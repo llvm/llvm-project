@@ -57,6 +57,26 @@ static unsigned getCharWidth(tok::TokenKind kind, const TargetInfo &Target) {
   }
 }
 
+static unsigned getEncodingPrefixLen(tok::TokenKind kind) {
+  switch (kind) {
+  default:
+    llvm_unreachable("Unknown token type!");
+  case tok::char_constant:
+  case tok::string_literal:
+    return 0;
+  case tok::utf8_char_constant:
+  case tok::utf8_string_literal:
+    return 2;
+  case tok::wide_char_constant:
+  case tok::wide_string_literal:
+  case tok::utf16_char_constant:
+  case tok::utf16_string_literal:
+  case tok::utf32_char_constant:
+  case tok::utf32_string_literal:
+    return 1;
+  }
+}
+
 static CharSourceRange MakeCharSourceRange(const LangOptions &Features,
                                            FullSourceLoc TokLoc,
                                            const char *TokBegin,
@@ -343,7 +363,9 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
          diag::err_unevaluated_string_invalid_escape_sequence)
         << StringRef(EscapeBegin, ThisTokBuf - EscapeBegin);
+    HadError = true;
   }
+
   return ResultChar;
 }
 
@@ -415,6 +437,19 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
     appendCodePoint(CodePoint, Buf);
     --I;
   }
+}
+
+bool clang::isFunctionLocalStringLiteralMacro(tok::TokenKind K,
+                                              const LangOptions &LO) {
+  return LO.MicrosoftExt &&
+         (K == tok::kw___FUNCTION__ || K == tok::kw_L__FUNCTION__ ||
+          K == tok::kw___FUNCSIG__ || K == tok::kw_L__FUNCSIG__ ||
+          K == tok::kw___FUNCDNAME__);
+}
+
+bool clang::tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO) {
+  return tok::isStringLiteral(Tok.getKind()) ||
+         isFunctionLocalStringLiteralMacro(Tok.getKind(), LO);
 }
 
 static bool ProcessNumericUCNEscape(const char *ThisTokBegin,
@@ -1917,9 +1952,22 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
     // Remember if we see any wide or utf-8/16/32 strings.
     // Also check for illegal concatenations.
     if (isUnevaluated() && Tok.getKind() != tok::string_literal) {
-      if (Diags)
-        Diags->Report(Tok.getLocation(), diag::err_unevaluated_string_prefix);
-      hadError = true;
+      if (Diags) {
+        SourceLocation PrefixEndLoc = Lexer::AdvanceToTokenCharacter(
+            Tok.getLocation(), getEncodingPrefixLen(Tok.getKind()), SM,
+            Features);
+        CharSourceRange Range =
+            CharSourceRange::getCharRange({Tok.getLocation(), PrefixEndLoc});
+        StringRef Prefix(SM.getCharacterData(Tok.getLocation()),
+                         getEncodingPrefixLen(Tok.getKind()));
+        Diags->Report(Tok.getLocation(),
+                      Features.CPlusPlus26
+                          ? diag::err_unevaluated_string_prefix
+                          : diag::warn_unevaluated_string_prefix)
+            << Prefix << Features.CPlusPlus << FixItHint::CreateRemoval(Range);
+      }
+      if (Features.CPlusPlus26)
+        hadError = true;
     } else if (Tok.isNot(Kind) && Tok.isNot(tok::string_literal)) {
       if (isOrdinary()) {
         Kind = Tok.getKind();

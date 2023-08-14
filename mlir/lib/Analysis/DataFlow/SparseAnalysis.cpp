@@ -224,7 +224,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
 
     // Check if the predecessor is the parent op.
     if (op == branch) {
-      operands = branch.getSuccessorEntryOperands(successorIndex);
+      operands = branch.getEntrySuccessorOperands(successorIndex);
       // Otherwise, try to deduce the operands from a region return-like op.
     } else if (auto regionTerminator =
                    dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
@@ -479,7 +479,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   Operation *op = branch.getOperation();
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
-  branch.getSuccessorRegions(/*index=*/{}, operands, successors);
+  branch.getEntrySuccessorRegions(operands, successors);
 
   // All operands not forwarded to any successor. This set can be non-contiguous
   // in the presence of multiple successors.
@@ -488,8 +488,8 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   for (RegionSuccessor &successor : successors) {
     Region *region = successor.getSuccessor();
     OperandRange operands =
-        region ? branch.getSuccessorEntryOperands(region->getRegionNumber())
-               : branch.getSuccessorEntryOperands({});
+        region ? branch.getEntrySuccessorOperands(region->getRegionNumber())
+               : branch.getEntrySuccessorOperands({});
     MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
     ValueRange inputs = successor.getSuccessorInputs();
     for (auto [operand, input] : llvm::zip(opoperands, inputs)) {
@@ -516,8 +516,7 @@ void AbstractSparseBackwardDataFlowAnalysis::
   SmallVector<Attribute> operandAttributes(terminator->getNumOperands(),
                                            nullptr);
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(terminator->getParentRegion()->getRegionNumber(),
-                             operandAttributes, successors);
+  terminator.getSuccessorRegions(operandAttributes, successors);
   // All operands not forwarded to any successor. This set can be
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(terminator->getNumOperands(), true);

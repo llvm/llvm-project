@@ -1,4 +1,10 @@
 add_header_library(
+  algorithm
+  HDRS
+    algorithm.h
+)
+
+add_header_library(
   array
   HDRS
     array.h

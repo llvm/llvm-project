@@ -674,11 +674,11 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
  * Currently, this is valid for CUDA shared variables, which have local
  * scope and global lifetime. So the conditions to check are :
  * 1. Is the global variable in shared address space?
- * 2. Does it have internal linkage?
+ * 2. Does it have local linkage?
  * 3. Is the global variable referenced only in one function?
  */
 static bool canDemoteGlobalVar(const GlobalVariable *gv, Function const *&f) {
-  if (!gv->hasInternalLinkage())
+  if (!gv->hasLocalLinkage())
     return false;
   PointerType *Pty = gv->getType();
   if (Pty->getAddressSpace() != ADDRESS_SPACE_SHARED)

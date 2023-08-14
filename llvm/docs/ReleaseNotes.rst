@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
+  an overloaded pointer type to support non-0 address spaces.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -94,6 +97,8 @@ Changes to the PowerPC Backend
 
 Changes to the RISC-V Backend
 -----------------------------
+
+* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -143,9 +148,6 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
-
-* AArch64 Linux targets now provide access to the Thread Local Storage
-  register ``tpidr``.
 
 Changes to Sanitizers
 ---------------------

@@ -235,7 +235,7 @@ CGSCC_PASS_WITH_PARAMS("function-attrs",
                          return PostOrderFunctionAttrsPass(SkipNonRecursive);
                        },
                        parsePostOrderFunctionAttrsPassOptions,
-                       "skip-non-recursive")
+                       "skip-non-recursive-function-attrs")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS

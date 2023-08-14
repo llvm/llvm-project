@@ -1763,19 +1763,12 @@ convertDeclareTargetAttr(Operation *op,
   if (FunctionOpInterface funcOp = dyn_cast<FunctionOpInterface>(op)) {
     if (auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(
             op->getParentOfType<ModuleOp>().getOperation())) {
-      bool isDeviceCompilation = offloadMod.getIsTargetDevice();
-      // FIXME: Temporarily disabled for host as it causes some issues when
-      // lowering while removing functions at the current time.
-      if (!isDeviceCompilation)
+      if (!offloadMod.getIsTargetDevice())
         return success();
 
       omp::DeclareTargetDeviceType declareType =
           declareTargetAttr.getDeviceType().getValue();
-
-      if ((isDeviceCompilation &&
-           declareType == omp::DeclareTargetDeviceType::host) ||
-          (!isDeviceCompilation &&
-           declareType == omp::DeclareTargetDeviceType::nohost)) {
+      if (declareType == omp::DeclareTargetDeviceType::host) {
         llvm::Function *llvmFunc =
             moduleTranslation.lookupFunction(funcOp.getName());
         llvmFunc->dropAllReferences();

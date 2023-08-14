@@ -486,7 +486,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
-      .clampNumElements(0, v2s32, v4s32);
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(1, s64, 2);
 
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
@@ -799,7 +800,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return Query.Types[0] == p0 && Query.Types[1] == s64;
   });
 
-  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
+                               G_STACKSAVE,
+                               G_STACKRESTORE}).lower();
 
   if (ST.hasMOPS()) {
     // G_BZERO is not supported. Currently it is only emitted by

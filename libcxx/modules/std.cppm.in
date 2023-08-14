@@ -1,0 +1,170 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+module;
+
+#include <__config>
+
+// TODO MODULES This could be generated
+
+// The headers of Table 24: C++ library headers [tab:headers.cpp]
+// and the headers of Table 25: C++ headers for C library facilities [tab:headers.cpp.c]
+#include <algorithm>
+#include <any>
+#include <array>
+#include <atomic>
+#include <barrier>
+#include <bit>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cerrno>
+#include <cfenv>
+#include <cfloat>
+#include <charconv>
+#include <chrono>
+#include <cinttypes>
+#include <climits>
+#include <cmath>
+#include <compare>
+#include <complex>
+#include <concepts>
+#include <condition_variable>
+#include <coroutine>
+#include <csetjmp>
+#include <csignal>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cuchar>
+#include <deque>
+#include <exception>
+#include <execution>
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <forward_list>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <iosfwd>
+#include <iterator>
+#include <latch>
+#include <limits>
+#include <list>
+#include <map>
+#include <mdspan>
+#include <memory>
+#include <memory_resource>
+#include <mutex>
+#include <new>
+#include <numbers>
+#include <numeric>
+#include <optional>
+#include <print>
+#include <queue>
+#include <random>
+#include <ranges>
+#include <ratio>
+#include <scoped_allocator>
+#include <semaphore>
+#include <set>
+#include <shared_mutex>
+#include <source_location>
+#include <span>
+#include <stack>
+#include <stdexcept>
+#include <stop_token>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <thread>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <valarray>
+#include <variant>
+#include <vector>
+#include <version>
+
+// *** Headers disabled by a feature ***
+
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  include <clocale>
+#  include <codecvt>
+#  include <fstream>
+#  include <iomanip>
+#  include <ios>
+#  include <iostream>
+#  include <istream>
+#  include <locale>
+#  include <ostream>
+#  include <regex>
+#  include <sstream>
+#  include <streambuf>
+#  include <strstream>
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  include <cwchar>
+#  include <cwctype>
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+// *** Headers not yet available ***
+#if __has_include(<generator>)
+#  error "include <generator> unconditionally"
+#  include <generator>
+#endif //   __has_include(<generator>)
+#if __has_include(<hazard_pointer>)
+#  error "include <hazard_pointer> unconditionally"
+#  include <hazard_pointer>
+#endif //   __has_include(<hazard_pointer>)
+#if __has_include(<flat_map>)
+#  error "include <flat_map> unconditionally"
+#  include <flat_map>
+#endif // __has_include(<flat_map>)
+#if __has_include(<flat_set>)
+#  error "include <flat_set> unconditionally"
+#  include <flat_set>
+#endif //  __has_include(<flat_set>)
+#if __has_include(<rcu>)
+#  error "include <rcu> unconditionally"
+#  include <rcu>
+#endif //   __has_include(<rcu>)
+#if __has_include(<spanstream>)
+#  error "include <spanstream> unconditionally"
+#  include <spanstream>
+#endif //   __has_include(<spanstream>)
+#if __has_include(<stacktrace>)
+#  error "include <stacktrace> unconditionally"
+#  include <stacktrace>
+#endif //   __has_include(<stacktrace>)
+#if __has_include(<stdfloat>)
+#  error "include <stdfloat> unconditionally"
+#  include <stdfloat>
+#endif //   __has_include(<stdfloat>)
+#if __has_include(<syncstream>)
+#  error "include <syncstream> unconditionally"
+#  include <syncstream>
+#endif //   __has_include(<syncstream>)
+#if __has_include(<text_encoding>)
+#  error "include <text_encoding> unconditionally"
+#  include <text_encoding>
+#endif //   __has_include(<text_encoding>)
+
+export module std;
+
+@LIBCXX_MODULE_STD_INCLUDE_SOURCES@

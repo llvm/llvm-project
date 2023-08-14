@@ -310,7 +310,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
-    }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+    }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
     omp.terminator
   }
   llvm.return
@@ -330,7 +330,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -348,7 +348,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {inclusive, operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+  }) {inclusive, operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -628,7 +628,7 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr<f
       %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0,0,0>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} :
     (i64, i64, i64) -> ()
 
   llvm.return
@@ -733,9 +733,9 @@ llvm.func @simdloop_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %ste
 // CHECK-LABEL: @simdloop_if
 llvm.func @simdloop_if(%arg0: !llvm.ptr<i32> {fir.bindc_name = "n"}, %arg1: !llvm.ptr<i32> {fir.bindc_name = "threshold"}) {
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>} : (i64) -> !llvm.ptr<i32>
+  %1 = llvm.alloca %0 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>} : (i64) -> !llvm.ptr<i32>
   %2 = llvm.mlir.constant(1 : i64) : i64
-  %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFtest_simdEi"} : (i64) -> !llvm.ptr<i32>
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFtest_simdEi"} : (i64) -> !llvm.ptr<i32>
   %4 = llvm.mlir.constant(0 : i32) : i32
   %5 = llvm.load %arg0 : !llvm.ptr<i32>
   %6 = llvm.mlir.constant(1 : i32) : i32
@@ -2547,10 +2547,8 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // -----
 
 module attributes {omp.is_target_device = false} {
-  // DISABLED, this portion of the test is disabled via the removal of the colon for the time 
-  // being as filtering is enabled for device only for the time being while a fix is in progress. 
-  // CHECK-NOT @filter_host_nohost
-  llvm.func @filter_host_nohost() -> ()
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
@@ -2558,8 +2556,8 @@ module attributes {omp.is_target_device = false} {
     llvm.return
   }
 
-  // CHECK: @filter_host_host
-  llvm.func @filter_host_host() -> ()
+  // CHECK: define void @filter_host
+  llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
@@ -2571,8 +2569,8 @@ module attributes {omp.is_target_device = false} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: @filter_device_nohost
-  llvm.func @filter_device_nohost() -> ()
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
@@ -2580,8 +2578,8 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
-  // CHECK-NOT: @filter_device_host
-  llvm.func @filter_device_host() -> ()
+  // CHECK-NOT: define void @filter_host
+  llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>

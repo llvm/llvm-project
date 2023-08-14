@@ -475,7 +475,7 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FS1]]
 //
-// CHECK:          ptr @llvm.stacksave()
+// CHECK:          ptr @llvm.stacksave.p0()
 // CHECK-32:       store i32 %{{.+}}, ptr %__vla_expr
 // OMP51:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
 // CHECK-64:       store i32 %{{.+}}, ptr [[B_ADDR:%.+]],

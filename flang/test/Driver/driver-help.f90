@@ -91,6 +91,10 @@
 ! HELP-NEXT: -print-effective-triple Print the effective target triple
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
 ! HELP-NEXT: -P                     Disable linemarker output in -E mode
+! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
+! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
+! HELP-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
+! HELP-NEXT: -R<remark>              Enable the specified remark
 ! HELP-NEXT: -save-temps=<value>    Save intermediate compilation results.
 ! HELP-NEXT: -save-temps            Save intermediate compilation results
 ! HELP-NEXT: -std=<value>           Language standard to compile for
@@ -214,6 +218,10 @@
 ! HELP-FC1-NEXT: -pic-level <value>      Value for __PIC__
 ! HELP-FC1-NEXT: -plugin <name>         Use the named plugin action instead of the default action (use "help" to list available options)
 ! HELP-FC1-NEXT: -P                     Disable linemarker output in -E mode
+! HELP-FC1-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
+! HELP-FC1-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
+! HELP-FC1-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
+! HELP-FC1-NEXT: -R<remark>              Enable the specified remark
 ! HELP-FC1-NEXT: -save-temps=<value>    Save intermediate compilation results.
 ! HELP-FC1-NEXT: -save-temps            Save intermediate compilation results
 ! HELP-FC1-NEXT: -std=<value>           Language standard to compile for

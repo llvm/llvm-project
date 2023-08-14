@@ -89,9 +89,24 @@ static cl::opt<unsigned> MaxBlockPredecessors(
     "considered during the estimation of dead code"));
 
 static cl::opt<unsigned> MinFunctionSize(
-    "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
+    "funcspec-min-function-size", cl::init(300), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
     "instructions"));
+
+static cl::opt<unsigned> MinCodeSizeSavings(
+    "funcspec-min-codesize-savings", cl::init(20), cl::Hidden, cl::desc(
+    "Reject specializations whose codesize savings are less than this"
+    "much percent of the original function size"));
+
+static cl::opt<unsigned> MinLatencySavings(
+    "funcspec-min-latency-savings", cl::init(70), cl::Hidden, cl::desc(
+    "Reject specializations whose latency savings are less than this"
+    "much percent of the original function size"));
+
+static cl::opt<unsigned> MinInliningBonus(
+    "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden, cl::desc(
+    "Reject specializations whose inlining bonus is less than this"
+    "much percent of the original function size"));
 
 static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
@@ -177,6 +192,22 @@ Bonus InstCostVisitor::getBonusFromPendingPHIs() {
     if (isBlockExecutable(Phi->getParent()))
       B += getUserBonus(Phi);
   }
+  return B;
+}
+
+/// Compute a bonus for replacing argument \p A with constant \p C.
+Bonus InstCostVisitor::getSpecializationBonus(Argument *A, Constant *C) {
+  LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
+                    << C->getNameOrAsOperand() << "\n");
+  Bonus B;
+  for (auto *U : A->users())
+    if (auto *UI = dyn_cast<Instruction>(U))
+      if (isBlockExecutable(UI->getParent()))
+        B += getUserBonus(UI, A, C);
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated bonus {CodeSize = "
+                    << B.CodeSize << ", Latency = " << B.Latency
+                    << "} for argument " << *A << "\n");
   return B;
 }
 
@@ -589,15 +620,15 @@ bool FunctionSpecializer::run() {
     int64_t Sz = *Metrics.NumInsts.getValue();
     assert(Sz > 0 && "CodeSize should be positive");
     // It is safe to down cast from int64_t, NumInsts is always positive.
-    unsigned SpecCost = static_cast<unsigned>(Sz);
+    unsigned FuncSize = static_cast<unsigned>(Sz);
 
     LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
-                      << F.getName() << " is " << SpecCost << "\n");
+                      << F.getName() << " is " << FuncSize << "\n");
 
     if (Inserted && Metrics.isRecursive)
       promoteConstantStackValues(&F);
 
-    if (!findSpecializations(&F, SpecCost, AllSpecs, SM)) {
+    if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -732,7 +763,7 @@ static Function *cloneCandidateFunction(Function *F) {
   return Clone;
 }
 
-bool FunctionSpecializer::findSpecializations(Function *F, unsigned SpecCost,
+bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
   // A mapping from a specialisation signature to the index of the respective
@@ -799,21 +830,42 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned SpecCost,
     } else {
       // Calculate the specialisation gain.
       Bonus B;
+      unsigned Score = 0;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
-      for (ArgInfo &A : S.Args)
-        B += getSpecializationBonus(A.Formal, A.Actual, Visitor);
+      for (ArgInfo &A : S.Args) {
+        B += Visitor.getSpecializationBonus(A.Formal, A.Actual);
+        Score += getInliningBonus(A.Formal, A.Actual);
+      }
       B += Visitor.getBonusFromPendingPHIs();
 
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization score {CodeSize = "
+
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
                         << B.CodeSize << ", Latency = " << B.Latency
-                        << "}\n");
+                        << ", Inlining = " << Score << "}\n");
+
+      auto IsProfitable = [&FuncSize](Bonus &B, unsigned Score) -> bool {
+        // No check required.
+        if (ForceSpecialization)
+          return true;
+        // Minimum inlining bonus.
+        if (Score > MinInliningBonus * FuncSize / 100)
+          return true;
+        // Minimum codesize savings.
+        if (B.CodeSize < MinCodeSizeSavings * FuncSize / 100)
+          return false;
+        // Minimum latency savings.
+        if (B.Latency < MinLatencySavings * FuncSize / 100)
+          return false;
+        return true;
+      };
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && B.Latency <= SpecCost - B.CodeSize)
+      if (!IsProfitable(B, Score))
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, B.Latency);
+      Score += std::max(B.CodeSize, B.Latency);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
@@ -879,31 +931,14 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   return Clone;
 }
 
-/// Compute a bonus for replacing argument \p A with constant \p C.
-Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
-                                                 InstCostVisitor &Visitor) {
-  LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
-                    << C->getNameOrAsOperand() << "\n");
-
-  Bonus B;
-  for (auto *U : A->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (Visitor.isBlockExecutable(UI->getParent()))
-        B += Visitor.getUserBonus(UI, A, C);
-
-  LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated bonus {CodeSize = "
-                    << B.CodeSize << ", Latency = " << B.Latency
-                    << "} for argument " << *A << "\n");
-
-  // The below heuristic is only concerned with exposing inlining
-  // opportunities via indirect call promotion. If the argument is not a
-  // (potentially casted) function pointer, give up.
-  //
-  // TODO: Perhaps we should consider checking such inlining opportunities
-  // while traversing the users of the specialization arguments ?
+/// Compute the inlining bonus for replacing argument \p A with constant \p C.
+/// The below heuristic is only concerned with exposing inlining
+/// opportunities via indirect call promotion. If the argument is not a
+/// (potentially casted) function pointer, give up.
+unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   Function *CalledFunction = dyn_cast<Function>(C->stripPointerCasts());
   if (!CalledFunction)
-    return B;
+    return 0;
 
   // Get TTI for the called function (used for the inline cost).
   auto &CalleeTTI = (GetTTI)(*CalledFunction);
@@ -948,7 +983,7 @@ Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
                       << " for user " << *U << "\n");
   }
 
-  return B += {0, InliningBonus};
+  return InliningBonus > 0 ? static_cast<unsigned>(InliningBonus) : 0;
 }
 
 /// Determine if it is possible to specialise the function for constant values

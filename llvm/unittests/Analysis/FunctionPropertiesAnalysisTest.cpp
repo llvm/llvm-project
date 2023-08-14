@@ -24,6 +24,11 @@
 #include <cstring>
 
 using namespace llvm;
+
+extern cl::opt<bool> EnableDetailedFunctionProperties;
+extern cl::opt<bool> BigBasicBlockInstructionThreshold;
+extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
+
 namespace {
 
 class FunctionPropertiesAnalysisTest : public testing::Test {
@@ -117,6 +122,57 @@ define internal i32 @top() {
   EXPECT_EQ(BranchesFeatures.StoreInstCount, 0);
   EXPECT_EQ(BranchesFeatures.MaxLoopDepth, 0);
   EXPECT_EQ(BranchesFeatures.TopLevelLoopCount, 0);
+
+  EnableDetailedFunctionProperties.setValue(true);
+  FunctionPropertiesInfo DetailedBranchesFeatures = buildFPI(*BranchesFunction);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithSingleSuccessor, 2);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithTwoSuccessors, 1);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithMoreThanTwoSuccessors, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithSinglePredecessor, 2);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithTwoPredecessors, 1);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithMoreThanTwoPredecessors, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.BigBasicBlocks, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.MediumBasicBlocks, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.SmallBasicBlocks, 4);
+  EXPECT_EQ(DetailedBranchesFeatures.CastInstructionCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.FloatingPointInstructionCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.IntegerInstructionCount, 4);
+  EXPECT_EQ(DetailedBranchesFeatures.IntegerConstantCount, 1);
+  EXPECT_EQ(DetailedBranchesFeatures.FloatingPointConstantCount, 0);
+  EnableDetailedFunctionProperties.setValue(false);
+}
+
+TEST_F(FunctionPropertiesAnalysisTest, DifferentPredecessorSuccessorCounts) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+define i64 @f1() {
+  br i1 0, label %br1, label %finally
+br1:
+  ret i64 0
+finally:
+  ret i64 3
+}
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  EnableDetailedFunctionProperties.setValue(true);
+  FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 1);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithMoreThanTwoSuccessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSinglePredecessor, 2);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoPredecessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithMoreThanTwoPredecessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BigBasicBlocks, 0);
+  EXPECT_EQ(DetailedF1Properties.MediumBasicBlocks, 0);
+  EXPECT_EQ(DetailedF1Properties.SmallBasicBlocks, 3);
+  EXPECT_EQ(DetailedF1Properties.CastInstructionCount, 0);
+  EXPECT_EQ(DetailedF1Properties.FloatingPointInstructionCount, 0);
+  EXPECT_EQ(DetailedF1Properties.IntegerInstructionCount, 0);
+  EXPECT_EQ(DetailedF1Properties.IntegerConstantCount, 3);
+  EXPECT_EQ(DetailedF1Properties.FloatingPointConstantCount, 0);
+  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InlineSameBBSimple) {

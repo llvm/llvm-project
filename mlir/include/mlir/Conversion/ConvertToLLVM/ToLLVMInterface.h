@@ -40,13 +40,15 @@ public:
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   virtual void populateConvertToLLVMConversionPatterns(
-      ConversionTarget &target, RewritePatternSet &patterns) const = 0;
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const = 0;
 };
 
 /// Recursively walk the IR and collect all dialects implementing the interface,
 /// and populate the conversion patterns.
 void populateConversionTargetFromOperation(Operation *op,
                                            ConversionTarget &target,
+                                           LLVMTypeConverter &typeConverter,
                                            RewritePatternSet &patterns);
 
 } // namespace mlir
