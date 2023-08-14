@@ -1504,9 +1504,11 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
 inline bool isLegal64BitDPPControl(const MCSubtargetInfo &ST, unsigned DC) {
-  if (!isGFX90A(ST))
-    return true;
-  return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  return false;
 }
 
 /// \returns true if the intrinsic is divergent

@@ -4572,12 +4572,14 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
   if (!AMDGPU::isLegal64BitDPPControl(getSTI(), DppCtrl)) {
-    // DPP64 is supported for row_newbcast only.
+    // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
+    // only on GFX12.
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     if (Src0Idx >= 0 &&
         getMRI()->getSubReg(Inst.getOperand(Src0Idx).getReg(), AMDGPU::sub1)) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "64 bit dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "64 bit dpp only supports row_newbcast");
       return false;
     }
   }
