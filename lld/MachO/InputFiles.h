@@ -164,6 +164,8 @@ public:
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
+  template <class LP>
+  void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
@@ -317,6 +319,7 @@ private:
 
 extern llvm::SetVector<InputFile *> inputFiles;
 extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
+extern llvm::SmallVector<StringRef> unprocessedLCLinkerOptions;
 
 std::optional<MemoryBufferRef> readFile(StringRef path);
 

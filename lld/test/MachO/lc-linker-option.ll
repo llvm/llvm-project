@@ -153,8 +153,8 @@
 ; SYMS-NO-FOO-NOT:   g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
 
 ; UNDEFINED-SYMBOL: undefined symbol: __SomeUndefinedSymbol
-; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked framework not found for -framework Foo
-; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked library not found for -lBar
+; MISSING-AUTO-LINK: {{.+}}: auto-linked framework not found for -framework Foo
+; MISSING-AUTO-LINK: {{.+}}: auto-linked library not found for -lBar
 
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
