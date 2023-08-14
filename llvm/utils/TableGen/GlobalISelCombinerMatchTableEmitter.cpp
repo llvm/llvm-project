@@ -248,8 +248,8 @@ class CXXPredicateCode {
       : Code(Code), ID(ID), BaseEnumName("GICombiner" + to_string(ID)) {
     // Don't assert if ErrorsPrinted is set. This may mean CodeExpander failed,
     // and it may add spaces in such cases.
-    assert(ErrorsPrinted || StringRef(Code).trim() == Code &&
-                                "Code was expected to be trimmed!");
+    assert((ErrorsPrinted || StringRef(Code).trim() == Code) &&
+           "Code was expected to be trimmed!");
   }
 
 public:

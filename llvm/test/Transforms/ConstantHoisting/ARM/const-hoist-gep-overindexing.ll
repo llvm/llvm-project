@@ -14,9 +14,11 @@ define void @test_inbounds() {
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast ptr getelementptr inbounds ([[TMP0:%.*]], ptr @global, i32 0, i32 1, i32 0) to ptr
 ; CHECK-NEXT:    store i16 undef, ptr [[CONST]], align 2
 ; CHECK-NEXT:    [[MAT_GEP:%.*]] = getelementptr i8, ptr [[CONST]], i32 2
-; CHECK-NEXT:    store i16 undef, ptr [[MAT_GEP]], align 2
+; CHECK-NEXT:    [[MAT_BITCAST:%.*]] = bitcast ptr [[MAT_GEP]] to ptr
+; CHECK-NEXT:    store i16 undef, ptr [[MAT_BITCAST]], align 2
 ; CHECK-NEXT:    [[MAT_GEP1:%.*]] = getelementptr i8, ptr [[CONST]], i32 20
-; CHECK-NEXT:    store i16 undef, ptr [[MAT_GEP1]], align 2
+; CHECK-NEXT:    [[MAT_BITCAST2:%.*]] = bitcast ptr [[MAT_GEP1]] to ptr
+; CHECK-NEXT:    store i16 undef, ptr [[MAT_BITCAST2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 bb:

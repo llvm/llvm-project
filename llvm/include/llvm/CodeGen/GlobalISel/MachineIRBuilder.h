@@ -1973,6 +1973,19 @@ public:
   MachineInstrBuilder buildVecReduceFMin(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_VECREDUCE_FMIN, {Dst}, {Src});
   }
+
+  /// Build and insert \p Res = G_VECREDUCE_FMAXIMUM \p Src
+  MachineInstrBuilder buildVecReduceFMaximum(const DstOp &Dst,
+                                             const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_FMAXIMUM, {Dst}, {Src});
+  }
+
+  /// Build and insert \p Res = G_VECREDUCE_FMINIMUM \p Src
+  MachineInstrBuilder buildVecReduceFMinimum(const DstOp &Dst,
+                                             const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_FMINIMUM, {Dst}, {Src});
+  }
+
   /// Build and insert \p Res = G_VECREDUCE_ADD \p Src
   MachineInstrBuilder buildVecReduceAdd(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_VECREDUCE_ADD, {Dst}, {Src});

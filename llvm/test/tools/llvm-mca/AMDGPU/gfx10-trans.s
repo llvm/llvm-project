@@ -50,52 +50,29 @@ v_sqrt_f64 v[2:3], v[0:1]
 # GFX11-NEXT:  1      40    1.00                  U     v_rsq_f64_e32 v[1:2], v[1:2]
 # GFX11-NEXT:  1      40    1.00                  U     v_sqrt_f64_e32 v[2:3], v[0:1]
 
-# GFX10:      Resources:
-# GFX10-NEXT: [0]   - HWBranch
-# GFX10-NEXT: [1]   - HWExport
-# GFX10-NEXT: [2]   - HWLGKM
-# GFX10-NEXT: [3]   - HWRC
-# GFX10-NEXT: [4]   - HWSALU
-# GFX10-NEXT: [5]   - HWTransVALU
-# GFX10-NEXT: [6]   - HWVALU
-# GFX10-NEXT: [7]   - HWVMEM
-
-# GFX11:      Resources:
-# GFX11-NEXT: [0]   - HWBranch
-# GFX11-NEXT: [1]   - HWExport
-# GFX11-NEXT: [2]   - HWLGKM
-# GFX11-NEXT: [3]   - HWRC
-# GFX11-NEXT: [4]   - HWSALU
-# GFX11-NEXT: [5]   - HWVALU
-# GFX11-NEXT: [6]   - HWVMEM
+# CHECK:      Resources:
+# CHECK-NEXT: [0]   - HWBranch
+# CHECK-NEXT: [1]   - HWExport
+# CHECK-NEXT: [2]   - HWLGKM
+# CHECK-NEXT: [3]   - HWRC
+# CHECK-NEXT: [4]   - HWSALU
+# CHECK-NEXT: [5]   - HWTransVALU
+# CHECK-NEXT: [6]   - HWVALU
+# CHECK-NEXT: [7]   - HWVMEM
 
 # CHECK:      Resource pressure per iteration:
-
-# GFX10-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# GFX10-NEXT:  -      -      -     7.00    -     7.00   3.00    -
-
-# GFX11-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]
-# GFX11-NEXT:  -      -      -     7.00    -     7.00    -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
+# CHECK-NEXT:  -      -      -     7.00    -     7.00   3.00    -
 
 # CHECK:      Resource pressure by instruction:
-
-# GFX10-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
-# GFX10-NEXT:  -      -      -     1.00    -     1.00    -      -     v_log_f32_e32 v0, v0
-# GFX10-NEXT:  -      -      -     1.00    -     1.00    -      -     v_rcp_f32_e32 v0, v0
-# GFX10-NEXT:  -      -      -     1.00    -     1.00    -      -     v_rsq_f32_e32 v1, v1
-# GFX10-NEXT:  -      -      -     1.00    -     1.00    -      -     v_sqrt_f32_e32 v2, v0
-# GFX10-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rcp_f64_e32 v[0:1], v[0:1]
-# GFX10-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rsq_f64_e32 v[1:2], v[1:2]
-# GFX10-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_sqrt_f64_e32 v[2:3], v[0:1]
-
-# GFX11-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_log_f32_e32 v0, v0
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_rcp_f32_e32 v0, v0
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_rsq_f32_e32 v1, v1
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_sqrt_f32_e32 v2, v0
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_rcp_f64_e32 v[0:1], v[0:1]
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_rsq_f64_e32 v[1:2], v[1:2]
-# GFX11-NEXT:  -      -      -     1.00    -     1.00    -     v_sqrt_f64_e32 v[2:3], v[0:1]
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_log_f32_e32 v0, v0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_rcp_f32_e32 v0, v0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_rsq_f32_e32 v1, v1
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_sqrt_f32_e32 v2, v0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rcp_f64_e32 v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rsq_f64_e32 v[1:2], v[1:2]
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_sqrt_f64_e32 v[2:3], v[0:1]
 
 # CHECK:      Timeline view:
 

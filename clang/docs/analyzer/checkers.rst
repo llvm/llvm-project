@@ -2499,7 +2499,7 @@ and add the `csa_mark_sanitized` function.
 
 Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
 be used after this point, because its contents are verified. It is the
-responisibility of the programmer to ensure that this verification was indeed
+responsibility of the programmer to ensure that this verification was indeed
 correct. Please note that `csa_mark_sanitized` function is only declared and
 used during Clang Static Analysis and skipped in (production) builds.
 

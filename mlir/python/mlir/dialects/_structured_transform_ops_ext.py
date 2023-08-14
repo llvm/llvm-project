@@ -84,6 +84,40 @@ def _get_int_int_array_attr(
     return ArrayAttr.get(values)
 
 
+class BufferizeToAllocationOp:
+    """Specialization for BufferizeToAllocationOp class."""
+
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        memory_space: Optional[int | str | Attribute] = None,
+        memcpy_op: Optional[str] = None,
+        alloc_op: Optional[str] = None,
+        bufferize_destination_only: Optional[bool] = None,
+        loc=None,
+        ip=None,
+    ):
+        # No other types are allowed, so hard-code those here.
+        allocated_buffer_type = transform.AnyValueType.get()
+        new_ops_type = transform.AnyOpType.get()
+
+        if isinstance(memory_space, int):
+            memory_space = str(memory_space)
+        if isinstance(memory_space, str):
+            memory_space = Attribute.parse(memory_space)
+
+        super().__init__(
+            allocated_buffer_type,
+            new_ops_type,
+            target,
+            memory_space=memory_space,
+            memcpy_op=memcpy_op,
+            alloc_op=alloc_op,
+            bufferize_destination_only=bufferize_destination_only,
+        )
+
+
 class DecomposeOp:
     """Specialization for DecomposeOp class."""
 
@@ -182,6 +216,66 @@ class InterchangeOp:
             pdl_operation_type,
             _get_op_result_or_value(target),
             iterator_interchange=iterator_interchange,
+            loc=loc,
+            ip=ip,
+        )
+
+
+class MapCopyToThreadsOp:
+    """Specialization for MapCopyToThreadsOp class."""
+
+    @overload
+    def __init__(
+        self,
+        forall_op_type: Type,
+        tiled_op_type: Type,
+        target: Union[Operation, OpView, Value],
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        forall_op_type_or_target: Union[Operation, OpView, Type, Value],
+        tiled_op_type_or_none: Optional[Type] = None,
+        target_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        if isinstance(forall_op_type_or_target, Type):
+            forall_op_type = forall_op_type_or_target
+            tiled_op_type = tiled_op_type_or_none
+            target = target_or_none
+        else:
+            forall_op_type = transform.AnyOpType.get()
+            tiled_op_type = transform.AnyOpType.get()
+            target = forall_op_type_or_target
+
+        super().__init__(
+            forall_op_type,
+            tiled_op_type,
+            target,
+            total_num_threads=total_num_threads,
+            desired_bit_alignment=desired_bit_alignment,
             loc=loc,
             ip=ip,
         )

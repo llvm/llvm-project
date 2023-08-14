@@ -763,6 +763,8 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       // Constant being rebased is a ConstantExpr.
       Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base, Adj->Offset,
                                       "mat_gep", Adj->MatInsertPt);
+      // Hide it behind a bitcast.
+      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast", Adj->MatInsertPt);
     } else
       // Constant being rebased is a ConstantInt.
       Mat = BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,

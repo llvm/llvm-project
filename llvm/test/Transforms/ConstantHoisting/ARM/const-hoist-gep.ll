@@ -24,10 +24,12 @@ define dso_local void @zot() {
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast ptr getelementptr inbounds ([[TMP0]], ptr @global, i32 0, i32 4, i32 0, i32 0) to ptr
 ; CHECK-NEXT:    store i32 undef, ptr [[CONST]], align 4
 ; CHECK-NEXT:    [[MAT_GEP:%.*]] = getelementptr i8, ptr [[CONST]], i32 4
-; CHECK-NEXT:    store i32 undef, ptr [[MAT_GEP]], align 4
+; CHECK-NEXT:    [[MAT_BITCAST:%.*]] = bitcast ptr [[MAT_GEP]] to ptr
+; CHECK-NEXT:    store i32 undef, ptr [[MAT_BITCAST]], align 4
 ; CHECK-NEXT:    store i32 undef, ptr [[CONST1]], align 4
 ; CHECK-NEXT:    [[MAT_GEP2:%.*]] = getelementptr i8, ptr [[CONST1]], i32 4
-; CHECK-NEXT:    store i32 undef, ptr [[MAT_GEP2]], align 4
+; CHECK-NEXT:    [[MAT_BITCAST3:%.*]] = bitcast ptr [[MAT_GEP2]] to ptr
+; CHECK-NEXT:    store i32 undef, ptr [[MAT_BITCAST3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:

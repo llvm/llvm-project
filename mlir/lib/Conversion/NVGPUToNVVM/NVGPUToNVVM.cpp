@@ -236,7 +236,7 @@ MemRefType nvgpu::getMBarrierMemrefType(MLIRContext *context,
 
 /// Returns the base pointer of the mbarrier object.
 static Value getMbarrierPtr(ConversionPatternRewriter &rewriter,
-                            LLVMTypeConverter &typeConverter,
+                            const LLVMTypeConverter &typeConverter,
                             TypedValue<nvgpu::MBarrierType> barrier,
                             Value barrierMemref) {
   MemRefType memrefType =
