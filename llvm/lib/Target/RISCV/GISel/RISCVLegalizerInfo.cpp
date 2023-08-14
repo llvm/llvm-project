@@ -44,29 +44,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(1, XLenLLT, XLenLLT)
       .clampScalar(0, XLenLLT, XLenLLT);
 
-  // Extensions
-  auto ExtLegalFunc = [=](const LegalityQuery &Query) {
-    unsigned DstSize = Query.Types[0].getSizeInBits();
-
-    // Make sure that we have something that will fit in a register, and
-    // make sure it's a power of 2.
-    if (DstSize < 8 || DstSize > XLen || !isPowerOf2_32(DstSize))
-      return false;
-
-    const LLT SrcTy = Query.Types[1];
-
-    // Make sure we fit in a register otherwise. Don't bother checking that
-    // the source type is below 2 * XLen bits. We shouldn't be allowing anything
-    // through which is wider than the destination in the first place.
-    unsigned SrcSize = SrcTy.getSizeInBits();
-    if (SrcSize < 8 || !isPowerOf2_32(SrcSize))
-      return false;
-
-    return true;
-  };
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalIf(ExtLegalFunc)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .maxScalar(0, XLenLLT);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({XLenLLT})
