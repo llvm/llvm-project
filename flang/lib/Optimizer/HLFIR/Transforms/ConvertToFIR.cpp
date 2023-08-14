@@ -138,7 +138,18 @@ public:
       } else {
         fir::runtime::genAssign(builder, loc, to, from);
       }
-    } else if (lhs.isArray()) {
+    } else if (lhs.isArray() ||
+               // Special case for element-by-element (or scalar) assignments
+               // generated for creating polymorphic expressions.
+               // The LHS of these assignments is a box describing just
+               // a single element, not the whole allocatable temp.
+               // They do not have 'realloc' attribute, because reallocation
+               // must not happen. The only expected effect of such an
+               // assignment is the copy of the contents, because the dynamic
+               // types of the LHS and the RHS must match already. We use the
+               // runtime in this case so that the polymorphic (including
+               // unlimited) content is copied properly.
+               (lhs.isPolymorphic() && assignOp.isTemporaryLHS())) {
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       mlir::Value from = emboxRHS(rhsExv);
