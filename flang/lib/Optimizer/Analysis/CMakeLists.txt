@@ -3,6 +3,7 @@ add_flang_library(FIRAnalysis
 
   DEPENDS
   FIRDialect
+  HLFIRDialect
   MLIRIR
 
   LINK_LIBS
