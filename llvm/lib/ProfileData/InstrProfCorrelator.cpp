@@ -38,6 +38,8 @@ Expected<object::SectionRef> getCountersSection(const object::ObjectFile &Obj) {
 const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
 const char *InstrProfCorrelator::CFGHashAttributeName = "CFG Hash";
 const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
+const char *InstrProfCorrelator::CovFunctionNameAttributeName =
+    "Cov Function Name";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
@@ -360,4 +362,77 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",
                                    NumSuppressedWarnings);
+}
+
+template <class IntPtrT>
+Error DwarfInstrProfCorrelator<IntPtrT>::correlateCovUnusedFuncNames(
+    int MaxWarnings) {
+  bool UnlimitedWarnings = (MaxWarnings == 0);
+  // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
+  int NumSuppressedWarnings = -MaxWarnings;
+  std::vector<std::string> UnusedFuncNames;
+  auto IsDIEOfCovName = [](const DWARFDie &Die) {
+    const auto &ParentDie = Die.getParent();
+    if (!Die.isValid() || !ParentDie.isValid() || Die.isNULL())
+      return false;
+    if (Die.getTag() != dwarf::DW_TAG_variable)
+      return false;
+    if (ParentDie.getParent().isValid())
+      return false;
+    if (!Die.hasChildren())
+      return false;
+    if (const char *Name = Die.getName(DINameKind::ShortName))
+      return StringRef(Name).startswith(getCoverageUnusedNamesVarName());
+    return false;
+  };
+  auto MaybeAddCovFuncName = [&](DWARFDie Die) {
+    if (!IsDIEOfCovName(Die))
+      return;
+    for (const DWARFDie &Child : Die.children()) {
+      if (Child.getTag() != dwarf::DW_TAG_LLVM_annotation)
+        continue;
+      auto AnnotationFormName = Child.find(dwarf::DW_AT_name);
+      auto AnnotationFormValue = Child.find(dwarf::DW_AT_const_value);
+      if (!AnnotationFormName || !AnnotationFormValue)
+        continue;
+      auto AnnotationNameOrErr = AnnotationFormName->getAsCString();
+      if (auto Err = AnnotationNameOrErr.takeError()) {
+        consumeError(std::move(Err));
+        continue;
+      }
+      std::optional<const char *> FunctionName;
+      StringRef AnnotationName = *AnnotationNameOrErr;
+      if (AnnotationName.compare(
+              InstrProfCorrelator::CovFunctionNameAttributeName) == 0) {
+        if (auto EC =
+                AnnotationFormValue->getAsCString().moveInto(FunctionName))
+          consumeError(std::move(EC));
+      }
+      if (!FunctionName) {
+        if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+          WithColor::warning() << format(
+              "Missing coverage function name value at DIE 0x%08" PRIx64,
+              Child.getOffset());
+        }
+        return;
+      }
+      UnusedFuncNames.push_back(*FunctionName);
+    }
+  };
+  for (auto &CU : DICtx->normal_units())
+    for (const auto &Entry : CU->dies())
+      MaybeAddCovFuncName(DWARFDie(CU.get(), &Entry));
+  for (auto &CU : DICtx->dwo_units())
+    for (const auto &Entry : CU->dies())
+      MaybeAddCovFuncName(DWARFDie(CU.get(), &Entry));
+
+  if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
+    WithColor::warning() << format("Suppressed %d additional warnings\n",
+                                   NumSuppressedWarnings);
+  if (!UnusedFuncNames.empty()) {
+    auto Result = collectPGOFuncNameStrings(
+        UnusedFuncNames, /*doCompression=*/false, this->CovUnusedFuncNames);
+    return Result;
+  }
+  return Error::success();
 }
