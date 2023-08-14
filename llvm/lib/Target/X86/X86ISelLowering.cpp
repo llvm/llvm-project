@@ -20090,17 +20090,14 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
 }
 
-/// Truncate using ISD::AND mask and X86ISD::PACKUS.
+/// Truncate using inreg zero extension (AND mask) and X86ISD::PACKUS.
 /// e.g. trunc <8 x i32> X to <8 x i16> -->
 /// MaskX = X & 0xffff (clear high bits to prevent saturation)
 /// packus (extract_subv MaskX, 0), (extract_subv MaskX, 1)
 static SDValue truncateVectorWithPACKUS(EVT DstVT, SDValue In, const SDLoc &DL,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
-  EVT SrcVT = In.getValueType();
-  APInt Mask = APInt::getLowBitsSet(SrcVT.getScalarSizeInBits(),
-                                    DstVT.getScalarSizeInBits());
-  In = DAG.getNode(ISD::AND, DL, SrcVT, In, DAG.getConstant(Mask, DL, SrcVT));
+  In = DAG.getZeroExtendInReg(In, DL, DstVT);
   return truncateVectorWithPACK(X86ISD::PACKUS, DstVT, In, DL, DAG, Subtarget);
 }
 
