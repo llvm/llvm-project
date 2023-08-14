@@ -209,6 +209,7 @@ public:
   void Visit(const APValue &Value, QualType Ty);
 
   void VisitAliasAttr(const AliasAttr *AA);
+  void VisitCleanupAttr(const CleanupAttr *CA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
