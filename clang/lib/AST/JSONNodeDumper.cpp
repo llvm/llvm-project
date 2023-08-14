@@ -550,6 +550,10 @@ void JSONNodeDumper::VisitUnavailableAttr(const UnavailableAttr *UA) {
     JOS.attribute("message", UA->getMessage());
 }
 
+void JSONNodeDumper::VisitSectionAttr(const SectionAttr *SA) {
+  JOS.attribute("section_name", SA->getName());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())
