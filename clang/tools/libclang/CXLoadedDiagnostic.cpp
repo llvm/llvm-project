@@ -387,7 +387,8 @@ std::error_code DiagLoader::visitSourceFileContentsRecord(
   auto fileItr = TopDiags->Files.find(ID);
   if (fileItr == TopDiags->Files.end())
     return reportInvalidFile("Source file contents for unknown file ID");
-  FileEntry *file = const_cast<FileEntry*>(&fileItr->second.getFileEntry());
+
+  CXFile file = cxfile::makeCXFile(fileItr->second);
   StringRef CopiedContents(TopDiags->copyString(Contents),
                            Contents.size());
 
