@@ -189,15 +189,16 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool canEmitLibcall(const TargetLowering &TLI, RTLIB::Libcall LC) {
+static bool canEmitLibcall(const TargetMachine &TM, Function *F,
+                           RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
-  return TLI.getLibcallName(LC) != nullptr;
+  const TargetLowering *TLI = TM.getSubtargetImpl(*F)->getTargetLowering();
+  return TLI->getLibcallName(LC) != nullptr;
 }
 
 // TODO: Handle atomic memcpy and memcpy.inline
 // TODO: Pass ScalarEvolution
 bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
-  const TargetLowering *TLI = TM.getSubtargetImpl(F)->getTargetLowering();
   Intrinsic::ID ID = F.getIntrinsicID();
   bool Changed = false;
 
@@ -210,7 +211,8 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Function *ParentFunc = Memcpy->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memcpy->getLength(), TTI)) {
-        if (UseMemIntrinsicLibFunc && canEmitLibcall(*TLI, RTLIB::MEMCPY))
+        if (UseMemIntrinsicLibFunc &&
+            canEmitLibcall(TM, ParentFunc, RTLIB::MEMCPY))
           break;
 
         // TODO: For optsize, emit the loop into a separate function
@@ -226,7 +228,8 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Function *ParentFunc = Memmove->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memmove->getLength(), TTI)) {
-        if (UseMemIntrinsicLibFunc && canEmitLibcall(*TLI, RTLIB::MEMMOVE))
+        if (UseMemIntrinsicLibFunc &&
+            canEmitLibcall(TM, ParentFunc, RTLIB::MEMMOVE))
           break;
 
         if (expandMemMoveAsLoop(Memmove, TTI)) {
@@ -242,7 +245,8 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Function *ParentFunc = Memset->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
       if (shouldExpandMemIntrinsicWithSize(Memset->getLength(), TTI)) {
-        if (UseMemIntrinsicLibFunc && canEmitLibcall(*TLI, RTLIB::MEMSET))
+        if (UseMemIntrinsicLibFunc &&
+            canEmitLibcall(TM, ParentFunc, RTLIB::MEMSET))
           break;
 
         expandMemSetAsLoop(Memset);
