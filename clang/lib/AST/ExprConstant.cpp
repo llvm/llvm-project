@@ -12124,11 +12124,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
-  case Builtin::BI__builtin_clzs: {
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (!Val)
+
+    // When the argument is 0, the result of GCC builtins is undefined, whereas
+    // for Microsoft intrinsics, the result is the bit-width of the argument.
+    bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                           BuiltinOp != Builtin::BI__lzcnt &&
+                           BuiltinOp != Builtin::BI__lzcnt64;
+
+    if (ZeroIsUndefined && !Val)
       return Error(E);
 
     return Success(Val.countl_zero(), E);
@@ -12267,7 +12277,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
-  case Builtin::BI__builtin_popcountll: {
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__popcnt16: // Microsoft variants of popcount
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
