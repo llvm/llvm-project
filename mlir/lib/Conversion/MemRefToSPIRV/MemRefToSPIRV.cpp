@@ -61,10 +61,10 @@ static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
 /// 1D array (spirv.array or spirv.rt_array), the last index is modified to load
 /// the bits needed. The extraction of the actual bits needed are handled
 /// separately. Note that this only works for a 1-D tensor.
-static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
-                                          spirv::AccessChainOp op,
-                                          int sourceBits, int targetBits,
-                                          OpBuilder &builder) {
+static Value
+adjustAccessChainForBitwidth(const SPIRVTypeConverter &typeConverter,
+                             spirv::AccessChainOp op, int sourceBits,
+                             int targetBits, OpBuilder &builder) {
   assert(targetBits % sourceBits == 0);
   const auto loc = op.getLoc();
   IntegerType targetType = builder.getIntegerType(targetBits);
@@ -277,7 +277,7 @@ public:
     Value src = adaptor.getSource();
     Type srcType = src.getType();
 
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type dstType = converter->convertType(op.getType());
     if (srcType != dstType)
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
@@ -436,7 +436,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
-  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
                            adaptor.getIndices(), loc, rewriter);
@@ -768,7 +768,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
       diag << "invalid src type " << src.getType();
     });
 
-  TypeConverter *converter = getTypeConverter();
+  const TypeConverter *converter = getTypeConverter();
 
   auto dstType = converter->convertType<spirv::PointerType>(op.getType());
   if (dstType != srcType)

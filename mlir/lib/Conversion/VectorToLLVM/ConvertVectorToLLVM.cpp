@@ -37,7 +37,7 @@ static VectorType reducedVectorTypeBack(VectorType tp) {
 
 // Helper that picks the proper sequence for inserting.
 static Value insertOne(ConversionPatternRewriter &rewriter,
-                       LLVMTypeConverter &typeConverter, Location loc,
+                       const LLVMTypeConverter &typeConverter, Location loc,
                        Value val1, Value val2, Type llvmType, int64_t rank,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
@@ -54,7 +54,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
 
 // Helper that picks the proper sequence for extracting.
 static Value extractOne(ConversionPatternRewriter &rewriter,
-                        LLVMTypeConverter &typeConverter, Location loc,
+                        const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
     auto idxType = rewriter.getIndexType();
@@ -68,7 +68,7 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
 }
 
 // Helper that returns data layout alignment of a memref.
-LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
+LogicalResult getMemRefAlignment(const LLVMTypeConverter &typeConverter,
                                  MemRefType memrefType, unsigned &align) {
   Type elementTy = typeConverter.convertType(memrefType.getElementType());
   if (!elementTy)
@@ -84,7 +84,7 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
 
 // Check if the last stride is non-unit or the memory space is not zero.
 static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
-                                           LLVMTypeConverter &converter) {
+                                           const LLVMTypeConverter &converter) {
   if (!isLastMemrefDimUnitStride(memRefType))
     return failure();
   FailureOr<unsigned> addressSpace =
@@ -96,7 +96,7 @@ static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
 
 // Add an index vector component to a base pointer.
 static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
-                            LLVMTypeConverter &typeConverter,
+                            const LLVMTypeConverter &typeConverter,
                             MemRefType memRefType, Value llvmMemref, Value base,
                             Value index, uint64_t vLen) {
   assert(succeeded(isMemRefTypeSupported(memRefType, typeConverter)) &&
@@ -112,7 +112,7 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
 // will be in the same address space as the incoming memref type.
 static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
                          Value ptr, MemRefType memRefType, Type vt,
-                         LLVMTypeConverter &converter) {
+                         const LLVMTypeConverter &converter) {
   if (converter.useOpaquePointers())
     return ptr;
 
@@ -294,7 +294,7 @@ public:
       return success();
     }
 
-    LLVMTypeConverter &typeConverter = *this->getTypeConverter();
+    const LLVMTypeConverter &typeConverter = *this->getTypeConverter();
     auto callback = [align, memRefType, base, ptr, loc, &rewriter,
                      &typeConverter](Type llvm1DVectorTy,
                                      ValueRange vectorOperands) {
@@ -672,7 +672,7 @@ static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
 class VectorReductionOpConversion
     : public ConvertOpToLLVMPattern<vector::ReductionOp> {
 public:
-  explicit VectorReductionOpConversion(LLVMTypeConverter &typeConv,
+  explicit VectorReductionOpConversion(const LLVMTypeConverter &typeConv,
                                        bool reassociateFPRed)
       : ConvertOpToLLVMPattern<vector::ReductionOp>(typeConv),
         reassociateFPReductions(reassociateFPRed) {}

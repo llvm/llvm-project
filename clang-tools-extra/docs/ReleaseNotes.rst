@@ -196,7 +196,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
-  `DeduplicateFindings` to output one finding per symbol occurence.
+  `DeduplicateFindings` to output one finding per symbol occurrence.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with

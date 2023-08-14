@@ -931,12 +931,6 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
     assert(LaneMaskVec.empty());
     llvm::append_range(LaneMaskVec, RUMasks);
-    // Terminator mask should not be used inside of the list.
-#ifndef NDEBUG
-    for (LaneBitmask M : LaneMaskVec) {
-      assert(!M.all() && "terminator mask should not be part of the list");
-    }
-#endif
     LaneMaskSeqs.add(LaneMaskVec);
   }
 
@@ -956,6 +950,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the shared table of regunit lane mask sequences.
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[] = {\n";
+  // TODO: Omit the terminator since it is never used. The length of this list
+  // is known implicitly from the corresponding reg unit list.
   LaneMaskSeqs.emit(OS, printMask, "LaneBitmask::getAll()");
   OS << "};\n\n";
 

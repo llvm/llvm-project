@@ -464,7 +464,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
 /// Unrolls op if it's operating on vectors.
 LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
-                                      LLVMTypeConverter &converter) {
+                                      const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
   if (llvm::none_of(operandTypes,
                     [](Type type) { return isa<VectorType>(type); })) {

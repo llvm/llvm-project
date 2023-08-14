@@ -2647,6 +2647,22 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_FMAX:
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    Register VecReg = MI.getOperand(1).getReg();
+    LLT VecTy = MRI.getType(VecReg);
+    LLT WideVecTy = VecTy.isVector()
+                        ? LLT::vector(VecTy.getElementCount(), WideTy)
+                        : WideTy;
+    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
   }
 }
 

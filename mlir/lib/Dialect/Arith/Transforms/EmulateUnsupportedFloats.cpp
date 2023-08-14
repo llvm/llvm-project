@@ -80,7 +80,7 @@ LogicalResult EmulateFloatPattern::match(Operation *op) const {
 void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   Location loc = op->getLoc();
-  TypeConverter *converter = getTypeConverter();
+  const TypeConverter *converter = getTypeConverter();
   SmallVector<Type> resultTypes;
   if (failed(converter->convertTypes(op->getResultTypes(), resultTypes))) {
     // Note to anyone looking for this error message: this is a "can't happen".

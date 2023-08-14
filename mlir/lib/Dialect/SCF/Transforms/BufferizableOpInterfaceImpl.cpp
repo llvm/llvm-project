@@ -760,13 +760,6 @@ struct WhileOpInterface
                           const BufferizationOptions &options) const {
     auto whileOp = cast<scf::WhileOp>(op);
 
-    assert(whileOp.getBefore().getBlocks().size() == 1 &&
-           "regions with multiple blocks not supported");
-    Block *beforeBody = &whileOp.getBefore().front();
-    assert(whileOp.getAfter().getBlocks().size() == 1 &&
-           "regions with multiple blocks not supported");
-    Block *afterBody = &whileOp.getAfter().front();
-
     // Indices of all bbArgs that have tensor type. These are the ones that
     // are bufferized. The "before" and "after" regions may have different args.
     DenseSet<int64_t> indicesBefore = getTensorIndices(whileOp.getInits());
@@ -827,7 +820,7 @@ struct WhileOpInterface
     rewriter.setInsertionPointToStart(newBeforeBody);
     SmallVector<Value> newBeforeArgs = getBbArgReplacements(
         rewriter, newWhileOp.getBeforeArguments(), indicesBefore);
-    rewriter.mergeBlocks(beforeBody, newBeforeBody, newBeforeArgs);
+    rewriter.mergeBlocks(whileOp.getBeforeBody(), newBeforeBody, newBeforeArgs);
 
     // Set up new iter_args and move the loop body block to the new op.
     // The old block uses tensors, so wrap the (memref) bbArgs of the new block
@@ -835,7 +828,7 @@ struct WhileOpInterface
     rewriter.setInsertionPointToStart(newAfterBody);
     SmallVector<Value> newAfterArgs = getBbArgReplacements(
         rewriter, newWhileOp.getAfterArguments(), indicesAfter);
-    rewriter.mergeBlocks(afterBody, newAfterBody, newAfterArgs);
+    rewriter.mergeBlocks(whileOp.getAfterBody(), newAfterBody, newAfterArgs);
 
     // Replace loop results.
     replaceOpWithBufferizedValues(rewriter, op, newWhileOp->getResults());

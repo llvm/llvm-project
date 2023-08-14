@@ -7,7 +7,7 @@ Modules in libc++
 .. warning:: Modules are an experimental feature. It has additional build
              requirements and not all libc++ configurations are supported yet.
 
-             The work is still in an early developement state and not
+             The work is still in an early development state and not
              considered stable nor complete
 
 This page contains information regarding C++23 module support in libc++.
