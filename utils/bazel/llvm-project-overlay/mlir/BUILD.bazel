@@ -56,7 +56,6 @@ exports_files(glob(["include/**/*.td"]))
 [
     gentbl_cc_library(
         name = name + "IncGen",
-        strip_include_prefix = "include",
         tbl_outs = [
             (
                 ["-gen-op-interface-decls"],
@@ -80,7 +79,6 @@ exports_files(glob(["include/**/*.td"]))
 
 gentbl_cc_library(
     name = "TensorEncodingIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attr-interface-decls"],
@@ -129,7 +127,6 @@ td_library(
 
 gentbl_cc_library(
     name = "BuiltinDialectIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-dialect-decls"],
@@ -147,7 +144,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinDialectBytecodeGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -164,7 +160,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attrdef-decls"],
@@ -182,7 +177,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinAttributeInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attr-interface-decls"],
@@ -200,7 +194,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinLocationAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attrdef-decls"],
@@ -218,7 +211,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -239,7 +231,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-typedef-decls"],
@@ -257,7 +248,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "BuiltinTypeInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-type-interface-decls"],
@@ -284,7 +274,6 @@ td_library(
 
 gentbl_cc_library(
     name = "FunctionInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -1274,7 +1263,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AffineOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -1306,7 +1294,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "AffineMemoryOpInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -1335,7 +1322,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AffineTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -1387,7 +1373,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AMDGPUIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -1461,7 +1446,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "AMDGPUPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -1534,7 +1518,6 @@ td_library(
 
 gentbl_cc_library(
     name = "EmitCAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attrdef-decls"],
@@ -1552,7 +1535,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "EmitCOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-dialect-decls"],
@@ -1629,7 +1611,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AsyncOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -1663,7 +1644,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "AsyncPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -1709,7 +1689,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ArmNeonIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -1760,7 +1739,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ArmNeonConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -1818,7 +1796,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ArmSMETransformsPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [(
         [
             "-gen-pass-decls",
@@ -1833,7 +1810,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ArmSMEIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -1873,7 +1849,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ArmSMEConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -1972,7 +1947,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ArmSVEIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -2044,7 +2018,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ArmSVEConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -2072,7 +2045,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AMXIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -2139,7 +2111,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "AMXConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -2168,7 +2139,6 @@ td_library(
 
 gentbl_cc_library(
     name = "X86VectorIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -2239,7 +2209,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "X86VectorConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -2274,7 +2243,6 @@ td_library(
 
 gentbl_cc_library(
     name = "IRDLIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-dialect-decls"],
@@ -2308,7 +2276,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IRDLInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -2326,7 +2293,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IRDLAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attrdef-decls"],
@@ -2344,7 +2310,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IRDLEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -2362,7 +2327,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IRDLOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -2380,7 +2344,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IRDLTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-typedef-decls"],
@@ -2451,7 +2414,6 @@ td_library(
 
 gentbl_cc_library(
     name = "SCFIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -2477,7 +2439,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SCFDeviceMappingInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attr-interface-decls"],
@@ -2503,7 +2464,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SCFPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -2568,7 +2528,6 @@ td_library(
 
 gentbl_cc_library(
     name = "SCFTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -2630,7 +2589,6 @@ td_library(
 
 gentbl_cc_library(
     name = "SparseTensorAttrDefsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attrdef-decls"],
@@ -2656,7 +2614,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SparseTensorOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -2692,7 +2649,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SparseTensorTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-typedef-decls"],
@@ -2710,7 +2666,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SparseTensorPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -2815,7 +2770,6 @@ td_library(
 
 gentbl_cc_library(
     name = "SparseTensorTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -2940,7 +2894,6 @@ td_library(
 
 gentbl_cc_library(
     name = "NVGPUIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -3000,7 +2953,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "NVGPUPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -3078,7 +3030,6 @@ td_library(
 
 gentbl_cc_library(
     name = "NVGPUTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -3160,7 +3111,6 @@ td_library(
 
 gentbl_cc_library(
     name = "FuncIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -3219,7 +3169,6 @@ td_library(
 
 gentbl_cc_library(
     name = "DialectUtilsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -3406,7 +3355,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "AffinePassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -3458,7 +3406,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ConversionPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -3829,7 +3776,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ShapeOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -3942,7 +3888,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ShapeTransformsPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [(
         [
             "-gen-pass-decls",
@@ -4002,7 +3947,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ControlFlowOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -4178,7 +4122,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "FuncTransformsPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [(
         [
             "-gen-pass-decls",
@@ -4286,7 +4229,6 @@ td_library(
 
 gentbl_cc_library(
     name = "VectorEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -4306,7 +4248,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "VectorPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -4580,7 +4521,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "LLVMDialectInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -4663,7 +4603,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "LLVMPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -4725,7 +4664,6 @@ td_library(
 
 gentbl_cc_library(
     name = "GPUDeviceMapperEnumsGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -4746,7 +4684,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "GPUCompilationAttrInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attr-interface-decls"],
@@ -4767,7 +4704,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "GPUBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -4785,7 +4721,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "GPUOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -4863,7 +4798,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "GPUPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -5015,7 +4949,6 @@ td_library(
 
 gentbl_cc_library(
     name = "GPUTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5433,7 +5366,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "LLVMOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5481,7 +5413,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LLVMTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -5505,7 +5436,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LLVMIntrinsicOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5523,7 +5453,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LLVMConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -5549,7 +5478,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LLVMIntrinsicConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -5643,7 +5571,6 @@ td_library(
 
 gentbl_cc_library(
     name = "NVVMOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5711,7 +5638,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "NVVMConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -5798,7 +5724,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ROCDLOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5844,7 +5769,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ROCDLConversionIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
@@ -5891,7 +5815,6 @@ td_library(
 
 gentbl_cc_library(
     name = "PDLOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -5917,7 +5840,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "PDLTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-typedef-decls"],
@@ -5967,7 +5889,6 @@ td_library(
 
 gentbl_cc_library(
     name = "PDLInterpOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -6014,7 +5935,6 @@ td_library(
 
 gentbl_cc_library(
     name = "SPIRVOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -6064,7 +5984,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SPIRVAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attrdef-decls"],
@@ -6096,7 +6015,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SPIRVAvailabilityIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-avail-interface-decls"],
@@ -6118,7 +6036,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SPIRVAttrUtilsGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-spirv-attr-utils"],
@@ -6132,7 +6049,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SPIRVSerializationGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-spirv-serialization"],
@@ -6175,7 +6091,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "SPIRVPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -6493,7 +6408,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TensorOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -6615,7 +6529,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "TensorPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -6684,7 +6597,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TensorTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -6770,7 +6682,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "DerivedAttributeOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6800,7 +6711,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "DestinationStyleOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6830,7 +6740,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "InferIntRangeInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6899,7 +6808,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LoopLikeInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6917,7 +6825,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MemorySlotInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6943,7 +6850,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ShapedOpInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6961,7 +6867,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ParallelCombiningOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6979,7 +6884,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "RuntimeVerifiableOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -6997,7 +6901,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "VectorInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7015,7 +6918,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ViewLikeInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7033,7 +6935,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "CopyOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7051,7 +6952,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformsPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -7528,7 +7428,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "BytecodeOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7546,7 +7445,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "CallOpInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7576,7 +7474,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "CastInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7606,7 +7503,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ControlFlowInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7636,7 +7532,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "InferTypeOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7667,7 +7562,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "SideEffectInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -7697,7 +7591,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "TilingInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -8851,7 +8744,6 @@ cc_binary(
 gentbl_cc_library(
     name = "AccCommonGen",
     includes = ["/llvm/include"],
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -8881,7 +8773,6 @@ td_library(
 
 gentbl_cc_library(
     name = "OpenACCOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -8944,7 +8835,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "OpenACCTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -8968,7 +8858,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "OpenACCTypeInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-type-interface-decls"],
@@ -9015,7 +8904,6 @@ cc_library(
 gentbl_cc_library(
     name = "OmpCommonTdGen",
     includes = ["/llvm/include"],
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -9049,7 +8937,6 @@ td_library(
 
 gentbl_cc_library(
     name = "OpenMPOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9107,7 +8994,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "OpenMPTypeInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-type-interface-decls"],
@@ -9125,7 +9011,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "OpenMPInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -9264,7 +9149,6 @@ td_library(
 
 gentbl_cc_library(
     name = "QuantOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9294,7 +9178,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "QuantDialectBytecodeGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -9364,7 +9247,6 @@ td_library(
 
 gentbl_cc_library(
     name = "IndexOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9404,7 +9286,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "IndexEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -9513,7 +9394,6 @@ td_library(
 
 gentbl_cc_library(
     name = "LinalgOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9553,7 +9433,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LinalgEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -9571,7 +9450,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LinalgMatchOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9594,7 +9472,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LinalgTransformEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -9615,7 +9492,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LinalgTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9670,7 +9546,6 @@ td_library(
 
 gentbl_cc_library(
     name = "LinalgStructuredOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -9688,7 +9563,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "LinalgInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -9717,7 +9591,6 @@ td_library(
 
 gentbl_cc_library(
     name = "BufferizableOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -9747,7 +9620,6 @@ td_library(
 
 gentbl_cc_library(
     name = "LinalgDocIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-doc"],
@@ -9869,7 +9741,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "LinalgPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10003,7 +9874,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ValueBoundsOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -10114,7 +9984,6 @@ td_library(
 
 gentbl_cc_library(
     name = "MaskableOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -10132,7 +10001,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MaskingOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -10150,7 +10018,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "VectorOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -10202,7 +10069,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "VectorTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -10392,7 +10258,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TosaDialectIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -10430,7 +10295,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TosaInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -10448,7 +10312,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TosaPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10639,7 +10502,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TransformDialectEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10661,7 +10523,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformDialectMatchInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10686,7 +10547,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformDialectInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10720,7 +10580,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformDialectIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10742,7 +10601,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -10764,7 +10622,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TransformTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-typedef-decls"],
@@ -10821,7 +10678,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TransformPDLExtensionOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10869,7 +10725,6 @@ td_library(
 
 gentbl_cc_library(
     name = "TransformDialectTransformsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10932,7 +10787,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ComplexAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attrdef-decls"],
@@ -10950,7 +10804,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ComplexBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -10974,7 +10827,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ComplexOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11149,7 +11001,6 @@ td_library(
 
 gentbl_cc_library(
     name = "ArithBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11181,7 +11032,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ArithOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11215,7 +11065,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ArithOpsInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -11282,7 +11131,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ArithPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11363,7 +11211,6 @@ td_library(
 
 gentbl_cc_library(
     name = "MathBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11387,7 +11234,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MathOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11405,7 +11251,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MathPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11519,7 +11364,6 @@ td_library(
 
 gentbl_cc_library(
     name = "MemRefBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11543,7 +11387,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MemRefOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11617,7 +11460,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "MemRefPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11685,7 +11527,6 @@ td_library(
 
 gentbl_cc_library(
     name = "MemRefTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11752,7 +11593,6 @@ td_library(
 
 gentbl_cc_library(
     name = "MLProgramOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -11778,7 +11618,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MLProgramAttributesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attrdef-decls"],
@@ -11796,7 +11635,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MLProgramTypesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-typedef-decls"],
@@ -11847,7 +11685,6 @@ td_library(
 
 gentbl_cc_library(
     name = "AllocationOpInterfaceIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -11893,7 +11730,6 @@ td_library(
 
 gentbl_cc_library(
     name = "BufferizationBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -11928,7 +11764,6 @@ td_library(
 
 gentbl_cc_library(
     name = "BufferizationEnumsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -11958,7 +11793,6 @@ td_library(
 
 gentbl_cc_library(
     name = "BufferizationTransformOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -12003,7 +11837,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "BufferizationOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
@@ -12059,7 +11892,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "BufferizationPassIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -12141,7 +11973,6 @@ td_library(
 
 gentbl_cc_library(
     name = "DLTIBaseIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -12178,7 +12009,6 @@ cc_library(
 
 gentbl_cc_library(
     name = "ReducerIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
@@ -12370,7 +12200,6 @@ td_library(
 
 gentbl_cc_library(
     name = "UBOpsInterfacesIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["--gen-attr-interface-decls"],
@@ -12388,7 +12217,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "UBOpsIncGen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             [
