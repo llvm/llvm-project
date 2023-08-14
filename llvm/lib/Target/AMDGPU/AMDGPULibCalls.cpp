@@ -1065,18 +1065,18 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
     B.SetCurrentDebugLocation(DL);
   }
 
-  Value *P = Alloc;
-  Type *PTy = Fsincos.getFunctionType()->getParamType(1);
-  // The allocaInst allocates the memory in private address space. This need
-  // to be bitcasted to point to the address space of cos pointer type.
-  // In OpenCL 2.0 this is generic, while in 1.2 that is private.
-  if (PTy->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    P = B.CreateAddrSpaceCast(Alloc, PTy);
+  Type *CosPtrTy = Fsincos.getFunctionType()->getParamType(1);
 
-  CallInst *SinCos = CreateCallEx2(B, Fsincos, Arg, P);
+  // The allocaInst allocates the memory in private address space. This need
+  // to be addrspacecasted to point to the address space of cos pointer type.
+  // In OpenCL 2.0 this is generic, while in 1.2 that is private.
+  Value *CastAlloc = B.CreateAddrSpaceCast(Alloc, CosPtrTy);
+
+  CallInst *SinCos = CreateCallEx2(B, Fsincos, Arg, CastAlloc);
 
   // TODO: Is it worth trying to preserve the location for the cos calls for the
   // load?
+
   LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
   return {SinCos, LoadCos, SinCos};
 }
@@ -1100,15 +1100,19 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   Function *F = B.GetInsertBlock()->getParent();
   Module *M = F->getParent();
 
-  // Merge the sin and cos.
+  // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
+  // implementation. Prefer the private form if available.
+  AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
 
-  // for OpenCL 2.0 we have only generic implementation of sincos
-  // function.
-  // FIXME: This is not true anymore
-  AMDGPULibFunc SinCosLibFunc(AMDGPULibFunc::EI_SINCOS, fInfo);
-  SinCosLibFunc.getLeads()[0].PtrKind =
+  AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
       AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
-  FunctionCallee FSinCos = getFunction(M, SinCosLibFunc);
+
+  FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
+  FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
+  FunctionCallee FSinCos = FSinCosPrivate ? FSinCosPrivate : FSinCosGeneric;
   if (!FSinCos)
     return false;
 
@@ -1121,7 +1125,8 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
   StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
-  const std::string SinCosName = SinCosLibFunc.mangle();
+  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
+  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
 
   // Intersect the two sets of flags.
   FastMathFlags FMF = FPOp->getFastMathFlags();
@@ -1144,7 +1149,8 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
       SinCalls.push_back(XI);
     else if (UCallee->getName() == CosName)
       CosCalls.push_back(XI);
-    else if (UCallee->getName() == SinCosName)
+    else if (UCallee->getName() == SinCosPrivateName ||
+             UCallee->getName() == SinCosGenericName)
       SinCosCalls.push_back(XI);
     else
       Handled = false;
