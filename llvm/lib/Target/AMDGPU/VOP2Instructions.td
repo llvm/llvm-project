@@ -1511,6 +1511,9 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
   VOP2_Realtriple_e64_with_name<Gen, op, opName, asmName>,
   VOP2_Real_NO_VOP3_with_name<Gen, op, opName, asmName>;
 
+multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
+  VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
+
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
                                       string asmName> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName>,
@@ -1582,6 +1585,9 @@ let SubtargetPredicate = isGFX12Plus in {
   defm : VOP2bInstAliases<
     V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = HasFmacF64Inst in
+defm V_FMAC_F64 : VOP2_Real_NO_DPP<GFX12Gen, 0x17>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

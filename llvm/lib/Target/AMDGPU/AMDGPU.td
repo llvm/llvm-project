@@ -1504,6 +1504,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    Feature512AddressableVGPRs,
    FeatureLDSBankCount32, // TODO-GFX1210: redefine
    FeatureDLInsts,
+   FeatureFmacF64Inst,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureWavefrontSize32,
