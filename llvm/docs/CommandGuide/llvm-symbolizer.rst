@@ -268,7 +268,7 @@ OPTIONS
   ``#<number>[.<inline>] <address> <function> <file>:<line>:<col> (<module>+<relative address>)``
 
   ``<inline>`` provides frame numbers for calls inlined into the caller
-  coresponding to ``<number>``. The inlined call numbers start at 1 and increase
+  corresponding to ``<number>``. The inlined call numbers start at 1 and increase
   from callee to caller.
 
   ``<address>`` is an address inside the call instruction to the function.  The
