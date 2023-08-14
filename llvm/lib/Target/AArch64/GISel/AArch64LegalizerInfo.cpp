@@ -850,7 +850,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .lower();
 
-  getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX})
+  getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
+                               G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
       .legalFor({{s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[1];
