@@ -6,7 +6,10 @@
 ;
 ; opt: ../lib/Transforms/Scalar/ConstantHoisting.cpp:919: bool llvm::ConstantHoistingPass::emitBaseConstants(llvm::GlobalVariable *): Assertion `UsesNum == (ReBasesNum + NotRebasedNum) && "Not all uses are rebased"' failed.
 
-; CHECK: Assertion `UsesNum == (ReBasesNum + NotRebasedNum) && "Not all uses are rebased"' failed.
+; CHECK: Assertion
+; CHECK-SAME: UsesNum == (ReBasesNum + NotRebasedNum)
+; CHECK-SAME: Not all uses are rebased
+; CHECK-SAME: failed.
 
 
 @g_77 = external global [5 x i32]
