@@ -213,7 +213,6 @@ public:
   void VisitDeprecatedAttr(const DeprecatedAttr *DA);
   void VisitUnavailableAttr(const UnavailableAttr *UA);
   void VisitSectionAttr(const SectionAttr *SA);
-  void VisitVisibilityAttr(const VisibilityAttr *VA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
