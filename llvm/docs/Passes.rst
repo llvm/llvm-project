@@ -48,12 +48,6 @@ cannot alias, etc), but does no stateful analysis.
 
 Yet to be written.
 
-``-count-aa``: Count Alias Analysis Query Responses
----------------------------------------------------
-
-A pass which can be used to count how many alias queries are being made and how
-the alias analysis implementation being used responds.
-
 .. _passes-da:
 
 ``da``: Dependence Analysis
