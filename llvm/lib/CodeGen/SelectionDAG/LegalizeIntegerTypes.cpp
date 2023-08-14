@@ -5096,11 +5096,11 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
   case ISD::SETCCCARRY:        Res = ExpandIntOp_SETCCCARRY(N); break;
   case ISD::STRICT_SINT_TO_FP:
-  case ISD::SINT_TO_FP:        Res = ExpandIntOp_SINT_TO_FP(N); break;
+  case ISD::SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::UINT_TO_FP:        Res = ExpandIntOp_XINT_TO_FP(N); break;
   case ISD::STORE:   Res = ExpandIntOp_STORE(cast<StoreSDNode>(N), OpNo); break;
   case ISD::TRUNCATE:          Res = ExpandIntOp_TRUNCATE(N); break;
-  case ISD::STRICT_UINT_TO_FP:
-  case ISD::UINT_TO_FP:        Res = ExpandIntOp_UINT_TO_FP(N); break;
 
   case ISD::SHL:
   case ISD::SRA:
@@ -5385,14 +5385,17 @@ SDValue DAGTypeLegalizer::ExpandIntOp_RETURNADDR(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, Lo), 0);
 }
 
-SDValue DAGTypeLegalizer::ExpandIntOp_SINT_TO_FP(SDNode *N) {
+SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
+  bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP ||
+                  N->getOpcode() == ISD::STRICT_SINT_TO_FP;
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
-  RTLIB::Libcall LC = RTLIB::getSINTTOFP(Op.getValueType(), DstVT);
+  RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(Op.getValueType(), DstVT)
+                               : RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-         "Don't know how to expand this SINT_TO_FP!");
+         "Don't know how to expand this XINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
   std::pair<SDValue, SDValue> Tmp =
@@ -5503,27 +5506,6 @@ SDValue DAGTypeLegalizer::ExpandIntOp_TRUNCATE(SDNode *N) {
   GetExpandedInteger(N->getOperand(0), InL, InH);
   // Just truncate the low part of the source.
   return DAG.getNode(ISD::TRUNCATE, SDLoc(N), N->getValueType(0), InL);
-}
-
-SDValue DAGTypeLegalizer::ExpandIntOp_UINT_TO_FP(SDNode *N) {
-  bool IsStrict = N->isStrictFPOpcode();
-  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
-  EVT DstVT = N->getValueType(0);
-  RTLIB::Libcall LC = RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-         "Don't know how to expand this UINT_TO_FP!");
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
-  std::pair<SDValue, SDValue> Tmp =
-      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
-
-  if (!IsStrict)
-    return Tmp.first;
-
-  ReplaceValueWith(SDValue(N, 1), Tmp.second);
-  ReplaceValueWith(SDValue(N, 0), Tmp.first);
-  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
