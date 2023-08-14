@@ -61,7 +61,8 @@ public:
 template <typename OpTy>
 class ConvertOpToGpuRuntimeCallPattern : public ConvertOpToLLVMPattern<OpTy> {
 public:
-  explicit ConvertOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  explicit ConvertOpToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToLLVMPattern<OpTy>(typeConverter) {}
 
 protected:
@@ -341,7 +342,8 @@ protected:
 class ConvertHostRegisterOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::HostRegisterOp> {
 public:
-  ConvertHostRegisterOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertHostRegisterOpToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::HostRegisterOp>(typeConverter) {}
 
 private:
@@ -354,7 +356,7 @@ class ConvertHostUnregisterOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::HostUnregisterOp> {
 public:
   ConvertHostUnregisterOpToGpuRuntimeCallPattern(
-      LLVMTypeConverter &typeConverter)
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::HostUnregisterOp>(typeConverter) {
   }
 
@@ -369,7 +371,7 @@ private:
 class ConvertAllocOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::AllocOp> {
 public:
-  ConvertAllocOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertAllocOpToGpuRuntimeCallPattern(const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::AllocOp>(typeConverter) {}
 
 private:
@@ -383,7 +385,8 @@ private:
 class ConvertDeallocOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::DeallocOp> {
 public:
-  ConvertDeallocOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertDeallocOpToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::DeallocOp>(typeConverter) {}
 
 private:
@@ -395,7 +398,8 @@ private:
 class ConvertAsyncYieldToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<async::YieldOp> {
 public:
-  ConvertAsyncYieldToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertAsyncYieldToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<async::YieldOp>(typeConverter) {}
 
 private:
@@ -409,7 +413,7 @@ private:
 class ConvertWaitOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::WaitOp> {
 public:
-  ConvertWaitOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertWaitOpToGpuRuntimeCallPattern(const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::WaitOp>(typeConverter) {}
 
 private:
@@ -423,7 +427,8 @@ private:
 class ConvertWaitAsyncOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::WaitOp> {
 public:
-  ConvertWaitAsyncOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertWaitAsyncOpToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::WaitOp>(typeConverter) {}
 
 private:
@@ -448,10 +453,9 @@ private:
 class ConvertLaunchFuncOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
-  ConvertLaunchFuncOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter,
-                                             StringRef gpuBinaryAnnotation,
-                                             bool kernelBarePtrCallConv,
-                                             SymbolTable *cachedModuleTable)
+  ConvertLaunchFuncOpToGpuRuntimeCallPattern(
+      const LLVMTypeConverter &typeConverter, StringRef gpuBinaryAnnotation,
+      bool kernelBarePtrCallConv, SymbolTable *cachedModuleTable)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
         gpuBinaryAnnotation(gpuBinaryAnnotation),
         kernelBarePtrCallConv(kernelBarePtrCallConv),
@@ -489,7 +493,7 @@ class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
 class ConvertMemcpyOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::MemcpyOp> {
 public:
-  ConvertMemcpyOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertMemcpyOpToGpuRuntimeCallPattern(const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::MemcpyOp>(typeConverter) {}
 
 private:
@@ -503,7 +507,7 @@ private:
 class ConvertMemsetOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::MemsetOp> {
 public:
-  ConvertMemsetOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+  ConvertMemsetOpToGpuRuntimeCallPattern(const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::MemsetOp>(typeConverter) {}
 
 private:
@@ -518,7 +522,7 @@ class ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::SetDefaultDeviceOp> {
 public:
   ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern(
-      LLVMTypeConverter &typeConverter)
+      const LLVMTypeConverter &typeConverter)
       : ConvertOpToGpuRuntimeCallPattern<gpu::SetDefaultDeviceOp>(
             typeConverter) {}
 
@@ -534,7 +538,7 @@ public:
       : public ConvertOpToGpuRuntimeCallPattern<gpu::op_name> {                \
   public:                                                                      \
     Convert##op_name##ToGpuRuntimeCallPattern(                                 \
-        LLVMTypeConverter &typeConverter)                                      \
+        const LLVMTypeConverter &typeConverter)                                \
         : ConvertOpToGpuRuntimeCallPattern<gpu::op_name>(typeConverter) {}     \
                                                                                \
   private:                                                                     \
@@ -980,15 +984,15 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   SmallVector<Value, 4> arguments;
   if (kernelBarePtrCallConv) {
     // Hack the bare pointer value on just for the argument promotion
-    LLVMTypeConverter *converter = getTypeConverter();
+    const LLVMTypeConverter *converter = getTypeConverter();
     LowerToLLVMOptions options = converter->getOptions();
     LowerToLLVMOptions overrideToMatchKernelOpts = options;
     overrideToMatchKernelOpts.useBarePtrCallConv = true;
-    converter->dangerousSetOptions(overrideToMatchKernelOpts);
-    arguments = converter->promoteOperands(
+    LLVMTypeConverter newConverter = *converter;
+    newConverter.dangerousSetOptions(overrideToMatchKernelOpts);
+    arguments = newConverter.promoteOperands(
         loc, launchOp.getOperands().take_back(numKernelOperands),
         adaptor.getOperands().take_back(numKernelOperands), builder);
-    converter->dangerousSetOptions(options);
   } else {
     arguments = getTypeConverter()->promoteOperands(
         loc, launchOp.getOperands().take_back(numKernelOperands),
@@ -1111,15 +1115,15 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
     SmallVector<Value, 4> arguments;
     if (kernelBarePtrCallConv) {
       // Hack the bare pointer value on just for the argument promotion
-      LLVMTypeConverter *converter = getTypeConverter();
+      const LLVMTypeConverter *converter = getTypeConverter();
       LowerToLLVMOptions options = converter->getOptions();
       LowerToLLVMOptions overrideToMatchKernelOpts = options;
       overrideToMatchKernelOpts.useBarePtrCallConv = true;
-      converter->dangerousSetOptions(overrideToMatchKernelOpts);
+      LLVMTypeConverter newConverter = *converter;
+      newConverter.dangerousSetOptions(overrideToMatchKernelOpts);
       arguments =
-          converter->promoteOperands(loc, launchOp.getKernelOperands(),
-                                     adaptor.getKernelOperands(), rewriter);
-      converter->dangerousSetOptions(options);
+          newConverter.promoteOperands(loc, launchOp.getKernelOperands(),
+                                       adaptor.getKernelOperands(), rewriter);
     } else {
       arguments = getTypeConverter()->promoteOperands(
           loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(),
@@ -1200,7 +1204,7 @@ static Value bitAndAddrspaceCast(Location loc,
                                  ConversionPatternRewriter &rewriter,
                                  LLVM::LLVMPointerType destinationType,
                                  Value sourcePtr,
-                                 LLVMTypeConverter &typeConverter) {
+                                 const LLVMTypeConverter &typeConverter) {
   auto sourceTy = cast<LLVM::LLVMPointerType>(sourcePtr.getType());
   if (destinationType.getAddressSpace() != sourceTy.getAddressSpace())
     sourcePtr = rewriter.create<LLVM::AddrSpaceCastOp>(

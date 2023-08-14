@@ -41,7 +41,8 @@ bool isStaticStrideOrOffset(int64_t strideOrOffset) {
   return !ShapedType::isDynamic(strideOrOffset);
 }
 
-LLVM::LLVMFuncOp getFreeFn(LLVMTypeConverter *typeConverter, ModuleOp module) {
+LLVM::LLVMFuncOp getFreeFn(const LLVMTypeConverter *typeConverter,
+                           ModuleOp module) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
@@ -52,7 +53,7 @@ LLVM::LLVMFuncOp getFreeFn(LLVMTypeConverter *typeConverter, ModuleOp module) {
 }
 
 struct AllocOpLowering : public AllocLikeOpLLVMLowering {
-  AllocOpLowering(LLVMTypeConverter &converter)
+  AllocOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
@@ -65,7 +66,7 @@ struct AllocOpLowering : public AllocLikeOpLLVMLowering {
 };
 
 struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
-  AlignedAllocOpLowering(LLVMTypeConverter &converter)
+  AlignedAllocOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
@@ -84,7 +85,7 @@ private:
 };
 
 struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
-  AllocaOpLowering(LLVMTypeConverter &converter)
+  AllocaOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocaOp::getOperationName(),
                                 converter) {
     setRequiresNumElements();
@@ -122,7 +123,7 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
 struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
   using OpAdaptor = typename memref::ReallocOp::Adaptor;
 
-  ReallocOpLoweringBase(LLVMTypeConverter &converter)
+  ReallocOpLoweringBase(const LLVMTypeConverter &converter)
       : AllocationOpLLVMLowering(memref::ReallocOp::getOperationName(),
                                  converter) {}
 
@@ -247,7 +248,7 @@ private:
 };
 
 struct ReallocOpLowering : public ReallocOpLoweringBase {
-  ReallocOpLowering(LLVMTypeConverter &converter)
+  ReallocOpLowering(const LLVMTypeConverter &converter)
       : ReallocOpLoweringBase(converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
@@ -258,7 +259,7 @@ struct ReallocOpLowering : public ReallocOpLoweringBase {
 };
 
 struct AlignedReallocOpLowering : public ReallocOpLoweringBase {
-  AlignedReallocOpLowering(LLVMTypeConverter &converter)
+  AlignedReallocOpLowering(const LLVMTypeConverter &converter)
       : ReallocOpLoweringBase(converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
@@ -334,7 +335,7 @@ struct AssumeAlignmentOpLowering
     : public ConvertOpToLLVMPattern<memref::AssumeAlignmentOp> {
   using ConvertOpToLLVMPattern<
       memref::AssumeAlignmentOp>::ConvertOpToLLVMPattern;
-  explicit AssumeAlignmentOpLowering(LLVMTypeConverter &converter)
+  explicit AssumeAlignmentOpLowering(const LLVMTypeConverter &converter)
       : ConvertOpToLLVMPattern<memref::AssumeAlignmentOp>(converter) {}
 
   LogicalResult
@@ -376,7 +377,7 @@ struct AssumeAlignmentOpLowering
 struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   using ConvertOpToLLVMPattern<memref::DeallocOp>::ConvertOpToLLVMPattern;
 
-  explicit DeallocOpLowering(LLVMTypeConverter &converter)
+  explicit DeallocOpLowering(const LLVMTypeConverter &converter)
       : ConvertOpToLLVMPattern<memref::DeallocOp>(converter) {}
 
   LogicalResult
@@ -635,8 +636,9 @@ struct GenericAtomicRMWOpLowering
 };
 
 /// Returns the LLVM type of the global variable given the memref type `type`.
-static Type convertGlobalMemrefTypeToLLVM(MemRefType type,
-                                          LLVMTypeConverter &typeConverter) {
+static Type
+convertGlobalMemrefTypeToLLVM(MemRefType type,
+                              const LLVMTypeConverter &typeConverter) {
   // LLVM type for a global memref will be a multi-dimension array. For
   // declarations or uninitialized global memrefs, we can potentially flatten
   // this to a 1D array. However, for memref.global's with an initial value,
@@ -703,7 +705,7 @@ struct GlobalMemrefOpLowering
 /// the first element stashed into the descriptor. This reuses
 /// `AllocLikeOpLowering` to reuse the Memref descriptor construction.
 struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
-  GetGlobalMemrefOpLowering(LLVMTypeConverter &converter)
+  GetGlobalMemrefOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::GetGlobalOp::getOperationName(),
                                 converter) {}
 
@@ -1191,7 +1193,7 @@ struct MemorySpaceCastOpLowering
 /// ranked descriptor.
 static void extractPointersAndOffset(Location loc,
                                      ConversionPatternRewriter &rewriter,
-                                     LLVMTypeConverter &typeConverter,
+                                     const LLVMTypeConverter &typeConverter,
                                      Value originalOperand,
                                      Value convertedOperand,
                                      Value *allocatedPtr, Value *alignedPtr,
