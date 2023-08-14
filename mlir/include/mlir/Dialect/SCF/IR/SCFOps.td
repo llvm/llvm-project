@@ -1110,6 +1110,8 @@ def WhileOp : SCF_Op<"while",
     YieldOp getYieldOp();
     Block::BlockArgListType getBeforeArguments();
     Block::BlockArgListType getAfterArguments();
+    Block *getBeforeBody() { return &getBefore().front(); }
+    Block *getAfterBody() { return &getAfter().front(); }
   }];
 
   let hasCanonicalizer = 1;
