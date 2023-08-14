@@ -172,3 +172,9 @@ add_header(
   HDR
     wchar-macros.h
 )
+
+add_header(
+  limits_macros
+  HDR
+    limits-macros.h
+)
