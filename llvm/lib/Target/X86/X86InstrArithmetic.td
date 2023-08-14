@@ -1365,11 +1365,13 @@ let Predicates = [HasBMI2] in {
 class ADCOXOpRR <bits<8> opcode, string mnemonic, X86TypeInfo info>
   : BinOpRR_C<opcode, MRMSrcReg, mnemonic, info, []>{
   let Opcode = opcode;
+  let OpSize = OpSizeFixed;
 }
 
 class ADCOXOpRM <bits<8> opcode, string mnemonic, X86TypeInfo info>
   : BinOpRM_C<opcode, MRMSrcMem, mnemonic, info, []>{
   let Opcode = opcode;
+  let OpSize = OpSizeFixed;
 }
 
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
