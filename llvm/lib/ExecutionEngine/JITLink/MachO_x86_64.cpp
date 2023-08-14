@@ -482,7 +482,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
 
