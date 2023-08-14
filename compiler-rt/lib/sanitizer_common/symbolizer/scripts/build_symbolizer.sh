@@ -47,6 +47,7 @@ ZLIB_SRC=$(readlink -f $ZLIB_SRC)
 CLANG="${CLANG:-`which clang`}"
 CLANG_DIR=$(readlink -f $(dirname "$CLANG"))
 
+rm -rf symbolizer
 BUILD_DIR=$(readlink -f ./symbolizer)
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
@@ -104,6 +105,8 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
     -DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" \
+    -DLIBCXX_ENABLE_SHARED=OFF \
+    -DLIBCXXABI_ENABLE_SHARED=OFF \
   $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
@@ -126,6 +129,7 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
     -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
     -DLLVM_ENABLE_ZLIB=ON \
+    -DLLVM_ENABLE_ZSTD=OFF \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
   $LLVM_SRC
