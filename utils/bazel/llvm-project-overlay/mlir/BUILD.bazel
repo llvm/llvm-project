@@ -440,6 +440,19 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIAMDGPU",
+    srcs = ["lib/CAPI/Dialect/AMDGPU.cpp"],
+    hdrs = ["include/mlir-c/Dialect/AMDGPU.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIArith",
     srcs = ["lib/CAPI/Dialect/Arith.cpp"],
     hdrs = ["include/mlir-c/Dialect/Arith.h"],
@@ -540,6 +553,32 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPINVGPU",
+    srcs = ["lib/CAPI/Dialect/NVGPU.cpp"],
+    hdrs = ["include/mlir-c/Dialect/NVGPU.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":NVGPUDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPINVVM",
+    srcs = ["lib/CAPI/Dialect/NVVM.cpp"],
+    hdrs = ["include/mlir-c/Dialect/NVVM.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":NVVMDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIGPU",
     srcs = [
         "lib/CAPI/Dialect/GPU.cpp",
@@ -559,6 +598,19 @@ mlir_c_api_cc_library(
         ":GPUDialect",
         ":GPUTransforms",
         ":Pass",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPIROCDL",
+    srcs = ["lib/CAPI/Dialect/ROCDL.cpp"],
+    hdrs = ["include/mlir-c/Dialect/ROCDL.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ROCDLDialect",
     ],
 )
 
