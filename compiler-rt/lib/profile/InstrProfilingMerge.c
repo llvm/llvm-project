@@ -49,14 +49,10 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
                                        uint64_t ProfileSize) {
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
-  char *SrcCountersStart, *SrcCountersEnd;
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
   SrcDataEnd = SrcDataStart + Header->DataSize;
-  SrcCountersStart = (char *)SrcDataEnd;
-  SrcCountersEnd = SrcCountersStart +
-                   Header->CountersSize * __llvm_profile_counter_entry_size();
 
   if (ProfileSize < sizeof(__llvm_profile_header))
     return 1;
@@ -74,11 +70,6 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
                                       __llvm_profile_begin_names()) ||
       Header->ValueKindLast != IPVK_Last)
     return 1;
-
-  if (SrcCountersEnd - SrcCountersStart !=
-      __llvm_profile_end_counters() - __llvm_profile_begin_counters()) {
-    return 1;
-  }
 
   if (ProfileSize <
       sizeof(__llvm_profile_header) + Header->BinaryIdsSize +
