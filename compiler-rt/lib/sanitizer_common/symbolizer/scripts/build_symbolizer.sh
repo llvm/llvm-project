@@ -78,7 +78,7 @@ if [[ "$FLAGS" =~ "-m32" ]] ; then
   FLAGS+=" -U_FILE_OFFSET_BITS"
 fi
 FLAGS+=" -fPIC -flto -Oz -g0 -DNDEBUG -target $TARGET_TRIPLE -Wno-unused-command-line-argument"
-FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON_REDEFINE_BUILTINS_IN_CXX"
+FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON_REDEFINE_BUILTINS_IN_STD"
 
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
