@@ -2139,24 +2139,21 @@ public:
 /// an IV with different start and step values, using Start + CanonicalIV *
 /// Step.
 class VPDerivedIVRecipe : public VPRecipeBase, public VPValue {
-  /// The type of the result value. It may be smaller than the type of the
-  /// induction and in this case it will get truncated to ResultTy.
-  Type *ResultTy;
+  /// If not nullptr, the result of the induction will get truncated to
+  /// TruncResultTy.
+  Type *TruncResultTy;
 
-  bool IsTruncated;
-
-  /// Induction descriptor for the induction the canonical IV is transformed to.
+  /// Kind and binary operator of the induction.
   const InductionDescriptor::InductionKind Kind;
   const BinaryOperator *BinOp;
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    Type *ResultTy)
+                    Type *TruncResultTy)
       : VPRecipeBase(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        VPValue(this), ResultTy(ResultTy),
-        IsTruncated(IndDesc.getStep()->getType() != ResultTy),
-        Kind(IndDesc.getKind()), BinOp(IndDesc.getInductionBinOp()) {}
+        VPValue(this), TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
+        BinOp(IndDesc.getInductionBinOp()) {}
 
   ~VPDerivedIVRecipe() override = default;
 
