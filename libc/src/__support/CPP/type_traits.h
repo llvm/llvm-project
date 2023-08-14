@@ -214,10 +214,6 @@ constexpr bool
                      details::void_t<decltype(details::convertible_to_helper<T>(
                          declval<F>()))>> = true;
 
-template <typename T>
-struct is_trivially_destructible
-    : public integral_constant<bool, __is_trivially_destructible(T)> {};
-
 } // namespace cpp
 } // namespace __llvm_libc
 
