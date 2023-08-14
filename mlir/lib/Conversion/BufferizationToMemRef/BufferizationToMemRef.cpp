@@ -120,6 +120,91 @@ class DeallocOpConversion
     return success();
   }
 
+  /// A special case lowering for the deallocation operation with exactly one
+  /// memref, but arbitrary number of retained values. This avoids the helper
+  /// function that the general case needs and thus also avoids storing indices
+  /// to specifically allocated memrefs. The size of the code produced by this
+  /// lowering is linear to the number of retained values.
+  ///
+  /// Example:
+  /// ```mlir
+  /// %0:2 = bufferization.dealloc (%m : memref<2xf32>) if (%cond)
+  //                        retain (%r0, %r1 : memref<1xf32>, memref<2xf32>)
+  /// return %0#0, %0#1 : i1, i1
+  /// ```
+  /// ```mlir
+  /// %m_base_pointer = memref.extract_aligned_pointer_as_index %m
+  /// %r0_base_pointer = memref.extract_aligned_pointer_as_index %r0
+  /// %r0_does_not_alias = arith.cmpi ne, %m_base_pointer, %r0_base_pointer
+  /// %r1_base_pointer = memref.extract_aligned_pointer_as_index %r1
+  /// %r1_does_not_alias = arith.cmpi ne, %m_base_pointer, %r1_base_pointer
+  /// %not_retained = arith.andi %r0_does_not_alias, %r1_does_not_alias : i1
+  /// %should_dealloc = arith.andi %not_retained, %cond : i1
+  /// scf.if %should_dealloc {
+  ///   memref.dealloc %m : memref<2xf32>
+  /// }
+  /// %true = arith.constant true
+  /// %r0_does_alias = arith.xori %r0_does_not_alias, %true : i1
+  /// %r0_ownership = arith.andi %r0_does_alias, %cond : i1
+  /// %r1_does_alias = arith.xori %r1_does_not_alias, %true : i1
+  /// %r1_ownership = arith.andi %r1_does_alias, %cond : i1
+  /// return %r0_ownership, %r1_ownership : i1, i1
+  /// ```
+  LogicalResult rewriteOneMemrefMultipleRetainCase(
+      bufferization::DeallocOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const {
+    assert(adaptor.getMemrefs().size() == 1 && "expected only one memref");
+
+    // Compute the base pointer indices, compare all retained indices to the
+    // memref index to check if they alias.
+    SmallVector<Value> doesNotAliasList;
+    Value memrefAsIdx = rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(
+        op->getLoc(), adaptor.getMemrefs()[0]);
+    for (Value retained : adaptor.getRetained()) {
+      Value retainedAsIdx =
+          rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(op->getLoc(),
+                                                                  retained);
+      Value doesNotAlias = rewriter.create<arith::CmpIOp>(
+          op->getLoc(), arith::CmpIPredicate::ne, memrefAsIdx, retainedAsIdx);
+      doesNotAliasList.push_back(doesNotAlias);
+    }
+
+    // AND-reduce the list of booleans from above.
+    Value prev = doesNotAliasList.front();
+    for (Value doesNotAlias : ArrayRef(doesNotAliasList).drop_front())
+      prev = rewriter.create<arith::AndIOp>(op->getLoc(), prev, doesNotAlias);
+
+    // Also consider the condition given by the dealloc operation and perform a
+    // conditional deallocation guarded by that value.
+    Value shouldDealloc = rewriter.create<arith::AndIOp>(
+        op->getLoc(), prev, adaptor.getConditions()[0]);
+
+    rewriter.create<scf::IfOp>(
+        op.getLoc(), shouldDealloc, [&](OpBuilder &builder, Location loc) {
+          builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[0]);
+          builder.create<scf::YieldOp>(loc);
+        });
+
+    // Compute the replacement values for the dealloc operation results. This
+    // inserts an already canonicalized form of
+    // `select(does_alias_with_memref(r), memref_cond, false)` for each retained
+    // value r.
+    SmallVector<Value> replacements;
+    Value trueVal = rewriter.create<arith::ConstantOp>(
+        op->getLoc(), rewriter.getBoolAttr(true));
+    for (Value doesNotAlias : doesNotAliasList) {
+      Value aliases =
+          rewriter.create<arith::XOrIOp>(op->getLoc(), doesNotAlias, trueVal);
+      Value result = rewriter.create<arith::AndIOp>(op->getLoc(), aliases,
+                                                    adaptor.getConditions()[0]);
+      replacements.push_back(result);
+    }
+
+    rewriter.replaceOp(op, replacements);
+
+    return success();
+  }
+
   /// Lowering that supports all features the dealloc operation has to offer. It
   /// computes the base pointer of each memref (as an index), stores it in a
   /// new memref helper structure and passes it to the helper function generated
@@ -310,11 +395,19 @@ public:
   matchAndRewrite(bufferization::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Lower the trivial case.
-    if (adaptor.getMemrefs().empty())
-      return rewriter.eraseOp(op), success();
+    if (adaptor.getMemrefs().empty()) {
+      Value falseVal = rewriter.create<arith::ConstantOp>(
+          op.getLoc(), rewriter.getBoolAttr(false));
+      rewriter.replaceOp(
+          op, SmallVector<Value>(adaptor.getRetained().size(), falseVal));
+      return success();
+    }
 
     if (adaptor.getMemrefs().size() == 1 && adaptor.getRetained().empty())
       return rewriteOneMemrefNoRetainCase(op, adaptor, rewriter);
+
+    if (adaptor.getMemrefs().size() == 1)
+      return rewriteOneMemrefMultipleRetainCase(op, adaptor, rewriter);
 
     return rewriteGeneralCase(op, adaptor, rewriter);
   }
@@ -535,8 +628,7 @@ struct BufferizationToMemRefPass
     // Build dealloc helper function if there are deallocs.
     func::FuncOp helperFuncOp;
     getOperation()->walk([&](bufferization::DeallocOp deallocOp) {
-      if (deallocOp.getMemrefs().size() > 1 ||
-          !deallocOp.getRetained().empty()) {
+      if (deallocOp.getMemrefs().size() > 1) {
         helperFuncOp = DeallocOpConversion::buildDeallocationHelperFunction(
             builder, getOperation()->getLoc(), symbolTable);
         return WalkResult::interrupt();
