@@ -886,7 +886,7 @@ namespace {
                             mInfo, swiftVersion);
     }
 
-    void convertContext(const Class &cl, bool isClass,
+    void convertContext(const Class &cl, ContextKind contextKind,
                         VersionTuple swiftVersion) {
       // Write the class.
       ObjCContextInfo cInfo;
@@ -901,7 +901,7 @@ namespace {
       if (cl.SwiftObjCMembers)
         cInfo.setSwiftObjCMembers(*cl.SwiftObjCMembers);
 
-      ContextID clID = Writer->addObjCContext(cl.Name, isClass, cInfo,
+      ContextID clID = Writer->addObjCContext(cl.Name, contextKind, cInfo,
                                               swiftVersion);
 
       // Write all methods.
@@ -974,7 +974,7 @@ namespace {
           continue;
         }
 
-        convertContext(cl, /*isClass*/ true, swiftVersion);
+        convertContext(cl, ContextKind::ObjCClass, swiftVersion);
       }
 
       // Write all protocols.
@@ -986,7 +986,7 @@ namespace {
           continue;
         }
 
-        convertContext(pr, /*isClass*/ false, swiftVersion);
+        convertContext(pr, ContextKind::ObjCProtocol, swiftVersion);
       }
 
       // Write all global variables.

@@ -187,7 +187,7 @@ namespace {
   /// Used to deserialize the on-disk Objective-C class table.
   class ObjCContextIDTableInfo {
   public:
-    // identifier ID, is-protocol
+    // identifier ID, context kind
     using internal_key_type = std::pair<unsigned, char>;
     using external_key_type = internal_key_type;
     using data_type = unsigned;
@@ -220,8 +220,8 @@ namespace {
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
       auto nameID
         = endian::readNext<uint32_t, little, unaligned>(data);
-      auto isProtocol = endian::readNext<uint8_t, little, unaligned>(data);
-      return { nameID, isProtocol };
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
+      return { nameID, contextKind };
     }
     
     static data_type ReadData(internal_key_type key, const uint8_t *data,
@@ -1822,7 +1822,8 @@ auto APINotesReader::lookupObjCClassID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  auto knownID = Impl.ObjCContextIDTable->find({*classID, '\0'});
+  auto knownID =
+      Impl.ObjCContextIDTable->find({*classID, (uint8_t)ContextKind::ObjCClass});
   if (knownID == Impl.ObjCContextIDTable->end())
     return std::nullopt;
 
@@ -1854,7 +1855,8 @@ auto APINotesReader::lookupObjCProtocolID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  auto knownID = Impl.ObjCContextIDTable->find({*classID, '\1'});
+  auto knownID = Impl.ObjCContextIDTable->find(
+      {*classID, (uint8_t)ContextKind::ObjCProtocol});
   if (knownID == Impl.ObjCContextIDTable->end())
     return std::nullopt;
 
@@ -1997,4 +1999,21 @@ auto APINotesReader::lookupTypedef(StringRef name)
     return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
+}
+
+auto APINotesReader::lookupNamespaceID(StringRef name)
+    -> std::optional<ContextID> {
+  if (!Impl.ObjCContextIDTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> namespaceID = Impl.getIdentifier(name);
+  if (!namespaceID)
+    return std::nullopt;
+
+  auto knownID = Impl.ObjCContextIDTable->find(
+      {*namespaceID, (char)ContextKind::Namespace});
+  if (knownID == Impl.ObjCContextIDTable->end())
+    return std::nullopt;
+
+  return ContextID(*knownID);
 }

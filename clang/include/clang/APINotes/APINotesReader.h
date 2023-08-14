@@ -204,6 +204,13 @@ public:
   ///
   /// \returns information about the typedef, if known.
   VersionedInfo<TypedefInfo> lookupTypedef(llvm::StringRef name);
+
+  /// Look for the context ID of the given C++ namespace.
+  ///
+  /// \param name The name of the class we're looking for.
+  ///
+  /// \returns The ID, if known.
+  std::optional<ContextID> lookupNamespaceID(llvm::StringRef name);
 };
 
 } // end namespace api_notes
