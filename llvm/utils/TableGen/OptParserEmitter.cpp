@@ -302,7 +302,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The other option arguments (unused for groups).
-    OS << ", INVALID, nullptr, 0, 0, 0";
+    OS << ", INVALID, nullptr, 0, 0";
 
     // The option help text.
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
@@ -340,10 +340,8 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // The containing option group (if any).
     OS << ", ";
     const ListInit *GroupFlags = nullptr;
-    const ListInit *GroupVis = nullptr;
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       GroupFlags = DI->getDef()->getValueAsListInit("Flags");
-      GroupVis = DI->getDef()->getValueAsListInit("Vis");
       OS << getOptionName(*DI->getDef());
     } else
       OS << "INVALID";
@@ -370,7 +368,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "\"";
     }
 
-    // "Flags" for the option, such as HelpHidden and Render*
+    // The option flags.
     OS << ", ";
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
@@ -382,21 +380,6 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
            << cast<DefInit>(I)->getDef()->getName();
     }
     if (NumFlags == 0)
-      OS << '0';
-
-    // Option visibility, for sharing options between drivers.
-    OS << ", ";
-    int NumVisFlags = 0;
-    LI = R.getValueAsListInit("Vis");
-    for (Init *I : *LI)
-      OS << (NumVisFlags++ ? " | " : "")
-         << cast<DefInit>(I)->getDef()->getName();
-    if (GroupVis) {
-      for (Init *I : *GroupVis)
-        OS << (NumVisFlags++ ? " | " : "")
-           << cast<DefInit>(I)->getDef()->getName();
-    }
-    if (NumVisFlags == 0)
       OS << '0';
 
     // The option parameter field.
