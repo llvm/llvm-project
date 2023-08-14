@@ -96,6 +96,7 @@ struct CallableInfo {
   std::string UsageIdentifier;
   StringRef CaptureInitializer;
   const FunctionDecl *Decl = nullptr;
+  bool DoesReturn = false;
 };
 
 struct LambdaProperties {
@@ -554,6 +555,8 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LP.Callable.Materialization = getCallableMaterialization(Result);
   LP.Callable.Decl =
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
+  if (LP.Callable.Decl)
+    LP.Callable.DoesReturn = !LP.Callable.Decl->getReturnType()->isVoidType();
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
     LP.Callable.CE = CE_Var;
@@ -672,15 +675,20 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
 
+  Stream << " { ";
+
+  if (LP.Callable.DoesReturn) {
+    Stream << "return ";
+  }
+
   if (LP.Callable.Type == CT_Function) {
     StringRef SourceTokens = LP.Callable.SourceTokens;
     SourceTokens.consume_front("&");
-    Stream << " { return " << SourceTokens;
+    Stream << SourceTokens;
   } else if (LP.Callable.Type == CT_MemberFunction) {
     const auto *MethodDecl = dyn_cast<CXXMethodDecl>(LP.Callable.Decl);
     const BindArgument &ObjPtr = FunctionCallArgs.front();
 
-    Stream << " { ";
     if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
       Stream << ObjPtr.UsageIdentifier;
       Stream << "->";
@@ -688,7 +696,6 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
     Stream << MethodDecl->getName();
   } else {
-    Stream << " { return ";
     switch (LP.Callable.CE) {
     case CE_Var:
       if (LP.Callable.UsageIdentifier != LP.Callable.CaptureIdentifier) {
