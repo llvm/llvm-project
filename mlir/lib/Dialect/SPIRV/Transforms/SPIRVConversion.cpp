@@ -132,7 +132,7 @@ MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
 
-bool SPIRVTypeConverter::allows(spirv::Capability capability) {
+bool SPIRVTypeConverter::allows(spirv::Capability capability) const {
   return targetEnv.allows(capability);
 }
 
@@ -992,7 +992,7 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
   return linearizedIndex;
 }
 
-Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -1023,7 +1023,7 @@ Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }
 
-Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -1058,7 +1058,7 @@ Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
                                                  linearizedIndices);
 }
 
-Value mlir::spirv::getElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
                                  OpBuilder &builder) {

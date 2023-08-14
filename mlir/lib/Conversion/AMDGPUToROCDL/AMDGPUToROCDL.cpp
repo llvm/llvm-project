@@ -42,7 +42,7 @@ namespace {
 /// Define lowering patterns for raw buffer ops
 template <typename GpuOp, typename Intrinsic>
 struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
-  RawBufferOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  RawBufferOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<GpuOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -345,7 +345,8 @@ static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
 /// vector.
 static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
-                                 Location loc, TypeConverter *typeConverter,
+                                 Location loc,
+                                 const TypeConverter *typeConverter,
                                  bool isUnsigned, Value llvmInput,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
@@ -384,7 +385,8 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
 /// result in the lower 16 bits, set subwordOffset to 1, otherwise result will
 /// be stored it in the upper part
 static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
-                                  Location loc, TypeConverter *typeConverter,
+                                  Location loc,
+                                  const TypeConverter *typeConverter,
                                   Value output, int32_t subwordOffset,
                                   bool clamp, SmallVector<Value, 4> &operands) {
   Type inputType = output.getType();
@@ -562,7 +564,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
 
 namespace {
 struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
-  MFMAOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  MFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<MFMAOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -600,7 +602,7 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
 };
 
 struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
-  WMMAOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  WMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<WMMAOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
