@@ -3037,8 +3037,7 @@ static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
 std::pair<Register, Register>
 AMDGPULegalizerInfo::getScaledLogInput(MachineIRBuilder &B, Register Src,
                                        unsigned Flags) const {
-  if (allowApproxFunc(B.getMF(), Flags) ||
-      !needsDenormHandlingF32(B.getMF(), Src, Flags))
+  if (!needsDenormHandlingF32(B.getMF(), Src, Flags))
     return {};
 
   const LLT F32 = LLT::scalar(32);

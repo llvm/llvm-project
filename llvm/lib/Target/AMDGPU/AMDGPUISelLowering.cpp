@@ -2528,7 +2528,7 @@ SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
 std::pair<SDValue, SDValue>
 AMDGPUTargetLowering::getScaledLogInput(SelectionDAG &DAG, const SDLoc SL,
                                         SDValue Src, SDNodeFlags Flags) const {
-  if (allowApproxFunc(DAG, Flags) || !needsDenormHandlingF32(DAG, Src, Flags))
+  if (!needsDenormHandlingF32(DAG, Src, Flags))
     return {};
 
   MVT VT = MVT::f32;
