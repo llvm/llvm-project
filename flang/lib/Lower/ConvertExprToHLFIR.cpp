@@ -1525,8 +1525,11 @@ private:
     // Elemental expression.
     mlir::Type elementType;
     if constexpr (R::category == Fortran::common::TypeCategory::Derived) {
-      elementType = Fortran::lower::translateDerivedTypeToFIRType(
-          getConverter(), op.derived().GetType().GetDerivedTypeSpec());
+      if (op.derived().GetType().IsUnlimitedPolymorphic())
+        elementType = mlir::NoneType::get(builder.getContext());
+      else
+        elementType = Fortran::lower::translateDerivedTypeToFIRType(
+            getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {
       elementType =
           Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
