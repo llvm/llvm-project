@@ -193,6 +193,87 @@ module __ppc_intrinsics
     !dir$ ignore_tkr(k) arg2; \
   end function ;
 
+! vector(i) function f(i, integer)
+#define FUNC_VII0I(VKIND) \
+  pure vector(integer(VKIND)) function func_vi##VKIND##i0i##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    integer(VKIND), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function ;
+
+! vector(r) function f(i, real)
+#define FUNC_VRI0R(VKIND) \
+  pure vector(real(VKIND)) function func_vr##VKIND##i0r##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    real(VKIND), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function ;
+
+! vector(i) function f(i, vector(i))
+#define FUNC_VII0VI(VKIND) \
+  pure vector(integer(VKIND)) function func_vi##VKIND##i0vi##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(integer(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function ;
+
+! vector(u) function f(i, vector(u))
+#define FUNC_VUI0VU(VKIND) \
+  pure vector(unsigned(VKIND)) function func_vu##VKIND##i0vu##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(unsigned(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function ;
+
+! vector(r) function f(i, vector(r))
+#define FUNC_VRI0VR(VKIND) \
+  pure vector(real(VKIND)) function func_vr##VKIND##i0vr##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(real(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function ;
+
+! __vector_pair function f(i, vector(i))
+#define FUNC_VPI0VI(VKIND) \
+  pure __vector_pair function func_vpi0vi##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(integer(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, vector(u))
+#define FUNC_VPI0VU(VKIND) \
+  pure __vector_pair function func_vpi0vu##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(unsigned(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, vector(r))
+#define FUNC_VPI0VR(VKIND) \
+  pure __vector_pair function func_vpi0vr##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(real(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, __vector_pair)
+#define FUNC_VPI0VP \
+  pure __vector_pair function func_vpi0vp(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    __vector_pair, intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
 ! The following macros are specific for the vec_convert(v, mold) intrinsics as
 ! the argument keywords are different from the other vector intrinsics.
 !
@@ -249,10 +330,28 @@ module __ppc_intrinsics
   ELEM_FUNC_VIVII0(1) ELEM_FUNC_VIVII0(2) ELEM_FUNC_VIVII0(4) ELEM_FUNC_VIVII0(8)
   ELEM_FUNC_VUVUI0(1) ELEM_FUNC_VUVUI0(2) ELEM_FUNC_VUVUI0(4) ELEM_FUNC_VUVUI0(8)
   ELEM_FUNC_VRVRI0(4) ELEM_FUNC_VRVRI0(8)
-  
+  FUNC_VII0VI(1) FUNC_VII0VI(2) FUNC_VII0VI(4) FUNC_VII0VI(8)
+  FUNC_VUI0VU(1) FUNC_VUI0VU(2) FUNC_VUI0VU(4) FUNC_VUI0VU(8)
+  FUNC_VRI0VR(4) FUNC_VRI0VR(8)
+  FUNC_VII0I(1) FUNC_VII0I(2) FUNC_VII0I(4) FUNC_VII0I(8)
+  FUNC_VRI0R(4) FUNC_VRI0R(8)
+  FUNC_VPI0VI(1) FUNC_VPI0VI(2) FUNC_VPI0VI(4) FUNC_VPI0VI(8)
+  FUNC_VPI0VU(1) FUNC_VPI0VU(2) FUNC_VPI0VU(4) FUNC_VPI0VU(8)
+  FUNC_VPI0VR(4) FUNC_VPI0VR(8)
+  FUNC_VPI0VP
+
 #undef FUNC_VEC_CONVERT_VRVIVR
 #undef FUNC_VEC_CONVERT_VUVIVU
 #undef FUNC_VEC_CONVERT_VIVIVI
+#undef FUNC_VPI0VP
+#undef FUNC_VPI0VR
+#undef FUNC_VPI0VU
+#undef FUNC_VPI0VI
+#undef FUNC_VRI0VR
+#undef FUNC_VUI0VU
+#undef FUNC_VII0VI
+#undef FUNC_VRI0R
+#undef FUNC_VII0I
 #undef ELEM_FUNC_VRVRI0
 #undef ELEM_FUNC_VUVUI0
 #undef ELEM_FUNC_VIVII0
@@ -1054,6 +1153,154 @@ module __ppc_intrinsics
 #undef VI_VI_VU_2
 #undef VU_VI_VI
 #undef VI_VI_VI
+
+!-------------------------------------------------------
+! vector function(integer, i/u/r/vector)
+!-------------------------------------------------------
+! i0 means the integer argument has ignore_tkr(k)
+#define VI_I0_VI(NAME, VKIND) __ppc_##NAME##_vi##VKIND##i0##vi##VKIND
+#define VU_I0_VU(NAME, VKIND) __ppc_##NAME##_vu##VKIND##i0##vu##VKIND
+#define VR_I0_VR(NAME, VKIND) __ppc_##NAME##_vr##VKIND##i0##vr##VKIND
+#define VI_I0_I(NAME, VKIND) __ppc_##NAME##_vi##VKIND##i0##i##VKIND
+#define VR_I0_R(NAME, VKIND) __ppc_##NAME##_vr##VKIND##i0##r##VKIND
+
+#define VEC_VI_I0_VI(NAME, VKIND) \
+  procedure(func_vi##VKIND##i0##vi##VKIND) :: VI_I0_VI(NAME, VKIND);
+#define VEC_VU_I0_VU(NAME, VKIND) \
+  procedure(func_vu##VKIND##i0##vu##VKIND) :: VU_I0_VU(NAME, VKIND);
+#define VEC_VR_I0_VR(NAME, VKIND) \
+  procedure(func_vr##VKIND##i0##vr##VKIND) :: VR_I0_VR(NAME, VKIND);
+#define VEC_VI_I0_I(NAME, VKIND) \
+  procedure(func_vi##VKIND##i0##i##VKIND) :: VI_I0_I(NAME, VKIND);
+#define VEC_VR_I0_R(NAME, VKIND) \
+  procedure(func_vr##VKIND##i0##r##VKIND) :: VR_I0_R(NAME, VKIND);
+
+! vec_ld
+  VEC_VI_I0_VI(vec_ld,1) VEC_VI_I0_VI(vec_ld,2) VEC_VI_I0_VI(vec_ld,4)
+  VEC_VU_I0_VU(vec_ld,1) VEC_VU_I0_VU(vec_ld,2) VEC_VU_I0_VU(vec_ld,4)
+  VEC_VR_I0_VR(vec_ld,4)
+  VEC_VI_I0_I(vec_ld,1) VEC_VI_I0_I(vec_ld,2) VEC_VI_I0_I(vec_ld,4)
+  VEC_VR_I0_R(vec_ld,4)
+  interface vec_ld
+    procedure :: VI_I0_VI(vec_ld,1), VI_I0_VI(vec_ld,2), VI_I0_VI(vec_ld,4)
+    procedure :: VU_I0_VU(vec_ld,1), VU_I0_VU(vec_ld,2), VU_I0_VU(vec_ld,4)
+    procedure :: VR_I0_VR(vec_ld,4)
+    procedure :: VI_I0_I(vec_ld,1), VI_I0_I(vec_ld,2), VI_I0_I(vec_ld,4)
+    procedure :: VR_I0_R(vec_ld,4)
+  end interface
+  public :: vec_ld
+
+! vec_lde
+  VEC_VI_I0_I(vec_lde,1) VEC_VI_I0_I(vec_lde,2) VEC_VI_I0_I(vec_lde,4)
+  VEC_VR_I0_R(vec_lde,4)
+  interface vec_lde
+    procedure :: VI_I0_I(vec_lde,1), VI_I0_I(vec_lde,2), VI_I0_I(vec_lde,4)
+    procedure :: VR_I0_R(vec_lde,4)
+  end interface
+  public :: vec_lde
+
+! vec_ldl
+  VEC_VI_I0_VI(vec_ldl,1) VEC_VI_I0_VI(vec_ldl,2) VEC_VI_I0_VI(vec_ldl,4)
+  VEC_VU_I0_VU(vec_ldl,1) VEC_VU_I0_VU(vec_ldl,2) VEC_VU_I0_VU(vec_ldl,4)
+  VEC_VR_I0_VR(vec_ldl,4)
+  VEC_VI_I0_I(vec_ldl,1) VEC_VI_I0_I(vec_ldl,2) VEC_VI_I0_I(vec_ldl,4)
+  VEC_VR_I0_R(vec_ldl,4)
+  interface vec_ldl
+    procedure :: VI_I0_VI(vec_ldl,1), VI_I0_VI(vec_ldl,2), VI_I0_VI(vec_ldl,4)
+    procedure :: VU_I0_VU(vec_ldl,1), VU_I0_VU(vec_ldl,2), VU_I0_VU(vec_ldl,4)
+    procedure :: VR_I0_VR(vec_ldl,4)
+    procedure :: VI_I0_I(vec_ldl,1), VI_I0_I(vec_ldl,2), VI_I0_I(vec_ldl,4)
+    procedure :: VR_I0_R(vec_ldl,4)
+  end interface
+  public :: vec_ldl
+
+! vec_xld2
+  VEC_VI_I0_VI(vec_xld2_,1) VEC_VI_I0_VI(vec_xld2_,2) VEC_VI_I0_VI(vec_xld2_,4) VEC_VI_I0_VI(vec_xld2_,8)
+  VEC_VU_I0_VU(vec_xld2_,1) VEC_VU_I0_VU(vec_xld2_,2) VEC_VU_I0_VU(vec_xld2_,4) VEC_VU_I0_VU(vec_xld2_,8)
+  VEC_VR_I0_VR(vec_xld2_,4) VEC_VR_I0_VR(vec_xld2_,8)
+  VEC_VI_I0_I(vec_xld2_,1) VEC_VI_I0_I(vec_xld2_,2) VEC_VI_I0_I(vec_xld2_,4) VEC_VI_I0_I(vec_xld2_,8)
+  VEC_VR_I0_R(vec_xld2_,4) VEC_VR_I0_R(vec_xld2_,8)
+  interface vec_xld2
+    procedure :: VI_I0_VI(vec_xld2_,1), VI_I0_VI(vec_xld2_,2), VI_I0_VI(vec_xld2_,4), VI_I0_VI(vec_xld2_,8)
+    procedure :: VU_I0_VU(vec_xld2_,1), VU_I0_VU(vec_xld2_,2), VU_I0_VU(vec_xld2_,4), VU_I0_VU(vec_xld2_,8)
+    procedure :: VR_I0_VR(vec_xld2_,4), VR_I0_VR(vec_xld2_,8)
+    procedure :: VI_I0_I(vec_xld2_,1), VI_I0_I(vec_xld2_,2), VI_I0_I(vec_xld2_,4), VI_I0_I(vec_xld2_,8)
+    procedure :: VR_I0_R(vec_xld2_,4), VR_I0_R(vec_xld2_,8)
+  end interface
+  public :: vec_xld2
+
+! vec_xlw4
+  VEC_VI_I0_VI(vec_xlw4_,1) VEC_VI_I0_VI(vec_xlw4_,2)
+  VEC_VU_I0_VU(vec_xlw4_,1) VEC_VU_I0_VU(vec_xlw4_,2) VEC_VU_I0_VU(vec_xlw4_,4)
+  VEC_VR_I0_VR(vec_xlw4_,4)
+  VEC_VI_I0_I(vec_xlw4_,1) VEC_VI_I0_I(vec_xlw4_,2) VEC_VI_I0_I(vec_xlw4_,4)
+  VEC_VR_I0_R(vec_xlw4_,4)
+  interface vec_xlw4
+    procedure :: VI_I0_VI(vec_xlw4_,1), VI_I0_VI(vec_xlw4_,2)
+    procedure :: VU_I0_VU(vec_xlw4_,1), VU_I0_VU(vec_xlw4_,2), VU_I0_VU(vec_xlw4_,4)
+    procedure :: VR_I0_VR(vec_xlw4_,4)
+    procedure :: VI_I0_I(vec_xlw4_,1), VI_I0_I(vec_xlw4_,2), VI_I0_I(vec_xlw4_,4)
+    procedure :: VR_I0_R(vec_xlw4_,4)
+  end interface
+  public :: vec_xlw4
+
+#undef VEC_VR_I0_R
+#undef VEC_VI_I0_I
+#undef VEC_VR_I0_VR
+#undef VEC_VU_I0_VU
+#undef VEC_VI_I0_VI
+#undef VR_I0_R
+#undef VI_I0_I
+#undef VR_I0_VR
+#undef VU_I0_VU
+#undef VI_I0_VI
+
+!-------------------------------------------------------
+! __vector_pair function(integer, vector/__vector_pair)
+!-------------------------------------------------------
+#define VP_I0_VI(NAME, VKIND) __ppc_##NAME##_vpi0##vi##VKIND
+#define VP_I0_VU(NAME, VKIND) __ppc_##NAME##_vpi0##vu##VKIND
+#define VP_I0_VR(NAME, VKIND) __ppc_##NAME##_vpi0##vr##VKIND
+#define VP_I0_VP(NAME) __ppc_##NAME##_vpi0vp0
+
+#define VEC_VP_I0_VI(NAME, VKIND) \
+  procedure(func_vpi0vi##VKIND) :: VP_I0_VI(NAME, VKIND);
+#define VEC_VP_I0_VU(NAME, VKIND) \
+  procedure(func_vpi0vu##VKIND) :: VP_I0_VU(NAME, VKIND);
+#define VEC_VP_I0_VR(NAME, VKIND) \
+  procedure(func_vpi0vr##VKIND) :: VP_I0_VR(NAME, VKIND);
+#define VEC_VP_I0_VP(NAME) procedure(func_vpi0vp) :: VP_I0_VP(NAME);
+
+! vec_lxvp
+  VEC_VP_I0_VI(vec_lxvp,1) VEC_VP_I0_VI(vec_lxvp,2) VEC_VP_I0_VI(vec_lxvp,4) VEC_VP_I0_VI(vec_lxvp,8)
+  VEC_VP_I0_VU(vec_lxvp,1) VEC_VP_I0_VU(vec_lxvp,2) VEC_VP_I0_VU(vec_lxvp,4) VEC_VP_I0_VU(vec_lxvp,8)
+  VEC_VP_I0_VR(vec_lxvp,4) VEC_VP_I0_VR(vec_lxvp,8)
+  VEC_VP_I0_VP(vec_lxvp)
+  interface vec_lxvp
+     procedure :: VP_I0_VI(vec_lxvp,1), VP_I0_VI(vec_lxvp,2), VP_I0_VI(vec_lxvp,4), VP_I0_VI(vec_lxvp,8)
+     procedure :: VP_I0_VU(vec_lxvp,1), VP_I0_VU(vec_lxvp,2), VP_I0_VU(vec_lxvp,4), VP_I0_VU(vec_lxvp,8)
+     procedure :: VP_I0_VR(vec_lxvp,4), VP_I0_VR(vec_lxvp,8)
+     procedure :: VP_I0_VP(vec_lxvp)
+  end interface vec_lxvp
+  public :: vec_lxvp
+
+! vsx_lxvp (alias to vec_lxvp)
+  interface vsx_lxvp
+     procedure :: VP_I0_VI(vec_lxvp,1), VP_I0_VI(vec_lxvp,2), VP_I0_VI(vec_lxvp,4), VP_I0_VI(vec_lxvp,8)
+     procedure :: VP_I0_VU(vec_lxvp,1), VP_I0_VU(vec_lxvp,2), VP_I0_VU(vec_lxvp,4), VP_I0_VU(vec_lxvp,8)
+     procedure :: VP_I0_VR(vec_lxvp,4), VP_I0_VR(vec_lxvp,8)
+     procedure :: VP_I0_VP(vec_lxvp)
+  end interface vsx_lxvp
+  public :: vsx_lxvp
+
+#undef VEC_VP_I_VP
+#undef VEC_VP_I_VR
+#undef VEC_VP_I_VU
+#undef VEC_VP_I_VI
+#undef VP_I_VP
+#undef VP_I_VR
+#undef VP_I_VU
+#undef VP_I_VI
 
 !-----------------------------------------
 ! vector function(vector, vector, vector)
