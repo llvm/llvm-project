@@ -146,9 +146,9 @@ define i64 @bitcast_v8i8_i64(<8 x i8> %a) {
 ; RV32ELEN32-LABEL: bitcast_v8i8_i64:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslidedown.vi v9, v8, 1
-; RV32ELEN32-NEXT:    vmv.x.s a1, v9
 ; RV32ELEN32-NEXT:    vmv.x.s a0, v8
+; RV32ELEN32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32ELEN32-NEXT:    vmv.x.s a1, v8
 ; RV32ELEN32-NEXT:    ret
 ;
 ; RV64ELEN32-LABEL: bitcast_v8i8_i64:
@@ -184,9 +184,9 @@ define i64 @bitcast_v4i16_i64(<4 x i16> %a) {
 ; RV32ELEN32-LABEL: bitcast_v4i16_i64:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslidedown.vi v9, v8, 1
-; RV32ELEN32-NEXT:    vmv.x.s a1, v9
 ; RV32ELEN32-NEXT:    vmv.x.s a0, v8
+; RV32ELEN32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32ELEN32-NEXT:    vmv.x.s a1, v8
 ; RV32ELEN32-NEXT:    ret
 ;
 ; RV64ELEN32-LABEL: bitcast_v4i16_i64:
@@ -222,9 +222,9 @@ define i64 @bitcast_v2i32_i64(<2 x i32> %a) {
 ; RV32ELEN32-LABEL: bitcast_v2i32_i64:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslidedown.vi v9, v8, 1
-; RV32ELEN32-NEXT:    vmv.x.s a1, v9
 ; RV32ELEN32-NEXT:    vmv.x.s a0, v8
+; RV32ELEN32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32ELEN32-NEXT:    vmv.x.s a1, v8
 ; RV32ELEN32-NEXT:    ret
 ;
 ; RV64ELEN32-LABEL: bitcast_v2i32_i64:
