@@ -921,17 +921,17 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   }
 
   ss << "},";
-  ss << " $" << (expectedOutputRegisters) << ","
-     << " $" << (expectedOutputRegisters + 1) << ","
+  // Need to map read/write registers correctly.
+  regCnt = (regCnt * 2);
+  ss << " $" << (regCnt) << ","
+     << " $" << (regCnt + 1) << ","
      << " p";
   if (!outputType.isInteger(32)) {
-    ss << ", $" << (expectedOutputRegisters + 3) << ",  $"
-       << (expectedOutputRegisters + 4);
+    ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
   // Don't add transpose parameters unless needed.
   if (isF16) {
-    ss << ", $" << (expectedOutputRegisters + 5) << ",  $"
-       << (expectedOutputRegisters + 6);
+    ss << ", $" << (regCnt + 5) << ",  $" << (regCnt + 6);
   }
   ss << ";\n"
      << "}\n";
