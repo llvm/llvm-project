@@ -217,7 +217,7 @@ define half @test_log10_f16(half %arg) {
 define half @test_log10_f16_fast(half %arg) {
 ; CHECK-LABEL: define half @test_log10_f16_fast
 ; CHECK-SAME: (half [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast half @_Z5log10Dh(half [[ARG]])
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast half @llvm.log10.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[LOG10]]
 ;
   %log10 = tail call fast half @_Z5log10Dh(half %arg)
@@ -277,7 +277,7 @@ define <16 x half> @test_log10_v16f16(<16 x half> %arg) {
 define float @test_log10_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-LABEL: define float @test_log10_f32_nobuiltin_callsite
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR5:[0-9]+]], !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR6:[0-9]+]], !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call float @_Z5log10f(float %arg) #0, !fpmath !0
@@ -287,7 +287,7 @@ define float @test_log10_f32_nobuiltin_callsite(float %arg) {
 define <2 x float> @test_log10_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_log10_v2f32_nobuiltin_callsite
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR5]], !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> %arg) #0, !fpmath !0
@@ -297,7 +297,7 @@ define <2 x float> @test_log10_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 define float @test_log10_cr_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-LABEL: define float @test_log10_cr_f32_nobuiltin_callsite
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call float @_Z5log10f(float %arg) #0
@@ -307,7 +307,7 @@ define float @test_log10_cr_f32_nobuiltin_callsite(float %arg) {
 define <2 x float> @test_log10_cr_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_log10_cr_v2f32_nobuiltin_callsite
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> %arg) #0
@@ -318,7 +318,7 @@ define <2 x float> @test_log10_cr_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 define float @test_log10_f32_nobuiltins(float %arg) #1 {
 ; CHECK-LABEL: define float @test_log10_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR5]], !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call float @_Z5log10f(float %arg) #0, !fpmath !0
@@ -328,7 +328,7 @@ define float @test_log10_f32_nobuiltins(float %arg) #1 {
 define <2 x float> @test_log10_v2f32_nobuiltins(<2 x float> %arg) #1 {
 ; CHECK-LABEL: define <2 x float> @test_log10_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR5]], !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR6]], !fpmath !0
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> %arg) #0, !fpmath !0
@@ -338,7 +338,7 @@ define <2 x float> @test_log10_v2f32_nobuiltins(<2 x float> %arg) #1 {
 define float @test_log10_cr_f32_nobuiltins(float %arg) #1 {
 ; CHECK-LABEL: define float @test_log10_cr_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call float @_Z5log10f(float [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call float @_Z5log10f(float %arg) #0
@@ -348,7 +348,7 @@ define float @test_log10_cr_f32_nobuiltins(float %arg) #1 {
 define <2 x float> @test_log10_cr_v2f32_nobuiltins(<2 x float> %arg) #1 {
 ; CHECK-LABEL: define <2 x float> @test_log10_cr_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call <2 x float> @_Z5log10Dv2_f(<2 x float> %arg) #0
@@ -358,7 +358,7 @@ define <2 x float> @test_log10_cr_v2f32_nobuiltins(<2 x float> %arg) #1 {
 define float @test_log10_f32_preserve_flags(float %arg) {
 ; CHECK-LABEL: define float @test_log10_f32_preserve_flags
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan ninf float @_Z5log10f(float [[ARG]]), !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan ninf float @llvm.log10.f32(float [[ARG]]), !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call nnan ninf float @_Z5log10f(float %arg), !fpmath !0
@@ -368,7 +368,7 @@ define float @test_log10_f32_preserve_flags(float %arg) {
 define <2 x float> @test_log10_v2f32_preserve_flags(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_log10_v2f32_preserve_flags
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz contract <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]), !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz contract <2 x float> @llvm.log10.v2f32(<2 x float> [[ARG]]), !fpmath !0
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call contract nsz nnan <2 x float> @_Z5log10Dv2_f(<2 x float> %arg), !fpmath !0
@@ -378,7 +378,7 @@ define <2 x float> @test_log10_v2f32_preserve_flags(<2 x float> %arg) {
 define float @test_log10_f32_preserve_flags_md(float %arg) {
 ; CHECK-LABEL: define float @test_log10_f32_preserve_flags_md
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan ninf float @_Z5log10f(float [[ARG]]), !fpmath !0, !foo !1
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan ninf float @llvm.log10.f32(float [[ARG]]), !fpmath !0, !foo !1
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call nnan ninf float @_Z5log10f(float %arg), !fpmath !0, !foo !1
@@ -388,7 +388,7 @@ define float @test_log10_f32_preserve_flags_md(float %arg) {
 define <2 x float> @test_log10_v2f32_preserve_flags_md(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_log10_v2f32_preserve_flags_md
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz contract <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]]), !fpmath !0, !foo !1
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz contract <2 x float> @llvm.log10.v2f32(<2 x float> [[ARG]]), !fpmath !0, !foo !1
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call contract nsz nnan <2 x float> @_Z5log10Dv2_f(<2 x float> %arg), !fpmath !0, !foo !1
@@ -398,7 +398,7 @@ define <2 x float> @test_log10_v2f32_preserve_flags_md(<2 x float> %arg) {
 define float @test_log10_cr_f32_preserve_flags(float %arg) {
 ; CHECK-LABEL: define float @test_log10_cr_f32_preserve_flags
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call ninf contract float @_Z5log10f(float [[ARG]])
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call ninf contract float @llvm.log10.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call ninf contract float @_Z5log10f(float %arg)
@@ -408,7 +408,7 @@ define float @test_log10_cr_f32_preserve_flags(float %arg) {
 define <2 x float> @test_log10_cr_v2f32_preserve_flags(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_log10_cr_v2f32_preserve_flags
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz <2 x float> @_Z5log10Dv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nnan nsz <2 x float> @llvm.log10.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[LOG10]]
 ;
   %log10 = tail call nnan nsz <2 x float> @_Z5log10Dv2_f(<2 x float> %arg)
@@ -482,7 +482,7 @@ define double @test_libm_log10_f64_fpmath(double %arg) {
 define float @test_log10_f32_fast_noinline(float %arg) {
 ; CHECK-LABEL: define float @test_log10_f32_fast_noinline
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @_Z5log10f(float [[ARG]]) #[[ATTR6:[0-9]+]], !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @_Z5log10f(float [[ARG]]) #[[ATTR7:[0-9]+]], !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call fast float @_Z5log10f(float %arg) #3, !fpmath !0
@@ -492,7 +492,7 @@ define float @test_log10_f32_fast_noinline(float %arg) {
 define float @test_log10_f32_fast_optsize(float %arg) #4 {
 ; CHECK-LABEL: define float @test_log10_f32_fast_optsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @_Z5log10f(float [[ARG]]), !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @llvm.log10.f32(float [[ARG]]), !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call fast float @_Z5log10f(float %arg), !fpmath !0
@@ -502,7 +502,7 @@ define float @test_log10_f32_fast_optsize(float %arg) #4 {
 define float @test_log10_f32_fast_minsize(float %arg) #5 {
 ; CHECK-LABEL: define float @test_log10_f32_fast_minsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @_Z5log10f(float [[ARG]]), !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast float @llvm.log10.f32(float [[ARG]]), !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call fast float @_Z5log10f(float %arg), !fpmath !0
@@ -512,7 +512,7 @@ define float @test_log10_f32_fast_minsize(float %arg) #5 {
 define float @test_log10_f32_nsz_contract_optsize(float %arg) #4 {
 ; CHECK-LABEL: define float @test_log10_f32_nsz_contract_optsize
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call nsz contract float @_Z5log10f(float [[ARG]]), !fpmath !0
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call nsz contract float @llvm.log10.f32(float [[ARG]]), !fpmath !0
 ; CHECK-NEXT:    ret float [[LOG10]]
 ;
   %log10 = tail call nsz contract float @_Z5log10f(float %arg), !fpmath !0
@@ -532,7 +532,7 @@ define float @test_log10_f32_nsz_contract_minsize(float %arg) #5 {
 define half @test_log10_f16_fast_minsize(half %arg) #5 {
 ; CHECK-LABEL: define half @test_log10_f16_fast_minsize
 ; CHECK-SAME: (half [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast half @_Z5log10Dh(half [[ARG]])
+; CHECK-NEXT:    [[LOG10:%.*]] = tail call fast half @llvm.log10.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[LOG10]]
 ;
   %log10 = tail call fast half @_Z5log10Dh(half %arg)

@@ -585,7 +585,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
     // Specialized optimizations for each function call.
     //
-    // TODO: Handle other simple intrinsic wrappers. Sqrt, log.
+    // TODO: Handle other simple intrinsic wrappers. Sqrt.
     //
     // TODO: Handle native functions
     switch (FInfo.getId()) {
@@ -598,6 +598,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       if (FMF.none())
         return false;
       return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::exp2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG10:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log10,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_FMIN:
       return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::minnum, true,
