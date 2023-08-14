@@ -2,6 +2,10 @@
 
 ; REQUIRES: asserts
 
+; Matching assertion strings is not easy as they might differ on different
+; platforms. So limit this to x86_64-linux.
+; REQUIRES: x86_64-linux
+
 ; This is a reproducer for https://github.com/llvm/llvm-project/issues/52689
 ;
 ; opt: ../lib/Transforms/Scalar/ConstantHoisting.cpp:919: bool llvm::ConstantHoistingPass::emitBaseConstants(llvm::GlobalVariable *): Assertion `UsesNum == (ReBasesNum + NotRebasedNum) && "Not all uses are rebased"' failed.
@@ -9,8 +13,6 @@
 ; CHECK: Assertion
 ; CHECK-SAME: UsesNum == (ReBasesNum + NotRebasedNum)
 ; CHECK-SAME: Not all uses are rebased
-; CHECK-SAME: failed.
-
 
 @g_77 = external global [5 x i32]
 
