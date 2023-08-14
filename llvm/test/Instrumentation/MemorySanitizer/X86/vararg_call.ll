@@ -42,8 +42,8 @@ entry:
 ; CHECK-ORIGIN: call void @llvm.memcpy{{.*}} [[ORIGIN_COPY:%[_0-9a-z]+]], {{.*}} @__msan_va_arg_origin_tls
 
 ; CHECK: call void @llvm.va_start
-; CHECK: call void @llvm.memcpy.{{.*}}, {{.*}} [[SHADOW_COPY]], i{{.*}} [[REGSAVE:[0-9]+]]
-; CHECK-ORIGIN: call void @llvm.memcpy.{{.*}}, {{.*}} [[ORIGIN_COPY]], i{{.*}} [[REGSAVE]]
+; CHECK: call void @llvm.memcpy.{{[^,]*}}, {{[^,]*}} [[SHADOW_COPY]], i{{[^,]*}} [[REGSAVE:[0-9]+]]
+; CHECK-ORIGIN: call void @llvm.memcpy.{{[^,]*}}, {{[^,]*}} [[ORIGIN_COPY]], i{{[^,]*}} [[REGSAVE]]
 
 ; CHECK: [[OVERFLOW_SHADOW:%[_0-9a-z]+]] = getelementptr i8, ptr [[SHADOW_COPY]], i{{.*}} [[REGSAVE]]
 ; CHECK: call void @llvm.memcpy.{{.*}}[[OVERFLOW_SHADOW]]

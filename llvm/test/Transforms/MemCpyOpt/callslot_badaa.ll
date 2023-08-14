@@ -17,7 +17,7 @@ define i8 @test(i8 %input) {
   %dst = alloca i8
   %src = alloca i8
 ; NOTE: we're matching the full line and looking for the lack of !alias.scope here
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 1, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 1, i8 0)
   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %src), !noalias !3
   store i8 %input, ptr %src
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 1, i1 false), !alias.scope !0

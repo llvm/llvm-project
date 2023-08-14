@@ -2,7 +2,7 @@
 ; CHECK: llvm intrinsics cannot be defined
 ; PR1047
 
-define void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1) {
+define void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i8) {
 entry:
 	ret void
 }

@@ -53,8 +53,8 @@ bb17:                                             ; preds = %bb12, %bb8
 ; CHECK: %idx1 = getelementptr inbounds i8, ptr addrspace(3) %array2, i32 %j
 ; CHECK: %t = getelementptr inbounds i8, ptr addrspace(5) %array, i32 %j
 ; CHECK: %n8 = load i8, ptr addrspace(5) %t, align 4
-; CHECK: call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) %idx, ptr addrspace(3) %idx1, i64 42, i1 false)
-; CHECK: call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) %idx, ptr addrspace(3) %idx1, i64 42, i1 false)
+; CHECK: call void @llvm.memcpy.p5.p3.i64(ptr addrspace(5) %idx, ptr addrspace(3) %idx1, i64 42, i8 0)
+; CHECK: call void @llvm.memmove.p5.p3.i64(ptr addrspace(5) %idx, ptr addrspace(3) %idx1, i64 42, i8 0)
 ; CHECK: call void @llvm.memset.p5.i64(ptr addrspace(5) %idx, i8 42, i64 42, i1 false)
 define void @lsr_crash_preserve_addrspace_unknown_type2(ptr addrspace(5) %array, ptr addrspace(3) %array2) {
 entry:

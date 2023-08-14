@@ -21,9 +21,9 @@ define void @test1(ptr %p) {
 ; Check that global G1 is reported as Ref by memcpy/memmove calls.
 define i32 @test_memcpy_with_deopt() {
 ; CHECK-LABEL: Function: test_memcpy_with_deopt:
-; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
-; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
-; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
+; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
+; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
+; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
 
   %A = alloca i8
   %B = alloca i8
@@ -40,9 +40,9 @@ define i32 @test_memcpy_with_deopt() {
 
 define i32 @test_memmove_with_deopt() {
 ; CHECK-LABEL: Function: test_memmove_with_deopt:
-; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
-; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
-; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i1 false) [ "deopt"() ]
+; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
+; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
+; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memmove.p0.p0.i64(ptr %A, ptr %B, i64 -1, i8 0) [ "deopt"() ]
 
   %A = alloca i8
   %B = alloca i8

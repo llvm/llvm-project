@@ -22,7 +22,7 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK: call void @llvm.memset.p0.i64(ptr align 8 [[C]], i8 0, i64 [[B]], i1 false)
 
 ; CHECK: [[D:%.*]] = call i64 @llvm.umin.i64(i64 [[B]], i64 800)
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C]], ptr align 8 @__msan_va_arg_tls, i64 [[D]], i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C]], ptr align 8 @__msan_va_arg_tls, i64 [[D]], i8 0)
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
@@ -82,7 +82,7 @@ define i32 @bar6(ptr %arg) {
 }
 
 ; CHECK-LABEL: @bar6
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 @__msan_va_arg_tls, ptr align 8 {{.*}}, i64 16, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 @__msan_va_arg_tls, ptr align 8 {{.*}}, i64 16, i8 0)
 ; CHECK: store {{.*}} 16, {{.*}} @__msan_va_arg_overflow_size_tls
 
 ; Check 16-aligned byval.
@@ -92,7 +92,7 @@ define i32 @bar7(ptr %arg) {
 }
 
 ; CHECK-LABEL: @bar7
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), ptr align 8 {{.*}}, i64 32, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), ptr align 8 {{.*}}, i64 32, i8 0)
 ; CHECK: store {{.*}} 40, {{.*}} @__msan_va_arg_overflow_size_tls
 
 ; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are

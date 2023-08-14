@@ -9,7 +9,7 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: %call = call i32 @f(i32 0)
-; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 @dst, ptr align 4 @src, i64 1, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 @dst, ptr align 4 @src, i64 1, i8 0)
 ; CHECK-NEXT: ret void
 
 @src = internal unnamed_addr global [1 x i32] zeroinitializer, align 4

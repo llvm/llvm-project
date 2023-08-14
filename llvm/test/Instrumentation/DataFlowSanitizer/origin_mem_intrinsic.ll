@@ -10,8 +10,8 @@ define void @memcpy(ptr %d, ptr %s, i32 %l) {
   ; CHECK: @memcpy.dfsan
   ; CHECK: [[L64:%.*]] = zext i32 %l to i64
   ; CHECK: call void @__dfsan_mem_origin_transfer(ptr %d, ptr %s, i64 [[L64]])
-  ; CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 {{.*}}, ptr align 1 {{.*}}, i32 {{.*}}, i1 false)
-  ; CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 %l, i1 false)
+  ; CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 {{.*}}, ptr align 1 {{.*}}, i32 {{.*}}, i8 0)
+  ; CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 %l, i8 0)
 
   call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 %l, i1 0)
   ret void
@@ -21,8 +21,8 @@ define void @memmove(ptr %d, ptr %s, i32 %l) {
   ; CHECK: @memmove.dfsan
   ; CHECK: [[L64:%.*]] = zext i32 %l to i64
   ; CHECK: call void @__dfsan_mem_origin_transfer(ptr %d, ptr %s, i64 [[L64]])
-  ; CHECK: call void @llvm.memmove.p0.p0.i32(ptr align 1 {{.*}}, ptr align 1 {{.*}}, i32 {{.*}}, i1 false)
-  ; CHECK: call void @llvm.memmove.p0.p0.i32(ptr %d, ptr %s, i32 %l, i1 false)
+  ; CHECK: call void @llvm.memmove.p0.p0.i32(ptr align 1 {{.*}}, ptr align 1 {{.*}}, i32 {{.*}}, i8 0)
+  ; CHECK: call void @llvm.memmove.p0.p0.i32(ptr %d, ptr %s, i32 %l, i8 0)
 
   call void @llvm.memmove.p0.p0.i32(ptr %d, ptr %s, i32 %l, i1 0)
   ret void

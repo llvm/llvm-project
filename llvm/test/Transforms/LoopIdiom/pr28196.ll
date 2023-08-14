@@ -22,7 +22,7 @@ for.body:                                         ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: define void @test1(
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 null, ptr align 4 inttoptr (i64 4 to ptr), i64 24, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 null, ptr align 4 inttoptr (i64 4 to ptr), i64 24, i8 0)
 ; CHECK-NOT: store
 
 define void @test1_no_null_opt() #0 {

@@ -11,7 +11,7 @@
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %v1 = alloca i32
 ; CHECK-NEXT:   call void @llvm.dbg.value(metadata ptr %v1
-; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 undef, ptr %v1, i64 4, i1 true)
+; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 undef, ptr %v1, i64 4, i8 3)
 
 ; CHECK-LABEL: define internal void @test.loop2()
 ; CHECK-NEXT: newFuncRoot:

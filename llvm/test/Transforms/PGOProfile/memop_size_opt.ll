@@ -38,20 +38,20 @@ for.body3:
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i8 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i1 false), !prof [[NEWVP:![0-9]+]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i8 0), !prof [[NEWVP:![0-9]+]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 0, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 0, i8 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 %conv, i1 false), !prof [[NEWVP]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 %conv, i8 0), !prof [[NEWVP]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
 ; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   br label %for.inc

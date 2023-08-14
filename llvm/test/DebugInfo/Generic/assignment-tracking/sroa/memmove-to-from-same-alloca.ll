@@ -39,7 +39,7 @@
 ;; ensure the DIAssignID still links it to the memmove(/memcpy).
 
 ; CHECK: %A.sroa.0.sroa.5 = alloca [5 x i32]
-; CHECK: llvm.memcpy{{.*}}(ptr align 4 %A.sroa.0.sroa.5, ptr align 4 getelementptr inbounds (i8, ptr @Glob, i64 4), i64 20, i1 false){{.*}}!DIAssignID ![[ID:[0-9]+]]
+; CHECK: llvm.memcpy{{.*}}(ptr align 4 %A.sroa.0.sroa.5, ptr align 4 getelementptr inbounds (i8, ptr @Glob, i64 4), i64 20, i8 0){{.*}}!DIAssignID ![[ID:[0-9]+]]
 ;; Here's the dbg.assign for element 0 - it's not important for the test.
 ; CHECK-NEXT: llvm.dbg.value({{.*}}!DIExpression(DW_OP_LLVM_fragment, 0, 32){{.*}})
 ;; This is the dbg.assign we care about:
