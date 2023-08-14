@@ -916,6 +916,11 @@ public:
     return HasPackedFP32Ops;
   }
 
+  // Has V_PK_MOV_B32 opcode
+  bool hasPkMovB32() const {
+    return GFX90AInsts;
+  }
+
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
