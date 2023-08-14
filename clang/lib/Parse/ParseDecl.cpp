@@ -7548,7 +7548,8 @@ void Parser::ParseParameterDeclarationClause(
           } else {
             if (Tok.is(tok::l_paren) && NextToken().is(tok::l_brace)) {
               Diag(Tok, diag::err_stmt_expr_in_default_arg) << 0;
-              Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+              Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
+                                                     /*DefaultArg=*/nullptr);
               // Skip the statement expression and continue parsing
               SkipUntil(tok::comma, StopBeforeMatch);
               continue;
@@ -7557,7 +7558,8 @@ void Parser::ParseParameterDeclarationClause(
           }
           DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
           if (DefArgResult.isInvalid()) {
-            Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+            Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
+                                                   /*DefaultArg=*/nullptr);
             SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
           } else {
             // Inform the actions module about the default argument
