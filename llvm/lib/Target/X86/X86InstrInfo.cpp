@@ -185,7 +185,7 @@ bool X86InstrInfo::isDataInvariant(MachineInstr &MI) {
       isSBB(Opcode) || isSUB(Opcode) || isXOR(Opcode))
     return true;
   // Arithmetic with just 32-bit and 64-bit variants and no immediates.
-  if (isADCX(Opcode) || isADOX(Opcode) || isANDN(Opcode))
+  if (isANDN(Opcode))
     return true;
   // Unary arithmetic operations.
   if (isDEC(Opcode) || isINC(Opcode) || isNEG(Opcode))
@@ -284,14 +284,10 @@ bool X86InstrInfo::isDataInvariantLoad(MachineInstr &MI) {
   case X86::ADC16rm:
   case X86::ADC32rm:
   case X86::ADC64rm:
-  case X86::ADCX32rm:
-  case X86::ADCX64rm:
   case X86::ADD8rm:
   case X86::ADD16rm:
   case X86::ADD32rm:
   case X86::ADD64rm:
-  case X86::ADOX32rm:
-  case X86::ADOX64rm:
   case X86::AND8rm:
   case X86::AND16rm:
   case X86::AND32rm:

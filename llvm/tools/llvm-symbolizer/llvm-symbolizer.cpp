@@ -394,8 +394,6 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   Filter.finish();
 }
 
-ExitOnError ExitOnErr;
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);

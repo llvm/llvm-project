@@ -623,7 +623,7 @@ public:
     this->S = static_cast<uint8_t>(S);
   }
 
-  /// Check wehther the given target flags are set for this Symbol.
+  /// Check whether the given target flags are set for this Symbol.
   bool hasTargetFlags(TargetFlagsType Flags) const {
     return static_cast<TargetFlagsType>(TargetFlags) & Flags;
   }

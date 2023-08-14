@@ -234,7 +234,6 @@ StringSet<> objdump::FoundSectionSet;
 static StringRef ToolName;
 
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
-ExitOnError ExitOnErr;
 
 void Dumper::reportUniqueWarning(Error Err) {
   reportUniqueWarning(toString(std::move(Err)));
