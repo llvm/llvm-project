@@ -9072,8 +9072,10 @@ Sema::BuildExprRequirement(
     MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
                                          /*Final=*/false);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
-    Expr *IDC = Param->getTypeConstraint()->getImmediatelyDeclaredConstraint();
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    const TypeConstraint *TC = Param->getTypeConstraint();
+    assert(TC && "Type Constraint cannot be null here");
+    ExprResult Constraint =
+        SubstExpr(TC->getImmediatelyDeclaredConstraint(), MLTAL);
     if (Constraint.isInvalid()) {
       Status = concepts::ExprRequirement::SS_ExprSubstitutionFailure;
     } else {
