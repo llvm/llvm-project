@@ -13794,8 +13794,9 @@ define <16 x i8> @test_v16i8_post_imm_ld1r(ptr %bar, ptr %ptr) {
 ;
 ; CHECK-GISEL-LABEL: test_v16i8_post_imm_ld1r:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ld1r.16b { v0 }, [x0], #1
-; CHECK-GISEL-NEXT:    str x0, [x1]
+; CHECK-GISEL-NEXT:    ld1r.16b { v0 }, [x0]
+; CHECK-GISEL-NEXT:    add x8, x0, #1
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmp1, i32 0
@@ -13828,8 +13829,9 @@ define <16 x i8> @test_v16i8_post_reg_ld1r(ptr %bar, ptr %ptr, i64 %inc) {
 ;
 ; CHECK-GISEL-LABEL: test_v16i8_post_reg_ld1r:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ld1r.16b { v0 }, [x0], x2
-; CHECK-GISEL-NEXT:    str x0, [x1]
+; CHECK-GISEL-NEXT:    ld1r.16b { v0 }, [x0]
+; CHECK-GISEL-NEXT:    add x8, x0, x2
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmp1, i32 0
@@ -13862,8 +13864,9 @@ define <8 x i8> @test_v8i8_post_imm_ld1r(ptr %bar, ptr %ptr) {
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_imm_ld1r:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ld1r.8b { v0 }, [x0], #1
-; CHECK-GISEL-NEXT:    str x0, [x1]
+; CHECK-GISEL-NEXT:    ld1r.8b { v0 }, [x0]
+; CHECK-GISEL-NEXT:    add x8, x0, #1
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmp1, i32 0
@@ -13888,8 +13891,9 @@ define <8 x i8> @test_v8i8_post_reg_ld1r(ptr %bar, ptr %ptr, i64 %inc) {
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_reg_ld1r:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ld1r.8b { v0 }, [x0], x2
-; CHECK-GISEL-NEXT:    str x0, [x1]
+; CHECK-GISEL-NEXT:    ld1r.8b { v0 }, [x0]
+; CHECK-GISEL-NEXT:    add x8, x0, x2
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmp1, i32 0
