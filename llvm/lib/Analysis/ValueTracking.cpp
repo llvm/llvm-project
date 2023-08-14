@@ -2707,14 +2707,20 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     return isKnownNonZero(I->getOperand(0), Depth, Q) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
                                      Depth);
-  case Instruction::Load:
-    // A Load tagged with nonnull metadata is never null.
-    if (Q.IIQ.getMetadata(cast<LoadInst>(I), LLVMContext::MD_nonnull))
-      return true;
+  case Instruction::Load: {
+    auto *LI = cast<LoadInst>(I);
+    // A Load tagged with nonnull or dereferenceable with null pointer undefined
+    // is never null.
+    if (auto *PtrT = dyn_cast<PointerType>(I->getType()))
+      if (Q.IIQ.getMetadata(LI, LLVMContext::MD_nonnull) ||
+          (Q.IIQ.getMetadata(LI, LLVMContext::MD_dereferenceable) &&
+           !NullPointerIsDefined(LI->getFunction(), PtrT->getAddressSpace())))
+        return true;
 
     // No need to fall through to computeKnownBits as range metadata is already
     // handled in isKnownNonZero.
     return false;
+  }
   case Instruction::Call:
   case Instruction::Invoke:
     if (I->getType()->isPointerTy()) {
