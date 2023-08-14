@@ -153,6 +153,8 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   Opts.CompilationCachingServicePath =
       std::move(FrontendOpts.CompilationCachingServicePath);
   FrontendOpts.CompilationCachingServicePath.clear();
+  Opts.WriteOutputAsCASID = FrontendOpts.WriteOutputAsCASID;
+  FrontendOpts.WriteOutputAsCASID = false;
   Opts.DisableCachedCompileJobReplay =
       FrontendOpts.DisableCachedCompileJobReplay;
   FrontendOpts.DisableCachedCompileJobReplay = false;

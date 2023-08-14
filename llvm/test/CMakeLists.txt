@@ -75,6 +75,7 @@ set(LLVM_TEST_DEPENDS
           llvm-bitcode-strip
           llvm-c-test
           llvm-cas
+          llvm-cas-dump
           llvm-cat
           llvm-cfi-verify
           llvm-config

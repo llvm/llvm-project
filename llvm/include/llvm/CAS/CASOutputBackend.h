@@ -32,6 +32,9 @@ public:
 
   SmallVector<OutputFile> takeOutputs() { return std::move(Outputs); }
 
+  /// Add a CAS object to the path in the output backend.
+  Error addObject(StringRef Path, const CASID &Object);
+
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>
   createFileImpl(StringRef Path,

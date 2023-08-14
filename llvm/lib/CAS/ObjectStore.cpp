@@ -273,8 +273,11 @@ cas::createCASFromIdentifier(StringRef Path) {
                              "No CAS identifier is provided");
 
   // FIXME: some current default behavior.
-  if (Path == "auto")
-    return createOnDiskCAS(getDefaultOnDiskCASPath());
+  SmallString<256> PathBuf;
+  if (Path == "auto") {
+    getDefaultOnDiskCASPath(PathBuf);
+    Path = PathBuf;
+  }
 
   // Fallback is to create UnifiedOnDiskCache.
   auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(Path);

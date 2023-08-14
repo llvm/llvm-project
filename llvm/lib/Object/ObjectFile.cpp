@@ -156,6 +156,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::minidump:
   case file_magic::goff_object:
   case file_magic::cuda_fatbinary:
+  case file_magic::cas_id: // MCCAS
   case file_magic::offload_binary:
   case file_magic::dxcontainer_object:
     return errorCodeToError(object_error::invalid_file_type);

@@ -4875,6 +4875,17 @@ bool CompilerInvocation::CreateFromArgsImpl(
                    Res.getFileSystemOpts(), Res.getFrontendOpts(),
                    Res.getCASOpts());
 
+  // BEGIN MCCAS
+  if (!Res.getFrontendOpts().CompilationCachingServicePath.empty())
+    if (Res.getCodeGenOpts().UseCASBackend)
+      Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+          << "-fcas-backend";
+  if (Res.getFrontendOpts().WriteOutputAsCASID) {
+    Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+        << "-fcasid-output";
+  }
+  // END MCCAS
+
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out
   // names.

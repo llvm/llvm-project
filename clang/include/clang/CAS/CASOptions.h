@@ -30,9 +30,6 @@ namespace clang {
 
 class DiagnosticsEngine;
 
-/// Set \p Path to a reasonable default on-disk cache path for the current user.
-void getClangDefaultCachePath(llvm::SmallVectorImpl<char> &Path);
-
 /// Base class for options configuring which CAS to use. Separated for the
 /// fields where we don't need special move/copy logic.
 ///

@@ -122,6 +122,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-as
     llvm-bcanalyzer
     llvm-cas
+    llvm-cas-dump
     llvm-cat
     llvm-cxxfilt
     llvm-dis

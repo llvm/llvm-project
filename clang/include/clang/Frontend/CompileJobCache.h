@@ -87,6 +87,7 @@ private:
 
   bool CacheCompileJob = false;
   bool DisableCachedCompileJobReplay = false;
+  std::optional<llvm::cas::CASID> MCOutputID;
 
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
