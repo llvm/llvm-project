@@ -311,7 +311,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
   }
 
   // Check all mbb start positions between First and Last while
-  // simulatenously advancing an iterator for each subrange.
+  // simultaneously advancing an iterator for each subrange.
   for (SlotIndexes::MBBIndexIterator MBBI = Indexes->findMBBIndex(First);
        MBBI != Indexes->MBBIndexEnd() && MBBI->first <= Last; ++MBBI) {
     SlotIndex MBBBegin = MBBI->first;

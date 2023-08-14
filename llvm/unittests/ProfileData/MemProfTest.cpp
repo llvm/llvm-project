@@ -167,7 +167,7 @@ TEST(MemProf, FillsValue) {
     Records.insert({Pair.first, Pair.second});
   }
 
-  // Mock program psuedocode and expected memprof record contents.
+  // Mock program pseudocode and expected memprof record contents.
   //
   //                              AllocSite       CallSite
   // inline foo() { new(); }         Y               N
