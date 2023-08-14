@@ -134,44 +134,6 @@ def testInterchange():
 
 
 @run
-def testMapCopyToThreadsOpCompact():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
-    )
-    with InsertionPoint(sequence.body):
-        structured.MapCopyToThreadsOp(
-            sequence.bodyTarget, total_num_threads=32, desired_bit_alignment=128
-        )
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: testMapCopyToThreadsOpCompact
-    # CHECK: = transform.structured.gpu.map_copy_to_threads
-    # CHECK-SAME: total_num_threads = 32
-    # CHECK-SAME: desired_bit_alignment = 128
-    # CHECK-SAME:  (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-
-
-@run
-def testMapCopyToThreadsOpTypes():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
-    )
-    with InsertionPoint(sequence.body):
-        structured.MapCopyToThreadsOp(
-            transform.OperationType.get("test.opA"),
-            transform.OperationType.get("test.opB"),
-            sequence.bodyTarget,
-            total_num_threads=32,
-            desired_bit_alignment=128,
-        )
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: testMapCopyToThreadsOpTypes
-    # CHECK: = transform.structured.gpu.map_copy_to_threads
-    # CHECK-SAME: total_num_threads = 32
-    # CHECK-SAME: desired_bit_alignment = 128
-    # CHECK-SAME:  (!transform.any_op) -> (!transform.op<"test.opA">, !transform.op<"test.opB">)
-
-
-@run
 def testMatchOpNamesString():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
