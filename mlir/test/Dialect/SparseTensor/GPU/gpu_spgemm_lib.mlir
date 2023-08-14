@@ -57,7 +57,7 @@
 // CHECK:           %[[VAL_65:.*]], %[[VAL_66:.*]] = gpu.spgemm_work_estimation_or_compute async {{\[}}%[[VAL_64]]]{ COMPUTE} %[[VAL_45]], %[[VAL_47]], %[[VAL_55]], %[[VAL_57]], %[[VAL_3]], %[[VAL_53]] : f32 into memref<?xf32>
 // CHECK:           %[[VAL_67:.*]], %[[VAL_68:.*]] = gpu.alloc async {{\[}}%[[VAL_66]]] (%[[VAL_65]]) : memref<?xi8>
 // CHECK:           %[[VAL_69:.*]], %[[VAL_70:.*]] = gpu.spgemm_work_estimation_or_compute async {{\[}}%[[VAL_68]]]{ COMPUTE} %[[VAL_45]], %[[VAL_47]], %[[VAL_55]], %[[VAL_57]], %[[VAL_65]], %[[VAL_67]] : f32 into memref<?xi8>
-// CHECK:           %[[VAL_71:.*]], %[[VAL_72:.*]], %[[VAL_73:.*]], %[[VAL_74:.*]] = gpu.spgemm_get_size async {{\[}}%[[VAL_70]]] %[[VAL_55]]
+// CHECK:           %[[VAL_71:.*]], %[[VAL_72:.*]], %[[VAL_73:.*]], %[[VAL_74:.*]] = gpu.spmat_get_size async {{\[}}%[[VAL_70]]] %[[VAL_55]]
 // CHECK:           %[[VAL_75:.*]], %[[VAL_76:.*]] = gpu.alloc async {{\[}}%[[VAL_74]]] (%[[VAL_73]]) : memref<?xindex>
 // CHECK:           %[[VAL_77:.*]], %[[VAL_78:.*]] = gpu.alloc async {{\[}}%[[VAL_76]]] (%[[VAL_73]]) : memref<?xf32>
 // CHECK:           %[[VAL_79:.*]] = gpu.set_csr_pointers async {{\[}}%[[VAL_78]]] %[[VAL_55]], %[[VAL_49]], %[[VAL_75]], %[[VAL_77]] : memref<?xindex>, memref<?xindex>, memref<?xf32>
