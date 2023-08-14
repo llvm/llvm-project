@@ -899,6 +899,10 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   if (I->getDesc().isIndirectBranch())
     return true;
 
+  // We can't handle Generic branch opcodes from Global ISel.
+  if (I->isPreISelOpcode())
+    return true;
+
   // We can't handle blocks with more than 2 terminators.
   if (NumTerminators > 2)
     return true;
