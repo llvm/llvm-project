@@ -1368,6 +1368,8 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // been generated, construct one based on function signature.
     if (LineInfoGenerated == false) {
       auto *S = MI->getMF()->getFunction().getSubprogram();
+      if (!S)
+        return;
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
       constructLineInfo(S, FuncLabel, S->getLine(), 0);
       LineInfoGenerated = true;
