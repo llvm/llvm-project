@@ -14847,14 +14847,20 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       return true;
     if (Opcodes1.size() > Opcodes2.size())
       return false;
-    std::optional<bool> ConstOrder;
     for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
       // Undefs are compatible with any other value.
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
-        if (!ConstOrder)
-          ConstOrder =
-              !isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]);
-        continue;
+        if (isa<Instruction>(Opcodes1[I]))
+          return true;
+        if (isa<Instruction>(Opcodes2[I]))
+          return false;
+        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]))
+          return true;
+        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]))
+          return false;
+        if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
+          continue;
+        return isa<UndefValue>(Opcodes2[I]);
       }
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
@@ -14870,21 +14876,26 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S.getOpcode())
+          if (S.getOpcode() && !S.isAltShuffle())
             continue;
           return I1->getOpcode() < I2->getOpcode();
         }
-      if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I])) {
-        if (!ConstOrder)
-          ConstOrder = Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID();
-        continue;
-      }
+      if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
+        return Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID();
+      if (isa<Instruction>(Opcodes1[I]))
+        return true;
+      if (isa<Instruction>(Opcodes2[I]))
+        return false;
+      if (isa<Constant>(Opcodes1[I]))
+        return true;
+      if (isa<Constant>(Opcodes2[I]))
+        return false;
       if (Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID())
         return true;
       if (Opcodes1[I]->getValueID() > Opcodes2[I]->getValueID())
         return false;
     }
-    return ConstOrder && *ConstOrder;
+    return false;
   };
   auto AreCompatiblePHIs = [&PHIToOpcodes, this](Value *V1, Value *V2) {
     if (V1 == V2)
@@ -14931,6 +14942,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           isValidElementType(P->getType()))
         Incoming.push_back(P);
     }
+
+    if (Incoming.size() <= 1)
+      break;
 
     // Find the corresponding non-phi nodes for better matching when trying to
     // build the tree.
