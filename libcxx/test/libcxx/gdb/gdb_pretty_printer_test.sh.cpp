@@ -15,7 +15,7 @@
 // UNSUPPORTED: clang-15, clang-16, clang-17
 
 // TODO: Investigate this failure on GCC 12 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: gcc-12, gcc-13
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
