@@ -1228,11 +1228,6 @@ class TextCrashLogParser(CrashLogParser):
         pass
 
 
-def usage():
-    print("Usage: lldb-symbolicate.py [-n name] executable-image")
-    sys.exit(0)
-
-
 def save_crashlog(debugger, command, exe_ctx, result, dict):
     usage = "save_crashlog [options] <output-path>"
     description = """Export the state of current target into a crashlog file"""
