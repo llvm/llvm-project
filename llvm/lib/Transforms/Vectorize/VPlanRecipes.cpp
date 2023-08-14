@@ -797,8 +797,8 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 
-  if (IsTruncated)
-    O << " (truncated to " << *ResultTy << ")";
+  if (TruncResultTy)
+    O << " (truncated to " << *TruncResultTy << ")";
 }
 #endif
 

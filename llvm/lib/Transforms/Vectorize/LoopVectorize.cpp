@@ -9488,10 +9488,11 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
                                           getStartValue()->getLiveInIRValue(),
                                           Step, Kind, BinOp);
   DerivedIV->setName("offset.idx");
-  if (ResultTy != DerivedIV->getType()) {
-    assert(IsTruncated && Step->getType()->isIntegerTy() &&
+  if (TruncResultTy) {
+    assert(TruncResultTy != DerivedIV->getType() &&
+           Step->getType()->isIntegerTy() &&
            "Truncation requires an integer step");
-    DerivedIV = State.Builder.CreateTrunc(DerivedIV, ResultTy);
+    DerivedIV = State.Builder.CreateTrunc(DerivedIV, TruncResultTy);
   }
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
