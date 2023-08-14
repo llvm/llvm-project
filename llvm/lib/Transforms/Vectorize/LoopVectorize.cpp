@@ -9479,14 +9479,14 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (BinOp && isa<FPMathOperator>(BinOp))
-    State.Builder.setFastMathFlags(BinOp->getFastMathFlags());
+  if (FPBinOp)
+    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
 
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
   Value *CanonicalIV = State.get(getCanonicalIV(), VPIteration(0, 0));
-  Value *DerivedIV = emitTransformedIndex(State.Builder, CanonicalIV,
-                                          getStartValue()->getLiveInIRValue(),
-                                          Step, Kind, BinOp);
+  Value *DerivedIV = emitTransformedIndex(
+      State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
+      Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
   if (TruncResultTy) {
     assert(TruncResultTy != DerivedIV->getType() &&
