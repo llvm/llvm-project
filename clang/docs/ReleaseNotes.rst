@@ -702,6 +702,10 @@ Bug Fixes in This Version
 - Fix a hang on valid C code passing a function type as an argument to
   ``typeof`` to form a function declaration.
   (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
+- Fixed an issue where accesses to the local variables of a coroutine during
+  ``await_suspend`` could be misoptimized, including accesses to the awaiter
+  object itself.
+  (`#56301 <https://github.com/llvm/llvm-project/issues/56301>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
