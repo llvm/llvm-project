@@ -135,6 +135,16 @@ def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+// Attribute to attach functions that perform the pre/post allocation actions or
+// pre/post deallocation actions as described in section 2.13.
+def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
+  let parameters = (ins OptionalParameter<"SymbolRefAttr">:$preAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$postAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$preDealloc,
+                        OptionalParameter<"SymbolRefAttr">:$postDealloc);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
