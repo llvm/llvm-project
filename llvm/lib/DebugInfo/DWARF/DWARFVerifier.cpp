@@ -1354,7 +1354,7 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
 static SmallVector<StringRef, 3> getNames(const DWARFDie &DIE,
                                           bool IncludeStrippedTemplateNames,
                                           bool IncludeLinkageName = true) {
-  SmallVector<StringRef, 2> Result;
+  SmallVector<StringRef, 3> Result;
   if (const char *Str = DIE.getShortName()) {
     Result.emplace_back(Str);
     if (IncludeStrippedTemplateNames) {
