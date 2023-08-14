@@ -51,7 +51,7 @@ private:
   Section *CommonSection = nullptr;
 };
 
-/// Ling-graph building code that's specific to the given ELFT, but common
+/// LinkGraph building code that's specific to the given ELFT, but common
 /// across all architectures.
 template <typename ELFT>
 class ELFLinkGraphBuilder : public ELFLinkGraphBuilderBase {
