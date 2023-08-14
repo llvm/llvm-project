@@ -253,6 +253,26 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
   }
 }
 
+// Automatic conversion of different-kind LOGICAL scalar actual argument
+// expressions (not variables) to LOGICAL scalar dummies when the dummy is of
+// default logical kind. This allows expressions in dummy arguments to work when
+// the default logical kind is not the one used in LogicalResult. This will
+// always be safe even when downconverting so no warning is needed.
+static void ConvertLogicalActual(evaluate::Expr<evaluate::SomeType> &actual,
+    const characteristics::TypeAndShape &dummyType,
+    characteristics::TypeAndShape &actualType) {
+  if (dummyType.type().category() == TypeCategory::Logical &&
+      actualType.type().category() == TypeCategory::Logical &&
+      dummyType.type().kind() != actualType.type().kind() &&
+      !evaluate::IsVariable(actual)) {
+    auto converted{
+        evaluate::ConvertToType(dummyType.type(), std::move(actual))};
+    CHECK(converted);
+    actual = std::move(*converted);
+    actualType = dummyType;
+  }
+}
+
 static bool DefersSameTypeParameters(
     const DerivedTypeSpec &actual, const DerivedTypeSpec &dummy) {
   for (const auto &pair : actual.parameters()) {
@@ -294,6 +314,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (allowActualArgumentConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
   }
+  ConvertLogicalActual(actual, dummy.type, actualType);
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
