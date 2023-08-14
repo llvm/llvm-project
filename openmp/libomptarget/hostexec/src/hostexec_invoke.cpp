@@ -436,16 +436,6 @@ __static_inl hostexec_result_t get_return_value(GLOB_ATTR header_t *header,
 
 #undef __static_inl
 
-// FIXME: for old plugin we need an extern const to identify __oclc_ABI_version
-//        remove this when old plugin is abandon
-#ifdef __AMDGCN__
-#pragma omp declare target
-#define __constant
-#include "oclc.h"
-#undef __constant
-#pragma omp end declare target
-#endif
-
 /** \brief The implementation that should be hidden behind an ABI
  *
  *  The transaction is a wave-wide operation, where the service_id
@@ -479,20 +469,6 @@ hostexec_invoke(const uint32_t service_id, uint64_t arg0, uint64_t arg1,
   uint32_t low = impl::first_lane_id(me);
 
   GLOB_ATTR buffer_t *buffer = (GLOB_ATTR buffer_t *)service_thread_buf;
-
-#ifdef __AMDGCN__
-  // Temporary hack to support the old amdgcn plugin. When running the
-  // old plugin, the global service_thread_buf will be null. So get value
-  // from implicit kernel args set by the old plugin. The location in
-  // the implicit kernel args depends on which abi version is in use.
-  if (!buffer) {
-    const size_t *argptr = (const size_t *)__builtin_amdgcn_implicitarg_ptr();
-    if (__oclc_ABI_version < 500)
-      buffer = (GLOB_ATTR buffer_t *)argptr[3];
-    else
-      buffer = (GLOB_ATTR buffer_t *)argptr[10];
-  }
-#endif
 
   uint64_t packet_ptr = pop_free_stack(buffer, me, low);
   GLOB_ATTR header_t *header = get_header(buffer, packet_ptr);

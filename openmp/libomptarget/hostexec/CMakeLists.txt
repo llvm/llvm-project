@@ -46,16 +46,6 @@ else()
    libomptarget_say("Not building hostexec for AMDGCN because hsa-runtime64 not found")
 endif()
 
-if( DEVICELIBS_ROOT )
-  set(ROCDL_INC_OCLC ${DEVICELIBS_ROOT}/oclc/inc)
-  else()
-message("   ERROR: DEVICELIBS_ROOT is not set.   Not building hostexec .")
-  return()
-  #set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../rocm-device-libs)
-endif()
-
-
-
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
    add_library(nvptx_hostexec_services STATIC 
@@ -147,6 +137,7 @@ foreach(archname ${HOSTRPC_ARCHS})
        -target amdgcn-amd-amdhsa
        ${clang_abi_opt} )
       set(ocl_atomics_cl_bc "ocl_atomics_${abi_num}-${archname}.bc")
+
       add_custom_target(${ocl_atomics_cl_bc}
       COMMAND ${opencl_cmd} ${ocl_atomics_cl_filename} -o ${ocl_atomics_cl_bc}
       DEPENDS ${ocl_atomics_cl_filename})
@@ -156,7 +147,7 @@ foreach(archname ${HOSTRPC_ARCHS})
       if (${archname} STREQUAL "amdgcn")
          set(openmp_device_args 
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-	      -I${ROCDL_INC_OCLC} -O${optimization_level}
+	      -O${optimization_level}
 	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
 	      ${clang_abi_opt}
 	      -std=c++17 -fvisibility=hidden 
@@ -174,11 +165,13 @@ foreach(archname ${HOSTRPC_ARCHS})
 	      -Wno-unknown-cuda-version)
       endif()
 
-      set(bc_filename "hostexec-stubs-${abi_num}-${mcpu}.bc")
-      add_custom_target(${bc_filename}
-         COMMAND ${CLANG_TOOL} ${openmp_device_args} ${hostexec_stubs_filename} -o ${bc_filename}
+      # FIXME: considre combining these two source files into singlce compiler
+      #        maybe if we can get rid of compilation for opencl atomics
+      set(stubs_bc_filename "hostexec-stubs-${abi_num}-${mcpu}.bc")
+      add_custom_target(${stubs_bc_filename}
+         COMMAND ${CLANG_TOOL} ${openmp_device_args} ${hostexec_stubs_filename} -o ${stubs_bc_filename}
          DEPENDS ${hostexec_stubs_filename} ${h_file} ${internal_h_file}
-         COMMENT "Built file ${bc_filename}")
+         COMMENT "Built file ${stubs_bc_filename}")
 
       set(hostexec_invoke_cpp_bc "hostexec-invoke-${abi_num}-${mcpu}.bc")
       add_custom_target(${hostexec_invoke_cpp_bc}
@@ -186,27 +179,21 @@ foreach(archname ${HOSTRPC_ARCHS})
 	 DEPENDS ${invoke_cpp_file_name}
          COMMENT "Building bc file for hostexec_invoke: ${hostexec_invoke_cpp_bc}")
 
-      if (${archname} STREQUAL "amdgcn")
-
-         #  amdgcn needs to compile and link in ocl_atomics
-         set(invoke_resolved_bc "invoked_resolved-${abi_num}-${mcpu}.bc")
-         add_custom_target(${invoke_resolved_bc}
-            COMMAND ${LINK_TOOL} ${hostexec_invoke_cpp_bc} --internalize --only-needed ${ocl_atomics_cl_bc} -o ${invoke_resolved_bc}
-	    DEPENDS ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc}
-            COMMENT "Building invoke resolved bc ${invoke_resolved_bc}")
-          add_dependencies(${invoke_resolved_bc} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc})
-
-      else()
+      if (NOT ${archname} STREQUAL "amdgcn")
           # for nvptx we dont need ocl_atomics
-         set(invoke_resolved_bc ${hostexec_invoke_cpp_bc})
+         set(ocl_atomics_cl_bc "")
       endif()
 
       set(libhostexec-bc "libhostexec-${abi_num}-${mcpu}.bc")
       add_custom_target(${libhostexec-bc}
-         COMMAND ${LINK_TOOL} ${bc_filename} --internalize --only-needed ${invoke_resolved_bc} -o ${libhostexec-bc}
-	 DEPENDS ${invoke_resolved_bc} ${bc_filename} 
+         COMMAND ${LINK_TOOL} ${stubs_bc_filename} ${hostexec_invoke_cpp_bc} ${ocl_atomics_cl_bc} -o ${libhostexec-bc}
+	 DEPENDS ${stubs_bc_filename} ${hostexec_invoke_cpp_bc}
          COMMENT "Building hostexec file ${libhostexec-bc}")
-      add_dependencies(${libhostexec-bc} ${bc_filename} ${invoke_resolved_bc})
+      add_dependencies(${libhostexec-bc} ${stubs_bc_filename})
+      add_dependencies(${libhostexec-bc} ${hostexec_invoke_cpp_bc})
+      if (${archname} STREQUAL "amdgcn")
+         add_dependencies(${libhostexec-bc} ${ocl_atomics_cl_bc})
+      endif()
 
       if (${archname} STREQUAL "amdgcn")
          add_dependencies(amdgcn_hostexec_services ${libhostexec-bc})
