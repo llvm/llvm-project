@@ -51,7 +51,7 @@ public:
   }
 
   /// Return a copy of this extension.
-  virtual std::unique_ptr<DialectExtensionBase> clone() const final {
+  std::unique_ptr<DialectExtensionBase> clone() const final {
     return std::make_unique<LoadDependentDialectExtension>(*this);
   }
 };
