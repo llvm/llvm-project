@@ -160,9 +160,13 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
     // lanes are undefined.
     return true;
 
-  // If the tied operand is an IMPLICIT_DEF (or a REG_SEQUENCE whose operands
-  // are solely IMPLICIT_DEFS), the pass through lanes are undefined.  
+  // If the tied operand is NoReg, an IMPLICIT_DEF, or a REG_SEQEUENCE whose
+  // operands are solely IMPLICIT_DEFS, then the pass through lanes are
+  // undefined.
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+  if (UseMO.getReg() == RISCV::NoRegister)
+    return true;
+
   if (MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg())) {
     if (UseMI->isImplicitDef())
       return true;

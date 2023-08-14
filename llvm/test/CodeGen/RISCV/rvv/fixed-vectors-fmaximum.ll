@@ -235,12 +235,12 @@ define <2 x half> @vfmax_v2f16_vv_nnana(<2 x half> %a, <2 x half> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfadd.vv v10, v8, v8
-; CHECK-NEXT:    vmfeq.vv v0, v10, v10
-; CHECK-NEXT:    vmfeq.vv v8, v9, v9
-; CHECK-NEXT:    vmerge.vvm v11, v10, v9, v0
+; CHECK-NEXT:    vmfeq.vv v0, v9, v9
+; CHECK-NEXT:    vmfeq.vv v8, v10, v10
+; CHECK-NEXT:    vmerge.vvm v11, v9, v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
-; CHECK-NEXT:    vfmax.vv v8, v8, v11
+; CHECK-NEXT:    vmerge.vvm v8, v10, v9, v0
+; CHECK-NEXT:    vfmax.vv v8, v11, v8
 ; CHECK-NEXT:    ret
   %c = fadd nnan <2 x half> %a, %a
   %v = call <2 x half> @llvm.maximum.v2f16(<2 x half> %c, <2 x half> %b)
@@ -253,12 +253,12 @@ define <2 x half> @vfmax_v2f16_vv_nnanb(<2 x half> %a, <2 x half> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfadd.vv v10, v9, v9
-; CHECK-NEXT:    vmfeq.vv v0, v10, v10
-; CHECK-NEXT:    vmfeq.vv v9, v8, v8
-; CHECK-NEXT:    vmerge.vvm v11, v10, v8, v0
+; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmfeq.vv v9, v10, v10
+; CHECK-NEXT:    vmerge.vvm v11, v8, v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
-; CHECK-NEXT:    vfmax.vv v8, v11, v8
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfmax.vv v8, v8, v11
 ; CHECK-NEXT:    ret
   %c = fadd nnan <2 x half> %b, %b
   %v = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %c)
