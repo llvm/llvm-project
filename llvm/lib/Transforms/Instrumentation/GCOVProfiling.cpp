@@ -898,9 +898,7 @@ bool GCOVProfiler::emitProfileNotes(
 
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();
-          MDNode *Scope = Loc.getScope();
-          // TODO: Handle blocks from another file due to #line, #include, etc.
-          if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
+          if (SP != getDISubprogram(Loc.getScope()))
             continue;
 
           GCOVLines &Lines = Block.getFile(Filename);
