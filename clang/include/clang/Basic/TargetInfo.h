@@ -1414,7 +1414,9 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
-    return getTriple().isOSBinFormatELF() && !getTriple().isOSFuchsia();
+    return getTriple().isOSBinFormatELF() &&
+           ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
+            getTriple().isOSFreeBSD());
   }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
