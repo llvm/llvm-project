@@ -3296,17 +3296,25 @@ multiclass VPseudoVWMAC_VV_VF_RM {
 multiclass VPseudoVWMAC_VV_VF_BF_RM {
   foreach m = MxListFW in {
     defvar mx = m.MX;
+    defvar WriteVFWMulAddV_MX = !cast<SchedWrite>("WriteVFWMulAddV_" # mx);
+    defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
+    // FIXME: should use SchedTernary
     defm "" : VPseudoTernaryW_VV_RM<m>,
-              SchedTernary<"WriteVFWMulAddV", "ReadVFWMullAddV",
-                           "ReadVFWMullAddV", "ReadVFWMullAddV", mx>;
+              Sched<[WriteVFWMulAddV_MX, ReadVFWMulAddV_MX,
+                     ReadVFWMulAddV_MX, ReadVFWMulAddV_MX, ReadVMask]>;
   }
 
   foreach f = BFPListW in {
     foreach m = f.MxListFW in {
       defvar mx = m.MX;
+      defvar WriteVFWMulAddF_MX = !cast<SchedWrite>("WriteVFWMulAddF_" # mx);
+      defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
+      defvar ReadVFWMulAddF_MX = !cast<SchedRead>("ReadVFWMulAddF_" # mx);
+
+      // FIXME: should use SchedTernary
       defm "" : VPseudoTernaryW_VF_RM<m, f>,
-                SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
-                             "ReadVFWMulAddF", "ReadVFWMulAddV", mx>;
+                Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
+                       ReadVFWMulAddF_MX, ReadVFWMulAddV_MX, ReadVMask]>;
     }
   }
 }
