@@ -844,7 +844,7 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   token = compute2->getResult(1);
 
   // Get sizes.
-  Operation *sizes = rewriter.create<gpu::SpGEMMGetSizeOp>(
+  Operation *sizes = rewriter.create<gpu::SpMatGetSizeOp>(
       loc, indexTp, indexTp, indexTp, tokenTp, token, spMatC);
   Value nnz = sizes->getResult(2);
   token = sizes->getResult(3);
