@@ -219,6 +219,10 @@ Changes in existing checks
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options.
 
+- Improved :doc:`readability-static-accessed-through-instance
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  identify calls to static member functions with out-of-class inline definitions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

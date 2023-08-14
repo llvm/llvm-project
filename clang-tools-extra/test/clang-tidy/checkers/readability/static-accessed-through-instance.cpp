@@ -363,3 +363,20 @@ void testEmbeddedAnonymousStructAndClass() {
 }
 
 } // namespace llvm_issue_61736
+
+namespace PR51861 {
+  class Foo {
+    public:
+      static Foo& getInstance();
+      static int getBar();
+  };
+
+  inline int Foo::getBar() { return 42; }
+
+  void test() {
+    auto& params = Foo::getInstance();
+    params.getBar();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: static member accessed through instance [readability-static-accessed-through-instance]
+    // CHECK-FIXES: {{^}}    PR51861::Foo::getBar();{{$}}
+  }
+}
