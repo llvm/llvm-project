@@ -1052,6 +1052,23 @@ defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM", isSEWAware=1>;
 
+foreach vtiTowti = AllWidenableIntVectors in {
+  defvar vti = vtiTowti.Vti;
+  defvar wti = vtiTowti.Wti;
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+  def : Pat<
+    (vti.Vector 
+      (riscv_trunc_vector_vl
+        (srem (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs1))),
+              (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs2)))),
+        (vti.Mask true_mask), (XLenVT srcvalue))),
+      (!cast<Instruction>("PseudoVREM_VV_"#vti.LMul.MX#"_E"#!shl(1, vti.Log2SEW))
+        (vti.Vector (IMPLICIT_DEF)), 
+        vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
 // 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, sext_oneuse,
                                    "PseudoVWMUL">;
