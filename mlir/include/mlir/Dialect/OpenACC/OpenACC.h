@@ -78,6 +78,10 @@ static constexpr StringLiteral getDeclareAttrName() {
   return StringLiteral("acc.declare");
 }
 
+static constexpr StringLiteral getDeclareActionAttrName() {
+  return StringLiteral("acc.declare_action");
+}
+
 } // namespace acc
 } // namespace mlir
 
