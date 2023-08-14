@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,14 +29,30 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <climits>
 #include <string>
 
 namespace clang::include_cleaner {
 
+namespace {
+bool shouldIgnoreMacroReference(const Preprocessor &PP, const Macro &M) {
+  auto *MI = PP.getMacroInfo(M.Name);
+  // Macros that expand to themselves are confusing from user's point of view.
+  // They usually aspect the usage to be attributed to the underlying decl and
+  // not the macro definition. So ignore such macros (e.g. std{in,out,err} are
+  // implementation defined macros, that just resolve to themselves in
+  // practice).
+  return MI && MI->getNumTokens() == 1 && MI->isObjectLike() &&
+         MI->getReplacementToken(0).getIdentifierInfo() == M.Name;
+}
+} // namespace
+
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const PragmaIncludes *PI, const SourceManager &SM,
+              const PragmaIncludes *PI, const Preprocessor &PP,
               UsedSymbolCB CB) {
+  const auto &SM = PP.getSourceManager();
   // This is duplicated in writeHTMLReport, changes should be mirrored there.
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
@@ -51,7 +68,8 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)))
+    if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)) ||
+        shouldIgnoreMacroReference(PP, MacroRef.Target.macro()))
       continue;
     CB(MacroRef, headersForSymbol(MacroRef.Target, SM, PI));
   }
@@ -60,15 +78,15 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
 AnalysisResults
 analyze(llvm::ArrayRef<Decl *> ASTRoots,
         llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &Inc,
-        const PragmaIncludes *PI, const SourceManager &SM,
-        const HeaderSearch &HS,
+        const PragmaIncludes *PI, const Preprocessor &PP,
         llvm::function_ref<bool(llvm::StringRef)> HeaderFilter) {
+  auto &SM = PP.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
   llvm::StringSet<> Missing;
   if (!HeaderFilter)
     HeaderFilter = [](llvm::StringRef) { return false; };
-  walkUsed(ASTRoots, MacroRefs, PI, SM,
+  walkUsed(ASTRoots, MacroRefs, PI, PP,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              bool Satisfied = false;
              for (const Header &H : Providers) {
@@ -82,7 +100,8 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
              if (!Satisfied && !Providers.empty() &&
                  Ref.RT == RefType::Explicit &&
                  !HeaderFilter(Providers.front().resolvedPath()))
-               Missing.insert(spellHeader({Providers.front(), HS, MainFile}));
+               Missing.insert(spellHeader(
+                   {Providers.front(), PP.getHeaderSearchInfo(), MainFile}));
            });
 
   AnalysisResults Results;
