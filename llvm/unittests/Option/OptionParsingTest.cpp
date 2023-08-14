@@ -44,6 +44,10 @@ enum OptionFlags {
   OptFlag3 = (1 << 6)
 };
 
+enum OptionVisibility {
+  SubtoolVis = (1 << 2),
+};
+
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
@@ -161,6 +165,43 @@ TYPED_TEST(OptTableTest, ParseWithFlagExclusions) {
   EXPECT_TRUE(AL.hasArg(OPT_C));
   EXPECT_EQ("foo", AL.getLastArgValue(OPT_SLASH_C));
   EXPECT_EQ("bar", AL.getLastArgValue(OPT_C));
+}
+
+TYPED_TEST(OptTableTest, ParseWithVisibility) {
+  TypeParam T;
+  unsigned MAI, MAC;
+
+  const char *STArgs[] = {"-A", "-Q", "-R"};
+
+  // With no visibility specified, we find all of the arguments.
+  InputArgList AL = T.ParseArgs(STArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_Q));
+  EXPECT_TRUE(AL.hasArg(OPT_R));
+
+  // Default visibility omits SubtoolVis.
+  AL = T.ParseArgs(STArgs, MAI, MAC, Visibility(DefaultVis));
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_FALSE(AL.hasArg(OPT_Q));
+  EXPECT_TRUE(AL.hasArg(OPT_R));
+
+  // ~SubtoolVis still finds arguments that are visible in Default.
+  AL = T.ParseArgs(STArgs, MAI, MAC, Visibility(~SubtoolVis));
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_FALSE(AL.hasArg(OPT_Q));
+  EXPECT_TRUE(AL.hasArg(OPT_R));
+
+  // Only SubtoolVis.
+  AL = T.ParseArgs(STArgs, MAI, MAC, Visibility(SubtoolVis));
+  EXPECT_FALSE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_Q));
+  EXPECT_TRUE(AL.hasArg(OPT_R));
+
+  // Both Default and SubtoolVis are found.
+  AL = T.ParseArgs(STArgs, MAI, MAC, Visibility(DefaultVis | SubtoolVis));
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_Q));
+  EXPECT_TRUE(AL.hasArg(OPT_R));
 }
 
 TYPED_TEST(OptTableTest, ParseAliasInGroup) {
@@ -345,6 +386,12 @@ TYPED_TEST(OptTableTest, FindNearest) {
                               /*FlagsToInclude=*/0,
                               /*FlagsToExclude=*/OptFlag2));
   EXPECT_EQ(Nearest, "-doopf1");
+
+  // Spelling should respect visibility.
+  EXPECT_EQ(1U, T.findNearest("-xyzzy", Nearest, Visibility(DefaultVis)));
+  EXPECT_EQ(Nearest, "-xyzzy2");
+  EXPECT_EQ(1U, T.findNearest("-xyzzy", Nearest, Visibility(SubtoolVis)));
+  EXPECT_EQ(Nearest, "-xyzzy1");
 }
 
 TYPED_TEST(DISABLED_OptTableTest, FindNearestFIXME) {
