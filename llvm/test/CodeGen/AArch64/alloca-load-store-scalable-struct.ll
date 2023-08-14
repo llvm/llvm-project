@@ -12,16 +12,13 @@ define void @test(ptr %addr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, x9, lsl #3]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x10, x8, lsl #3]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x10, x9, lsl #3]
 ; CHECK-NEXT:    st1d { z2.d }, p0, [sp]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

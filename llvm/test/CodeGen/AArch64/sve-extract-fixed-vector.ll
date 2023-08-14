@@ -473,7 +473,7 @@ define <4 x i32> @typesize_regression_test_v4i32(i32* %addr, i64 %idx) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %addr, i64 %idx
   %bc = bitcast i32* %ptr to <vscale x 4 x i32>*
-  %ld = load <vscale x 4 x i32>, <vscale x 4 x i32>* %bc, align 16
+  %ld = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %bc, align 16
   %out = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> %ld, i64 0)
   ret <4 x i32> %out
 }

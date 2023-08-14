@@ -1927,6 +1927,9 @@ SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
   assert(MulImm.getBitWidth() == VT.getSizeInBits() &&
          "APInt size does not match type size!");
 
+  if (MulImm == 0)
+    return getConstant(0, DL, VT);
+
   if (ConstantFold) {
     const MachineFunction &MF = getMachineFunction();
     const Function &F = MF.getFunction();
