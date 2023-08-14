@@ -2044,6 +2044,72 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstEltSize;
 }
 
+// Where SVE2 is enabled, we can combine an add of 1, add & shift right by 1
+// to a single s/urhadd instruction. Some extends can be folded into the
+// instruction and will be 'free', e.g.
+//    %ld1 = load i8, ptr %a
+//    %zext1 = zext i8 %ld1 to i16
+//    %ld2 = load i8, ptr %b
+//    %zext2 = zext i8 %ld2 to i16
+//    %add1 = add nuw nsw i16 %zext1, 1
+//    %add2 = add nuw nsw i16 %add1, %zext2
+//    %shr = lshr i16 %add2, 1
+//    %trunc = trunc i16 %shr to i8
+//
+bool isExtShiftRightAdd(const Instruction *I, const Instruction *Ext, Type *Dst,
+                        Type *Src) {
+  // Check that the cast is doubling the source type.
+  if ((Src->getScalarSizeInBits() != Dst->getScalarSizeInBits() / 2) ||
+      I->getOpcode() != Instruction::Add || !I->hasOneUser())
+    return false;
+
+  // Check for the add/shift/trunc pattern if I is an add of a constant.
+  auto Op1 = dyn_cast<ConstantInt>(I->getOperand(1));
+  if (!Op1) {
+    // Otherwise, get the other operand and look for the same pattern
+    // if this is an add.
+    auto *Op = I->getOperand(0) == Ext ? I->getOperand(1) : I->getOperand(0);
+
+    I = dyn_cast<Instruction>(Op);
+    if (!I || I->getOpcode() != Instruction::Add || !I->hasOneUser())
+      return false;
+
+    Op1 = dyn_cast<ConstantInt>(I->getOperand(1));
+  }
+
+  if (!Op1)
+    return false;
+
+  auto ExtVal = isa<ZExtInst>(Ext) ? Op1->getZExtValue() : Op1->getSExtValue();
+  if (ExtVal != 1)
+    return false;
+
+  // The add should only have one user, a right shift of 1.
+  auto *Add = cast<Instruction>(*I->user_begin());
+  if (Add->getOpcode() != Instruction::Add || !Add->hasOneUser())
+    return false;
+
+  auto *LShr = cast<Instruction>(*Add->user_begin());
+  if (LShr->getOpcode() != Instruction::LShr || !LShr->hasOneUser())
+    return false;
+
+  auto *LShrOp1 = dyn_cast<ConstantInt>(LShr->getOperand(1));
+  ExtVal = isa<ZExtInst>(Ext) ? LShrOp1->getZExtValue()
+                              : LShrOp1->getSExtValue();
+  if (!LShrOp1 || LShrOp1->getZExtValue() != 1)
+    return false;
+
+  // Ensure the only user of the shift is a trunc which is casting
+  // back to the original element type.
+  auto *Trunc = cast<Instruction>(*LShr->user_begin());
+  if (Trunc->getOpcode() != Instruction::Trunc ||
+      Src->getScalarSizeInBits() !=
+          cast<CastInst>(Trunc)->getDestTy()->getScalarSizeInBits())
+    return false;
+
+  return true;
+}
+
 InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  Type *Src,
                                                  TTI::CastContextHint CCH,
@@ -2068,6 +2134,11 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       } else // Others are free so long as isWideningInstruction returned true.
         return 0;
     }
+
+    // The cast will be free for the SVE2 s/urhadd instructions
+    if (ST->hasSVE2() && (isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
+        isExtShiftRightAdd(SingleUser, I, Dst, Src))
+      return 0;
   }
 
   // TODO: Allow non-throughput costs that aren't binary.
