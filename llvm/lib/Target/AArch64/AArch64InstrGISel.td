@@ -271,6 +271,7 @@ def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
+def : GINodeEquiv<G_INSERT_VECTOR_ELT, insertelt>;
 
 def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
 
@@ -528,3 +529,38 @@ def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv2d GPR64sp:$Rn)>;
 def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv1d GPR64sp:$Rn)>;
+
+class Ld1Lane64PatGISel<SDPatternOperator scalar_load, Operand VecIndex,
+                   ValueType VTy, ValueType STy, Instruction LD1>
+  : Pat<(insertelt (VTy VecListOne64:$Rd),
+           (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+        (EXTRACT_SUBREG
+            (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
+                          (UImmS1XForm VecIndex:$idx), GPR64sp:$Rn),
+            dsub)>;
+
+class Ld1Lane128PatGISel<Operand VecIndex, ValueType VTy,
+                         ValueType STy, Instruction LD1>
+  : Pat<(insertelt (VTy VecListOne128:$Rd),
+           (STy (load GPR64sp:$Rn)), VecIndex:$idx),
+        (LD1 VecListOne128:$Rd, (UImmS1XForm VecIndex:$idx), GPR64sp:$Rn)>;
+
+// Enable these patterns only for GlobalISel, since
+// SelectionDAG analogues only select insertelt with i32 indices.
+let Predicates = [OnlyGISel] in {
+  def : Ld1Lane64PatGISel<load, VectorIndexB,    v8i8,  i8, LD1i8>;
+  def : Ld1Lane64PatGISel<load, VectorIndexB32b, v8i8,  i8, LD1i8>;
+  def : Ld1Lane64PatGISel<load, VectorIndexH,    v4i16, i16, LD1i16>;
+  def : Ld1Lane64PatGISel<load, VectorIndexH32b, v4i16, i16, LD1i16>;
+  def : Ld1Lane64PatGISel<load, VectorIndexS,    v2i32, i32, LD1i32>;
+  def : Ld1Lane64PatGISel<load, VectorIndexS32b, v2i32, i32, LD1i32>;
+
+  def : Ld1Lane128PatGISel<VectorIndexB, v16i8, i8, LD1i8>;
+  def : Ld1Lane128PatGISel<VectorIndexB32b, v16i8, i8, LD1i8>;
+  def : Ld1Lane128PatGISel<VectorIndexH, v8i16, i16, LD1i16>;
+  def : Ld1Lane128PatGISel<VectorIndexH32b, v8i16, i16, LD1i16>;
+  def : Ld1Lane128PatGISel<VectorIndexH, v4i32, i32, LD1i32>;
+  def : Ld1Lane128PatGISel<VectorIndexH32b, v4i32, i32, LD1i32>;
+  def : Ld1Lane128PatGISel<VectorIndexH, v2i64, i64, LD1i64>;
+  def : Ld1Lane128PatGISel<VectorIndexH32b, v2i64, i64, LD1i64>;
+}

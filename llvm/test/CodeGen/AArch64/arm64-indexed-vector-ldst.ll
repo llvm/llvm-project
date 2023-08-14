@@ -14283,10 +14283,9 @@ define <16 x i8> @test_v16i8_post_imm_ld1lane(ptr %bar, ptr %ptr, <16 x i8> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v16i8_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr b1, [x0]
+; CHECK-GISEL-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #1
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> %A, i8 %tmp1, i32 1
@@ -14304,10 +14303,9 @@ define <16 x i8> @test_v16i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <16 
 ;
 ; CHECK-GISEL-LABEL: test_v16i8_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr b1, [x0]
+; CHECK-GISEL-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> %A, i8 %tmp1, i32 1
@@ -14327,11 +14325,10 @@ define <8 x i8> @test_v8i8_post_imm_ld1lane(ptr %bar, ptr %ptr, <8 x i8> %A) {
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr b1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, #1
+; CHECK-GISEL-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
@@ -14352,11 +14349,10 @@ define <8 x i8> @test_v8i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <8 x i
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr b1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, x2
+; CHECK-GISEL-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i8, ptr %bar
@@ -14375,10 +14371,9 @@ define <8 x i16> @test_v8i16_post_imm_ld1lane(ptr %bar, ptr %ptr, <8 x i16> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v8i16_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr h1, [x0]
+; CHECK-GISEL-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #2
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.h v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i16, ptr %bar
   %tmp2 = insertelement <8 x i16> %A, i16 %tmp1, i32 1
@@ -14397,9 +14392,8 @@ define <8 x i16> @test_v8i16_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <8 x
 ;
 ; CHECK-GISEL-LABEL: test_v8i16_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr h1, [x0]
+; CHECK-GISEL-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GISEL-NEXT:    mov.h v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i16, ptr %bar
@@ -14420,11 +14414,10 @@ define <4 x i16> @test_v4i16_post_imm_ld1lane(ptr %bar, ptr %ptr, <4 x i16> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v4i16_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr h1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, #2
+; CHECK-GISEL-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.h v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i16, ptr %bar
@@ -14446,12 +14439,11 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4 x
 ;
 ; CHECK-GISEL-LABEL: test_v4i16_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr h1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GISEL-NEXT:    mov.h v0[1], v1[0]
-; CHECK-GISEL-NEXT:    str x8, [x1]
+; CHECK-GISEL-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i16, ptr %bar
   %tmp2 = insertelement <4 x i16> %A, i16 %tmp1, i32 1
@@ -14469,10 +14461,9 @@ define <4 x i32> @test_v4i32_post_imm_ld1lane(ptr %bar, ptr %ptr, <4 x i32> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v4i32_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #4
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i32, ptr %bar
   %tmp2 = insertelement <4 x i32> %A, i32 %tmp1, i32 1
@@ -14491,9 +14482,8 @@ define <4 x i32> @test_v4i32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4 x
 ;
 ; CHECK-GISEL-LABEL: test_v4i32_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i32, ptr %bar
@@ -14514,11 +14504,10 @@ define <2 x i32> @test_v2i32_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x i32> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v2i32_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, #4
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i32, ptr %bar
@@ -14540,12 +14529,11 @@ define <2 x i32> @test_v2i32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2 x
 ;
 ; CHECK-GISEL-LABEL: test_v2i32_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
-; CHECK-GISEL-NEXT:    str x8, [x1]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i32, ptr %bar
   %tmp2 = insertelement <2 x i32> %A, i32 %tmp1, i32 1
@@ -14563,10 +14551,9 @@ define <2 x i64> @test_v2i64_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x i64> %A) 
 ;
 ; CHECK-GISEL-LABEL: test_v2i64_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d1, [x0]
+; CHECK-GISEL-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #8
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i64, ptr %bar
   %tmp2 = insertelement <2 x i64> %A, i64 %tmp1, i32 1
@@ -14585,9 +14572,8 @@ define <2 x i64> @test_v2i64_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2 x
 ;
 ; CHECK-GISEL-LABEL: test_v2i64_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d1, [x0]
+; CHECK-GISEL-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #3
-; CHECK-GISEL-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i64, ptr %bar
@@ -14606,10 +14592,9 @@ define <4 x float> @test_v4f32_post_imm_ld1lane(ptr %bar, ptr %ptr, <4 x float> 
 ;
 ; CHECK-GISEL-LABEL: test_v4f32_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #4
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load float, ptr %bar
   %tmp2 = insertelement <4 x float> %A, float %tmp1, i32 1
@@ -14628,9 +14613,8 @@ define <4 x float> @test_v4f32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4
 ;
 ; CHECK-GISEL-LABEL: test_v4f32_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load float, ptr %bar
@@ -14651,11 +14635,10 @@ define <2 x float> @test_v2f32_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x float> 
 ;
 ; CHECK-GISEL-LABEL: test_v2f32_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, #4
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load float, ptr %bar
@@ -14677,12 +14660,11 @@ define <2 x float> @test_v2f32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2
 ;
 ; CHECK-GISEL-LABEL: test_v2f32_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #2
-; CHECK-GISEL-NEXT:    mov.s v0[1], v1[0]
-; CHECK-GISEL-NEXT:    str x8, [x1]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load float, ptr %bar
   %tmp2 = insertelement <2 x float> %A, float %tmp1, i32 1
@@ -14700,10 +14682,9 @@ define <2 x double> @test_v2f64_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x double
 ;
 ; CHECK-GISEL-LABEL: test_v2f64_post_imm_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d1, [x0]
+; CHECK-GISEL-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, #8
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load double, ptr %bar
   %tmp2 = insertelement <2 x double> %A, double %tmp1, i32 1
@@ -14722,9 +14703,8 @@ define <2 x double> @test_v2f64_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <
 ;
 ; CHECK-GISEL-LABEL: test_v2f64_post_reg_ld1lane:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d1, [x0]
+; CHECK-GISEL-NEXT:    ld1.d { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #3
-; CHECK-GISEL-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load double, ptr %bar
@@ -14779,15 +14759,14 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane_forced_narrow(ptr %bar, ptr %ptr, 
 ; CHECK-GISEL-LABEL: test_v4i16_post_reg_ld1lane_forced_narrow:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    add x8, x0, x2, lsl #1
-; CHECK-GISEL-NEXT:    ldr h1, [x0]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-GISEL-NEXT:    ld1.h { v0 }[1], [x0]
 ; CHECK-GISEL-NEXT:    str x8, [x1]
-; CHECK-GISEL-NEXT:    mov.h v0[1], v1[0]
-; CHECK-GISEL-NEXT:    ldr d2, [x3]
 ; CHECK-GISEL-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    cnt.8b v2, v2
-; CHECK-GISEL-NEXT:    uaddlp.4h v2, v2
-; CHECK-GISEL-NEXT:    uaddlp.2s v1, v2
+; CHECK-GISEL-NEXT:    ldr d1, [x3]
+; CHECK-GISEL-NEXT:    cnt.8b v1, v1
+; CHECK-GISEL-NEXT:    uaddlp.4h v1, v1
+; CHECK-GISEL-NEXT:    uaddlp.2s v1, v1
 ; CHECK-GISEL-NEXT:    str d1, [x3]
 ; CHECK-GISEL-NEXT:    ret
   %tmp1 = load i16, ptr %bar
@@ -14987,9 +14966,8 @@ define <4 x i32> @test_inc_cycle(<4 x i32> %vec, ptr %in) {
 ;
 ; CHECK-GISEL-LABEL: test_inc_cycle:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr s1, [x0]
+; CHECK-GISEL-NEXT:    ld1.s { v0 }[0], [x0]
 ; CHECK-GISEL-NEXT:    adrp x9, _var@PAGE
-; CHECK-GISEL-NEXT:    mov.s v0[0], v1[0]
 ; CHECK-GISEL-NEXT:    fmov x8, d0
 ; CHECK-GISEL-NEXT:    add x8, x0, x8, lsl #2
 ; CHECK-GISEL-NEXT:    str x8, [x9, _var@PAGEOFF]

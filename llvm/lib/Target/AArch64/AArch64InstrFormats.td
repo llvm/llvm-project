@@ -484,6 +484,9 @@ def UImmS8XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() / 8, SDLoc(N), MVT::i64);
 }]>;
 
+def gi_UImmS1XForm : GICustomOperandRenderer<"renderUImmS1">,
+  GISDNodeXFormEquiv<UImmS1XForm>;
+
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 32 * N].
 def UImm5s2Operand : UImmScaledMemoryIndexed<5, 2>;

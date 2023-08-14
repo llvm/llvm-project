@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 
 #define DEBUG_TYPE "gi-match-table-executor"
 
@@ -62,9 +63,16 @@ bool GIMatchTableExecutor::isBaseWithConstantOffset(
 bool GIMatchTableExecutor::isObviouslySafeToFold(MachineInstr &MI,
                                                  MachineInstr &IntoMI) const {
   // Immediate neighbours are already folded.
-  if (MI.getParent() == IntoMI.getParent() &&
-      std::next(MI.getIterator()) == IntoMI.getIterator())
-    return true;
+  // Any G_CONSTANT between immediate neighbours can be ignored.
+  if (MI.getParent() == IntoMI.getParent()) {
+    auto IntoIt = IntoMI.getIterator();
+    auto NextIt = std::next(MI.getIterator());
+    while (!NextIt.isEnd() && NextIt != IntoIt &&
+           NextIt->getOpcode() == TargetOpcode::G_CONSTANT)
+      ++NextIt;
+    if (NextIt == IntoIt)
+      return true;
+  }
 
   // Convergent instructions cannot be moved in the CFG.
   if (MI.isConvergent() && MI.getParent() != IntoMI.getParent())
