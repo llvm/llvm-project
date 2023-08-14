@@ -850,6 +850,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .lower();
 
+  getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX})
+      .legalFor({{s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[1];
+        return Query.Types[0] == s16 && (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .minScalarOrElt(0, MinFPScalar)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       // Try to break down into smaller vectors as long as they're at least 64
