@@ -1267,6 +1267,9 @@ public:
 
   bool hasVOPD3() const { return GFX12_10Insts; }
 
+  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
+  bool hasAddU64SubU64() const { return GFX12_10Insts; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

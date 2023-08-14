@@ -718,6 +718,10 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32, i32]> {
   let HasExtSDWA9 = 0;
 }
 
+def VOP2_I64_I64_I64_ARITH : VOPProfile <[i64, i64, i64, untyped], /*EnableClamp=*/1> {
+  let HasExtVOP3DPP = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP2 Instructions
 //===----------------------------------------------------------------------===//
@@ -779,11 +783,18 @@ defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "
 defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32", 1>;
 
 
-let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
+let isReMaterializable = 1 in {
+let SubtargetPredicate = HasAddNoCarryInsts in {
 defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32", 1>;
 defm V_SUB_U32 : VOP2Inst_VOPD <"v_sub_u32", VOP_I32_I32_I32_ARITH, 0x14, "v_sub_nc_u32", null_frag, "v_sub_u32", 1>;
 defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 }
+
+let SubtargetPredicate = isGFX12_10Plus in {
+defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP2_I64_I64_I64_ARITH>;
+defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP2_I64_I64_I64_ARITH>;
+} // End SubtargetPredicate = HasGFX1210Insts
+} // End isReMaterializable = 1
 
 } // End isCommutable = 1
 
@@ -1588,6 +1599,11 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = HasFmacF64Inst in
 defm V_FMAC_F64 : VOP2_Real_NO_DPP<GFX12Gen, 0x17>;
+
+let SubtargetPredicate = isGFX12_10Plus in {
+defm V_ADD_U64 : VOP2_Real_FULL<GFX12Gen, 0x28>;
+defm V_SUB_U64 : VOP2_Real_FULL<GFX12Gen, 0x29>;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX11.
