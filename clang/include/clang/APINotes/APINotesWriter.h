@@ -46,15 +46,16 @@ public:
   /// Write the API notes data to the given stream.
   void writeToStream(llvm::raw_ostream &os);
 
-  /// Add information about a specific Objective-C class or protocol.
+  /// Add information about a specific Objective-C class or protocol or a C++
+  /// namespace.
   ///
-  /// \param name The name of this class/protocol.
-  /// \param isClass Whether this is a class (vs. a protocol).
-  /// \param info Information about this class/protocol.
+  /// \param name The name of this class/protocol/namespace.
+  /// \param contextKind Whether this is a class, a protocol, or a namespace.
+  /// \param info Information about this class/protocol/namespace.
   ///
-  /// \returns the ID of the class or protocol, which can be used to add
-  /// properties and methods to the class/protocol.
-  ContextID addObjCContext(llvm::StringRef name, bool isClass,
+  /// \returns the ID of the class, protocol, or namespace, which can be used to
+  /// add properties and methods to the class/protocol/namespace.
+  ContextID addObjCContext(llvm::StringRef name, ContextKind contextKind,
                            const ObjCContextInfo &info,
                            llvm::VersionTuple swiftVersion);
 

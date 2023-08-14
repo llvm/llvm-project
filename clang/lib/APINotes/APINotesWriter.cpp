@@ -1222,12 +1222,13 @@ void APINotesWriter::writeToStream(raw_ostream &os) {
   Impl.writeToStream(os);
 }
 
-ContextID APINotesWriter::addObjCContext(StringRef name, bool isClass,
+ContextID APINotesWriter::addObjCContext(StringRef name,
+                                         ContextKind contextKind,
                                          const ObjCContextInfo &info,
                                          VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
 
-  std::pair<unsigned, char> key(nameID, isClass ? 0 : 1);
+  std::pair<unsigned, char> key(nameID, (uint8_t)contextKind);
   auto known = Impl.ObjCContexts.find(key);
   if (known == Impl.ObjCContexts.end()) {
     unsigned nextID = Impl.ObjCContexts.size() + 1;
@@ -1280,10 +1281,11 @@ void APINotesWriter::addObjCMethod(ContextID contextID,
   // it has designated initializers.
   if (info.DesignatedInit) {
     assert(Impl.ObjCContexts.count({Impl.ObjCContextNames[contextID.Value],
-                                    (char)0}));
+                                    (char)ContextKind::ObjCClass}));
     auto &versionedVec =
-      Impl.ObjCContexts[{Impl.ObjCContextNames[contextID.Value], (char)0}]
-        .second;
+        Impl.ObjCContexts[{Impl.ObjCContextNames[contextID.Value],
+                           (char)ContextKind::ObjCClass}]
+            .second;
     bool found = false;
     for (auto &versioned : versionedVec) {
       if (versioned.first == swiftVersion) {

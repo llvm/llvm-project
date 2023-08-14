@@ -740,12 +740,19 @@ namespace api_notes {
 /// The file extension used for the source representation of API notes.
 static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
 
-/// Opaque context ID used to refer to an Objective-C class or protocol.
+/// Opaque context ID used to refer to an Objective-C class or protocol or a C++
+/// namespace.
 class ContextID {
 public:
   unsigned Value;
 
   explicit ContextID(unsigned value) : Value(value) { }
+};
+
+enum class ContextKind : uint8_t {
+  ObjCClass = 0,
+  ObjCProtocol = 1,
+  Namespace = 2
 };
 
 /// A temporary reference to an Objective-C selector, suitable for
