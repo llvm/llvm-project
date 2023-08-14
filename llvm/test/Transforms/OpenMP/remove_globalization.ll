@@ -226,7 +226,7 @@ exit:
   ret void
 }
 
-; CHECK: declare ptr @__kmpc_alloc_shared(i64)
+; CHECK: declare noalias ptr @__kmpc_alloc_shared(i64)
 declare ptr @__kmpc_alloc_shared(i64)
 
 ; CHECK: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
