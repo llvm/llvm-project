@@ -2143,9 +2143,11 @@ class VPDerivedIVRecipe : public VPRecipeBase, public VPValue {
   /// TruncResultTy.
   Type *TruncResultTy;
 
-  /// Kind and binary operator of the induction.
+  /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
-  const BinaryOperator *BinOp;
+  /// If not nullptr, the floating point induction binary operator. Must be set
+  /// for floating point inductions.
+  const FPMathOperator *FPBinOp;
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
@@ -2153,7 +2155,8 @@ public:
                     Type *TruncResultTy)
       : VPRecipeBase(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
         VPValue(this), TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
-        BinOp(IndDesc.getInductionBinOp()) {}
+        FPBinOp(dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())) {
+  }
 
   ~VPDerivedIVRecipe() override = default;
 
