@@ -27,11 +27,11 @@
 # ----------------------------------------------------------------------
 
 import abc
+import argparse
 import concurrent.futures
 import contextlib
 import datetime
 import json
-import optparse
 import os
 import platform
 import plistlib
@@ -1234,12 +1234,20 @@ def usage():
 
 
 def save_crashlog(debugger, command, exe_ctx, result, dict):
-    usage = "usage: %prog [options] <output-path>"
+    usage = "save_crashlog [options] <output-path>"
     description = """Export the state of current target into a crashlog file"""
-    parser = optparse.OptionParser(
-        description=description, prog="save_crashlog", usage=usage
+    parser = argparse.ArgumentParser(
+        description=description,
+        prog="save_crashlog",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_option(
+    parser.add_argument(
+        "output",
+        metavar="output-file",
+        type=argparse.FileType("w", encoding="utf-8"),
+        nargs=1,
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -1248,21 +1256,13 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
         default=False,
     )
     try:
-        (options, args) = parser.parse_args(shlex.split(command))
-    except:
-        result.PutCString("error: invalid options")
-        return
-    if len(args) != 1:
-        result.PutCString(
-            "error: invalid arguments, a single output file is the only valid argument"
-        )
-        return
-    out_file = open(args[0], "w", encoding="utf-8")
-    if not out_file:
-        result.PutCString("error: failed to open file '%s' for writing...", args[0])
+        options = parser.parse_args(shlex.split(command))
+    except Exception as e:
+        result.SetError(str(e))
         return
     target = exe_ctx.target
     if target:
+        out_file = options.output
         identifier = target.executable.basename
         process = exe_ctx.process
         if process:
@@ -1352,7 +1352,7 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
                     )
         out_file.close()
     else:
-        result.PutCString("error: invalid target")
+        result.SetError("invalid target")
 
 
 class Symbolicate:
@@ -1366,8 +1366,8 @@ class Symbolicate:
         return "Symbolicate one or more darwin crash log files."
 
     def get_long_help(self):
-        option_parser = CrashLogOptionParser()
-        return option_parser.format_help()
+        arg_parser = CrashLogOptionParser()
+        return arg_parser.format_help()
 
 
 def SymbolicateCrashLog(crash_log, options):
@@ -1523,11 +1523,22 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
 def CreateSymbolicateCrashLogOptions(
     command_name, description, add_interactive_options
 ):
-    usage = "usage: %prog [options] <FILE> [FILE ...]"
-    option_parser = optparse.OptionParser(
-        description=description, prog="crashlog", usage=usage
+    usage = "crashlog [options] <FILE> [FILE ...]"
+    arg_parser = argparse.ArgumentParser(
+        description=description,
+        prog="crashlog",
+        usage=usage,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
+        "reports",
+        metavar="FILE",
+        type=str,
+        nargs="*",
+        help="crash report(s) to symbolicate",
+    )
+
+    arg_parser.add_argument(
         "--version",
         "-V",
         dest="version",
@@ -1535,7 +1546,7 @@ def CreateSymbolicateCrashLogOptions(
         help="Show crashlog version",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -1543,7 +1554,7 @@ def CreateSymbolicateCrashLogOptions(
         help="display verbose debug info",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--debug",
         "-g",
         action="store_true",
@@ -1551,7 +1562,7 @@ def CreateSymbolicateCrashLogOptions(
         help="display verbose debug logging",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--load-all",
         "-a",
         action="store_true",
@@ -1561,22 +1572,22 @@ def CreateSymbolicateCrashLogOptions(
         "interactive mode.",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--images",
         action="store_true",
         dest="dump_image_list",
         help="show image list",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--debug-delay",
-        type="int",
+        type=int,
         dest="debug_delay",
         metavar="NSEC",
         help="pause for NSEC seconds for debugger",
         default=0,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--crashed-only",
         "-c",
         action="store_true",
@@ -1584,15 +1595,15 @@ def CreateSymbolicateCrashLogOptions(
         help="only symbolicate the crashed thread",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--disasm-depth",
         "-d",
-        type="int",
+        type=int,
         dest="disassemble_depth",
-        help="set the depth in stack frames that should be disassembled (default is 1)",
+        help="set the depth in stack frames that should be disassembled",
         default=1,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--disasm-all",
         "-D",
         action="store_true",
@@ -1600,40 +1611,40 @@ def CreateSymbolicateCrashLogOptions(
         help="enabled disassembly of frames on all threads (not just the crashed thread)",
         default=False,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--disasm-before",
         "-B",
-        type="int",
+        type=int,
         dest="disassemble_before",
         help="the number of instructions to disassemble before the frame PC",
         default=4,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--disasm-after",
         "-A",
-        type="int",
+        type=int,
         dest="disassemble_after",
         help="the number of instructions to disassemble after the frame PC",
         default=4,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--source-context",
         "-C",
-        type="int",
+        type=int,
         metavar="NLINES",
         dest="source_context",
-        help="show NLINES source lines of source context (default = 4)",
+        help="show NLINES source lines of source context",
         default=4,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--source-frames",
-        type="int",
+        type=int,
         metavar="NFRAMES",
         dest="source_frames",
-        help="show source for NFRAMES (default = 4)",
+        help="show source for NFRAMES",
         default=4,
     )
-    option_parser.add_option(
+    arg_parser.add_argument(
         "--source-all",
         action="store_true",
         dest="source_all",
@@ -1641,28 +1652,28 @@ def CreateSymbolicateCrashLogOptions(
         default=False,
     )
     if add_interactive_options:
-        option_parser.add_option(
+        arg_parser.add_argument(
             "-i",
             "--interactive",
             action="store_true",
             help="parse a crash log and load it in a ScriptedProcess",
             default=False,
         )
-        option_parser.add_option(
+        arg_parser.add_argument(
             "-b",
             "--batch",
             action="store_true",
             help="dump symbolicated stackframes without creating a debug session",
             default=True,
         )
-        option_parser.add_option(
+        arg_parser.add_argument(
             "--target",
             "-t",
             dest="target_path",
             help="the target binary path that should be used for interactive crashlog (optional)",
             default=None,
         )
-        option_parser.add_option(
+        arg_parser.add_argument(
             "--skip-status",
             "-s",
             dest="skip_status",
@@ -1670,7 +1681,7 @@ def CreateSymbolicateCrashLogOptions(
             help="prevent the interactive crashlog to dump the process status and thread backtrace at launch",
             default=False,
         )
-    return option_parser
+    return arg_parser
 
 
 def CrashLogOptionParser():
@@ -1686,15 +1697,16 @@ be disassembled and lookups can be performed using the addresses found in the cr
 
 
 def SymbolicateCrashLogs(debugger, command_args, result, is_command):
-    option_parser = CrashLogOptionParser()
+    arg_parser = CrashLogOptionParser()
 
     if not len(command_args):
-        option_parser.print_help()
+        arg_parser.print_help()
         return
 
     try:
-        (options, args) = option_parser.parse_args(command_args)
-    except:
+        options = arg_parser.parse_args(command_args)
+    except Exception as e:
+        result.SetError(str(e))
         return
 
     # Interactive mode requires running the crashlog command from inside lldb.
@@ -1724,7 +1736,7 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
     if options.debug:
         print("command_args = %s" % command_args)
         print("options", options)
-        print("args", args)
+        print("args", options.reports)
 
     if options.debug_delay > 0:
         print("Waiting %u seconds for debugger to attach..." % options.debug_delay)
@@ -1743,8 +1755,8 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
 
     ci = debugger.GetCommandInterpreter()
 
-    if args:
-        for crashlog_file in args:
+    if options.reports:
+        for crashlog_file in options.reports:
             crashlog_path = os.path.expanduser(crashlog_file)
             if not os.path.exists(crashlog_path):
                 raise FileNotFoundError(
