@@ -926,13 +926,17 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   // If the value used in the zext/sext is the select condition, or the negated
   // of the select condition, the binop can be simplified.
-  if (CondVal == A)
-    return SelectInst::Create(CondVal, NewFoldedConst(false, TrueVal),
+  if (CondVal == A) {
+    Value *NewTrueVal = NewFoldedConst(false, TrueVal);
+    return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(true, FalseVal));
+  }
 
-  if (match(A, m_Not(m_Specific(CondVal))))
-    return SelectInst::Create(CondVal, NewFoldedConst(true, TrueVal),
+  if (match(A, m_Not(m_Specific(CondVal)))) {
+    Value *NewTrueVal = NewFoldedConst(true, TrueVal);
+    return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(false, FalseVal));
+  }
 
   return nullptr;
 }
