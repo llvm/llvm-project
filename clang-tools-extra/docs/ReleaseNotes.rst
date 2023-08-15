@@ -198,6 +198,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check to ignore
+  false-positives in unevaluated context (e.g., ``decltype``).
+
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
