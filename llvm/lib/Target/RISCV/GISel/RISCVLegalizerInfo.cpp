@@ -68,7 +68,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .legalIf(ExtLegalFunc)
       .clampScalar(0, XLenLLT, XLenLLT);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({XLenLLT}).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .legalFor({XLenLLT})
+      .maxScalar(0, XLenLLT)
+      .lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
