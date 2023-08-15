@@ -5239,30 +5239,50 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         llvm::Type *SrcTy = Src.getElementType();
-        uint64_t SrcSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
-        uint64_t DstSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        llvm::TypeSize SrcTypeSize =
+            CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        llvm::TypeSize DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        if (SrcTypeSize.isScalable()) {
+          assert(STy->containsHomogeneousScalableVectorTypes() &&
+                 "ABI only supports structure with homogeneous scalable vector "
+                 "type");
+          assert(SrcTypeSize == DstTypeSize &&
+                 "Only allow non-fractional movement of structure with "
+                 "homogeneous scalable vector type");
+          assert(NumIRArgs == STy->getNumElements());
 
-        // If the source type is smaller than the destination type of the
-        // coerce-to logic, copy the source value into a temp alloca the size
-        // of the destination type to allow loading all of it. The bits past
-        // the source value are left undef.
-        if (SrcSize < DstSize) {
-          Address TempAlloca
-            = CreateTempAlloca(STy, Src.getAlignment(),
-                               Src.getName() + ".coerce");
-          Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
-          Src = TempAlloca;
+          llvm::Value *StoredStructValue =
+              Builder.CreateLoad(Src, Src.getName() + ".tuple");
+          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+            llvm::Value *Extract = Builder.CreateExtractValue(
+                StoredStructValue, i, Src.getName() + ".extract" + Twine(i));
+            IRCallArgs[FirstIRArg + i] = Extract;
+          }
         } else {
-          Src = Src.withElementType(STy);
-        }
+          uint64_t SrcSize = SrcTypeSize.getFixedValue();
+          uint64_t DstSize = DstTypeSize.getFixedValue();
 
-        assert(NumIRArgs == STy->getNumElements());
-        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          Address EltPtr = Builder.CreateStructGEP(Src, i);
-          llvm::Value *LI = Builder.CreateLoad(EltPtr);
-          if (ArgHasMaybeUndefAttr)
-            LI = Builder.CreateFreeze(LI);
-          IRCallArgs[FirstIRArg + i] = LI;
+          // If the source type is smaller than the destination type of the
+          // coerce-to logic, copy the source value into a temp alloca the size
+          // of the destination type to allow loading all of it. The bits past
+          // the source value are left undef.
+          if (SrcSize < DstSize) {
+            Address TempAlloca = CreateTempAlloca(STy, Src.getAlignment(),
+                                                  Src.getName() + ".coerce");
+            Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
+            Src = TempAlloca;
+          } else {
+            Src = Src.withElementType(STy);
+          }
+
+          assert(NumIRArgs == STy->getNumElements());
+          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+            Address EltPtr = Builder.CreateStructGEP(Src, i);
+            llvm::Value *LI = Builder.CreateLoad(EltPtr);
+            if (ArgHasMaybeUndefAttr)
+              LI = Builder.CreateFreeze(LI);
+            IRCallArgs[FirstIRArg + i] = LI;
+          }
         }
       } else {
         // In the simple case, just pass the coerced loaded value.
