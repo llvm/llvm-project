@@ -2751,7 +2751,7 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
 
   assert(VT == MVT::f32);
 
-  if (allowApproxFunc(DAG, Flags) || !needsDenormHandlingF32(DAG, Src, Flags))
+  if (!needsDenormHandlingF32(DAG, Src, Flags))
     return DAG.getNode(AMDGPUISD::EXP, SL, MVT::f32, Src, Flags);
 
   // bool needs_scaling = x < -0x1.f80000p+6f;
