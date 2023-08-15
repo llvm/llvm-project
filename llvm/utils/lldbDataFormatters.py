@@ -129,6 +129,9 @@ class SmallVectorSynthProvider:
         if the_type.IsReferenceType():
             the_type = the_type.GetDereferencedType()
 
+        if the_type.IsPointerType():
+            the_type = the_type.GetPointeeType()
+
         self.data_type = the_type.GetTemplateArgumentType(0)
         self.type_size = self.data_type.GetByteSize()
         assert self.type_size != 0
