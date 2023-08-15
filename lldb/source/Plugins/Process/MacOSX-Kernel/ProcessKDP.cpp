@@ -557,6 +557,7 @@ Status ProcessKDP::DoDetach(bool keep_stopped) {
     }
   }
   StopAsyncThread();
+  m_comm.Clear();
 
   SetPrivateState(eStateDetached);
   ResumePrivateStateThread();
