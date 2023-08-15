@@ -28,6 +28,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/UUID.h"
 
 #include "ProcessMachCore.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -223,6 +224,66 @@ void ProcessMachCore::CreateMemoryRegions() {
   }
 }
 
+// Some corefiles have a UUID stored in a low memory
+// address.  We inspect a set list of addresses for
+// the characters 'uuid' and 16 bytes later there will
+// be a uuid_t UUID.  If we can find a binary that
+// matches the UUID, it is loaded with no slide in the target.
+bool ProcessMachCore::LoadBinaryViaLowmemUUID() {
+  Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Process));
+  ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+
+  uint64_t lowmem_uuid_addresses[] = {0x2000204, 0x1000204, 0x1000020, 0x4204,
+                                      0x1204,    0x1020,    0x4020,    0xc00,
+                                      0xC0,      0};
+
+  for (uint64_t addr : lowmem_uuid_addresses) {
+    const VMRangeToFileOffset::Entry *core_memory_entry =
+        m_core_aranges.FindEntryThatContains(addr);
+    if (core_memory_entry) {
+      const addr_t offset = addr - core_memory_entry->GetRangeBase();
+      const addr_t bytes_left = core_memory_entry->GetRangeEnd() - addr;
+      // (4-bytes 'uuid' + 12 bytes pad for align + 16 bytes uuid_t) == 32 bytes
+      if (bytes_left >= 32) {
+        char strbuf[4];
+        if (core_objfile->CopyData(
+                core_memory_entry->data.GetRangeBase() + offset, 4, &strbuf) &&
+            strncmp("uuid", (char *)&strbuf, 4) == 0) {
+          uuid_t uuid_bytes;
+          if (core_objfile->CopyData(core_memory_entry->data.GetRangeBase() +
+                                         offset + 16,
+                                     sizeof(uuid_t), uuid_bytes)) {
+            UUID uuid(uuid_bytes, sizeof(uuid_t));
+            if (uuid.IsValid()) {
+              LLDB_LOGF(log,
+                        "ProcessMachCore::LoadBinaryViaLowmemUUID: found "
+                        "binary uuid %s at low memory address 0x%" PRIx64,
+                        uuid.GetAsString().c_str(), addr);
+              // We have no address specified, only a UUID.  Load it at the file
+              // address.
+              const bool value_is_offset = true;
+              const bool force_symbol_search = true;
+              const bool notify = true;
+              const bool set_address_in_target = true;
+              const bool allow_memory_image_last_resort = false;
+              if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
+                      this, llvm::StringRef(), uuid, 0, value_is_offset,
+                      force_symbol_search, notify, set_address_in_target,
+                      allow_memory_image_last_resort)) {
+                m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
+              }
+              // We found metadata saying which binary should be loaded; don't
+              // try an exhaustive search.
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool ProcessMachCore::LoadBinariesViaMetadata() {
   Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Process));
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -337,6 +398,9 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
     found_binary_spec_in_metadata = true;
     m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
   }
+
+  if (!found_binary_spec_in_metadata && LoadBinaryViaLowmemUUID())
+    found_binary_spec_in_metadata = true;
 
   // LoadCoreFileImges may have set the dynamic loader, e.g. in
   // PlatformDarwinKernel::LoadPlatformBinaryAndSetup().
