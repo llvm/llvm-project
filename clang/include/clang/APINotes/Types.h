@@ -755,6 +755,13 @@ enum class ContextKind : uint8_t {
   Namespace = 2
 };
 
+struct Context {
+  ContextID id;
+  ContextKind kind;
+
+  Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
+};
+
 /// A temporary reference to an Objective-C selector, suitable for
 /// referencing selector data on the stack.
 ///

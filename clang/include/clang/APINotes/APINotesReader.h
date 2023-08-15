@@ -196,14 +196,16 @@ public:
   /// \param name The name of the tag.
   ///
   /// \returns information about the tag, if known.
-  VersionedInfo<TagInfo> lookupTag(llvm::StringRef name);
+  VersionedInfo<TagInfo> lookupTag(std::optional<Context> context,
+                                   llvm::StringRef name);
 
   /// Look for information regarding the given typedef.
   ///
   /// \param name The name of the typedef.
   ///
   /// \returns information about the typedef, if known.
-  VersionedInfo<TypedefInfo> lookupTypedef(llvm::StringRef name);
+  VersionedInfo<TypedefInfo> lookupTypedef(std::optional<Context> context,
+                                           llvm::StringRef name);
 
   /// Look for the context ID of the given C++ namespace.
   ///

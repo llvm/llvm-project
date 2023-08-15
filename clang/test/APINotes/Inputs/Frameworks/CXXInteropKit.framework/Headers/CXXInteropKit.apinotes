@@ -13,3 +13,15 @@ Enumerators:
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options
+- Name: char_box
+  SwiftName: InWrongContext
+Namespaces:
+- Name: Namespace1
+  Tags:
+  - Name: char_box
+    SwiftName: CharBox
+  Namespaces:
+  - Name: Nested1
+    Tags:
+    - Name: char_box
+      SwiftName: NestedCharBox

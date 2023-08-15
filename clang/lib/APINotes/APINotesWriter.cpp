@@ -111,15 +111,15 @@ public:
 
   /// Information about tags.
   ///
-  /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
+  /// Indexed by the context ID, contextKind, identifier ID.
+  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
                  llvm::SmallVector<std::pair<VersionTuple, TagInfo>, 1>>
     Tags;
 
   /// Information about typedefs.
   ///
-  /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
+  /// Indexed by the context ID, contextKind, identifier ID.
+  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
                  llvm::SmallVector<std::pair<VersionTuple, TypedefInfo>, 1>>
     Typedefs;
 
@@ -1050,16 +1050,20 @@ void APINotesWriter::Implementation::writeEnumConstantBlock(
 namespace {
   template<typename Derived, typename UnversionedDataType>
   class CommonTypeTableInfo
-    : public VersionedTableInfo<Derived, unsigned, UnversionedDataType> {
+    : public VersionedTableInfo<Derived,
+                                std::tuple<uint32_t, uint8_t, uint32_t>,
+                                UnversionedDataType> {
   public:
     using key_type_ref = typename CommonTypeTableInfo::key_type_ref;
 
     unsigned getKeyLength(key_type_ref) {
-      return sizeof(IdentifierID);
+      return sizeof(uint32_t) + sizeof(uint8_t) + sizeof(IdentifierID);
     }
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<IdentifierID>(key);
+      writer.write<uint32_t>(std::get<0>(key));
+      writer.write<uint8_t>(std::get<1>(key));
+      writer.write<IdentifierID>(std::get<2>(key));
     }
 
     unsigned getUnversionedInfoSize(const UnversionedDataType &info) {
@@ -1323,16 +1327,28 @@ void APINotesWriter::addEnumConstant(llvm::StringRef name,
   Impl.EnumConstants[enumConstantID].push_back({swiftVersion, info});
 }
 
-void APINotesWriter::addTag(llvm::StringRef name, const TagInfo &info,
+void APINotesWriter::addTag(std::optional<Context> context,
+                            llvm::StringRef name, const TagInfo &info,
                             VersionTuple swiftVersion) {
   IdentifierID tagID = Impl.getIdentifier(name);
-  Impl.Tags[tagID].push_back({swiftVersion, info});
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, tagID};
+  else
+    key = {-1, (uint8_t)-1, tagID};
+  Impl.Tags[key].push_back({swiftVersion, info});
 }
 
-void APINotesWriter::addTypedef(llvm::StringRef name, const TypedefInfo &info,
+void APINotesWriter::addTypedef(std::optional<Context> context,
+                                llvm::StringRef name, const TypedefInfo &info,
                                 VersionTuple swiftVersion) {
   IdentifierID typedefID = Impl.getIdentifier(name);
-  Impl.Typedefs[typedefID].push_back({swiftVersion, info});
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, typedefID};
+  else
+    key = {-1, (uint8_t)-1, typedefID};
+  Impl.Typedefs[key].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addModuleOptions(ModuleOptions opts) {

@@ -105,15 +105,15 @@ public:
   ///
   /// \param name The name of this tag.
   /// \param info Information about this tag.
-  void addTag(llvm::StringRef name, const TagInfo &info,
-              llvm::VersionTuple swiftVersion);
+  void addTag(std::optional<Context> context, llvm::StringRef name,
+              const TagInfo &info, llvm::VersionTuple swiftVersion);
 
   /// Add information about a typedef.
   ///
   /// \param name The name of this typedef.
   /// \param info Information about this typedef.
-  void addTypedef(llvm::StringRef name, const TypedefInfo &info,
-                  llvm::VersionTuple swiftVersion);
+  void addTypedef(std::optional<Context> context, llvm::StringRef name,
+                  const TypedefInfo &info, llvm::VersionTuple swiftVersion);
 
   /// Add module options
   void addModuleOptions(ModuleOptions opts);
