@@ -996,7 +996,23 @@ namespace {
       }
     }
 
-    void convertTopLevelItems(const TopLevelItems &items,
+    void convertNamespaceContext(const Namespace &ns,
+                                 VersionTuple swiftVersion) {
+      // Write the namespace.
+      ObjCContextInfo cInfo;
+
+      if (convertCommon(ns, cInfo, ns.Name))
+        return;
+
+      ContextID clID = Writer->addObjCContext(ns.Name, ContextKind::Namespace,
+                                              cInfo, swiftVersion);
+
+      convertTopLevelItems(Context(clID, ContextKind::Namespace), ns.Items,
+                           swiftVersion);
+    }
+
+    void convertTopLevelItems(std::optional<Context> context,
+                              const TopLevelItems &items,
                               VersionTuple swiftVersion) {
       // Write all classes.
       llvm::StringSet<> knownClasses;
@@ -1020,6 +1036,18 @@ namespace {
         }
 
         convertContext(pr, ContextKind::ObjCProtocol, swiftVersion);
+      }
+
+      // Write all namespaces.
+      llvm::StringSet<> knownNamespaces;
+      for (const auto &ns : items.Namespaces) {
+        // Check for duplicate namespace definitions.
+        if (!knownNamespaces.insert(ns.Name).second) {
+          emitError("multiple definitions of namespace '" + ns.Name + "'");
+          continue;
+        }
+
+        convertNamespaceContext(ns, swiftVersion);
       }
 
       // Write all global variables.
@@ -1130,7 +1158,7 @@ namespace {
           tagInfo.setFlagEnum(t.FlagEnum);          
         }
 
-        Writer->addTag(t.Name, tagInfo, swiftVersion);
+        Writer->addTag(context, t.Name, tagInfo, swiftVersion);
       }
 
       // Write all typedefs.
@@ -1147,7 +1175,7 @@ namespace {
           continue;
         typedefInfo.SwiftWrapper = t.SwiftType;
 
-        Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
+        Writer->addTypedef(context, t.Name, typedefInfo, swiftVersion);
       }
     }
 
@@ -1158,7 +1186,8 @@ namespace {
       Writer = &writer;
 
       // Write the top-level items.
-      convertTopLevelItems(TheModule.TopLevel, VersionTuple());
+      convertTopLevelItems(/* context */ std::nullopt, TheModule.TopLevel,
+                           VersionTuple());
 
       if (TheModule.SwiftInferImportAsMember) {
         ModuleOptions opts;
@@ -1168,7 +1197,8 @@ namespace {
 
       // Convert the versioned information.
       for (const auto &versioned : TheModule.SwiftVersions) {
-        convertTopLevelItems(versioned.Items, versioned.Version);
+        convertTopLevelItems(/* context */ std::nullopt, versioned.Items,
+                             versioned.Version);
       }
 
       if (!ErrorOccured)

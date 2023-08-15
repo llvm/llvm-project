@@ -485,11 +485,14 @@ namespace {
 
   /// Used to deserialize the on-disk tag table.
   class TagTableInfo
-    : public VersionedTableInfo<TagTableInfo, unsigned, TagInfo> {
+      : public VersionedTableInfo<
+            TagTableInfo, std::tuple<uint32_t, uint8_t, uint32_t>, TagInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
     }
     
     static TagInfo readUnversioned(internal_key_type key,
@@ -513,11 +516,15 @@ namespace {
 
   /// Used to deserialize the on-disk typedef table.
   class TypedefTableInfo
-    : public VersionedTableInfo<TypedefTableInfo, unsigned, TypedefInfo> {
+      : public VersionedTableInfo<TypedefTableInfo,
+                                  std::tuple<uint32_t, uint8_t, uint32_t>,
+                                  TypedefInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
     }
 
     static TypedefInfo readUnversioned(internal_key_type key,
@@ -1970,7 +1977,8 @@ auto APINotesReader::lookupEnumConstant(StringRef name)
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
+auto APINotesReader::lookupTag(std::optional<Context> context, StringRef name)
+    -> VersionedInfo<TagInfo> {
   if (!Impl.TagTable)
     return std::nullopt;
 
@@ -1978,14 +1986,21 @@ auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.TagTable->find(*nameID);
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, *nameID};
+  else
+    key = {-1, (uint8_t)-1, *nameID};
+
+  auto known = Impl.TagTable->find(key);
   if (known == Impl.TagTable->end())
     return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupTypedef(StringRef name)
+auto APINotesReader::lookupTypedef(std::optional<Context> context,
+                                   StringRef name)
     -> VersionedInfo<TypedefInfo> {
   if (!Impl.TypedefTable)
     return std::nullopt;
@@ -1994,7 +2009,13 @@ auto APINotesReader::lookupTypedef(StringRef name)
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.TypedefTable->find(*nameID);
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, *nameID};
+  else
+    key = {-1, (uint8_t)-1, *nameID};
+
+  auto known = Impl.TypedefTable->find(key);
   if (known == Impl.TypedefTable->end())
     return std::nullopt;
 
