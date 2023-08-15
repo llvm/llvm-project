@@ -1058,6 +1058,7 @@ const AstTypeMatcher<FunctionType> functionType;
 const AstTypeMatcher<FunctionProtoType> functionProtoType;
 const AstTypeMatcher<ParenType> parenType;
 const AstTypeMatcher<BlockPointerType> blockPointerType;
+const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
 const AstTypeMatcher<MemberPointerType> memberPointerType;
 const AstTypeMatcher<PointerType> pointerType;
 const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;

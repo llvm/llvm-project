@@ -2648,6 +2648,18 @@ matched since the type is deduced as int&amp; by reference collapsing rules.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('macroQualifiedType0')"><a name="macroQualifiedType0Anchor">macroQualifiedType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MacroQualifiedType.html">MacroQualifiedType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="macroQualifiedType0"><pre>Matches qualified types when the qualifier is applied via a macro.
+
+Given
+  #define CDECL __attribute__((cdecl))
+  typedef void (CDECL *X)();
+  typedef void (__attribute__((cdecl)) *Y)();
+macroQualifiedType()
+  matches the type of the typedef declaration of X but not Y.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('memberPointerType0')"><a name="memberPointerType0Anchor">memberPointerType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="memberPointerType0"><pre>Matches member pointer types.
 Given
