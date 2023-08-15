@@ -706,8 +706,8 @@ def : Pattern<
 ```
 
 This will copy the attribute `foo` and `bar` of `ThreeResultOp` in the source
-pattern to `TwoResultOp` and `OneResultOp` in the result patterns respectively.
-The patterns are executed in the order they are specified.
+pattern to `ZeroResultOp` and `ThreeResultOp` in the result patterns respectively.
+The patterns are executed in specified order.
 
 ### Adjusting benefits
 
