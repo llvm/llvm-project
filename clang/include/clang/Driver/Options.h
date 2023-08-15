@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_OPTIONS_H
 
 #include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 
 namespace clang {
 namespace driver {
@@ -35,6 +36,13 @@ enum ClangFlags {
   CLDXCOption = (1 << 18),
   Ignored = (1 << 19),
   TargetSpecific = (1 << 20),
+};
+
+// Flags specifically for clang option visibility. We alias DefaultVis to
+// ClangOption, because "DefaultVis" is confusing in Options.td, which is used
+// for multiple drivers (clang, cl, flang, etc).
+enum ClangVisibility {
+  ClangOption = llvm::opt::DefaultVis,
 };
 
 enum ID {
