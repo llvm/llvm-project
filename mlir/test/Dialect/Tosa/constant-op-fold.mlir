@@ -558,7 +558,7 @@ func.func @cast_int_to_int_sign() -> tensor<i32> {
 func.func @reverse_splat() -> tensor<10xi32> {
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<42> : tensor<10xi32>}
   %splat = "tosa.const"() {value = dense<42> : tensor<10xi32>} : () -> tensor<10xi32>
-  %reverse = tosa.reverse %splat { axis = 0 : i64 } : (tensor<10xi32>) -> tensor<10xi32>
+  %reverse = tosa.reverse %splat { axis = 0 : i32 } : (tensor<10xi32>) -> tensor<10xi32>
   // CHECK: return %[[SPLAT]]
   return %reverse : tensor<10xi32>
 }
@@ -567,9 +567,9 @@ func.func @reverse_splat() -> tensor<10xi32> {
 
 // CHECK-LABEL: @reverse_length_one
 func.func @reverse_length_one(%arg0 : tensor<10x1xi32>) -> (tensor<10x1xi32>, tensor<10x1xi32>) {
-  %nofold = tosa.reverse %arg0 { axis = 0 : i64 } : (tensor<10x1xi32>) -> tensor<10x1xi32>
-  %fold = tosa.reverse %arg0 { axis = 1 : i64 } : (tensor<10x1xi32>) -> tensor<10x1xi32>
-  // CHECK: %[[NOFOLD:.+]] = tosa.reverse %arg0 {axis = 0 : i64}
+  %nofold = tosa.reverse %arg0 { axis = 0 : i32 } : (tensor<10x1xi32>) -> tensor<10x1xi32>
+  %fold = tosa.reverse %arg0 { axis = 1 : i32 } : (tensor<10x1xi32>) -> tensor<10x1xi32>
+  // CHECK: %[[NOFOLD:.+]] = tosa.reverse %arg0 {axis = 0 : i32}
   // CHECK: return %[[NOFOLD]], %arg0
   return %nofold, %fold : tensor<10x1xi32>, tensor<10x1xi32>
 }
