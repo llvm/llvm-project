@@ -25,12 +25,17 @@ class testFieldDecl {
 
 namespace testVarDeclNRVO {
   class A { };
-  A foo() {
+  A TestFuncNRVO() {
     A TestVarDeclNRVO;
     return TestVarDeclNRVO;
   }
 }
-// CHECK: VarDecl{{.*}} TestVarDeclNRVO 'A':'testVarDeclNRVO::A' nrvo
+// CHECK:      FunctionDecl{{.*}} TestFuncNRVO 'A ()'
+// CHECK-NEXT: `-CompoundStmt
+// CHECK-NEXT: |-DeclStmt
+// CHECK-NEXT: | `-VarDecl{{.*}} TestVarDeclNRVO 'A':'testVarDeclNRVO::A' nrvo callinit
+// CHECK-NEXT: |   `-CXXConstructExpr
+// CHECK-NEXT: `-ReturnStmt{{.*}} nrvo_candidate(Var {{.*}} 'TestVarDeclNRVO' 'A':'testVarDeclNRVO::A')
 
 void testParmVarDeclInit(int TestParmVarDeclInit = 0);
 // CHECK:      ParmVarDecl{{.*}} TestParmVarDeclInit 'int'
