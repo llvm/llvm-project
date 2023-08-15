@@ -2610,9 +2610,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
       X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
     }
 
-    SDValue Lowered = LowerFLOGUnsafe(
-        X, DL, DAG, IsLog10 ? numbers::ln2 / numbers::ln10 : numbers::ln2,
-        Flags);
+    SDValue Lowered = LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags);
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       return DAG.getNode(ISD::FP_ROUND, DL, VT, Lowered,
                          DAG.getTargetConstant(0, DL, MVT::i32), Flags);
@@ -2697,11 +2695,36 @@ SDValue AMDGPUTargetLowering::LowerFLOG10(SDValue Op, SelectionDAG &DAG) const {
 // Do f32 fast math expansion for flog2 or flog10. This is accurate enough for a
 // promote f16 operation.
 SDValue AMDGPUTargetLowering::LowerFLOGUnsafe(SDValue Src, const SDLoc &SL,
-                                              SelectionDAG &DAG,
-                                              double Log2BaseInverted,
+                                              SelectionDAG &DAG, bool IsLog10,
                                               SDNodeFlags Flags) const {
   EVT VT = Src.getValueType();
   unsigned LogOp = VT == MVT::f32 ? AMDGPUISD::LOG : ISD::FLOG2;
+
+  double Log2BaseInverted =
+      IsLog10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
+
+  if (VT == MVT::f32) {
+    auto [ScaledInput, IsScaled] = getScaledLogInput(DAG, SL, Src, Flags);
+    if (ScaledInput) {
+      SDValue LogSrc = DAG.getNode(AMDGPUISD::LOG, SL, VT, ScaledInput, Flags);
+      SDValue ScaledResultOffset =
+          DAG.getConstantFP(-32.0 * Log2BaseInverted, SL, VT);
+
+      SDValue Zero = DAG.getConstantFP(0.0f, SL, VT);
+
+      SDValue ResultOffset = DAG.getNode(ISD::SELECT, SL, VT, IsScaled,
+                                         ScaledResultOffset, Zero, Flags);
+
+      SDValue Log2Inv = DAG.getConstantFP(Log2BaseInverted, SL, VT);
+
+      if (Subtarget->hasFastFMAF32())
+        return DAG.getNode(ISD::FMA, SL, VT, LogSrc, Log2Inv, ResultOffset,
+                           Flags);
+      SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, LogSrc, Log2Inv, Flags);
+      return DAG.getNode(ISD::FADD, SL, VT, Mul, ResultOffset);
+    }
+  }
+
   SDValue Log2Operand = DAG.getNode(LogOp, SL, VT, Src, Flags);
   SDValue Log2BaseInvertedOperand = DAG.getConstantFP(Log2BaseInverted, SL, VT);
 
