@@ -350,7 +350,17 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << Pointee << " {" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {";
+    if (Base == RootPtrMark)
+      OS << "rootptr, ";
+    else
+      OS << Base << ", ";
+
+    if (Offset == PastEndMark)
+      OS << "pastend, ";
+    else
+      OS << Offset << ", ";
+
     if (Pointee)
       OS << Pointee->getSize();
     else
