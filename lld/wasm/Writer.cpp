@@ -676,7 +676,10 @@ done:
   // memory is not being imported then we can assume its zero initialized.
   // In the case the memory is imported, and we can use the memory.fill
   // instruction, then we can also avoid including the segments.
-  if (config->memoryImport.has_value() && !allowed.count("bulk-memory"))
+  // Finally, if we are emitting relocations, they may refer to locations within
+  // the bss segments, so these segments need to exist in the binary.
+  if (config->emitRelocs ||
+      (config->memoryImport.has_value() && !allowed.count("bulk-memory")))
     config->emitBssSegments = true;
 
   if (allowed.count("extended-const"))
