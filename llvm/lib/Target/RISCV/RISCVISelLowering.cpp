@@ -15169,8 +15169,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
   // registers are exhausted.
   if (UseGPRForF64 && XLen == 32 && ValVT == MVT::f64) {
-    assert(!ArgFlags.isSplit() && PendingLocs.empty() &&
-           "Can't lower f64 if it is split");
+    assert(PendingLocs.empty() && "Can't lower f64 if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
