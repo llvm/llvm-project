@@ -87,6 +87,8 @@ protected:
 private:
   void CreateMemoryRegions();
 
+  bool LoadBinaryViaLowmemUUID();
+
   /// \return
   ///   True if any metadata were found indicating the binary that should
   ///   be loaded, regardless of whether the specified binary could be found.
