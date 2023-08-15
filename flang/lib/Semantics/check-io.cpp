@@ -1036,12 +1036,9 @@ void IoChecker::CheckForDefinableVariable(
 
 void IoChecker::CheckForPureSubprogram() const { // C1597
   CHECK(context_.location());
-  if (const Scope *
-      scope{context_.globalScope().FindScope(*context_.location())}) {
-    if (FindPureProcedureContaining(*scope)) {
-      context_.Say(
-          "External I/O is not allowed in a pure subprogram"_err_en_US);
-    }
+  const Scope &scope{context_.FindScope(*context_.location())};
+  if (FindPureProcedureContaining(scope)) {
+    context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
   }
 }
 
