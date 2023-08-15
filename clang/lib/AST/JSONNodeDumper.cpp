@@ -530,6 +530,10 @@ JSONNodeDumper::createCXXBaseSpecifier(const CXXBaseSpecifier &BS) {
   return Ret;
 }
 
+void JSONNodeDumper::VisitAliasAttr(const AliasAttr *AA) {
+  JOS.attribute("aliasee", AA->getAliasee());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())

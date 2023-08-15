@@ -208,6 +208,8 @@ public:
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
 
+  void VisitAliasAttr(const AliasAttr *AA);
+
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
   void VisitFunctionType(const FunctionType *T);
