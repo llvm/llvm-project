@@ -212,7 +212,9 @@ public:
   /// \param name The name of the class we're looking for.
   ///
   /// \returns The ID, if known.
-  std::optional<ContextID> lookupNamespaceID(llvm::StringRef name);
+  std::optional<ContextID>
+  lookupNamespaceID(std::optional<ContextID> parentNamespaceID,
+                    llvm::StringRef name);
 };
 
 } // end namespace api_notes
