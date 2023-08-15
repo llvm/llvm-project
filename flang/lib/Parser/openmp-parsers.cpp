@@ -610,7 +610,7 @@ TYPE_PARSER(
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
-    verbatim("REQUIRES"_tok), some(Parser<OmpClause>{} / maybe(","_tok)))))
+    verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(
