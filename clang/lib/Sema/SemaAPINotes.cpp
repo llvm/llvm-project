@@ -821,9 +821,28 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto NamespaceContext = dyn_cast<NamespaceDecl>(D->getDeclContext())) {
       for (auto Reader :
            APINotes.findAPINotes(NamespaceContext->getLocation())) {
-        if (auto id = Reader->lookupNamespaceID(NamespaceContext->getName())) {
-          APINotesContext = {*id, api_notes::ContextKind::Namespace};
+        // Retrieve the context ID for the parent namespace of the decl.
+        std::stack<NamespaceDecl *> NamespaceStack;
+        {
+          auto CurrentNamespace = NamespaceContext;
+          while (CurrentNamespace) {
+            NamespaceStack.push(CurrentNamespace);
+            CurrentNamespace =
+                dyn_cast<NamespaceDecl>(CurrentNamespace->getParent());
+          }
         }
+        std::optional<api_notes::ContextID> NamespaceID;
+        while (!NamespaceStack.empty()) {
+          auto CurrentNamespace = NamespaceStack.top();
+          NamespaceStack.pop();
+          NamespaceID = Reader->lookupNamespaceID(NamespaceID,
+                                                  CurrentNamespace->getName());
+          if (!NamespaceID)
+            break;
+        }
+        if (NamespaceID)
+          APINotesContext = api_notes::Context(
+              *NamespaceID, api_notes::ContextKind::Namespace);
       }
     }
 

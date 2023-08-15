@@ -25,3 +25,8 @@ Namespaces:
     Tags:
     - Name: char_box
       SwiftName: NestedCharBox
+    Namespaces:
+    - Name: Namespace1
+      Tags:
+      - Name: char_box
+        SwiftName: DeepNestedCharBox

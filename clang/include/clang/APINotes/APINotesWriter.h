@@ -55,7 +55,8 @@ public:
   ///
   /// \returns the ID of the class, protocol, or namespace, which can be used to
   /// add properties and methods to the class/protocol/namespace.
-  ContextID addObjCContext(llvm::StringRef name, ContextKind contextKind,
+  ContextID addObjCContext(std::optional<ContextID> parentContextID,
+                           llvm::StringRef name, ContextKind contextKind,
                            const ObjCContextInfo &info,
                            llvm::VersionTuple swiftVersion);
 

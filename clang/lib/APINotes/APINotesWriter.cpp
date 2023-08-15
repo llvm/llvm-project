@@ -56,14 +56,20 @@ public:
 
   bool SwiftInferImportAsMember = false;
 
-  /// Information about Objective-C contexts (classes or protocols).
+  /// Information about contexts (Objective-C classes or protocols or C++
+  /// namespaces).
   ///
-  /// Indexed by the identifier ID and a bit indication whether we're looking
-  /// for a class (0) or protocol (1) and provides both the context ID and
-  /// information describing the context within that module.
-  llvm::DenseMap<std::pair<unsigned, char>,
+  /// Indexed by the parent context ID, context kind and the identifier ID of
+  /// this context and provides both the context ID and information describing
+  /// the context within that module.
+  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
                  std::pair<unsigned, VersionedSmallVector<ObjCContextInfo>>>
     ObjCContexts;
+
+  /// Information about parent contexts for each context.
+  ///
+  /// Indexed by context ID, provides the parent context ID.
+  llvm::DenseMap<uint32_t, uint32_t> ParentContexts;
 
   /// Mapping from context IDs to the identifier ID holding the name.
   llvm::DenseMap<unsigned, unsigned> ObjCContextNames;
@@ -378,7 +384,7 @@ namespace {
   /// Used to serialize the on-disk Objective-C context table.
   class ObjCContextIDTableInfo {
   public:
-    using key_type = std::pair<unsigned, char>; // identifier ID, is-protocol
+    using key_type = std::tuple<uint32_t, uint8_t, uint32_t>; // parent context ID, context kind, identifier ID
     using key_type_ref = key_type;
     using data_type = unsigned;
     using data_type_ref = const data_type &;
@@ -392,7 +398,8 @@ namespace {
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
                                                     key_type_ref key,
                                                     data_type_ref data) {
-      uint32_t keyLength = sizeof(uint32_t) + 1;
+      uint32_t keyLength =
+          sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
       uint32_t dataLength = sizeof(uint32_t);
       endian::Writer writer(out, little);
       writer.write<uint16_t>(keyLength);
@@ -402,8 +409,9 @@ namespace {
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(key.first);
-      writer.write<uint8_t>(key.second);
+      writer.write<uint32_t>(std::get<0>(key));
+      writer.write<uint8_t>(std::get<1>(key));
+      writer.write<uint32_t>(std::get<2>(key));
     }
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
@@ -1226,13 +1234,16 @@ void APINotesWriter::writeToStream(raw_ostream &os) {
   Impl.writeToStream(os);
 }
 
-ContextID APINotesWriter::addObjCContext(StringRef name,
-                                         ContextKind contextKind,
-                                         const ObjCContextInfo &info,
-                                         VersionTuple swiftVersion) {
+ContextID
+APINotesWriter::addObjCContext(std::optional<ContextID> parentContextID,
+                               StringRef name, ContextKind contextKind,
+                               const ObjCContextInfo &info,
+                               VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
 
-  std::pair<unsigned, char> key(nameID, (uint8_t)contextKind);
+  uint32_t rawParentContextID = parentContextID ? parentContextID->Value : -1;
+  std::tuple<uint32_t, uint8_t, uint32_t> key = {rawParentContextID,
+                                                 (uint8_t)contextKind, nameID};
   auto known = Impl.ObjCContexts.find(key);
   if (known == Impl.ObjCContexts.end()) {
     unsigned nextID = Impl.ObjCContexts.size() + 1;
@@ -1243,6 +1254,7 @@ ContextID APINotesWriter::addObjCContext(StringRef name,
               .first;
 
     Impl.ObjCContextNames[nextID] = nameID;
+    Impl.ParentContexts[nextID] = rawParentContextID;
   }
 
   // Add this version information.
@@ -1284,12 +1296,13 @@ void APINotesWriter::addObjCMethod(ContextID contextID,
   // If this method is a designated initializer, update the class to note that
   // it has designated initializers.
   if (info.DesignatedInit) {
-    assert(Impl.ObjCContexts.count({Impl.ObjCContextNames[contextID.Value],
-                                    (char)ContextKind::ObjCClass}));
-    auto &versionedVec =
-        Impl.ObjCContexts[{Impl.ObjCContextNames[contextID.Value],
-                           (char)ContextKind::ObjCClass}]
-            .second;
+    assert(Impl.ParentContexts.contains(contextID.Value));
+    uint32_t parentContextID = Impl.ParentContexts[contextID.Value];
+    std::tuple<uint32_t, uint8_t, uint32_t> ctxKey = {
+        parentContextID, (char)ContextKind::ObjCClass,
+        Impl.ObjCContextNames[contextID.Value]};
+    assert(Impl.ObjCContexts.contains(ctxKey));
+    auto &versionedVec = Impl.ObjCContexts[ctxKey].second;
     bool found = false;
     for (auto &versioned : versionedVec) {
       if (versioned.first == swiftVersion) {

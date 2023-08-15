@@ -2,8 +2,11 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -x objective-c++
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter SomeClass -x objective-c++ | FileCheck %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter "unnamed enum" -x objective-c++ | FileCheck -check-prefix=CHECK-ANONYMOUS-ENUM %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::funcInNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-FUNC-IN-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-NESTED-NAMESPACE %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::funcInNestedNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-FUNC-IN-NESTED-NAMESPACE %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::Namespace1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE %s
 
 #import <CXXInteropKit/CXXInteropKit.h>
 
@@ -24,10 +27,23 @@
 // CHECK-ANONYMOUS-ENUM-NEXT: EnumDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> 'NSSomeEnumOptions':'unsigned long'
 // CHECK-ANONYMOUS-ENUM-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeEnum.Options"
 
+// CHECK-FUNC-IN-NAMESPACE: Dumping Namespace1::funcInNamespace:
+// CHECK-FUNC-IN-NAMESPACE-NEXT: FunctionDecl {{.+}} imported in CXXInteropKit funcInNamespace 'void ()'
+// CHECK-FUNC-IN-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftFuncInNamespace()"
+
 // CHECK-STRUCT-IN-NAMESPACE: Dumping Namespace1::char_box:
 // CHECK-STRUCT-IN-NAMESPACE-NEXT: CXXRecordDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> struct char_box
 // CHECK-STRUCT-IN-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "CharBox"
 
+// CHECK-FUNC-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested1::funcInNestedNamespace:
+// CHECK-FUNC-IN-NESTED-NAMESPACE-NEXT: FunctionDecl {{.+}} imported in CXXInteropKit funcInNestedNamespace 'void (int)'
+// CHECK-FUNC-IN-NESTED-NAMESPACE-NEXT: ParmVarDecl {{.+}} i 'int'
+// CHECK-FUNC-IN-NESTED-NAMESPACE-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "swiftFuncInNestedNamespace(_:)"
+
 // CHECK-STRUCT-IN-NESTED-NAMESPACE: Dumping Namespace1::Nested1::char_box:
 // CHECK-STRUCT-IN-NESTED-NAMESPACE-NEXT: CXXRecordDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> struct char_box
 // CHECK-STRUCT-IN-NESTED-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "NestedCharBox"
+
+// CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE: Dumping Namespace1::Nested1::Namespace1::char_box:
+// CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE-NEXT: CXXRecordDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> struct char_box
+// CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "DeepNestedCharBox"
