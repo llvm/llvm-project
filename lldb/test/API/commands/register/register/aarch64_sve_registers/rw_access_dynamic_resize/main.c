@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <stdbool.h>
 #include <sys/prctl.h>
 
 #ifndef PR_SME_SET_VL
@@ -62,7 +63,18 @@ static inline void write_sve_registers() {
 
 int SET_VL_OPT = PR_SVE_SET_VL;
 
+// These ensure that when lldb stops in one of threadX / threadY, the other has
+// at least been created. That means we can continue the other onto the expected
+// breakpoint. Otherwise we could get to the breakpoint in one thread before the
+// other has started.
+volatile bool threadX_ready = false;
+volatile bool threadY_ready = false;
+
 void *threadX_func(void *x_arg) {
+  threadX_ready = true;
+  while (!threadY_ready) {
+  }
+
   prctl(SET_VL_OPT, 8 * 4);
 #ifdef USE_SSVE
   SMSTART();
@@ -73,6 +85,10 @@ void *threadX_func(void *x_arg) {
 }
 
 void *threadY_func(void *y_arg) {
+  threadY_ready = true;
+  while (!threadX_ready) {
+  }
+
   prctl(SET_VL_OPT, 8 * 2);
 #ifdef USE_SSVE
   SMSTART();
