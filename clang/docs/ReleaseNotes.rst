@@ -85,6 +85,9 @@ C++2c Feature Support
       int _; // Previously diagnosed under -Wunused, no longer diagnosed
     }
 
+- Attributes now expect unevaluated strings in attributes parameters that are string literals.
+  This is applied to both C++ standard attributes, and other attributes supported by Clang.
+  This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>_`
 
 
 Resolutions to C++ Defect Reports

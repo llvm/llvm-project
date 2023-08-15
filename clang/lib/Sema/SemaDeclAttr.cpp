@@ -350,7 +350,7 @@ bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
   if (ArgLocation)
     *ArgLocation = E->getBeginLoc();
 
-  if (!Literal || !Literal->isOrdinary()) {
+  if (!Literal || (!Literal->isUnevaluated() && !Literal->isOrdinary())) {
     Diag(E->getBeginLoc(), diag::err_attribute_argument_type)
         << CI << AANT_ArgumentString;
     return false;
@@ -382,6 +382,16 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
 
   // Now check for an actual string literal.
   Expr *ArgExpr = AL.getArgAsExpr(ArgNum);
+  const auto *Literal = dyn_cast<StringLiteral>(ArgExpr->IgnoreParenCasts());
+  if (ArgLocation)
+    *ArgLocation = ArgExpr->getBeginLoc();
+
+  if (!Literal || (!Literal->isUnevaluated() && !Literal->isOrdinary())) {
+    Diag(ArgExpr->getBeginLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentString;
+    return false;
+  }
+  Str = Literal->getString();
   return checkStringLiteralArgumentAttr(AL, ArgExpr, Str, ArgLocation);
 }
 
