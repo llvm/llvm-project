@@ -2780,3 +2780,44 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       },
       accDeclConstruct.u);
 }
+
+void Fortran::lower::attachDeclarePostAllocAction(
+    AbstractConverter &converter, fir::FirOpBuilder &builder,
+    const Fortran::semantics::Symbol &sym) {
+  std::stringstream fctName;
+  fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
+  mlir::Operation &op = builder.getInsertionBlock()->back();
+  op.setAttr(mlir::acc::getDeclareActionAttrName(),
+             mlir::acc::DeclareActionAttr::get(
+                 builder.getContext(),
+                 /*preAlloc=*/{},
+                 /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
+                 /*preDealloc=*/{}, /*postDealloc=*/{}));
+}
+
+void Fortran::lower::attachDeclarePreDeallocAction(
+    AbstractConverter &converter, fir::FirOpBuilder &builder,
+    mlir::Value beginOpValue, const Fortran::semantics::Symbol &sym) {
+  std::stringstream fctName;
+  fctName << converter.mangleName(sym) << declarePreDeallocSuffix.str();
+  beginOpValue.getDefiningOp()->setAttr(
+      mlir::acc::getDeclareActionAttrName(),
+      mlir::acc::DeclareActionAttr::get(
+          builder.getContext(),
+          /*preAlloc=*/{}, /*postAlloc=*/{},
+          /*preDealloc=*/builder.getSymbolRefAttr(fctName.str()),
+          /*postDealloc=*/{}));
+}
+
+void Fortran::lower::attachDeclarePostDeallocAction(
+    AbstractConverter &converter, fir::FirOpBuilder &builder,
+    const Fortran::semantics::Symbol &sym) {
+  std::stringstream fctName;
+  fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
+  mlir::Operation &op = builder.getInsertionBlock()->back();
+  op.setAttr(mlir::acc::getDeclareActionAttrName(),
+             mlir::acc::DeclareActionAttr::get(
+                 builder.getContext(),
+                 /*preAlloc=*/{}, /*postAlloc=*/{}, /*preDealloc=*/{},
+                 /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
+}
