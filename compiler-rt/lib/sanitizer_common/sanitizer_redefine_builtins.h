@@ -22,7 +22,7 @@ asm("memmove = __sanitizer_internal_memmove");
 asm("memset = __sanitizer_internal_memset");
 
 #      if defined(__cplusplus) && \
-          !defined(SANITIZER_COMMON_REDEFINE_BUILTINS_IN_CXX)
+          !defined(SANITIZER_COMMON_REDEFINE_BUILTINS_IN_STD)
 
 // The builtins should not be redefined in source files that make use of C++
 // standard libraries, in particular where C++STL headers with inline functions
