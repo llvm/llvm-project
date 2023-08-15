@@ -509,10 +509,9 @@ Status ProcessMachCore::DoLoadCore() {
 
   CleanupMemoryRegionPermissions();
 
-  addr_t address_mask = core_objfile->GetAddressMask();
-  if (address_mask != 0) {
-    SetCodeAddressMask(address_mask);
-    SetDataAddressMask(address_mask);
+  AddressableBits addressable_bits;
+  if (core_objfile->GetAddressableBits(addressable_bits)) {
+    addressable_bits.SetProcessMasks(*this);
   }
   return error;
 }
