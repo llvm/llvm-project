@@ -471,6 +471,15 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     // Skip ops that no longer have tensor semantics.
     if (!hasTensorSemantics(nextOp))
       continue;
+    // Check for unsupported unstructured control flow.
+    if (!bufferizableOp.supportsUnstructuredControlFlow())
+      for (Region &r : nextOp->getRegions())
+        if (r.getBlocks().size() > 1)
+          return nextOp->emitOpError(
+              "op or BufferizableOpInterface implementation does not support "
+              "unstructured control flow, but at least one region has multiple "
+              "blocks");
+
     // Bufferize the op.
     LLVM_DEBUG(llvm::dbgs()
                << "//===-------------------------------------------===//\n"
