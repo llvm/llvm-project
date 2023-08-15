@@ -17,15 +17,15 @@ struct StableSort {
 
   void run(benchmark::State& state) const {
     runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountBatch, [](auto& Copy) {
-      std::stable_sort(Copy.begin(), Copy.end());
+      std::stable_sort(std::execution::par, Copy.begin(), Copy.end());
     });
   }
 
   bool skip() const { return Order() == ::Order::Heap; }
 
   std::string name() const {
-    return "BM_StableSort" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
-  };
+    return "BM_pstl_stable_sort" + ValueType::name() + Order::name() + "/" + std::to_string(Quantity);
+  }
 };
 } // namespace
 
