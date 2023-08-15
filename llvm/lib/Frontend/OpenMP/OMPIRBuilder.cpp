@@ -4038,15 +4038,18 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   Twine DynamicEnvironmentName = KernelName + "_dynamic_environment";
   Constant *DynamicEnvironmentInitializer =
       ConstantStruct::get(DynamicEnvironment, {DebugIndentionLevelVal});
-  Constant *DynamicEnvironmentGV = new GlobalVariable(
-      M, DynamicEnvironment, /* IsConstant */ false,
-      GlobalValue::WeakODRLinkage, DynamicEnvironmentInitializer,
-      DynamicEnvironmentName,
-      /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
+  GlobalVariable *DynamicEnvironmentGV = new GlobalVariable(
+      M, DynamicEnvironment, /*IsConstant=*/false, GlobalValue::WeakODRLinkage,
+      DynamicEnvironmentInitializer, DynamicEnvironmentName,
+      /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
       DL.getDefaultGlobalsAddressSpace());
-  if (DynamicEnvironmentGV->getType() != DynamicEnvironmentPtr)
-    DynamicEnvironmentGV = ConstantExpr::getAddrSpaceCast(
-        DynamicEnvironmentGV, DynamicEnvironmentPtr);
+  DynamicEnvironmentGV->setVisibility(GlobalValue::ProtectedVisibility);
+
+  Constant *DynamicEnvironment =
+      DynamicEnvironmentGV->getType() == DynamicEnvironmentPtr
+          ? DynamicEnvironmentGV
+          : ConstantExpr::getAddrSpaceCast(DynamicEnvironmentGV,
+                                           DynamicEnvironmentPtr);
 
   Constant *ConfigurationEnvironmentInitializer = ConstantStruct::get(
       ConfigurationEnvironment, {
@@ -4058,19 +4061,22 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
       KernelEnvironment, {
                              ConfigurationEnvironmentInitializer,
                              Ident,
-                             DynamicEnvironmentGV,
+                             DynamicEnvironment,
                          });
   Twine KernelEnvironmentName = KernelName + "_kernel_environment";
-  Constant *KernelEnvironmentGV = new GlobalVariable(
-      M, KernelEnvironment, /* IsConstant */ true, GlobalValue::WeakODRLinkage,
+  GlobalVariable *KernelEnvironmentGV = new GlobalVariable(
+      M, KernelEnvironment, /*IsConstant=*/true, GlobalValue::WeakODRLinkage,
       KernelEnvironmentInitializer, KernelEnvironmentName,
-      /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
+      /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
       DL.getDefaultGlobalsAddressSpace());
-  if (KernelEnvironmentGV->getType() != KernelEnvironmentPtr)
-    KernelEnvironmentGV = ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
-                                                         KernelEnvironmentPtr);
+  KernelEnvironmentGV->setVisibility(GlobalValue::ProtectedVisibility);
 
-  CallInst *ThreadKind = Builder.CreateCall(Fn, {KernelEnvironmentGV});
+  Constant *KernelEnvironment =
+      KernelEnvironmentGV->getType() == KernelEnvironmentPtr
+          ? KernelEnvironmentGV
+          : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
+                                           KernelEnvironmentPtr);
+  CallInst *ThreadKind = Builder.CreateCall(Fn, {KernelEnvironment});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
