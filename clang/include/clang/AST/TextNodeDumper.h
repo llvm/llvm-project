@@ -202,6 +202,7 @@ public:
   void dumpName(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
+  void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 
