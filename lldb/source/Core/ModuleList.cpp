@@ -1083,6 +1083,7 @@ bool ModuleList::AnyOf(
 
 void ModuleList::Swap(ModuleList &other) {
   // scoped_lock locks both mutexes at once.
-  std::scoped_lock lock(m_modules_mutex, other.m_modules_mutex);
+  std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lock(
+      m_modules_mutex, other.m_modules_mutex);
   m_modules.swap(other.m_modules);
 }

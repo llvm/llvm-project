@@ -65,8 +65,9 @@ PipePosix::PipePosix(PipePosix &&pipe_posix)
             pipe_posix.ReleaseWriteFileDescriptor()} {}
 
 PipePosix &PipePosix::operator=(PipePosix &&pipe_posix) {
-  std::scoped_lock guard(m_read_mutex, m_write_mutex, pipe_posix.m_read_mutex,
-                         pipe_posix.m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex, std::mutex, std::mutex> guard(
+      m_read_mutex, m_write_mutex, pipe_posix.m_read_mutex,
+      pipe_posix.m_write_mutex);
 
   PipeBase::operator=(std::move(pipe_posix));
   m_fds[READ] = pipe_posix.ReleaseReadFileDescriptorUnlocked();
@@ -77,7 +78,7 @@ PipePosix &PipePosix::operator=(PipePosix &&pipe_posix) {
 PipePosix::~PipePosix() { Close(); }
 
 Status PipePosix::CreateNew(bool child_processes_inherit) {
-  std::scoped_lock guard(m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
 
@@ -107,7 +108,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
 }
 
 Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
-  std::scoped_lock (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
@@ -145,7 +146,7 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
 
 Status PipePosix::OpenAsReader(llvm::StringRef name,
                                bool child_process_inherit) {
-  std::scoped_lock (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
 
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
@@ -168,7 +169,7 @@ Status
 PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
                                    bool child_process_inherit,
                                    const std::chrono::microseconds &timeout) {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
@@ -205,7 +206,7 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
 }
 
 int PipePosix::GetReadFileDescriptor() const {
-  std::lock_guard guard(m_read_mutex);
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   return GetReadFileDescriptorUnlocked();
 }
 
@@ -214,7 +215,7 @@ int PipePosix::GetReadFileDescriptorUnlocked() const {
 }
 
 int PipePosix::GetWriteFileDescriptor() const {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   return GetWriteFileDescriptorUnlocked();
 }
 
@@ -223,7 +224,7 @@ int PipePosix::GetWriteFileDescriptorUnlocked() const {
 }
 
 int PipePosix::ReleaseReadFileDescriptor() {
-  std::lock_guard guard(m_read_mutex);
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   return ReleaseReadFileDescriptorUnlocked();
 }
 
@@ -234,7 +235,7 @@ int PipePosix::ReleaseReadFileDescriptorUnlocked() {
 }
 
 int PipePosix::ReleaseWriteFileDescriptor() {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   return ReleaseWriteFileDescriptorUnlocked();
 }
 
@@ -245,7 +246,7 @@ int PipePosix::ReleaseWriteFileDescriptorUnlocked() {
 }
 
 void PipePosix::Close() {
-  std::scoped_lock guard(m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   CloseUnlocked();
 }
 
@@ -259,7 +260,7 @@ Status PipePosix::Delete(llvm::StringRef name) {
 }
 
 bool PipePosix::CanRead() const {
-  std::lock_guard guard(m_read_mutex);
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   return CanReadUnlocked();
 }
 
@@ -268,7 +269,7 @@ bool PipePosix::CanReadUnlocked() const {
 }
 
 bool PipePosix::CanWrite() const {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   return CanWriteUnlocked();
 }
 
@@ -277,7 +278,7 @@ bool PipePosix::CanWriteUnlocked() const {
 }
 
 void PipePosix::CloseReadFileDescriptor() {
-  std::lock_guard guard(m_read_mutex);
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   CloseReadFileDescriptorUnlocked();
 }
 void PipePosix::CloseReadFileDescriptorUnlocked() {
@@ -288,7 +289,7 @@ void PipePosix::CloseReadFileDescriptorUnlocked() {
 }
 
 void PipePosix::CloseWriteFileDescriptor() {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   CloseWriteFileDescriptorUnlocked();
 }
 
@@ -302,7 +303,7 @@ void PipePosix::CloseWriteFileDescriptorUnlocked() {
 Status PipePosix::ReadWithTimeout(void *buf, size_t size,
                                   const std::chrono::microseconds &timeout,
                                   size_t &bytes_read) {
-  std::lock_guard guard(m_read_mutex);
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   bytes_read = 0;
   if (!CanReadUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
@@ -335,7 +336,7 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
 }
 
 Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
-  std::lock_guard guard(m_write_mutex);
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   bytes_written = 0;
   if (!CanWriteUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
