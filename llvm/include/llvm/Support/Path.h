@@ -390,6 +390,21 @@ StringRef stem(StringRef path, Style style = Style::native);
 /// @result The extension of \a path.
 StringRef extension(StringRef path, Style style = Style::native);
 
+/// Get the program's name
+///
+/// If the path ends with the string ".exe", returns the stem of
+/// \a path. Otherwise returns the filename of \a path.
+///
+/// @code
+///   /foo/prog.exe => prog
+///   /bar/prog     => prog
+///   /foo/prog1.2  => prog1.2
+/// @endcode
+///
+/// @param path Input path.
+/// @result The filename of \a path without any ".exe" component.
+StringRef program_name(StringRef path, Style style = Style::native);
+
 /// Check whether the given char is a path separator on the host OS.
 ///
 /// @param value a character

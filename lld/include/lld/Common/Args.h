@@ -38,8 +38,6 @@ uint64_t getZOptionValue(llvm::opt::InputArgList &args, int id, StringRef key,
 
 std::vector<StringRef> getLines(MemoryBufferRef mb);
 
-StringRef getFilenameWithoutExe(StringRef path);
-
 } // namespace args
 } // namespace lld
 

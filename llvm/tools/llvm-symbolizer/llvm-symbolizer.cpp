@@ -432,7 +432,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
   ToolName = argv[0];
-  bool IsAddr2Line = sys::path::stem(ToolName).contains("addr2line");
+  bool IsAddr2Line = sys::path::filename(ToolName).contains("addr2line");
   BumpPtrAllocator A;
   StringSaver Saver(A);
   SymbolizerOptTable Tbl;

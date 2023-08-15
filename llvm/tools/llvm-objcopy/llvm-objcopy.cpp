@@ -74,7 +74,7 @@ static ErrorSuccess reportWarning(Error E) {
 }
 
 static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
-  StringRef Stem = sys::path::stem(ToolName);
+  StringRef Stem = sys::path::program_name(ToolName);
   auto Is = [=](StringRef Tool) {
     // We need to recognize the following filenames:
     //

@@ -68,7 +68,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   auto *ctx = new COFFLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
+  ctx->e.logName = sys::path::program_name(args[0]);
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now"
                                  " (use /errorlimit:0 to see all errors)";
 

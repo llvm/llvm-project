@@ -85,9 +85,3 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {
   }
   return ret;
 }
-
-StringRef lld::args::getFilenameWithoutExe(StringRef path) {
-  if (path.ends_with_insensitive(".exe"))
-    return sys::path::stem(path);
-  return sys::path::filename(path);
-}

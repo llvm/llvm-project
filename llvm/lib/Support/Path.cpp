@@ -600,6 +600,13 @@ StringRef extension(StringRef path, Style style) {
   return fname.substr(pos);
 }
 
+StringRef program_name(StringRef path, Style style) {
+  // In the future this may need to be extended to other program suffixes.
+  if (path.ends_with_insensitive(".exe"))
+    return stem(path, style);
+  return filename(path, style);
+}
+
 bool is_separator(char value, Style style) {
   if (value == '/')
     return true;

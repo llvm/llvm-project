@@ -48,7 +48,7 @@ static int findTool(int Argc, char **Argv, const char *Argv0) {
     return 0;
   }
 
-  StringRef Stem = sys::path::stem(ToolName);
+  StringRef Stem = sys::path::program_name(ToolName);
   auto Is = [=](StringRef Tool) {
     auto IsImpl = [=](StringRef Stem) {
       auto I = Stem.rfind_insensitive(Tool);

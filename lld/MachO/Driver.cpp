@@ -1428,7 +1428,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     InputFile::resetIdCount();
   };
 
-  ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
+  ctx->e.logName = sys::path::program_name(argsArr[0]);
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));

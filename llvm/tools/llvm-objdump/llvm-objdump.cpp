@@ -3297,7 +3297,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<CommonOptTable> T;
   OptSpecifier Unknown, HelpFlag, HelpHiddenFlag, VersionFlag;
 
-  StringRef Stem = sys::path::stem(ToolName);
+  StringRef Stem = sys::path::program_name(ToolName);
   auto Is = [=](StringRef Tool) {
     // We need to recognize the following filenames:
     //
