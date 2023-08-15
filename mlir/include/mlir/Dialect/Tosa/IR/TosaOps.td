@@ -42,7 +42,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 
   let arguments = (ins
     Tosa_Tensor: $input,
-    I64Attr: $axis
+    I32Attr: $axis
   );
 
   let results = (outs
@@ -1260,7 +1260,7 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1288,7 +1288,7 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1316,7 +1316,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1344,7 +1344,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1372,7 +1372,7 @@ def Tosa_ReduceProdOp : Tosa_InferTensorTypeOp<"reduce_prod"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1400,7 +1400,7 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1434,7 +1434,7 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
 
   let arguments = (ins
     Variadic<Tosa_Tensor>:$input1,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
@@ -1544,7 +1544,7 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$axis
+    I32Attr:$axis
   );
 
   let results = (outs
