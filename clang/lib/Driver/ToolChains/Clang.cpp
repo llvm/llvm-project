@@ -8811,9 +8811,9 @@ static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
 }
 
 /// This is an alternative to LinkerWrapper::ConstructJob.
-/// This is called when driver option --opaque-offload-wrapper is specified.
+/// This is called when driver option --opaque-offload-linker is specified.
 
-/// opaque-offload-wrapper requires heterogeneous objects have bitcode
+/// opaque-offload-linker requires heterogeneous objects have bitcode
 /// because offload LTO is implemented by merging all offloaded bitcodes
 /// and then linking in system bitcode libraries followed by opt and then
 /// the GPU backend is called only once for each TargetID.
@@ -8950,6 +8950,19 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
     const char *LlcExec =
         Args.MakeArgString(getToolChain().GetProgramPath("llc"));
+
+    // produce assembly temp output file if --save-temps is specified
+    if (C.getDriver().isSaveTempsEnabled()) {
+      ArgStringList LlcAsmArgs;
+      auto LlcAsmOutputFileName = amdgpu::dlr::getLlcCommandArgs(
+          C, Args, LlcAsmArgs, TheTriple, TargetID, OutputFilePrefix,
+          OptOutputFileName, /*OutputIsAsm*/ true);
+
+      C.addCommand(std::make_unique<Command>(
+          JA, *this, ResponseFileSupport::AtFileCurCP(), LlcExec, LlcAsmArgs,
+          Inputs, InputInfo(&JA, Args.MakeArgString(LlcAsmOutputFileName))));
+    }
+
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::AtFileCurCP(), LlcExec, LlcArgs, Inputs,
         InputInfo(&JA, Args.MakeArgString(LlcOutputFileName))));
