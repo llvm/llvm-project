@@ -1529,7 +1529,7 @@ bool CheckArgumentIsConstantExprInRange(
 
   if (*scalarValue < lowerBound || *scalarValue > upperBound) {
     messages.Say(
-        "Argument #%d must be a constant expression in range %d-%d"_err_en_US,
+        "Argument #%d must be a constant expression in range %d to %d"_err_en_US,
         index + 1, lowerBound, upperBound);
     return false;
   }
@@ -1559,6 +1559,29 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
   }
   if (specific.name().ToString().compare(0, 16, "__ppc_vec_permi_") == 0) {
     return CheckArgumentIsConstantExprInRange(actuals, 2, 0, 3, messages);
+  }
+  if (specific.name().ToString().compare(0, 21, "__ppc_vec_splat_s32__") == 0) {
+    return CheckArgumentIsConstantExprInRange(actuals, 0, -16, 15, messages);
+  }
+  if (specific.name().ToString().compare(0, 16, "__ppc_vec_splat_") == 0) {
+    // The value of arg2 in vec_splat must be a constant expression that is
+    // greater than or equal to 0, and less than the number of elements in arg1.
+    auto *expr{actuals[0].value().UnwrapExpr()};
+    auto type{characteristics::TypeAndShape::Characterize(*expr, context)};
+    assert(type && "unknown type");
+    const auto *derived{evaluate::GetDerivedTypeSpec(type.value().type())};
+    if (derived && derived->IsVectorType()) {
+      for (const auto &pair : derived->parameters()) {
+        if (pair.first == "element_kind") {
+          auto vecElemKind{Fortran::evaluate::ToInt64(pair.second.GetExplicit())
+                               .value_or(0)};
+          auto numElem{vecElemKind == 0 ? 0 : (16 / vecElemKind)};
+          return CheckArgumentIsConstantExprInRange(
+              actuals, 1, 0, numElem - 1, messages);
+        }
+      }
+    } else
+      assert(false && "vector type is expected");
   }
   return false;
 }
