@@ -301,10 +301,9 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
         // Return now the only terminator is an unconditional branch.
         TBB = LastInst->getOperand(0).getMBB();
         return false;
-      } else {
-        SecondLastInst = &*I;
-        SecondLastOpc = SecondLastInst->getOpcode();
       }
+      SecondLastInst = &*I;
+      SecondLastOpc = SecondLastInst->getOpcode();
     }
   }
 
@@ -327,10 +326,9 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
         return false;
       }
       return true; // Can't handle indirect branch.
-    } else {
-      SecondLastInst = &*I;
-      SecondLastOpc = SecondLastInst->getOpcode();
     }
+    SecondLastInst = &*I;
+    SecondLastOpc = SecondLastInst->getOpcode();
   }
 
   // If there are three terminators, we don't know what sort of block this is.
