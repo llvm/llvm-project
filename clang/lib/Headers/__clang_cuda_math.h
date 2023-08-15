@@ -36,7 +36,7 @@
 // because the OpenMP overlay requires constexpr functions here but prior to
 // c++14 void return functions could not be constexpr.
 #pragma push_macro("__DEVICE_VOID__")
-#ifdef __OPENMP_NVPTX__ && defined(__cplusplus) && __cplusplus < 201402L
+#if defined(__OPENMP_NVPTX__) && defined(__cplusplus) && __cplusplus < 201402L
 #define __DEVICE_VOID__ static __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE_VOID__ __DEVICE__
