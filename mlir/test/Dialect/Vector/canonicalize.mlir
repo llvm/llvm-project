@@ -669,6 +669,18 @@ func.func @dont_fold_0d_extract_shapecast(%arg0 : vector<f32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: fold_extract_shapecast_to_shapecast
+//  CHECK-SAME: (%[[ARG:.+]]: vector<3x4xf32>)
+//       CHECK:   %[[R:.+]] = vector.shape_cast %[[ARG]] : vector<3x4xf32> to vector<12xf32>
+//       CHECK:   return %[[R]]
+func.func @fold_extract_shapecast_to_shapecast(%arg0 : vector<3x4xf32>) -> vector<12xf32> {
+  %0 = vector.shape_cast %arg0 : vector<3x4xf32> to vector<1x12xf32>
+  %r = vector.extract %0[0] : vector<1x12xf32>
+  return %r : vector<12xf32>
+}
+
+// -----
+
 // CHECK-LABEL: dont_fold_expand_collapse
 //       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
 //       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
