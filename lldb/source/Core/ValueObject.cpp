@@ -2131,11 +2131,10 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       temp_expression = temp_expression.drop_front(); // skip . or >
 
       size_t next_sep_pos = temp_expression.find_first_of("-.[", 1);
-      ConstString child_name;
       if (next_sep_pos == llvm::StringRef::npos) // if no other separator just
                                                  // expand this last layer
       {
-        child_name.SetString(temp_expression);
+        llvm::StringRef child_name = temp_expression;
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
 
@@ -2203,8 +2202,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       } else // other layers do expand
       {
         llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
-
-        child_name.SetString(temp_expression.slice(0, next_sep_pos));
+        llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
 
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
