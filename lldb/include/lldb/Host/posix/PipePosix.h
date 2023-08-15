@@ -8,8 +8,8 @@
 
 #ifndef LLDB_HOST_POSIX_PIPEPOSIX_H
 #define LLDB_HOST_POSIX_PIPEPOSIX_H
-
 #include "lldb/Host/PipeBase.h"
+#include <mutex>
 
 namespace lldb_private {
 
@@ -70,7 +70,22 @@ public:
                          size_t &bytes_read) override;
 
 private:
+  bool CanReadUnlocked() const;
+  bool CanWriteUnlocked() const;
+
+  int GetReadFileDescriptorUnlocked() const;
+  int GetWriteFileDescriptorUnlocked() const;
+  int ReleaseReadFileDescriptorUnlocked();
+  int ReleaseWriteFileDescriptorUnlocked();
+  void CloseReadFileDescriptorUnlocked();
+  void CloseWriteFileDescriptorUnlocked();
+  void CloseUnlocked();
+
   int m_fds[2];
+
+  /// Mutexes for m_fds;
+  mutable std::mutex m_read_mutex;
+  mutable std::mutex m_write_mutex;
 };
 
 } // namespace lldb_private
