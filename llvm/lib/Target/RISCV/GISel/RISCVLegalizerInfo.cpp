@@ -69,7 +69,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{XLenLLT, XLenLLT}})
+      .legalFor({{XLenLLT, XLenLLT}, {XLenLLT, p0}})
       .widenScalarToNextPow2(1)
       .clampScalar(1, XLenLLT, XLenLLT)
       .clampScalar(0, XLenLLT, XLenLLT);
