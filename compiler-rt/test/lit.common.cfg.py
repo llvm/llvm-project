@@ -268,6 +268,9 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.have_zlib:
     config.available_features.add("zlib")
 
+if config.have_internal_symbolizer:
+    config.available_features.add("internal_symbolizer")
+
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.
 # in RUN lines.
 config.substitutions.append(
