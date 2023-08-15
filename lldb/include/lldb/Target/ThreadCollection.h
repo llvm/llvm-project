@@ -47,7 +47,7 @@ public:
     return ThreadIterable(m_threads, GetMutex());
   }
 
-  virtual std::recursive_mutex &GetMutex() const { return m_mutex; }
+  std::recursive_mutex &GetMutex() const { return m_mutex; }
 
 protected:
   collection m_threads;
