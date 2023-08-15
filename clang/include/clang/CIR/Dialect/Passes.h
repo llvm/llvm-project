@@ -28,6 +28,8 @@ std::unique_ptr<Pass> createLifetimeCheckPass(ArrayRef<StringRef> remark,
                                               clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createMergeCleanupsPass();
 std::unique_ptr<Pass> createDropASTPass();
+std::unique_ptr<Pass> createLoweringPreparePass();
+std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
 
 //===----------------------------------------------------------------------===//
 // Registration

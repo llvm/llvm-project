@@ -10,6 +10,8 @@ int foo(void) {
 
 // CIR:  IR Dump After MergeCleanups (cir-merge-cleanups)
 // CIR:  cir.func @foo() -> !s32i
+// CIR:  IR Dump After LoweringPrepare (cir-lowering-prepare)
+// CIR:  cir.func @foo() -> !s32i
 // CIR:  IR Dump After DropAST (cir-drop-ast)
 // CIR:  cir.func @foo() -> !s32i
 // LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass (cir-to-llvm)
