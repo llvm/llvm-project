@@ -109,13 +109,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void seed(result_type __sd = default_seed)
         {seed(__sd, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, subtract_with_carry_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
 

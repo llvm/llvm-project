@@ -688,14 +688,9 @@ struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
 };
 #endif // _LIBCPP_STD_VER >= 23
 
-template <class _T1, class _T2>
+template <class _T1, class _T2, __enable_if_t<__is_swappable<_T1>::value && __is_swappable<_T2>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __is_swappable<_T1>::value &&
-    __is_swappable<_T2>::value,
-    void
->::type
+void
 swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
                      _NOEXCEPT_((__is_nothrow_swappable<_T1>::value &&
                                  __is_nothrow_swappable<_T2>::value))
