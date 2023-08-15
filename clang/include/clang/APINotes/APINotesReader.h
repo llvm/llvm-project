@@ -174,7 +174,8 @@ public:
   /// \param name The name of the global variable.
   ///
   /// \returns information about the global variable, if known.
-  VersionedInfo<GlobalVariableInfo> lookupGlobalVariable(llvm::StringRef name);
+  VersionedInfo<GlobalVariableInfo>
+  lookupGlobalVariable(std::optional<Context> context, llvm::StringRef name);
 
   /// Look for information regarding the given global function.
   ///

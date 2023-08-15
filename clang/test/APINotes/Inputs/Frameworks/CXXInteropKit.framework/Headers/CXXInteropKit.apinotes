@@ -20,6 +20,9 @@ Tags:
   SwiftName: InWrongContext
 Namespaces:
 - Name: Namespace1
+  Globals:
+  - Name: varInNamespace
+    SwiftName: swiftVarInNamespace
   Functions:
   - Name: funcInNamespace
     SwiftName: swiftFuncInNamespace()
@@ -28,6 +31,9 @@ Namespaces:
     SwiftName: CharBox
   Namespaces:
   - Name: Nested1
+    Globals:
+    - Name: varInNestedNamespace
+      SwiftName: swiftVarInNestedNamespace
     Functions:
     - Name: funcInNestedNamespace
       SwiftName: swiftFuncInNestedNamespace(_:)
@@ -39,3 +45,7 @@ Namespaces:
       Tags:
       - Name: char_box
         SwiftName: DeepNestedCharBox
+  - Name: Nested2
+    Globals:
+    - Name: varInNestedNamespace
+      SwiftName: swiftAnotherVarInNestedNamespace

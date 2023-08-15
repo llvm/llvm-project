@@ -432,12 +432,15 @@ namespace {
 
   /// Used to deserialize the on-disk global variable table.
   class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo, unsigned,
-                                GlobalVariableInfo> {
+      : public VersionedTableInfo<GlobalVariableTableInfo,
+                                  std::tuple<uint32_t, uint8_t, uint32_t>,
+                                  GlobalVariableInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
     }
 
     static GlobalVariableInfo readUnversioned(internal_key_type key,
@@ -1936,7 +1939,7 @@ auto APINotesReader::lookupObjCMethod(
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupGlobalVariable(
+auto APINotesReader::lookupGlobalVariable(std::optional<Context> context,
                                           StringRef name)
     -> VersionedInfo<GlobalVariableInfo> {
   if (!Impl.GlobalVariableTable)
@@ -1946,7 +1949,13 @@ auto APINotesReader::lookupGlobalVariable(
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.GlobalVariableTable->find(*nameID);
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, *nameID};
+  else
+    key = {-1, (uint8_t)-1, *nameID};
+
+  auto known = Impl.GlobalVariableTable->find(key);
   if (known == Impl.GlobalVariableTable->end())
     return std::nullopt;
 
