@@ -948,13 +948,39 @@ LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
   return success();
 }
 
-/// Assert that the current bufferization decisions are consistent.
-static LogicalResult checkAliasInfoConsistency(Operation *op,
-                                               const DominanceInfo &domInfo,
-                                               OneShotAnalysisState &state) {
+/// Perform various checks on the input IR to see if it contains IR constructs
+/// that are unsupported by One-Shot Bufferize.
+static LogicalResult
+checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
+                                 OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
+  // Note: This walk cannot be combined with the one below because interface
+  // methods of invalid/unsupported ops may be called during the second walk.
+  // (On ops different from `op`.)
   WalkResult walkResult = op->walk([&](BufferizableOpInterface op) {
+    // Skip ops that are not in the filter.
+    if (!options.isOpAllowed(op.getOperation()))
+      return WalkResult::advance();
+
+    // Check for unsupported unstructured control flow.
+    if (!op.supportsUnstructuredControlFlow()) {
+      for (Region &r : op->getRegions()) {
+        if (r.getBlocks().size() > 1) {
+          op->emitOpError("op or BufferizableOpInterface implementation does "
+                          "not support unstructured control flow, but at least "
+                          "one region has multiple blocks");
+          return WalkResult::interrupt();
+        }
+      }
+    }
+
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  walkResult = op->walk([&](BufferizableOpInterface op) {
     // Skip ops that are not in the filter.
     if (!options.isOpAllowed(op.getOperation()))
       return WalkResult::advance();
@@ -1107,7 +1133,7 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   DominanceInfo domInfo(op);
   const OneShotBufferizationOptions &options = state.getOptions();
 
-  if (failed(checkAliasInfoConsistency(op, domInfo, state)))
+  if (failed(checkPreBufferizationAssumptions(op, domInfo, state)))
     return failure();
 
   // If the analysis fails, just return.

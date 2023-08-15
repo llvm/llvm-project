@@ -531,7 +531,21 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return ::mlir::bufferization::detail::defaultIsRepetitiveRegion(
               ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
-      >
+      >,
+      StaticInterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the op and this interface implementation supports
+          unstructured control flow. I.e., regions with multiple blocks. This is
+          not supported in most ops, so the default answer is `false`.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"supportsUnstructuredControlFlow",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
   ];
 
   let extraClassDeclaration = [{
