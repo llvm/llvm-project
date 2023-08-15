@@ -86,6 +86,9 @@ public:
     return false;
   }
 
+  /// Returns the program. This is only needed for unittests.
+  Program &getProgram() const { return *P.get(); }
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func, APValue &Result);
