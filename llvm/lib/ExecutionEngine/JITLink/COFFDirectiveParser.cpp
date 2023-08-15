@@ -36,6 +36,7 @@ static constexpr const ArrayRef<StringLiteral>
     PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
 
 // Create table mapping all options defined in COFFOptions.td
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(...)                                                            \
   LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(COFF_OPT_, __VA_ARGS__),

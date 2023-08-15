@@ -51,6 +51,7 @@
 #endif
 
 using namespace lld;
+using namespace llvm::opt;
 using namespace llvm;
 
 // Create OptTable
@@ -71,9 +72,13 @@ enum {
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
