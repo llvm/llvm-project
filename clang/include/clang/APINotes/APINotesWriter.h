@@ -85,7 +85,8 @@ public:
   ///
   /// \param name The name of this global variable.
   /// \param info Information about this global variable.
-  void addGlobalVariable(llvm::StringRef name, const GlobalVariableInfo &info,
+  void addGlobalVariable(std::optional<Context> context, llvm::StringRef name,
+                         const GlobalVariableInfo &info,
                          llvm::VersionTuple swiftVersion);
 
   /// Add information about a global function.

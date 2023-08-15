@@ -1073,7 +1073,7 @@ namespace {
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
         info.setType(std::string(global.Type));
-        Writer->addGlobalVariable(global.Name, info, swiftVersion);
+        Writer->addGlobalVariable(context, global.Name, info, swiftVersion);
       }
 
       // Write all global functions.

@@ -849,7 +849,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        auto Info = Reader->lookupGlobalVariable(VD->getName());
+        auto Info =
+            Reader->lookupGlobalVariable(APINotesContext, VD->getName());
         ProcessVersionedAPINotes(*this, VD, Info);
       }
 
