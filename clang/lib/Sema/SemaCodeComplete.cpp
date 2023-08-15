@@ -6066,12 +6066,21 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   if (!Target)
     return {};
 
-  if (auto P = Target.getAs<PointerTypeLoc>()) {
-    Target = P.getPointeeLoc();
-  }
-
-  if (auto P = Target.getAs<ParenTypeLoc>()) {
-    Target = P.getInnerLoc();
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
   }
 
   if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
