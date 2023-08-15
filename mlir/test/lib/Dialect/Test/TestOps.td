@@ -1660,6 +1660,24 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                           $x),
           (TestEitherOpB $arg2, $x)>;
 
+def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
+  let arguments = (ins I32:$arg0);
+  let results = (outs I32:$output);
+}
+
+def TestEitherHelperOpB : TEST_Op<"either_helper_op_b"> {
+  let arguments = (ins I32:$arg0);
+  let results = (outs I32:$output);
+}
+
+// This test case ensures `emitOpMatch` doesn't redefine `castedOp{0}` local
+// variables. To trigger this, we must ensure the matcher for
+// `TestEitherHelperOpA` and `TestEitherHelperOpB` are not lifted as a static
+// matcher.
+def : Pat<(TestEitherOpB (either (TestEitherHelperOpA I32:$either_helper_0),
+                                 (TestEitherHelperOpB I32:$either_helper_1))),
+          (TestEitherOpB $either_helper_0, $either_helper_1)>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Location)
 
