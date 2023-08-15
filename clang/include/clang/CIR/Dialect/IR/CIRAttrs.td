@@ -26,6 +26,14 @@ class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
+class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
+    : CIR_Attr<name, attrMnemonic, traits> {
+  let returnType = "bool";
+  let defaultValue = "false";
+  let valueType = NoneType;
+  let isOptional = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // LangAttr
 //===----------------------------------------------------------------------===//
@@ -438,6 +446,10 @@ def InlineAttr : CIR_Attr<"Inline", "inline"> {
     bool isAlwaysInline() const { return getValue() == InlineKind::AlwaysInline; };
     bool isInlineHint() const { return getValue() == InlineKind::InlineHint; };
   }];
+}
+
+def OptNoneAttr : CIRUnitAttr<"OptNone", "optnone"> {
+  let storageType = [{ OptNoneAttr }];
 }
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS
