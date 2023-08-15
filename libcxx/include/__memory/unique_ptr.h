@@ -247,11 +247,10 @@ public:
   }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value &&
+                                     is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-      typename enable_if<is_convertible<_Up*, _Tp*>::value &&
-                             is_same<_Dp, default_delete<_Tp> >::value,
-                         unique_ptr&>::type
+  unique_ptr&
       operator=(auto_ptr<_Up> __p) {
     reset(__p.release());
     return *this;
@@ -490,10 +489,9 @@ public:
     return __t;
   }
 
-  template <class _Pp>
+  template <class _Pp, __enable_if_t<_CheckArrayPointerConversion<_Pp>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
-      typename enable_if< _CheckArrayPointerConversion<_Pp>::value >::type
-      reset(_Pp __p) _NOEXCEPT {
+  void reset(_Pp __p) _NOEXCEPT {
     pointer __tmp = __ptr_.first();
     __ptr_.first() = __p;
     if (__tmp)
@@ -512,9 +510,9 @@ public:
   }
 };
 
-template <class _Tp, class _Dp>
+template <class _Tp, class _Dp, __enable_if_t<__is_swappable<_Dp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
-    typename enable_if< __is_swappable<_Dp>::value, void >::type
+    void
     swap(unique_ptr<_Tp, _Dp>& __x, unique_ptr<_Tp, _Dp>& __y) _NOEXCEPT {
   __x.swap(__y);
 }
