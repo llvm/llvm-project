@@ -860,7 +860,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-          auto Info = Reader->lookupGlobalFunction(FD->getName());
+          auto Info =
+              Reader->lookupGlobalFunction(APINotesContext, FD->getName());
           ProcessVersionedAPINotes(*this, FD, Info);
         }
       }

@@ -10,6 +10,9 @@ Classes:
 Enumerators:
 - Name: SomeClassRed
   SwiftName: red
+Functions:
+- Name: funcInNamespace
+  SwiftName: inWrongContext()
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options
@@ -17,11 +20,17 @@ Tags:
   SwiftName: InWrongContext
 Namespaces:
 - Name: Namespace1
+  Functions:
+  - Name: funcInNamespace
+    SwiftName: swiftFuncInNamespace()
   Tags:
   - Name: char_box
     SwiftName: CharBox
   Namespaces:
   - Name: Nested1
+    Functions:
+    - Name: funcInNestedNamespace
+      SwiftName: swiftFuncInNestedNamespace(_:)
     Tags:
     - Name: char_box
       SwiftName: NestedCharBox

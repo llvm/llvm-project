@@ -181,7 +181,8 @@ public:
   /// \param name The name of the global function.
   ///
   /// \returns information about the global function, if known.
-  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(llvm::StringRef name);
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunction(std::optional<Context> context, llvm::StringRef name);
 
   /// Look for information regarding the given enumerator.
   ///
