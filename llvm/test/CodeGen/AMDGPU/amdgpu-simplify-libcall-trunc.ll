@@ -27,7 +27,7 @@ declare <16 x half> @_Z5truncDv16_Dh(<16 x half>)
 define float @test_rint_f32(float %arg) {
 ; CHECK-LABEL: define float @test_rint_f32
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z5truncf(float [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call float @llvm.trunc.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
   %rint = tail call float @_Z5truncf(float %arg)
@@ -37,7 +37,7 @@ define float @test_rint_f32(float %arg) {
 define <2 x float> @test_rint_v2f32(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @llvm.trunc.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
   %rint = tail call <2 x float> @_Z5truncDv2_f(<2 x float> %arg)
@@ -47,7 +47,7 @@ define <2 x float> @test_rint_v2f32(<2 x float> %arg) {
 define <3 x float> @test_rint_v3f32(<3 x float> %arg) {
 ; CHECK-LABEL: define <3 x float> @test_rint_v3f32
 ; CHECK-SAME: (<3 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x float> @_Z5truncDv3_f(<3 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x float> @llvm.trunc.v3f32(<3 x float> [[ARG]])
 ; CHECK-NEXT:    ret <3 x float> [[RINT]]
 ;
   %rint = tail call <3 x float> @_Z5truncDv3_f(<3 x float> %arg)
@@ -57,7 +57,7 @@ define <3 x float> @test_rint_v3f32(<3 x float> %arg) {
 define <4 x float> @test_rint_v4f32(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @test_rint_v4f32
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x float> @_Z5truncDv4_f(<4 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x float> @llvm.trunc.v4f32(<4 x float> [[ARG]])
 ; CHECK-NEXT:    ret <4 x float> [[RINT]]
 ;
   %rint = tail call <4 x float> @_Z5truncDv4_f(<4 x float> %arg)
@@ -67,7 +67,7 @@ define <4 x float> @test_rint_v4f32(<4 x float> %arg) {
 define <8 x float> @test_rint_v8f32(<8 x float> %arg) {
 ; CHECK-LABEL: define <8 x float> @test_rint_v8f32
 ; CHECK-SAME: (<8 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x float> @_Z5truncDv8_f(<8 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x float> @llvm.trunc.v8f32(<8 x float> [[ARG]])
 ; CHECK-NEXT:    ret <8 x float> [[RINT]]
 ;
   %rint = tail call <8 x float> @_Z5truncDv8_f(<8 x float> %arg)
@@ -77,7 +77,7 @@ define <8 x float> @test_rint_v8f32(<8 x float> %arg) {
 define <16 x float> @test_rint_v16f32(<16 x float> %arg) {
 ; CHECK-LABEL: define <16 x float> @test_rint_v16f32
 ; CHECK-SAME: (<16 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x float> @_Z5truncDv16_f(<16 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x float> @llvm.trunc.v16f32(<16 x float> [[ARG]])
 ; CHECK-NEXT:    ret <16 x float> [[RINT]]
 ;
   %rint = tail call <16 x float> @_Z5truncDv16_f(<16 x float> %arg)
@@ -87,7 +87,7 @@ define <16 x float> @test_rint_v16f32(<16 x float> %arg) {
 define double @test_rint_f64(double %arg) {
 ; CHECK-LABEL: define double @test_rint_f64
 ; CHECK-SAME: (double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call double @_Z5truncd(double [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call double @llvm.trunc.f64(double [[ARG]])
 ; CHECK-NEXT:    ret double [[RINT]]
 ;
   %rint = tail call double @_Z5truncd(double %arg)
@@ -97,7 +97,7 @@ define double @test_rint_f64(double %arg) {
 define <2 x double> @test_rint_v2f64(<2 x double> %arg) {
 ; CHECK-LABEL: define <2 x double> @test_rint_v2f64
 ; CHECK-SAME: (<2 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x double> @_Z5truncDv2_d(<2 x double> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x double> @llvm.trunc.v2f64(<2 x double> [[ARG]])
 ; CHECK-NEXT:    ret <2 x double> [[RINT]]
 ;
   %rint = tail call <2 x double> @_Z5truncDv2_d(<2 x double> %arg)
@@ -107,7 +107,7 @@ define <2 x double> @test_rint_v2f64(<2 x double> %arg) {
 define <3 x double> @test_rint_v3f64(<3 x double> %arg) {
 ; CHECK-LABEL: define <3 x double> @test_rint_v3f64
 ; CHECK-SAME: (<3 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x double> @_Z5truncDv3_d(<3 x double> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x double> @llvm.trunc.v3f64(<3 x double> [[ARG]])
 ; CHECK-NEXT:    ret <3 x double> [[RINT]]
 ;
   %rint = tail call <3 x double> @_Z5truncDv3_d(<3 x double> %arg)
@@ -117,7 +117,7 @@ define <3 x double> @test_rint_v3f64(<3 x double> %arg) {
 define <4 x double> @test_rint_v4f64(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x double> @test_rint_v4f64
 ; CHECK-SAME: (<4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x double> @_Z5truncDv4_d(<4 x double> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x double> @llvm.trunc.v4f64(<4 x double> [[ARG]])
 ; CHECK-NEXT:    ret <4 x double> [[RINT]]
 ;
   %rint = tail call <4 x double> @_Z5truncDv4_d(<4 x double> %arg)
@@ -127,7 +127,7 @@ define <4 x double> @test_rint_v4f64(<4 x double> %arg) {
 define <8 x double> @test_rint_v8f64(<8 x double> %arg) {
 ; CHECK-LABEL: define <8 x double> @test_rint_v8f64
 ; CHECK-SAME: (<8 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x double> @_Z5truncDv8_d(<8 x double> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x double> @llvm.trunc.v8f64(<8 x double> [[ARG]])
 ; CHECK-NEXT:    ret <8 x double> [[RINT]]
 ;
   %rint = tail call <8 x double> @_Z5truncDv8_d(<8 x double> %arg)
@@ -137,7 +137,7 @@ define <8 x double> @test_rint_v8f64(<8 x double> %arg) {
 define <16 x double> @test_rint_v16f64(<16 x double> %arg) {
 ; CHECK-LABEL: define <16 x double> @test_rint_v16f64
 ; CHECK-SAME: (<16 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x double> @_Z5truncDv16_d(<16 x double> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x double> @llvm.trunc.v16f64(<16 x double> [[ARG]])
 ; CHECK-NEXT:    ret <16 x double> [[RINT]]
 ;
   %rint = tail call <16 x double> @_Z5truncDv16_d(<16 x double> %arg)
@@ -147,7 +147,7 @@ define <16 x double> @test_rint_v16f64(<16 x double> %arg) {
 define half @test_rint_f16(half %arg) {
 ; CHECK-LABEL: define half @test_rint_f16
 ; CHECK-SAME: (half [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call half @_Z5truncDh(half [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call half @llvm.trunc.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[RINT]]
 ;
   %rint = tail call half @_Z5truncDh(half %arg)
@@ -157,7 +157,7 @@ define half @test_rint_f16(half %arg) {
 define <2 x half> @test_rint_v2f16(<2 x half> %arg) {
 ; CHECK-LABEL: define <2 x half> @test_rint_v2f16
 ; CHECK-SAME: (<2 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x half> @_Z5truncDv2_Dh(<2 x half> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x half> @llvm.trunc.v2f16(<2 x half> [[ARG]])
 ; CHECK-NEXT:    ret <2 x half> [[RINT]]
 ;
   %rint = tail call <2 x half> @_Z5truncDv2_Dh(<2 x half> %arg)
@@ -167,7 +167,7 @@ define <2 x half> @test_rint_v2f16(<2 x half> %arg) {
 define <3 x half> @test_rint_v3f16(<3 x half> %arg) {
 ; CHECK-LABEL: define <3 x half> @test_rint_v3f16
 ; CHECK-SAME: (<3 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x half> @_Z5truncDv3_Dh(<3 x half> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <3 x half> @llvm.trunc.v3f16(<3 x half> [[ARG]])
 ; CHECK-NEXT:    ret <3 x half> [[RINT]]
 ;
   %rint = tail call <3 x half> @_Z5truncDv3_Dh(<3 x half> %arg)
@@ -177,7 +177,7 @@ define <3 x half> @test_rint_v3f16(<3 x half> %arg) {
 define <4 x half> @test_rint_v4f16(<4 x half> %arg) {
 ; CHECK-LABEL: define <4 x half> @test_rint_v4f16
 ; CHECK-SAME: (<4 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x half> @_Z5truncDv4_Dh(<4 x half> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <4 x half> @llvm.trunc.v4f16(<4 x half> [[ARG]])
 ; CHECK-NEXT:    ret <4 x half> [[RINT]]
 ;
   %rint = tail call <4 x half> @_Z5truncDv4_Dh(<4 x half> %arg)
@@ -187,7 +187,7 @@ define <4 x half> @test_rint_v4f16(<4 x half> %arg) {
 define <8 x half> @test_rint_v8f16(<8 x half> %arg) {
 ; CHECK-LABEL: define <8 x half> @test_rint_v8f16
 ; CHECK-SAME: (<8 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x half> @_Z5truncDv8_Dh(<8 x half> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <8 x half> @llvm.trunc.v8f16(<8 x half> [[ARG]])
 ; CHECK-NEXT:    ret <8 x half> [[RINT]]
 ;
   %rint = tail call <8 x half> @_Z5truncDv8_Dh(<8 x half> %arg)
@@ -197,7 +197,7 @@ define <8 x half> @test_rint_v8f16(<8 x half> %arg) {
 define <16 x half> @test_rint_v16f16(<16 x half> %arg) {
 ; CHECK-LABEL: define <16 x half> @test_rint_v16f16
 ; CHECK-SAME: (<16 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x half> @_Z5truncDv16_Dh(<16 x half> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <16 x half> @llvm.trunc.v16f16(<16 x half> [[ARG]])
 ; CHECK-NEXT:    ret <16 x half> [[RINT]]
 ;
   %rint = tail call <16 x half> @_Z5truncDv16_Dh(<16 x half> %arg)
@@ -207,7 +207,7 @@ define <16 x half> @test_rint_v16f16(<16 x half> %arg) {
 define float @test_rint_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-LABEL: define float @test_rint_f32_nobuiltin_callsite
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z5truncf(float [[ARG]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z5truncf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
   %rint = tail call float @_Z5truncf(float %arg) #0
@@ -217,7 +217,7 @@ define float @test_rint_f32_nobuiltin_callsite(float %arg) {
 define <2 x float> @test_rint_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32_nobuiltin_callsite
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
   %rint = tail call <2 x float> @_Z5truncDv2_f(<2 x float> %arg) #0
@@ -228,7 +228,7 @@ define <2 x float> @test_rint_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 define float @test_rint_f32_nobuiltins(float %arg) #1 {
 ; CHECK-LABEL: define float @test_rint_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z5truncf(float [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[RINT:%.*]] = tail call float @_Z5truncf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
   %rint = tail call float @_Z5truncf(float %arg) #0
@@ -238,7 +238,7 @@ define float @test_rint_f32_nobuiltins(float %arg) #1 {
 define <2 x float> @test_rint_v2f32_nobuiltins(<2 x float> %arg) #1 {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[RINT:%.*]] = tail call <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
   %rint = tail call <2 x float> @_Z5truncDv2_f(<2 x float> %arg) #0
@@ -248,7 +248,7 @@ define <2 x float> @test_rint_v2f32_nobuiltins(<2 x float> %arg) #1 {
 define float @test_rint_f32_preserve_flags(float %arg) {
 ; CHECK-LABEL: define float @test_rint_f32_preserve_flags
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan ninf float @_Z5truncf(float [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan ninf float @llvm.trunc.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
   %rint = tail call nnan ninf float @_Z5truncf(float %arg)
@@ -258,7 +258,7 @@ define float @test_rint_f32_preserve_flags(float %arg) {
 define <2 x float> @test_rint_v2f32_preserve_flags(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32_preserve_flags
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan nsz contract <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan nsz contract <2 x float> @llvm.trunc.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
   %rint = tail call contract nsz nnan <2 x float> @_Z5truncDv2_f(<2 x float> %arg)
@@ -268,7 +268,7 @@ define <2 x float> @test_rint_v2f32_preserve_flags(<2 x float> %arg) {
 define float @test_rint_f32_preserve_flags_md(float %arg) {
 ; CHECK-LABEL: define float @test_rint_f32_preserve_flags_md
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan ninf float @_Z5truncf(float [[ARG]]), !foo !0
+; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan ninf float @llvm.trunc.f32(float [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret float [[RINT]]
 ;
   %rint = tail call nnan ninf float @_Z5truncf(float %arg), !foo !0
@@ -278,7 +278,7 @@ define float @test_rint_f32_preserve_flags_md(float %arg) {
 define <2 x float> @test_rint_v2f32_preserve_flags_md(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_rint_v2f32_preserve_flags_md
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan nsz contract <2 x float> @_Z5truncDv2_f(<2 x float> [[ARG]]), !foo !0
+; CHECK-NEXT:    [[RINT:%.*]] = tail call nnan nsz contract <2 x float> @llvm.trunc.v2f32(<2 x float> [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret <2 x float> [[RINT]]
 ;
   %rint = tail call contract nsz nnan <2 x float> @_Z5truncDv2_f(<2 x float> %arg), !foo !0
