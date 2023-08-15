@@ -50,6 +50,19 @@ define void @buildvec_vid_plus_imm_v16i8(ptr %x) {
   ret void
 }
 
+define void @buildvec_vid_plus_nonimm_v16i8(ptr %x) {
+; CHECK-LABEL: buildvec_vid_plus_nonimm_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <16 x i8> <i8 100, i8 101, i8 102, i8 103, i8 104, i8 105, i8 106, i8 107, i8 108, i8 109, i8 110, i8 111, i8 112, i8 113, i8 114, i8 115>, ptr %x
+  ret void
+}
+
 define void @buildvec_vid_mpy_imm_v16i8(ptr %x) {
 ; CHECK-LABEL: buildvec_vid_mpy_imm_v16i8:
 ; CHECK:       # %bb.0:
@@ -276,8 +289,8 @@ define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3)
 define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step1_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI24_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI24_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI25_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI25_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -293,8 +306,8 @@ define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step2_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI25_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI25_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI26_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI26_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -458,8 +471,8 @@ define <2 x i8> @buildvec_dominant2_v2i8() {
 define void @buildvec_dominant0_v2i32(ptr %x) {
 ; RV32-LABEL: buildvec_dominant0_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI37_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI37_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI38_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI38_0)
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    vse32.v v8, (a0)
@@ -467,8 +480,8 @@ define void @buildvec_dominant0_v2i32(ptr %x) {
 ;
 ; RV64-LABEL: buildvec_dominant0_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI37_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI37_0)(a1)
+; RV64-NEXT:    lui a1, %hi(.LCPI38_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI38_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, -1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
@@ -482,8 +495,8 @@ define void @buildvec_dominant0_v2i32(ptr %x) {
 define void @buildvec_dominant1_optsize_v2i32(ptr %x) optsize {
 ; RV32-LABEL: buildvec_dominant1_optsize_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI38_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI38_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI39_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI39_0)
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    vse32.v v8, (a0)
@@ -491,8 +504,8 @@ define void @buildvec_dominant1_optsize_v2i32(ptr %x) optsize {
 ;
 ; RV64-LABEL: buildvec_dominant1_optsize_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI38_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI38_0)
+; RV64-NEXT:    lui a1, %hi(.LCPI39_0)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI39_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
 ; RV64-NEXT:    vse64.v v8, (a0)
@@ -541,8 +554,8 @@ define void @buildvec_seq_v8i8_v2i32(ptr %x) {
 define void @buildvec_seq_v16i8_v2i64(ptr %x) {
 ; RV32-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI41_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI41_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI42_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI42_0)
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
 ; RV32-NEXT:    vse8.v v8, (a0)
@@ -550,8 +563,8 @@ define void @buildvec_seq_v16i8_v2i64(ptr %x) {
 ;
 ; RV64-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI41_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI41_0)
+; RV64-NEXT:    lui a1, %hi(.LCPI42_0)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI42_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vlse64.v v8, (a1), zero
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
