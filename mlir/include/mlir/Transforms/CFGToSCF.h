@@ -42,12 +42,14 @@ public:
 
   /// Creates a return-like terminator for a branch region of the op returned
   /// by `createStructuredBranchRegionOp`. `branchRegionOp` is the operation
-  /// returned by `createStructuredBranchRegionOp` while `results` are the
-  /// values that should be returned by the branch region.
-  virtual LogicalResult
-  createStructuredBranchRegionTerminatorOp(Location loc, OpBuilder &builder,
-                                           Operation *branchRegionOp,
-                                           ValueRange results) = 0;
+  /// returned by `createStructuredBranchRegionOp`.
+  /// `replacedControlFlowOp` is the control flow op being replaced by the
+  /// terminator or nullptr if the terminator is not replacing any existing
+  /// control flow op. `results` are the values that should be returned by the
+  /// branch region.
+  virtual LogicalResult createStructuredBranchRegionTerminatorOp(
+      Location loc, OpBuilder &builder, Operation *branchRegionOp,
+      Operation *replacedControlFlowOp, ValueRange results) = 0;
 
   /// Creates a structured control flow operation representing a do-while loop.
   /// The do-while loop is expected to have the exact same result types as the
@@ -77,8 +79,10 @@ public:
   /// `caseDestinations` or `defaultDest`. This is used by the transformation
   /// for intermediate transformations before lifting to structured control
   /// flow. The switch op branches based on `flag` which is guaranteed to be of
-  /// the same type as values returned by `getCFGSwitchValue`. Note:
-  /// `caseValues` and other related ranges may be empty to represent an
+  /// the same type as values returned by `getCFGSwitchValue`. The insertion
+  /// block of the builder is guaranteed to have its predecessors already set
+  /// to create an equivalent CFG after this operation.
+  /// Note: `caseValues` and other related ranges may be empty to represent an
   /// unconditional branch.
   virtual void createCFGSwitchOp(Location loc, OpBuilder &builder, Value flag,
                                  ArrayRef<unsigned> caseValues,
