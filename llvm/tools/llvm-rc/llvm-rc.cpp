@@ -21,6 +21,7 @@
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -50,9 +51,7 @@ namespace {
 
 enum ID {
   OPT_INVALID = 0, // This is not a correct option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -66,13 +65,7 @@ namespace rc_opt {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -85,9 +78,7 @@ public:
 
 enum Windres_ID {
   WINDRES_INVALID = 0, // This is not a correct option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  WINDRES_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
 #include "WindresOpts.inc"
 #undef OPTION
 };
@@ -101,12 +92,8 @@ namespace windres_opt {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         WINDRES_##ID, opt::Option::KIND##Class,                    \
-   PARAM,           FLAGS,        WINDRES_##GROUP,                             \
-   WINDRES_##ALIAS, ALIASARGS,    VALUES},
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
 #include "WindresOpts.inc"
 #undef OPTION
 };
