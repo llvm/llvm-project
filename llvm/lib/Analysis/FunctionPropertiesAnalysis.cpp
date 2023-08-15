@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
@@ -111,16 +112,30 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
       else if (I.getType()->isIntegerTy())
         IntegerInstructionCount += Direction;
 
+#define COUNT_OPERAND(OPTYPE)                                                  \
+  if (isa<OPTYPE>(Operand)) {                                                  \
+    OPTYPE##OperandCount += Direction;                                         \
+    continue;                                                                  \
+  }
+
       for (unsigned int OperandIndex = 0; OperandIndex < I.getNumOperands();
            ++OperandIndex) {
-        if (const Constant *C =
-                dyn_cast<Constant>(I.getOperand(OperandIndex))) {
-          if (C->getType()->isIntegerTy())
-            IntegerConstantCount += Direction;
-          else if (C->getType()->isFloatTy())
-            FloatingPointConstantCount += Direction;
-        }
+        Value *Operand = I.getOperand(OperandIndex);
+        COUNT_OPERAND(GlobalValue)
+        COUNT_OPERAND(ConstantInt)
+        COUNT_OPERAND(ConstantFP)
+        COUNT_OPERAND(Constant)
+        COUNT_OPERAND(Instruction)
+        COUNT_OPERAND(BasicBlock)
+        COUNT_OPERAND(InlineAsm)
+        COUNT_OPERAND(Argument)
+
+        // We only get to this point if we haven't matched any of the other
+        // operand types.
+        UnknownOperandCount += Direction;
       }
+
+#undef CHECK_OPERAND
     }
   }
 }
@@ -160,40 +175,44 @@ FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
 }
 
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
-  OS << "BasicBlockCount: " << BasicBlockCount << "\n"
-     << "BlocksReachedFromConditionalInstruction: "
-     << BlocksReachedFromConditionalInstruction << "\n"
-     << "Uses: " << Uses << "\n"
-     << "DirectCallsToDefinedFunctions: " << DirectCallsToDefinedFunctions
-     << "\n"
-     << "LoadInstCount: " << LoadInstCount << "\n"
-     << "StoreInstCount: " << StoreInstCount << "\n"
-     << "MaxLoopDepth: " << MaxLoopDepth << "\n"
-     << "TopLevelLoopCount: " << TopLevelLoopCount << "\n"
-     << "TotalInstructionCount: " << TotalInstructionCount << "\n";
+#define PRINT_PROPERTY(PROP_NAME) OS << #PROP_NAME ": " << PROP_NAME << "\n";
+
+  PRINT_PROPERTY(BasicBlockCount)
+  PRINT_PROPERTY(BlocksReachedFromConditionalInstruction)
+  PRINT_PROPERTY(Uses)
+  PRINT_PROPERTY(DirectCallsToDefinedFunctions)
+  PRINT_PROPERTY(LoadInstCount)
+  PRINT_PROPERTY(StoreInstCount)
+  PRINT_PROPERTY(MaxLoopDepth)
+  PRINT_PROPERTY(TopLevelLoopCount)
+  PRINT_PROPERTY(TotalInstructionCount)
+
   if (EnableDetailedFunctionProperties) {
-    OS << "BasicBlocksWithSingleSuccessor: " << BasicBlocksWithSingleSuccessor
-       << "\n"
-       << "BasicBlocksWithTwoSuccessors: " << BasicBlocksWithTwoSuccessors
-       << "\n"
-       << "BasicBlocksWithMoreThanTwoSuccessors: "
-       << BasicBlocksWithMoreThanTwoSuccessors << "\n"
-       << "BasicBlocksWithSinglePredecessor: "
-       << BasicBlocksWithSinglePredecessor << "\n"
-       << "BasicBlocksWithTwoPredecessors: " << BasicBlocksWithTwoPredecessors
-       << "\n"
-       << "BasicBlocksWithMoreThanTwoPredecessors: "
-       << BasicBlocksWithMoreThanTwoPredecessors << "\n"
-       << "BigBasicBlocks: " << BigBasicBlocks << "\n"
-       << "MediumBasicBlocks: " << MediumBasicBlocks << "\n"
-       << "SmallBasicBlocks: " << SmallBasicBlocks << "\n"
-       << "CastInstructionCount: " << CastInstructionCount << "\n"
-       << "FloatingPointInstructionCount: " << FloatingPointInstructionCount
-       << "\n"
-       << "IntegerInstructionCount: " << IntegerInstructionCount << "\n"
-       << "IntegerConstantCount: " << IntegerConstantCount << "\n"
-       << "FloatingPointConstantCount: " << FloatingPointConstantCount << "\n";
+    PRINT_PROPERTY(BasicBlocksWithSingleSuccessor)
+    PRINT_PROPERTY(BasicBlocksWithTwoSuccessors)
+    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors)
+    PRINT_PROPERTY(BasicBlocksWithSinglePredecessor)
+    PRINT_PROPERTY(BasicBlocksWithTwoPredecessors)
+    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors)
+    PRINT_PROPERTY(BigBasicBlocks)
+    PRINT_PROPERTY(MediumBasicBlocks)
+    PRINT_PROPERTY(SmallBasicBlocks)
+    PRINT_PROPERTY(CastInstructionCount)
+    PRINT_PROPERTY(FloatingPointInstructionCount)
+    PRINT_PROPERTY(IntegerInstructionCount)
+    PRINT_PROPERTY(ConstantIntOperandCount)
+    PRINT_PROPERTY(ConstantFPOperandCount)
+    PRINT_PROPERTY(ConstantOperandCount)
+    PRINT_PROPERTY(InstructionOperandCount)
+    PRINT_PROPERTY(BasicBlockOperandCount)
+    PRINT_PROPERTY(GlobalValueOperandCount)
+    PRINT_PROPERTY(InlineAsmOperandCount)
+    PRINT_PROPERTY(ArgumentOperandCount)
+    PRINT_PROPERTY(UnknownOperandCount)
   }
+
+#undef PRINT_PROPERTY
+
   OS << "\n";
 }
 
