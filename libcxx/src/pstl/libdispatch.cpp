@@ -24,6 +24,8 @@ __chunk_partitions __partition_chunks(ptrdiff_t element_count) noexcept {
   partitions.__chunk_count_      = std::max<ptrdiff_t>(1, element_count / 256);
   partitions.__chunk_size_       = element_count / partitions.__chunk_count_;
   partitions.__first_chunk_size_ = element_count - (partitions.__chunk_count_ - 1) * partitions.__chunk_size_;
+  if (partitions.__chunk_count_ == 0 && element_count > 0)
+    partitions.__chunk_count_ = 1;
   return partitions;
 }
 
