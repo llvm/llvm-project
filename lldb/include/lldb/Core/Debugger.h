@@ -241,10 +241,6 @@ public:
 
   void ClearIOHandlers();
 
-  bool GetCloseInputOnEOF() const;
-
-  void SetCloseInputOnEOF(bool b);
-
   bool EnableLog(llvm::StringRef channel,
                  llvm::ArrayRef<const char *> categories,
                  llvm::StringRef log_file, uint32_t log_options,
