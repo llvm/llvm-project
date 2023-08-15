@@ -2513,14 +2513,14 @@ private:
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
   /// pointers to the collected stores.
-  DenseMap<Value *, SmallVector<StoreInst *, 4>>
+  DenseMap<Value *, SmallVector<StoreInst *>>
   collectUserStores(const BoUpSLP::TreeEntry *TE) const;
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
   /// stores in \p StoresVec can form a vector instruction. If so it returns true
   /// and populates \p ReorderIndices with the shuffle indices of the the stores
   /// when compared to the sorted vector.
-  bool canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+  bool canFormVector(ArrayRef<StoreInst *> StoresVec,
                      OrdersType &ReorderIndices) const;
 
   /// Iterates through the users of \p TE, looking for scalar stores that can be
@@ -4913,9 +4913,9 @@ void BoUpSLP::buildExternalUses(
   }
 }
 
-DenseMap<Value *, SmallVector<StoreInst *, 4>>
+DenseMap<Value *, SmallVector<StoreInst *>>
 BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
-  DenseMap<Value *, SmallVector<StoreInst *, 4>> PtrToStoresMap;
+  DenseMap<Value *, SmallVector<StoreInst *>> PtrToStoresMap;
   for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size())) {
     Value *V = TE->Scalars[Lane];
     // To save compilation time we don't visit if we have too many users.
@@ -4954,14 +4954,14 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
   return PtrToStoresMap;
 }
 
-bool BoUpSLP::canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
                             OrdersType &ReorderIndices) const {
   // We check whether the stores in StoreVec can form a vector by sorting them
   // and checking whether they are consecutive.
 
   // To avoid calling getPointersDiff() while sorting we create a vector of
   // pairs {store, offset from first} and sort this instead.
-  SmallVector<std::pair<StoreInst *, int>, 4> StoreOffsetVec(StoresVec.size());
+  SmallVector<std::pair<StoreInst *, int>> StoreOffsetVec(StoresVec.size());
   StoreInst *S0 = StoresVec[0];
   StoreOffsetVec[0] = {S0, 0};
   Type *S0Ty = S0->getValueOperand()->getType();
@@ -5030,7 +5030,7 @@ SmallVector<BoUpSLP::OrdersType, 1>
 BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
   unsigned NumLanes = TE->Scalars.size();
 
-  DenseMap<Value *, SmallVector<StoreInst *, 4>> PtrToStoresMap =
+  DenseMap<Value *, SmallVector<StoreInst *>> PtrToStoresMap =
       collectUserStores(TE);
 
   // Holds the reorder indices for each candidate store vector that is a user of
