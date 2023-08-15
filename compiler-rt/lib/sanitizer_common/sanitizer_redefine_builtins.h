@@ -21,6 +21,8 @@ asm("memcpy = __sanitizer_internal_memcpy");
 asm("memmove = __sanitizer_internal_memmove");
 asm("memset = __sanitizer_internal_memset");
 
+#      if defined(__cplusplus)
+
 // The builtins should not be redefined in source files that make use of C++
 // standard libraries, in particular where C++STL headers with inline functions
 // are used. The redefinition in such cases would lead to ODR violations.
@@ -46,6 +48,7 @@ using unordered_set = Define_SANITIZER_COMMON_NO_REDEFINE_BUILTINS_in_cpp_file;
 using vector = Define_SANITIZER_COMMON_NO_REDEFINE_BUILTINS_in_cpp_file;
 }  // namespace std
 
+#      endif  // __cpluplus
 #endif  // !_WIN32
 
 #endif  // SANITIZER_REDEFINE_BUILTINS_H
