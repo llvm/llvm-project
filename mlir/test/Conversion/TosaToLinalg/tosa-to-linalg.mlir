@@ -903,7 +903,7 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK:   [[RES:%.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield [[RES]] : f32
   // CHECK: tensor.expand_shape [[GENERIC]] {{\[}}[0, 1]] : tensor<4xf32> into tensor<1x4xf32>
-  %0 = tosa.reduce_sum %arg0 {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<5xf32>
   // CHECK: [[CST0:%.+]] = arith.constant 0.0
@@ -913,25 +913,25 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK:   [[RES:%.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield [[RES]] : f32
   // CHECK: tensor.expand_shape [[GENERIC]] {{\[}}[0, 1]] : tensor<5xf32> into tensor<5x1xf32>
-  %1 = tosa.reduce_sum %arg0 {axis = 1 : i64} : (tensor<5x4xf32>) -> tensor<5x1xf32>
+  %1 = tosa.reduce_sum %arg0 {axis = 1 : i32} : (tensor<5x4xf32>) -> tensor<5x1xf32>
 
   // CHECK: arith.constant 1.0
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.mulf
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant 3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.minf
-  %3 = tosa.reduce_min %arg0 {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %3 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant -3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.maxf
-  %4 = tosa.reduce_max %arg0 {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %4 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
 
@@ -953,7 +953,7 @@ func.func @reduce_float_dyn(%arg0: tensor<?x5x4xf32>) -> () {
   // CHECK:   %[[RES:.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield %[[RES]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0], [1, 2]] : tensor<?x4xf32> into tensor<?x1x4xf32>
-  %0 = tosa.reduce_sum %arg0 {axis = 1 : i64} : (tensor<?x5x4xf32>) -> tensor<?x1x4xf32>
+  %0 = tosa.reduce_sum %arg0 {axis = 1 : i32} : (tensor<?x5x4xf32>) -> tensor<?x1x4xf32>
   return
 }
 
@@ -973,7 +973,7 @@ func.func @reduce_float_dyn_rank_1(%arg0: tensor<?xf32>) -> () {
   // CHECK:   %[[RES:.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield %[[RES]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}] : tensor<f32> into tensor<1xf32>
-  %0 = tosa.reduce_sum %arg0 {axis = 0 : i64} : (tensor<?xf32>) -> tensor<1xf32>
+  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<?xf32>) -> tensor<1xf32>
   return
 }
 
@@ -995,7 +995,7 @@ func.func @reduce_float_dyn_nonzero_batch(%arg0: tensor<5x?x4xf32>) -> () {
   // CHECK:   %[[RES:.+]] = arith.mulf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield %[[RES]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0], [1, 2]] : tensor<5x?xf32> into tensor<5x?x1xf32>
-  %0 = tosa.reduce_prod %arg0 {axis = 2 : i64} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
+  %0 = tosa.reduce_prod %arg0 {axis = 2 : i32} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
   return
 }
 
@@ -1017,7 +1017,7 @@ func.func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
   // CHECK:   %[[MAX:.+]] = arith.maxf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield %[[MAX]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<?xf32> into tensor<?x1xf32>
-  %0 = tosa.reduce_max %arg0 {axis = 1 : i64} : (tensor<?x?xf32>) -> tensor<?x1xf32>
+  %0 = tosa.reduce_max %arg0 {axis = 1 : i32} : (tensor<?x?xf32>) -> tensor<?x1xf32>
   return
 }
 
@@ -1038,7 +1038,7 @@ func.func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
   // CHECK:   [[RES:%.+]] = arith.addi %[[ARG1]], %[[ARG2]] : i32
   // CHECK:   linalg.yield [[RES]] : i32
   // CHECK: tensor.expand_shape [[GENERIC]] {{\[}}[0, 1]] : tensor<4xi32> into tensor<1x4xi32>
-  %0 = tosa.reduce_sum %arg0 {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
 
   // CHECK: [[INIT:%.+]] = tensor.empty()
   // CHECK: [[CST0:%.+]] = arith.constant 0
@@ -1048,27 +1048,27 @@ func.func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
   // CHECK:   [[RES:%.+]] = arith.addi %[[ARG1]], %[[ARG2]] : i32
   // CHECK:   linalg.yield [[RES]] : i32
   // CHECK: tensor.expand_shape [[GENERIC]] {{\[}}[0, 1]] : tensor<5xi32> into tensor<5x1xi32>
-  %1 = tosa.reduce_sum %arg0 {axis = 1 : i64} : (tensor<5x4xi32>) -> tensor<5x1xi32>
+  %1 = tosa.reduce_sum %arg0 {axis = 1 : i32} : (tensor<5x4xi32>) -> tensor<5x1xi32>
 
   // CHECK: arith.constant 1
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.muli
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
 
   // CHECK: arith.constant 2147483647 : i32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.cmpi slt
   // CHECK: select
-  %3 = tosa.reduce_min %arg0 {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %3 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
 
   // CHECK: arith.constant -2147483648 : i32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: arith.cmpi sgt
   // CHECK: select
-  %4 = tosa.reduce_max %arg0 {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %4 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
   return
 }
 
@@ -1088,13 +1088,13 @@ func.func @reduce_bool(%arg0: tensor<5x4xi1>) -> () {
   // CHECK:   [[RES:%.+]] = arith.andi %[[ARG1]], %[[ARG2]] : i1
   // CHECK:   linalg.yield [[RES]] : i1
   // CHECK: tensor.expand_shape [[GENERIC]] {{\[}}[0, 1]] : tensor<4xi1> into tensor<1x4xi1>
-  %0 = tosa.reduce_all %arg0 {axis = 0 : i64} : (tensor<5x4xi1>) -> tensor<1x4xi1>
+  %0 = tosa.reduce_all %arg0 {axis = 0 : i32} : (tensor<5x4xi1>) -> tensor<1x4xi1>
 
   // CHECK: arith.constant false
   // CHECK: linalg.fill
   // CHECK: linalg.generic
   // CHECK: or
-  %1 = tosa.reduce_any %arg0 {axis = 0 : i64} : (tensor<5x4xi1>) -> tensor<1x4xi1>
+  %1 = tosa.reduce_any %arg0 {axis = 0 : i32} : (tensor<5x4xi1>) -> tensor<1x4xi1>
 
   return
 }
@@ -1294,7 +1294,7 @@ func.func @reverse(%arg0: tensor<5x4xi32>) -> () {
   // CHECK-DAG:   %[[READ_DIM:.+]] = arith.subi %[[RDIM_MINUS_C1]], %[[I0]]
   // CHECK-DAG:   %[[EXTRACT:.+]] = tensor.extract %arg0[%[[READ_DIM]], %[[I1]]] : tensor<5x4xi32>
   // CHECK:   linalg.yield %[[EXTRACT]]
-  %0 = tosa.reverse %arg0 {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<5x4xi32>
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<5x4xi32>
 
   // CHECK: %[[C1:.+]] = arith.constant 1
   // CHECK: %[[RDIM:.+]] = tensor.dim %[[ARG0]], %[[C1]]
@@ -1307,7 +1307,7 @@ func.func @reverse(%arg0: tensor<5x4xi32>) -> () {
   // CHECK-DAG:   %[[READ_DIM:.+]] = arith.subi %[[RDIM_MINUS_C1]], %[[I1]]
   // CHECK-DAG:   %[[EXTRACT:.+]] = tensor.extract %arg0[%[[I0]], %[[READ_DIM]]] : tensor<5x4xi32>
   // CHECK:   linalg.yield %[[EXTRACT]]
-  %1 = tosa.reverse %arg0 {axis = 1 : i64} : (tensor<5x4xi32>) -> tensor<5x4xi32>
+  %1 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<5x4xi32>) -> tensor<5x4xi32>
   return
 }
 
@@ -1330,7 +1330,7 @@ func.func @reverse_dyn(%arg0: tensor<?xi32>) -> () {
   // CHECK-DAG:   %[[READ_DIM:.+]] = arith.subi %[[RDIM_MINUS_C1]], %[[I0]]
   // CHECK-DAG:   %[[EXTRACT:.+]] = tensor.extract %arg0[%[[READ_DIM]]] : tensor<?xi32>
   // CHECK:   linalg.yield %[[EXTRACT]]
-  %0 = tosa.reverse %arg0 {axis = 0 : i64} : (tensor<?xi32>) -> tensor<?xi32>
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<?xi32>) -> tensor<?xi32>
   return
 }
 
@@ -1429,7 +1429,7 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], %[[ARG1]], %[[ARG3]]
   // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], %[[ARG2]]
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
-  %0 = tosa.argmax %arg0 { axis = 0 : i64} : (tensor<3x2xi32>)  -> tensor<2xi32>
+  %0 = tosa.argmax %arg0 { axis = 0 : i32} : (tensor<3x2xi32>)  -> tensor<2xi32>
 
   // CHECK: [[IDX_INIT:%.+]] = tensor.empty()
   // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
@@ -1445,7 +1445,7 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], %[[ARG1]], %[[ARG3]]
   // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], %[[ARG2]]
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
-  %1 = tosa.argmax %arg0 { axis = 1 : i64} : (tensor<3x2xi32>)  -> tensor<3xi32>
+  %1 = tosa.argmax %arg0 { axis = 1 : i32} : (tensor<3x2xi32>)  -> tensor<3xi32>
 
   // CHECK: arith.constant -3.40282347E+38 : f32
   // CHECK: linalg.index
@@ -1454,7 +1454,7 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: select
   // CHECK: select
   // CHECK: linalg.yield
-  %2 = tosa.argmax %arg1 { axis = 0 : i64} : (tensor<6xf32>)  -> tensor<i32>
+  %2 = tosa.argmax %arg1 { axis = 0 : i32} : (tensor<6xf32>)  -> tensor<i32>
 
   return
 }
@@ -1481,7 +1481,7 @@ func.func @argmax_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK:   %[[SELECT_VAL:.+]] = arith.select %[[CMP]], %[[ARG1]], %[[ARG3]]
   // CHECK:   %[[SELECT_IDX:.+]] = arith.select %[[CMP]], %[[CAST]], %[[ARG2]]
   // CHECK:   linalg.yield %[[SELECT_IDX]], %[[SELECT_VAL]]
-  %0 = tosa.argmax %arg0 { axis = 0 : i64} : (tensor<3x?xi32>)  -> tensor<?xi32>
+  %0 = tosa.argmax %arg0 { axis = 0 : i32} : (tensor<3x?xi32>)  -> tensor<?xi32>
   return
 }
 
@@ -1504,7 +1504,7 @@ func.func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK:   %[[SELECT_VAL:.+]] = arith.select %[[CMP]], %[[ARG1]], %[[ARG3]]
   // CHECK:   %[[SELECT_IDX:.+]] = arith.select %[[CMP]], %[[CAST]], %[[ARG2]]
   // CHECK:   linalg.yield %[[SELECT_IDX]], %[[SELECT_VAL]]
-  %0 = tosa.argmax %arg0 { axis = 1 : i64} : (tensor<3x?xi32>)  -> tensor<3xi32>
+  %0 = tosa.argmax %arg0 { axis = 1 : i32} : (tensor<3x?xi32>)  -> tensor<3xi32>
   return
 }
 
