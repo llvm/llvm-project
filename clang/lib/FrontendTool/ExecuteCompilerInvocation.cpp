@@ -36,6 +36,7 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIRFrontendAction/CIRGenAction.h"
 #endif
 
@@ -323,6 +324,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 #endif
 #if CLANG_ENABLE_CIR
   if (!Clang->getFrontendOpts().MLIRArgs.empty()) {
+    mlir::registerCIRPasses();
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
     mlir::registerAsmPrinterCLOptions();
