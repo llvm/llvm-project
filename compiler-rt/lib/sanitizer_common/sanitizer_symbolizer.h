@@ -212,6 +212,7 @@ class Symbolizer final {
     ~SymbolizerScope();
    private:
     const Symbolizer *sym_;
+    int errno_;  // Backup errno in case symbolizer change the value.
   };
 };
 
