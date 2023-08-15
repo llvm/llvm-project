@@ -929,8 +929,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       (void)D.getVFS().makeAbsolute(CoverageFilename);
     llvm::sys::path::replace_extension(CoverageFilename, "gcno");
     if (EmitCovNotes) {
-      CmdArgs.push_back("-coverage-notes-file");
-      CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
+      CmdArgs.push_back(
+          Args.MakeArgString("-coverage-notes-file=" + CoverageFilename));
     }
 
     if (EmitCovData) {
@@ -940,8 +940,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
         llvm::sys::path::append(CoverageFilename, Gcno);
       }
       llvm::sys::path::replace_extension(CoverageFilename, "gcda");
-      CmdArgs.push_back("-coverage-data-file");
-      CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
+      CmdArgs.push_back(
+          Args.MakeArgString("-coverage-data-file=" + CoverageFilename));
     }
   }
 }
