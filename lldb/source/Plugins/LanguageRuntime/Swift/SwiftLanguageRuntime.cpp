@@ -455,9 +455,39 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
 
 SwiftLanguageRuntimeImpl::ReflectionContextInterface *
 SwiftLanguageRuntimeImpl::GetReflectionContext() {
-  if (!m_initialized_reflection_ctx)
-    SetupReflection();
-  return m_reflection_ctx.get();
+  m_reflection_ctx_mutex.lock();
+  SetupReflection();
+  // SetupReflection can potentially fail.
+  if (m_initialized_reflection_ctx)
+    ProcessModulesToAdd();
+  return {m_reflection_ctx.get(), m_reflection_ctx_mutex};
+}
+
+void SwiftLanguageRuntimeImpl::ProcessModulesToAdd() {
+  // A snapshot of the modules to be processed. This is necessary because
+  // AddModuleToReflectionContext may recursively call into this function again.
+  ModuleList modules_to_add_snapshot;
+  modules_to_add_snapshot.Swap(m_modules_to_add);
+
+  if (modules_to_add_snapshot.IsEmpty())
+    return;
+
+  auto &target = m_process.GetTarget();
+  auto exe_module = target.GetExecutableModule();
+  Progress progress(
+      llvm::formatv("Setting up Swift reflection for '{0}'",
+                    exe_module->GetFileSpec().GetFilename().AsCString()),
+      modules_to_add_snapshot.GetSize());
+
+  size_t completion = 0;
+
+  // Add all defered modules to reflection context that were added to
+  // the target since this SwiftLanguageRuntime was created.
+  modules_to_add_snapshot.ForEach([&](const ModuleSP &module_sp) -> bool {
+    AddModuleToReflectionContext(module_sp);
+    progress.Increment(++completion);
+    return true;
+  });
 }
 
 SwiftMetadataCache *
