@@ -22,16 +22,26 @@ typedef NS_OPTIONS(NSUInteger, NSSomeEnumOptions) {
 	NSSomeEnumWithBlue,
 };
 
+namespace Namespace1 { namespace Nested1 {} }
+
 namespace Namespace1 {
 struct char_box { char c; };
 void funcInNamespace();
 
 namespace Nested1 {
+void funcInNestedNamespace(int i);
 struct char_box { char c; };
+}
+
+namespace Nested1 {
 void funcInNestedNamespace(int i);
 
 namespace Namespace1 {
 struct char_box { char c; };
 } // namespace Namespace1
 } // namespace Nested1
+
+namespace Nested1 { namespace Namespace1 {} }
 } // namespace Namespace1
+
+namespace Namespace1 {}
