@@ -1541,14 +1541,12 @@ bool SBDebugger::SetCurrentPlatformSDKRoot(const char *sysroot) {
   return false;
 }
 
-LLDB_DEPRECATED("SBDebugger::GetCloseInputOnEOF() is deprecated.")
 bool SBDebugger::GetCloseInputOnEOF() const {
   LLDB_INSTRUMENT_VA(this);
 
   return false;
 }
 
-LLDB_DEPRECATED("SBDebugger::SetCloseInputOnEOF() is deprecated.")
 void SBDebugger::SetCloseInputOnEOF(bool b) {
   LLDB_INSTRUMENT_VA(this, b);
 }
