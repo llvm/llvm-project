@@ -170,6 +170,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   }
 
+  // BEGIN SWIFT
   // For Swift frames, rewrite `po 0x12345600` to use `unsafeBitCast`.
   //
   // This works only when the address points to an instance of a class. This
@@ -190,11 +191,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   //   3. Require addresses to be on the heap
   std::string modified_expr_storage;
   // Either Swift was explicitly specified, or the frame is Swift.
-  bool is_swift = false;
-  if (m_expr_options.language == lldb::eLanguageTypeSwift)
-    is_swift = true;
-  else if (m_expr_options.language == lldb::eLanguageTypeUnknown)
-    is_swift = frame && frame->GuessLanguage() == lldb::eLanguageTypeSwift;
+  bool is_swift = language == lldb::eLanguageTypeSwift;
   if (is_swift && is_po) {
     lldb::addr_t addr;
     bool is_integer = !expr.getAsInteger(0, addr);
@@ -209,6 +206,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
       }
     }
   }
+  // END SWIFT
 
   // Second, also lastly, try `expr` as a source expression to evaluate.
   {
