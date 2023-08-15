@@ -76,7 +76,7 @@ ControlFlowToSCFTransformation::createStructuredBranchRegionOp(
 LogicalResult
 ControlFlowToSCFTransformation::createStructuredBranchRegionTerminatorOp(
     Location loc, OpBuilder &builder, Operation *branchRegionOp,
-    ValueRange results) {
+    Operation *replacedControlFlowOp, ValueRange results) {
   builder.create<scf::YieldOp>(loc, results);
   return success();
 }

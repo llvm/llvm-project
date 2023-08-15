@@ -32,10 +32,9 @@ public:
       MutableArrayRef<Region> regions) override;
 
   /// Creates an `scf.yield` op returning the given results.
-  LogicalResult
-  createStructuredBranchRegionTerminatorOp(Location loc, OpBuilder &builder,
-                                           Operation *branchRegionOp,
-                                           ValueRange results) override;
+  LogicalResult createStructuredBranchRegionTerminatorOp(
+      Location loc, OpBuilder &builder, Operation *branchRegionOp,
+      Operation *replacedControlFlowOp, ValueRange results) override;
 
   /// Creates an `scf.while` op. The loop body is made the before-region of the
   /// while op and terminated with an `scf.condition` op. The after-region does
