@@ -381,6 +381,20 @@ entry:
   ret i32 %0
 }
 
+define i32 @pr64687(ptr nocapture %a) {
+; CHECK-LABEL: define i32 @pr64687
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i32 123) ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  tail call void @llvm.assume(i1 true) ["align"(ptr %a, i32 123)]
+  %0 = load i32, ptr %a, align 4
+  ret i32 %0
+}
+
 declare void @llvm.assume(i1) nounwind
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
