@@ -95,7 +95,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool resultBufferizesToMemoryWrite(OpResult opResult,
                                        const AnalysisState &state);
 
-    bool bufferizesToAllocation(OpResult opResult) { return true; }
+    bool bufferizesToAllocation(Value value) { return true; }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
@@ -103,7 +103,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     FailureOr<BaseMemRefType> getBufferType(
@@ -237,7 +237,7 @@ def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     RankedTensorType getType() {
@@ -295,7 +295,7 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
       return false;
     }
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
@@ -459,7 +459,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return !getReadOnly();
     }
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }

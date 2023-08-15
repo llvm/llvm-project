@@ -164,14 +164,14 @@ struct CallOpInterface
         opOperand.getOperandNumber());
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
-      return detail::unknownGetAliasingOpResults(opOperand);
+      return detail::unknownGetAliasingValues(opOperand);
 
     // Get aliasing results from state.
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
@@ -188,7 +188,7 @@ struct CallOpInterface
               *equivalent == opOperand.getOperandNumber()) &&
              "inconsistent analysis state");
     }
-    AliasingOpResultList result;
+    AliasingValueList result;
     for (int64_t resultIdx : aliasingReturnVals)
       result.addAlias({callOp->getOpResult(resultIdx),
                        equivalent.has_value() ? BufferRelation::Equivalent
@@ -299,8 +299,8 @@ struct ReturnOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 

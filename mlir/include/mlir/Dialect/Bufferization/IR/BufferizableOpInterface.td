@@ -18,23 +18,23 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
     Note: All "bufferizesTo*" and "getAliasing*" interface methods must be
     implemented conservatively. If it is not statically known whether an
-    OpOperand/OpResult bufferizes in a certain way (e.g., to a memory write),
+    OpOperand/Value bufferizes in a certain way (e.g., to a memory write),
     the worst case must be assumed (e.g., that it does). Similarly,
     "getAliasing*" interface methods may always return additional OpOperands or
-    OpResults, but must not miss an OpOperand or OpResult that could potentially
+    Values, but must not miss an OpOperand or Value that could potentially
     alias at runtime.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
-          Return `true` if the given OpResult may bufferize to a new buffer
-          allocation. If it is statically unknown if the given OpResult
+          Return `true` if the given Value may bufferize to a new buffer
+          allocation. If it is statically unknown that the given Value
           bufferizes to a buffer allocation, `true` should be returned.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToAllocation",
-        /*args=*/(ins "::mlir::OpResult":$opResult),
+        /*args=*/(ins "::mlir::Value":$value),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return false;"
       >,
@@ -68,10 +68,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           tensor type.
 
           This method will never be called on OpOperands that do not have an
-          aliasing OpResult. Intuitively, it does not make sense for an
-          OpOperand to bufferize to a memory write without returning an aliasing
-          tensor, because the write would have no visible effect outside of the
-          op.
+          aliasing Value. Intuitively, it does not make sense for an OpOperand
+          to bufferize to a memory write without returning an aliasing tensor,
+          because the write would have no visible effect outside of the op.
 
           Note: It is always safe to consider an OpOperand as a memory write,
           even if it does actually not write; however, this can introduce
@@ -87,7 +86,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
           // Does not have to be implemented for OpOperands that do not have an
-          // aliasing OpResult.
+          // aliasing Value.
           llvm_unreachable("bufferizesToMemoryWrite not implemented");
          }]
       >,
@@ -221,21 +220,21 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the OpResults that may alias with a given OpOperand when
+          Return the Values that may alias with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
 
-          This method can return multiple OpResults, indicating that a given
+          This method can return multiple Values, indicating that a given
           OpOperand may at runtime alias with any (or multiple) of the returned
-          OpResults.
+          Values.
 
           Each alias is specified with a degree of certainty:
 
           * MAYBE (`isDefinite = false`): At runtime, buffer(opOperand) may
-            alias with the specified OpResult.
+            alias with the specified Value.
           * DEFINITE (`isDefinite = true`, default): At runtime,
             buffer(opOperand) is guaranteed to alias the buffer of the specified
-            OpResult. This is a stronger property than MAYBE and allows for more
+            Value. This is a stronger property than MAYBE and allows for more
             precise analyses. DEFINITE properties should be used when possible.
 
           Furthermore, each alias is specified with a buffer relation:
@@ -245,39 +244,39 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           * `BufferRelation::Unknown`: There is no further information apart
             from the fact that both buffers alias.
 
-          False positives are allowed in the list of OpResults, but they can
+          False positives are allowed in the list of Values, but they can
           adversely affect the accuracy of the anlysis. On the contrary,
           omitting potential aliases is incorrect.
 
           One possible (conservative) implementation of this interface method,
-          that is always safe, is to return all tensor OpResults with
+          that is always safe, is to return all tensor Values with
           BufferRelation::Unknown and MAYBE.
 
           Examples:
 
           ```
-          // aliasingOpResults(%t) = DEFINITE {Equivalent %r}
+          // aliasingValues(%t) = DEFINITE {Equivalent %r}
           %r = tensor.insert_slice %f into %t : tensor<10xf32>
 
-          // aliasingOpResults(%t) = DEFINITE {Unknown %r}
+          // aliasingValues(%t) = DEFINITE {Unknown %r}
           // Note: "Buffer is subset of buffer" relationship are not yet
           // supported, so "Unknown" is the best we can do for now.
           %r = tensor.extract_slice %t[0]][5][1]
               : tensor<10xf32> to tensor<5xf32>
 
-          // aliasingOpResults(%t1) = MAYBE {Equivalent %r}
-          // aliasingOpResults(%t2) = MAYBE {Equivalent %r}
+          // aliasingValues(%t1) = MAYBE {Equivalent %r}
+          // aliasingValues(%t2) = MAYBE {Equivalent %r}
           %r = arith.select %c, %t1, %t2 : tensor<10xf32>
 
           // A hypothetical op that bufferizes to rolling a dice and based on
           // the result to either return buffer(%t) or a newly allocated copy
           // thereof.
-          // aliasingOpResults(%t) = MAYBE {Equivalent %r}
+          // aliasingValues(%t) = MAYBE {Equivalent %r}
           %r = "dummy.alias_or_copy(%t) : (tensor<10xf32>) -> (tensor<10xf32>)"
           ```
         }],
-        /*retType=*/"::mlir::bufferization::AliasingOpResultList",
-        /*methodName=*/"getAliasingOpResults",
+        /*retType=*/"::mlir::bufferization::AliasingValueList",
+        /*methodName=*/"getAliasingValues",
         /*args=*/(ins "::mlir::OpOperand &":$opOperand,
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
@@ -285,29 +284,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           // Does not have to be implemented for ops without tensor OpOperands.
           assert(::llvm::isa<::mlir::TensorType>(opOperand.get().getType()) &&
                  "expected OpOperand with tensor type");
-          llvm_unreachable("getAliasingOpResults not implemented");
+          llvm_unreachable("getAliasingValues not implemented");
         }]
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the OpOperands that alias with a given OpResult when
-          bufferized in-place. This method will never be called on OpResults
-          that do not have a tensor type.
+          Return the OpOperands that alias with a given Value when bufferized
+          in-place. This method will never be called on Values that do not
+          have a tensor type.
 
-          By default, this method is the inverse of `getAliasingOpResults`. Ops
+          By default, this method is the inverse of `getAliasingValues`. Ops
           with a region that yield values may want to override this method to
           return the OpOperands that are yielded by the terminator.
 
           This method can return multiple OpOperands, indicating that a given
-          OpResult may at runtime alias with any (or multiple) of the returned
+          Value may at runtime alias with any (or multiple) of the returned
           OpOperands.
 
           This property is specified with a degree of certainty:
 
-          * MAYBE (`isDefinite = false`): At runtime, buffer(opResult) may
-            alias with the specified OpOperand.
+          * MAYBE (`isDefinite = false`): At runtime, buffer(value) may alias
+            with the specified OpOperand.
           * DEFINITE (`isDefinite = true`, default): At runtime,
-            buffer(opResult) is guaranteed to alias the buffer of the specified
+            buffer(value) is guaranteed to alias the buffer of the specified
             OpOperand. This is a stronger property than MAYBE and allows for
             more precise analyses. DEFINITE properties should be used when
             possible.
@@ -350,14 +349,14 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"::mlir::bufferization::AliasingOpOperandList",
         /*methodName=*/"getAliasingOpOperands",
-        /*args=*/(ins "::mlir::OpResult":$opResult,
+        /*args=*/(ins "::mlir::Value":$value,
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(::llvm::isa<::mlir::TensorType>(opResult.getType()) &&
-                 "expected OpResult with tensor type");
+          assert(isa<::mlir::TensorType>(value.getType()) &&
+                 "expected tensor type");
           return ::mlir::bufferization::detail::defaultGetAliasingOpOperands(
-              opResult, state);
+              value, state);
         }]
       >,
       InterfaceMethod<
@@ -568,7 +567,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           ::llvm::cast<::mlir::bufferization::BufferizableOpInterface>(getOperation());
       return !bufferizableOp.bufferizesToMemoryRead(opOperand, state)
           && !bufferizableOp.bufferizesToMemoryWrite(opOperand, state)
-          && bufferizableOp.getAliasingOpResults(opOperand, state)
+          && bufferizableOp.getAliasingValues(opOperand, state)
               .getNumAliases() != 0;
     }
   }];

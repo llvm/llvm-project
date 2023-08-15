@@ -76,8 +76,8 @@ struct IndexCastOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
@@ -123,8 +123,8 @@ struct SelectOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {{op->getOpResult(0) /*result*/, BufferRelation::Equivalent,
              /*isDefinite=*/false}};
   }
