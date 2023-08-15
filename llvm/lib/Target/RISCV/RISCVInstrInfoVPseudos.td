@@ -52,16 +52,16 @@
 ///
 /// Currently, the policy is represented via the following instrinsic families:
 /// * _MASK - Can represent all three policy states for both tail and mask.  If
-///   passthrough is IMPLICIT_DEF, then represents "undefined".  Otherwise,
-///   policy operand and tablegen flags drive the interpretation.  (If policy
-///   operand is not present - there are a couple, thought we're rapidly
-///   removing them - a non-undefined policy defaults to "tail agnostic", and
-///   "mask undisturbed".  Since this is the only variant with a mask, all
-///   other variants are "mask undefined".
+///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
+///   Otherwise, policy operand and tablegen flags drive the interpretation.
+///   (If policy operand is not present - there are a couple, though we're
+///   rapidly removing them - a non-undefined policy defaults to "tail
+///   agnostic", and "mask undisturbed".  Since this is the only variant with
+///   a mask, all other variants are "mask undefined".
 /// * Unsuffixed w/ both passthrough and policy operand. Can represent all
-///   three policy states.  If passthrough is IMPLICIT_DEF, then represents
-///   "undefined".  Otherwise, policy operand and tablegen flags drive the
-///   interpretation.
+///   three policy states.  If passthrough is IMPLICIT_DEF (or NoReg), then
+///   represents "undefined".  Otherwise, policy operand and tablegen flags
+///   drive the interpretation.
 /// * Unsuffixed w/o passthrough or policy operand -- Does not have a
 ///   passthrough operand, and thus represents the "undefined" state.  Note
 ///   that terminology in code frequently refers to these as "TA" which is
@@ -70,8 +70,8 @@
 /// * _TU w/o policy operand -- Has a passthrough operand, and always
 ///   represents the tail undisturbed state.  
 /// * _TU w/policy operand - Can represent all three policy states.  If
-///   passthrough is IMPLICIT_DEF, then represents "undefined".  Otherwise,
-///   policy operand and tablegen flags drive the interpretation.
+///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
+///   Otherwise, policy operand and tablegen flags drive the interpretation.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -3296,25 +3296,17 @@ multiclass VPseudoVWMAC_VV_VF_RM {
 multiclass VPseudoVWMAC_VV_VF_BF_RM {
   foreach m = MxListFW in {
     defvar mx = m.MX;
-    defvar WriteVFWMulAddV_MX = !cast<SchedWrite>("WriteVFWMulAddV_" # mx);
-    defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
-    // FIXME: should use SchedTernary
     defm "" : VPseudoTernaryW_VV_RM<m>,
-              Sched<[WriteVFWMulAddV_MX, ReadVFWMulAddV_MX,
-                     ReadVFWMulAddV_MX, ReadVFWMulAddV_MX, ReadVMask]>;
+              SchedTernary<"WriteVFWMulAddV", "ReadVFWMulAddV",
+                           "ReadVFWMulAddV", "ReadVFWMulAddV", mx>;
   }
 
   foreach f = BFPListW in {
     foreach m = f.MxListFW in {
       defvar mx = m.MX;
-      defvar WriteVFWMulAddF_MX = !cast<SchedWrite>("WriteVFWMulAddF_" # mx);
-      defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
-      defvar ReadVFWMulAddF_MX = !cast<SchedRead>("ReadVFWMulAddF_" # mx);
-
-      // FIXME: should use SchedTernary
       defm "" : VPseudoTernaryW_VF_RM<m, f>,
-                Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
-                       ReadVFWMulAddF_MX, ReadVFWMulAddV_MX, ReadVMask]>;
+                SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
+                             "ReadVFWMulAddF", "ReadVFWMulAddV", mx>;
     }
   }
 }

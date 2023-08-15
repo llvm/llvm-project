@@ -43,6 +43,7 @@
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
+; CHECK-NEXT:       RISC-V init undef pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator

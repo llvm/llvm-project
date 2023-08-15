@@ -530,6 +530,30 @@ JSONNodeDumper::createCXXBaseSpecifier(const CXXBaseSpecifier &BS) {
   return Ret;
 }
 
+void JSONNodeDumper::VisitAliasAttr(const AliasAttr *AA) {
+  JOS.attribute("aliasee", AA->getAliasee());
+}
+
+void JSONNodeDumper::VisitCleanupAttr(const CleanupAttr *CA) {
+  JOS.attribute("cleanup_function", createBareDeclRef(CA->getFunctionDecl()));
+}
+
+void JSONNodeDumper::VisitDeprecatedAttr(const DeprecatedAttr *DA) {
+  if (!DA->getMessage().empty())
+    JOS.attribute("message", DA->getMessage());
+  if (!DA->getReplacement().empty())
+    JOS.attribute("replacement", DA->getReplacement());
+}
+
+void JSONNodeDumper::VisitUnavailableAttr(const UnavailableAttr *UA) {
+  if (!UA->getMessage().empty())
+    JOS.attribute("message", UA->getMessage());
+}
+
+void JSONNodeDumper::VisitSectionAttr(const SectionAttr *SA) {
+  JOS.attribute("section_name", SA->getName());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())

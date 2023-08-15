@@ -82,8 +82,12 @@ private:
   // sqrt
   bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
-  bool insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
-                    const FuncInfo &FInfo);
+  /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
+  /// of cos, sincos call).
+  std::tuple<Value *, Value *, Value *> insertSinCos(Value *Arg,
+                                                     FastMathFlags FMF,
+                                                     IRBuilder<> &B,
+                                                     FunctionCallee Fsincos);
 
   // sin/cos
   bool fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -1041,32 +1045,14 @@ bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
   return false;
 }
 
-bool AMDGPULibCalls::insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
-                                  const FuncInfo &fInfo) {
-  Value *Arg = Sin->getOperand(0);
-  assert(Arg == Cos->getOperand(0));
-
+std::tuple<Value *, Value *, Value *>
+AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
+                             FunctionCallee Fsincos) {
+  DebugLoc DL = B.getCurrentDebugLocation();
   Function *F = B.GetInsertBlock()->getParent();
-  Module *M = F->getParent();
-  // Merge the sin and cos.
-
-  // for OpenCL 2.0 we have only generic implementation of sincos
-  // function.
-  // FIXME: This is not true anymore
-  AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
-  nf.getLeads()[0].PtrKind =
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
-  FunctionCallee Fsincos = getFunction(M, nf);
-  if (!Fsincos)
-    return false;
-
   B.SetInsertPointPastAllocas(F);
 
-  DILocation *MergedDebugLoc =
-      DILocation::getMergedLocation(Sin->getDebugLoc(), Cos->getDebugLoc());
-  B.SetCurrentDebugLocation(MergedDebugLoc);
-
-  AllocaInst *Alloc = B.CreateAlloca(Sin->getType(), nullptr, "__sincos_");
+  AllocaInst *Alloc = B.CreateAlloca(Arg->getType(), nullptr, "__sincos_");
 
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
@@ -1074,36 +1060,25 @@ bool AMDGPULibCalls::insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
     // if it's an argument or constant.
 
     B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
-    B.SetCurrentDebugLocation(MergedDebugLoc);
+
+    // SetInsertPoint unwelcomely always tries to set the debug loc.
+    B.SetCurrentDebugLocation(DL);
   }
 
-  Value *P = Alloc;
-  Type *PTy = Fsincos.getFunctionType()->getParamType(1);
+  Type *CosPtrTy = Fsincos.getFunctionType()->getParamType(1);
+
   // The allocaInst allocates the memory in private address space. This need
-  // to be bitcasted to point to the address space of cos pointer type.
+  // to be addrspacecasted to point to the address space of cos pointer type.
   // In OpenCL 2.0 this is generic, while in 1.2 that is private.
-  if (PTy->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    P = B.CreateAddrSpaceCast(Alloc, PTy);
+  Value *CastAlloc = B.CreateAddrSpaceCast(Alloc, CosPtrTy);
 
-  // Intersect the two sets of flags.
-  FastMathFlags FMF = cast<FPMathOperator>(Sin)->getFastMathFlags();
-  FMF &= cast<FPMathOperator>(Cos)->getFastMathFlags();
-  B.setFastMathFlags(FMF);
+  CallInst *SinCos = CreateCallEx2(B, Fsincos, Arg, CastAlloc);
 
-  CallInst *Call = CreateCallEx2(B, Fsincos, Arg, P);
-  LoadInst *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
-  Reload->setDebugLoc(Cos->getDebugLoc());
+  // TODO: Is it worth trying to preserve the location for the cos calls for the
+  // load?
 
-  LLVM_DEBUG(errs() << "AMDIC: fold_sincos (" << *Sin << ", " << *Cos
-                    << ") with " << *Call << '\n');
-
-  Sin->replaceAllUsesWith(Call);
-  Sin->eraseFromParent();
-
-  Cos->replaceAllUsesWith(Reload);
-  Cos->eraseFromParent();
-
-  return true;
+  LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
+  return {SinCos, LoadCos, SinCos};
 }
 
 // fold sin, cos -> sincos.
@@ -1121,33 +1096,98 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   Value *CArgVal = FPOp->getOperand(0);
   CallInst *CI = cast<CallInst>(FPOp);
-  bool Changed = false;
 
+  Function *F = B.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+
+  // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
+  // implementation. Prefer the private form if available.
+  AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
+
+  AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
+
+  FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
+  FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
+  FunctionCallee FSinCos = FSinCosPrivate ? FSinCosPrivate : FSinCosGeneric;
+  if (!FSinCos)
+    return false;
+
+  SmallVector<CallInst *> SinCalls;
+  SmallVector<CallInst *> CosCalls;
+  SmallVector<CallInst *> SinCosCalls;
   FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
                        fInfo);
   const std::string PairName = PartnerInfo.mangle();
 
-  CallInst *UI = nullptr;
+  StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
+  StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
+  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
+  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
 
-  // TODO: Handle repeated uses, the generic implementation does.
+  // Intersect the two sets of flags.
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  MDNode *FPMath = CI->getMetadata(LLVMContext::MD_fpmath);
+
+  SmallVector<DILocation *> MergeDbgLocs = {CI->getDebugLoc()};
+
   for (User* U : CArgVal->users()) {
     CallInst *XI = dyn_cast<CallInst>(U);
-    if (!XI || XI->isNoBuiltin())
+    if (!XI || XI->getFunction() != F || XI->isNoBuiltin())
       continue;
 
     Function *UCallee = XI->getCalledFunction();
-    if (UCallee && UCallee->getName().equals(PairName))
-      UI = XI;
-    else if (UI)
-      return Changed;
+    if (!UCallee)
+      continue;
+
+    bool Handled = true;
+
+    if (UCallee->getName() == SinName)
+      SinCalls.push_back(XI);
+    else if (UCallee->getName() == CosName)
+      CosCalls.push_back(XI);
+    else if (UCallee->getName() == SinCosPrivateName ||
+             UCallee->getName() == SinCosGenericName)
+      SinCosCalls.push_back(XI);
+    else
+      Handled = false;
+
+    if (Handled) {
+      MergeDbgLocs.push_back(XI->getDebugLoc());
+      auto *OtherOp = cast<FPMathOperator>(XI);
+      FMF &= OtherOp->getFastMathFlags();
+      FPMath = MDNode::getMostGenericFPMath(
+          FPMath, XI->getMetadata(LLVMContext::MD_fpmath));
+    }
   }
 
-  if (!UI)
-    return Changed;
+  if (SinCalls.empty() || CosCalls.empty())
+    return false;
 
-  CallInst *Sin = isSin ? CI : UI;
-  CallInst *Cos = isSin ? UI : CI;
-  return insertSinCos(Sin, Cos, B, fInfo) || Changed;
+  B.setFastMathFlags(FMF);
+  B.setDefaultFPMathTag(FPMath);
+  DILocation *DbgLoc = DILocation::getMergedLocations(MergeDbgLocs);
+  B.SetCurrentDebugLocation(DbgLoc);
+
+  auto [Sin, Cos, SinCos] = insertSinCos(CArgVal, FMF, B, FSinCos);
+
+  auto replaceTrigInsts = [](ArrayRef<CallInst *> Calls, Value *Res) {
+    for (CallInst *C : Calls)
+      C->replaceAllUsesWith(Res);
+
+    // Leave the other dead instructions to avoid clobbering iterators.
+  };
+
+  replaceTrigInsts(SinCalls, Sin);
+  replaceTrigInsts(CosCalls, Cos);
+  replaceTrigInsts(SinCosCalls, SinCos);
+
+  // It's safe to delete the original now.
+  CI->eraseFromParent();
+  return true;
 }
 
 bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,

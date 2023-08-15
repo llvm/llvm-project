@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) { // CHECK:      1: [[#]]:int main
 // CHECK-NOT:  {{^ +[0-9]+:}}
 
 //--- a.h
-struct A { A() { } };              // CHECK:      2: [[#]]:struct A
+/// Apple targets doesn't enable -mconstructor-aliases by default and the count may be 4.
+struct A { A() { } };              // CHECK:      {{[24]}}: [[#]]:struct A
 inline auto *const inl_var_a =
     new A;
 /// TODO a.inc:1 should have line execution.

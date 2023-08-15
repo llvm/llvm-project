@@ -8,7 +8,7 @@
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
 ; GCN-POSTLINK: call fast float @_Z3sinf(
 ; GCN-POSTLINK: call fast float @_Z3cosf(
-; GCN-PRELINK: call fast float @_Z6sincosfPf(
+; GCN-PRELINK: call fast float @_Z6sincosfPU3AS5f(
 ; GCN-NATIVE: call fast float @_Z10native_sinf(
 ; GCN-NATIVE: call fast float @_Z10native_cosf(
 define amdgpu_kernel void @test_sincos(ptr addrspace(1) nocapture %a) {
@@ -29,7 +29,7 @@ declare float @_Z3cosf(float)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v2
 ; GCN-POSTLINK: call fast <2 x float> @_Z3sinDv2_f(
 ; GCN-POSTLINK: call fast <2 x float> @_Z3cosDv2_f(
-; GCN-PRELINK: call fast <2 x float> @_Z6sincosDv2_fPS_(
+; GCN-PRELINK: call fast <2 x float> @_Z6sincosDv2_fPU3AS5S_(
 ; GCN-NATIVE: call fast <2 x float> @_Z10native_sinDv2_f(
 ; GCN-NATIVE: call fast <2 x float> @_Z10native_cosDv2_f(
 define amdgpu_kernel void @test_sincos_v2(ptr addrspace(1) nocapture %a) {
@@ -50,7 +50,7 @@ declare <2 x float> @_Z3cosDv2_f(<2 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v3
 ; GCN-POSTLINK: call fast <3 x float> @_Z3sinDv3_f(
 ; GCN-POSTLINK: call fast <3 x float> @_Z3cosDv3_f(
-; GCN-PRELINK: call fast <3 x float> @_Z6sincosDv3_fPS_(
+; GCN-PRELINK: call fast <3 x float> @_Z6sincosDv3_fPU3AS5S_(
 ; GCN-NATIVE: call fast <3 x float> @_Z10native_sinDv3_f(
 ; GCN-NATIVE: call fast <3 x float> @_Z10native_cosDv3_f(
 define amdgpu_kernel void @test_sincos_v3(ptr addrspace(1) nocapture %a) {
@@ -74,7 +74,7 @@ declare <3 x float> @_Z3cosDv3_f(<3 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v4
 ; GCN-POSTLINK: call fast <4 x float> @_Z3sinDv4_f(
 ; GCN-POSTLINK: call fast <4 x float> @_Z3cosDv4_f(
-; GCN-PRELINK: call fast <4 x float> @_Z6sincosDv4_fPS_(
+; GCN-PRELINK: call fast <4 x float> @_Z6sincosDv4_fPU3AS5S_(
 ; GCN-NATIVE: call fast <4 x float> @_Z10native_sinDv4_f(
 ; GCN-NATIVE: call fast <4 x float> @_Z10native_cosDv4_f(
 define amdgpu_kernel void @test_sincos_v4(ptr addrspace(1) nocapture %a) {
@@ -95,7 +95,7 @@ declare <4 x float> @_Z3cosDv4_f(<4 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v8
 ; GCN-POSTLINK: call fast <8 x float> @_Z3sinDv8_f(
 ; GCN-POSTLINK: call fast <8 x float> @_Z3cosDv8_f(
-; GCN-PRELINK: call fast <8 x float> @_Z6sincosDv8_fPS_(
+; GCN-PRELINK: call fast <8 x float> @_Z6sincosDv8_fPU3AS5S_(
 ; GCN-NATIVE: call fast <8 x float> @_Z10native_sinDv8_f(
 ; GCN-NATIVE: call fast <8 x float> @_Z10native_cosDv8_f(
 define amdgpu_kernel void @test_sincos_v8(ptr addrspace(1) nocapture %a) {
@@ -116,7 +116,7 @@ declare <8 x float> @_Z3cosDv8_f(<8 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v16
 ; GCN-POSTLINK: call fast <16 x float> @_Z3sinDv16_f(
 ; GCN-POSTLINK: call fast <16 x float> @_Z3cosDv16_f(
-; GCN-PRELINK: call fast <16 x float> @_Z6sincosDv16_fPS_(
+; GCN-PRELINK: call fast <16 x float> @_Z6sincosDv16_fPU3AS5S_(
 ; GCN-NATIVE: call fast <16 x float> @_Z10native_sinDv16_f(
 ; GCN-NATIVE: call fast <16 x float> @_Z10native_cosDv16_f(
 define amdgpu_kernel void @test_sincos_v16(ptr addrspace(1) nocapture %a) {

@@ -111,3 +111,16 @@ body:             |
     PseudoRET implicit $x10, implicit $x11, implicit $x12
 
 ...
+---
+name:            const_null
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: const_null
+    ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $x10 = COPY [[C]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = G_CONSTANT i32 0
+    $x10 = COPY %0(p0)
+    PseudoRET implicit $x10
+
+...

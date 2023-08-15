@@ -1,11 +1,5 @@
 // RUN: rm -rf %t; mkdir %t
 
-// RUN: %clang_pgogen -o %t/dbg -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %s
-// RUN: env LLVM_PROFILE_FILE=%t/dbg_%m.profdata %run %t/dbg 2>&1 | count 0
-// RUN: env LLVM_PROFILE_FILE=%t/dbg_%m.profdata %run %t/dbg 2>&1 | FileCheck %s --check-prefix=DBG
-
-// DBG: Debug info correlation does not support profile merging at runtime.
-
 // RUN: %clang_pgogen -o %t/timeprof -mllvm -pgo-temporal-instrumentation %s
 // RUN: env LLVM_PROFILE_FILE=%t/timeprof_%m.profdata %run %t/timeprof 2>&1 | count 0
 // RUN: env LLVM_PROFILE_FILE=%t/timeprof_%m.profdata %run %t/timeprof 2>&1 | FileCheck %s --check-prefix=TIMEPROF

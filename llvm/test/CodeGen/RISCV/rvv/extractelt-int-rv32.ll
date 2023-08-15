@@ -599,10 +599,10 @@ define i64 @extractelt_nxv1i64_imm(<vscale x 1 x i64> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsrl.vx v9, v8, a0
+; CHECK-NEXT:    vmv.x.s a1, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsrl.vx v8, v8, a1
-; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i64> %v, i32 2
   ret i64 %r
@@ -640,10 +640,10 @@ define i64 @extractelt_nxv2i64_imm(<vscale x 2 x i64> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsrl.vx v10, v8, a0
+; CHECK-NEXT:    vmv.x.s a1, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsrl.vx v8, v8, a1
-; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i64> %v, i32 2
   ret i64 %r
@@ -681,10 +681,10 @@ define i64 @extractelt_nxv4i64_imm(<vscale x 4 x i64> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsrl.vx v12, v8, a0
+; CHECK-NEXT:    vmv.x.s a1, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsrl.vx v8, v8, a1
-; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i64> %v, i32 2
   ret i64 %r
@@ -722,10 +722,10 @@ define i64 @extractelt_nxv8i64_imm(<vscale x 8 x i64> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsrl.vx v16, v8, a0
+; CHECK-NEXT:    vmv.x.s a1, v16
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsrl.vx v8, v8, a1
-; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i64> %v, i32 2
   ret i64 %r
@@ -957,9 +957,9 @@ define i64 @extractelt_nxv16i64_0(<vscale x 16 x i64> %v) {
 ; CHECK-LABEL: extractelt_nxv16i64_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v16, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v16
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i64> %v, i32 0
   ret i64 %r

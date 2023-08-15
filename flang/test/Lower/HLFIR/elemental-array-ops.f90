@@ -238,3 +238,27 @@ end subroutine polymorphic_parenthesis
 ! CHECK:           hlfir.destroy %[[VAL_7]] : !hlfir.expr<?x!fir.type<_QFpolymorphic_parenthesisTt>?>
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine unlimited_polymorphic_parenthesis(x, y)
+  class(*), allocatable :: x(:)
+  class(*), intent(in) :: y(:)
+  x = (y)
+end subroutine unlimited_polymorphic_parenthesis
+! CHECK-LABEL:   func.func @_QPunlimited_polymorphic_parenthesis(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "x"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "y"}) {
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFunlimited_polymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFunlimited_polymorphic_parenthesisEy"} : (!fir.class<!fir.array<?xnone>>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_4]] : (!fir.class<!fir.array<?xnone>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = hlfir.elemental %[[VAL_6]] mold %[[VAL_3]]#0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?xnone>>) -> !hlfir.expr<?xnone?> {
+! CHECK:           ^bb0(%[[VAL_8:.*]]: index):
+! CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_8]])  : (!fir.class<!fir.array<?xnone>>, index) -> !fir.class<none>
+! CHECK:             %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_9]] : (!fir.class<none>) -> !hlfir.expr<none?>
+! CHECK:             hlfir.yield_element %[[VAL_10]] : !hlfir.expr<none?>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_7]] to %[[VAL_2]]#0 realloc : !hlfir.expr<?xnone?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK:           hlfir.destroy %[[VAL_7]] : !hlfir.expr<?xnone?>
+! CHECK:           return
+! CHECK:         }

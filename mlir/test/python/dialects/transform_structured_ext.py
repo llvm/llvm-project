@@ -19,42 +19,6 @@ def run(f):
 
 
 @run
-def testBufferizeToAllocationOpCompact():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
-    )
-    with InsertionPoint(sequence.body):
-        structured.BufferizeToAllocationOp(sequence.bodyTarget)
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: testBufferizeToAllocationOpCompact
-    # CHECK: transform.sequence
-    # CHECK: transform.structured.bufferize_to_allocation
-
-
-@run
-def testBufferizeToAllocationOpArgs():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
-    )
-    with InsertionPoint(sequence.body):
-        structured.BufferizeToAllocationOp(
-            sequence.bodyTarget,
-            memory_space=3,
-            memcpy_op="memref.copy",
-            alloc_op="memref.alloca",
-            bufferize_destination_only=True,
-        )
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: testBufferizeToAllocationOpArgs
-    # CHECK: transform.sequence
-    # CHECK: transform.structured.bufferize_to_allocation
-    # CHECK-SAME: alloc_op = "memref.alloca"
-    # CHECK-SAME: bufferize_destination_only
-    # CHECK-SAME: memcpy_op = "memref.copy"
-    # CHECK-SAME: memory_space = 3
-
-
-@run
 def testDecompose():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()

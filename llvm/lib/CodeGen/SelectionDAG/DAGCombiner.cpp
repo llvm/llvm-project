@@ -14340,9 +14340,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   EVT SrcVT = N0.getValueType();
   bool isLE = DAG.getDataLayout().isLittleEndian();
 
-  // noop truncate
-  if (SrcVT == VT)
-    return N0;
+  // trunc(undef) = undef
+  if (N0.isUndef())
+    return DAG.getUNDEF(VT);
 
   // fold (truncate (truncate x)) -> (truncate x)
   if (N0.getOpcode() == ISD::TRUNCATE)

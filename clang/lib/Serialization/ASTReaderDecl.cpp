@@ -4459,7 +4459,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
         VTSD->setPointOfInstantiation(POI);
       } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-        VD->getMemberSpecializationInfo()->setPointOfInstantiation(POI);
+        MemberSpecializationInfo *MSInfo = VD->getMemberSpecializationInfo();
+        assert(MSInfo && "No member specialization information");
+        MSInfo->setPointOfInstantiation(POI);
       } else {
         auto *FD = cast<FunctionDecl>(D);
         if (auto *FTSInfo = FD->TemplateOrSpecialization

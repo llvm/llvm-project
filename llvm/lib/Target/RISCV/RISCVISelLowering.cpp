@@ -4118,6 +4118,56 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   return Interleaved;
 }
 
+// If we have a vector of bits that we want to reverse, we can use a vbrev on a
+// larger element type, e.g. v32i1 can be reversed with a v1i32 bitreverse.
+static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
+                                      SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  SDLoc DL(SVN);
+  MVT VT = SVN->getSimpleValueType(0);
+  SDValue V = SVN->getOperand(0);
+  unsigned NumElts = VT.getVectorNumElements();
+
+  assert(VT.getVectorElementType() == MVT::i1);
+
+  if (!ShuffleVectorInst::isReverseMask(SVN->getMask()) ||
+      !SVN->getOperand(1).isUndef())
+    return SDValue();
+
+  unsigned ViaEltSize = std::max((uint64_t)8, PowerOf2Ceil(NumElts));
+  MVT ViaVT = MVT::getVectorVT(MVT::getIntegerVT(ViaEltSize), 1);
+  MVT ViaBitVT = MVT::getVectorVT(MVT::i1, ViaVT.getScalarSizeInBits());
+
+  // If we don't have zvbb or the larger element type > ELEN, the operation will
+  // be illegal.
+  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::BITREVERSE,
+                                                               ViaVT))
+    return SDValue();
+
+  // If the bit vector doesn't fit exactly into the larger element type, we need
+  // to insert it into the larger vector and then shift up the reversed bits
+  // afterwards to get rid of the gap introduced.
+  if (ViaEltSize > NumElts)
+    V = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ViaBitVT, DAG.getUNDEF(ViaBitVT),
+                    V, DAG.getVectorIdxConstant(0, DL));
+
+  SDValue Res =
+      DAG.getNode(ISD::BITREVERSE, DL, ViaVT, DAG.getBitcast(ViaVT, V));
+
+  // Shift up the reversed bits if the vector didn't exactly fit into the larger
+  // element type.
+  if (ViaEltSize > NumElts)
+    Res = DAG.getNode(ISD::SRL, DL, ViaVT, Res,
+                      DAG.getConstant(ViaEltSize - NumElts, DL, ViaVT));
+
+  Res = DAG.getBitcast(ViaBitVT, Res);
+
+  if (ViaEltSize > NumElts)
+    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                      DAG.getVectorIdxConstant(0, DL));
+  return Res;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -4128,8 +4178,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  // Promote i1 shuffle to i8 shuffle.
   if (VT.getVectorElementType() == MVT::i1) {
+    if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
+      return V;
+
+    // Promote i1 shuffle to i8 shuffle.
     MVT WidenVT = MVT::getVectorVT(MVT::i8, VT.getVectorElementCount());
     V1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, V1);
     V2 = V2.isUndef() ? DAG.getUNDEF(WidenVT)

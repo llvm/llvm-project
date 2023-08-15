@@ -29,6 +29,10 @@ enum class VecOp {
   Convert,
   Ctf,
   Cvf,
+  Ld,
+  Lde,
+  Ldl,
+  Lxvp,
   Mergeh,
   Mergel,
   Msub,
@@ -42,13 +46,19 @@ enum class VecOp {
   Sldw,
   Sll,
   Slo,
+  Splat,
+  Splat_s32,
+  Splats,
   Sr,
   Srl,
   Sro,
   St,
   Ste,
   Stxv,
+  Stxvp,
   Sub,
+  Xld2,
+  Xlw4,
   Xor,
   Xst,
   Xst_be,
@@ -110,6 +120,15 @@ static inline VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
 
 static inline VecTypeInfo getVecTypeFromFir(mlir::Value firVec) {
   return getVecTypeFromFirType(firVec.getType());
+}
+
+// Calculates the vector length and returns a VecTypeInfo with element type and
+// length.
+static inline VecTypeInfo getVecTypeFromEle(mlir::Value ele) {
+  VecTypeInfo vecTyInfo;
+  vecTyInfo.eleTy = ele.getType();
+  vecTyInfo.len = 16 / (vecTyInfo.eleTy.getIntOrFloatBitWidth() / 8);
+  return vecTyInfo;
 }
 
 // Converts array of fir vectors to mlir vectors.
@@ -193,6 +212,10 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
                                 llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
+  fir::ExtendedValue genVecLdCallGrp(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
   fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args);
 
@@ -208,6 +231,10 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
 
   template <VecOp>
   void genVecXStore(llvm::ArrayRef<fir::ExtendedValue>);
+
+  template <VecOp vop>
+  fir::ExtendedValue genVecSplat(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args);
 };
 
 const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);
