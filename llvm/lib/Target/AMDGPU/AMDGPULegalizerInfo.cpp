@@ -3291,8 +3291,7 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
 
   assert(Ty == F32);
 
-  if (allowApproxFunc(B.getMF(), Flags) ||
-      !needsDenormHandlingF32(B.getMF(), Src, Flags)) {
+  if (!needsDenormHandlingF32(B.getMF(), Src, Flags)) {
     B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst})
         .addUse(Src)
         .setMIFlags(Flags);
