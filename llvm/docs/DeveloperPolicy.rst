@@ -355,8 +355,11 @@ Below are some guidelines about the format of the message itself:
   caused PR#".
 
 * It is acceptable to add metadata to the commit message to automate processes,
-  including for downstream consumers. If the patch fixes a bug in GitHub Issues,
-  we encourage adding a reference to the issue being closed, as described
+  including for downstream consumers. If the patch has been reviewed, add a
+  link to its review page, as shown
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`_. If
+  the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+  the issue being closed, as described
   `here <https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs>`_.
   Other kinds of metadata are also acceptable, including links to resources
   that are not available to the entire community. However, such links should
