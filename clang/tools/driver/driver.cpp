@@ -79,7 +79,7 @@ static const char *GetStableCStr(std::set<std::string> &SavedStrings,
   return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
-/// ApplyQAOneOverride - Apply a list of edits to the input argument lists.
+/// ApplyOneQAOverride - Apply a list of edits to the input argument lists.
 ///
 /// The input string is a space separated list of edits to perform,
 /// they are applied in order to the input argument lists. Edits
