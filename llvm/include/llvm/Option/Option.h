@@ -37,10 +37,6 @@ enum DriverFlag {
   RenderSeparate   = (1 << 3)
 };
 
-enum DriverVisibility {
-  Default = (1 << 0),
-};
-
 /// Option - Abstract representation for a single form of driver
 /// argument.
 ///
@@ -185,11 +181,6 @@ public:
   /// Test if this option has the flag \a Val.
   bool hasFlag(unsigned Val) const {
     return Info->Flags & Val;
-  }
-
-  /// Test if this option has the visibility flag \a Val.
-  bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
   }
 
   /// getUnaliasedOption - Return the final option this option

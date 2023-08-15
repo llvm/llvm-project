@@ -26,7 +26,6 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
-using namespace llvm::opt;
 
 namespace {
 enum ObjcopyID {

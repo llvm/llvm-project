@@ -73,13 +73,6 @@ def RenderJoined : OptionFlag;
 // (only sensible on joined options).
 def RenderSeparate : OptionFlag;
 
-// Define Visibility categories
-
-class OptionVisibility {}
-
-// Explicit specifier for default visibility
-def Default : OptionVisibility;
-
 // Define the option group class.
 
 class OptionGroup<string name> {
@@ -88,7 +81,6 @@ class OptionGroup<string name> {
   string HelpText = ?;
   OptionGroup Group = ?;
   list<OptionFlag> Flags = [];
-  list<OptionVisibility> Vis = [];
 }
 
 // Define the option class.
@@ -105,7 +97,6 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   string Values = ?;
   code ValuesCode = ?;
   list<OptionFlag> Flags = [];
-  list<OptionVisibility> Vis = [Default];
   OptionGroup Group = ?;
   Option Alias = ?;
   list<string> AliasArgs = [];
@@ -150,7 +141,6 @@ class Alias<Option alias> { Option Alias = alias; }
 class AliasArgs<list<string> aliasargs> { list<string> AliasArgs = aliasargs; }
 class EnumName<string name> { string EnumName = name; }
 class Flags<list<OptionFlag> flags> { list<OptionFlag> Flags = flags; }
-class Vis<list<OptionVisibility> vis> { list<OptionVisibility> Vis = vis; }
 class Group<OptionGroup group> { OptionGroup Group = group; }
 class HelpText<string text> { string HelpText = text; }
 class MetaVarName<string name> { string MetaVarName = name; }
