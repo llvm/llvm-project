@@ -66,6 +66,8 @@ public:
             llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
           else
             llvm_unreachable("Unknown inline kind");
+        } else if (attr.getValue().dyn_cast<mlir::cir::OptNoneAttr>()) {
+          llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
         }
       }
     }
