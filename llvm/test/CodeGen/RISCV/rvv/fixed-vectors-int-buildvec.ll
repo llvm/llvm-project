@@ -63,77 +63,170 @@ define void @buildvec_vid_mpy_imm_v16i8(ptr %x) {
   ret void
 }
 
-; Some tests return this struct because the stores end up being scalarized.
-%x4v4i8 = type {<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>}
-
-define %x4v4i8 @buildvec_vid_step2_add0_v4i8() {
+define <4 x i8> @buildvec_vid_step2_add0_v4i8() {
 ; CHECK-LABEL: buildvec_vid_step2_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 2, i8 4, i8 6>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 2, i8 4, i8 6>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 4, i8 6>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 0, i8 undef, i8 undef, i8 6>, 3
-  ret %x4v4i8 %4
+  ret <4 x i8> <i8 0, i8 2, i8 4, i8 6>
 }
 
-define %x4v4i8 @buildvec_vid_step2_add1_v4i8() {
+define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef0() {
+; CHECK-LABEL: buildvec_vid_step2_add0_v4i8_undef0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 2, i8 4, i8 6>
+}
+
+define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef1() {
+; CHECK-LABEL: buildvec_vid_step2_add0_v4i8_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 undef, i8 4, i8 6>
+}
+
+define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef2() {
+; CHECK-LABEL: buildvec_vid_step2_add0_v4i8_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 6>
+}
+
+define <4 x i8> @buildvec_vid_step2_add1_v4i8() {
 ; CHECK-LABEL: buildvec_vid_step2_add1_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 1, i8 3, i8 5, i8 7>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 3, i8 5, i8 7>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 5, i8 7>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 1, i8 undef, i8 undef, i8 7>, 3
-  ret %x4v4i8 %4
+  ret <4 x i8> <i8 1, i8 3, i8 5, i8 7>
 }
 
-define %x4v4i8 @buildvec_vid_stepn1_add0_v4i8() {
+define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef0() {
+; CHECK-LABEL: buildvec_vid_step2_add1_v4i8_undef0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 3, i8 5, i8 7>
+}
+
+define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef1() {
+; CHECK-LABEL: buildvec_vid_step2_add1_v4i8_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 undef, i8 5, i8 7>
+}
+
+define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef2() {
+; CHECK-LABEL: buildvec_vid_step2_add1_v4i8_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 1, i8 undef, i8 undef, i8 7>
+}
+
+define <4 x i8> @buildvec_vid_stepn1_add0_v4i8() {
 ; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 -1, i8 -2, i8 -3>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 0, i8 undef, i8 undef, i8 -3>, 3
-  ret %x4v4i8 %4
+  ret <4 x i8> <i8 0, i8 -1, i8 -2, i8 -3>
 }
 
-define %x4v4i8 @buildvec_vid_stepn2_add0_v4i8() {
+define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef0() {
+; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8_undef0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>
+}
+
+define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef1() {
+; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>
+}
+
+define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef2() {
+; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 -3>
+}
+
+define <4 x i8> @buildvec_vid_stepn2_add0_v4i8() {
 ; CHECK-LABEL: buildvec_vid_stepn2_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vmv.v.i v11, -6
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 -2, i8 -4, i8 -6>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 -2, i8 -4, i8 -6>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 -4, i8 -6>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 undef, i8 undef, i8 undef, i8 -6>, 3
-  ret %x4v4i8 %4
+  ret <4 x i8> <i8 0, i8 -2, i8 -4, i8 -6>
+}
+
+define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef0() {
+; CHECK-LABEL: buildvec_vid_stepn2_add0_v4i8_undef0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 -2, i8 -4, i8 -6>
+}
+
+define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef1() {
+; CHECK-LABEL: buildvec_vid_stepn2_add0_v4i8_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 undef, i8 -4, i8 -6>
+}
+
+define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef2() {
+; CHECK-LABEL: buildvec_vid_stepn2_add0_v4i8_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, -6
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 undef, i8 undef, i8 -6>
 }
 
 define <4 x i8> @buildvec_vid_stepn2_add3_v4i8() {
@@ -183,8 +276,8 @@ define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3)
 define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step1_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI12_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI24_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI24_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -200,8 +293,8 @@ define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV32-LABEL: buildvec_vid_step2_add0_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI25_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI25_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -215,59 +308,99 @@ define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
   ret <4 x i64> <i64 0, i64 2, i64 4, i64 6>
 }
 
-%x6v4i8 = type {<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>}
-
-define %x6v4i8 @buildvec_no_vid_v4i8() {
-; RV32-LABEL: buildvec_no_vid_v4i8:
+define <4 x i8> @buildvec_no_vid_v4i8_0() {
+; RV32-LABEL: buildvec_no_vid_v4i8_0:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 28768
 ; RV32-NEXT:    addi a0, a0, 769
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    lui a0, 28752
-; RV32-NEXT:    addi a0, a0, 512
-; RV32-NEXT:    vmv.s.x v9, a0
-; RV32-NEXT:    lui a0, 32768
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    lui a0, 28672
-; RV32-NEXT:    addi a0, a0, 255
-; RV32-NEXT:    vmv.s.x v11, a0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vmv.v.i v12, -2
-; RV32-NEXT:    lui a0, 1032144
-; RV32-NEXT:    addi a0, a0, -257
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v13, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: buildvec_no_vid_v4i8:
+; RV64-LABEL: buildvec_no_vid_v4i8_0:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 28768
 ; RV64-NEXT:    addiw a0, a0, 769
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v8, a0
+; RV64-NEXT:    ret
+  ret <4 x i8> <i8 1, i8 3, i8 6, i8 7>
+}
+
+define <4 x i8> @buildvec_no_vid_v4i8_1() {
+; RV32-LABEL: buildvec_no_vid_v4i8_1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 28752
+; RV32-NEXT:    addi a0, a0, 512
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_no_vid_v4i8_1:
+; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 28752
 ; RV64-NEXT:    addiw a0, a0, 512
-; RV64-NEXT:    vmv.s.x v9, a0
-; RV64-NEXT:    lui a0, 32768
-; RV64-NEXT:    vmv.s.x v10, a0
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v8, a0
+; RV64-NEXT:    ret
+  ret <4 x i8> <i8 undef, i8 2, i8 5, i8 7>
+}
+
+define <4 x i8> @buildvec_no_vid_v4i8_2() {
+; CHECK-LABEL: buildvec_no_vid_v4i8_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 32768
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 8>
+}
+
+define <4 x i8> @buildvec_no_vid_v4i8_3() {
+; RV32-LABEL: buildvec_no_vid_v4i8_3:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 28672
+; RV32-NEXT:    addi a0, a0, 255
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_no_vid_v4i8_3:
+; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 28672
 ; RV64-NEXT:    addiw a0, a0, 255
-; RV64-NEXT:    vmv.s.x v11, a0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vmv.v.i v12, -2
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v8, a0
+; RV64-NEXT:    ret
+  ret <4 x i8> <i8 -1, i8 undef, i8 undef, i8 7>
+}
+
+define <4 x i8> @buildvec_no_vid_v4i8_4() {
+; CHECK-LABEL: buildvec_no_vid_v4i8_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, -2
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 -2, i8 undef, i8 undef, i8 undef>
+}
+
+define <4 x i8> @buildvec_no_vid_v4i8_5() {
+; RV32-LABEL: buildvec_no_vid_v4i8_5:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 1032144
+; RV32-NEXT:    addi a0, a0, -257
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_no_vid_v4i8_5:
+; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 1032144
 ; RV64-NEXT:    addiw a0, a0, -257
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v13, a0
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    ret
-  %1 = insertvalue %x6v4i8 poison, <4 x i8> <i8 1, i8 3, i8 6, i8 7>, 0
-  %2 = insertvalue %x6v4i8 %1, <4 x i8> <i8 undef, i8 2, i8 5, i8 7>, 1
-  %3 = insertvalue %x6v4i8 %2, <4 x i8> <i8 0, i8 undef, i8 undef, i8 8>, 2
-  %4 = insertvalue %x6v4i8 %3, <4 x i8> <i8 -1, i8 undef, i8 undef, i8 7>, 3
-  %5 = insertvalue %x6v4i8 %4, <4 x i8> <i8 -2, i8 undef, i8 undef, i8 undef>, 4
-  %6 = insertvalue %x6v4i8 %5, <4 x i8> <i8 -1, i8 -2, i8 -4, i8 -5>, 5
-  ret %x6v4i8 %6
+  ret <4 x i8> <i8 -1, i8 -2, i8 -4, i8 -5>
 }
 
 define void @buildvec_dominant0_v8i16(ptr %x) {
@@ -325,8 +458,8 @@ define <2 x i8> @buildvec_dominant2_v2i8() {
 define void @buildvec_dominant0_v2i32(ptr %x) {
 ; RV32-LABEL: buildvec_dominant0_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI20_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI20_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI37_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI37_0)
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    vse32.v v8, (a0)
@@ -334,8 +467,8 @@ define void @buildvec_dominant0_v2i32(ptr %x) {
 ;
 ; RV64-LABEL: buildvec_dominant0_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI20_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI20_0)(a1)
+; RV64-NEXT:    lui a1, %hi(.LCPI37_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI37_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, -1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
@@ -349,8 +482,8 @@ define void @buildvec_dominant0_v2i32(ptr %x) {
 define void @buildvec_dominant1_optsize_v2i32(ptr %x) optsize {
 ; RV32-LABEL: buildvec_dominant1_optsize_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI38_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI38_0)
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    vse32.v v8, (a0)
@@ -358,8 +491,8 @@ define void @buildvec_dominant1_optsize_v2i32(ptr %x) optsize {
 ;
 ; RV64-LABEL: buildvec_dominant1_optsize_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; RV64-NEXT:    lui a1, %hi(.LCPI38_0)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI38_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
 ; RV64-NEXT:    vse64.v v8, (a0)
@@ -408,8 +541,8 @@ define void @buildvec_seq_v8i8_v2i32(ptr %x) {
 define void @buildvec_seq_v16i8_v2i64(ptr %x) {
 ; RV32-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI24_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI24_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI41_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI41_0)
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a1)
 ; RV32-NEXT:    vse8.v v8, (a0)
@@ -417,8 +550,8 @@ define void @buildvec_seq_v16i8_v2i64(ptr %x) {
 ;
 ; RV64-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI24_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI24_0)
+; RV64-NEXT:    lui a1, %hi(.LCPI41_0)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI41_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vlse64.v v8, (a1), zero
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
