@@ -29,6 +29,9 @@ class DeadBlock;
 class Pointer;
 enum PrimType : unsigned;
 
+class Pointer;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
+
 /// A pointer to a memory block, live or dead.
 ///
 /// This object can be allocated into interpreter stack frames. If pointing to
