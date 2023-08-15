@@ -59,6 +59,451 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genMmaIntr<MMAOp::DisassemblePair, MMAHandlerOp::SubToFunc>),
      {{{"data", asAddr}, {"pair", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_mma_pmxvbf16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvbf16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvbf16ger2nn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvbf16ger2nn,
+                         MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvbf16ger2np",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvbf16ger2np,
+                         MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvbf16ger2pn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvbf16ger2pn,
+                         MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvbf16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvbf16ger2pp,
+                         MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf16ger2nn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf16ger2nn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf16ger2np",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf16ger2np, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf16ger2pn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf16ger2pn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf16ger2pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf32ger",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf32ger, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf32gernn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf32gernn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf32gernp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf32gernp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf32gerpn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf32gerpn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf32gerpp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf32gerpp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf64ger",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf64ger, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf64gernn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf64gernn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf64gernp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf64gernp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf64gerpn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf64gerpn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvf64gerpp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvf64gerpp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi16ger2pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi16ger2s",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi16ger2s, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi16ger2spp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi16ger2spp,
+                         MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi4ger8_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi4ger8, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi4ger8pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi4ger8pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi8ger4_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi8ger4, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi8ger4pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi8ger4pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_pmxvi8ger4spp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Pmxvi8ger4spp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr},
+       {"a", asValue},
+       {"b", asValue},
+       {"xmask", asValue},
+       {"ymask", asValue},
+       {"pmask", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvbf16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvbf16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvbf16ger2nn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvbf16ger2nn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvbf16ger2np",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvbf16ger2np, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvbf16ger2pn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvbf16ger2pn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvbf16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvbf16ger2pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf16ger2nn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf16ger2nn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf16ger2np",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf16ger2np, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf16ger2pn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf16ger2pn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf16ger2pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf32ger",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf32ger, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf32gernn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf32gernn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf32gernp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf32gernp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf32gerpn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf32gerpn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf32gerpp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf32gerpp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf64ger",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf64ger, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf64gernn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf64gernn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf64gernp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf64gernp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf64gerpn",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf64gerpn, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvf64gerpp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvf64gerpp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi16ger2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi16ger2, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi16ger2pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi16ger2pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi16ger2s",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi16ger2s, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi16ger2spp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi16ger2spp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi4ger8_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi4ger8, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi4ger8pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi4ger8pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi8ger4_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi8ger4, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi8ger4pp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi8ger4pp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xvi8ger4spp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xvi8ger4spp, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}, {"a", asValue}, {"b", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xxmfacc",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xxmfacc, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xxmtacc",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xxmtacc, MMAHandlerOp::FirstArgIsResult>),
+     {{{"acc", asAddr}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_xxsetaccz",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::Xxsetaccz, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr}}},
+     /*isElemental=*/true},
     {"__ppc_mtfsf",
      static_cast<IntrinsicLibrary::SubroutineGenerator>(&PI::genMtfsf<false>),
      {{{"mask", asValue}, {"r", asValue}}},
@@ -1836,6 +2281,128 @@ const char *getMmaIrIntrName(MMAOp mmaOp) {
     return "llvm.ppc.mma.disassemble.acc";
   case MMAOp::DisassemblePair:
     return "llvm.ppc.vsx.disassemble.pair";
+  case MMAOp::Xxmfacc:
+    return "llvm.ppc.mma.xxmfacc";
+  case MMAOp::Xxmtacc:
+    return "llvm.ppc.mma.xxmtacc";
+  case MMAOp::Xxsetaccz:
+    return "llvm.ppc.mma.xxsetaccz";
+  case MMAOp::Pmxvbf16ger2:
+    return "llvm.ppc.mma.pmxvbf16ger2";
+  case MMAOp::Pmxvbf16ger2nn:
+    return "llvm.ppc.mma.pmxvbf16ger2nn";
+  case MMAOp::Pmxvbf16ger2np:
+    return "llvm.ppc.mma.pmxvbf16ger2np";
+  case MMAOp::Pmxvbf16ger2pn:
+    return "llvm.ppc.mma.pmxvbf16ger2pn";
+  case MMAOp::Pmxvbf16ger2pp:
+    return "llvm.ppc.mma.pmxvbf16ger2pp";
+  case MMAOp::Pmxvf16ger2:
+    return "llvm.ppc.mma.pmxvf16ger2";
+  case MMAOp::Pmxvf16ger2nn:
+    return "llvm.ppc.mma.pmxvf16ger2nn";
+  case MMAOp::Pmxvf16ger2np:
+    return "llvm.ppc.mma.pmxvf16ger2np";
+  case MMAOp::Pmxvf16ger2pn:
+    return "llvm.ppc.mma.pmxvf16ger2pn";
+  case MMAOp::Pmxvf16ger2pp:
+    return "llvm.ppc.mma.pmxvf16ger2pp";
+  case MMAOp::Pmxvf32ger:
+    return "llvm.ppc.mma.pmxvf32ger";
+  case MMAOp::Pmxvf32gernn:
+    return "llvm.ppc.mma.pmxvf32gernn";
+  case MMAOp::Pmxvf32gernp:
+    return "llvm.ppc.mma.pmxvf32gernp";
+  case MMAOp::Pmxvf32gerpn:
+    return "llvm.ppc.mma.pmxvf32gerpn";
+  case MMAOp::Pmxvf32gerpp:
+    return "llvm.ppc.mma.pmxvf32gerpp";
+  case MMAOp::Pmxvf64ger:
+    return "llvm.ppc.mma.pmxvf64ger";
+  case MMAOp::Pmxvf64gernn:
+    return "llvm.ppc.mma.pmxvf64gernn";
+  case MMAOp::Pmxvf64gernp:
+    return "llvm.ppc.mma.pmxvf64gernp";
+  case MMAOp::Pmxvf64gerpn:
+    return "llvm.ppc.mma.pmxvf64gerpn";
+  case MMAOp::Pmxvf64gerpp:
+    return "llvm.ppc.mma.pmxvf64gerpp";
+  case MMAOp::Pmxvi16ger2:
+    return "llvm.ppc.mma.pmxvi16ger2";
+  case MMAOp::Pmxvi16ger2pp:
+    return "llvm.ppc.mma.pmxvi16ger2pp";
+  case MMAOp::Pmxvi16ger2s:
+    return "llvm.ppc.mma.pmxvi16ger2s";
+  case MMAOp::Pmxvi16ger2spp:
+    return "llvm.ppc.mma.pmxvi16ger2spp";
+  case MMAOp::Pmxvi4ger8:
+    return "llvm.ppc.mma.pmxvi4ger8";
+  case MMAOp::Pmxvi4ger8pp:
+    return "llvm.ppc.mma.pmxvi4ger8pp";
+  case MMAOp::Pmxvi8ger4:
+    return "llvm.ppc.mma.pmxvi8ger4";
+  case MMAOp::Pmxvi8ger4pp:
+    return "llvm.ppc.mma.pmxvi8ger4pp";
+  case MMAOp::Pmxvi8ger4spp:
+    return "llvm.ppc.mma.pmxvi8ger4spp";
+  case MMAOp::Xvbf16ger2:
+    return "llvm.ppc.mma.xvbf16ger2";
+  case MMAOp::Xvbf16ger2nn:
+    return "llvm.ppc.mma.xvbf16ger2nn";
+  case MMAOp::Xvbf16ger2np:
+    return "llvm.ppc.mma.xvbf16ger2np";
+  case MMAOp::Xvbf16ger2pn:
+    return "llvm.ppc.mma.xvbf16ger2pn";
+  case MMAOp::Xvbf16ger2pp:
+    return "llvm.ppc.mma.xvbf16ger2pp";
+  case MMAOp::Xvf16ger2:
+    return "llvm.ppc.mma.xvf16ger2";
+  case MMAOp::Xvf16ger2nn:
+    return "llvm.ppc.mma.xvf16ger2nn";
+  case MMAOp::Xvf16ger2np:
+    return "llvm.ppc.mma.xvf16ger2np";
+  case MMAOp::Xvf16ger2pn:
+    return "llvm.ppc.mma.xvf16ger2pn";
+  case MMAOp::Xvf16ger2pp:
+    return "llvm.ppc.mma.xvf16ger2pp";
+  case MMAOp::Xvf32ger:
+    return "llvm.ppc.mma.xvf32ger";
+  case MMAOp::Xvf32gernn:
+    return "llvm.ppc.mma.xvf32gernn";
+  case MMAOp::Xvf32gernp:
+    return "llvm.ppc.mma.xvf32gernp";
+  case MMAOp::Xvf32gerpn:
+    return "llvm.ppc.mma.xvf32gerpn";
+  case MMAOp::Xvf32gerpp:
+    return "llvm.ppc.mma.xvf32gerpp";
+  case MMAOp::Xvf64ger:
+    return "llvm.ppc.mma.xvf64ger";
+  case MMAOp::Xvf64gernn:
+    return "llvm.ppc.mma.xvf64gernn";
+  case MMAOp::Xvf64gernp:
+    return "llvm.ppc.mma.xvf64gernp";
+  case MMAOp::Xvf64gerpn:
+    return "llvm.ppc.mma.xvf64gerpn";
+  case MMAOp::Xvf64gerpp:
+    return "llvm.ppc.mma.xvf64gerpp";
+  case MMAOp::Xvi16ger2:
+    return "llvm.ppc.mma.xvi16ger2";
+  case MMAOp::Xvi16ger2pp:
+    return "llvm.ppc.mma.xvi16ger2pp";
+  case MMAOp::Xvi16ger2s:
+    return "llvm.ppc.mma.xvi16ger2s";
+  case MMAOp::Xvi16ger2spp:
+    return "llvm.ppc.mma.xvi16ger2spp";
+  case MMAOp::Xvi4ger8:
+    return "llvm.ppc.mma.xvi4ger8";
+  case MMAOp::Xvi4ger8pp:
+    return "llvm.ppc.mma.xvi4ger8pp";
+  case MMAOp::Xvi8ger4:
+    return "llvm.ppc.mma.xvi8ger4";
+  case MMAOp::Xvi8ger4pp:
+    return "llvm.ppc.mma.xvi8ger4pp";
+  case MMAOp::Xvi8ger4spp:
+    return "llvm.ppc.mma.xvi8ger4spp";
   }
   llvm_unreachable("getMmaIrIntrName");
 }
@@ -1850,6 +2417,157 @@ mlir::FunctionType getMmaIrFuncType(mlir::MLIRContext *context, MMAOp mmaOp) {
     return genMmaDisassembleFuncType(context, mmaOp);
   case MMAOp::DisassemblePair:
     return genMmaDisassembleFuncType(context, mmaOp);
+  case MMAOp::Xxmfacc:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 0);
+  case MMAOp::Xxmtacc:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 0);
+  case MMAOp::Xxsetaccz:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 0);
+  case MMAOp::Pmxvbf16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvbf16ger2nn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvbf16ger2np:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvbf16ger2pn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvbf16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf16ger2nn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf16ger2np:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf16ger2pn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvf32ger:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf32gernn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf32gernp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf32gerpn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf32gerpp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf64ger:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 1, /*Vector*/ 1,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf64gernn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf64gernp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf64gerpn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvf64gerpp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1,
+                            /*Integer*/ 2);
+  case MMAOp::Pmxvi16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi16ger2s:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi16ger2spp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi4ger8:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi4ger8pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi8ger4:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi8ger4pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Pmxvi8ger4spp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2,
+                            /*Integer*/ 3);
+  case MMAOp::Xvbf16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvbf16ger2nn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvbf16ger2np:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvbf16ger2pn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvbf16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf16ger2nn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf16ger2np:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf16ger2pn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf32ger:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf32gernn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf32gernp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf32gerpn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf32gerpp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvf64ger:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 1, /*Vector*/ 1);
+  case MMAOp::Xvf64gernn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1);
+  case MMAOp::Xvf64gernp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1);
+  case MMAOp::Xvf64gerpn:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1);
+  case MMAOp::Xvf64gerpp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 1, /*Vector*/ 1);
+  case MMAOp::Xvi16ger2:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi16ger2pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi16ger2s:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi16ger2spp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi4ger8:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi4ger8pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi8ger4:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi8ger4pp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::Xvi8ger4spp:
+    return genMmaVqFuncType(context, /*Quad*/ 1, /*Pair*/ 0, /*Vector*/ 2);
   }
   llvm_unreachable("getMmaIrFuncType");
 }
