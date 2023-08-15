@@ -1033,10 +1033,10 @@ SwiftASTContextForModule::~SwiftASTContextForModule() {
 
 /// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath).
 static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
-                                  FileSpec resource_dir, llvm::Triple triple) {
+                                  StringRef resource_dir, llvm::Triple triple) {
   // Make sure the triple is right:
   invocation.setTargetTriple(triple.str());
-  invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
+  invocation.setRuntimeResourcePath(resource_dir);
 }
 
 static const char *getImportFailureString(swift::serialization::Status status) {
@@ -1928,8 +1928,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   std::string resource_dir =
       HostInfo::GetSwiftResourceDir(triple, swift_ast_sp->GetPlatformSDKPath());
-  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
-                        FileSpec(resource_dir), triple);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
 
   // Apply the working directory to all relative paths.
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
@@ -2388,8 +2388,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   llvm::Triple triple = swift_ast_sp->GetTriple();
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());
-  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
-                        FileSpec(resource_dir), triple);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
   const bool discover_implicit_search_paths =
       target.GetSwiftDiscoverImplicitSearchPaths();
 
@@ -2811,8 +2811,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   llvm::Triple triple(GetTriple());
   std::string resource_dir =
       HostInfo::GetSwiftResourceDir(triple, GetPlatformSDKPath());
-  ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
-                        triple);
+  ConfigureResourceDirs(GetCompilerInvocation(), resource_dir, triple);
 
   std::string sdk_path = GetPlatformSDKPath().str();
   if (TargetSP target_sp = GetTargetWP().lock())
@@ -2851,6 +2850,20 @@ void SwiftASTContext::InitializeSearchPathOptions(
     std::vector<std::string> &lpaths =
         invocation.getSearchPathOptions().LibrarySearchPaths;
     lpaths.insert(lpaths.begin(), "/usr/lib/swift");
+  }
+
+  // Set the default host plugin paths.
+  llvm::SmallString<256> plugin_path;
+  llvm::sys::path::append(plugin_path, resource_dir, "host", "plugins");
+  if (!FileSystem::Instance().Exists(plugin_path)) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Host plugin path %s does not exist",
+               plugin_path.str().str().c_str());
+  } else {
+    std::string server = SwiftASTContext::GetPluginServer(plugin_path);
+    if (!server.empty() && FileSystem::Instance().Exists(server))
+      invocation.getSearchPathOptions().PluginSearchOpts.emplace_back(
+          swift::PluginSearchOption::ExternalPluginPath{plugin_path.str().str(),
+                                                        server});
   }
 
   llvm::StringMap<bool> processed;
