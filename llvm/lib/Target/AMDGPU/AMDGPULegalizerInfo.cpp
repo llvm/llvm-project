@@ -4532,8 +4532,6 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
       return true;
     }
 
-    // TODO: Match rsq
-
     // -1 / x -> RCP( FNEG(x) )
     if (CLHS->isExactlyValue(-1.0)) {
       auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
