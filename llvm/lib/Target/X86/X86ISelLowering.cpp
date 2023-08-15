@@ -55982,6 +55982,12 @@ bool X86TargetLowering::preferABDSToABSWithNSW(EVT VT) const {
   return false;
 }
 
+// Prefer (non-AVX512) vector TRUNCATE(SIGN_EXTEND_INREG(X)) to use of PACKSS.
+bool X86TargetLowering::preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
+                                                  EVT ExtVT) const {
+  return Subtarget.hasAVX512() || !VT.isVector();
+}
+
 bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if (!isTypeLegal(VT))
     return false;
