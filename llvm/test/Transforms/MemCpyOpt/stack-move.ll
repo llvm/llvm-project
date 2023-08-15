@@ -412,6 +412,28 @@ define void @src_mod_dest_mod_after_copy() {
   ret void
 }
 
+; TODO: not crash on this.
+define void @avoid_memory_use_last_user_crash() {
+; CHECK-LABEL: define void @avoid_memory_use_last_user_crash() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[SRC]])
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr nocapture [[SRC]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DEST]], align 4
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dest = alloca %struct.Foo, align 4
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %src)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+  call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %src)
+  %v = load i32, ptr %dest
+  ret void
+}
+
 ; TODO: if the last user is terminator, we won't insert lifetime.end.
 ; For multi-bb patch, we will insert it for next immediate post dominator block.
 define void @terminator_lastuse() personality i32 0 {
