@@ -26,7 +26,7 @@ import re
 
 # To re-generate the list of expected headers, temporarily set this to True, and run this test.
 # Note that this needs to be done for all supported language versions of libc++:
-# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std ${path_to_this_file}; done
+# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std libcxx/test/libcxx/transitive_includes.gen.py; done
 regenerate_expected_results = False
 
 BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
