@@ -119,6 +119,62 @@ static mlir::Value normaliseVal(mlir::Value val) {
   return unwrapFirDeclare(unwrapReboxOp(val));
 }
 
+/// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.
+/// fir.shift and fir.shapeshift allow us to extract lower bounds
+/// if lowerbounds cannot be found, return nullptr
+static mlir::Value tryGetLowerBoundsFromShapeLike(mlir::Value shapeLike,
+                                                  unsigned dim) {
+  mlir::Value lowerBound{nullptr};
+  if (auto shift = shapeLike.getDefiningOp<fir::ShiftOp>())
+    lowerBound = shift.getOrigins()[dim];
+  if (auto shapeShift = shapeLike.getDefiningOp<fir::ShapeShiftOp>())
+    lowerBound = shapeShift.getOrigins()[dim];
+  return lowerBound;
+}
+
+/// attempt to get the array lower bounds of dimension dim of the memref
+/// argument to a fir.array_coor op
+/// 0 <= dim < rank
+/// May return nullptr if no lower bounds can be determined
+static mlir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
+  // 1) try to get from the shape argument to fir.array_coor
+  if (mlir::Value shapeLike = coop.getShape())
+    if (mlir::Value lb = tryGetLowerBoundsFromShapeLike(shapeLike, dim))
+      return lb;
+
+  // It is important not to try to read the lower bound from the box, because
+  // in the FIR lowering, boxes will sometimes contain incorrect lower bound
+  // information
+
+  // out of ideas
+  return {};
+}
+
+/// gets the i'th index from array coordinate operation op
+/// dim should range between 0 and rank - 1
+static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
+                            unsigned dim) {
+  if (fir::CoordinateOp coop = mlir::dyn_cast<fir::CoordinateOp>(op))
+    return coop.getCoor()[dim];
+
+  fir::ArrayCoorOp coop = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+  assert(coop &&
+         "operation must be either fir.coordiante_of or fir.array_coor");
+
+  // fir.coordinate_of indices start at 0: adjust these indices to match by
+  // subtracting the lower bound
+  mlir::Value index = coop.getIndices()[dim];
+  mlir::Value lb = getLowerBound(coop, dim);
+  if (!lb)
+    // assume a default lower bound of one
+    lb = builder.createIntegerConstant(coop.getLoc(), index.getType(), 1);
+
+  // index_0 = index - lb;
+  if (lb.getType() != index.getType())
+    lb = builder.createConvert(coop.getLoc(), index.getType(), lb);
+  return builder.create<mlir::arith::SubIOp>(coop.getLoc(), index, lb);
+}
+
 void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
   mlir::func::FuncOp func = getOperation();
@@ -181,7 +237,16 @@ void LoopVersioningPass::runOnOperation() {
   func.walk([&](fir::DoLoopOp loop) {
     mlir::Block &body = *loop.getBody();
     mlir::SmallVector<ArgInfo, 4> argsInLoop;
-    body.walk([&](fir::CoordinateOp op) {
+    body.walk([&](mlir::Operation *op) {
+      // support either fir.array_coor or fir.coordinate_of
+      if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op)) {
+        // no support currently for sliced arrays
+        if (arrayCoor.getSlice())
+          return;
+      } else if (!mlir::isa<fir::CoordinateOp>(op)) {
+        return;
+      }
+
       // The current operation could be inside another loop than
       // the one we're currently processing. Skip it, we'll get
       // to it later.
@@ -271,7 +336,9 @@ void LoopVersioningPass::runOnOperation() {
       auto caddr = builder.create<fir::BoxAddrOp>(loc, refArrTy, carg);
       auto insPt = builder.saveInsertionPoint();
       // Use caddr instead of arg.
-      clonedLoop->walk([&](fir::CoordinateOp coop) {
+      clonedLoop->walk([&](mlir::Operation *coop) {
+        if (!mlir::isa<fir::CoordinateOp, fir::ArrayCoorOp>(coop))
+          return;
         // Reduce the multi-dimensioned index to a single index.
         // This is required becase fir arrays do not support multiple dimensions
         // with unknown dimensions at compile time.
@@ -283,9 +350,8 @@ void LoopVersioningPass::runOnOperation() {
           builder.setInsertionPoint(coop);
           mlir::Value totalIndex;
           for (unsigned i = arg.rank - 1; i > 0; i--) {
-            // Operand(1) = array; Operand(2) = index1; Operand(3) = index2
             mlir::Value curIndex =
-                builder.createConvert(loc, idxTy, coop->getOperand(i + 1));
+                builder.createConvert(loc, idxTy, getIndex(builder, coop, i));
             // Multiply by the stride of this array. Later we'll divide by the
             // element size.
             mlir::Value scale =
@@ -298,7 +364,7 @@ void LoopVersioningPass::runOnOperation() {
           }
           // This is the lowest dimension - which doesn't need scaling
           mlir::Value finalIndex =
-              builder.createConvert(loc, idxTy, coop->getOperand(1));
+              builder.createConvert(loc, idxTy, getIndex(builder, coop, 0));
           if (totalIndex) {
             assert(llvm::isPowerOf2_32(arg.size) &&
                    "Expected power of two here");
