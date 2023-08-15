@@ -57,7 +57,7 @@ struct __chunk_partitions {
   ptrdiff_t __first_chunk_size_;
 };
 
-[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI __chunk_partitions __partition_chunks(ptrdiff_t __size);
+[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI __chunk_partitions __partition_chunks(ptrdiff_t __size) noexcept;
 
 template <class _RandomAccessIterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI void
