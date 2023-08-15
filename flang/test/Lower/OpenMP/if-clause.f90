@@ -13,7 +13,6 @@ program main
   ! - PARALLEL SECTIONS
   ! - PARALLEL WORKSHARE
   ! - TARGET PARALLEL
-  ! - TARGET TEAMS
   ! - TARGET TEAMS DISTRIBUTE
   ! - TARGET TEAMS DISTRIBUTE PARALLEL DO
   ! - TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
@@ -21,7 +20,6 @@ program main
   ! - TARGET UPDATE
   ! - TASKLOOP
   ! - TASKLOOP SIMD
-  ! - TEAMS
   ! - TEAMS DISTRIBUTE
   ! - TEAMS DISTRIBUTE PARALLEL DO
   ! - TEAMS DISTRIBUTE PARALLEL DO SIMD
@@ -417,6 +415,54 @@ program main
   !$omp end target simd
 
   ! ----------------------------------------------------------------------------
+  ! TARGET TEAMS
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK:      omp.target
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  !$omp target teams
+  i = 1
+  !$omp end target teams
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  !$omp target teams if(.true.)
+  i = 1
+  !$omp end target teams
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  !$omp target teams if(target: .true.) if(teams: .false.)
+  i = 1
+  !$omp end target teams
+
+  ! CHECK:      omp.target
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  !$omp target teams if(target: .true.)
+  i = 1
+  !$omp end target teams
+
+  ! CHECK:      omp.target
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  !$omp target teams if(teams: .true.)
+  i = 1
+  !$omp end target teams
+
+  ! ----------------------------------------------------------------------------
   ! TASK
   ! ----------------------------------------------------------------------------
   ! CHECK:      omp.task
@@ -434,4 +480,26 @@ program main
   ! CHECK-SAME: if({{.*}})
   !$omp task if(task: .true.)
   !$omp end task
+
+  ! ----------------------------------------------------------------------------
+  ! TEAMS
+  ! ----------------------------------------------------------------------------
+  ! CHECK:      omp.teams
+  ! CHECK-NOT:  if({{.*}})
+  ! CHECK-SAME: {
+  !$omp teams
+  i = 1
+  !$omp end teams
+
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  !$omp teams if(.true.)
+  i = 1
+  !$omp end teams
+
+  ! CHECK:      omp.teams
+  ! CHECK-SAME: if({{.*}})
+  !$omp teams if(teams: .true.)
+  i = 1
+  !$omp end teams
 end program main
