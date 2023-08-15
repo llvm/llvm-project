@@ -65,4 +65,14 @@ def DropAST : Pass<"cir-drop-ast"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def LoweringPrepare : Pass<"cir-lowering-prepare"> {
+  let summary = "Preparation work before lowering to LLVM dialect";
+  let description = [{
+    This pass does preparation work for LLVM lowering. For example, it may
+    expand the global variable initialziation in a more ABI-friendly form.
+  }];
+  let constructor = "mlir::createLoweringPreparePass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 #endif // MLIR_DIALECT_CIR_PASSES
