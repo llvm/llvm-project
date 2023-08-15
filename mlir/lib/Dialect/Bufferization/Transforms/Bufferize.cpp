@@ -438,16 +438,9 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Otherwise, we have to use a memref type with a fully dynamic layout map to
   // avoid copies. We are currently missing patterns for layout maps to
   // canonicalize away (or canonicalize to more precise layouts).
-  //
-  // FuncOps must be bufferized before their bodies, so add them to the worklist
-  // first.
   SmallVector<Operation *> worklist;
-  op->walk([&](func::FuncOp funcOp) {
-    if (hasTensorSemantics(funcOp))
-      worklist.push_back(funcOp);
-  });
   op->walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (hasTensorSemantics(op) && !isa<func::FuncOp>(op))
+    if (hasTensorSemantics(op))
       worklist.push_back(op);
   });
 
