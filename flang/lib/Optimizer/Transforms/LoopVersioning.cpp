@@ -94,6 +94,16 @@ static fir::SequenceType getAsSequenceType(mlir::Value *v) {
   return argTy.dyn_cast<fir::SequenceType>();
 }
 
+/// if a value comes from a fir.declare, follow it to the original source,
+/// otherwise return the value
+static mlir::Value unwrapFirDeclare(mlir::Value val) {
+  // fir.declare is for source code variables. We don't have declares of
+  // declares
+  if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>())
+    return declare.getMemref();
+  return val;
+}
+
 void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
   mlir::func::FuncOp func = getOperation();
@@ -154,9 +164,9 @@ void LoopVersioningPass::runOnOperation() {
       // to it later.
       if (op->getParentOfType<fir::DoLoopOp>() != loop)
         return;
-      const mlir::Value &operand = op->getOperand(0);
+      mlir::Value operand = op->getOperand(0);
       for (auto a : argsOfInterest) {
-        if (*a.arg == operand) {
+        if (*a.arg == unwrapFirDeclare(operand)) {
           // Only add if it's not already in the list.
           if (std::find_if(argsInLoop.begin(), argsInLoop.end(), [&](auto it) {
                 return it.arg == a.arg;
@@ -244,7 +254,7 @@ void LoopVersioningPass::runOnOperation() {
         // arr(x, y, z) bedcomes arr(z * stride(2) + y * stride(1) + x)
         // where stride is the distance between elements in the dimensions
         // 0, 1 and 2 or x, y and z.
-        if (coop->getOperand(0) == *arg.arg &&
+        if (unwrapFirDeclare(coop->getOperand(0)) == *arg.arg &&
             coop->getOperands().size() >= 2) {
           builder.setInsertionPoint(coop);
           mlir::Value totalIndex;
