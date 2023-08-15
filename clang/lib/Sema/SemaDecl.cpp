@@ -1995,7 +1995,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
       return false;
   } else if (!D->getDeclName()) {
     return false;
-  } else if (D->isReferenced() || D->isUsed()) {
+  } else if (D->isReferenced() || (!isa<VarDecl>(D) && D->isUsed())) {
     return false;
   }
 
