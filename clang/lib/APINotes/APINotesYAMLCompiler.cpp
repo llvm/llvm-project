@@ -1096,7 +1096,7 @@ namespace {
                            info, function.Name);
         info.ResultType = std::string(function.ResultType);
         info.setRetainCountConvention(function.RetainCountConvention);
-        Writer->addGlobalFunction(function.Name, info, swiftVersion);
+        Writer->addGlobalFunction(context, function.Name, info, swiftVersion);
       }
 
       // Write all enumerators.

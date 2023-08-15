@@ -24,9 +24,11 @@ typedef NS_OPTIONS(NSUInteger, NSSomeEnumOptions) {
 
 namespace Namespace1 {
 struct char_box { char c; };
+void funcInNamespace();
 
 namespace Nested1 {
 struct char_box { char c; };
+void funcInNestedNamespace(int i);
 
 namespace Namespace1 {
 struct char_box { char c; };

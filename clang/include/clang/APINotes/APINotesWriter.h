@@ -92,7 +92,8 @@ public:
   ///
   /// \param name The name of this global function.
   /// \param info Information about this global function.
-  void addGlobalFunction(llvm::StringRef name, const GlobalFunctionInfo &info,
+  void addGlobalFunction(std::optional<Context> context, llvm::StringRef name,
+                         const GlobalFunctionInfo &info,
                          llvm::VersionTuple swiftVersion);
 
   /// Add information about an enumerator.

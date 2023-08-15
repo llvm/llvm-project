@@ -101,8 +101,8 @@ public:
 
   /// Information about global functions.
   ///
-  /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
+  /// Indexed by the context ID, contextKind, identifier ID.
+  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
                  llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>,
                                    1>>
     GlobalFunctions;
@@ -957,16 +957,18 @@ namespace {
   /// Used to serialize the on-disk global function table.
   class GlobalFunctionTableInfo
     : public VersionedTableInfo<GlobalFunctionTableInfo,
-                                unsigned,
+                                std::tuple<uint32_t, uint8_t, uint32_t>,
                                 GlobalFunctionInfo> {
   public:
     unsigned getKeyLength(key_type_ref) {
-      return sizeof(uint32_t);
+      return sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(key);
+      writer.write<uint32_t>(std::get<0>(key));
+      writer.write<uint8_t>(std::get<1>(key));
+      writer.write<uint32_t>(std::get<2>(key));
     }
 
     unsigned getUnversionedInfoSize(const GlobalFunctionInfo &info) {
@@ -1326,11 +1328,17 @@ void APINotesWriter::addGlobalVariable(llvm::StringRef name,
   Impl.GlobalVariables[variableID].push_back({swiftVersion, info});
 }
 
-void APINotesWriter::addGlobalFunction(llvm::StringRef name,
+void APINotesWriter::addGlobalFunction(std::optional<Context> context,
+                                       llvm::StringRef name,
                                        const GlobalFunctionInfo &info,
                                        VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  Impl.GlobalFunctions[nameID].push_back({swiftVersion, info});
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, nameID};
+  else
+    key = {-1, (uint8_t)-1, nameID};
+  Impl.GlobalFunctions[key].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addEnumConstant(llvm::StringRef name,
