@@ -129,9 +129,6 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
-- Clang now warns on unused variables declared and initialized in condition
-  expressions.
-  (`#61681: <https://github.com/llvm/llvm-project/issues/61681>`_)
 
 Bug Fixes in This Version
 -------------------------
