@@ -440,23 +440,6 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   return root;
 }
 
-lldb::ValueObjectSP ValueObject::GetChildAtNamePath(
-    llvm::ArrayRef<std::pair<ConstString, bool>> names,
-    ConstString *name_of_error) {
-  if (names.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-  for (std::pair<ConstString, bool> name : names) {
-    root = root->GetChildMemberWithName(name.first, name.second);
-    if (!root) {
-      if (name_of_error)
-        *name_of_error = name.first;
-      return root;
-    }
-  }
-  return root;
-}
-
 size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
   return GetCompilerType().GetIndexOfChildWithName(name,
