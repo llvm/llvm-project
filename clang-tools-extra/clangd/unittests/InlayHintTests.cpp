@@ -1353,6 +1353,11 @@ TEST(TypeHints, DependentType) {
       // FIXME: It would be nice to show "T" as the hint.
       auto $var2[[var2]] = arg;
     }
+
+    template <typename T>
+    void bar(T arg) {
+      auto [a, b] = arg;
+    }
   )cpp");
 }
 
