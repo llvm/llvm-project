@@ -961,7 +961,7 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
       Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false))
+                   options::OPT_fno_rtlib_add_rpath, true))
     CmdArgs.append(
         {"-rpath", Args.MakeArgString(RocmInstallation->getLibPath())});
 
