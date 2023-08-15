@@ -354,16 +354,18 @@ Below are some guidelines about the format of the message itself:
   related commit. This could be as simple as "Revert commit NNNN because it
   caused PR#".
 
-* It is acceptable to add metadata to the commit message to automate processes,
-  including for downstream consumers. If the patch has been reviewed, add a
-  link to its review page, as shown
-  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`__. If
-  the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+* If the patch has been reviewed, add a link to its review page, as shown
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`__.
+  If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
   the issue being closed, as described
   `here <https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs>`__.
-  Other kinds of metadata are also acceptable, including links to resources
-  that are not available to the entire community. However, such links should
-  not be used in place of making the commit message self-explanatory.
+
+* It is also acceptable to add other metadata to the commit message to automate
+  processes, including for downstream consumers. This metadata can include
+  links to resources that are not available to the entire community. However,
+  such links and/or metadata should not be used in place of making the commit
+  message self-explanatory. Note that such non-public links should not be
+  included in the submitted code.
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
