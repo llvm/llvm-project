@@ -1903,15 +1903,13 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
 }
 
 void LifetimeCheckPass::runOnOperation() {
+  assert(astCtx && "Missing ASTContext, please construct with the right ctor");
   opts.parseOptions(*this);
   Operation *op = getOperation();
   checkOperation(op);
 }
 
 std::unique_ptr<Pass> mlir::createLifetimeCheckPass() {
-  // FIXME: MLIR requres a default "constructor", but should never
-  // be used.
-  llvm_unreachable("Check requires clang::ASTContext, use the other ctor");
   return std::make_unique<LifetimeCheckPass>();
 }
 
