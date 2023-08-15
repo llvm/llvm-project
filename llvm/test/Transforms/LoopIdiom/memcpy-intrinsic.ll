@@ -19,7 +19,7 @@ define dso_local i32 @copy_noalias(ptr noalias nocapture %a, ptr nocapture reado
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]], i64 [[TMP1]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -82,7 +82,7 @@ define dso_local i32 @copy_may_alias(ptr nocapture %a, ptr nocapture readonly %b
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I_08]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[B:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX2]], ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX]], i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX2]], ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX]], i64 12, i8 0)
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
@@ -130,7 +130,7 @@ define dso_local void @copy_noalias_read(ptr noalias nocapture %x, ptr noalias n
 ; CHECK-NEXT:    [[S_PROMOTED:%.*]] = load i32, ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 6
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 1 [[Y:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 1 [[Y:%.*]], i64 [[TMP1]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.for.cond.cleanup_crit_edge:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ]
@@ -199,7 +199,7 @@ define dso_local i32 @copy_noalias_negative_stride(ptr noalias nocapture %arg, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG2]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP1]], 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG:%.*]], ptr align 4 [[ARG1:%.*]], i64 [[TMP2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG:%.*]], ptr align 4 [[ARG1:%.*]], i64 [[TMP2]], i8 0)
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB5]]
@@ -264,7 +264,7 @@ define dso_local i32 @copy_noalias_opposite_stride(ptr noalias nocapture %arg, p
 ; CHECK-NEXT:    [[I10:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARG1:%.*]], i64 [[I9]]
 ; CHECK-NEXT:    [[I11:%.*]] = zext i32 [[I8]] to i64
 ; CHECK-NEXT:    [[I12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARG:%.*]], i64 [[I11]]
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[I12]], ptr noundef nonnull align 4 dereferenceable(12) [[I10]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[I12]], ptr noundef nonnull align 4 dereferenceable(12) [[I10]], i64 12, i8 0)
 ; CHECK-NEXT:    [[I15]] = add nuw nsw i32 [[I8]], 1
 ; CHECK-NEXT:    [[I16]] = add nsw i32 [[I7]], -1
 ; CHECK-NEXT:    [[I17:%.*]] = icmp slt i32 [[I15]], [[ARG2]]
@@ -312,7 +312,7 @@ define dso_local i32 @copy_noalias_packed(ptr noalias nocapture %a, ptr nocaptur
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 9
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A:%.*]], ptr align 1 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A:%.*]], ptr align 1 [[B:%.*]], i64 [[TMP1]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -361,7 +361,7 @@ define dso_local i32 @copy_noalias_aligned(ptr noalias nocapture %a, ptr nocaptu
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A:%.*]], ptr align 16 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A:%.*]], ptr align 16 [[B:%.*]], i64 [[TMP1]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

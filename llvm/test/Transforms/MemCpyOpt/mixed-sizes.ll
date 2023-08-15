@@ -19,9 +19,9 @@ define i32 @foo(i1 %z) {
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_INC7_1]]
 ; CHECK:       for.inc7.1:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[SCEVGEP]], i64 4, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[SCEVGEP]], i64 4, i8 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %a = alloca [10 x i32]

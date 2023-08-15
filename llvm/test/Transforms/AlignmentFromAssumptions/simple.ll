@@ -341,7 +341,7 @@ define i32 @moo2(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i32 128) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32) ]
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i8 0)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -356,7 +356,7 @@ define i32 @moo3(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i16 32), "align"(ptr [[B]], i32 128) ]
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i8 0)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

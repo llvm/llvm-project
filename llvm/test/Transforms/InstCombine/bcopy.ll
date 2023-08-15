@@ -15,7 +15,7 @@ define void @bcopy_memmove(ptr nocapture readonly %a, ptr nocapture %b) {
 
 define void @bcopy_memmove2(ptr nocapture readonly %a, ptr nocapture %b, i32 %len) {
 ; CHECK-LABEL: @bcopy_memmove2(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i32(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i32 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i32(ptr align 1 [[B:%.*]], ptr align 1 [[A:%.*]], i32 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @bcopy(ptr %a, ptr %b, i32 %len)

@@ -21,7 +21,7 @@ define i1 @alloca_forwarding_lifetime_end_clobber() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_1]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
@@ -49,7 +49,7 @@ define i1 @alloca_forwarding_call_clobber() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i8 0)
 ; CHECK-NEXT:    call void @clobber(ptr [[A_2]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_1]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
@@ -74,7 +74,7 @@ define i1 @alloca_forwarding_call_clobber_after() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    call void @clobber(ptr [[A_2]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
@@ -100,7 +100,7 @@ define i1 @alloca_forwarding_unrelated_call_noclobber() {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i8 0)
 ; CHECK-NEXT:    call void @clobber(ptr [[A_3]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    ret i1 [[CALL]]

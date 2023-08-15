@@ -19,7 +19,7 @@ define void @memcpy_1(ptr %d, ptr %s) {
 ; strb r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 1, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -42,11 +42,11 @@ define void @memcpy_2(ptr %d, ptr %s) {
 ; strb  r2, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_2'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 2, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 2, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_2'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 2, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 2, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -73,11 +73,11 @@ define void @memcpy_3(ptr %d, ptr %s) {
 ; strb  r2, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_3'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 3, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 3, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_3'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 3, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 3, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -104,11 +104,11 @@ define void @memcpy_4(ptr %d, ptr %s) {
 ; strb.w  r12, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_4'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 4, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 4, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_4'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 4, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 4, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -133,7 +133,7 @@ define void @memcpy_8(ptr %d, ptr %s) {
 ; pop {r7, pc}
 ;
 ; COMMON-LABEL: 'memcpy_8'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 8, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 8, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -162,11 +162,11 @@ define void @memcpy_16(ptr %d, ptr %s) {
 ; pop {r7, pc}
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_16'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 16, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 16, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_16'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 16, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 16, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -182,7 +182,7 @@ define void @memcpy_32(ptr %d, ptr %s, i32 %N) {
 ; bl	__aeabi_memcpy
 ;
 ; COMMON-LABEL: 'memcpy_32'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 32, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 32, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -197,7 +197,7 @@ define void @memcpy_N(ptr %d, ptr %s, i32 %N) {
 ; bl __aeabi_memcpy
 ;
 ; COMMON-LABEL: 'memcpy_N'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 %N, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 1 %s, i32 %N, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -217,7 +217,7 @@ define void @memcpy_1_al2(ptr %d, ptr %s) {
 ; strb r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1_al2'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 1, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -233,7 +233,7 @@ define void @memcpy_2_al2(ptr %d, ptr %s) {
 ; strh r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_2_al2'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 2, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 2, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -251,7 +251,7 @@ define void @memcpy_3_al2(ptr %d, ptr %s) {
 ; strh r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_3_al2'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 3, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 3, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -274,11 +274,11 @@ define void @memcpy_4_al2(ptr %d, ptr %s) {
 ; strh  r1, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_4_al2'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 4, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 4, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_4_al2'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 4, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 4, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -307,11 +307,11 @@ define void @memcpy_8_al2(ptr %d, ptr %s) {
 ;	strh	r1, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_8_al2'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 8, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 8, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_8_al2'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 8, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 8, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -338,11 +338,11 @@ define void @memcpy_16_al2(ptr %d, ptr %s) {
 ;	bl	__aeabi_memcpy
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_16_al2'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 16, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 16, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_16_al2'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 16, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 16, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -358,7 +358,7 @@ define void @memcpy_32_al2(ptr %d, ptr %s, i32 %N) {
 ; bl __aeabi_memcpy
 ;
 ; COMMON-LABEL: 'memcpy_32_al2'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 32, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 32, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -373,7 +373,7 @@ define void @memcpy_N_al2(ptr %d, ptr %s, i32 %N) {
 ; bl __aeabi_memcpy
 ;
 ; COMMON-LABEL: 'memcpy_N_al2'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 %N, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %d, ptr align 2 %s, i32 %N, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -393,7 +393,7 @@ define void @memcpy_1_al4(ptr %d, ptr %s) {
 ; strb r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 1, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -409,7 +409,7 @@ define void @memcpy_2_al4(ptr %d, ptr %s) {
 ; strh r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_2_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 2, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 2, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -427,7 +427,7 @@ define void @memcpy_3_al4(ptr %d, ptr %s) {
 ; strh r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_3_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 3, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 3, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -443,7 +443,7 @@ define void @memcpy_4_al4(ptr %d, ptr %s) {
 ; str r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_4_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 4, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 4, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -459,7 +459,7 @@ define void @memcpy_8_al4(ptr %d, ptr %s) {
 ; strd r2, r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_8_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 8, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 8, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -477,7 +477,7 @@ define void @memcpy_16_al4(ptr %d, ptr %s) {
 ; str    r1, [r0, #12]
 ;
 ; COMMON-LABEL: 'memcpy_16_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 16, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 16, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -495,7 +495,7 @@ define void @memcpy_32_al4(ptr %d, ptr %s, i32 %N) {
 ; stm.w  r0, {r2, r3, r12, lr}
 ;
 ; COMMON-LABEL: 'memcpy_32_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 32, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 32, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -510,7 +510,7 @@ define void @memcpy_N_al4(ptr %d, ptr %s, i32 %N) {
 ; bl  __aeabi_memcpy4
 ;
 ; COMMON-LABEL: 'memcpy_N_al4'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 %N, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 %N, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -530,7 +530,7 @@ define void @memcpy_1_al14(ptr %d, ptr %s) {
 ; strb r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1_al14'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 1, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -553,11 +553,11 @@ define void @memcpy_2_al14(ptr %d, ptr %s) {
 ; strb	r2, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_2_al14'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 2, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 2, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_2_al14'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 2, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 2, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -584,11 +584,11 @@ define void @memcpy_3_al14(ptr %d, ptr %s) {
 ; strb	r2, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_3_al14'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 3, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 3, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_3_al14'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 3, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 3, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -615,11 +615,11 @@ define void @memcpy_4_al14(ptr %d, ptr %s) {
 ; strb.w	r12, [r0]
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_4_al14'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 4, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 4, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_4_al14'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 4, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 4, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -644,7 +644,7 @@ define void @memcpy_8_al14(ptr %d, ptr %s) {
 ; pop {r7, pc}
 ;
 ; COMMON-LABEL: 'memcpy_8_al14'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 8, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 8, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -671,11 +671,11 @@ define void @memcpy_16_al14(ptr %d, ptr %s) {
 ;	bl	__aeabi_memcpy
 ;
 ; CHECK-NO-SA-LABEL: 'memcpy_16_al14'
-; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 16, i1 false)
+; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 16, i8 0)
 ; CHECK-NO-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-SA-LABEL: 'memcpy_16_al14'
-; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 16, i1 false)
+; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 16, i8 0)
 ; CHECK-SA-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -691,7 +691,7 @@ define void @memcpy_32_al14(ptr %d, ptr %s) {
 ; bl   __aeabi_memcpy
 ;
 ; COMMON-LABEL: 'memcpy_32_al14'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 32, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 32, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -706,7 +706,7 @@ define void @memcpy_N_al14(ptr %d, ptr %s, i32 %N) {
 ; bl  __aeabi_memcpy4
 ;
 ; COMMON-LABEL: 'memcpy_N_al14'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 %N, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %d, ptr align 4 %s, i32 %N, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:
@@ -726,7 +726,7 @@ define void @memcpy_1_al41(ptr %d, ptr %s) {
 ; strb  r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1_al41'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 1 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 1 %s, i32 1, i8 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:

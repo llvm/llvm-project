@@ -15,7 +15,7 @@ define double @bar(ptr %wishart) {
 ; CHECK-NEXT:    [[TMP_SROA_2_0_WISHART_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[WISHART]], i64 8
 ; CHECK-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[TMP_SROA_2_0_WISHART_SROA_IDX]], align 8, !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP_SROA_3_0_WISHART_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[WISHART]], i64 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP_SROA_3]], ptr align 4 [[TMP_SROA_3_0_WISHART_SROA_IDX]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP_SROA_3]], ptr align 4 [[TMP_SROA_3_0_WISHART_SROA_IDX]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @subcall(double [[TMP_SROA_0_0_COPYLOAD]], i32 [[TMP_SROA_2_0_COPYLOAD]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;

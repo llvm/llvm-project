@@ -45,7 +45,7 @@ define void @test_call(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr nonnull [[ARRAYIDX]])
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
@@ -66,7 +66,7 @@ define void @test_call_no_null_opt(ptr addrspace(1) %out, i64 %x) #0 {
 ; CHECK-LABEL: @test_call_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr [[ARRAYIDX]])
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
@@ -87,7 +87,7 @@ define void @test_load_and_call(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_load_and_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
@@ -114,7 +114,7 @@ define void @test_load_and_call_no_null_opt(ptr addrspace(1) %out, i64 %x, i64 %
 ; CHECK-LABEL: @test_load_and_call_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]

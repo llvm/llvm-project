@@ -34,7 +34,7 @@ define void @test2(ptr noalias %in) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_I1_I:%.*]] = tail call ptr @get_ptr()
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[CALL_I1_I]], ptr [[IN:%.*]], i64 10, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[CALL_I1_I]], ptr [[IN:%.*]], i64 10, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -49,7 +49,7 @@ declare ptr @malloc(i64)
 define i32 @test3(ptr noalias %in) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[CALL_I_I_I:%.*]] = tail call ptr @malloc(i64 20)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[CALL_I_I_I]], ptr [[IN:%.*]], i64 20, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[CALL_I_I_I]], ptr [[IN:%.*]], i64 20, i8 0)
 ; CHECK-NEXT:    ret i32 10
 ;
   %call.i.i.i = tail call ptr @malloc(i64 20)
@@ -61,7 +61,7 @@ define void @test4(i32 %n, ptr noalias %ptr.0, ptr noalias %ptr.1, ptr %ptr.2) u
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ELEM_I:%.*]] = getelementptr i8, ptr [[PTR_0:%.*]], i64 8
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[PTR_2:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ELEM_I]], ptr [[PTR_1:%.*]], i64 10, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ELEM_I]], ptr [[PTR_1:%.*]], i64 10, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %elem.i = getelementptr i8, ptr %ptr.0, i64 8
@@ -81,7 +81,7 @@ define void @test5(ptr %ptr) {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[EARLY_DATA]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    call fastcc void @decompose(ptr [[TMP]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[EARLY_DATA]], ptr [[TMP]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[EARLY_DATA]], ptr [[TMP]], i64 32, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -99,7 +99,7 @@ define i8 @test6(ptr %ptr, ptr noalias %ptr.1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr [[PTR:%.*]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PTR]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[PTR]], ptr [[PTR_1:%.*]], i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[PTR]], ptr [[PTR_1:%.*]], i64 24, i8 0)
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -133,7 +133,7 @@ entry:
 
 define void @test8(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DST:%.*]], ptr align 1 [[SRC:%.*]], i64 8224, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DST:%.*]], ptr align 1 [[SRC:%.*]], i64 8224, i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SRC]], i8 0, i64 8224, i1 false)
 ; CHECK-NEXT:    ret void
 ;

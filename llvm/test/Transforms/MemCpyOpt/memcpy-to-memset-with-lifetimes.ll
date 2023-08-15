@@ -28,7 +28,7 @@ define void @bar(ptr noalias nocapture sret([8 x i64]) dereferenceable(64) %sret
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(64) [[A]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(64) [[SRET:%.*]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[A]], i8 42, i64 32, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(64) [[OUT:%.*]], ptr noundef nonnull align 8 dereferenceable(64) [[A]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(64) [[OUT:%.*]], ptr noundef nonnull align 8 dereferenceable(64) [[A]], i64 64, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 64, ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;

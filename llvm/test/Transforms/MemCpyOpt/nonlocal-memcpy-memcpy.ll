@@ -24,13 +24,13 @@ define void @wobble(ptr noalias %dst, ptr %src, i1 %some_condition) {
 ; CHECK-LABEL: @wobble(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TEMP:%.*]] = alloca i8, i32 64, align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i8 0)
 ; CHECK-NEXT:    br i1 [[SOME_CONDITION:%.*]], label [[MORE:%.*]], label [[OUT:%.*]]
 ; CHECK:       out:
 ; CHECK-NEXT:    call void @qux()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       more:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -56,10 +56,10 @@ define i32 @foo(i1 %t3) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 ; CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_S]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S]], ptr align 4 @s_foo, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S]], ptr align 4 @s_foo, i64 8, i8 0)
 ; CHECK-NEXT:    br i1 [[T3:%.*]], label [[BB4:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[T]], ptr align 4 @s_foo, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[T]], ptr align 4 @s_foo, i64 8, i8 0)
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[T]], align 4
@@ -97,7 +97,7 @@ define i32 @baz(i1 %t5) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 ; CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_S]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S]], ptr align 4 @s_baz, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S]], ptr align 4 @s_baz, i64 8, i8 0)
 ; CHECK-NEXT:    br i1 [[T5:%.*]], label [[BB6:%.*]], label [[BB22:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    invoke void @__cxa_throw(ptr null, ptr @i, ptr null)
@@ -110,7 +110,7 @@ define i32 @baz(i1 %t5) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[T15:%.*]] = call ptr @__cxa_begin_catch(ptr null)
 ; CHECK-NEXT:    br label [[BB23:%.*]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[T]], ptr align 4 @s_baz, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[T]], ptr align 4 @s_baz, i64 8, i8 0)
 ; CHECK-NEXT:    br label [[BB23]]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    [[T18:%.*]] = load i32, ptr [[T]], align 4
@@ -158,13 +158,13 @@ bb25:                                             ; preds = %bb6
 define void @memphi_with_unrelated_clobber(i1 %cond, ptr %arg, ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: @memphi_with_unrelated_clobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr [[B:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr [[B:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    store i64 0, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[C:%.*]], ptr [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[C:%.*]], ptr [[B]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:

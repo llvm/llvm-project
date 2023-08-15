@@ -166,7 +166,7 @@ define ptr addrspace(4) @forward_store_zero2(ptr addrspace(4) %loc) {
 define ptr addrspace(4) @neg_forward_memcopy(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_forward_memcopy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i8 0)
 ; CHECK-NEXT:    [[REF:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[LOC]], align 8
 ; CHECK-NEXT:    ret ptr addrspace(4) [[REF]]
 ;
@@ -179,7 +179,7 @@ entry:
 define ptr addrspace(4) @neg_forward_memcopy2(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_forward_memcopy2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i8 0)
 ; CHECK-NEXT:    [[REF:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[LOC]], align 8
 ; CHECK-NEXT:    ret ptr addrspace(4) [[REF]]
 ;
@@ -192,7 +192,7 @@ entry:
 define ptr addrspace(4) @forward_memcopy(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @forward_memcopy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 8, i8 0)
 ; CHECK-NEXT:    ret ptr addrspace(4) getelementptr (i64, ptr addrspace(4) null, i32 3)
 ;
 entry:
@@ -204,7 +204,7 @@ entry:
 define ptr addrspace(4) @forward_memcopy2(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @forward_memcopy2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 8, i8 0)
 ; CHECK-NEXT:    ret ptr addrspace(4) getelementptr (i64, ptr addrspace(4) null, i32 3)
 ;
 entry:
@@ -216,7 +216,7 @@ entry:
 define <1 x ptr addrspace(4)> @neg_forward_memcpy_vload(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_forward_memcpy_vload(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 8, i8 0)
 ; CHECK-NEXT:    [[REF:%.*]] = load <1 x ptr addrspace(4)>, ptr addrspace(4) [[LOC]], align 8
 ; CHECK-NEXT:    ret <1 x ptr addrspace(4)> [[REF]]
 ;
@@ -229,7 +229,7 @@ entry:
 define <4 x ptr addrspace(4)> @neg_forward_memcpy_vload2(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_forward_memcpy_vload2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant, i64 32, i8 0)
 ; CHECK-NEXT:    [[REF:%.*]] = load <4 x ptr addrspace(4)>, ptr addrspace(4) [[LOC]], align 32
 ; CHECK-NEXT:    ret <4 x ptr addrspace(4)> [[REF]]
 ;
@@ -242,7 +242,7 @@ entry:
 define <4 x i64> @neg_forward_memcpy_vload3(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_forward_memcpy_vload3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 32, i8 0)
 ; CHECK-NEXT:    [[REF:%.*]] = load <4 x i64>, ptr addrspace(4) [[LOC]], align 32
 ; CHECK-NEXT:    ret <4 x i64> [[REF]]
 ;
@@ -255,7 +255,7 @@ entry:
 define <1 x ptr addrspace(4)> @forward_memcpy_vload3(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @forward_memcpy_vload3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @NonZeroConstant2, i64 32, i8 0)
 ; CHECK-NEXT:    ret <1 x ptr addrspace(4)> <ptr addrspace(4) getelementptr (i64, ptr addrspace(4) null, i32 3)>
 ;
 entry:
@@ -270,7 +270,7 @@ entry:
 define ptr addrspace(4) @forward_memcpy_zero(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @forward_memcpy_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @ZeroConstant, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 4 [[LOC:%.*]], ptr @ZeroConstant, i64 8, i8 0)
 ; CHECK-NEXT:    ret ptr addrspace(4) null
 ;
 entry:

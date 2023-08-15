@@ -18,7 +18,7 @@ define void @test1(ptr %a) {
 
 define void @test2(ptr %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr [[A:%.*]], ptr [[A]], i32 100, i1 true)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr [[A:%.*]], ptr [[A]], i32 100, i8 3)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %a, i32 100, i1 true)
@@ -29,7 +29,7 @@ define void @test2(ptr %a) {
 
 define void @test3(ptr %d, ptr %s) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(17179869184) [[D:%.*]], ptr noundef nonnull align 4 dereferenceable(17179869184) [[S:%.*]], i64 17179869184, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(17179869184) [[D:%.*]], ptr noundef nonnull align 4 dereferenceable(17179869184) [[S:%.*]], i64 17179869184, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %d, ptr align 4 %s, i64 17179869184, i1 false)

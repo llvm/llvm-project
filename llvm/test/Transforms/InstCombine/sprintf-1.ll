@@ -26,7 +26,7 @@ declare i32 @sprintf(ptr, ptr, ...)
 
 define void @test_simplify1(ptr %dst) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @hello_world)
@@ -103,7 +103,7 @@ define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; NOSTPCPY-LABEL: @test_simplify7(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; NOSTPCPY-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
+; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i8 0)
 ; NOSTPCPY-NEXT:    ret i32 [[STRLEN]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)
@@ -113,7 +113,7 @@ define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; Check sprintf(dst, "%s", str) -> llvm.memcpy(dest, str, strlen(str) + 1, 1).
 define i32 @test_simplify8(ptr %dst) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i8 0)
 ; CHECK-NEXT:    ret i32 12
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr @hello_world)
@@ -133,7 +133,7 @@ define i32 @test_simplify9(ptr %dst, ptr %str) {
 ; NOSTPCPY-LABEL: @test_simplify9(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; NOSTPCPY-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
+; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i8 0)
 ; NOSTPCPY-NEXT:    ret i32 [[STRLEN]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)

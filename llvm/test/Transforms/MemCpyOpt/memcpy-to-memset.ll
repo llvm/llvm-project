@@ -69,7 +69,7 @@ define void @test_i1x16_zero() nounwind {
 define void @test_i1x16_one() nounwind {
 ; CHECK-LABEL: @test_i1x16_one(
 ; CHECK-NEXT:    [[A:%.*]] = alloca <16 x i1>, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @i1x16_one, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @i1x16_one, i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca <16 x i1>, align 4

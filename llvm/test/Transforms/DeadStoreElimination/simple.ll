@@ -96,7 +96,7 @@ define void @test6_atomic(ptr align 4 %p, ptr align 4 %q) {
 ; alias).
 define void @test7(ptr %p, ptr %q, ptr noalias %r) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Q:%.*]], ptr [[R:%.*]], i64 900, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Q:%.*]], ptr [[R:%.*]], i64 900, i8 0)
 ; CHECK-NEXT:    store i32 30, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -339,7 +339,7 @@ define noalias ptr @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, ptr [[X]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strdup(ptr [[X]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strdup(ptr [[X]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -545,8 +545,8 @@ define void @test35(ptr noalias %p) {
 ; We cannot optimize away the first memmove since %P could overlap with %Q.
 define void @test36(ptr %P, ptr %Q) {
 ; CHECK-LABEL: @test36(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[Q]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[Q]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -569,8 +569,8 @@ define void @test36_atomic(ptr %P, ptr %Q) {
 
 define void @test37(ptr %P, ptr %Q, ptr %R) {
 ; CHECK-LABEL: @test37(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -595,8 +595,8 @@ define void @test37_atomic(ptr %P, ptr %Q, ptr %R) {
 ; inequal and overlapping).
 define void @test38(ptr %P, ptr %Q, ptr %R) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -621,8 +621,8 @@ define void @test38_atomic(ptr %P, ptr %Q, ptr %R) {
 
 define void @test39(ptr %P, ptr %Q, ptr %R) {
 ; CHECK-LABEL: @test39(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -654,8 +654,8 @@ define void @test40(ptr noalias %Pp, ptr noalias %Q)  {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[A]])
 ; CHECK-NEXT:    [[PC:%.*]] = load ptr, ptr [[PP:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 [[A]], ptr align 4 [[Q:%.*]], i64 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[PC]], ptr nonnull align 4 [[A]], i64 4, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 [[A]], ptr align 4 [[Q:%.*]], i64 4, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[PC]], ptr nonnull align 4 [[A]], i64 4, i8 3)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;

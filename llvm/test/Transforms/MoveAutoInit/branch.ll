@@ -10,7 +10,7 @@ define void @foo(i32 %x) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[BUFFER]], ptr align 16 @__const.foo.buffer, i64 32, i1 false), !annotation !0
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[BUFFER]], ptr align 16 @__const.foo.buffer, i64 32, i8 0), !annotation !0
 ; CHECK-NEXT:    call void @dump(ptr [[BUFFER]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:

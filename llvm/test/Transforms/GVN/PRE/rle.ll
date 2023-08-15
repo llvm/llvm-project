@@ -35,7 +35,7 @@ define i8 @crash0({i32, i32} %A, ptr %P) {
 declare void @helper()
 define void @crash1() {
 ; CHECK-LABEL: @crash1(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr undef, ptr undef, i64 undef, i1 false) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr undef, ptr undef, i64 undef, i8 0) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0.p0.i64(ptr undef, ptr undef, i64 undef, i1 false) nounwind
@@ -253,7 +253,7 @@ Cont:
 define float @memcpy_to_float_local(ptr %A) nounwind ssp {
 ; CHECK-LABEL: @memcpy_to_float_local(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr @GCst, i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr @GCst, i64 12, i8 0)
 ; CHECK-NEXT:    ret float 1.400000e+01
 ;
 entry:
@@ -267,7 +267,7 @@ entry:
 define float @memcpy_to_float_local_as1(ptr %A) nounwind ssp {
 ; CHECK-LABEL: @memcpy_to_float_local_as1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p1.i64(ptr [[A:%.*]], ptr addrspace(1) @GCst_as1, i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p1.i64(ptr [[A:%.*]], ptr addrspace(1) @GCst_as1, i64 12, i8 0)
 ; CHECK-NEXT:    ret float 1.400000e+01
 ;
 entry:

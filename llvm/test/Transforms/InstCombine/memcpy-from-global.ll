@@ -77,7 +77,7 @@ declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1)
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -97,7 +97,7 @@ define void @test2() {
 define void @test2_no_null_opt() #0 {
 ; CHECK-LABEL: @test2_no_null_opt(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -118,7 +118,7 @@ define void @test2_addrspacecast() {
 ; CHECK-LABEL: @test2_addrspacecast(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B_CAST:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], ptr addrspace(1) noundef align 4 dereferenceable(124) addrspacecast (ptr @G to ptr addrspace(1)), i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], ptr addrspace(1) noundef align 4 dereferenceable(124) addrspacecast (ptr @G to ptr addrspace(1)), i64 124, i8 0)
 ; CHECK-NEXT:    call void @bar_as1(ptr addrspace(1) [[B_CAST]])
 ; CHECK-NEXT:    ret void
 ;
@@ -220,7 +220,7 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1), i64 20, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1) to ptr addrspace(1)), i64 20, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -274,8 +274,8 @@ define void @test9_small_global() {
 ; CHECK-LABEL: @test9_small_global(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CC:%.*]] = alloca [1000000 x i8], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(3) [[CC]], ptr noundef nonnull align 16 dereferenceable(3) @_ZL3KKK, i64 3, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(1000000) @bbb, ptr noundef nonnull align 16 dereferenceable(1000000) [[CC]], i64 1000000, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(3) [[CC]], ptr noundef nonnull align 16 dereferenceable(3) @_ZL3KKK, i64 3, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(1000000) @bbb, ptr noundef nonnull align 16 dereferenceable(1000000) [[CC]], i64 1000000, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -289,7 +289,7 @@ entry:
 define void @test10_same_global() {
 ; CHECK-LABEL: @test10_same_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(3) @bbb, ptr noundef nonnull align 16 dereferenceable(3) @_ZL3KKK, i64 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(3) @bbb, ptr noundef nonnull align 16 dereferenceable(3) @_ZL3KKK, i64 3, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -321,7 +321,7 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i8 3)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    ret float [[R]]
@@ -352,7 +352,7 @@ define void @memcpy_from_readonly_noalias(ptr readonly noalias align 8 dereferen
 define void @memcpy_from_just_readonly(ptr readonly align 8 dereferenceable(124) %arg) {
 ; CHECK-LABEL: @memcpy_from_just_readonly(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[ALLOCA]], ptr noundef nonnull align 8 dereferenceable(124) [[ARG:%.*]], i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[ALLOCA]], ptr noundef nonnull align 8 dereferenceable(124) [[ARG:%.*]], i64 124, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[ALLOCA]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -366,7 +366,7 @@ define void @memcpy_from_just_readonly(ptr readonly align 8 dereferenceable(124)
 define void @volatile_memcpy() {
 ; CHECK-LABEL: @volatile_memcpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @H, i64 20, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @H, i64 20, i8 3)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[A]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -394,7 +394,7 @@ define void @memcpy_to_nocapture_readonly() {
 define void @memcpy_to_capturing_readonly() {
 ; CHECK-LABEL: @memcpy_to_capturing_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i8 0)
 ; CHECK-NEXT:    call void @bar(ptr nonnull readonly [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -410,7 +410,7 @@ define void @memcpy_to_capturing_readonly() {
 define void @memcpy_to_aliased_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_aliased_nocapture_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i8 0)
 ; CHECK-NEXT:    call void @two_params(ptr nocapture nonnull readonly [[A]], ptr nocapture nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;

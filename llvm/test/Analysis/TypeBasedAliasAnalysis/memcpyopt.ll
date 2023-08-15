@@ -7,10 +7,11 @@ target datalayout = "e-p:64:64:64"
 ; it has a TBAA tag which declares that it is unrelated.
 
 define void @foo(ptr nocapture %p, ptr nocapture %q, ptr nocapture %s) nounwind {
-; CHECK: @foo
-; CHECK-NEXT: tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) %p, ptr noundef nonnull align 1 dereferenceable(16) %q, i64 16, i1 false), !tbaa !0
-; CHECK-NEXT: store i8 2, ptr %s, align 1, !tbaa [[TAGA:!.*]]
-; CHECK-NEXT: ret void
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[P:%.*]], ptr noundef nonnull align 1 dereferenceable(16) [[Q:%.*]], i64 16, i8 0), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    store i8 2, ptr [[S:%.*]], align 1, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
   tail call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 16, i1 false), !tbaa !2
   store i8 2, ptr %s, align 1, !tbaa !1
   tail call void @llvm.memcpy.p0.p0.i64(ptr %q, ptr %p, i64 16, i1 false), !tbaa !2
@@ -19,8 +20,6 @@ define void @foo(ptr nocapture %p, ptr nocapture %q, ptr nocapture %s) nounwind 
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
-; CHECK: [[TAGA]] = !{[[TYPEA:!.*]], [[TYPEA]], i64 0}
-; CHECK: [[TYPEA]] = !{!"A", !{{.*}}}
 !0 = !{!"tbaa root"}
 !1 = !{!3, !3, i64 0}
 !2 = !{!4, !4, i64 0}

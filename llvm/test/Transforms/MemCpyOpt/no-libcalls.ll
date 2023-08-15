@@ -38,7 +38,7 @@ define void @dont_create_memset(ptr %p) {
 
 define void @dont_create_memcpy(ptr %p1, ptr %p2) {
 ; LIBCALLS-LABEL: @dont_create_memcpy(
-; LIBCALLS-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[P2:%.*]], ptr align 4 [[P1:%.*]], i64 8, i1 false)
+; LIBCALLS-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[P2:%.*]], ptr align 4 [[P1:%.*]], i64 8, i8 0)
 ; LIBCALLS-NEXT:    ret void
 ;
 ; NO-LIBCALLS-LABEL: @dont_create_memcpy(
@@ -53,8 +53,8 @@ define void @dont_create_memcpy(ptr %p1, ptr %p2) {
 
 define void @forward_memcpy(ptr noalias %p1, ptr noalias %p2, ptr noalias %p3) {
 ; CHECK-LABEL: @forward_memcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2:%.*]], ptr [[P1:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P3:%.*]], ptr [[P1]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2:%.*]], ptr [[P1:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P3:%.*]], ptr [[P1]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %p2, ptr %p1, i64 16, i1 false)

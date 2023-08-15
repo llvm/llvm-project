@@ -15,7 +15,7 @@ declare ptr @strcpy(ptr, ptr)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -37,7 +37,7 @@ define ptr @test_simplify2() {
 
 define void @test_simplify3(ptr %dst) {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -70,7 +70,7 @@ define ptr @test_no_simplify2(ptr %dst, ptr %src) {
 
 define void @test_no_incompatible_attr() {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 

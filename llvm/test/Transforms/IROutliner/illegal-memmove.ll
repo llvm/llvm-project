@@ -19,7 +19,7 @@ define i8 @function1(ptr noalias %s, ptr noalias %d, i64 %len) {
 ; CHECK-NEXT:    [[B_RELOAD:%.*]] = load i8, ptr [[B_LOC]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A_LOC]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B_LOC]])
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[D]], ptr [[S]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[D]], ptr [[S]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[RET_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i8 [[A_RELOAD]], i8 [[B_RELOAD]], ptr [[S]], ptr [[RET_LOC]])
 ; CHECK-NEXT:    [[RET_RELOAD:%.*]] = load i8, ptr [[RET_LOC]], align 1
@@ -48,7 +48,7 @@ define i8 @function2(ptr noalias %s, ptr noalias %d, i64 %len) {
 ; CHECK-NEXT:    [[B_RELOAD:%.*]] = load i8, ptr [[B_LOC]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A_LOC]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B_LOC]])
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[D]], ptr [[S]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[D]], ptr [[S]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[RET_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i8 [[A_RELOAD]], i8 [[B_RELOAD]], ptr [[S]], ptr [[RET_LOC]])
 ; CHECK-NEXT:    [[RET_RELOAD:%.*]] = load i8, ptr [[RET_LOC]], align 1

@@ -28,7 +28,7 @@ define ptr @alloc_tree() {
 ; CHECK-NEXT:    store ptr [[CALL3_2]], ptr [[ARRAYIDX_2]], align 8
 ; CHECK-NEXT:    [[CALL3_3:%.*]] = tail call ptr @alloc(ptr [[CALL]])
 ; CHECK-NEXT:    store ptr [[CALL3_3]], ptr [[FVAL]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(32) [[CALL]], ptr nonnull align 16 dereferenceable(32) [[FVAL]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(32) [[CALL]], ptr nonnull align 16 dereferenceable(32) [[FVAL]], i64 32, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[FVAL]])
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;

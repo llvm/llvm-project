@@ -28,7 +28,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [6 x double], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i8 0)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -43,7 +43,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
 ; CHECK-NEXT:    [[TMP6:%.*]] = alloca [6 x double], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i8 0)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP6]], [[COPY2]] ]
@@ -136,7 +136,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP33]], label [[COPY62:%.*]], label [[NO_ALIAS63]]
 ; CHECK:       copy62:
 ; CHECK-NEXT:    [[TMP34:%.*]] = alloca [6 x double], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP34]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP34]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i8 0)
 ; CHECK-NEXT:    br label [[NO_ALIAS63]]
 ; CHECK:       no_alias63:
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi ptr [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT61]] ], [ [[TMP34]], [[COPY62]] ]
@@ -151,7 +151,7 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[COPY69:%.*]], label [[NO_ALIAS70]]
 ; CHECK:       copy69:
 ; CHECK-NEXT:    [[TMP38:%.*]] = alloca [6 x double], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP38]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP38]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i8 0)
 ; CHECK-NEXT:    br label [[NO_ALIAS70]]
 ; CHECK:       no_alias70:
 ; CHECK-NEXT:    [[TMP39:%.*]] = phi ptr [ [[B]], [[NO_ALIAS63]] ], [ [[B]], [[ALIAS_CONT68]] ], [ [[TMP38]], [[COPY69]] ]

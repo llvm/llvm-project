@@ -115,7 +115,7 @@ define i32 @test4(ptr %P) {
 ; write to G1.
 define i32 @test5(ptr %P, i32 %Len) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr @G2, ptr @G1, i32 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr @G2, ptr @G1, i32 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret i32 0
 ;
   %tmp = load i32, ptr @G1

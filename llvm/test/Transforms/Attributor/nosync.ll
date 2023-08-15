@@ -336,8 +336,8 @@ declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
-; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], ptr nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[PTR1]], ptr nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR21:[0-9]+]]
+; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], ptr nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[PTR1]], ptr nocapture nofree readonly [[PTR2]], i32 noundef 8, i8 noundef 3) #[[ATTR21:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)
@@ -351,7 +351,7 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
-; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR13:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR22:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
@@ -377,7 +377,7 @@ declare void @readnone_test() convergent readnone
 define void @convergent_readnone() {
 ; CHECK: Function Attrs: memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@convergent_readnone
-; CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    call void @readnone_test()
 ; CHECK-NEXT:    ret void
 ;
@@ -395,7 +395,7 @@ declare void @llvm.x86.sse2.clflush(ptr)
 define void @i_totally_sync() {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@i_totally_sync
-; CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    tail call void @llvm.x86.sse2.clflush(ptr noundef nonnull align 4 dereferenceable(4) @a)
 ; CHECK-NEXT:    ret void
 ;
@@ -410,7 +410,7 @@ declare float @llvm.cos.f32(float %val) readnone
 define i32 @cos_test(float %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cos_test
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR18:[0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]]) #[[ATTR17:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 4
 ;
   %i = call float @llvm.cos.f32(float %x)
@@ -420,7 +420,7 @@ define i32 @cos_test(float %x) {
 define float @cos_test2(float %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cos_test2
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR18]] {
+; CHECK-SAME: (float [[X:%.*]]) #[[ATTR17]] {
 ; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[X]]) #[[ATTR23:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -432,7 +432,7 @@ declare void @unknown()
 define void @nosync_convergent_callee_test() {
 ; CHECK: Function Attrs: nosync memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nosync_convergent_callee_test
-; CHECK-SAME: () #[[ATTR19:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR18:[0-9]+]] {
 ; CHECK-NEXT:    call void @unknown() #[[ATTR24:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -450,16 +450,16 @@ define void @nosync_convergent_callee_test() {
 ; CHECK: attributes #[[ATTR7]] = { nofree norecurse nounwind }
 ; CHECK: attributes #[[ATTR8]] = { mustprogress nofree norecurse nosync nounwind willreturn }
 ; CHECK: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
-; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR12]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR13]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR14:[0-9]+]] = { convergent memory(none) }
-; CHECK: attributes #[[ATTR15]] = { memory(none) }
-; CHECK: attributes #[[ATTR16]] = { nounwind }
-; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR19]] = { nosync memory(none) }
+; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR11]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR12]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR13:[0-9]+]] = { convergent memory(none) }
+; CHECK: attributes #[[ATTR14]] = { memory(none) }
+; CHECK: attributes #[[ATTR15]] = { nounwind }
+; CHECK: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR17]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR18]] = { nosync memory(none) }
+; CHECK: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR20]] = { nofree nounwind }
 ; CHECK: attributes #[[ATTR21]] = { nofree willreturn }
 ; CHECK: attributes #[[ATTR22]] = { nofree willreturn memory(write) }

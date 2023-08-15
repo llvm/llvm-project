@@ -8,7 +8,7 @@ declare void @llvm.memset.p0.i8(ptr nocapture, i8, i8, i1) nounwind
 
 define void @test1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i8(ptr [[A:%.*]], ptr [[B:%.*]], i8 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i8(ptr [[A:%.*]], ptr [[B:%.*]], i8 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %A  ;; Written to by memcpy
@@ -20,7 +20,7 @@ define void @test1(ptr noalias %A, ptr noalias %B) {
 
 define void @test2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i8(ptr [[A]], ptr [[B:%.*]], i8 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i8(ptr [[A:%.*]], ptr [[B:%.*]], i8 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %A  ;; Written to by memmove
@@ -33,7 +33,7 @@ define void @test2(ptr noalias %A, ptr noalias %B) {
 define void @test2a(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test2a(
 ; CHECK-NEXT:    store i8 0, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i8(ptr [[A]], ptr [[B:%.*]], i8 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i8(ptr [[A]], ptr [[B:%.*]], i8 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %A  ;; Written to by memmove
@@ -107,7 +107,7 @@ define void @test6() {
 
 define void @test7(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i8(ptr [[A:%.*]], ptr [[B:%.*]], i8 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i8(ptr [[A:%.*]], ptr [[B:%.*]], i8 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %A  ;; Written to by memcpy

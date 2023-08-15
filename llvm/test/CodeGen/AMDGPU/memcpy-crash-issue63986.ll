@@ -9,10 +9,10 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshlrev_b64 v[4:5], 6, v[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
+; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion2.preheader
 ; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 6, v[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:  .LBB0_2: ; %loop-memcpy-expansion
+; CHECK-NEXT:  .LBB0_2: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s6
@@ -58,21 +58,21 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    flat_store_byte v[8:9], v18 offset:13
 ; CHECK-NEXT:    flat_store_byte v[8:9], v25 offset:12
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
-; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual-header
+; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual-header5
 ; CHECK-NEXT:    s_and_b32 s4, 32, 15
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    s_branch .LBB0_6
-; CHECK-NEXT:  .LBB0_5: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
+; CHECK-NEXT:  .LBB0_5: ; %loop-memcpy-residual-header5.post-loop-memcpy-expansion1_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[2:3], 6, v[2:3]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_9
-; CHECK-NEXT:  .LBB0_6: ; %loop-memcpy-residual.preheader
+; CHECK-NEXT:  .LBB0_6: ; %loop-memcpy-residual4.preheader
 ; CHECK-NEXT:    v_or_b32_e32 v2, 32, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v5
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:  .LBB0_7: ; %loop-memcpy-residual
+; CHECK-NEXT:  .LBB0_7: ; %loop-memcpy-residual4
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_add_u32 s8, 32, s6
 ; CHECK-NEXT:    s_addc_u32 s9, 0, s7
@@ -93,7 +93,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:  ; %bb.8:
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v5
-; CHECK-NEXT:  .LBB0_9: ; %post-loop-memcpy-expansion
+; CHECK-NEXT:  .LBB0_9: ; %post-loop-memcpy-expansion1
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 4, v[0:1]
 ; CHECK-NEXT:    v_and_b32_e32 v6, 15, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
@@ -117,12 +117,12 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    ; Child Loop BB0_18 Depth 2
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_15
-; CHECK-NEXT:  ; %bb.13: ; %loop-memcpy-expansion2.preheader
+; CHECK-NEXT:  ; %bb.13: ; %loop-memcpy-expansion.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
-; CHECK-NEXT:  .LBB0_14: ; %loop-memcpy-expansion2
+; CHECK-NEXT:  .LBB0_14: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; Parent Loop BB0_12 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v10, s10
@@ -175,16 +175,16 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], -1
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_11
-; CHECK-NEXT:  ; %bb.16: ; %loop-memcpy-residual-header5
+; CHECK-NEXT:  ; %bb.16: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 s[10:11], exec, s[8:9]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
-; CHECK-NEXT:  ; %bb.17: ; %loop-memcpy-residual4.preheader
+; CHECK-NEXT:  ; %bb.17: ; %loop-memcpy-residual.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
-; CHECK-NEXT:  .LBB0_18: ; %loop-memcpy-residual4
+; CHECK-NEXT:  .LBB0_18: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; Parent Loop BB0_12 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v12, s15

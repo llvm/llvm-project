@@ -1097,10 +1097,10 @@ define void @no_replace_memcpy_size(i1 zeroext %flag, ptr addrspace(1) %dst, ptr
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i8 0)
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 4096, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 4096, i8 0)
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -1128,10 +1128,10 @@ define void @no_replace_memmove_size(i1 zeroext %flag, ptr addrspace(1) %dst, pt
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i8 0)
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 4096, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 4096, i8 0)
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void

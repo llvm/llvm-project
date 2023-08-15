@@ -123,7 +123,7 @@ entry:
 define void @write32to36(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @write32to36(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i8 0)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2PLUSI:%.*]], ptr [[P]], i64 0, i32 2
 ; CHECK-NEXT:    store i32 1, ptr [[C]], align 4
 ; CHECK-NEXT:    ret void
@@ -169,7 +169,7 @@ entry:
 define void @write16to32(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @write16to32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 16, i8 0)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 1
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[C]], align 4
 ; CHECK-NEXT:    ret void
@@ -199,7 +199,7 @@ entry:
 define void @dontwrite28to32memcpy(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @dontwrite28to32memcpy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i8 0)
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
@@ -239,7 +239,7 @@ define void @cpu_lwp_fork(ptr %md_regs, i64 %pcb_rsp0) nounwind uwtable noinline
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[PCB_RSP0:%.*]] to ptr
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [[STRUCT_TRAPFRAME:%.*]], ptr [[TMP0]], i64 -1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ADD_PTR]], ptr [[MD_REGS:%.*]], i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ADD_PTR]], ptr [[MD_REGS:%.*]], i64 24, i8 0)
 ; CHECK-NEXT:    [[TF_TRAPNO:%.*]] = getelementptr inbounds [[STRUCT_TRAPFRAME]], ptr [[TMP0]], i64 -1, i32 1
 ; CHECK-NEXT:    store i64 3, ptr [[TF_TRAPNO]], align 8
 ; CHECK-NEXT:    ret void
@@ -259,8 +259,8 @@ define void @write16To23AndThen24To31(ptr nocapture %P, i64 %n64, i32 %n32, i16 
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 8 [[P:%.*]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    [[BASE64_2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[BASE64_3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
-; CHECK-NEXT:    store i64 3, ptr [[BASE64_2]]
-; CHECK-NEXT:    store i64 3, ptr [[BASE64_3]]
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_2]], align 8
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

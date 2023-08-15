@@ -32,7 +32,7 @@ declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture, i8, i64, i1) #1
 ; Test the upper bound for sizes to leave
 define amdgpu_kernel void @max_size_small_static_memcpy_caller0(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @max_size_small_static_memcpy_caller0(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @max_size_small_static_memcpy_caller0(
@@ -79,7 +79,7 @@ define amdgpu_kernel void @min_size_large_static_memcpy_caller0(ptr addrspace(1)
 
 define amdgpu_kernel void @max_size_small_static_memmove_caller0(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @max_size_small_static_memmove_caller0(
-; MAX1024-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 1024, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @max_size_small_static_memmove_caller0(
@@ -265,58 +265,58 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0,
 ; OPT-NEXT:    [[TMP2:%.*]] = urem i64 [[N]], 16
 ; OPT-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[TMP2]]
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP1]], 0
-; OPT-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION2:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5:%.*]]
-; OPT:       loop-memcpy-expansion2:
-; OPT-NEXT:    [[LOOP_INDEX3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION2]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX3]]
+; OPT-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
+; OPT:       loop-memcpy-expansion:
+; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; OPT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST0:%.*]], i64 [[LOOP_INDEX3]]
+; OPT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST0:%.*]], i64 [[LOOP_INDEX]]
 ; OPT-NEXT:    store <4 x i32> [[TMP6]], ptr addrspace(1) [[TMP7]], align 1
-; OPT-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX3]], 1
+; OPT-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP8]], [[TMP1]]
-; OPT-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION2]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5]]
-; OPT:       loop-memcpy-residual4:
-; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX6:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER5]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL4:%.*]] ]
-; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX6]]
+; OPT-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
+; OPT:       loop-memcpy-residual:
+; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
+; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP10]]
 ; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST0]], i64 [[TMP10]]
 ; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 1
-; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX6]], 1
+; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
-; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1:%.*]]
-; OPT:       post-loop-memcpy-expansion1:
+; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
+; OPT:       post-loop-memcpy-expansion:
 ; OPT-NEXT:    [[TMP16:%.*]] = udiv i64 [[M:%.*]], 16
 ; OPT-NEXT:    [[TMP17:%.*]] = urem i64 [[M]], 16
 ; OPT-NEXT:    [[TMP18:%.*]] = sub i64 [[M]], [[TMP17]]
 ; OPT-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP16]], 0
-; OPT-NEXT:    br i1 [[TMP19]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
-; OPT:       loop-memcpy-expansion:
-; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION1]] ], [ [[TMP23:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
-; OPT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    br i1 [[TMP19]], label [[LOOP_MEMCPY_EXPANSION2:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5:%.*]]
+; OPT:       loop-memcpy-expansion2:
+; OPT-NEXT:    [[LOOP_INDEX3:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION]] ], [ [[TMP23:%.*]], [[LOOP_MEMCPY_EXPANSION2]] ]
+; OPT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX3]]
 ; OPT-NEXT:    [[TMP21:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP20]], align 1
-; OPT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX3]]
 ; OPT-NEXT:    store <4 x i32> [[TMP21]], ptr addrspace(1) [[TMP22]], align 1
-; OPT-NEXT:    [[TMP23]] = add i64 [[LOOP_INDEX]], 1
+; OPT-NEXT:    [[TMP23]] = add i64 [[LOOP_INDEX3]], 1
 ; OPT-NEXT:    [[TMP24:%.*]] = icmp ult i64 [[TMP23]], [[TMP16]]
-; OPT-NEXT:    br i1 [[TMP24]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
-; OPT:       loop-memcpy-residual:
-; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP29:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
-; OPT-NEXT:    [[TMP25:%.*]] = add i64 [[TMP18]], [[RESIDUAL_LOOP_INDEX]]
+; OPT-NEXT:    br i1 [[TMP24]], label [[LOOP_MEMCPY_EXPANSION2]], label [[LOOP_MEMCPY_RESIDUAL_HEADER5]]
+; OPT:       loop-memcpy-residual4:
+; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX6:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER5]] ], [ [[TMP29:%.*]], [[LOOP_MEMCPY_RESIDUAL4:%.*]] ]
+; OPT-NEXT:    [[TMP25:%.*]] = add i64 [[TMP18]], [[RESIDUAL_LOOP_INDEX6]]
 ; OPT-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP25]]
 ; OPT-NEXT:    [[TMP27:%.*]] = load i8, ptr addrspace(1) [[TMP26]], align 1
 ; OPT-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST1]], i64 [[TMP25]]
 ; OPT-NEXT:    store i8 [[TMP27]], ptr addrspace(1) [[TMP28]], align 1
-; OPT-NEXT:    [[TMP29]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
+; OPT-NEXT:    [[TMP29]] = add i64 [[RESIDUAL_LOOP_INDEX6]], 1
 ; OPT-NEXT:    [[TMP30:%.*]] = icmp ult i64 [[TMP29]], [[TMP17]]
-; OPT-NEXT:    br i1 [[TMP30]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
-; OPT:       post-loop-memcpy-expansion:
+; OPT-NEXT:    br i1 [[TMP30]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1:%.*]]
+; OPT:       post-loop-memcpy-expansion1:
 ; OPT-NEXT:    ret void
 ; OPT:       loop-memcpy-residual-header:
-; OPT-NEXT:    [[TMP31:%.*]] = icmp ne i64 [[TMP17]], 0
+; OPT-NEXT:    [[TMP31:%.*]] = icmp ne i64 [[TMP2]], 0
 ; OPT-NEXT:    br i1 [[TMP31]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
 ; OPT:       loop-memcpy-residual-header5:
-; OPT-NEXT:    [[TMP32:%.*]] = icmp ne i64 [[TMP2]], 0
+; OPT-NEXT:    [[TMP32:%.*]] = icmp ne i64 [[TMP17]], 0
 ; OPT-NEXT:    br i1 [[TMP32]], label [[LOOP_MEMCPY_RESIDUAL4]], label [[POST_LOOP_MEMCPY_EXPANSION1]]
 ;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst0, ptr addrspace(1) %src, i64 %n, i1 false)
@@ -388,7 +388,7 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; MAX1024-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
 ; MAX1024-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
 ; MAX1024:       post-loop-memcpy-expansion:
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST1:%.*]], ptr addrspace(1) [[SRC]], i64 102, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST1:%.*]], ptr addrspace(1) [[SRC]], i64 102, i8 0)
 ; MAX1024-NEXT:    ret void
 ; MAX1024:       loop-memcpy-residual-header:
 ; MAX1024-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP2]], 0
@@ -401,12 +401,12 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP1]], 0
 ; ALL-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
 ; ALL:       loop-memcpy-expansion:
-; ALL-NEXT:    [[LOOP_INDEX1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
-; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX1]]
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
 ; ALL-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST0:%.*]], i64 [[LOOP_INDEX1]]
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST0:%.*]], i64 [[LOOP_INDEX]]
 ; ALL-NEXT:    store <4 x i32> [[TMP6]], ptr addrspace(1) [[TMP7]], align 1
-; ALL-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX1]], 1
+; ALL-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX]], 1
 ; ALL-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP8]], [[TMP1]]
 ; ALL-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
 ; ALL:       loop-memcpy-residual:
@@ -422,12 +422,12 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(ptr addrspac
 ; ALL:       post-loop-memcpy-expansion:
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       load-store-loop:
-; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION]] ], [ [[TMP19:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[LOOP_INDEX1:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION]] ], [ [[TMP19:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX1]]
 ; ALL-NEXT:    [[TMP17:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP16]], align 1
-; ALL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST1:%.*]], i64 [[LOOP_INDEX1]]
 ; ALL-NEXT:    store <4 x i32> [[TMP17]], ptr addrspace(1) [[TMP18]], align 1
-; ALL-NEXT:    [[TMP19]] = add i64 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP19]] = add i64 [[LOOP_INDEX1]], 1
 ; ALL-NEXT:    [[TMP20:%.*]] = icmp ult i64 [[TMP19]], 6
 ; ALL-NEXT:    br i1 [[TMP20]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; ALL:       memcpy-split:
@@ -1197,7 +1197,7 @@ define amdgpu_kernel void @memcpy_global_align4_local_align4_variable(ptr addrsp
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_16(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_16(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 16, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 16, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_16(
@@ -1220,7 +1220,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_16(ptr addrspace(1
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_12(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_12(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 12, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 12, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_12(
@@ -1240,7 +1240,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_12(ptr addrspace(1
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_8(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_8(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 8, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 8, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_8(
@@ -1256,7 +1256,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_8(ptr addrspace(1)
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_10(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_10(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 10, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 10, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_10(
@@ -1276,7 +1276,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_10(ptr addrspace(1
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_4(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_4(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 4, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 4, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_4(
@@ -1292,7 +1292,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_4(ptr addrspace(1)
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_2(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_2(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 2, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 2, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_2(
@@ -1308,7 +1308,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_2(ptr addrspace(1)
 
 define amdgpu_kernel void @memcpy_global_align4_global_align4_1(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
 ; MAX1024-LABEL: @memcpy_global_align4_global_align4_1(
-; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 1, i1 false)
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[DST:%.*]], ptr addrspace(1) align 4 [[SRC:%.*]], i64 1, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_1(
@@ -1324,7 +1324,7 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1(ptr addrspace(1)
 
 define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrspace(1) %src) {
 ; MAX1024-LABEL: @memmove_flat_align1_global_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p0.p1.i64(ptr [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p0.p1.i64(ptr [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_flat_align1_global_align1(
@@ -1363,7 +1363,7 @@ define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrs
 
 define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %dst, ptr %src) {
 ; MAX1024-LABEL: @memmove_global_align1_flat_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_global_align1_flat_align1(
@@ -1402,7 +1402,7 @@ define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %d
 
 define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addrspace(5) %src) {
 ; MAX1024-LABEL: @memmove_flat_align1_private_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p0.p5.i64(ptr [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p0.p5.i64(ptr [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_flat_align1_private_align1(
@@ -1441,7 +1441,7 @@ define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addr
 
 define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %dst, ptr %src) {
 ; MAX1024-LABEL: @memmove_private_align1_flat_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_private_align1_flat_align1(
@@ -1480,7 +1480,7 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 
 define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5) %dst, ptr addrspace(1) %src) {
 ; MAX1024-LABEL: @memmove_private_align1_global_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_private_align1_global_align1(
@@ -1503,7 +1503,7 @@ define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5)
 
 define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1) %dst, ptr addrspace(5) %src) {
 ; MAX1024-LABEL: @memmove_global_align1_private_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_global_align1_private_align1(
@@ -1526,7 +1526,7 @@ define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1)
 
 define amdgpu_kernel void @memmove_global_align1_p999_align1(ptr addrspace(1) %dst, ptr addrspace(999) %src, i64 %size) {
 ; OPT-LABEL: @memmove_global_align1_p999_align1(
-; OPT-NEXT:    call void @llvm.memmove.p1.p999.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(999) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    call void @llvm.memmove.p1.p999.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(999) [[SRC:%.*]], i64 [[SIZE:%.*]], i8 0)
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memmove.p1.p999.i64(ptr addrspace(1) %dst, ptr addrspace(999) %src, i64 %size, i1 false)
@@ -1535,7 +1535,7 @@ define amdgpu_kernel void @memmove_global_align1_p999_align1(ptr addrspace(1) %d
 
 define amdgpu_kernel void @memmove_p999_align1_p1_align1(ptr addrspace(999) %dst, ptr addrspace(1) %src, i64 %size) {
 ; OPT-LABEL: @memmove_p999_align1_p1_align1(
-; OPT-NEXT:    call void @llvm.memmove.p999.p1.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    call void @llvm.memmove.p999.p1.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 [[SIZE:%.*]], i8 0)
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memmove.p999.p1.i64(ptr addrspace(999) %dst, ptr addrspace(1) %src, i64 %size, i1 false)
@@ -1544,7 +1544,7 @@ define amdgpu_kernel void @memmove_p999_align1_p1_align1(ptr addrspace(999) %dst
 
 define amdgpu_kernel void @memmove_p999_align1_p998_align1(ptr addrspace(999) %dst, ptr addrspace(998) %src, i64 %size) {
 ; OPT-LABEL: @memmove_p999_align1_p998_align1(
-; OPT-NEXT:    call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(998) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(998) [[SRC:%.*]], i64 [[SIZE:%.*]], i8 0)
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) %dst, ptr addrspace(998) %src, i64 %size, i1 false)
@@ -1553,7 +1553,7 @@ define amdgpu_kernel void @memmove_p999_align1_p998_align1(ptr addrspace(999) %d
 
 define amdgpu_kernel void @memmove_local_align1_private_align1(ptr addrspace(3) %dst, ptr addrspace(5) %src) {
 ; MAX1024-LABEL: @memmove_local_align1_private_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p3.p5.i32(ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i32 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p3.p5.i32(ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i32 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_local_align1_private_align1(
@@ -1643,7 +1643,7 @@ define amdgpu_kernel void @memmove_local_align1_private_align1_unknown_size(ptr 
 
 define amdgpu_kernel void @memmove_private_align1_local_align1(ptr addrspace(5) %dst, ptr addrspace(3) %src) {
 ; MAX1024-LABEL: @memmove_private_align1_local_align1(
-; MAX1024-NEXT:    call void @llvm.memmove.p5.p3.i32(ptr addrspace(5) [[DST:%.*]], ptr addrspace(3) [[SRC:%.*]], i32 256, i1 false)
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p3.i32(ptr addrspace(5) [[DST:%.*]], ptr addrspace(3) [[SRC:%.*]], i32 256, i8 0)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memmove_private_align1_local_align1(

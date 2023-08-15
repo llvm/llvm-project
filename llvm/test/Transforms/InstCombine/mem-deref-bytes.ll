@@ -102,7 +102,7 @@ define i32 @memcmp_nonconst_size(ptr nocapture readonly %d, ptr nocapture readon
 
 define ptr @memcpy_const_size_set_deref(ptr nocapture readonly %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_const_size_set_deref(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(64) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(64) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i8 0)
 ; CHECK-NEXT:    ret ptr [[D]]
 ;
   %call = tail call ptr @memcpy(ptr %d, ptr %s, i64 64)
@@ -111,7 +111,7 @@ define ptr @memcpy_const_size_set_deref(ptr nocapture readonly %d, ptr nocapture
 
 define ptr @memmove_const_size_set_deref(ptr nocapture readonly %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @memmove_const_size_set_deref(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(64) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(64) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i8 0)
 ; CHECK-NEXT:    ret ptr [[D]]
 ;
   %call = tail call ptr @memmove(ptr %d, ptr %s, i64 64)
@@ -139,7 +139,7 @@ define ptr @memchr_const_size_set_deref(ptr nocapture readonly %s, i32 %c) {
 
 define ptr @llvm_memcpy_const_size_set_deref(ptr nocapture readonly %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @llvm_memcpy_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(16) [[S:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(16) [[S:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    ret ptr [[D]]
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %d, ptr align 1 %s, i64 16, i1 false)
@@ -148,7 +148,7 @@ define ptr @llvm_memcpy_const_size_set_deref(ptr nocapture readonly %d, ptr noca
 
 define ptr @llvm_memmove_const_size_set_deref(ptr nocapture readonly %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @llvm_memmove_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(16) [[S:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(16) [[S:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    ret ptr [[D]]
 ;
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %d, ptr align 1 %s, i64 16, i1 false)

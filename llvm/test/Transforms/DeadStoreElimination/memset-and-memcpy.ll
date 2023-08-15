@@ -12,7 +12,7 @@ declare void @llvm.init.trampoline(ptr, ptr, ptr)
 ;; Overwrite of memset by memcpy.
 define void @test17(ptr %P, ptr noalias %Q) nounwind ssp {
 ; CHECK-LABEL: @test17(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memset.p0.i64(ptr %P, i8 42, i64 8, i1 false)
@@ -47,7 +47,7 @@ define void @test17_atomic_weaker(ptr %P, ptr noalias %Q) nounwind ssp {
 ;; the memset.
 define void @test17_atomic_weaker_2(ptr %P, ptr noalias %Q) nounwind ssp {
 ; CHECK-LABEL: @test17_atomic_weaker_2(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %P, i8 42, i64 8, i32 1)
@@ -59,7 +59,7 @@ define void @test17_atomic_weaker_2(ptr %P, ptr noalias %Q) nounwind ssp {
 define void @test17v(ptr %P, ptr %Q) nounwind ssp {
 ; CHECK-LABEL: @test17v(
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 42, i64 8, i1 true)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[Q:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memset.p0.i64(ptr %P, i8 42, i64 8, i1 true)
@@ -71,8 +71,8 @@ define void @test17v(ptr %P, ptr %Q) nounwind ssp {
 ; inequal and overlapping).
 define void @test18(ptr %P, ptr %Q, ptr %R) nounwind ssp {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[R:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
@@ -93,7 +93,7 @@ define void @test18_atomic(ptr %P, ptr %Q, ptr %R) nounwind ssp {
 
 define void @test_memset_memcpy_inline(ptr noalias %P, ptr noalias %Q) {
 ; CHECK-LABEL: @test_memset_memcpy_inline(
-; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 12, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memset.p0.i64(ptr %P, i8 42, i64 8, i1 false)
@@ -105,7 +105,7 @@ define void @test_store_memcpy_inline(ptr noalias %P, ptr noalias %Q) {
 ; CHECK-LABEL: @test_store_memcpy_inline(
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    store i8 4, ptr [[P_4]], align 1
-; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[Q:%.*]], i64 4, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[Q:%.*]], i64 4, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, ptr %P

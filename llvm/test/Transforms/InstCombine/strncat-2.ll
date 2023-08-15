@@ -14,7 +14,7 @@ define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) @a)
 ; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr @a, i32 [[STRLEN]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -96,7 +96,7 @@ define ptr @test5(ptr %str, i32 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[STR]], i32 [[STRLEN]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i8 0)
 ; CHECK-NEXT:    ret ptr [[STR]]
 ;
   %temp1 = call ptr @strncat(ptr %str, ptr @hello, i32 10)

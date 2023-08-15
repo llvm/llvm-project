@@ -123,15 +123,15 @@ define void @huge_size() {
 ; CHECK-NEXT:    store i64 undef, ptr [[ARRAY_SUB_2_SROA_10_0_GEP_2_4_SROA_IDX]], align 1
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.3:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ARRAY]], ptr [[ARRAY_SUB_1]], i64 1600, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ARRAY]], ptr [[ARRAY_SUB_1]], i64 1600, i8 0)
 ; CHECK-NEXT:    [[GEP_3_1:%.*]] = getelementptr [5 x [5 x [5 x { i64, i64 }]]], ptr [[ARRAY]], i64 0, i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_1]], ptr [[ARRAY_SUB_1]], i64 1600, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_1]], ptr [[ARRAY_SUB_1]], i64 1600, i8 0)
 ; CHECK-NEXT:    [[GEP_3_2:%.*]] = getelementptr [5 x [5 x [5 x { i64, i64 }]]], ptr [[ARRAY]], i64 0, i64 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_2]], ptr [[ARRAY_SUB_1]], i64 1600, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_2]], ptr [[ARRAY_SUB_1]], i64 1600, i8 0)
 ; CHECK-NEXT:    [[GEP_3_3:%.*]] = getelementptr [5 x [5 x [5 x { i64, i64 }]]], ptr [[ARRAY]], i64 0, i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_3]], ptr [[ARRAY_SUB_1]], i64 1600, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_3]], ptr [[ARRAY_SUB_1]], i64 1600, i8 0)
 ; CHECK-NEXT:    [[GEP_3_4:%.*]] = getelementptr [5 x [5 x [5 x { i64, i64 }]]], ptr [[ARRAY]], i64 0, i64 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_4]], ptr [[ARRAY_SUB_1]], i64 1600, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP_3_4]], ptr [[ARRAY_SUB_1]], i64 1600, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 start:

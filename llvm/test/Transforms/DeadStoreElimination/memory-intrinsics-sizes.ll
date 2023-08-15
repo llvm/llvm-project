@@ -68,7 +68,7 @@ define void @memset_and_store_2(ptr %ptr, i64 %len) {
 
 define void @memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)
@@ -78,8 +78,8 @@ define void @memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %l
 
 define void @memcpy_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memcpy_different_size_values_1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN_2:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN_2:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %len.1, i1 false)
@@ -89,8 +89,8 @@ define void @memcpy_different_size_values_1(ptr noalias %src, ptr noalias %dst, 
 
 define void @memcpy_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_different_size_values_2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 100, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)
@@ -100,8 +100,8 @@ define void @memcpy_different_size_values_2(ptr noalias %src, ptr noalias %dst, 
 
 define void @memcpy_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_different_size_values_3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 100, i1 false)
@@ -111,7 +111,7 @@ define void @memcpy_different_size_values_3(ptr noalias %src, ptr noalias %dst, 
 
 define void @memset_and_memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memset_and_memcpy_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len, i1 false)
@@ -122,7 +122,7 @@ define void @memset_and_memcpy_equal_size_values(ptr noalias %src, ptr noalias %
 define void @memset_and_memcpy_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memset_and_memcpy_different_size_values_1(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_2:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_2:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len.1, i1 false)
@@ -133,7 +133,7 @@ define void @memset_and_memcpy_different_size_values_1(ptr noalias %src, ptr noa
 define void @memset_and_memcpy_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memset_and_memcpy_different_size_values_2(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 100, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len.1, i1 false)
@@ -144,7 +144,7 @@ define void @memset_and_memcpy_different_size_values_2(ptr noalias %src, ptr noa
 define void @memset_and_memcpy_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memset_and_memcpy_different_size_values_3(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 100, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 100, i1 false)
@@ -164,7 +164,7 @@ define void @memcpy_and_memset_equal_size_values(ptr noalias %src, ptr noalias %
 
 define void @memcpy_and_memset_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memcpy_and_memset_different_size_values_1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[LEN_2:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -175,7 +175,7 @@ define void @memcpy_and_memset_different_size_values_1(ptr noalias %src, ptr noa
 
 define void @memcpy_and_memset_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memcpy_and_memset_different_size_values_2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 100, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -186,7 +186,7 @@ define void @memcpy_and_memset_different_size_values_2(ptr noalias %src, ptr noa
 
 define void @memcpy_and_memset_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memcpy_and_memset_different_size_values_3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[LEN_1:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -197,7 +197,7 @@ define void @memcpy_and_memset_different_size_values_3(ptr noalias %src, ptr noa
 
 define void @memmove_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memmove_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)
@@ -207,8 +207,8 @@ define void @memmove_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %
 
 define void @memmove_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memmove_different_size_values_1(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN_2:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN_2:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %len.1, i1 false)
@@ -218,8 +218,8 @@ define void @memmove_different_size_values_1(ptr noalias %src, ptr noalias %dst,
 
 define void @memmove_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memmove_different_size_values_2(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 100, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)
@@ -229,8 +229,8 @@ define void @memmove_different_size_values_2(ptr noalias %src, ptr noalias %dst,
 
 define void @memmove_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memmove_different_size_values_3(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i8 0)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 100, i1 false)
@@ -240,7 +240,7 @@ define void @memmove_different_size_values_3(ptr noalias %src, ptr noalias %dst,
 
 define void @memset_and_memmove_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memset_and_memmove_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len, i1 false)
@@ -251,7 +251,7 @@ define void @memset_and_memmove_equal_size_values(ptr noalias %src, ptr noalias 
 define void @memset_and_memmove_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memset_and_memmove_different_size_values_1(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_2:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_2:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len.1, i1 false)
@@ -262,7 +262,7 @@ define void @memset_and_memmove_different_size_values_1(ptr noalias %src, ptr no
 define void @memset_and_memmove_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memset_and_memmove_different_size_values_2(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 [[LEN_1:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 100, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %len.1, i1 false)
@@ -273,7 +273,7 @@ define void @memset_and_memmove_different_size_values_2(ptr noalias %src, ptr no
 define void @memset_and_memmove_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memset_and_memmove_different_size_values_3(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST:%.*]], i8 0, i64 100, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 100, i1 false)
@@ -293,7 +293,7 @@ define void @memmove_and_memset_equal_size_values(ptr noalias %src, ptr noalias 
 
 define void @memmove_and_memset_different_size_values_1(ptr noalias %src, ptr noalias %dst, i64 %len.1, i64 %len.2) {
 ; CHECK-LABEL: @memmove_and_memset_different_size_values_1(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[LEN_2:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -304,7 +304,7 @@ define void @memmove_and_memset_different_size_values_1(ptr noalias %src, ptr no
 
 define void @memmove_and_memset_different_size_values_2(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memmove_and_memset_different_size_values_2(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN_1:%.*]], i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 100, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -315,7 +315,7 @@ define void @memmove_and_memset_different_size_values_2(ptr noalias %src, ptr no
 
 define void @memmove_and_memset_different_size_values_3(ptr noalias %src, ptr noalias %dst, i64 %len.1) {
 ; CHECK-LABEL: @memmove_and_memset_different_size_values_3(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 100, i8 0)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[LEN_1:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -326,7 +326,7 @@ define void @memmove_and_memset_different_size_values_3(ptr noalias %src, ptr no
 
 define void @memmove_and_memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memmove_and_memcpy_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)
@@ -336,7 +336,7 @@ define void @memmove_and_memcpy_equal_size_values(ptr noalias %src, ptr noalias 
 
 define void @memcpy_and_memmove_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_and_memmove_equal_size_values(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %len, i1 false)

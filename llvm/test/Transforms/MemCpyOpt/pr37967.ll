@@ -14,7 +14,7 @@ define dso_local void @_Z3bar3Foo(ptr byval(%struct.Foo) align 8 %0) {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[AGG_TMP]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8, !dbg [[DBG13:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP1]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(24) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(24) [[TMP1]], i64 24, i1 false), !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(24) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(24) [[TMP1]], i64 24, i8 0), !dbg [[DBG14:![0-9]+]]
 ; CHECK-NEXT:    call void @_Z3bar3Foo(ptr nonnull byval([[STRUCT_FOO]]) align 8 [[TMP1]]), !dbg [[DBG15:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG16:![0-9]+]]
 ;

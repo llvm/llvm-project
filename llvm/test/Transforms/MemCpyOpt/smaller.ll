@@ -20,8 +20,8 @@ define void @foo() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 ; CHECK-NEXT:    store i32 99, ptr getelementptr inbounds ([[STRUCT_S]], ptr @cell, i32 0, i32 1), align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 @cell, i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 @cell, i32 16, i8 0)
 ; CHECK-NEXT:    call void @check(ptr [[AGG_TMP]])
 ; CHECK-NEXT:    ret void
 ;

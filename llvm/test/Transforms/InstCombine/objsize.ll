@@ -158,7 +158,7 @@ define ptr @test5(i32 %n) nounwind ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(20) ptr @malloc(i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @s, align 8
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[TMP0]], ptr noundef nonnull align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false) #[[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[TMP0]], ptr noundef nonnull align 1 dereferenceable(10) [[TMP1]], i32 10, i8 0) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:

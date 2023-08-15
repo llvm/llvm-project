@@ -15,7 +15,7 @@ define void @test-memcpy(i64 %Size) nounwind ssp {
 ; DIS-NONE-NEXT:  bb.nph:
 ; DIS-NONE-NEXT:    [[BASE:%.*]] = alloca i8, i32 10000, align 1
 ; DIS-NONE-NEXT:    [[DEST:%.*]] = alloca i8, i32 10000, align 1
-; DIS-NONE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST]], ptr align 1 [[BASE]], i64 [[SIZE:%.*]], i1 false)
+; DIS-NONE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST]], ptr align 1 [[BASE]], i64 [[SIZE:%.*]], i8 0)
 ; DIS-NONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; DIS-NONE:       for.body:
 ; DIS-NONE-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -66,7 +66,7 @@ define void @test-memcpy(i64 %Size) nounwind ssp {
 ; DIS-MEMSET-NEXT:  bb.nph:
 ; DIS-MEMSET-NEXT:    [[BASE:%.*]] = alloca i8, i32 10000, align 1
 ; DIS-MEMSET-NEXT:    [[DEST:%.*]] = alloca i8, i32 10000, align 1
-; DIS-MEMSET-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST]], ptr align 1 [[BASE]], i64 [[SIZE:%.*]], i1 false)
+; DIS-MEMSET-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST]], ptr align 1 [[BASE]], i64 [[SIZE:%.*]], i8 0)
 ; DIS-MEMSET-NEXT:    br label [[FOR_BODY:%.*]]
 ; DIS-MEMSET:       for.body:
 ; DIS-MEMSET-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]

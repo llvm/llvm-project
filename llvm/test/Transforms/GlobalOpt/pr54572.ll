@@ -12,7 +12,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 ;.
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr getelementptr inbounds ([2 x ptr], ptr @c, i64 0, i64 1), i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr getelementptr inbounds ([2 x ptr], ptr @c, i64 0, i64 1), i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr getelementptr inbounds ([2 x ptr], ptr @c, i64 0, i64 1), i64 8, i1 false)

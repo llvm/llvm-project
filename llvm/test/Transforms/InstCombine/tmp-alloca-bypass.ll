@@ -17,8 +17,8 @@ define void @test(ptr %out) {
 ; CHECK-NEXT:    [[I0:%.*]] = alloca [[T0:%.*]], align 8
 ; CHECK-NEXT:    [[I2:%.*]] = call i1 @get_cond()
 ; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I2]], ptr @g0, ptr @g1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[I0]], ptr noundef nonnull align 8 dereferenceable(16) [[I3]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[OUT:%.*]], ptr noundef nonnull align 8 dereferenceable(16) [[I0]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[I0]], ptr noundef nonnull align 8 dereferenceable(16) [[I3]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[OUT:%.*]], ptr noundef nonnull align 8 dereferenceable(16) [[I0]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %i0 = alloca %t0
@@ -36,7 +36,7 @@ define void @test2() {
 ; CHECK-NEXT:    [[I1:%.*]] = call i32 @func(ptr undef)
 ; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[I1]], 2503
 ; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I2]], ptr @g0, ptr @g1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[I]], ptr noundef nonnull align 8 dereferenceable(16) [[I3]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[I]], ptr noundef nonnull align 8 dereferenceable(16) [[I3]], i64 16, i8 0)
 ; CHECK-NEXT:    [[I5:%.*]] = call i32 @func(ptr nonnull byval([[T0]]) [[I]])
 ; CHECK-NEXT:    unreachable
 ;

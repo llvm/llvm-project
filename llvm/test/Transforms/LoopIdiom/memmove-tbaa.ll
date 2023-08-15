@@ -5,7 +5,7 @@ define void @looper(ptr nocapture %out) {
 ; CHECK-LABEL: @looper(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = getelementptr double, ptr [[OUT:%.*]], i32 16
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i8 0), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -41,7 +41,7 @@ define void @looperBadMerge(ptr nocapture %out) {
 ; CHECK-LABEL: @looperBadMerge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = getelementptr double, ptr [[OUT:%.*]], i32 16
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i1 false), !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i8 0), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -76,7 +76,7 @@ define void @looperGoodMerge(ptr nocapture %out) {
 ; CHECK-LABEL: @looperGoodMerge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = getelementptr double, ptr [[OUT:%.*]], i32 16
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[M]], i64 256, i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
