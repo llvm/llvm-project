@@ -59,13 +59,12 @@ features:
 ## Rule Definition
 
 The core construct for defining a rewrite rule is defined in
-[`PatternBase.td`][PatternBase] as
+[`OpBase.td`][OpBase] as
 
 ```tablegen
 class Pattern<
     dag sourcePattern, list<dag> resultPatterns,
     list<dag> additionalConstraints = [],
-    list<dag> supplementalPatterns = [],
     dag benefitsAdded = (addBenefit 0)>;
 ```
 
@@ -678,36 +677,6 @@ You can
     `TwoResultOp` must has no use);
 *   Apply constraints on multiple bound symbols (`$input` and `TwoResultOp`'s
     first result must have the same element type).
-
-### Supplying additional result patterns
-
-Sometimes we need to add additional code after the result patterns, e.g. coping
-the attributes of the source op to the result ops. These can be specified via
-`SupplementalPatterns` parameter. Similar to auxiliary patterns, they are not
-for replacing results in the source pattern.
-
-For example, we can write
-
-```tablegen
-def GetOwner: NativeCodeCall<"$0.getOwner()">;
-
-def CopyAttrFoo: NativeCodeCallVoid<
-  "$1->setAttr($_builder.getStringAttr(\"foo\"), $0->getAttr(\"foo\"))">;
-
-def CopyAttrBar: NativeCodeCallVoid<
-  "$1->setAttr($_builder.getStringAttr(\"bar\"), $0->getAttr(\"bar\"))">;
-
-
-def : Pattern<
-  (ThreeResultOp:$src ...),
-  [(ZeroResultOp:$dest1 ...), (ThreeResultOp:$dest2 ...)],
-  [(CopyAttrFoo (GetOwner $src), $dest1),
-    (CopyAttrBar (GetOwner $src), (GetOwner $dest2))]>;
-```
-
-This will copy the attribute `foo` and `bar` of `ThreeResultOp` in the source
-pattern to `ZeroResultOp` and `ThreeResultOp` in the result patterns respectively.
-The patterns are executed in specified order.
 
 ### Adjusting benefits
 
