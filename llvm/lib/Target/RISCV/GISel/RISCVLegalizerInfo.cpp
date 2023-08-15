@@ -75,7 +75,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{XLenLLT, XLenLLT}})
+      .legalFor({{XLenLLT, XLenLLT}, {p0, XLenLLT}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT)
       .clampScalar(1, XLenLLT, XLenLLT);
