@@ -31,6 +31,9 @@
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
+static unsigned routineCounter = 0;
+static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
+
 /// Generate the acc.bounds operation from the descriptor information.
 static llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -2721,6 +2724,32 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   llvm_unreachable("unsupported declarative directive");
 }
 
+static void
+genACC(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenACCRoutineConstruct &routineConstruct) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.genLocation(routineConstruct.source);
+  std::optional<Fortran::parser::Name> name =
+      std::get<std::optional<Fortran::parser::Name>>(routineConstruct.t);
+  const auto &clauses =
+      std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
+  if (name)
+    TODO(loc, "acc routine with name");
+  if (!clauses.v.empty())
+    TODO(loc, "acc routine with clauses");
+
+  mlir::func::FuncOp func = builder.getFunction();
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  std::stringstream routineOpName;
+  routineOpName << accRoutinePrefix.str() << routineCounter++;
+  modBuilder.create<mlir::acc::RoutineOp>(
+      loc, routineOpName.str(), func.getName(), mlir::StringAttr{},
+      mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{},
+      mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::IntegerAttr{});
+}
+
 void Fortran::lower::genOpenACCConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -2774,8 +2803,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            TODO(converter.genLocation(routineConstruct.source),
-                 "OpenACC Routine construct not lowered yet!");
+            genACC(converter, eval, routineConstruct);
           },
       },
       accDeclConstruct.u);
