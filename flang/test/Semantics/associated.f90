@@ -70,6 +70,8 @@ subroutine assoc()
     procedure(subrInt), pointer :: subProcPointer
     procedure(), pointer :: implicitProcPointer
     procedure(subrCannotBeCalledfromImplicit), pointer :: cannotBeCalledfromImplicitPointer
+    !ERROR: 'neverdeclared' must be an abstract interface or a procedure with an explicit interface
+    procedure(neverDeclared), pointer :: badPointer
     logical :: lVar
     type(t1) :: t1x
     type(t1), target :: t1xtarget
@@ -210,5 +212,10 @@ subroutine assoc()
     lvar = associated(intPointerArr, targetIntArr([2,1]))
     !ERROR: TARGET= argument 'targetintcoarray[1_8]' may not have a vector subscript or coindexing
     lvar = associated(intPointerVar1, targetIntCoarray[1])
+    !ERROR: 'neverdeclared' is not a procedure
+    !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
+    !ERROR: 'neverdeclared' is not a procedure
+    !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
+    lvar = associated(badPointer)
   end subroutine test
 end subroutine assoc
