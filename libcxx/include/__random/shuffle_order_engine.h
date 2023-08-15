@@ -108,13 +108,9 @@ public:
     void seed() {__e_.seed(); __init();}
     _LIBCPP_INLINE_VISIBILITY
     void seed(result_type __sd) {__e_.seed(__sd); __init();}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, shuffle_order_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q) {__e_.seed(__q); __init();}
 
     // generating functions
@@ -174,23 +170,15 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     result_type __eval2(true_type) {return __evalf<__k, 0>();}
 
-    template <uint64_t _Np, uint64_t _Dp>
+    template <uint64_t _Np, uint64_t _Dp, __enable_if_t<(__uratio<_Np, _Dp>::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)), int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            (__uratio<_Np, _Dp>::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)),
-            result_type
-        >::type
+        result_type
         __eval(__uratio<_Np, _Dp>)
             {return __evalf<__uratio<_Np, _Dp>::num, __uratio<_Np, _Dp>::den>();}
 
-    template <uint64_t _Np, uint64_t _Dp>
+    template <uint64_t _Np, uint64_t _Dp, __enable_if_t<__uratio<_Np, _Dp>::num <= 0xFFFFFFFFFFFFFFFFull / (_Max - _Min), int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __uratio<_Np, _Dp>::num <= 0xFFFFFFFFFFFFFFFFull / (_Max - _Min),
-            result_type
-        >::type
+        result_type
         __eval(__uratio<_Np, _Dp>)
         {
             const size_t __j = static_cast<size_t>(__uratio<_Np, _Dp>::num * (__y_ - _Min)
