@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wdocumentation -ast-dump=json %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -Wdocumentation -ast-dump=json %s | FileCheck %s
 
 int global_decl;
 extern __attribute__((alias("global_decl"))) int global_alias;
@@ -24,7 +24,7 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 73,
+// CHECK-NEXT:   "offset": 97,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 3,
 // CHECK-NEXT:   "col": 5,
@@ -32,12 +32,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 69,
+// CHECK-NEXT:    "offset": 93,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 73,
+// CHECK-NEXT:    "offset": 97,
 // CHECK-NEXT:    "col": 5,
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
@@ -53,19 +53,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 135,
+// CHECK-NEXT:   "offset": 159,
 // CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 50,
 // CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 86,
+// CHECK-NEXT:    "offset": 110,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 135,
+// CHECK-NEXT:    "offset": 159,
 // CHECK-NEXT:    "col": 50,
 // CHECK-NEXT:    "tokLen": 12
 // CHECK-NEXT:   }
@@ -82,12 +82,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "AliasAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 108,
+// CHECK-NEXT:      "offset": 132,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 127,
+// CHECK-NEXT:      "offset": 151,
 // CHECK-NEXT:      "col": 42,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -101,18 +101,18 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 242,
+// CHECK-NEXT:   "offset": 266,
 // CHECK-NEXT:   "col": 50,
 // CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 195,
+// CHECK-NEXT:    "offset": 219,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 242,
+// CHECK-NEXT:    "offset": 266,
 // CHECK-NEXT:    "col": 50,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   }
@@ -127,12 +127,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "CleanupAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 210,
+// CHECK-NEXT:      "offset": 234,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 234,
+// CHECK-NEXT:      "offset": 258,
 // CHECK-NEXT:      "col": 42,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -153,19 +153,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 282,
+// CHECK-NEXT:   "offset": 306,
 // CHECK-NEXT:   "line": 11,
 // CHECK-NEXT:   "col": 33,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 250,
+// CHECK-NEXT:    "offset": 274,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 282,
+// CHECK-NEXT:    "offset": 306,
 // CHECK-NEXT:    "col": 33,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -181,12 +181,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 265,
+// CHECK-NEXT:      "offset": 289,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 265,
+// CHECK-NEXT:      "offset": 289,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -199,19 +199,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 341,
+// CHECK-NEXT:   "offset": 365,
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 43,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 299,
+// CHECK-NEXT:    "offset": 323,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 341,
+// CHECK-NEXT:    "offset": 365,
 // CHECK-NEXT:    "col": 43,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -227,12 +227,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 314,
+// CHECK-NEXT:      "offset": 338,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 333,
+// CHECK-NEXT:      "offset": 357,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -246,19 +246,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 415,
+// CHECK-NEXT:   "offset": 439,
 // CHECK-NEXT:   "line": 13,
 // CHECK-NEXT:   "col": 58,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 358,
+// CHECK-NEXT:    "offset": 382,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 415,
+// CHECK-NEXT:    "offset": 439,
 // CHECK-NEXT:    "col": 58,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -274,12 +274,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 373,
+// CHECK-NEXT:      "offset": 397,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 407,
+// CHECK-NEXT:      "offset": 431,
 // CHECK-NEXT:      "col": 50,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -294,19 +294,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 466,
+// CHECK-NEXT:   "offset": 490,
 // CHECK-NEXT:   "line": 15,
 // CHECK-NEXT:   "col": 34,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 433,
+// CHECK-NEXT:    "offset": 457,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 466,
+// CHECK-NEXT:    "offset": 490,
 // CHECK-NEXT:    "col": 34,
 // CHECK-NEXT:    "tokLen": 16
 // CHECK-NEXT:   }
@@ -322,12 +322,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "UnavailableAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 448,
+// CHECK-NEXT:      "offset": 472,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 448,
+// CHECK-NEXT:      "offset": 472,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     }
@@ -340,19 +340,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 527,
+// CHECK-NEXT:   "offset": 551,
 // CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 44,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 484,
+// CHECK-NEXT:    "offset": 508,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 527,
+// CHECK-NEXT:    "offset": 551,
 // CHECK-NEXT:    "col": 44,
 // CHECK-NEXT:    "tokLen": 16
 // CHECK-NEXT:   }
@@ -368,12 +368,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "UnavailableAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 499,
+// CHECK-NEXT:      "offset": 523,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 519,
+// CHECK-NEXT:      "offset": 543,
 // CHECK-NEXT:      "col": 36,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -387,19 +387,19 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 593,
+// CHECK-NEXT:   "offset": 617,
 // CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 48,
 // CHECK-NEXT:   "tokLen": 11
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 546,
+// CHECK-NEXT:    "offset": 570,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 593,
+// CHECK-NEXT:    "offset": 617,
 // CHECK-NEXT:    "col": 48,
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
@@ -415,12 +415,12 @@ __attribute__ ((section ("SECTION_NAME"))) int section_var;
 // CHECK-NEXT:    "kind": "SectionAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 562,
+// CHECK-NEXT:      "offset": 586,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 585,
+// CHECK-NEXT:      "offset": 609,
 // CHECK-NEXT:      "col": 40,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
