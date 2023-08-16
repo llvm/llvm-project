@@ -308,7 +308,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                                 : (getHeatColor(1));
 
     std::string Attrs = "color=\"" + EdgeColor + "ff\", style=filled," +
-                        " fillcolor=\"" + Color + "70\"";
+                        " fillcolor=\"" + Color + "70\"" +
+                        " fontname=\"Courier\"";
     return Attrs;
   }
   bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
