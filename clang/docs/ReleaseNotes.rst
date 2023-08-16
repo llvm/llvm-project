@@ -252,6 +252,7 @@ AST Matchers
 ------------
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
+- Add ``macroQualifiedType``.
 
 clang-format
 ------------
