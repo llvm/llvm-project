@@ -14,20 +14,21 @@
 #ifndef LLVM_CLANG_AST_EXPRCONCEPTS_H
 #define LLVM_CLANG_AST_EXPRCONCEPTS_H
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <utility>
 #include <string>
+#include <utility>
 
 namespace clang {
 class ASTStmtReader;
@@ -466,6 +467,13 @@ public:
     return R->getKind() == RK_Nested;
   }
 };
+
+using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
+
+/// \brief create a Requirement::SubstitutionDiagnostic with only a
+/// SubstitutedEntity and DiagLoc using Sema's allocator.
+Requirement::SubstitutionDiagnostic *
+createSubstDiagAt(Sema &S, SourceLocation Location, EntityPrinter Printer);
 
 } // namespace concepts
 
