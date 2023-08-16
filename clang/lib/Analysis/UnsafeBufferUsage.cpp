@@ -888,7 +888,8 @@ public:
 
   const DeclStmt *lookupDecl(const VarDecl *VD) const {
     auto It = Defs.find(VD);
-    assert(It != Defs.end() && "Definition never discovered!");
+    if (It == Defs.end())
+      return nullptr;
     return It->second;
   }
 };
@@ -2053,7 +2054,10 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
                                      ASTContext &Ctx,
                                      UnsafeBufferUsageHandler &Handler) {
   const DeclStmt *DS = Tracker.lookupDecl(VD);
-  assert(DS && "Fixing non-local variables not implemented yet!");
+  if (!DS) {
+    DEBUG_NOTE_DECL_FAIL(VD, " : variables declared this way not implemented yet");
+    return {};
+  }
   if (!DS->isSingleDecl()) {
     // FIXME: to support handling multiple `VarDecl`s in a single `DeclStmt`
     DEBUG_NOTE_DECL_FAIL(VD, " : multiple VarDecls");
