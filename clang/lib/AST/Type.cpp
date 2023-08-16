@@ -1962,7 +1962,7 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
-  if (CanonicalType->isVLSTBuiltinType()) {
+  if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() == BuiltinType::SveBool ||
            (VT->getKind() >= BuiltinType::SveInt8 &&
@@ -2179,7 +2179,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
   if (const auto *VT = dyn_cast<MatrixType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
-  if (CanonicalType->isVLSTBuiltinType()) {
+  if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() >= BuiltinType::SveUint8 &&
            VT->getKind() <= BuiltinType::SveUint64;
@@ -2433,7 +2433,7 @@ bool Type::isRVVSizelessBuiltinType() const {
   return false;
 }
 
-bool Type::isVLSTBuiltinType() const {
+bool Type::isSveVLSBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
     case BuiltinType::SveInt8:
@@ -2460,7 +2460,7 @@ bool Type::isVLSTBuiltinType() const {
 }
 
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
-  assert(isVLSTBuiltinType() && "unsupported type!");
+  assert(isSveVLSBuiltinType() && "unsupported type!");
 
   const BuiltinType *BTy = castAs<BuiltinType>();
   if (BTy->getKind() == BuiltinType::SveBool)

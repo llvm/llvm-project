@@ -8363,7 +8363,7 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
   }
 
   // Attribute can only be attached to a single SVE vector or predicate type.
-  if (!CurType->isVLSTBuiltinType()) {
+  if (!CurType->isSveVLSBuiltinType()) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_sve_type)
         << Attr << CurType;
     Attr.setInvalid();
