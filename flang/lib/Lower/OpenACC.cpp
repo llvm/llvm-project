@@ -3048,6 +3048,14 @@ void Fortran::lower::attachDeclarePostAllocAction(
 void Fortran::lower::attachDeclarePreDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Value beginOpValue, const Fortran::semantics::Symbol &sym) {
+  if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyIn) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyInReadOnly) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopy) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyOut) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccDeviceResident))
+    return;
+
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePreDeallocSuffix.str();
   beginOpValue.getDefiningOp()->setAttr(
@@ -3062,6 +3070,14 @@ void Fortran::lower::attachDeclarePreDeallocAction(
 void Fortran::lower::attachDeclarePostDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
+  if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyIn) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyInReadOnly) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopy) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccCopyOut) &&
+      !sym.test(Fortran::semantics::Symbol::Flag::AccDeviceResident))
+    return;
+
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation &op = builder.getInsertionBlock()->back();
