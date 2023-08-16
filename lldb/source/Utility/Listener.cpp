@@ -231,8 +231,7 @@ bool Listener::FindNextEventInternal(
       // to return it so it should be okay to get the next event off the queue
       // here - and it might be useful to do that in the "DoOnRemoval".
       lock.unlock();
-      if (!m_is_shadow)
-        event_sp->DoOnRemoval();
+      event_sp->DoOnRemoval();
     }
     return true;
   }
