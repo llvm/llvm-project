@@ -8,6 +8,9 @@ Tags:
     SwiftName: InWrongContext
 Namespaces:
   - Name: Namespace1
+    Typedefs:
+      - Name: my_typedef
+        SwiftName: SwiftTypedef
     Globals:
       - Name: varInNamespace
         SwiftName: swiftVarInNamespace

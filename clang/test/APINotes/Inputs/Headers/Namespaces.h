@@ -28,4 +28,6 @@ static int varInNestedNamespace = 2;
 namespace Nested1 { namespace Namespace1 {} }
 } // namespace Namespace1
 
-namespace Namespace1 {}
+namespace Namespace1 {
+typedef int my_typedef;
+}
