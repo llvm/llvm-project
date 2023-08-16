@@ -250,6 +250,10 @@ Bug Fixes to C++ Support
   (`#64962 <https://github.com/llvm/llvm-project/issues/64962>`_) and
   (`#28679 <https://github.com/llvm/llvm-project/issues/28679>`_).
 
+- Fix a crash caused by substitution failure in expression requirements.
+  (`#64172 <https://github.com/llvm/llvm-project/issues/64172>`_) and
+  (`#64723 <https://github.com/llvm/llvm-project/issues/64723>`_).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
