@@ -2006,6 +2006,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     assert(MinDepDistBytes == MinDepDistBytesOld &&
            "An update to MinDepDistBytes requires an update to "
            "MaxSafeVectorWidthInBits");
+    (void)MinDepDistBytesOld;
     return Dependence::BackwardVectorizableButPreventsForwarding;
   }
 
