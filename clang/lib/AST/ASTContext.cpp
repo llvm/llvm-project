@@ -9461,7 +9461,7 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
 
 /// getSVETypeSize - Return SVE vector or predicate register size.
 static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
-  assert(Ty->isVLSTBuiltinType() && "Invalid SVE Type");
+  assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
   if (Ty->getKind() == BuiltinType::SveBool ||
       Ty->getKind() == BuiltinType::SveCount)
     return (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth();
