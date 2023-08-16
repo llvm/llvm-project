@@ -188,6 +188,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
+  let extraClassDeclaration = [{
+    /// Returns the number of reduction variables.
+    unsigned getNumReductionVars() { return getReductionVars().size(); }
+  }];
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
