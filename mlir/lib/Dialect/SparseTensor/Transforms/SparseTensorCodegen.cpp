@@ -539,15 +539,8 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   }
 }
 
-static TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
-                                              Value tensor) {
-  auto tTp = llvm::cast<TensorType>(tensor.getType());
-  auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
-  return builder.create<bufferization::ToMemrefOp>(loc, mTp, tensor)
-      .getResult();
-}
-
-Value genSliceToSize(OpBuilder &builder, Location loc, Value mem, Value sz) {
+static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
+                            Value sz) {
   auto elemTp = llvm::cast<MemRefType>(mem.getType()).getElementType();
   return builder
       .create<memref::SubViewOp>(
