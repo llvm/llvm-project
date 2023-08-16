@@ -2736,18 +2736,46 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
   if (name)
     TODO(loc, "acc routine with name");
-  if (!clauses.v.empty())
-    TODO(loc, "acc routine with clauses");
 
   mlir::func::FuncOp func = builder.getFunction();
   mlir::ModuleOp mod = builder.getModule();
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   std::stringstream routineOpName;
   routineOpName << accRoutinePrefix.str() << routineCounter++;
-  modBuilder.create<mlir::acc::RoutineOp>(
+  auto routineOp = modBuilder.create<mlir::acc::RoutineOp>(
       loc, routineOpName.str(), func.getName(), mlir::StringAttr{},
       mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{},
       mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::IntegerAttr{});
+
+  for (const Fortran::parser::AccClause &clause : clauses.v) {
+    if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+      routineOp.setSeqAttr(builder.getUnitAttr());
+    } else if (const auto *gangClause =
+                   std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
+      routineOp.setGangAttr(builder.getUnitAttr());
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x = *gangClause->v;
+        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+          if (const auto *dim =
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
+            const std::optional<int64_t> dimValue = Fortran::evaluate::ToInt64(
+                *Fortran::semantics::GetExpr(dim->v));
+            if (!dimValue)
+              mlir::emitError(loc,
+                              "dim value must be a constant positive integer");
+            routineOp.setGangDimAttr(
+                builder.getIntegerAttr(builder.getIntegerType(32), *dimValue));
+          }
+        }
+      }
+    } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+      routineOp.setVectorAttr(builder.getUnitAttr());
+    } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+      routineOp.setWorkerAttr(builder.getUnitAttr());
+    } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
+      routineOp.setNohostAttr(builder.getUnitAttr());
+    }
+  }
 
   llvm::SmallVector<mlir::SymbolRefAttr> routines;
   if (func.getOperation()->hasAttr(mlir::acc::getRoutineInfoAttrName())) {
