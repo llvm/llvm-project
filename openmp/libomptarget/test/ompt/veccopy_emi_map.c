@@ -62,10 +62,12 @@ int main() {
 /// CHECK: Callback Target EMI: kind=1 endpoint=1
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback Submit EMI: endpoint=1 req_num_teams=1
@@ -82,10 +84,12 @@ int main() {
 /// CHECK: Callback Target EMI: kind=1 endpoint=1
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback Submit EMI: endpoint=1 req_num_teams=0
