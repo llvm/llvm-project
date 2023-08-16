@@ -40,11 +40,10 @@ static void Handler(int signo) {
 
 void *Thread(void *arg) {
   fprintf(stderr, "Thread Frame:%p\n", __builtin_frame_address(0));
-  stack_t stack = {
-      .ss_sp = arg,
-      .ss_flags = 0,
-      .ss_size = kStackSize,
-  };
+  stack_t stack = {};
+  stack.ss_sp = arg;
+  stack.ss_flags = 0;
+  stack.ss_size = kStackSize;
   assert(sigaltstack(&stack, nullptr) == 0);
 
   struct sigaction sa = {};
