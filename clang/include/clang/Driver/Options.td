@@ -7869,7 +7869,7 @@ def _SLASH_ZH_SHA1 : CLFlag<"ZH:SHA1">,
 def _SLASH_ZH_SHA_256 : CLFlag<"ZH:SHA_256">,
   HelpText<"Use SHA256 for file checksums in debug info">,
   Alias<gsrc_hash_EQ>, AliasArgs<["sha256"]>;
-def _SLASH_Zi : CLFlag<"Zi">, Alias<g_Flag>,
+def _SLASH_Zi : CLFlag<"Zi", [CLOption, DXCOption]>, Alias<g_Flag>,
   HelpText<"Like /Z7">;
 def _SLASH_Zp : CLJoined<"Zp">,
   HelpText<"Set default maximum struct packing alignment">,
@@ -8202,3 +8202,6 @@ def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
+def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
+  Flags<[Ignored, NoXarchOption]>, Visibility<[DXCOption]>,
+  HelpText<"Embed PDB in shader container (ignored)">;
