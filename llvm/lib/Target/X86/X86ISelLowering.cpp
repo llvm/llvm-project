@@ -22423,6 +22423,11 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   return Sub.getValue(1);
 }
 
+bool X86TargetLowering::isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode Cond,
+                                                          EVT VT) const {
+  return !VT.isVector() || Cond != ISD::CondCode::SETEQ;
+}
+
 /// Check if replacement of SQRT with RSQRT should be disabled.
 bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
