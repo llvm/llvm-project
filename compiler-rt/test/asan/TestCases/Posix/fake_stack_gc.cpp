@@ -6,9 +6,6 @@
 // FIXME: Investigate.
 // UNSUPPORTED: android
 
-// FIXME: Fails on Darwin
-// UNSUPPORTED: darwin
-
 #include <algorithm>
 #include <assert.h>
 #include <csignal>
@@ -77,14 +74,14 @@ int main(void) {
   if ((uintptr_t)main_stack > (uintptr_t)alt_stack)
     std::swap(alt_stack, main_stack);
 
-  pthread_attr_t attr;
-  assert(pthread_attr_init(&attr) == 0);
-  assert(pthread_attr_setstack(&attr, main_stack, kStackSize) == 0);
-
   fprintf(stderr, "main_stack: %p-%p\n", main_stack,
           (char *)main_stack + kStackSize);
   fprintf(stderr, "alt_stack: %p-%p\n", alt_stack,
           (char *)alt_stack + kStackSize);
+
+  pthread_attr_t attr;
+  assert(pthread_attr_init(&attr) == 0);
+  assert(pthread_attr_setstack(&attr, main_stack, kStackSize) == 0);
 
   pthread_t tid;
   assert(pthread_create(&tid, &attr, Thread, alt_stack) == 0);
