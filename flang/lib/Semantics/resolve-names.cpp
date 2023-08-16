@@ -135,14 +135,15 @@ private:
 //   + AttrsVisitor
 //   | + DeclTypeSpecVisitor
 //   |   + ImplicitRulesVisitor
-//   |     + ScopeHandler -----------+--+
-//   |       + ModuleVisitor ========|==+
-//   |       + InterfaceVisitor      |  |
-//   |       +-+ SubprogramVisitor ==|==+
-//   + ArraySpecVisitor              |  |
-//     + DeclarationVisitor <--------+  |
-//       + ConstructVisitor             |
-//         + ResolveNamesVisitor <------+
+//   |     + ScopeHandler ------------------+
+//   |       + ModuleVisitor -------------+ |
+//   |       + GenericHandler -------+    | |
+//   |       | + InterfaceVisitor    |    | |
+//   |       +-+ SubprogramVisitor ==|==+ | |
+//   + ArraySpecVisitor              |  | | |
+//     + DeclarationVisitor <--------+  | | |
+//       + ConstructVisitor             | | |
+//         + ResolveNamesVisitor <------+-+-+
 
 class BaseVisitor {
 public:
@@ -809,7 +810,23 @@ private:
       Scope *ancestor = nullptr);
 };
 
-class InterfaceVisitor : public virtual ScopeHandler {
+class GenericHandler : public virtual ScopeHandler {
+protected:
+  using ProcedureKind = parser::ProcedureStmt::Kind;
+  void ResolveSpecificsInGeneric(Symbol &, bool isEndOfSpecificationPart);
+  void DeclaredPossibleSpecificProc(Symbol &);
+
+  // Mappings of generics to their as-yet specific proc names and kinds
+  using SpecificProcMapType =
+      std::multimap<Symbol *, std::pair<const parser::Name *, ProcedureKind>>;
+  SpecificProcMapType specificsForGenericProcs_;
+  // inversion of SpecificProcMapType: maps pending proc names to generics
+  using GenericProcMapType = std::multimap<SourceName, Symbol *>;
+  GenericProcMapType genericsForSpecificProcs_;
+};
+
+class InterfaceVisitor : public virtual ScopeHandler,
+                         public virtual GenericHandler {
 public:
   bool Pre(const parser::InterfaceStmt &);
   void Post(const parser::InterfaceStmt &);
@@ -840,15 +857,7 @@ private:
   std::stack<GenericInfo> genericInfo_;
   const GenericInfo &GetGenericInfo() const { return genericInfo_.top(); }
   void SetGenericSymbol(Symbol &symbol) { genericInfo_.top().symbol = &symbol; }
-
-  using ProcedureKind = parser::ProcedureStmt::Kind;
-  // mapping of generic to its specific proc names and kinds
-  using SpecificProcMapType =
-      std::multimap<Symbol *, std::pair<const parser::Name *, ProcedureKind>>;
-  SpecificProcMapType specificProcs_;
-
   void AddSpecificProcs(const std::list<parser::Name> &, ProcedureKind);
-  void ResolveSpecificsInGeneric(Symbol &, bool isEndOfSpecificationPart);
   void ResolveNewSpecifics();
 };
 
@@ -904,7 +913,7 @@ private:
 };
 
 class DeclarationVisitor : public ArraySpecVisitor,
-                           public virtual ScopeHandler {
+                           public virtual GenericHandler {
 public:
   using ArraySpecVisitor::Post;
   using ScopeHandler::Post;
@@ -3309,35 +3318,32 @@ bool InterfaceVisitor::isAbstract() const {
 
 void InterfaceVisitor::AddSpecificProcs(
     const std::list<parser::Name> &names, ProcedureKind kind) {
-  for (const auto &name : names) {
-    specificProcs_.emplace(
-        GetGenericInfo().symbol, std::make_pair(&name, kind));
+  if (Symbol * symbol{GetGenericInfo().symbol};
+      symbol && symbol->has<GenericDetails>()) {
+    for (const auto &name : names) {
+      specificsForGenericProcs_.emplace(symbol, std::make_pair(&name, kind));
+      genericsForSpecificProcs_.emplace(name.source, symbol);
+    }
   }
 }
 
 // By now we should have seen all specific procedures referenced by name in
 // this generic interface. Resolve those names to symbols.
-void InterfaceVisitor::ResolveSpecificsInGeneric(
+void GenericHandler::ResolveSpecificsInGeneric(
     Symbol &generic, bool isEndOfSpecificationPart) {
   auto &details{generic.get<GenericDetails>()};
   UnorderedSymbolSet symbolsSeen;
   for (const Symbol &symbol : details.specificProcs()) {
     symbolsSeen.insert(symbol.GetUltimate());
   }
-  auto range{specificProcs_.equal_range(&generic)};
+  auto range{specificsForGenericProcs_.equal_range(&generic)};
   SpecificProcMapType retain;
   for (auto it{range.first}; it != range.second; ++it) {
     const parser::Name *name{it->second.first};
     auto kind{it->second.second};
-    const Symbol *symbol{FindSymbol(*name)};
-    if (!isEndOfSpecificationPart && symbol &&
-        &symbol->owner() != &generic.owner()) {
-      // Don't mistakenly use a name from the enclosing scope while there's
-      // still a chance that it could be overridden by a later declaration in
-      // this scope.
-      retain.emplace(&generic, std::make_pair(name, kind));
-      continue;
-    }
+    const Symbol *symbol{isEndOfSpecificationPart
+            ? FindSymbol(*name)
+            : FindInScope(generic.owner(), *name)};
     ProcedureDefinitionClass defClass{ProcedureDefinitionClass::None};
     const Symbol *specific{symbol};
     const Symbol *ultimate{nullptr};
@@ -3400,8 +3406,15 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(
           MakeOpName(generic.name()));
     }
   }
-  specificProcs_.erase(range.first, range.second);
-  specificProcs_.merge(std::move(retain));
+  specificsForGenericProcs_.erase(range.first, range.second);
+  specificsForGenericProcs_.merge(std::move(retain));
+}
+
+void GenericHandler::DeclaredPossibleSpecificProc(Symbol &proc) {
+  auto range{genericsForSpecificProcs_.equal_range(proc.name())};
+  for (auto iter{range.first}; iter != range.second; ++iter) {
+    ResolveSpecificsInGeneric(*iter->second, false);
+  }
 }
 
 void InterfaceVisitor::ResolveNewSpecifics() {
@@ -4140,6 +4153,9 @@ void SubprogramVisitor::EndSubprogram(
         HandleLanguageBinding(name.symbol, name.source, &suffix->binding);
       }
     }
+  }
+  if (inInterfaceBlock() && currScope().symbol()) {
+    DeclaredPossibleSpecificProc(*currScope().symbol());
   }
   PopScope();
 }
@@ -5477,6 +5493,7 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   if (dtDetails) {
     dtDetails->add_component(symbol);
   }
+  DeclaredPossibleSpecificProc(symbol);
 }
 
 bool DeclarationVisitor::Pre(const parser::TypeBoundProcedurePart &) {
