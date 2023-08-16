@@ -204,7 +204,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   constexpr int EXP_SEPERATOR_LEN = 1;
 
   padding = static_cast<int>(to_conv.min_width - (sign_char > 0 ? 1 : 0) -
-                             PREFIX_LEN - mant_digits -
+                             PREFIX_LEN - mant_digits - trailing_zeroes -
                              static_cast<int>(has_hexadecimal_point) -
                              EXP_SEPERATOR_LEN - (EXP_LEN - exp_cur));
   if (padding < 0)
