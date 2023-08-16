@@ -53,6 +53,47 @@ constexpr char DECIMAL_POINT = '.';
 // This is used to represent which direction the number should be rounded.
 enum class RoundDirection { Up, Down, Even };
 
+LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
+                                               bool is_negative) {
+  switch (fputil::quick_get_round()) {
+  case FE_TONEAREST:
+    // Round to nearest, if it's exactly halfway then round to even.
+    if (last_digit != 5) {
+      return last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
+    } else {
+      return !truncated ? RoundDirection::Even : RoundDirection::Up;
+    }
+  case FE_DOWNWARD:
+    if (is_negative && (truncated || last_digit > 0)) {
+      return RoundDirection::Up;
+    } else {
+      return RoundDirection::Down;
+    }
+  case FE_UPWARD:
+    if (!is_negative && (truncated || last_digit > 0)) {
+      return RoundDirection::Up;
+    } else {
+      return RoundDirection::Down;
+    }
+    return is_negative ? RoundDirection::Down : RoundDirection::Up;
+  case FE_TOWARDZERO:
+    return RoundDirection::Down;
+  default:
+    return RoundDirection::Down;
+  }
+}
+
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa) {
+  const int32_t required_twos = -base_2_exp - digits_after_point - 1;
+  const bool has_trailing_zeros =
+      required_twos <= 0 ||
+      (required_twos < 60 &&
+       multiple_of_power_of_2(mantissa, static_cast<uint32_t>(required_twos)));
+  return has_trailing_zeros;
+}
+
 class PaddingWriter {
   bool left_justified = false;
   bool leading_zeroes = false;
@@ -127,7 +168,9 @@ class FloatWriter {
   Writer *writer;                   // Writes to the final output.
   PaddingWriter padding_writer; // Handles prefixes/padding, uses total_digits.
 
-  int flush_buffer() {
+  int flush_buffer(bool round_up_max_blocks = false) {
+    const char MAX_BLOCK_DIGIT = (round_up_max_blocks ? '0' : '9');
+
     // Write the most recent buffered block, and mark has_written
     if (!has_written) {
       has_written = true;
@@ -174,12 +217,12 @@ class FloatWriter {
         has_decimal_point) {
       size_t digits_to_write = digits_before_decimal - total_digits_written;
       if (digits_to_write > 0) {
-        RET_IF_RESULT_NEGATIVE(writer->write('9', digits_to_write));
+        RET_IF_RESULT_NEGATIVE(writer->write(MAX_BLOCK_DIGIT, digits_to_write));
       }
       RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
       if ((BLOCK_SIZE * max_block_count) - digits_to_write > 0) {
         RET_IF_RESULT_NEGATIVE(writer->write(
-            '9', (BLOCK_SIZE * max_block_count) - digits_to_write));
+            MAX_BLOCK_DIGIT, (BLOCK_SIZE * max_block_count) - digits_to_write));
       }
       // add 1 for the decimal point
       total_digits_written += BLOCK_SIZE * max_block_count + 1;
@@ -189,7 +232,8 @@ class FloatWriter {
 
     // Clear the buffer of max blocks
     if (max_block_count > 0) {
-      RET_IF_RESULT_NEGATIVE(writer->write('9', max_block_count * BLOCK_SIZE));
+      RET_IF_RESULT_NEGATIVE(
+          writer->write(MAX_BLOCK_DIGIT, max_block_count * BLOCK_SIZE));
       total_digits_written += max_block_count * BLOCK_SIZE;
       max_block_count = 0;
     }
@@ -268,19 +312,23 @@ public:
       end_buff[count] = int_to_str[count + 1 + (BLOCK_SIZE - block_digits)];
     }
 
-    char low_digit;
+    char low_digit = '0';
     if (block_digits > 0) {
       low_digit = end_buff[block_digits - 1];
     } else if (max_block_count > 0) {
       low_digit = '9';
-    } else {
+    } else if (buffered_digits > 0) {
       low_digit = block_buffer[buffered_digits - 1];
     }
+
+    bool round_up_max_blocks = false;
 
     // Round up
     if (round == RoundDirection::Up ||
         (round == RoundDirection::Even && low_digit % 2 != 0)) {
       bool has_carry = true;
+      round_up_max_blocks = true; // if we're rounding up, we might need to
+                                  // round up the max blocks that are buffered.
       // handle the low block that we're adding
       for (int count = static_cast<int>(block_digits) - 1;
            count >= 0 && has_carry; --count) {
@@ -289,6 +337,8 @@ public:
         } else {
           end_buff[count] += 1;
           has_carry = false;
+          round_up_max_blocks = false; // If the low block isn't all nines, then
+                                       // the max blocks aren't rounded up.
         }
       }
       // handle the high block that's buffered
@@ -333,7 +383,7 @@ public:
     // Either we intend to round down, or the rounding up is complete. Flush the
     // buffers.
 
-    RET_IF_RESULT_NEGATIVE(flush_buffer());
+    RET_IF_RESULT_NEGATIVE(flush_buffer(round_up_max_blocks));
 
     // And then write the final block.
     RET_IF_RESULT_NEGATIVE(writer->write({end_buff, block_digits}));
@@ -571,42 +621,11 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
           digits /= 10;
         }
         RoundDirection round;
-        // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
-        const int32_t requiredTwos =
-            -(exponent - MANT_WIDTH) - static_cast<int32_t>(precision) - 1;
-        const bool trailingZeros =
-            requiredTwos <= 0 ||
-            (requiredTwos < 60 &&
-             multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                                    static_cast<uint32_t>(requiredTwos)));
-        switch (fputil::quick_get_round()) {
-        case FE_TONEAREST:
-          // Round to nearest, if it's exactly halfway then round to even.
-          if (last_digit != 5) {
-            round = last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
-          } else {
-            round = trailingZeros ? RoundDirection::Even : RoundDirection::Up;
-          }
-          break;
-        case FE_DOWNWARD:
-          if (is_negative && (!trailingZeros || last_digit > 0)) {
-            round = RoundDirection::Up;
-          } else {
-            round = RoundDirection::Down;
-          }
-          break;
-        case FE_UPWARD:
-          if (!is_negative && (!trailingZeros || last_digit > 0)) {
-            round = RoundDirection::Up;
-          } else {
-            round = RoundDirection::Down;
-          }
-          round = is_negative ? RoundDirection::Down : RoundDirection::Up;
-          break;
-        case FE_TOWARDZERO:
-          round = RoundDirection::Down;
-          break;
-        }
+        const bool truncated =
+            !zero_after_digits(exponent - MANT_WIDTH, precision,
+                               float_bits.get_explicit_mantissa());
+        round = get_round_direction(last_digit, truncated, is_negative);
+
         RET_IF_RESULT_NEGATIVE(
             float_writer.write_last_block_dec(digits, maximum, round));
         break;
