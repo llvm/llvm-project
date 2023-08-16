@@ -72,7 +72,7 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
+    libc.src.__support.File.platform_stdout
 )
 
 add_entrypoint_object(
@@ -84,7 +84,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
+    libc.src.__support.File.platform_stdin
 )
 
 add_entrypoint_object(
@@ -96,7 +96,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
+    libc.src.__support.File.platform_stdout
 )
 
 add_entrypoint_object(
@@ -108,5 +108,5 @@ add_entrypoint_object(
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
+    libc.src.__support.File.platform_stderr
 )
