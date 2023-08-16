@@ -1502,103 +1502,6 @@ llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
   return llvm::PointerType::getUnqual(Kmpc_MicroTy);
 }
 
-llvm::FunctionCallee
-CGOpenMPRuntime::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
-                                             bool IsGPUDistribute) {
-  assert((IVSize == 32 || IVSize == 64) &&
-         "IV size is not compatible with the omp runtime");
-  StringRef Name;
-  if (IsGPUDistribute)
-    Name = IVSize == 32 ? (IVSigned ? "__kmpc_distribute_static_init_4"
-                                    : "__kmpc_distribute_static_init_4u")
-                        : (IVSigned ? "__kmpc_distribute_static_init_8"
-                                    : "__kmpc_distribute_static_init_8u");
-  else
-    Name = IVSize == 32 ? (IVSigned ? "__kmpc_for_static_init_4"
-                                    : "__kmpc_for_static_init_4u")
-                        : (IVSigned ? "__kmpc_for_static_init_8"
-                                    : "__kmpc_for_static_init_8u");
-
-  llvm::Type *ITy = IVSize == 32 ? CGM.Int32Ty : CGM.Int64Ty;
-  auto *PtrTy = llvm::PointerType::getUnqual(ITy);
-  llvm::Type *TypeParams[] = {
-    getIdentTyPointerTy(),                     // loc
-    CGM.Int32Ty,                               // tid
-    CGM.Int32Ty,                               // schedtype
-    llvm::PointerType::getUnqual(CGM.Int32Ty), // p_lastiter
-    PtrTy,                                     // p_lower
-    PtrTy,                                     // p_upper
-    PtrTy,                                     // p_stride
-    ITy,                                       // incr
-    ITy                                        // chunk
-  };
-  auto *FnTy =
-      llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-  return CGM.CreateRuntimeFunction(FnTy, Name);
-}
-
-llvm::FunctionCallee
-CGOpenMPRuntime::createDispatchInitFunction(unsigned IVSize, bool IVSigned) {
-  assert((IVSize == 32 || IVSize == 64) &&
-         "IV size is not compatible with the omp runtime");
-  StringRef Name =
-      IVSize == 32
-          ? (IVSigned ? "__kmpc_dispatch_init_4" : "__kmpc_dispatch_init_4u")
-          : (IVSigned ? "__kmpc_dispatch_init_8" : "__kmpc_dispatch_init_8u");
-  llvm::Type *ITy = IVSize == 32 ? CGM.Int32Ty : CGM.Int64Ty;
-  llvm::Type *TypeParams[] = { getIdentTyPointerTy(), // loc
-                               CGM.Int32Ty,           // tid
-                               CGM.Int32Ty,           // schedtype
-                               ITy,                   // lower
-                               ITy,                   // upper
-                               ITy,                   // stride
-                               ITy                    // chunk
-  };
-  auto *FnTy =
-      llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-  return CGM.CreateRuntimeFunction(FnTy, Name);
-}
-
-llvm::FunctionCallee
-CGOpenMPRuntime::createDispatchFiniFunction(unsigned IVSize, bool IVSigned) {
-  assert((IVSize == 32 || IVSize == 64) &&
-         "IV size is not compatible with the omp runtime");
-  StringRef Name =
-      IVSize == 32
-          ? (IVSigned ? "__kmpc_dispatch_fini_4" : "__kmpc_dispatch_fini_4u")
-          : (IVSigned ? "__kmpc_dispatch_fini_8" : "__kmpc_dispatch_fini_8u");
-  llvm::Type *TypeParams[] = {
-      getIdentTyPointerTy(), // loc
-      CGM.Int32Ty,           // tid
-  };
-  auto *FnTy =
-      llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FnTy, Name);
-}
-
-llvm::FunctionCallee
-CGOpenMPRuntime::createDispatchNextFunction(unsigned IVSize, bool IVSigned) {
-  assert((IVSize == 32 || IVSize == 64) &&
-         "IV size is not compatible with the omp runtime");
-  StringRef Name =
-      IVSize == 32
-          ? (IVSigned ? "__kmpc_dispatch_next_4" : "__kmpc_dispatch_next_4u")
-          : (IVSigned ? "__kmpc_dispatch_next_8" : "__kmpc_dispatch_next_8u");
-  llvm::Type *ITy = IVSize == 32 ? CGM.Int32Ty : CGM.Int64Ty;
-  auto *PtrTy = llvm::PointerType::getUnqual(ITy);
-  llvm::Type *TypeParams[] = {
-    getIdentTyPointerTy(),                     // loc
-    CGM.Int32Ty,                               // tid
-    llvm::PointerType::getUnqual(CGM.Int32Ty), // p_lastiter
-    PtrTy,                                     // p_lower
-    PtrTy,                                     // p_upper
-    PtrTy                                      // p_stride
-  };
-  auto *FnTy =
-      llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
-  return CGM.CreateRuntimeFunction(FnTy, Name);
-}
-
 llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
 convertDeviceClause(const VarDecl *VD) {
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
@@ -2749,7 +2652,8 @@ void CGOpenMPRuntime::emitForDispatchInit(
       CGF.Builder.getIntN(IVSize, 1),                        // Stride
       Chunk                                                  // Chunk
   };
-  CGF.EmitRuntimeCall(createDispatchInitFunction(IVSize, IVSigned), Args);
+  CGF.EmitRuntimeCall(OMPBuilder.createDispatchInitFunction(IVSize, IVSigned),
+                      Args);
 }
 
 static void emitForStaticInitCall(
@@ -2816,7 +2720,8 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                                  : OMP_IDENT_WORK_SECTIONS);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
-      createForStaticInitFunction(Values.IVSize, Values.IVSigned, false);
+      OMPBuilder.createForStaticInitFunction(Values.IVSize, Values.IVSigned,
+                                             false);
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, ScheduleKind.M1, ScheduleKind.M2, Values);
@@ -2835,7 +2740,7 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   bool isGPUDistribute =
       CGM.getLangOpts().OpenMPIsTargetDevice &&
       (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
-  StaticInitFunction = createForStaticInitFunction(
+  StaticInitFunction = OMPBuilder.createForStaticInitFunction(
       Values.IVSize, Values.IVSigned, isGPUDistribute);
 
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
@@ -2879,7 +2784,8 @@ void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
     return;
   // Call __kmpc_for_dynamic_fini_(4|8)[u](ident_t *loc, kmp_int32 tid);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
-  CGF.EmitRuntimeCall(createDispatchFiniFunction(IVSize, IVSigned), Args);
+  CGF.EmitRuntimeCall(OMPBuilder.createDispatchFiniFunction(IVSize, IVSigned),
+                      Args);
 }
 
 llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
@@ -2899,8 +2805,8 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
       UB.getPointer(), // &Upper
       ST.getPointer()  // &Stride
   };
-  llvm::Value *Call =
-      CGF.EmitRuntimeCall(createDispatchNextFunction(IVSize, IVSigned), Args);
+  llvm::Value *Call = CGF.EmitRuntimeCall(
+      OMPBuilder.createDispatchNextFunction(IVSize, IVSigned), Args);
   return CGF.EmitScalarConversion(
       Call, CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/1),
       CGF.getContext().BoolTy, Loc);
