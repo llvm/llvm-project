@@ -48,6 +48,10 @@
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
+#if CLANG_ENABLE_CIR
+#include "cir/CIRASTConsumer.h"
+#endif
+
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
@@ -466,6 +470,15 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     Consumers.push_back(std::move(AnalysisConsumer));
   }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
+
+#if CLANG_ENABLE_CIR
+  if (Context.isCheckEnabled(cir::LifetimeCheckName)) {
+    std::unique_ptr<cir::CIRASTConsumer> CIRConsumer =
+        std::make_unique<cir::CIRASTConsumer>(Compiler, File, Context);
+    Consumers.push_back(std::move(CIRConsumer));
+  }
+#endif // CLANG_ENABLE_CIR
+
   return std::make_unique<ClangTidyASTConsumer>(
       std::move(Consumers), std::move(Profiling), std::move(Finder),
       std::move(Checks));

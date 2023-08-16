@@ -77,6 +77,9 @@ add_subdirectory(performance)
 add_subdirectory(portability)
 add_subdirectory(readability)
 add_subdirectory(zircon)
+if(CLANG_ENABLE_CIR)
+  add_subdirectory(cir)
+endif()
 set(ALL_CLANG_TIDY_CHECKS
   clangTidyAndroidModule
   clangTidyAbseilModule
@@ -104,6 +107,9 @@ set(ALL_CLANG_TIDY_CHECKS
   )
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
   list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyMPIModule)
+endif()
+if(CLANG_ENABLE_CIR)
+  list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyCIRModule)
 endif()
 set(ALL_CLANG_TIDY_CHECKS ${ALL_CLANG_TIDY_CHECKS} PARENT_SCOPE)
 

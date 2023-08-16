@@ -137,6 +137,13 @@ extern volatile int ZirconModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
     ZirconModuleAnchorSource;
 
+#if CLANG_ENABLE_CIR
+// This anchor is used to force the linker to link the CIRModule.
+extern volatile int CIRModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED CIRModuleAnchorDestination =
+    CIRModuleAnchorSource;
+#endif
+
 } // namespace clang::tidy
 
 #endif

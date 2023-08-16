@@ -7,4 +7,6 @@
 
 #cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
+#cmakedefine01 CLANG_ENABLE_CIR
+
 #endif
