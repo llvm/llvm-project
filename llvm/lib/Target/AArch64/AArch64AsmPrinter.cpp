@@ -138,9 +138,9 @@ public:
     SetupMachineFunction(MF);
 
     if (STI->isTargetCOFF()) {
-      bool Internal = MF.getFunction().hasInternalLinkage();
-      COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
-                                              : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+      bool Local = MF.getFunction().hasLocalLinkage();
+      COFF::SymbolStorageClass Scl =
+          Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
       int Type =
         COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
