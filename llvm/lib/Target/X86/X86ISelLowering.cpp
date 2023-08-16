@@ -20134,12 +20134,12 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   assert(SrcSVT.getSizeInBits() > DstSVT.getSizeInBits() && "Bad truncation");
   unsigned NumStages = Log2_32(SrcSVT.getSizeInBits() / DstSVT.getSizeInBits());
 
-  // Truncation to sub-128bit vXi32 can be better handled with shuffles.
-  if (DstSVT == MVT::i32 && SrcVT.getSizeInBits() <= 128)
-    return SDValue();
-
+  // Truncation from 128-bit to vXi32 can be better handled with PSHUFD.
+  // Truncation to sub-64-bit vXi16 can be better handled with PSHUFD/PSHUFLW.
   // Truncation from v2i64 to v2i8 can be better handled with PSHUFB.
-  if (DstVT == MVT::v2i8 && SrcVT == MVT::v2i64 && Subtarget.hasSSSE3())
+  if ((DstSVT == MVT::i32 && SrcVT.getSizeInBits() <= 128) ||
+      (DstSVT == MVT::i16 && SrcVT.getSizeInBits() <= (64 * NumStages)) ||
+      (DstVT == MVT::v2i8 && SrcVT == MVT::v2i64 && Subtarget.hasSSSE3()))
     return SDValue();
 
   // Prefer to lower v4i64 -> v4i32 as a shuffle unless we can cheaply
