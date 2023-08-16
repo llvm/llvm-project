@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -1639,12 +1640,6 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
                              const Fortran::lower::SomeExpr &expr,
                              mlir::Type strTy, mlir::Type lenTy,
                              Fortran::lower::StatementContext &stmtCtx) {
-  // Possible optimization TODO: Instead of inlining a selectOp every time there
-  // is a variable reference to a format statement, a function with the selectOp
-  // could be generated to reduce code size. It is not clear if such an
-  // optimization would be deployed very often or improve the object code
-  // beyond, say, what GVN/GCM might produce.
-
   // Create the requisite blocks to inline a selectOp.
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Block *startBlock = builder.getBlock();
@@ -1657,9 +1652,7 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
 
   auto symbol = GetLastSymbol(&expr);
   Fortran::lower::pft::LabelSet labels;
-  [[maybe_unused]] auto foundLabelSet =
-      converter.lookupLabelSet(*symbol, labels);
-  assert(foundLabelSet && "Label not found in map");
+  converter.lookupLabelSet(*symbol, labels);
 
   for (auto label : labels) {
     indexList.push_back(label);
@@ -1698,11 +1691,11 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
   // Create the unit case which should result in an error.
   auto *unitBlock = block->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToEnd(unitBlock);
-
-  // Crash the program.
+  fir::runtime::genReportFatalUserError(
+      builder, loc,
+      "Assigned format variable '" + symbol->name().ToString() +
+          "' has not been assigned a valid format label");
   builder.create<fir::UnreachableOp>(loc);
-
-  // Add unit case to the select statement.
   blockList.push_back(unitBlock);
 
   // Lower the selectOp.
