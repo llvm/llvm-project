@@ -458,6 +458,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   config->sharedMemory = args.hasArg(OPT_shared_memory);
+  config->soName = args.getLastArgValue(OPT_soname);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
