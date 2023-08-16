@@ -26,3 +26,16 @@ func.func @execute_region_multiple_blocks(%t: tensor<5xf32>) -> tensor<5xf32> {
   }
   func.return %0 : tensor<5xf32>
 }
+
+// -----
+
+func.func @inconsistent_memory_space_scf_for(%lb: index, %ub: index, %step: index) -> tensor<10xf32> {
+  %0 = bufferization.alloc_tensor() {memory_space = 0 : ui64} : tensor<10xf32>
+  %1 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<10xf32>
+  // expected-error @below{{init_arg and yielded value bufferize to inconsistent memory spaces}}
+  %2 = scf.for %iv = %lb to %ub step %step iter_args(%arg = %0) -> tensor<10xf32> {
+    // expected-error @below {{failed to bufferize op}}
+    scf.yield %1 : tensor<10xf32>
+  }
+  return %2 : tensor<10xf32>
+}
