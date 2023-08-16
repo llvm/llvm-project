@@ -1057,6 +1057,9 @@ namespace llvm {
     bool preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
                                    EVT ExtVT) const override;
 
+    bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode Cond,
+                                           EVT VT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
