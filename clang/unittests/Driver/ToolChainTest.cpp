@@ -183,8 +183,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       "/usr/gcc/7/lib/gcc/x86_64-pc-solaris2.11/7.5.0/32/crtbegin.o",
       "/usr/gcc/7/lib/gcc/x86_64-pc-solaris2.11/7.5.0/crtbegin.o",
       "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0/crtbegin.o",
-      "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0/sparcv8plus/"
-      "crtbegin.o",
+      "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0/sparcv8plus/crtbegin.o",
       "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0/32/crtbegin.o",
       "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0/crtbegin.o",
       "/usr/gcc/4.7/lib/gcc/i386-pc-solaris2.11/4.7.3/amd64/crtbegin.o",
