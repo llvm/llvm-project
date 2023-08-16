@@ -931,7 +931,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
   (void)OutlinedFnID;
 
   // Return value of the runtime offloading call.
-  Value *Return;
+  Value *Return = nullptr;
 
   // Arguments for the target kernel.
   SmallVector<Value *> ArgsVector;
