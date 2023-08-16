@@ -303,6 +303,9 @@ def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;
 /// Function always comes back to callsite.
 def WillReturn : EnumAttr<"willreturn", [FnAttr]>;
 
+/// Pointer argument is writable.
+def Writable : EnumAttr<"writable", [ParamAttr]>;
+
 /// Function only writes to memory.
 def WriteOnly : EnumAttr<"writeonly", [ParamAttr]>;
 
