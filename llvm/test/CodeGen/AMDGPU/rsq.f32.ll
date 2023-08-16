@@ -406,7 +406,7 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s5, s1
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
@@ -537,7 +537,7 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s5, s1
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
@@ -658,7 +658,7 @@ define float @v_neg_rsq_neg_f32(float %val) {
 ; GCN-DAZ-UNSAFE:       ; %bb.0:
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_f32:
@@ -711,8 +711,8 @@ define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v1, -v1
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_v2f32:
@@ -917,7 +917,7 @@ define float @v_neg_rsq_f32(float %val) {
 ; GCN-DAZ-UNSAFE:       ; %bb.0:
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_f32:
@@ -969,8 +969,8 @@ define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v1
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-DAZ-UNSAFE-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_v2f32:
