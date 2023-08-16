@@ -879,10 +879,10 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
           .addReg(RISCV::VL, RegState::Implicit);
       return;
     }
-    // Otherwise use an AVL of 0 to avoid depending on previous vl.
+    // Otherwise use an AVL of 1 to avoid depending on previous vl.
     BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-        .addImm(0)
+        .addImm(1)
         .addImm(Info.encodeVTYPE());
     return;
   }
