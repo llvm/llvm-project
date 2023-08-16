@@ -498,15 +498,10 @@ public:
   /// object files can return an AddressableBits object that can can be
   /// used to set the address masks in the Process.
   ///
-  /// \param[out] address_bits
-  ///     Can be used to set the Process address masks.
-  ///
   /// \return
-  ///     Returns true if addressable bits metadata was found.
-  virtual bool GetAddressableBits(lldb_private::AddressableBits &address_bits) {
-    address_bits.Clear();
-    return false;
-  }
+  ///     Returns an AddressableBits object which can be used to set
+  ///     the address masks in the Process.
+  virtual lldb_private::AddressableBits GetAddressableBits() { return {}; }
 
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
   /// the core file.  lldb can iterate over the pages looking for a valid

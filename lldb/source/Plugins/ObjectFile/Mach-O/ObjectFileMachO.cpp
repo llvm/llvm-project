@@ -5486,8 +5486,8 @@ std::string ObjectFileMachO::GetIdentifierString() {
   return result;
 }
 
-bool ObjectFileMachO::GetAddressableBits(AddressableBits &address_bits) {
-  address_bits.Clear();
+AddressableBits ObjectFileMachO::GetAddressableBits() {
+  AddressableBits addressable_bits;
 
   Log *log(GetLog(LLDBLog::Process));
   ModuleSP module_sp(GetModule());
@@ -5515,24 +5515,24 @@ bool ObjectFileMachO::GetAddressableBits(AddressableBits &address_bits) {
             if (version == 3) {
               uint32_t num_addr_bits = m_data.GetU32_unchecked(&offset);
               if (num_addr_bits != 0) {
-                address_bits.SetAddressableBits(num_addr_bits);
+                addressable_bits.SetAddressableBits(num_addr_bits);
               }
               LLDB_LOGF(log,
                         "LC_NOTE 'addrable bits' v3 found, value %d "
                         "bits",
                         num_addr_bits);
-              return true;
+              break;
             }
             if (version == 4) {
               uint32_t lo_addr_bits = m_data.GetU32_unchecked(&offset);
               uint32_t hi_addr_bits = m_data.GetU32_unchecked(&offset);
 
-              address_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
+              addressable_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
               LLDB_LOGF(log,
                         "LC_NOTE 'addrable bits' v4 found, value %d & %d bits",
                         lo_addr_bits, hi_addr_bits);
 
-              return true;
+              break;
             }
           }
         }
@@ -5540,7 +5540,7 @@ bool ObjectFileMachO::GetAddressableBits(AddressableBits &address_bits) {
       offset = cmd_offset + lc.cmdsize;
     }
   }
-  return false;
+  return addressable_bits;
 }
 
 bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,

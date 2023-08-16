@@ -1661,6 +1661,18 @@ for this region.
 //                                       start code that may be changing the
 //                                       page table setup, a dynamically set
 //                                       value may be needed.
+//  "low_mem_addressing_bits" unsigned optional, specifies how many bits in 
+//                                       addresses in low memory are significant 
+//                                       for addressing, base 10.  AArch64 can 
+//                                       have different page table setups for low 
+//                                       and high memory, and therefore a different 
+//                                       number of bits used for addressing.
+//  "high_mem_addressing_bits" unsigned optional, specifies how many bits in 
+//                                       addresses in high memory are significant 
+//                                       for addressing, base 10.  AArch64 can have 
+//                                       different page table setups for low and 
+//                                       high memory, and therefore a different 
+//                                       number of bits used for addressing.
 //
 // BEST PRACTICES:
 //  Since register values can be supplied with this packet, it is often useful
