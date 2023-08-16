@@ -1,5 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -x objective-c++
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::my_typedef -x objective-c++ | FileCheck -check-prefix=CHECK-TYPEDEF-IN-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::varInNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-GLOBAL-IN-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::funcInNamespace -x objective-c++ | FileCheck -check-prefix=CHECK-FUNC-IN-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-NAMESPACE %s
@@ -10,6 +11,10 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter Namespace1::Nested1::Namespace1::char_box -x objective-c++ | FileCheck -check-prefix=CHECK-STRUCT-IN-DEEP-NESTED-NAMESPACE %s
 
 #import <Namespaces.h>
+
+// CHECK-TYPEDEF-IN-NAMESPACE: Dumping Namespace1::my_typedef:
+// CHECK-TYPEDEF-IN-NAMESPACE-NEXT: TypedefDecl {{.+}} imported in Namespaces my_typedef 'int'
+// CHECK-TYPEDEF-IN-NAMESPACE: SwiftNameAttr {{.+}} <<invalid sloc>> "SwiftTypedef"
 
 // CHECK-GLOBAL-IN-NAMESPACE: Dumping Namespace1::varInNamespace:
 // CHECK-GLOBAL-IN-NAMESPACE-NEXT: VarDecl {{.+}} imported in Namespaces varInNamespace 'int' static cinit
