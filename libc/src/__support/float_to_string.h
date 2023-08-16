@@ -423,17 +423,8 @@ class FloatToString {
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
-    exponent = float_bits.get_exponent();
+    exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
-
-    // Handle the exponent for numbers with a 0 exponent.
-    if (exponent == -EXP_BIAS) {
-      if (mantissa > 0) { // Subnormals
-        ++exponent;
-      } else { // Zeroes
-        exponent = 0;
-      }
-    }
 
     // Adjust for the width of the mantissa.
     exponent -= MANT_WIDTH;
