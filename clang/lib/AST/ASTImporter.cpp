@@ -419,6 +419,7 @@ namespace clang {
     ExpectedType VisitObjCInterfaceType(const ObjCInterfaceType *T);
     ExpectedType VisitObjCObjectType(const ObjCObjectType *T);
     ExpectedType VisitObjCObjectPointerType(const ObjCObjectPointerType *T);
+    ExpectedType VisitMacroQualifiedType(const MacroQualifiedType *T);
 
     // Importing declarations
     Error ImportDeclParts(NamedDecl *D, DeclarationName &Name, NamedDecl *&ToD,
@@ -1699,6 +1700,17 @@ ASTNodeImporter::VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
     return ToPointeeTypeOrErr.takeError();
 
   return Importer.getToContext().getObjCObjectPointerType(*ToPointeeTypeOrErr);
+}
+
+ExpectedType
+ASTNodeImporter::VisitMacroQualifiedType(const MacroQualifiedType *T) {
+  ExpectedType ToUnderlyingTypeOrErr = import(T->getUnderlyingType());
+  if (!ToUnderlyingTypeOrErr)
+    return ToUnderlyingTypeOrErr.takeError();
+
+  IdentifierInfo *ToIdentifier = Importer.Import(T->getMacroIdentifier());
+  return Importer.getToContext().getMacroQualifiedType(*ToUnderlyingTypeOrErr,
+                                                       ToIdentifier);
 }
 
 //----------------------------------------------------------------------------
