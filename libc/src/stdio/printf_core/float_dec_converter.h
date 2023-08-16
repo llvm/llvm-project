@@ -406,19 +406,24 @@ public:
       }
     }
 
-    char low_digit;
+    char low_digit = '0';
     if (block_digits > 0) {
       low_digit = end_buff[block_digits - 1];
     } else if (max_block_count > 0) {
       low_digit = '9';
-    } else {
+    } else if (buffered_digits > 0) {
       low_digit = block_buffer[buffered_digits - 1];
     }
+
+    bool round_up_max_blocks = false;
 
     // Round up
     if (round == RoundDirection::Up ||
         (round == RoundDirection::Even && low_digit % 2 != 0)) {
       bool has_carry = true;
+      round_up_max_blocks = true; // if we're rounding up, we might need to
+                                  // round up the max blocks that are buffered.
+
       // handle the low block that we're adding
       for (int count = static_cast<int>(block_digits) - 1;
            count >= 0 && has_carry; --count) {
@@ -427,6 +432,8 @@ public:
         } else {
           end_buff[count] += 1;
           has_carry = false;
+          round_up_max_blocks = false; // If the low block isn't all nines, then
+                                       // the max blocks aren't rounded up.
         }
       }
       // handle the high block that's buffered
@@ -490,7 +497,7 @@ public:
     // Either we intend to round down, or the rounding up is complete. Flush the
     // buffers.
 
-    RET_IF_RESULT_NEGATIVE(flush_buffer());
+    RET_IF_RESULT_NEGATIVE(flush_buffer(round_up_max_blocks));
 
     // And then write the final block. It's written via the buffer so that if
     // this is also the first block, the decimal point will be placed correctly.
@@ -740,10 +747,17 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
     last_block_size = IntegerToString<intmax_t>(digits).size();
   }
 
+  // This tracks if the number is truncated, that meaning that the digits after
+  // last_digit are non-zero.
+  bool truncated = false;
+
   // This is the last block.
   const size_t maximum = precision + 1 - digits_written;
   uint32_t last_digit = 0;
   for (uint32_t k = 0; k < last_block_size - maximum; ++k) {
+    if (last_digit > 0)
+      truncated = true;
+
     last_digit = digits % 10;
     digits /= 10;
   }
@@ -751,47 +765,41 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   // If the last block we read doesn't have the digit after the end of what
   // we'll print, then we need to read the next block to get that digit.
   if (maximum == last_block_size) {
-    BlockInt extra_block = float_converter.get_block(cur_block - 1);
+    --cur_block;
+    BlockInt extra_block = float_converter.get_block(cur_block);
     last_digit = extra_block / ((MAX_BLOCK / 10) + 1);
+    if (extra_block % ((MAX_BLOCK / 10) + 1) > 0) {
+      truncated = true;
+    }
   }
 
   RoundDirection round;
-  // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
-  const int32_t requiredTwos =
-      -(exponent - MANT_WIDTH) - static_cast<int32_t>(precision) - 1;
-  const bool trailingZeros =
-      requiredTwos <= 0 ||
-      (requiredTwos < 60 &&
-       multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                              static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::quick_get_round()) {
-  case FE_TONEAREST:
-    // Round to nearest, if it's exactly halfway then round to even.
-    if (last_digit != 5) {
-      round = last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
-    } else {
-      round = trailingZeros ? RoundDirection::Even : RoundDirection::Up;
+
+  // If we've already seen a truncated digit, then we don't need to check any
+  // more.
+  if (!truncated) {
+    // Check the blocks above the decimal point
+    if (cur_block >= 0) {
+      // Check every block until the decimal point for non-zero digits.
+      for (int cur_extra_block = cur_block - 1; cur_extra_block >= 0;
+           --cur_extra_block) {
+        BlockInt extra_block = float_converter.get_block(cur_extra_block);
+        if (extra_block > 0) {
+          truncated = true;
+          break;
+        }
+      }
     }
-    break;
-  case FE_DOWNWARD:
-    if (is_negative && (!trailingZeros || last_digit > 0)) {
-      round = RoundDirection::Up;
-    } else {
-      round = RoundDirection::Down;
+    // If it's still not truncated and there are digits below the decimal point
+    if (!truncated && exponent - MANT_WIDTH < 0) {
+      // Use the formula from %f.
+      truncated =
+          !zero_after_digits(exponent - MANT_WIDTH, precision - final_exponent,
+                             float_bits.get_explicit_mantissa());
     }
-    break;
-  case FE_UPWARD:
-    if (!is_negative && (!trailingZeros || last_digit > 0)) {
-      round = RoundDirection::Up;
-    } else {
-      round = RoundDirection::Down;
-    }
-    round = is_negative ? RoundDirection::Down : RoundDirection::Up;
-    break;
-  case FE_TOWARDZERO:
-    round = RoundDirection::Down;
-    break;
   }
+  round = get_round_direction(last_digit, truncated, is_negative);
+
   RET_IF_RESULT_NEGATIVE(float_writer.write_last_block_exp(
       digits, maximum, round, final_exponent, a + 'E' - 'A'));
 
@@ -984,12 +992,17 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
     }
   }
 
+  bool truncated = false;
+
   // Find the digit after the lowest digit that we'll actually print to
   // determine the rounding.
   const uint32_t maximum =
       exp_precision + 1 - static_cast<uint32_t>(digits_checked);
   uint32_t last_digit = 0;
   for (uint32_t k = 0; k < last_block_size - maximum; ++k) {
+    if (last_digit > 0)
+      truncated = true;
+
     last_digit = digits % 10;
     digits /= 10;
   }
@@ -997,49 +1010,42 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   // If the last block we read doesn't have the digit after the end of what
   // we'll print, then we need to read the next block to get that digit.
   if (maximum == last_block_size) {
-    BlockInt extra_block = float_converter.get_block(cur_block - 1);
+    --cur_block;
+    BlockInt extra_block = float_converter.get_block(cur_block);
     last_digit = extra_block / ((MAX_BLOCK / 10) + 1);
+
+    if (extra_block % ((MAX_BLOCK / 10) + 1) > 0)
+      truncated = true;
   }
 
   // TODO: unify this code across the three float conversions.
   RoundDirection round;
-  // Is m * 10^(additionalDigits + 1) / 2^(-exponent) integer?
-  const int32_t requiredTwos =
-      -(exponent - MANT_WIDTH) - static_cast<int32_t>(exp_precision) - 1;
-  // TODO: rename this variable to remove confusion with trailing_zeroes
-  const bool trailingZeros =
-      requiredTwos <= 0 ||
-      (requiredTwos < 60 &&
-       multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                              static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::quick_get_round()) {
-  case FE_TONEAREST:
-    // Round to nearest, if it's exactly halfway then round to even.
-    if (last_digit != 5) {
-      round = last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
-    } else {
-      round = trailingZeros ? RoundDirection::Even : RoundDirection::Up;
+
+  // If we've already seen a truncated digit, then we don't need to check any
+  // more.
+  if (!truncated) {
+    // Check the blocks above the decimal point
+    if (cur_block >= 0) {
+      // Check every block until the decimal point for non-zero digits.
+      for (int cur_extra_block = cur_block - 1; cur_extra_block >= 0;
+           --cur_extra_block) {
+        BlockInt extra_block = float_converter.get_block(cur_extra_block);
+        if (extra_block > 0) {
+          truncated = true;
+          break;
+        }
+      }
     }
-    break;
-  case FE_DOWNWARD:
-    if (is_negative && (!trailingZeros || last_digit > 0)) {
-      round = RoundDirection::Up;
-    } else {
-      round = RoundDirection::Down;
+    // If it's still not truncated and there are digits below the decimal point
+    if (!truncated && exponent - MANT_WIDTH < 0) {
+      // Use the formula from %f.
+      truncated =
+          !zero_after_digits(exponent - MANT_WIDTH, exp_precision - base_10_exp,
+                             float_bits.get_explicit_mantissa());
     }
-    break;
-  case FE_UPWARD:
-    if (!is_negative && (!trailingZeros || last_digit > 0)) {
-      round = RoundDirection::Up;
-    } else {
-      round = RoundDirection::Down;
-    }
-    round = is_negative ? RoundDirection::Down : RoundDirection::Up;
-    break;
-  case FE_TOWARDZERO:
-    round = RoundDirection::Down;
-    break;
   }
+
+  round = get_round_direction(last_digit, truncated, is_negative);
 
   bool round_up;
   if (round == RoundDirection::Up) {
@@ -1047,8 +1053,32 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   } else if (round == RoundDirection::Down) {
     round_up = false;
   } else {
-    // RoundDirection is even, so check the extra digit.
-    uint32_t low_digit = digits % 10;
+    // RoundDirection is even, so check the lowest digit that will be printed.
+    uint32_t low_digit;
+
+    // maximum is the number of digits that will remain in digits after getting
+    // last_digit. If it's greater than zero, we can just check the lowest digit
+    // in digits.
+    if (maximum > 0) {
+      low_digit = digits % 10;
+    } else {
+      // Else if there are trailing nines, then the low digit is a nine, same
+      // with zeroes.
+      if (trailing_nines > 0) {
+        low_digit = 9;
+      } else if (trailing_zeroes > 0) {
+        low_digit = 0;
+      } else {
+        // If there are no trailing zeroes or nines, then the round direction
+        // doesn't actually matter here. Since this conversion passes off the
+        // value to another one for final conversion, rounding only matters to
+        // determine if the exponent is higher than expected (with an all nine
+        // number) or to determine the trailing zeroes to trim. In this case
+        // low_digit is set to 0, but it could be set to any number.
+
+        low_digit = 0;
+      }
+    }
     round_up = (low_digit % 2) != 0;
   }
 
