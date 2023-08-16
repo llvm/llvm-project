@@ -555,7 +555,6 @@ define <2 x i32> @dup_const4_ext(<4 x i32> %A) nounwind {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI39_0
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI39_0]
 ; CHECK-GI-NEXT:    add.4s v0, v0, v1
-; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %tmp1 = add <4 x i32> %A, <i32 8421377, i32 8421377, i32 8421377, i32 8421377>
