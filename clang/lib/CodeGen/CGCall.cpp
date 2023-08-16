@@ -40,6 +40,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 using namespace clang;
@@ -4644,7 +4645,24 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  args.add(EmitAnyExprToTemp(E), type);
+  AggValueSlot ArgSlot = AggValueSlot::ignored();
+  if (hasAggregateEvaluationKind(E->getType())) {
+    Address ArgSlotAlloca = Address::invalid();
+    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
+
+    // Emit a lifetime start/end for this temporary. If the type has a
+    // destructor, then we need to keep it alive. FIXME: We should still be able
+    // to end the lifetime after the destructor returns.
+    if (!E->getType().isDestructedType()) {
+      llvm::TypeSize size =
+          CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(E->getType()));
+      if (llvm::Value *lifetimeSize =
+              EmitLifetimeStart(size, ArgSlotAlloca.getPointer()))
+        args.addLifetimeCleanup({ArgSlotAlloca.getPointer(), lifetimeSize});
+    }
+  }
+
+  args.add(EmitAnyExpr(E, ArgSlot), type);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
@@ -5812,6 +5830,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // we can't use the full cleanup mechanism.
   for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
     LifetimeEnd.Emit(*this, /*Flags=*/{});
+
+  for (const CallArgList::EndLifetimeInfo &LT : CallArgs.getLifetimeCleanups())
+    EmitLifetimeEnd(LT.Size, LT.Addr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)
