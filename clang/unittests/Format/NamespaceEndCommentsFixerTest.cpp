@@ -40,6 +40,18 @@ protected:
         Code,
         /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
   }
+
+  bool isFormatted(StringRef Code, const std::vector<tooling::Range> &Ranges,
+                   const FormatStyle &Style = getLLVMStyle()) const {
+    return clang::format::fixNamespaceEndComments(Style, Code, Ranges,
+                                                  "<stdin>")
+        .empty();
+  }
+
+  bool isFormatted(StringRef Code,
+                   const FormatStyle &Style = getLLVMStyle()) const {
+    return isFormatted(Code, {1, tooling::Range(0, Code.size())}, Style);
+  }
 };
 
 TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
@@ -688,48 +700,34 @@ TEST_F(NamespaceEndCommentsFixerTest, KeepsValidMacroEndComment) {
   FormatStyle Style = getLLVMStyle();
   Style.NamespaceMacros.push_back("TESTSUITE");
 
-  EXPECT_EQ("TESTSUITE() {\n"
-            "int i;\n"
-            "} // end anonymous TESTSUITE()",
-            fixNamespaceEndComments("TESTSUITE() {\n"
-                                    "int i;\n"
-                                    "} // end anonymous TESTSUITE()",
-                                    Style));
-  EXPECT_EQ("TESTSUITE(A) {\n"
-            "int i;\n"
-            "} /* end of TESTSUITE(A) */",
-            fixNamespaceEndComments("TESTSUITE(A) {\n"
-                                    "int i;\n"
-                                    "} /* end of TESTSUITE(A) */",
-                                    Style));
-  EXPECT_EQ("TESTSUITE(A) {\n"
-            "int i;\n"
-            "}   //   TESTSUITE(A)",
-            fixNamespaceEndComments("TESTSUITE(A) {\n"
-                                    "int i;\n"
-                                    "}   //   TESTSUITE(A)",
-                                    Style));
-  EXPECT_EQ("TESTSUITE(A::B) {\n"
-            "int i;\n"
-            "} // end TESTSUITE(A::B)",
-            fixNamespaceEndComments("TESTSUITE(A::B) {\n"
-                                    "int i;\n"
-                                    "} // end TESTSUITE(A::B)",
-                                    Style));
-  EXPECT_EQ("TESTSUITE(A) {\n"
-            "int i;\n"
-            "}; // end TESTSUITE(A)",
-            fixNamespaceEndComments("TESTSUITE(A) {\n"
-                                    "int i;\n"
-                                    "}; // end TESTSUITE(A)",
-                                    Style));
-  EXPECT_EQ("TESTSUITE() {\n"
-            "int i;\n"
-            "}; /* unnamed TESTSUITE() */",
-            fixNamespaceEndComments("TESTSUITE() {\n"
-                                    "int i;\n"
-                                    "}; /* unnamed TESTSUITE() */",
-                                    Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE() {\n"
+                          "int i;\n"
+                          "} // end anonymous TESTSUITE()",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE(A) {\n"
+                          "int i;\n"
+                          "} /* end of TESTSUITE(A) */",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE(A) {\n"
+                          "int i;\n"
+                          "}   //   TESTSUITE(A)",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE(A::B) {\n"
+                          "int i;\n"
+                          "} // end TESTSUITE(A::B)",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE(A) {\n"
+                          "int i;\n"
+                          "}; // end TESTSUITE(A)",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE() {\n"
+                          "int i;\n"
+                          "}; /* unnamed TESTSUITE() */",
+                          Style));
+  EXPECT_TRUE(isFormatted("TESTSUITE(\"foo\") {\n"
+                          "int i;\n"
+                          "} // TESTSUITE(\"foo\")",
+                          Style));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
