@@ -429,8 +429,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
       PN->setIncomingBlock(0, PN->getIncomingBlock(PreheaderIdx));
     }
     // Nuke all entries except the zero'th.
-    for (unsigned i = 0, e = PN->getNumIncomingValues()-1; i != e; ++i)
-      PN->removeIncomingValue(e-i, false);
+    PN->removeIncomingValueIf([](unsigned Idx) { return Idx != 0; },
+                              /* DeletePHIIfEmpty */ false);
 
     // Finally, add the newly constructed PHI node as the entry for the BEBlock.
     PN->addIncoming(NewPN, BEBlock);

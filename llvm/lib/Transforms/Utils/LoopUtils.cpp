@@ -556,12 +556,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       // Removes all incoming values from all other exiting blocks (including
       // duplicate values from an exiting block).
       // Nuke all entries except the zero'th entry which is the preheader entry.
-      // NOTE! We need to remove Incoming Values in the reverse order as done
-      // below, to keep the indices valid for deletion (removeIncomingValues
-      // updates getNumIncomingValues and shifts all values down into the
-      // operand being deleted).
-      for (unsigned i = 0, e = P.getNumIncomingValues() - 1; i != e; ++i)
-        P.removeIncomingValue(e - i, false);
+      P.removeIncomingValueIf([](unsigned Idx) { return Idx != 0; },
+                              /* DeletePHIIfEmpty */ false);
 
       assert((P.getNumIncomingValues() == 1 &&
               P.getIncomingBlock(PredIndex) == Preheader) &&
