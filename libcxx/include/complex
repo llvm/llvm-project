@@ -942,35 +942,25 @@ arg(const complex<_Tp>& __c)
     return std::atan2(__c.imag(), __c.real());
 }
 
-template <class _Tp>
+template <class _Tp, __enable_if_t<is_same<_Tp, long double>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if<
-    is_same<_Tp, long double>::value,
-    long double
->::type
+long double
 arg(_Tp __re)
 {
     return std::atan2l(0.L, __re);
 }
 
-template<class _Tp>
+template<class _Tp, __enable_if_t<is_integral<_Tp>::value || is_same<_Tp, double>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value || is_same<_Tp, double>::value,
-    double
->::type
+double
 arg(_Tp __re)
 {
     return std::atan2(0., __re);
 }
 
-template <class _Tp>
+template <class _Tp, __enable_if_t<is_same<_Tp, float>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if<
-    is_same<_Tp, float>::value,
-    float
->::type
+float
 arg(_Tp __re)
 {
     return std::atan2f(0.F, __re);
@@ -1033,13 +1023,9 @@ proj(const complex<_Tp>& __c)
     return __r;
 }
 
-template <class _Tp>
+template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_floating_point<_Tp>::value,
-    typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
->::type
+typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
 proj(_Tp __re)
 {
     if (std::__constexpr_isinf(__re))
@@ -1047,13 +1033,9 @@ proj(_Tp __re)
     return complex<_Tp>(__re);
 }
 
-template <class _Tp>
+template <class _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
->::type
+typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
 proj(_Tp __re)
 {
     typedef typename __libcpp_complex_overload_traits<_Tp>::_ComplexType _ComplexType;
@@ -1173,26 +1155,18 @@ pow(const complex<_Tp>& __x, const complex<_Up>& __y)
     return _VSTD::pow(result_type(__x), result_type(__y));
 }
 
-template<class _Tp, class _Up>
+template<class _Tp, class _Up, __enable_if_t<is_arithmetic<_Up>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_arithmetic<_Up>::value,
-    complex<typename __promote<_Tp, _Up>::type>
->::type
+complex<typename __promote<_Tp, _Up>::type>
 pow(const complex<_Tp>& __x, const _Up& __y)
 {
     typedef complex<typename __promote<_Tp, _Up>::type> result_type;
     return _VSTD::pow(result_type(__x), result_type(__y));
 }
 
-template<class _Tp, class _Up>
+template<class _Tp, class _Up, __enable_if_t<is_arithmetic<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_arithmetic<_Tp>::value,
-    complex<typename __promote<_Tp, _Up>::type>
->::type
+complex<typename __promote<_Tp, _Up>::type>
 pow(const _Tp& __x, const complex<_Up>& __y)
 {
     typedef complex<typename __promote<_Tp, _Up>::type> result_type;

@@ -50,6 +50,8 @@ using namespace lldb;
 using namespace llvm;
 
 namespace {
+using namespace llvm::opt;
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),

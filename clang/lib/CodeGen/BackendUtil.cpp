@@ -768,7 +768,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         CodeGenOpts.InstrProfileOutput.empty() ? getDefaultProfileGenName()
                                                : CodeGenOpts.InstrProfileOutput,
         "", "", CodeGenOpts.MemoryProfileUsePath, nullptr, PGOOptions::IRInstr,
-        PGOOptions::NoCSAction, CodeGenOpts.DebugInfoForProfiling);
+        PGOOptions::NoCSAction, CodeGenOpts.DebugInfoForProfiling,
+        /*PseudoProbeForProfiling=*/false, CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse

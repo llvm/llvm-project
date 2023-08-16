@@ -15,8 +15,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+} // namespace
+
 static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
-  if (const ElaboratedType *ElType = QType->getAs<ElaboratedType>()) {
+  if (const auto *ElType = QType->getAs<ElaboratedType>()) {
     if (const NestedNameSpecifier *NestedSpecifiers = ElType->getQualifier()) {
       unsigned NameSpecifierNestingLevel = 1;
       do {
@@ -38,7 +42,7 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStaticStorageClass()),
+      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStatic()),
                                       varDecl(hasStaticStorageDuration()),
                                       enumConstantDecl())))
           .bind("memberExpression"),

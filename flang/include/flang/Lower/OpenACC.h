@@ -40,6 +40,7 @@ struct OpenACCDeclarativeConstruct;
 
 namespace semantics {
 class SemanticsContext;
+class Symbol;
 }
 
 namespace lower {
@@ -85,6 +86,14 @@ mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(mlir::OpBuilder &,
                                                               llvm::StringRef,
                                                               mlir::Location,
                                                               mlir::Type);
+
+void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                  const Fortran::semantics::Symbol &);
+void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                   mlir::Value beginOpValue,
+                                   const Fortran::semantics::Symbol &);
+void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                    const Fortran::semantics::Symbol &);
 
 } // namespace lower
 } // namespace Fortran

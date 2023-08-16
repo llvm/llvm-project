@@ -886,41 +886,46 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
   Data = Data.substr(ProfileNamesSize);
+
+  N = 0;
+  uint64_t CoverageMappingSize = decodeULEB128(Data.bytes_begin(), &N);
+  if (N > Data.size())
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  Data = Data.substr(N);
+
   // Skip the padding bytes because coverage map data has an alignment of 8.
   size_t Pad = offsetToAlignedAddr(Data.data(), Align(8));
   if (Data.size() < Pad)
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(Pad);
-  if (Data.size() < sizeof(CovMapHeader))
+  if (Data.size() < CoverageMappingSize)
     return make_error<CoverageMapError>(coveragemap_error::malformed);
-  auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
-      Data.substr(0, sizeof(CovMapHeader)).data());
+  StringRef CoverageMapping = Data.substr(0, CoverageMappingSize);
+  Data = Data.substr(CoverageMappingSize);
+
+  // Skip the padding bytes because coverage records data has an alignment of 8.
+  Pad = offsetToAlignedAddr(Data.data(), Align(8));
+  if (Data.size() < Pad)
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  Data = Data.substr(Pad);
+  BinaryCoverageReader::FuncRecordsStorage CoverageRecords =
+      MemoryBuffer::getMemBuffer(Data);
+
+  // Some extra checking.
+  if (CoverageMapping.size() < sizeof(CovMapHeader))
+    return make_error<CoverageMapError>(coveragemap_error::truncated);
+  auto const *CovHeader =
+      reinterpret_cast<const CovMapHeader *>(CoverageMapping.data());
   CovMapVersion Version =
       (CovMapVersion)CovHeader->getVersion<support::endianness::little>();
-  StringRef CoverageMapping;
-  BinaryCoverageReader::FuncRecordsStorage CoverageRecords;
   if (Version < CovMapVersion::Version4) {
-    CoverageMapping = Data;
-    if (CoverageMapping.empty())
-      return make_error<CoverageMapError>(coveragemap_error::truncated);
-    CoverageRecords = MemoryBuffer::getMemBuffer("");
-  } else {
-    uint32_t FilenamesSize =
-        CovHeader->getFilenamesSize<support::endianness::little>();
-    uint32_t CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
-    CoverageMapping = Data.substr(0, CoverageMappingSize);
-    if (CoverageMapping.empty())
-      return make_error<CoverageMapError>(coveragemap_error::truncated);
-    Data = Data.substr(CoverageMappingSize);
-    // Skip the padding bytes because coverage records data has an alignment
-    // of 8.
-    Pad = offsetToAlignedAddr(Data.data(), Align(8));
-    if (Data.size() < Pad)
+    if (CoverageRecords->getBufferSize() != 0)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
-    CoverageRecords = MemoryBuffer::getMemBuffer(Data.substr(Pad));
+  } else {
     if (CoverageRecords->getBufferSize() == 0)
       return make_error<CoverageMapError>(coveragemap_error::truncated);
   }
+
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
       CoverageMapping, std::move(CoverageRecords), std::move(ProfileNames),
       BytesInAddress, Endian, CompilationDir);

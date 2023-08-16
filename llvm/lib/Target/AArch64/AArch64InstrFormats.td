@@ -703,6 +703,28 @@ def fixedpoint_f16_i64 : fixedpoint_i64<f16>;
 def fixedpoint_f32_i64 : fixedpoint_i64<f32>;
 def fixedpoint_f64_i64 : fixedpoint_i64<f64>;
 
+class fixedpoint_recip_i32<ValueType FloatVT>
+  : Operand<FloatVT>,
+    ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
+  let EncoderMethod = "getFixedPointScaleOpValue";
+  let DecoderMethod = "DecodeFixedPointScaleImm32";
+}
+
+class fixedpoint_recip_i64<ValueType FloatVT>
+  : Operand<FloatVT>,
+    ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
+  let EncoderMethod = "getFixedPointScaleOpValue";
+  let DecoderMethod = "DecodeFixedPointScaleImm64";
+}
+
+def fixedpoint_recip_f16_i32 : fixedpoint_recip_i32<f16>;
+def fixedpoint_recip_f32_i32 : fixedpoint_recip_i32<f32>;
+def fixedpoint_recip_f64_i32 : fixedpoint_recip_i32<f64>;
+
+def fixedpoint_recip_f16_i64 : fixedpoint_recip_i64<f16>;
+def fixedpoint_recip_f32_i64 : fixedpoint_recip_i64<f32>;
+def fixedpoint_recip_f64_i64 : fixedpoint_recip_i64<f64>;
+
 def vecshiftR8 : Operand<i32>, ImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
 }]> {
@@ -4984,55 +5006,55 @@ multiclass IntegerToFP<bit isUnsigned, string asm, SDPatternOperator node> {
   }
 
   // Scaled
-  def SWHri: BaseIntegerToFP<isUnsigned, GPR32, FPR16, fixedpoint_f16_i32, asm,
+  def SWHri: BaseIntegerToFP<isUnsigned, GPR32, FPR16, fixedpoint_recip_f16_i32, asm,
                              [(set (f16 FPR16:$Rd),
-                                   (fdiv (node GPR32:$Rn),
-                                         fixedpoint_f16_i32:$scale))]> {
+                                   (fmul (node GPR32:$Rn),
+                                         fixedpoint_recip_f16_i32:$scale))]> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b11; // 16-bit FPR flag
     let scale{5} = 1;
     let Predicates = [HasFullFP16];
   }
 
-  def SWSri: BaseIntegerToFP<isUnsigned, GPR32, FPR32, fixedpoint_f32_i32, asm,
+  def SWSri: BaseIntegerToFP<isUnsigned, GPR32, FPR32, fixedpoint_recip_f32_i32, asm,
                              [(set FPR32:$Rd,
-                                   (fdiv (node GPR32:$Rn),
-                                         fixedpoint_f32_i32:$scale))]> {
+                                   (fmul (node GPR32:$Rn),
+                                         fixedpoint_recip_f32_i32:$scale))]> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
     let scale{5} = 1;
   }
 
-  def SWDri: BaseIntegerToFP<isUnsigned, GPR32, FPR64, fixedpoint_f64_i32, asm,
+  def SWDri: BaseIntegerToFP<isUnsigned, GPR32, FPR64, fixedpoint_recip_f64_i32, asm,
                              [(set FPR64:$Rd,
-                                   (fdiv (node GPR32:$Rn),
-                                         fixedpoint_f64_i32:$scale))]> {
+                                   (fmul (node GPR32:$Rn),
+                                         fixedpoint_recip_f64_i32:$scale))]> {
     let Inst{31} = 0; // 32-bit GPR flag
     let Inst{23-22} = 0b01; // 64-bit FPR flag
     let scale{5} = 1;
   }
 
-  def SXHri: BaseIntegerToFP<isUnsigned, GPR64, FPR16, fixedpoint_f16_i64, asm,
+  def SXHri: BaseIntegerToFP<isUnsigned, GPR64, FPR16, fixedpoint_recip_f16_i64, asm,
                              [(set (f16 FPR16:$Rd),
-                                   (fdiv (node GPR64:$Rn),
-                                         fixedpoint_f16_i64:$scale))]> {
+                                   (fmul (node GPR64:$Rn),
+                                         fixedpoint_recip_f16_i64:$scale))]> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b11; // 16-bit FPR flag
     let Predicates = [HasFullFP16];
   }
 
-  def SXSri: BaseIntegerToFP<isUnsigned, GPR64, FPR32, fixedpoint_f32_i64, asm,
+  def SXSri: BaseIntegerToFP<isUnsigned, GPR64, FPR32, fixedpoint_recip_f32_i64, asm,
                              [(set FPR32:$Rd,
-                                   (fdiv (node GPR64:$Rn),
-                                         fixedpoint_f32_i64:$scale))]> {
+                                   (fmul (node GPR64:$Rn),
+                                         fixedpoint_recip_f32_i64:$scale))]> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
 
-  def SXDri: BaseIntegerToFP<isUnsigned, GPR64, FPR64, fixedpoint_f64_i64, asm,
+  def SXDri: BaseIntegerToFP<isUnsigned, GPR64, FPR64, fixedpoint_recip_f64_i64, asm,
                              [(set FPR64:$Rd,
-                                   (fdiv (node GPR64:$Rn),
-                                         fixedpoint_f64_i64:$scale))]> {
+                                   (fmul (node GPR64:$Rn),
+                                         fixedpoint_recip_f64_i64:$scale))]> {
     let Inst{31} = 1; // 64-bit GPR flag
     let Inst{23-22} = 0b01; // 64-bit FPR flag
   }

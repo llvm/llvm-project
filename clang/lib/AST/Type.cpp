@@ -112,6 +112,25 @@ bool QualType::isConstant(QualType T, const ASTContext &Ctx) {
   return T.getAddressSpace() == LangAS::opencl_constant;
 }
 
+std::optional<QualType::NonConstantStorageReason>
+QualType::isNonConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
+                            bool ExcludeDtor) {
+  if (!isConstant(Ctx) && !(*this)->isReferenceType())
+    return NonConstantStorageReason::NonConstNonReferenceType;
+  if (!Ctx.getLangOpts().CPlusPlus)
+    return std::nullopt;
+  if (const CXXRecordDecl *Record =
+          Ctx.getBaseElementType(*this)->getAsCXXRecordDecl()) {
+    if (!ExcludeCtor)
+      return NonConstantStorageReason::NonTrivialCtor;
+    if (Record->hasMutableFields())
+      return NonConstantStorageReason::MutableField;
+    if (!Record->hasTrivialDestructor() && !ExcludeDtor)
+      return NonConstantStorageReason::NonTrivialDtor;
+  }
+  return std::nullopt;
+}
+
 // C++ [temp.dep.type]p1:
 //   A type is dependent if it is...
 //     - an array type constructed from any dependent type or whose

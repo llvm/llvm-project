@@ -39,6 +39,8 @@ public:
 
     getDerived()->traverseObjCProtocols();
 
+    getDerived()->traverseObjCCategories();
+
     getDerived()->traverseMacroDefinitionRecords();
 
     getDerived()->traverseTypedefRecords();
@@ -84,6 +86,11 @@ public:
       getDerived()->visitObjCContainerRecord(*Protocol.second);
   }
 
+  void traverseObjCCategories() {
+    for (const auto &Category : API.getObjCCategories())
+      getDerived()->visitObjCCategoryRecord(*Category.second);
+  }
+
   void traverseMacroDefinitionRecords() {
     for (const auto &Macro : API.getMacros())
       getDerived()->visitMacroDefinitionRecord(*Macro.second);
@@ -112,6 +119,9 @@ public:
 
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record){};
+
+  /// Visit an Objective-C category record.
+  void visitObjCCategoryRecord(const ObjCCategoryRecord &Record){};
 
   /// Visit a macro definition record.
   void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record){};

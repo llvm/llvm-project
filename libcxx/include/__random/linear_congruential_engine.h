@@ -255,13 +255,9 @@ public:
     void seed(result_type __s = default_seed)
         {seed(integral_constant<bool, __m == 0>(),
               integral_constant<bool, __c == 0>(), __s);}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, linear_congruential_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned,
                 1 + (__m == 0 ? (sizeof(result_type) * __CHAR_BIT__ - 1)/32

@@ -198,6 +198,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check to ignore
+  false-positives in unevaluated context (e.g., ``decltype``).
+
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
@@ -218,6 +222,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options.
+
+- Improved :doc:`readability-static-accessed-through-instance
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  identify calls to static member functions with out-of-class inline definitions.
 
 Removed checks
 ^^^^^^^^^^^^^^

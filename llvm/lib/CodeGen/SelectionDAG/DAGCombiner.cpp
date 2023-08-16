@@ -10134,25 +10134,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  // fold (sra (shl x, c1), c1) -> sext_inreg for some c1 and target supports
-  // sext_inreg.
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
-  if (N1C && N0.getOpcode() == ISD::SHL && N1 == N0.getOperand(1)) {
-    unsigned LowBits = OpSizeInBits - (unsigned)N1C->getZExtValue();
-    EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), LowBits);
-    if (VT.isVector())
-      ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtVT,
-                               VT.getVectorElementCount());
-    if (!LegalOperations ||
-        TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
-        TargetLowering::Legal)
-      return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT,
-                         N0.getOperand(0), DAG.getValueType(ExtVT));
-    // Even if we can't convert to sext_inreg, we might be able to remove
-    // this shift pair if the input is already sign extended.
-    if (DAG.ComputeNumSignBits(N0.getOperand(0)) > N1C->getZExtValue())
-      return N0.getOperand(0);
-  }
 
   // fold (sra (sra x, c1), c2) -> (sra x, (add c1, c2))
   // clamp (add c1, c2) to max shift.
@@ -14374,7 +14356,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     SDValue X = N0.getOperand(0);
     SDValue ExtVal = N0.getOperand(1);
     EVT ExtVT = cast<VTSDNode>(ExtVal)->getVT();
-    if (ExtVT.bitsLT(VT)) {
+    if (ExtVT.bitsLT(VT) && TLI.preferSextInRegOfTruncate(VT, SrcVT, ExtVT)) {
       SDValue TrX = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, X);
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, TrX, ExtVal);
     }

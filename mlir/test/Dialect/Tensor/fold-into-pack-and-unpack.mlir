@@ -45,6 +45,19 @@ func.func @nofold_unpack_slice_non_unit_stride(%arg0 : tensor<?x?x8x4xf32>, %arg
 
 // -----
 
+func.func @nofold_unpack_slice_rank_reduced(%arg0 : tensor<?x?x8x4xf32>, %arg1 : tensor<?x?xf32>,
+    %arg2 : index, %arg3 : index) -> tensor<f32> {
+  %0 = tensor.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %arg1
+      : tensor<?x?x8x4xf32> -> tensor<?x?xf32>
+  %1 = tensor.extract_slice %0[0, 0] [1, 1] [1, 1] : tensor<?x?xf32> to tensor<f32>
+  return %1 : tensor<f32>
+}
+// CHECK-LABEL: func @nofold_unpack_slice_rank_reduced(
+//       CHECK:   %[[UNPACK:.+]] = tensor.unpack
+//       CHECK:   tensor.extract_slice %[[UNPACK]]
+
+// -----
+
 func.func @pad_pack(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32

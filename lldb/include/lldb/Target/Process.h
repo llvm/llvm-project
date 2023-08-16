@@ -1439,8 +1439,13 @@ public:
   /// \param[in] exit_status
   ///     The value for the process's return code.
   ///
-  /// \see lldb::StateType
-  virtual bool SetExitStatus(int exit_status, const char *cstr);
+  /// \param[in] exit_string
+  ///     A StringRef containing the reason for exiting. May be empty.
+  ///
+  /// \return
+  ///     Returns \b false if the process was already in an exited state, \b
+  ///     true otherwise.
+  virtual bool SetExitStatus(int exit_status, llvm::StringRef exit_string);
 
   /// Check if a process is still alive.
   ///

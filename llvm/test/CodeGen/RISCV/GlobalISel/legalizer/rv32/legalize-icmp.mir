@@ -1529,3 +1529,21 @@ body:             |
     PseudoRET implicit $x10
 
 ...
+---
+name:            cmp_eq_ptr
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmp_eq_ptr
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](p0), [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ICMP]](s32)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = COPY $x10
+    %1:_(p0) = COPY $x11
+    %2:_(s1) = G_ICMP intpred(eq), %0(p0), %1
+    %3:_(s32) = G_ANYEXT %2(s1)
+    $x10 = COPY %3(s32)
+    PseudoRET implicit $x10
+
+...

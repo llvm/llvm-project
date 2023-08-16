@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -301,10 +301,9 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
         // Return now the only terminator is an unconditional branch.
         TBB = LastInst->getOperand(0).getMBB();
         return false;
-      } else {
-        SecondLastInst = &*I;
-        SecondLastOpc = SecondLastInst->getOpcode();
       }
+      SecondLastInst = &*I;
+      SecondLastOpc = SecondLastInst->getOpcode();
     }
   }
 
@@ -327,10 +326,9 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
         return false;
       }
       return true; // Can't handle indirect branch.
-    } else {
-      SecondLastInst = &*I;
-      SecondLastOpc = SecondLastInst->getOpcode();
     }
+    SecondLastInst = &*I;
+    SecondLastOpc = SecondLastInst->getOpcode();
   }
 
   // If there are three terminators, we don't know what sort of block this is.

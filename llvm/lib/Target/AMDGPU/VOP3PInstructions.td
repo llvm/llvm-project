@@ -737,7 +737,7 @@ def MAIInstInfoTable : GenericTable {
   let PrimaryKeyName = "getMAIInstInfoHelper";
 }
 
-let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1, isReMaterializable = 1 in {
+let isCommutable = 1, isReMaterializable = 1 in {
   let SubtargetPredicate = HasPackedFP32Ops in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
     defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;

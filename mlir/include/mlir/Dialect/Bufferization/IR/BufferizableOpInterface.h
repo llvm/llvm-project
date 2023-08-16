@@ -49,14 +49,13 @@ struct AliasingOpOperand {
   bool isDefinite;
 };
 
-/// A maybe aliasing OpResult. If `isDefinite` is `true`, the OpResult is
-/// guaranteed to alias at runtime.
-struct AliasingOpResult {
-  AliasingOpResult(OpResult opResult, BufferRelation relation,
-                   bool isDefinite = true)
-      : opResult(opResult), relation(relation), isDefinite(isDefinite) {}
+/// A maybe aliasing Value. If `isDefinite` is `true`, the Value is guaranteed
+/// to alias at runtime.
+struct AliasingValue {
+  AliasingValue(Value value, BufferRelation relation, bool isDefinite = true)
+      : value(value), relation(relation), isDefinite(isDefinite) {}
 
-  OpResult opResult;
+  Value value;
   BufferRelation relation;
   bool isDefinite;
 };
@@ -90,12 +89,12 @@ private:
 };
 
 /// A list of possible aliasing OpOperands. This list models the runtime
-/// aliasing relationship for an OpResult.
+/// aliasing relationship for a Value.
 using AliasingOpOperandList = AliasList<AliasingOpOperand>;
 
-/// A list of possible aliasing OpResults. This list models the runtime
-/// aliasing relationship for an OpOperand.
-using AliasingOpResultList = AliasList<AliasingOpResult>;
+/// A list of possible aliasing Values. This list models the runtime aliasing
+/// relationship for an OpOperand.
+using AliasingValueList = AliasList<AliasingValue>;
 
 class OpFilter {
 public:
@@ -418,15 +417,14 @@ struct TraversalConfig {
 /// tensor values.
 class AnalysisState {
 public:
-  /// Determine which OpOperand* will alias with `result` if the op is
+  /// Determine which OpOperand* will alias with `value` if the op is
   /// bufferized in place. Return all tensor OpOperand* if the op is not
   /// bufferizable.
-  AliasingOpOperandList getAliasingOpOperands(OpResult result) const;
+  AliasingOpOperandList getAliasingOpOperands(Value value) const;
 
-  /// Determine which OpResult will alias with `opOperand` if the op is
-  /// bufferized in place. Return all tensor OpResults if the op is not
-  /// bufferizable.
-  AliasingOpResultList getAliasingOpResults(OpOperand &opOperand) const;
+  /// Determine which Value will alias with `opOperand` if the op is bufferized
+  /// in place. Return all tensor Values if the op is not bufferizable.
+  AliasingValueList getAliasingValues(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
@@ -685,7 +683,7 @@ namespace detail {
 /// This is the default implementation of
 /// BufferizableOpInterface::getAliasingOpOperands. Should not be called from
 /// other places.
-AliasingOpOperandList defaultGetAliasingOpOperands(OpResult opResult,
+AliasingOpOperandList defaultGetAliasingOpOperands(Value value,
                                                    const AnalysisState &state);
 
 /// This is the default implementation of
@@ -709,11 +707,11 @@ bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
 
 /// This is the default implementation of getAliasingOpOperands in case the
 /// defining op does not implement the BufferizableOpInterface.
-AliasingOpOperandList unknownGetAliasingOpOperands(OpResult opResult);
+AliasingOpOperandList unknownGetAliasingOpOperands(Value value);
 
-/// This is the default implementation of getAliasingOpResults in case the
-/// owner op does not implement the BufferizableOpInterface.
-AliasingOpResultList unknownGetAliasingOpResults(OpOperand &opOperand);
+/// This is the default implementation of getAliasingValues in case the owner
+/// op does not implement the BufferizableOpInterface.
+AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
 } // namespace detail
 
 } // namespace bufferization

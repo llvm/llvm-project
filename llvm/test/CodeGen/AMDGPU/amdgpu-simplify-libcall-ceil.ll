@@ -27,7 +27,7 @@ declare <16 x half> @_Z4ceilDv16_Dh(<16 x half>)
 define float @test_ceil_f32(float %arg) {
 ; CHECK-LABEL: define float @test_ceil_f32
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @llvm.ceil.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
   %ceil = tail call float @_Z4ceilf(float %arg)
@@ -37,7 +37,7 @@ define float @test_ceil_f32(float %arg) {
 define <2 x float> @test_ceil_v2f32(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @llvm.ceil.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
   %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg)
@@ -47,7 +47,7 @@ define <2 x float> @test_ceil_v2f32(<2 x float> %arg) {
 define <3 x float> @test_ceil_v3f32(<3 x float> %arg) {
 ; CHECK-LABEL: define <3 x float> @test_ceil_v3f32
 ; CHECK-SAME: (<3 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x float> @_Z4ceilDv3_f(<3 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x float> @llvm.ceil.v3f32(<3 x float> [[ARG]])
 ; CHECK-NEXT:    ret <3 x float> [[CEIL]]
 ;
   %ceil = tail call <3 x float> @_Z4ceilDv3_f(<3 x float> %arg)
@@ -57,7 +57,7 @@ define <3 x float> @test_ceil_v3f32(<3 x float> %arg) {
 define <4 x float> @test_ceil_v4f32(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @test_ceil_v4f32
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x float> @_Z4ceilDv4_f(<4 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x float> @llvm.ceil.v4f32(<4 x float> [[ARG]])
 ; CHECK-NEXT:    ret <4 x float> [[CEIL]]
 ;
   %ceil = tail call <4 x float> @_Z4ceilDv4_f(<4 x float> %arg)
@@ -67,7 +67,7 @@ define <4 x float> @test_ceil_v4f32(<4 x float> %arg) {
 define <8 x float> @test_ceil_v8f32(<8 x float> %arg) {
 ; CHECK-LABEL: define <8 x float> @test_ceil_v8f32
 ; CHECK-SAME: (<8 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x float> @_Z4ceilDv8_f(<8 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x float> @llvm.ceil.v8f32(<8 x float> [[ARG]])
 ; CHECK-NEXT:    ret <8 x float> [[CEIL]]
 ;
   %ceil = tail call <8 x float> @_Z4ceilDv8_f(<8 x float> %arg)
@@ -77,7 +77,7 @@ define <8 x float> @test_ceil_v8f32(<8 x float> %arg) {
 define <16 x float> @test_ceil_v16f32(<16 x float> %arg) {
 ; CHECK-LABEL: define <16 x float> @test_ceil_v16f32
 ; CHECK-SAME: (<16 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x float> @_Z4ceilDv16_f(<16 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x float> @llvm.ceil.v16f32(<16 x float> [[ARG]])
 ; CHECK-NEXT:    ret <16 x float> [[CEIL]]
 ;
   %ceil = tail call <16 x float> @_Z4ceilDv16_f(<16 x float> %arg)
@@ -87,7 +87,7 @@ define <16 x float> @test_ceil_v16f32(<16 x float> %arg) {
 define double @test_ceil_f64(double %arg) {
 ; CHECK-LABEL: define double @test_ceil_f64
 ; CHECK-SAME: (double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call double @_Z4ceild(double [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call double @llvm.ceil.f64(double [[ARG]])
 ; CHECK-NEXT:    ret double [[CEIL]]
 ;
   %ceil = tail call double @_Z4ceild(double %arg)
@@ -97,7 +97,7 @@ define double @test_ceil_f64(double %arg) {
 define <2 x double> @test_ceil_v2f64(<2 x double> %arg) {
 ; CHECK-LABEL: define <2 x double> @test_ceil_v2f64
 ; CHECK-SAME: (<2 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x double> @_Z4ceilDv2_d(<2 x double> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x double> @llvm.ceil.v2f64(<2 x double> [[ARG]])
 ; CHECK-NEXT:    ret <2 x double> [[CEIL]]
 ;
   %ceil = tail call <2 x double> @_Z4ceilDv2_d(<2 x double> %arg)
@@ -107,7 +107,7 @@ define <2 x double> @test_ceil_v2f64(<2 x double> %arg) {
 define <3 x double> @test_ceil_v3f64(<3 x double> %arg) {
 ; CHECK-LABEL: define <3 x double> @test_ceil_v3f64
 ; CHECK-SAME: (<3 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x double> @_Z4ceilDv3_d(<3 x double> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x double> @llvm.ceil.v3f64(<3 x double> [[ARG]])
 ; CHECK-NEXT:    ret <3 x double> [[CEIL]]
 ;
   %ceil = tail call <3 x double> @_Z4ceilDv3_d(<3 x double> %arg)
@@ -117,7 +117,7 @@ define <3 x double> @test_ceil_v3f64(<3 x double> %arg) {
 define <4 x double> @test_ceil_v4f64(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x double> @test_ceil_v4f64
 ; CHECK-SAME: (<4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x double> @_Z4ceilDv4_d(<4 x double> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x double> @llvm.ceil.v4f64(<4 x double> [[ARG]])
 ; CHECK-NEXT:    ret <4 x double> [[CEIL]]
 ;
   %ceil = tail call <4 x double> @_Z4ceilDv4_d(<4 x double> %arg)
@@ -127,7 +127,7 @@ define <4 x double> @test_ceil_v4f64(<4 x double> %arg) {
 define <8 x double> @test_ceil_v8f64(<8 x double> %arg) {
 ; CHECK-LABEL: define <8 x double> @test_ceil_v8f64
 ; CHECK-SAME: (<8 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x double> @_Z4ceilDv8_d(<8 x double> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x double> @llvm.ceil.v8f64(<8 x double> [[ARG]])
 ; CHECK-NEXT:    ret <8 x double> [[CEIL]]
 ;
   %ceil = tail call <8 x double> @_Z4ceilDv8_d(<8 x double> %arg)
@@ -137,7 +137,7 @@ define <8 x double> @test_ceil_v8f64(<8 x double> %arg) {
 define <16 x double> @test_ceil_v16f64(<16 x double> %arg) {
 ; CHECK-LABEL: define <16 x double> @test_ceil_v16f64
 ; CHECK-SAME: (<16 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x double> @_Z4ceilDv16_d(<16 x double> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x double> @llvm.ceil.v16f64(<16 x double> [[ARG]])
 ; CHECK-NEXT:    ret <16 x double> [[CEIL]]
 ;
   %ceil = tail call <16 x double> @_Z4ceilDv16_d(<16 x double> %arg)
@@ -147,7 +147,7 @@ define <16 x double> @test_ceil_v16f64(<16 x double> %arg) {
 define half @test_ceil_f16(half %arg) {
 ; CHECK-LABEL: define half @test_ceil_f16
 ; CHECK-SAME: (half [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call half @_Z4ceilDh(half [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call half @llvm.ceil.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[CEIL]]
 ;
   %ceil = tail call half @_Z4ceilDh(half %arg)
@@ -157,7 +157,7 @@ define half @test_ceil_f16(half %arg) {
 define <2 x half> @test_ceil_v2f16(<2 x half> %arg) {
 ; CHECK-LABEL: define <2 x half> @test_ceil_v2f16
 ; CHECK-SAME: (<2 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x half> @_Z4ceilDv2_Dh(<2 x half> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x half> @llvm.ceil.v2f16(<2 x half> [[ARG]])
 ; CHECK-NEXT:    ret <2 x half> [[CEIL]]
 ;
   %ceil = tail call <2 x half> @_Z4ceilDv2_Dh(<2 x half> %arg)
@@ -167,7 +167,7 @@ define <2 x half> @test_ceil_v2f16(<2 x half> %arg) {
 define <3 x half> @test_ceil_v3f16(<3 x half> %arg) {
 ; CHECK-LABEL: define <3 x half> @test_ceil_v3f16
 ; CHECK-SAME: (<3 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x half> @_Z4ceilDv3_Dh(<3 x half> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <3 x half> @llvm.ceil.v3f16(<3 x half> [[ARG]])
 ; CHECK-NEXT:    ret <3 x half> [[CEIL]]
 ;
   %ceil = tail call <3 x half> @_Z4ceilDv3_Dh(<3 x half> %arg)
@@ -177,7 +177,7 @@ define <3 x half> @test_ceil_v3f16(<3 x half> %arg) {
 define <4 x half> @test_ceil_v4f16(<4 x half> %arg) {
 ; CHECK-LABEL: define <4 x half> @test_ceil_v4f16
 ; CHECK-SAME: (<4 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x half> @_Z4ceilDv4_Dh(<4 x half> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <4 x half> @llvm.ceil.v4f16(<4 x half> [[ARG]])
 ; CHECK-NEXT:    ret <4 x half> [[CEIL]]
 ;
   %ceil = tail call <4 x half> @_Z4ceilDv4_Dh(<4 x half> %arg)
@@ -187,7 +187,7 @@ define <4 x half> @test_ceil_v4f16(<4 x half> %arg) {
 define <8 x half> @test_ceil_v8f16(<8 x half> %arg) {
 ; CHECK-LABEL: define <8 x half> @test_ceil_v8f16
 ; CHECK-SAME: (<8 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x half> @_Z4ceilDv8_Dh(<8 x half> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <8 x half> @llvm.ceil.v8f16(<8 x half> [[ARG]])
 ; CHECK-NEXT:    ret <8 x half> [[CEIL]]
 ;
   %ceil = tail call <8 x half> @_Z4ceilDv8_Dh(<8 x half> %arg)
@@ -197,7 +197,7 @@ define <8 x half> @test_ceil_v8f16(<8 x half> %arg) {
 define <16 x half> @test_ceil_v16f16(<16 x half> %arg) {
 ; CHECK-LABEL: define <16 x half> @test_ceil_v16f16
 ; CHECK-SAME: (<16 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x half> @_Z4ceilDv16_Dh(<16 x half> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <16 x half> @llvm.ceil.v16f16(<16 x half> [[ARG]])
 ; CHECK-NEXT:    ret <16 x half> [[CEIL]]
 ;
   %ceil = tail call <16 x half> @_Z4ceilDv16_Dh(<16 x half> %arg)
@@ -207,7 +207,7 @@ define <16 x half> @test_ceil_v16f16(<16 x half> %arg) {
 define float @test_ceil_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-LABEL: define float @test_ceil_f32_nobuiltin_callsite
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
   %ceil = tail call float @_Z4ceilf(float %arg) #0
@@ -217,7 +217,7 @@ define float @test_ceil_f32_nobuiltin_callsite(float %arg) {
 define <2 x float> @test_ceil_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32_nobuiltin_callsite
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
   %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) #0
@@ -228,7 +228,7 @@ define <2 x float> @test_ceil_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 define float @test_ceil_f32_nobuiltins(float %arg) #1 {
 ; CHECK-LABEL: define float @test_ceil_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call float @_Z4ceilf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
   %ceil = tail call float @_Z4ceilf(float %arg) #0
@@ -238,7 +238,7 @@ define float @test_ceil_f32_nobuiltins(float %arg) #1 {
 define <2 x float> @test_ceil_v2f32_nobuiltins(<2 x float> %arg) #1 {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
   %ceil = tail call <2 x float> @_Z4ceilDv2_f(<2 x float> %arg) #0
@@ -248,7 +248,7 @@ define <2 x float> @test_ceil_v2f32_nobuiltins(<2 x float> %arg) #1 {
 define float @test_ceil_f32_preserve_flags(float %arg) {
 ; CHECK-LABEL: define float @test_ceil_f32_preserve_flags
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan ninf float @_Z4ceilf(float [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan ninf float @llvm.ceil.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
   %ceil = tail call nnan ninf float @_Z4ceilf(float %arg)
@@ -258,7 +258,7 @@ define float @test_ceil_f32_preserve_flags(float %arg) {
 define <2 x float> @test_ceil_v2f32_preserve_flags(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32_preserve_flags
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan nsz contract <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan nsz contract <2 x float> @llvm.ceil.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
   %ceil = tail call contract nsz nnan <2 x float> @_Z4ceilDv2_f(<2 x float> %arg)
@@ -268,7 +268,7 @@ define <2 x float> @test_ceil_v2f32_preserve_flags(<2 x float> %arg) {
 define float @test_ceil_f32_preserve_flags_md(float %arg) {
 ; CHECK-LABEL: define float @test_ceil_f32_preserve_flags_md
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan ninf float @_Z4ceilf(float [[ARG]]), !foo !0
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan ninf float @llvm.ceil.f32(float [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret float [[CEIL]]
 ;
   %ceil = tail call nnan ninf float @_Z4ceilf(float %arg), !foo !0
@@ -278,7 +278,7 @@ define float @test_ceil_f32_preserve_flags_md(float %arg) {
 define <2 x float> @test_ceil_v2f32_preserve_flags_md(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_ceil_v2f32_preserve_flags_md
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan nsz contract <2 x float> @_Z4ceilDv2_f(<2 x float> [[ARG]]), !foo !0
+; CHECK-NEXT:    [[CEIL:%.*]] = tail call nnan nsz contract <2 x float> @llvm.ceil.v2f32(<2 x float> [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret <2 x float> [[CEIL]]
 ;
   %ceil = tail call contract nsz nnan <2 x float> @_Z4ceilDv2_f(<2 x float> %arg), !foo !0

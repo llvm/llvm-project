@@ -934,7 +934,7 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
   auto GV = new llvm::GlobalVariable(
       CGM.getModule(), C->getType(),
-      CGM.isTypeConstant(E->getType(), true, false),
+      E->getType().isConstantStorage(CGM.getContext(), true, false),
       llvm::GlobalValue::InternalLinkage, C, ".compoundliteral", nullptr,
       llvm::GlobalVariable::NotThreadLocal,
       CGM.getContext().getTargetAddressSpace(addressSpace));

@@ -12004,7 +12004,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     TpLoopBody->moveAfter(TpEntry);
     TpExit->moveAfter(TpLoopBody);
 
-    // Finally, remove the memcpy Psuedo Instruction
+    // Finally, remove the memcpy Pseudo Instruction
     MI.eraseFromParent();
 
     // Return the exit block as it may contain other instructions requiring a

@@ -78,3 +78,6 @@ Revert "[IR] Deprecate some old methods for getting typed pointer types"
 Revert [clang] Add missing field to TLSModelAttr json AST dump
 Revert [clang] Add missing field to VisibilityAttr json AST dump
 
+Revert Complete the implementation of P2361 Unevaluated string literals
+Cherry-Picked AMDGPU: Fix verifier error on splatted opencl fmin/fmax and ldexp calls
+

@@ -1538,14 +1538,11 @@ bool SBDebugger::SetCurrentPlatformSDKRoot(const char *sysroot) {
 bool SBDebugger::GetCloseInputOnEOF() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetCloseInputOnEOF() : false);
+  return false;
 }
 
 void SBDebugger::SetCloseInputOnEOF(bool b) {
   LLDB_INSTRUMENT_VA(this, b);
-
-  if (m_opaque_sp)
-    m_opaque_sp->SetCloseInputOnEOF(b);
 }
 
 SBTypeCategory SBDebugger::GetCategory(const char *category_name) {
