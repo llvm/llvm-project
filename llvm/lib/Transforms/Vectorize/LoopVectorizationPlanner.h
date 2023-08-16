@@ -280,6 +280,9 @@ class LoopVectorizationPlanner {
 
   SmallVector<VPlanPtr, 4> VPlans;
 
+  /// Candidate VectorizationFactors for VPlans.
+  DenseMap<VPlan *, SmallVector<VectorizationFactor>> VFCandidates;
+
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
@@ -336,6 +339,21 @@ public:
   /// Check if the number of runtime checks exceeds the threshold.
   bool requiresTooManyRuntimeChecks() const;
 
+  /// \return The most profitable vectorization factor and the cost of that VF.
+  /// This method checks every VF in every plan in VPlans.
+  VectorizationFactor selectVectorizationFactor();
+
+  /// \return The most profitable vectorization factor and the cost of that VF
+  /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
+  /// epilogue vectorization is not supported for the loop.
+  VectorizationFactor
+  selectEpilogueVectorizationFactor(const ElementCount MaxVF);
+
+  /// Convenience function that returns the value of vscale_range iff
+  /// vscale_range.min == vscale_range.max or otherwise returns the value
+  /// returned by the corresponding TLI method.
+  std::optional<unsigned> getVScaleForTuning() const;
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
@@ -370,6 +388,25 @@ private:
   void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  /// Returns true when Factor A is more profitable than Factor B.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B) const;
+
+  /// Determines if we have the infrastructure to vectorize loop \p L and its
+  /// epilogue, assuming the main loop is vectorized by \p VF.
+  bool isCandidateForEpilogueVectorization(const ElementCount VF) const;
+
+  /// Returns true if epilogue vectorization is considered profitable, and
+  /// false otherwise.
+  /// \p VF is the vectorization factor chosen for the original loop.
+  bool isEpilogueVectorizationProfitable(const ElementCount VF) const;
+
+  ArrayRef<VectorizationFactor> getVFCandidatesFor(VPlan &Plan) const {
+    auto I = VFCandidates.find(&Plan);
+    assert(I != VFCandidates.end());
+    return I->second;
+  }
 };
 
 } // namespace llvm

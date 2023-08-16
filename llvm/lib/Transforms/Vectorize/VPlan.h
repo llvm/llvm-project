@@ -2320,6 +2320,9 @@ public:
     UFs.insert(UF);
   }
 
+  /// Return the VFs represented in the plan.
+  ArrayRef<ElementCount> getVFs() const { return VFs.getArrayRef(); }
+
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;
 

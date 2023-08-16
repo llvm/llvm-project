@@ -1161,6 +1161,8 @@ using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
 
 using InstructionVFPair = std::pair<Instruction *, ElementCount>;
 
+using VectorizationCostTy = std::pair<InstructionCost, bool>;
+
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
 /// In many cases vectorization is not profitable. This can happen because of
@@ -1191,18 +1193,6 @@ public:
   /// \return True if runtime checks are required for vectorization, and false
   /// otherwise.
   bool runtimeChecksRequired();
-
-  /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs.
-  VectorizationFactor
-  selectVectorizationFactor(const ElementCountSet &CandidateVFs);
-
-  /// \return The most profitable vectorization factor and the cost of that VF
-  /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
-  /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MaxVF,
-                                    const LoopVectorizationPlanner &LVP);
 
   /// Setup cost-based decisions for user vectorization factor.
   /// \return true if the UserVF is a feasible VF to be chosen.
@@ -1633,10 +1623,17 @@ public:
     Scalars.clear();
   }
 
-  /// Convenience function that returns the value of vscale_range iff
-  /// vscale_range.min == vscale_range.max or otherwise returns the value
-  /// returned by the corresponding TLI method.
-  std::optional<unsigned> getVScaleForTuning() const;
+  /// Returns the expected execution cost. The unit of the cost does
+  /// not matter because we use the 'cost' units to compare different
+  /// vector widths. The cost that is returned is *not* normalized by
+  /// the factor width. If \p Invalid is not nullptr, this function
+  /// will add a pair(Instruction*, ElementCount) to \p Invalid for
+  /// each instruction that has an Invalid cost for the given VF.
+  VectorizationCostTy
+  expectedCost(ElementCount VF,
+               SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
+
+  bool hasPredStores() const { return NumPredStores > 0; }
 
 private:
   unsigned NumPredStores = 0;
@@ -1668,17 +1665,6 @@ private:
   /// operate on vector values after type legalization in the backend. If this
   /// latter value is false, then all operations will be scalarized (i.e. no
   /// vectorization has actually taken place).
-  using VectorizationCostTy = std::pair<InstructionCost, bool>;
-
-  /// Returns the expected execution cost. The unit of the cost does
-  /// not matter because we use the 'cost' units to compare different
-  /// vector widths. The cost that is returned is *not* normalized by
-  /// the factor width. If \p Invalid is not nullptr, this function
-  /// will add a pair(Instruction*, ElementCount) to \p Invalid for
-  /// each instruction that has an Invalid cost for the given VF.
-  VectorizationCostTy
-  expectedCost(ElementCount VF,
-               SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
@@ -1841,15 +1827,6 @@ private:
     return SmallVector<Value *, 4>(make_filter_range(
         Ops, [this, VF](Value *V) { return this->needsExtract(V, VF); }));
   }
-
-  /// Determines if we have the infrastructure to vectorize the loop and its
-  /// epilogue, assuming the main loop is vectorized by \p VF.
-  bool isCandidateForEpilogueVectorization(const ElementCount VF) const;
-
-  /// Returns true if epilogue vectorization is considered profitable, and
-  /// false otherwise.
-  /// \p VF is the vectorization factor chosen for the original loop.
-  bool isEpilogueVectorizationProfitable(const ElementCount VF) const;
 
 public:
   /// The loop that we evaluate.
@@ -5347,69 +5324,6 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-std::optional<unsigned> LoopVectorizationCostModel::getVScaleForTuning() const {
-  if (TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
-    auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
-    auto Min = Attr.getVScaleRangeMin();
-    auto Max = Attr.getVScaleRangeMax();
-    if (Max && Min == Max)
-      return Max;
-  }
-
-  return TTI.getVScaleForTuning();
-}
-
-bool LoopVectorizationCostModel::isMoreProfitable(
-    const VectorizationFactor &A, const VectorizationFactor &B) const {
-  InstructionCost CostA = A.Cost;
-  InstructionCost CostB = B.Cost;
-
-  unsigned MaxTripCount = PSE.getSE()->getSmallConstantMaxTripCount(TheLoop);
-
-  if (!A.Width.isScalable() && !B.Width.isScalable() && MaxTripCount) {
-    // If the trip count is a known (possibly small) constant, the trip count
-    // will be rounded up to an integer number of iterations under
-    // FoldTailByMasking. The total cost in that case will be
-    // VecCost*ceil(TripCount/VF). When not folding the tail, the total
-    // cost will be VecCost*floor(TC/VF) + ScalarCost*(TC%VF). There will be
-    // some extra overheads, but for the purpose of comparing the costs of
-    // different VFs we can use this to compare the total loop-body cost
-    // expected after vectorization.
-    auto GetCostForTC = [MaxTripCount, this](unsigned VF,
-                                             InstructionCost VectorCost,
-                                             InstructionCost ScalarCost) {
-      return foldTailByMasking() ? VectorCost * divideCeil(MaxTripCount, VF)
-                                 : VectorCost * (MaxTripCount / VF) +
-                                       ScalarCost * (MaxTripCount % VF);
-    };
-    auto RTCostA = GetCostForTC(A.Width.getFixedValue(), CostA, A.ScalarCost);
-    auto RTCostB = GetCostForTC(B.Width.getFixedValue(), CostB, B.ScalarCost);
-
-    return RTCostA < RTCostB;
-  }
-
-  // Improve estimate for the vector width if it is scalable.
-  unsigned EstimatedWidthA = A.Width.getKnownMinValue();
-  unsigned EstimatedWidthB = B.Width.getKnownMinValue();
-  if (std::optional<unsigned> VScale = getVScaleForTuning()) {
-    if (A.Width.isScalable())
-      EstimatedWidthA *= *VScale;
-    if (B.Width.isScalable())
-      EstimatedWidthB *= *VScale;
-  }
-
-  // Assume vscale may be larger than 1 (or the value being tuned for),
-  // so that scalable vectorization is slightly favorable over fixed-width
-  // vectorization.
-  if (A.Width.isScalable() && !B.Width.isScalable())
-    return (CostA * B.Width.getFixedValue()) <= (CostB * EstimatedWidthA);
-
-  // To avoid the need for FP division:
-  //      (CostA / A.Width) < (CostB / B.Width)
-  // <=>  (CostA * B.Width) < (CostB * A.Width)
-  return (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA);
-}
-
 static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
                                    OptimizationRemarkEmitter *ORE,
                                    Loop *TheLoop) {
@@ -5474,19 +5388,81 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
   } while (!Tail.empty());
 }
 
-VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
-    const ElementCountSet &VFCandidates) {
-  InstructionCost ExpectedCost = expectedCost(ElementCount::getFixed(1)).first;
-  LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
-  assert(ExpectedCost.isValid() && "Unexpected invalid cost for scalar loop");
-  assert(VFCandidates.count(ElementCount::getFixed(1)) &&
-         "Expected Scalar VF to be a candidate");
+bool LoopVectorizationPlanner::isMoreProfitable(
+    const VectorizationFactor &A, const VectorizationFactor &B) const {
+  InstructionCost CostA = A.Cost;
+  InstructionCost CostB = B.Cost;
 
-  const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost,
+  unsigned MaxTripCount = PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop);
+
+  if (!A.Width.isScalable() && !B.Width.isScalable() && MaxTripCount) {
+    // If the trip count is a known (possibly small) constant, the trip count
+    // will be rounded up to an integer number of iterations under
+    // FoldTailByMasking. The total cost in that case will be
+    // VecCost*ceil(TripCount/VF). When not folding the tail, the total
+    // cost will be VecCost*floor(TC/VF) + ScalarCost*(TC%VF). There will be
+    // some extra overheads, but for the purpose of comparing the costs of
+    // different VFs we can use this to compare the total loop-body cost
+    // expected after vectorization.
+    auto GetCostForTC = [MaxTripCount, this](unsigned VF,
+                                             InstructionCost VectorCost,
+                                             InstructionCost ScalarCost) {
+      return CM.foldTailByMasking() ? VectorCost * divideCeil(MaxTripCount, VF)
+                                    : VectorCost * (MaxTripCount / VF) +
+                                          ScalarCost * (MaxTripCount % VF);
+    };
+    auto RTCostA = GetCostForTC(A.Width.getFixedValue(), CostA, A.ScalarCost);
+    auto RTCostB = GetCostForTC(B.Width.getFixedValue(), CostB, B.ScalarCost);
+
+    return RTCostA < RTCostB;
+  }
+
+  // Improve estimate for the vector width if it is scalable.
+  unsigned EstimatedWidthA = A.Width.getKnownMinValue();
+  unsigned EstimatedWidthB = B.Width.getKnownMinValue();
+  if (std::optional<unsigned> VScale = getVScaleForTuning()) {
+    if (A.Width.isScalable())
+      EstimatedWidthA *= *VScale;
+    if (B.Width.isScalable())
+      EstimatedWidthB *= *VScale;
+  }
+
+  // Assume vscale may be larger than 1 (or the value being tuned for),
+  // so that scalable vectorization is slightly favorable over fixed-width
+  // vectorization.
+  if (A.Width.isScalable() && !B.Width.isScalable())
+    return (CostA * B.Width.getFixedValue()) <= (CostB * EstimatedWidthA);
+
+  // To avoid the need for FP division:
+  //      (CostA / A.Width) < (CostB / B.Width)
+  // <=>  (CostA * B.Width) < (CostB * A.Width)
+  return (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA);
+}
+
+std::optional<unsigned> LoopVectorizationPlanner::getVScaleForTuning() const {
+  Function *TheFunction = OrigLoop->getHeader()->getParent();
+  if (TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
+    auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
+    auto Min = Attr.getVScaleRangeMin();
+    auto Max = Attr.getVScaleRangeMax();
+    if (Max && Min == Max)
+      return Max;
+  }
+
+  return TTI->getVScaleForTuning();
+}
+
+VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
+  assert(!VPlans.empty());
+
+  ElementCount ScalarFactor = ElementCount::getFixed(1);
+  const auto &[ExpectedCost, _] = CM.expectedCost(ScalarFactor);
+  const VectorizationFactor ScalarCost(ScalarFactor, ExpectedCost,
                                        ExpectedCost);
   VectorizationFactor ChosenFactor = ScalarCost;
+  assert(hasPlanWithVF(ScalarFactor) && "Expected Scalar VF to be a candidate");
 
-  bool ForceVectorization = Hints->getForce() == LoopVectorizeHints::FK_Enabled;
+  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
   if (ForceVectorization && VFCandidates.size() > 1) {
     // Ignore scalar width, because the user explicitly wants vectorization.
     // Initialize cost to max so that VF = 2 is, at least, chosen during cost
@@ -5494,53 +5470,15 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
     ChosenFactor.Cost = InstructionCost::getMax();
   }
 
-  SmallVector<InstructionVFPair> InvalidCosts;
-  for (const auto &i : VFCandidates) {
-    // The cost for scalar VF=1 is already calculated, so ignore it.
-    if (i.isScalar())
-      continue;
+  for (auto &Plan : VPlans) {
+    for (const auto &Candidate : getVFCandidatesFor(*Plan)) {
+      // The cost for scalar VF=1 is already calculated, so ignore it.
+      if (Candidate.Width.isScalar())
+        continue;
 
-    VectorizationCostTy C = expectedCost(i, &InvalidCosts);
-    VectorizationFactor Candidate(i, C.first, ScalarCost.ScalarCost);
-
-#ifndef NDEBUG
-    unsigned AssumedMinimumVscale = 1;
-    if (std::optional<unsigned> VScale = getVScaleForTuning())
-      AssumedMinimumVscale = *VScale;
-    unsigned Width =
-        Candidate.Width.isScalable()
-            ? Candidate.Width.getKnownMinValue() * AssumedMinimumVscale
-            : Candidate.Width.getFixedValue();
-    LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << i
-                      << " costs: " << (Candidate.Cost / Width));
-    if (i.isScalable())
-      LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
-                        << AssumedMinimumVscale << ")");
-    LLVM_DEBUG(dbgs() << ".\n");
-#endif
-
-    if (!C.second && !ForceVectorization) {
-      LLVM_DEBUG(
-          dbgs() << "LV: Not considering vector loop of width " << i
-                 << " because it will not generate any vector instructions.\n");
-      continue;
+      if (isMoreProfitable(Candidate, ChosenFactor))
+        ChosenFactor = Candidate;
     }
-
-    // If profitable add it to ProfitableVF list.
-    if (isMoreProfitable(Candidate, ScalarCost))
-      ProfitableVFs.push_back(Candidate);
-
-    if (isMoreProfitable(Candidate, ChosenFactor))
-      ChosenFactor = Candidate;
-  }
-
-  emitInvalidCostRemarks(InvalidCosts, ORE, TheLoop);
-
-  if (!EnableCondStoresVectorization && NumPredStores) {
-    reportVectorizationFailure("There are conditional stores.",
-        "store that is conditionally executed prevents vectorization",
-        "ConditionalStore", ORE, TheLoop);
-    ChosenFactor = ScalarCost;
   }
 
   LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
@@ -5551,11 +5489,11 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
   return ChosenFactor;
 }
 
-bool LoopVectorizationCostModel::isCandidateForEpilogueVectorization(
+bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as reductions need special handling and are
   // currently unsupported.
-  if (any_of(TheLoop->getHeader()->phis(),
+  if (any_of(OrigLoop->getHeader()->phis(),
              [&](PHINode &Phi) { return Legal->isFixedOrderRecurrence(&Phi); }))
     return false;
 
@@ -5564,26 +5502,26 @@ bool LoopVectorizationCostModel::isCandidateForEpilogueVectorization(
   for (const auto &Entry : Legal->getInductionVars()) {
     // Look for uses of the value of the induction at the last iteration.
     Value *PostInc =
-        Entry.first->getIncomingValueForBlock(TheLoop->getLoopLatch());
+        Entry.first->getIncomingValueForBlock(OrigLoop->getLoopLatch());
     for (User *U : PostInc->users())
-      if (!TheLoop->contains(cast<Instruction>(U)))
+      if (!OrigLoop->contains(cast<Instruction>(U)))
         return false;
     // Look for uses of penultimate value of the induction.
     for (User *U : Entry.first->users())
-      if (!TheLoop->contains(cast<Instruction>(U)))
+      if (!OrigLoop->contains(cast<Instruction>(U)))
         return false;
   }
 
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
-  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
   return true;
 }
 
-bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
+bool LoopVectorizationPlanner::isEpilogueVectorizationProfitable(
     const ElementCount VF) const {
   // FIXME: We need a much better cost-model to take different parameters such
   // as register pressure, code size increase and cost of extra branches into
@@ -5591,12 +5529,12 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // with vectorization factors larger than a certain value.
 
   // Allow the target to opt out entirely.
-  if (!TTI.preferEpilogueVectorization())
+  if (!TTI->preferEpilogueVectorization())
     return false;
 
   // We also consider epilogue vectorization unprofitable for targets that don't
   // consider interleaving beneficial (eg. MVE).
-  if (TTI.getMaxInterleaveFactor(VF) <= 1)
+  if (TTI->getMaxInterleaveFactor(VF) <= 1)
     return false;
 
   unsigned Multiplier = 1;
@@ -5607,16 +5545,15 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   return false;
 }
 
-VectorizationFactor
-LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
-    const ElementCount MainLoopVF, const LoopVectorizationPlanner &LVP) {
+VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
+    const ElementCount MainLoopVF) {
   VectorizationFactor Result = VectorizationFactor::Disabled();
   if (!EnableEpilogueVectorization) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n");
     return Result;
   }
 
-  if (!isScalarEpilogueAllowed()) {
+  if (!CM.isScalarEpilogueAllowed()) {
     LLVM_DEBUG(dbgs() << "LEV: Unable to vectorize epilogue because no "
                          "epilogue is allowed.\n");
     return Result;
@@ -5633,7 +5570,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
   if (EpilogueVectorizationForceVF > 1) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
-    if (LVP.hasPlanWithVF(ForcedEC))
+    if (hasPlanWithVF(ForcedEC))
       return {ForcedEC, 0, 0};
     else {
       LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization forced factor is not "
@@ -5642,8 +5579,8 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     }
   }
 
-  if (TheLoop->getHeader()->getParent()->hasOptSize() ||
-      TheLoop->getHeader()->getParent()->hasMinSize()) {
+  if (OrigLoop->getHeader()->getParent()->hasOptSize() ||
+      OrigLoop->getHeader()->getParent()->hasMinSize()) {
     LLVM_DEBUG(
         dbgs() << "LEV: Epilogue vectorization skipped due to opt for size.\n");
     return Result;
@@ -5665,13 +5602,16 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
       EstimatedRuntimeVF *= *VScale;
   }
 
-  for (auto &NextVF : ProfitableVFs)
-    if (((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
-          ElementCount::isKnownLT(NextVF.Width, EstimatedRuntimeVF)) ||
-         ElementCount::isKnownLT(NextVF.Width, MainLoopVF)) &&
-        (Result.Width.isScalar() || isMoreProfitable(NextVF, Result)) &&
-        LVP.hasPlanWithVF(NextVF.Width))
-      Result = NextVF;
+  for (auto &VPlan : VPlans) {
+    for (const auto &NextVF : getVFCandidatesFor(*VPlan)) {
+      assert(VPlan->hasVF(NextVF.Width) && "VF not in plan");
+      if (((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
+            ElementCount::isKnownLT(NextVF.Width, EstimatedRuntimeVF)) ||
+           ElementCount::isKnownLT(NextVF.Width, MainLoopVF)) &&
+          (Result.Width.isScalar() || isMoreProfitable(NextVF, Result)))
+        Result = NextVF;
+    }
+  }
 
   if (Result != VectorizationFactor::Disabled())
     LLVM_DEBUG(dbgs() << "LEV: Vectorizing epilogue loop with VF = "
@@ -6371,8 +6311,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
   return Discount;
 }
 
-LoopVectorizationCostModel::VectorizationCostTy
-LoopVectorizationCostModel::expectedCost(
+VectorizationCostTy LoopVectorizationCostModel::expectedCost(
     ElementCount VF, SmallVectorImpl<InstructionVFPair> *Invalid) {
   VectorizationCostTy Cost;
 
@@ -6824,7 +6763,7 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   return getWideningCost(I, VF);
 }
 
-LoopVectorizationCostModel::VectorizationCostTy
+VectorizationCostTy
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
   // If we know that this instruction will remain uniform, check the cost of
@@ -7631,7 +7570,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
-  VectorizationFactor VF = CM.selectVectorizationFactor(VFCandidates);
+  VectorizationFactor VF = selectVectorizationFactor();
   assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
   if (!hasPlanWithVF(VF.Width)) {
     LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << VF.Width
@@ -8104,6 +8043,7 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     VPlans.push_back(buildVPlan(SubRange));
+    VFCandidates[&*VPlans.back()] = SmallVector<VectorizationFactor>();
     VF = SubRange.End;
   }
 }
@@ -8720,12 +8660,61 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   auto &ConditionalAssumes = Legal->getConditionalAssumes();
   DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
 
+  InstructionCost ScalarCost = CM.expectedCost(ElementCount::getFixed(1)).first;
+  LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ScalarCost << ".\n");
+
+  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  SmallVector<InstructionVFPair> InvalidCosts;
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, DeadInstructions))
-      VPlans.push_back(std::move(*Plan));
+    auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, DeadInstructions);
+    if (!Plan) {
+      VF = SubRange.End;
+      continue;
+    }
+    VPlans.emplace_back(std::move(*Plan));
     VF = SubRange.End;
+  }
+
+  for (const VPlanPtr &Plan : VPlans) {
+    SmallVector<VectorizationFactor> Costs;
+    for (ElementCount CostVF : Plan->getVFs()) {
+      auto [VecCost, IsVec] = CM.expectedCost(CostVF, &InvalidCosts);
+#ifndef NDEBUG
+      unsigned AssumedMinimumVscale = 1;
+      if (std::optional<unsigned> VScale = getVScaleForTuning())
+        AssumedMinimumVscale = *VScale;
+      unsigned Width = CostVF.isScalable()
+                           ? CostVF.getKnownMinValue() * AssumedMinimumVscale
+                           : CostVF.getFixedValue();
+      LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << CostVF
+                        << " costs: " << (VecCost / Width));
+      if (CostVF.isScalable())
+        LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
+                          << AssumedMinimumVscale << ")");
+      LLVM_DEBUG(dbgs() << ".\n");
+#endif
+      if (CostVF.isVector() && !IsVec && !ForceVectorization) {
+        LLVM_DEBUG(
+            dbgs()
+            << "LV: Not considering vector loop of width " << CostVF
+            << " because it will not generate any vector instructions.\n");
+        continue;
+      }
+
+      Costs.emplace_back(VectorizationFactor(CostVF, VecCost, ScalarCost));
+    }
+    VFCandidates[&*Plan] = Costs;
+  }
+  emitInvalidCostRemarks(InvalidCosts, ORE, OrigLoop);
+
+  if (!EnableCondStoresVectorization && CM.hasPredStores()) {
+    reportVectorizationFailure(
+        "There are conditional stores.",
+        "store that is conditionally executed prevents vectorization",
+        "ConditionalStore", ORE, OrigLoop);
+    VPlans.clear();
   }
 }
 
@@ -10268,7 +10257,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, CM.getVScaleForTuning(), L,
+        !areRuntimeChecksProfitable(Checks, VF, LVP.getVScaleForTuning(), L,
                                     *PSE.getSE())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
@@ -10390,7 +10379,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
-          CM.selectEpilogueVectorizationFactor(VF.Width, LVP);
+          LVP.selectEpilogueVectorizationFactor(VF.Width);
       if (EpilogueVF.Width.isVector()) {
 
         // The first pass vectorizes the main loop and creates a scalar epilogue
