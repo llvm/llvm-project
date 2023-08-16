@@ -173,6 +173,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/reserved-identifier>`, so that it does not warn
   on macros starting with underscore and lowercase letter.
 
+- Improved :doc:`bugprone-lambda-function-name
+  <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
+  `IgnoreMacros` to ignore warnings in macros.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   to ignore ``static`` variables declared within the scope of
