@@ -7854,7 +7854,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       }
       break;
 
-    case Instruction::AShr: {
+    case Instruction::AShr:
       // AShr X, C, where C is a constant.
       ConstantInt *CI = dyn_cast<ConstantInt>(BO->RHS);
       if (!CI)
@@ -7876,36 +7876,68 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       Type *TruncTy = IntegerType::get(getContext(), BitWidth - AShrAmt);
 
       Operator *L = dyn_cast<Operator>(BO->LHS);
-      if (L && L->getOpcode() == Instruction::Shl) {
+      const SCEV *AddTruncateExpr = nullptr;
+      ConstantInt *ShlAmtCI = nullptr;
+      const SCEV *AddConstant = nullptr;
+
+      if (L && L->getOpcode() == Instruction::Add) {
+        // X = Shl A, n
+        // Y = Add X, c
+        // Z = AShr Y, m
+        // n, c and m are constants.
+
+        Operator *LShift = dyn_cast<Operator>(L->getOperand(0));
+        ConstantInt *AddOperandCI = dyn_cast<ConstantInt>(L->getOperand(1));
+        if (LShift && LShift->getOpcode() == Instruction::Shl) {
+          if (AddOperandCI) {
+            const SCEV *ShlOp0SCEV = getSCEV(LShift->getOperand(0));
+            ShlAmtCI = dyn_cast<ConstantInt>(LShift->getOperand(1));
+            // since we truncate to TruncTy, the AddConstant should be of the
+            // same type, so create a new Constant with type same as TruncTy.
+            // Also, the Add constant should be shifted right by AShr amount.
+            APInt AddOperand = AddOperandCI->getValue().ashr(AShrAmt);
+            AddConstant = getConstant(TruncTy, AddOperand.getZExtValue(),
+                                      AddOperand.isSignBitSet());
+            // we model the expression as sext(add(trunc(A), c << n)), since the
+            // sext(trunc) part is already handled below, we create a
+            // AddExpr(TruncExp) which will be used later.
+            AddTruncateExpr = getTruncateExpr(ShlOp0SCEV, TruncTy);
+          }
+        }
+      } else if (L && L->getOpcode() == Instruction::Shl) {
         // X = Shl A, n
         // Y = AShr X, m
         // Both n and m are constant.
 
         const SCEV *ShlOp0SCEV = getSCEV(L->getOperand(0));
-        if (L->getOperand(1) == BO->RHS)
-          // For a two-shift sext-inreg, i.e. n = m,
-          // use sext(trunc(x)) as the SCEV expression.
-          return getSignExtendExpr(
-              getTruncateExpr(ShlOp0SCEV, TruncTy), OuterTy);
+        ShlAmtCI = dyn_cast<ConstantInt>(L->getOperand(1));
+        AddTruncateExpr = getTruncateExpr(ShlOp0SCEV, TruncTy);
+      }
 
-        ConstantInt *ShlAmtCI = dyn_cast<ConstantInt>(L->getOperand(1));
-        if (ShlAmtCI && ShlAmtCI->getValue().ult(BitWidth)) {
-          uint64_t ShlAmt = ShlAmtCI->getZExtValue();
-          if (ShlAmt > AShrAmt) {
-            // When n > m, use sext(mul(trunc(x), 2^(n-m)))) as the SCEV
-            // expression. We already checked that ShlAmt < BitWidth, so
-            // the multiplier, 1 << (ShlAmt - AShrAmt), fits into TruncTy as
-            // ShlAmt - AShrAmt < Amt.
-            APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt,
-                                            ShlAmt - AShrAmt);
-            return getSignExtendExpr(
-                getMulExpr(getTruncateExpr(ShlOp0SCEV, TruncTy),
-                getConstant(Mul)), OuterTy);
-          }
+      if (AddTruncateExpr && ShlAmtCI) {
+        // We can merge the two given cases into a single SCEV statement,
+        // incase n = m, the mul expression will be 2^0, so it gets resolved to
+        // a simpler case. The following code handles the two cases:
+        //
+        // 1) For a two-shift sext-inreg, i.e. n = m,
+        //    use sext(trunc(x)) as the SCEV expression.
+        //
+        // 2) When n > m, use sext(mul(trunc(x), 2^(n-m)))) as the SCEV
+        //    expression. We already checked that ShlAmt < BitWidth, so
+        //    the multiplier, 1 << (ShlAmt - AShrAmt), fits into TruncTy as
+        //    ShlAmt - AShrAmt < Amt.
+        uint64_t ShlAmt = ShlAmtCI->getZExtValue();
+        if (ShlAmtCI->getValue().ult(BitWidth) && ShlAmt >= AShrAmt) {
+          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt, ShlAmt - AShrAmt);
+          const SCEV *CompositeExpr =
+              getMulExpr(AddTruncateExpr, getConstant(Mul));
+          if (L->getOpcode() != Instruction::Shl)
+            CompositeExpr = getAddExpr(CompositeExpr, AddConstant);
+
+          return getSignExtendExpr(CompositeExpr, OuterTy);
         }
       }
       break;
-    }
     }
   }
 
