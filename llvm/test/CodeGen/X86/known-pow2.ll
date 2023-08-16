@@ -619,11 +619,8 @@ define <4 x i1> @pow2_vselect_eq(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pand %xmm0, %xmm2
 ; CHECK-NEXT:    pandn %xmm7, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
-; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %yy = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %y
   %zz = lshr <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>, %z
