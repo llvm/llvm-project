@@ -7,4 +7,4 @@ subroutine acc_routine1()
 end subroutine
 
 ! CHECK: acc.routine @acc_routine_0 func(@_QPacc_routine1)
-! CHECK-LABEL: func.func @_QPacc_routine1()
+! CHECK-LABEL: func.func @_QPacc_routine1() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
