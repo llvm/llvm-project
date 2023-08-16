@@ -283,6 +283,36 @@ module acc_declare
 
   end subroutine
 
+! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+! CHECK:         %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:         %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>> {name = "a", structured = false}
+! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "a_desc", structured = false}
+! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:         return
+! CHECK:       }
+
+! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_pre_dealloc(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+! CHECK:         %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:         %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:         %[[GETDEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>> {dataClause = #acc<data_clause acc_create>, name = "a_desc", structured = false}
+! CHECK:         acc.declare_exit dataOperands(%[[GETDEVICEPTR]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK:         acc.delete accPtr(%[[GETDEVICEPTR]] : !fir.heap<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_create>, name = "a_desc", structured = false}
+! CHECK:         return
+! CHECK:       }
+
+! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+! CHECK:         %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:         %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>> {implicit = true, name = "a_desc_desc", structured = false}
+! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK:         return
+! CHECK:       }
+
 end module
 
 module acc_declare_allocatable_test
