@@ -105,9 +105,11 @@ private:
                                          bool AllowMinSizeF32 = false,
                                          bool AllowF64 = false,
                                          bool AllowStrictFP = false);
-  void replaceLibCallWithSimpleIntrinsic(CallInst *CI, Intrinsic::ID IntrID);
+  void replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                         Intrinsic::ID IntrID);
 
-  bool tryReplaceLibcallWithSimpleIntrinsic(CallInst *CI, Intrinsic::ID IntrID,
+  bool tryReplaceLibcallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                            Intrinsic::ID IntrID,
                                             bool AllowMinSizeF32 = false,
                                             bool AllowF64 = false,
                                             bool AllowStrictFP = false);
@@ -592,64 +594,72 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_EXP:
       if (FMF.none())
         return false;
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::exp,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_EXP2:
       if (FMF.none())
         return false;
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::exp2,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp2,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_LOG:
       if (FMF.none())
         return false;
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_LOG2:
       if (FMF.none())
         return false;
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log2,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log2,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_LOG10:
       if (FMF.none())
         return false;
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::log10,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log10,
                                                   FMF.approxFunc());
     case AMDGPULibFunc::EI_FMIN:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::minnum, true,
-                                                  true);
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::minnum,
+                                                  true, true);
     case AMDGPULibFunc::EI_FMAX:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::maxnum, true,
-                                                  true);
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::maxnum,
+                                                  true, true);
     case AMDGPULibFunc::EI_FMA:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::fma, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fma, true,
                                                   true);
     case AMDGPULibFunc::EI_MAD:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::fmuladd, true,
-                                                  true);
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fmuladd,
+                                                  true, true);
     case AMDGPULibFunc::EI_FABS:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::fabs, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fabs, true,
                                                   true, true);
     case AMDGPULibFunc::EI_COPYSIGN:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::copysign, true,
-                                                  true, true);
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::copysign,
+                                                  true, true, true);
     case AMDGPULibFunc::EI_FLOOR:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::floor, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::floor, true,
                                                   true);
     case AMDGPULibFunc::EI_CEIL:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::ceil, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::ceil, true,
                                                   true);
     case AMDGPULibFunc::EI_TRUNC:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::trunc, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::trunc, true,
                                                   true);
     case AMDGPULibFunc::EI_RINT:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::rint, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::rint, true,
                                                   true);
     case AMDGPULibFunc::EI_ROUND:
-      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::round, true,
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::round, true,
                                                   true);
     case AMDGPULibFunc::EI_LDEXP: {
       if (!shouldReplaceLibcallWithIntrinsic(CI, true, true))
         return false;
+
+      Value *Arg1 = CI->getArgOperand(1);
+      if (VectorType *VecTy = dyn_cast<VectorType>(CI->getType());
+          VecTy && !isa<VectorType>(Arg1->getType())) {
+        Value *SplatArg1 = B.CreateVectorSplat(VecTy->getElementCount(), Arg1);
+        CI->setArgOperand(1, SplatArg1);
+      }
+
       CI->setCalledFunction(Intrinsic::getDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
@@ -1135,21 +1145,34 @@ bool AMDGPULibCalls::shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
   return true;
 }
 
-void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(CallInst *CI,
+void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
+                                                       CallInst *CI,
                                                        Intrinsic::ID IntrID) {
+  if (CI->arg_size() == 2) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    VectorType *Arg0VecTy = dyn_cast<VectorType>(Arg0->getType());
+    VectorType *Arg1VecTy = dyn_cast<VectorType>(Arg1->getType());
+    if (Arg0VecTy && !Arg1VecTy) {
+      Value *SplatRHS = B.CreateVectorSplat(Arg0VecTy->getElementCount(), Arg1);
+      CI->setArgOperand(1, SplatRHS);
+    } else if (!Arg0VecTy && Arg1VecTy) {
+      Value *SplatLHS = B.CreateVectorSplat(Arg1VecTy->getElementCount(), Arg0);
+      CI->setArgOperand(0, SplatLHS);
+    }
+  }
+
   CI->setCalledFunction(
       Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
 }
 
-bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(CallInst *CI,
-                                                          Intrinsic::ID IntrID,
-                                                          bool AllowMinSizeF32,
-                                                          bool AllowF64,
-                                                          bool AllowStrictFP) {
+bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
+    IRBuilder<> &B, CallInst *CI, Intrinsic::ID IntrID, bool AllowMinSizeF32,
+    bool AllowF64, bool AllowStrictFP) {
   if (!shouldReplaceLibcallWithIntrinsic(CI, AllowMinSizeF32, AllowF64,
                                          AllowStrictFP))
     return false;
-  replaceLibCallWithSimpleIntrinsic(CI, IntrID);
+  replaceLibCallWithSimpleIntrinsic(B, CI, IntrID);
   return true;
 }
 
