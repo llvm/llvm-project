@@ -205,8 +205,15 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
     return false;
   // Replace if either DstReg has no constraints or the register
   // constraints match.
-  return !MRI.getRegClassOrRegBank(DstReg) ||
-         MRI.getRegClassOrRegBank(DstReg) == MRI.getRegClassOrRegBank(SrcReg);
+  const auto &DstRBC = MRI.getRegClassOrRegBank(DstReg);
+  if (!DstRBC || DstRBC == MRI.getRegClassOrRegBank(SrcReg))
+    return true;
+
+  // Otherwise match if the Src is already a regclass that is covered by the Dst
+  // RegBank.
+  return DstRBC.is<const RegisterBank *>() && MRI.getRegClassOrNull(SrcReg) &&
+         DstRBC.get<const RegisterBank *>()->covers(
+             *MRI.getRegClassOrNull(SrcReg));
 }
 
 bool llvm::isTriviallyDead(const MachineInstr &MI,
