@@ -16,6 +16,7 @@
 #include "lldb/lldb-types.h"
 
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 
 namespace lldb_private {
@@ -45,8 +46,6 @@ public:
   ///
   /// The destructor is virtual since this class gets subclassed.
   virtual ~Communication();
-
-  virtual void Clear();
 
   /// Connect using the current connection by passing \a url to its connect
   /// function. string.
@@ -84,7 +83,10 @@ public:
 
   bool HasConnection() const;
 
-  lldb_private::Connection *GetConnection() { return m_connection_sp.get(); }
+  lldb_private::Connection *GetConnection() {
+    std::shared_lock guard(m_connection_mutex);
+    return m_connection_sp.get();
+  }
 
   /// Read bytes from the current connection.
   ///
@@ -169,13 +171,24 @@ protected:
                                       ///by this communications class.
   std::mutex
       m_write_mutex; ///< Don't let multiple threads write at the same time...
+  mutable std::shared_mutex m_connection_mutex;
   bool m_close_on_eof;
+
+  /// Same as read but with m_connection_mutex unlocked.
+  size_t ReadUnlocked(void *dst, size_t dst_len,
+                      const Timeout<std::micro> &timeout,
+                      lldb::ConnectionStatus &status, Status *error_ptr);
 
   size_t ReadFromConnection(void *dst, size_t dst_len,
                             const Timeout<std::micro> &timeout,
                             lldb::ConnectionStatus &status, Status *error_ptr);
 
 private:
+  /// Same as Disconnect but with with m_connection_mutex unlocked.
+  lldb::ConnectionStatus DisconnectUnlocked(Status *error_ptr = nullptr);
+  /// Same as Write but with both m_write_mutex and m_connection_mutex unlocked.
+  size_t WriteUnlocked(const void *src, size_t src_len,
+                       lldb::ConnectionStatus &status, Status *error_ptr);
   Communication(const Communication &) = delete;
   const Communication &operator=(const Communication &) = delete;
 };
