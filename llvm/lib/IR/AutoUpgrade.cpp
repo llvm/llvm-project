@@ -930,19 +930,16 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
-  case 'd': {
-    if (Name == "dbg.addr") {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
-      return true;
-    }
-    if (Name == "dbg.value" && F->arg_size() == 4) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
-      return true;
+  case 'd':
+    if (Name.consume_front("dbg.")) {
+      if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
+        return true;
+      }
+      break; // No other 'dbg.*'.
     }
     break;
-  }
   case 'e':
     if (Name.consume_front("experimental.vector.")) {
       Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
