@@ -2874,16 +2874,18 @@ multiclass RVVSignedWidenBinBuiltinSetVwsll
                           ["vx", "Uw", "UwUvz"]]>;
 
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-  // zvbb
+  // zvkb
   defm vandn   : RVVUnsignedBinBuiltinSet;
-  defm vbrev   : RVVOutBuiltinSetZvbb;
   defm vbrev8  : RVVOutBuiltinSetZvbb;
   defm vrev8   : RVVOutBuiltinSetZvbb;
+  defm vrol    : RVVUnsignedShiftBuiltinSet;
+  defm vror    : RVVUnsignedShiftBuiltinSet;
+
+  // zvbb
+  defm vbrev   : RVVOutBuiltinSetZvbb;
   defm vclz    : RVVOutBuiltinSetZvbb;
   defm vctz    : RVVOutBuiltinSetZvbb;
   defm vcpopv  : RVVOutBuiltinSetZvbb;
-  defm vrol    : RVVUnsignedShiftBuiltinSet;
-  defm vror    : RVVUnsignedShiftBuiltinSet;
   let OverloadedName = "vwsll" in
   defm vwsll   : RVVSignedWidenBinBuiltinSetVwsll;
 
