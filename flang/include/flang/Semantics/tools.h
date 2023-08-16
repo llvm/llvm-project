@@ -679,5 +679,8 @@ std::optional<R> GetConstExpr(
   return std::nullopt;
 }
 
+// Returns "m" for a module, "m:sm" for a submodule.
+std::string GetModuleOrSubmoduleName(const Symbol &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
