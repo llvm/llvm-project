@@ -28,7 +28,7 @@ DynamicIndexList = Sequence[Union[MixedInt, Sequence[MixedInt]]]
 
 def _dispatch_dynamic_index_list(
     indices: Union[DynamicIndexList, ArrayAttr],
-) -> tuple[list[ValueLike], list[int] | ArrayAttr, list[bool]]:
+) -> tuple[list[ValueLike], Union[list[int], ArrayAttr], list[bool]]:
     """Dispatches a list of indices to the appropriate form.
 
     This is similar to the custom `DynamicIndexList` directive upstream:
