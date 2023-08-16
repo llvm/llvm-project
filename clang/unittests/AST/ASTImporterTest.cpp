@@ -8638,6 +8638,24 @@ TEST_P(ImportInjectedClassNameType, ImportTypedefType) {
   EXPECT_TRUE(ToCtx.hasSameType(ToInjTypedef, ToInjParmVar));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportMacroQualifiedType) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+        #define CDECL __attribute__((cdecl))
+        typedef void (CDECL *X)();
+      )",
+      Lang_CXX03, "", Lang_CXX03, "X");
+
+  auto *FromTy =
+      FirstDeclMatcher<MacroQualifiedType>().match(From, macroQualifiedType());
+  auto *ToTy =
+      FirstDeclMatcher<MacroQualifiedType>().match(To, macroQualifiedType());
+
+  EXPECT_TRUE(isa<AttributedType>(FromTy->getUnderlyingType()));
+  EXPECT_TRUE(isa<AttributedType>(ToTy->getUnderlyingType()));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportCorrectTemplateName) {
   constexpr auto TestCode = R"(
       template <class T>
