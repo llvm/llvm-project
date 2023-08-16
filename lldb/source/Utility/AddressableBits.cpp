@@ -23,28 +23,57 @@ void AddressableBits::SetAddressableBits(uint32_t lowmem_addressing_bits,
   m_high_memory_addr_bits = highmem_addressing_bits;
 }
 
-void AddressableBits::Clear() {
-  m_low_memory_addr_bits = m_high_memory_addr_bits = 0;
+void AddressableBits::SetLowmemAddressableBits(
+    uint32_t lowmem_addressing_bits) {
+  m_low_memory_addr_bits = lowmem_addressing_bits;
+}
+
+void AddressableBits::SetHighmemAddressableBits(
+    uint32_t highmem_addressing_bits) {
+  m_high_memory_addr_bits = highmem_addressing_bits;
 }
 
 void AddressableBits::SetProcessMasks(Process &process) {
-  // In case either value is set to 0, indicating it was not set, use the
-  // other value.
-  if (m_low_memory_addr_bits == 0)
-    m_low_memory_addr_bits = m_high_memory_addr_bits;
-  if (m_high_memory_addr_bits == 0)
-    m_high_memory_addr_bits = m_low_memory_addr_bits;
-
-  if (m_low_memory_addr_bits == 0)
+  if (m_low_memory_addr_bits == 0 && m_high_memory_addr_bits == 0)
     return;
 
-  addr_t address_mask = ~((1ULL << m_low_memory_addr_bits) - 1);
-  process.SetCodeAddressMask(address_mask);
-  process.SetDataAddressMask(address_mask);
+  // If we don't have an addressable bits value for low memory,
+  // see if we have a Code/Data mask already, and use that.
+  // Or use the high memory addressable bits value as a last
+  // resort.
+  addr_t low_addr_mask;
+  if (m_low_memory_addr_bits == 0) {
+    if (process.GetCodeAddressMask() != UINT64_MAX)
+      low_addr_mask = process.GetCodeAddressMask();
+    else if (process.GetDataAddressMask() != UINT64_MAX)
+      low_addr_mask = process.GetDataAddressMask();
+    else
+      low_addr_mask = ~((1ULL << m_high_memory_addr_bits) - 1);
+  } else {
+    low_addr_mask = ~((1ULL << m_low_memory_addr_bits) - 1);
+  }
 
-  if (m_low_memory_addr_bits != m_high_memory_addr_bits) {
-    lldb::addr_t hi_address_mask = ~((1ULL << m_high_memory_addr_bits) - 1);
-    process.SetHighmemCodeAddressMask(hi_address_mask);
-    process.SetHighmemDataAddressMask(hi_address_mask);
+  // If we don't have an addressable bits value for high memory,
+  // see if we have a Code/Data mask already, and use that.
+  // Or use the low memory addressable bits value as a last
+  // resort.
+  addr_t hi_addr_mask;
+  if (m_high_memory_addr_bits == 0) {
+    if (process.GetHighmemCodeAddressMask() != UINT64_MAX)
+      hi_addr_mask = process.GetHighmemCodeAddressMask();
+    else if (process.GetHighmemDataAddressMask() != UINT64_MAX)
+      hi_addr_mask = process.GetHighmemDataAddressMask();
+    else
+      hi_addr_mask = ~((1ULL << m_low_memory_addr_bits) - 1);
+  } else {
+    hi_addr_mask = ~((1ULL << m_high_memory_addr_bits) - 1);
+  }
+
+  process.SetCodeAddressMask(low_addr_mask);
+  process.SetDataAddressMask(low_addr_mask);
+
+  if (low_addr_mask != hi_addr_mask) {
+    process.SetHighmemCodeAddressMask(hi_addr_mask);
+    process.SetHighmemDataAddressMask(hi_addr_mask);
   }
 }
