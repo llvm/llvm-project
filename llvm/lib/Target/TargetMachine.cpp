@@ -89,6 +89,7 @@ uint64_t TargetMachine::getMaxCodeSize() const {
   case CodeModel::Large:
     return llvm::maxUIntN(64);
   }
+  llvm_unreachable("Unhandled CodeModel enum");
 }
 
 /// Get the IR-specified TLS model for Var.
