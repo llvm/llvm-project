@@ -175,6 +175,20 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
   return TSFlags & HasRoundModeOpMask;
 }
 
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getRoundModeOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags))
+    return -1;
+  // The operand order
+  // -------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4 |
+  // | policy         | sew  | vl  | rm  |
+  // -------------------------------------
+  return Desc.getNumOperands() - hasVecPolicyOp(TSFlags) - 3;
+}
+
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
