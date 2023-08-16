@@ -2,6 +2,8 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK: acc.routine @acc_routine_8 func(@_QPacc_routine9) bind("_QPacc_routine9a")
+! CHECK: acc.routine @acc_routine_7 func(@_QPacc_routine8) bind("routine8_")
 ! CHECK: acc.routine @acc_routine_6 func(@_QPacc_routine7) gang(dim = 1 : i32)
 ! CHECK: acc.routine @acc_routine_5 func(@_QPacc_routine6) nohost
 ! CHECK: acc.routine @acc_routine_4 func(@_QPacc_routine5) worker
@@ -51,3 +53,18 @@ subroutine acc_routine7()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine7() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_6]>}
+
+subroutine acc_routine8()
+  !$acc routine bind("routine8_")
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_routine8() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_7]>}
+
+subroutine acc_routine9a()
+end subroutine
+
+subroutine acc_routine9()
+  !$acc routine bind(acc_routine9a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_routine9() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_8]>}
