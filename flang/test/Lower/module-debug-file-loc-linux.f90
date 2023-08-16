@@ -11,4 +11,4 @@ end subroutine
 ! CHECK:   func.func @_QPsb1() {
 ! CHECK:   }
 ! CHECK: } loc(#[[MODULE_LOC:.*]])
-! CHECK: #[[MODULE_LOC]] = loc("/{{.*}}flang/test/Lower/module-debug-file-loc-linux.f90":0:0)
+! CHECK: #[[MODULE_LOC]] = loc("/{{.*}}/test/Lower/module-debug-file-loc-linux.f90":0:0)
