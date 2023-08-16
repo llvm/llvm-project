@@ -574,10 +574,9 @@ Status ProcessMachCore::DoLoadCore() {
 
   CleanupMemoryRegionPermissions();
 
-  AddressableBits addressable_bits;
-  if (core_objfile->GetAddressableBits(addressable_bits)) {
-    addressable_bits.SetProcessMasks(*this);
-  }
+  AddressableBits addressable_bits = core_objfile->GetAddressableBits();
+  addressable_bits.SetProcessMasks(*this);
+
   return error;
 }
 

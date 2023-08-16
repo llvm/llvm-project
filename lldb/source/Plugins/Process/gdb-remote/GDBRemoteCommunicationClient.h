@@ -238,7 +238,7 @@ public:
 
   ArchSpec GetSystemArchitecture();
 
-  bool GetAddressableBits(lldb_private::AddressableBits &addressable_bits);
+  lldb_private::AddressableBits GetAddressableBits();
 
   bool GetHostname(std::string &s);
 
