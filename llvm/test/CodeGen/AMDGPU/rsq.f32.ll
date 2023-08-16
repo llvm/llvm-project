@@ -1167,6 +1167,54 @@ define float @v_rsq_f32(float %val) {
   ret float %div
 }
 
+define { float, float } @v_rsq_f32_multi_use(float %val) {
+; GCN-DAZ-LABEL: v_rsq_f32_multi_use:
+; GCN-DAZ:       ; %bb.0:
+; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v2, v0
+; GCN-DAZ-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-UNSAFE-LABEL: v_rsq_f32_multi_use:
+; GCN-IEEE-UNSAFE:       ; %bb.0:
+; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %insert.0 = insertvalue { float, float } poison, float %sqrt, 0
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  %insert.1 = insertvalue { float, float } %insert.0, float %div, 1
+  ret { float, float } %insert.1
+}
+
 define float @v_rsq_f32_missing_contract0(float %val) {
 ; GCN-DAZ-LABEL: v_rsq_f32_missing_contract0:
 ; GCN-DAZ:       ; %bb.0:
