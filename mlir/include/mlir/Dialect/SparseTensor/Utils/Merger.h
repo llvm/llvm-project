@@ -13,17 +13,48 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
-#include "mlir/Dialect/SparseTensor/Utils/MergerNewtypes.h"
-
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
+
 #include <optional>
 
 namespace mlir {
 namespace sparse_tensor {
+
+namespace detail {
+/// A constant serving as the canonically invalid identifier,
+/// regardless of the identifier type.
+static constexpr unsigned kInvalidId = -1u;
+} // namespace detail
+
+/// Tensor identifiers, chosen to be the `BlockArgument::getArgNumber`
+/// of the value passed to `Merger::buildTensorExp`.
+using TensorId = unsigned;
+
+/// Loop identifiers.
+using LoopId = unsigned;
+
+/// A compressed representation of `std::pair<TensorId, LoopId>`.
+/// The compression scheme is such that this also serves as an index
+/// into the bitvector stored in `LatPoint` (since that bitvector is
+/// just the implementation for a set of `TensorLoopId` values).
+using TensorLoopId = unsigned;
+
+/// `TensorExp` identifiers. These are allocated by `Merger::addExp`,
+/// and serve as unique identifiers for the corresponding `TensorExp` object.
+using ExprId = unsigned;
+
+/// `LatPoint` identifiers. These are allocated by `Merger::addLat`,
+/// and serve as unique identifiers for the corresponding `LatPoint` object.
+using LatPointId = unsigned;
+
+/// `LatSet` identifiers.  These are allocated by `Merger::addSet` (and
+/// by other methods calling that one), and serve as unique identifiers
+/// for the corresponding `SmallVector<LatPointId>` object.
+using LatSetId = unsigned;
 
 /// Tensor expression. Represents an MLIR expression in tensor index notation.
 struct TensorExp final {
@@ -35,16 +66,16 @@ struct TensorExp final {
     ExprId e1;
   };
 
-  // The `x` parameter has different types depending on the value of the
-  // `k` parameter.  The correspondences are:
-  // * `kTensor`    -> `TensorId`
-  // * `kInvariant` -> `kInvalidId`
-  // * `kLoopVar`   -> `LoopId`
-  // * else         -> `ExprId`
-  //
-  // The `y`, `v`, and `op` parameters either must or must not be
-  // `kInvalidId`/`nullptr`, depending on the value of the `k` parameter;
-  // however, they have uniform C++ types regardless of the value of `k`.
+  /// The `x` parameter has different types depending on the value of the
+  /// `k` parameter.  The correspondences are:
+  /// * `kTensor`    -> `TensorId`
+  /// * `kInvariant` -> `kInvalidId`
+  /// * `kLoopVar`   -> `LoopId`
+  /// * else         -> `ExprId`
+  ///
+  /// The `y`, `v`, and `op` parameters either must or must not be
+  /// `kInvalidId`/`nullptr`, depending on the value of the `k` parameter;
+  /// however, they have uniform C++ types regardless of the value of `k`.
   TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *op, Attribute a);
 
   /// Tensor expression kind.
@@ -165,7 +196,6 @@ enum class TensorExp::Kind {
   kDenseOp, // special category of operations requiring all dense operands
 };
 
-//===----------------------------------------------------------------------===//
 /// Lattice point.  Each lattice point consists of a formal conjunction
 /// of `TensorLoopId`s, together with the identifier of the corresponding
 /// tensor expression.  The formal conjunction is represented as a set of
@@ -189,7 +219,6 @@ struct LatPoint final {
   ExprId exp;
 };
 
-//===----------------------------------------------------------------------===//
 /// A class to handle all iteration lattice operations. This class abstracts
 /// away from some implementation details of storing iteration lattices and
 /// tensor expressions. This allows for fine-tuning performance characteristics
@@ -341,19 +370,19 @@ public:
   /// Gets the loop-identifier of the `TensorLoopId`.
   constexpr LoopId loop(TensorLoopId b) const { return b / numTensors; }
 
-  /// Get the total number of tensors (including the output-tensor and
+  /// Gets the total number of tensors (including the output-tensor and
   /// synthetic-tensor).
   constexpr unsigned getNumTensors() const { return numTensors; }
 
-  /// Get the total number of loops (native loops + filter loops).
+  /// Gets the total number of loops (native loops + filter loops).
   constexpr unsigned getNumLoops() const { return numLoops; }
-  /// Get the number of native loops.
+  /// Gets the number of native loops.
   constexpr unsigned getNumNativeLoops() const { return numNativeLoops; }
-  /// Get the number of filter loops.
+  /// Gets the number of filter loops.
   constexpr unsigned getNumFilterLoops() const {
     return numLoops - numNativeLoops;
   }
-  /// Get the identifier of the first filter-loop.
+  /// Gets the identifier of the first filter-loop.
   constexpr LoopId getStartingFilterLoopId() const {
     return getNumNativeLoops();
   }
@@ -363,9 +392,10 @@ public:
     return b == makeTensorLoopId(outTensor, i);
   }
 
-  /// Get the output tensor's identifier.
+  /// Gets the output tensor's identifier.
   constexpr TensorId getOutTensorID() const { return outTensor; }
-  /// Get the synthetic tensor's identifier (used for all invariant
+
+  /// Gets the synthetic tensor's identifier (used for all invariant
   /// tensor expressions).
   constexpr TensorId getSynTensorID() const { return syntheticTensor; }
 
@@ -669,31 +699,31 @@ private:
   // `operator[]`: `SmallVector` performs OOB checks, whereas `std::vector`
   // does not.
 
-  // Map that converts pair<TensorId, LoopId> to the corresponding
-  // level-type.
+  /// Map that converts pair<TensorId, LoopId> to the corresponding
+  /// level-type.
   std::vector<std::vector<DimLevelType>> lvlTypes;
 
-  // Map that converts pair<TensorId, LoopId> to the corresponding
-  // level.
+  /// Map that converts pair<TensorId, LoopId> to the corresponding
+  /// level.
   std::vector<std::vector<std::optional<Level>>> loopToLvl;
 
-  // Map that converts pair<TensorId, Level> to the corresponding LoopId.
+  /// Map that converts pair<TensorId, Level> to the corresponding LoopId.
   std::vector<std::vector<std::optional<LoopId>>> lvlToLoop;
 
-  // Map from a loop to its dependencies if any.
-  // The dependencies of a loop is a set of (tensor, level) pairs.
-  // It is currently only set for non-trivial index expressions.
-  // E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
-  // that i and j are used in the non-trivial index expression on A0.
+  /// Map from a loop to its dependencies if any.
+  /// The dependencies of a loop is a set of (tensor, level) pairs.
+  /// It is currently only set for non-trivial index expressions.
+  /// E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
+  /// that i and j are used in the non-trivial index expression on A0.
   std::vector<std::vector<std::optional<std::pair<Level, DimLevelType>>>>
       loopToDependencies;
 
-  // The inverse map of ldxToDependencies from tensor level -> dependent loop
-  // E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
-  // to compute its indices.
+  /// The inverse map of ldxToDependencies from tensor level -> dependent loop
+  /// E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
+  /// to compute its indices.
   std::vector<std::vector<std::vector<LoopId>>> levelToDependentLoop;
 
-  // Map from a loop to the [tid, lvl] pair that defines the loop boundary.
+  /// Map from a loop to the [tid, lvl] pair that defines the loop boundary.
   std::vector<std::pair<TensorId, Level>> loopBounds;
 
   llvm::SmallVector<TensorExp> tensorExps;
