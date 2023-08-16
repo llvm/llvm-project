@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -S -triple x86_64 -std=c17 -fsanitize=function %s -o - | FileCheck %s --check-prefixes=CHECK
 
 // CHECK: .long	248076293
