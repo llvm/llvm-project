@@ -1140,11 +1140,14 @@ structured_op: !LinalgStructuredOpConfig
 metadata: !LinalgOpMetadata
   name: batch_mmt4d
   cpp_class_name: BatchMmt4DOp
-  doc: "Performs a batched matrix-matrix-transpose multiplication of two\nbatched-4D\
-    \ (5D) inputs.\n\nBesides the outermost batch dimension has the same semantic\
-    \ as\nlinalg.batch_matmul, the differences from linalg.batch_matmul in the\nnon-batch\
-    \ dimensions are the same as linalg.mmt4d vs. linalg.matmul. See the\ndescription\
-    \ of lingalg.mmt4d."
+  doc: |-
+    Performs a batched matrix-matrix-transpose multiplication of two batched-4D
+    (5D) inputs.
+
+    Besides the outermost batch dimension has the same semantic as
+    linalg.batch_matmul, the differences from linalg.batch_matmul in the
+    non-batch dimensions are the same as linalg.mmt4d vs. linalg.matmul. See the
+    description of lingalg.mmt4d.
   implements:
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
