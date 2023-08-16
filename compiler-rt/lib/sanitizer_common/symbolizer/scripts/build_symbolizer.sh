@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Run as: CLANG=bin/clang ZLIB_SRC=src/zlib \
-#             build_symbolizer.sh runtime_build/lib/clang/4.0.0/lib/linux/
+# Run as: CLANG=bin/clang build_symbolizer.sh out.o
 # zlib can be downloaded from http://www.zlib.net.
 #
 # Script compiles self-contained object file with symbolization code and injects
@@ -36,21 +35,8 @@ COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
 
-if [[ "$ZLIB_SRC" == ""  ||
-      ! -x "${ZLIB_SRC}/configure" ||
-      ! -f "${ZLIB_SRC}/zlib.h" ]]; then
-  echo "Missing or incomplete ZLIB_SRC"
-  exit 1
-fi
-ZLIB_SRC=$(readlink -f $ZLIB_SRC)
-
 CLANG="${CLANG:-`which clang`}"
 CLANG_DIR=$(readlink -f $(dirname "$CLANG"))
-
-rm -rf symbolizer
-BUILD_DIR=$(readlink -f ./symbolizer)
-mkdir -p $BUILD_DIR
-cd $BUILD_DIR
 
 CC=$CLANG_DIR/clang
 CXX=$CLANG_DIR/clang++
@@ -65,6 +51,10 @@ for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
      exit 1
   fi
 done
+
+BUILD_DIR=${PWD}/symbolizer
+mkdir -p $BUILD_DIR
+cd $BUILD_DIR
 
 ZLIB_BUILD=${BUILD_DIR}/zlib
 LIBCXX_BUILD=${BUILD_DIR}/libcxx
@@ -83,9 +73,8 @@ FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-mkdir -p ${ZLIB_BUILD}
+[[ -d ${ZLIB_BUILD} ]] || git clone https://github.com/madler/zlib ${ZLIB_BUILD}
 cd ${ZLIB_BUILD}
-cp -r ${ZLIB_SRC}/* .
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
 make -j libz.a
 
