@@ -33,14 +33,14 @@ class PSVRuntimeInfo {
   // data is little-endian encoded and may not be properly aligned to read
   // directly from. The dereference operator creates a copy of the data and byte
   // swaps it as appropriate.
-  template <typename T> struct ViewArray {
+  struct ResourceArray {
     StringRef Data;
     uint32_t Stride; // size of each element in the list.
 
-    ViewArray() = default;
-    ViewArray(StringRef D, size_t S) : Data(D), Stride(S) {}
+    ResourceArray() = default;
+    ResourceArray(StringRef D, size_t S) : Data(D), Stride(S) {}
 
-    using value_type = T;
+    using value_type = dxbc::PSV::v2::ResourceBindInfo;
     static constexpr uint32_t MaxStride() {
       return static_cast<uint32_t>(sizeof(value_type));
     }
@@ -50,7 +50,7 @@ class PSVRuntimeInfo {
       uint32_t Stride; // size of each element in the list.
       const char *Current;
 
-      iterator(const ViewArray &A, const char *C)
+      iterator(const ResourceArray &A, const char *C)
           : Data(A.Data), Stride(A.Stride), Current(C) {}
       iterator(const iterator &) = default;
 
@@ -58,8 +58,7 @@ class PSVRuntimeInfo {
         // Explicitly zero the structure so that unused fields are zeroed. It is
         // up to the user to know if the fields are used by verifying the PSV
         // version.
-        value_type Val;
-        std::memset(&Val, 0, sizeof(value_type));
+        value_type Val = {{0, 0, 0, 0}, 0, 0};
         if (Current >= Data.end())
           return Val;
         memcpy(static_cast<void *>(&Val), Current,
@@ -104,9 +103,6 @@ class PSVRuntimeInfo {
     size_t size() const { return Data.size() / Stride; }
   };
 
-  using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
-  using SigElementArray = ViewArray<dxbc::PSV::v0::SignatureElement>;
-
   StringRef Data;
   uint32_t Size;
   using InfoStruct =
@@ -114,11 +110,6 @@ class PSVRuntimeInfo {
                    dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
   InfoStruct BasicInfo;
   ResourceArray Resources;
-  StringRef StringTable;
-  SmallVector<uint32_t> SemanticIndexTable;
-  SigElementArray SigInputElements;
-  SigElementArray SigOutputElements;
-  SigElementArray SigPatchOrPrimElements;
 
 public:
   PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
@@ -139,23 +130,6 @@ public:
   uint32_t getResourceStride() const { return Resources.Stride; }
 
   const InfoStruct &getInfo() const { return BasicInfo; }
-
-  StringRef getStringTable() const { return StringTable; }
-  ArrayRef<uint32_t> getSemanticIndexTable() const {
-    return SemanticIndexTable;
-  }
-
-  uint8_t getSigInputCount() const;
-  uint8_t getSigOutputCount() const;
-  uint8_t getSigPatchOrPrimCount() const;
-
-  SigElementArray getSigInputElements() const { return SigInputElements; }
-  SigElementArray getSigOutputElements() const { return SigOutputElements; }
-  SigElementArray getSigPatchOrPrimElements() const {
-    return SigPatchOrPrimElements;
-  }
-
-  uint32_t getSigElementStride() const { return SigInputElements.Stride; }
 };
 
 } // namespace DirectX
