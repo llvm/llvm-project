@@ -4045,8 +4045,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   unsigned BitWidth = OpVT.getScalarSizeInBits();
 
   // Is the constant a known power of 2?
-  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Val))
-    return Const->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+  if (ISD::matchUnaryPredicate(Val, [BitWidth](ConstantSDNode *C) {
+        return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+      }))
+    return true;
 
   // A left-shift of a constant one will have exactly one bit set because
   // shifting the bit off the end is undefined.
@@ -4054,6 +4056,8 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue() == 1)
       return true;
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+           isKnownNeverZero(Val, Depth);
   }
 
   // Similarly, a logical right-shift of a constant sign-bit will have exactly
@@ -4062,7 +4066,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue().isSignMask())
       return true;
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+           isKnownNeverZero(Val, Depth);
   }
+
+  if (Val.getOpcode() == ISD::ROTL || Val.getOpcode() == ISD::ROTR)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
 
   // Are all operands of a build vector constant powers of two?
   if (Val.getOpcode() == ISD::BUILD_VECTOR)
@@ -4084,6 +4093,34 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
       getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
       isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1))
     return true;
+
+  if (Val.getOpcode() == ISD::SMIN || Val.getOpcode() == ISD::SMAX ||
+      Val.getOpcode() == ISD::UMIN || Val.getOpcode() == ISD::UMAX)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+
+  if (Val.getOpcode() == ISD::SELECT || Val.getOpcode() == ISD::VSELECT)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(2), Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1);
+
+  if (Val.getOpcode() == ISD::AND) {
+    // Looking for `x & -x` pattern:
+    // If x == 0:
+    //    x & -x -> 0
+    // If x != 0:
+    //    x & -x -> non-zero pow2
+    // so if we find the pattern return whether we know `x` is non-zero.
+    for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) {
+      SDValue NegOp = Val.getOperand(OpIdx);
+      if (NegOp.getOpcode() == ISD::SUB &&
+          NegOp.getOperand(1) == Val.getOperand(1 - OpIdx) &&
+          isNullOrNullSplat(NegOp.getOperand(0)))
+        return isKnownNeverZero(Val.getOperand(1 - OpIdx), Depth);
+    }
+  }
+
+  if (Val.getOpcode() == ISD::ZERO_EXTEND)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
