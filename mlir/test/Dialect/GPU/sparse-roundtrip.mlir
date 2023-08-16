@@ -64,7 +64,7 @@ module attributes {gpu.container_module} {
   // CHECK: %{{.*}}, %{{.*}} = gpu.spgemm_create_descr async [%{{.*}}]
   // CHECK: %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{ WORK_ESTIMATION} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
   // CHECK: %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{ COMPUTE} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
-  // CHECK: %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} = gpu.spgemm_get_size async [%{{.*}}] %{{.*}}
+  // CHECK: %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} = gpu.spmat_get_size async [%{{.*}}] %{{.*}}
   // CHECK: %{{.*}} = gpu.set_csr_pointers async [%{{.*}}] %{{.*}}, {{.*}}, {{.*}}, {{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf32>
   // CHECK: %{{.*}} = gpu.spgemm_copy async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
   // CHECK: %{{.*}} = gpu.spgemm_destroy_descr async [%{{.*}}] %{{.*}}
@@ -91,7 +91,7 @@ module attributes {gpu.container_module} {
                                [%token7]{COMPUTE}
 			       %spmatA, %spmatB, %spmatC,
                                %spgemmDesc, %c0, %alloc: f32 into memref<0xi8>
-    %rows, %cols, %nnz, %token9 = gpu.spgemm_get_size async [%token8] %spmatC
+    %rows, %cols, %nnz, %token9 = gpu.spmat_get_size async [%token8] %spmatC
     %token10 = gpu.set_csr_pointers async [%token8] %spmatC, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf32>
     %token11 = gpu.spgemm_copy async [%token10] %spmatA, %spmatB, %spmatC, %spgemmDesc: f32
     %token12 = gpu.spgemm_destroy_descr async [%token11] %spgemmDesc

@@ -74,3 +74,7 @@ Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in 
 Revert "[clang][test] Fix LIT test failures for the following commit"
 Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 Revert "[IR] Deprecate some old methods for getting typed pointer types"
+
+Revert [clang] Add missing field to TLSModelAttr json AST dump
+Revert [clang] Add missing field to VisibilityAttr json AST dump
+

@@ -37,6 +37,9 @@ __isinf U
 __isoc99_sscanf U
 __isoc99_vsscanf U
 __moddi3 U
+__sanitizer_internal_memcpy U
+__sanitizer_internal_memmove U
+__sanitizer_internal_memset U
 __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
 __sanitizer_symbolize_demangle T
