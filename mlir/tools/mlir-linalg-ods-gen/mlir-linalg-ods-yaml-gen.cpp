@@ -693,14 +693,13 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
   std::string doc;
   if (opConfig.metadata->doc) {
     static const char structuredOpDocFmt[] = R"FMT(
-  let summary = [{ {0} }];
-  let description = [{
-    {1}
-  }];
+  let summary = [{{{0}}];
+  let description = [{{{1}}];
 )FMT";
     StringRef summary, description;
     std::tie(summary, description) =
-        StringRef(*opConfig.metadata->doc).trim().split('\n');
+        StringRef(*opConfig.metadata->doc).trim().split("\n\n");
+
     doc = llvm::formatv(structuredOpDocFmt, summary.trim(), description.trim());
   }
 
