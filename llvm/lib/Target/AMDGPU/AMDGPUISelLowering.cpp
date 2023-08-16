@@ -2482,15 +2482,17 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
   llvm_unreachable("covered opcode switch");
 }
 
-static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags) {
+bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
+                                           SDNodeFlags Flags) {
   if (Flags.hasApproximateFuncs())
     return true;
   auto &Options = DAG.getTarget().Options;
   return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
 }
 
-static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
-                                   SDNodeFlags Flags) {
+bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
+                                                  SDValue Src,
+                                                  SDNodeFlags Flags) {
   return !valueIsKnownNeverF32Denorm(Src) &&
          DAG.getMachineFunction()
                  .getDenormalMode(APFloat::IEEEsingle())
