@@ -1396,7 +1396,6 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       continue;
     }
 
-    if (isa<PHINode>(InVal)) return nullptr;  // Itself a phi.
     if (NonSimplifiedBB) return nullptr;  // More than one non-simplified value.
 
     NonSimplifiedBB = InBB;
