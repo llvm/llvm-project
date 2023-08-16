@@ -687,7 +687,7 @@ multiclass VPatUnaryV_V_NoMask_Zvk<string intrinsic, string instruction,
                           vti.LMul, vti.RegClass, vti.RegClass>;
 }
 
-multiclass VPatUnaryV_S_NoMaskVectorCtypto<string intrinsic, string instruction,
+multiclass VPatUnaryV_S_NoMaskVectorCrypto<string intrinsic, string instruction,
                                list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     foreach vti_vs2 = ZvkI32IntegerVectors<vti.LMul.MX>.vs2_types in
@@ -699,7 +699,7 @@ multiclass VPatUnaryV_S_NoMaskVectorCtypto<string intrinsic, string instruction,
 multiclass VPatUnaryV_V_S_NoMask_Zvk<string intrinsic, string instruction,
                                 list<VTypeInfo> vtilist> {
   defm : VPatUnaryV_V_NoMask_Zvk<intrinsic, instruction, vtilist>;
-  defm : VPatUnaryV_S_NoMaskVectorCtypto<intrinsic, instruction, vtilist>;
+  defm : VPatUnaryV_S_NoMaskVectorCrypto<intrinsic, instruction, vtilist>;
 }
 
 multiclass VPatBinaryV_VV_NoMask<string intrinsic, string instruction,
@@ -861,7 +861,7 @@ let Predicates = [HasStdExtZvkned] in {
   defm : VPatUnaryV_V_S_NoMask_Zvk<"int_riscv_vaesem", "PseudoVAESEM", I32IntegerVectors>;
   defm : VPatBinaryV_VI_NoMaskTU<"int_riscv_vaeskf1", "PseudoVAESKF1", I32IntegerVectors>;
   defm : VPatBinaryV_VI_NoMask<"int_riscv_vaeskf2", "PseudoVAESKF2", I32IntegerVectors>;
-  defm : VPatUnaryV_S_NoMaskVectorCtypto<"int_riscv_vaesz", "PseudoVAESZ", I32IntegerVectors>;
+  defm : VPatUnaryV_S_NoMaskVectorCrypto<"int_riscv_vaesz", "PseudoVAESZ", I32IntegerVectors>;
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvknha] in {
