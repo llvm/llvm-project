@@ -39,24 +39,21 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   MantissaInt mantissa;
   bool is_inf_or_nan;
   uint32_t mantissa_width;
-  int exponent_bias;
   if (to_conv.length_modifier == LengthModifier::L) {
     mantissa_width = fputil::MantissaWidth<long double>::VALUE;
-    exponent_bias = fputil::FPBits<long double>::EXPONENT_BIAS;
     fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
-    exponent = float_bits.get_exponent();
+    exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
   } else {
     mantissa_width = fputil::MantissaWidth<double>::VALUE;
-    exponent_bias = fputil::FPBits<double>::EXPONENT_BIAS;
     fputil::FPBits<double>::UIntType float_raw =
         static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
-    exponent = float_bits.get_exponent();
+    exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
   }
@@ -73,14 +70,6 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   else if ((to_conv.flags & FormatFlags::SPACE_PREFIX) ==
            FormatFlags::SPACE_PREFIX)
     sign_char = ' ';
-
-  // Handle the exponent for numbers with a 0 exponent
-  if (exponent == -exponent_bias) {
-    if (mantissa > 0) // Subnormals
-      ++exponent;
-    else // Zeroes
-      exponent = 0;
-  }
 
   constexpr size_t BITS_IN_HEX_DIGIT = 4;
 

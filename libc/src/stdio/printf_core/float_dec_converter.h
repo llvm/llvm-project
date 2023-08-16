@@ -483,7 +483,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
   // signed because later we use -MANT_WIDTH
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
-  int exponent = float_bits.get_exponent();
+  int exponent = float_bits.get_explicit_exponent();
 
   char sign_char = 0;
 
@@ -626,7 +626,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   // signed because later we use -MANT_WIDTH
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
-  int exponent = float_bits.get_exponent();
+  int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
 
   const char a = (to_conv.conv_name & 32) | 'A';
@@ -787,7 +787,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   // signed because later we use -MANT_WIDTH
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
-  int exponent = float_bits.get_exponent();
+  int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
 
   // From the standard: Let P (init_precision) equal the precision if nonzero, 6
