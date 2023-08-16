@@ -48,7 +48,7 @@ struct llcas_functions_t {
   llcas_digest_t (*objectid_get_digest)(llcas_cas_t, llcas_objectid_t);
 
   llcas_lookup_result_t (*cas_contains_object)(llcas_cas_t, llcas_objectid_t,
-                                               char **error);
+                                               bool globally, char **error);
 
   llcas_lookup_result_t (*cas_load_object)(llcas_cas_t, llcas_objectid_t,
                                            llcas_loaded_object_t *,

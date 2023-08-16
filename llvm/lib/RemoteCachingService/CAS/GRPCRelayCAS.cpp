@@ -116,6 +116,7 @@ public:
                                ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
+  Expected<bool> isMaterialized(ObjectRef Ref) const final;
   Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
   Error validate(const CASID &ID) final {
     // Not supported yet. Always return success.
@@ -301,6 +302,11 @@ std::optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {
          "Expected ID from same hash schema");
   auto &I = indexHash(ID.getHash());
   return toReference(I);
+}
+
+Expected<bool> GRPCRelayCAS::isMaterialized(ObjectRef Ref) const {
+  auto &I = asInMemoryIndexValue(Ref);
+  return (bool)I.Data.load();
 }
 
 Expected<std::optional<ObjectHandle>>

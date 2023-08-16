@@ -112,13 +112,18 @@ struct CASWrapper {
 
   std::mutex Lock{};
 
+  /// Check if the object is contained, in the "local" CAS only or "globally".
+  bool containsObject(ObjectID ID, bool Globally);
+
   /// Load the object, potentially "downloading" it from upstream.
   Expected<std::optional<ondisk::ObjectHandle>> loadObject(ObjectID ID);
 
-  /// "Uploads" a key the associated full node graph.
+  /// "Uploads" a key and the associated full node graph.
   Error upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value);
-  /// "Downloads" the single root node that is associated with the key. The rest
-  /// of the nodes in the graph will be "downloaded" lazily as they are visited.
+
+  /// "Downloads" the ID associated with the key but not the node data. The node
+  /// itself and the rest of the nodes in the graph will be "downloaded" lazily
+  /// as they are visited.
   Expected<std::optional<ObjectID>> downstreamKey(ArrayRef<uint8_t> Key);
 
   /// Synchronized access to \c llvm::errs().
@@ -139,6 +144,17 @@ private:
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CASWrapper, llcas_cas_t)
 
 } // namespace
+
+bool CASWrapper::containsObject(ObjectID ID, bool Globally) {
+  if (DB->getGraphDB().containsObject(ID))
+    return true;
+  if (!Globally || !UpstreamDB)
+    return false;
+
+  ObjectID UpstreamID =
+      UpstreamDB->getGraphDB().getReference(DB->getGraphDB().getDigest(ID));
+  return UpstreamDB->getGraphDB().containsObject(UpstreamID);
+}
 
 Expected<std::optional<ondisk::ObjectHandle>>
 CASWrapper::loadObject(ObjectID ID) {
@@ -231,16 +247,8 @@ CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
   if (!UpstreamValue)
     return std::nullopt;
 
-  Expected<ObjectID> Value = downstreamNode(*UpstreamValue);
-  if (!Value)
-    return Value.takeError();
-  assert(DB->getGraphDB().getDigest(*Value) ==
-         UpstreamDB->getGraphDB().getDigest(*UpstreamValue));
-  Expected<ObjectID> PutValue = DB->KVPut(Key, *Value);
-  if (!PutValue)
-    return PutValue.takeError();
-  assert(*PutValue == *Value);
-  return PutValue;
+  return DB->getGraphDB().getReference(
+      UpstreamDB->getGraphDB().getDigest(*UpstreamValue));
 }
 
 llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
@@ -329,11 +337,11 @@ llcas_digest_t llcas_objectid_get_digest(llcas_cas_t c_cas,
 
 llcas_lookup_result_t llcas_cas_contains_object(llcas_cas_t c_cas,
                                                 llcas_objectid_t c_id,
-                                                char **error) {
-  auto &CAS = unwrap(c_cas)->DB->getGraphDB();
+                                                bool globally, char **error) {
   ObjectID ID = ObjectID::fromOpaqueData(c_id.opaque);
-  return CAS.containsObject(ID) ? LLCAS_LOOKUP_RESULT_SUCCESS
-                                : LLCAS_LOOKUP_RESULT_NOTFOUND;
+  return unwrap(c_cas)->containsObject(ID, globally)
+             ? LLCAS_LOOKUP_RESULT_SUCCESS
+             : LLCAS_LOOKUP_RESULT_NOTFOUND;
 }
 
 llcas_lookup_result_t llcas_cas_load_object(llcas_cas_t c_cas,
