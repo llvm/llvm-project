@@ -85,17 +85,17 @@ public:
   /// Return the intersection of this set and the given set.
   PresburgerRelation intersect(const PresburgerRelation &set) const;
 
-  /// Intersect the given `set` with the range in-place.
+  /// Return the range intersection of the given `set` with `this` relation.
   ///
   /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
-  /// operation modifies R to be A -> (B intersection C).
-  PresburgerRelation intersectRange(PresburgerSet &set);
+  /// operation returns A -> (B intersection C).
+  PresburgerRelation intersectRange(const PresburgerSet &set) const;
 
-  /// Intersect the given `set` with the domain in-place.
+  /// Return the domain intersection of the given `set` with `this` relation.
   ///
   /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
-  /// operation modifies R to be (A intersection C) -> B.
-  PresburgerRelation intersectDomain(const PresburgerSet &set);
+  /// operation returns (A intersection C) -> B.
+  PresburgerRelation intersectDomain(const PresburgerSet &set) const;
 
   /// Invert the relation, i.e. swap its domain and range.
   ///
