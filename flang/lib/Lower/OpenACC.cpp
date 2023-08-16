@@ -2748,6 +2748,19 @@ genACC(Fortran::lower::AbstractConverter &converter,
       loc, routineOpName.str(), func.getName(), mlir::StringAttr{},
       mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{},
       mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::IntegerAttr{});
+
+  llvm::SmallVector<mlir::SymbolRefAttr> routines;
+  if (func.getOperation()->hasAttr(mlir::acc::getRoutineInfoAttrName())) {
+    auto routineInfo =
+        func.getOperation()->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+            mlir::acc::getRoutineInfoAttrName());
+    routines.append(routineInfo.getAccRoutines().begin(),
+                    routineInfo.getAccRoutines().end());
+  }
+  routines.push_back(builder.getSymbolRefAttr(routineOpName.str()));
+  func.getOperation()->setAttr(
+      mlir::acc::getRoutineInfoAttrName(),
+      mlir::acc::RoutineInfoAttr::get(builder.getContext(), routines));
 }
 
 void Fortran::lower::genOpenACCConstruct(
