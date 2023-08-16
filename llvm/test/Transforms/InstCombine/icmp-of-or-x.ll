@@ -9,7 +9,7 @@ declare void @use.i8(i8)
 define i1 @or_ugt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ugt(
 ; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[XN1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[XN1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xn1 = or i8 %x, %y
@@ -20,7 +20,7 @@ define i1 @or_ugt(i8 %x, i8 %y) {
 define <2 x i1> @or_ule(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @or_ule(
 ; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[XN1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[XN1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %xn1 = or <2 x i8> %x, %y
@@ -82,9 +82,8 @@ define i1 @or_eq_noundef(i8 %x, i8 noundef %y) {
 
 define i1 @or_eq_notY_eq_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_eq_notY_eq_0(
-; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], [[NY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ny = xor i8 %y, -1
@@ -110,9 +109,8 @@ define i1 @or_eq_notY_eq_0_fail_multiuse(i8 %x, i8 %y) {
 
 define i1 @or_ne_notY_eq_1s(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_notY_eq_1s(
-; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ny = xor i8 %y, -1
@@ -136,8 +134,8 @@ define i1 @or_ne_notY_eq_1s_fail_bad_not(i8 %x, i8 %y) {
 
 define <2 x i1> @or_ne_vecC(<2 x i8> %x) {
 ; CHECK-LABEL: @or_ne_vecC(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X:%.*]], <i8 9, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[OR]], <i8 9, i8 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -10, i8 -43>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %or = or <2 x i8> %x, <i8 9, i8 42>
@@ -359,7 +357,7 @@ define i1 @or_simplify_ugt_fail(i8 %y_in, i8 %rhs_in) {
 ; CHECK-LABEL: @or_simplify_ugt_fail(
 ; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[RHS_IN:%.*]], 1
 ; CHECK-NEXT:    [[LBO:%.*]] = or i8 [[RHS]], [[Y_IN:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[LBO]], [[RHS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[LBO]], [[RHS]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = and i8 %y_in, -2
@@ -371,11 +369,7 @@ define i1 @or_simplify_ugt_fail(i8 %y_in, i8 %rhs_in) {
 
 define i1 @pr64610(ptr %b) {
 ; CHECK-LABEL: @pr64610(
-; CHECK-NEXT:    [[V:%.*]] = load i1, ptr [[B:%.*]], align 2
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[V]], i32 74, i32 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[S]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[OR]], [[S]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %v = load i1, ptr %b, align 2
   %s = select i1 %v, i32 74, i32 0
