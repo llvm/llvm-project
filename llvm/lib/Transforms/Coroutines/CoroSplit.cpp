@@ -702,7 +702,8 @@ void CoroCloner::salvageDebugInfo() {
       collectDbgVariableIntrinsics(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, DVI, Shape.OptimizeFrame);
+    coro::salvageDebugInfo(ArgToAllocaMap, DVI, Shape.OptimizeFrame,
+                           false /*IsEntryPoint*/);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1995,7 +1996,8 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // coroutine funclets.
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   for (auto *DDI : collectDbgVariableIntrinsics(F))
-    coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame);
+    coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
+                           true /*IsEntryPoint*/);
 
   return Shape;
 }
