@@ -145,6 +145,39 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   return Removed;
 }
 
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                                    bool DeletePHIIfEmpty) {
+  SmallDenseSet<unsigned> RemoveIndices;
+  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
+    if (Predicate(Idx))
+      RemoveIndices.insert(Idx);
+
+  if (RemoveIndices.empty())
+    return;
+
+  // Remove operands.
+  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
+    return RemoveIndices.contains(U.getOperandNo());
+  });
+  for (Use &U : make_range(NewOpEnd, op_end()))
+    U.set(nullptr);
+
+  // Remove incoming blocks.
+  std::remove_if(const_cast<block_iterator>(block_begin()),
+                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
+                   return RemoveIndices.contains(&BB - block_begin());
+                 });
+
+  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+
+  // If the PHI node is dead, because it has zero entries, nuke it now.
+  if (getNumOperands() == 0 && DeletePHIIfEmpty) {
+    // If anyone is using this PHI, make them use a dummy value instead...
+    replaceAllUsesWith(PoisonValue::get(getType()));
+    eraseFromParent();
+  }
+}
+
 /// growOperands - grow operands - This grows the operand list in response
 /// to a push_back style of operation.  This grows the number of ops by 1.5
 /// times.
