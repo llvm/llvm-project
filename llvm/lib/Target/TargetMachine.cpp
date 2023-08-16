@@ -78,6 +78,19 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
 /// and dynamic-no-pic.
 Reloc::Model TargetMachine::getRelocationModel() const { return RM; }
 
+uint64_t TargetMachine::getMaxCodeSize() const {
+  switch (getCodeModel()) {
+  case CodeModel::Tiny:
+    return llvm::maxUIntN(10);
+  case CodeModel::Small:
+  case CodeModel::Kernel:
+  case CodeModel::Medium:
+    return llvm::maxUIntN(31);
+  case CodeModel::Large:
+    return llvm::maxUIntN(64);
+  }
+}
+
 /// Get the IR-specified TLS model for Var.
 static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   switch (GV->getThreadLocalMode()) {
