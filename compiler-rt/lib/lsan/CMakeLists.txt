@@ -78,6 +78,7 @@ if(COMPILER_RT_HAS_LSAN)
                 $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+                $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
                 $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         ADDITIONAL_HEADERS ${LSAN_HEADERS}
         CFLAGS ${LSAN_CFLAGS}

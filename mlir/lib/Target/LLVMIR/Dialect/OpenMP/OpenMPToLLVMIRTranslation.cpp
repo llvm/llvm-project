@@ -1382,7 +1382,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
                         const SmallVector<Value> &mapOperands,
                         const ArrayAttr &mapTypes,
                         const SmallVector<Value> &devPtrOperands = {},
-                        const SmallVector<Value> &devAddrOperands = {}) {
+                        const SmallVector<Value> &devAddrOperands = {},
+                        bool IsTargetParams = false) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   auto fail = [&combinedInfo]() -> void {
@@ -1417,8 +1418,14 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
         llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     combinedInfo.Names.emplace_back(
         LLVM::createMappingInformation(mapOp.getLoc(), *ompBuilder));
-    combinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(
-        mapTypes[index].dyn_cast<IntegerAttr>().getInt()));
+
+    combinedInfo.Types.emplace_back(
+        llvm::omp::OpenMPOffloadMappingFlags(
+            mapTypes[index].dyn_cast<IntegerAttr>().getInt()) |
+        (IsTargetParams
+             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
+             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE));
+
     combinedInfo.Sizes.emplace_back(
         builder.getInt64(getSizeInBytes(DL, mapOp.getType())));
     index++;
@@ -1740,11 +1747,27 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   int32_t defaultValTeams = -1;
-  int32_t defaultValThreads = -1;
+  int32_t defaultValThreads = 0;
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
+
+  DataLayout DL = DataLayout(opInst.getParentOfType<ModuleOp>());
+  SmallVector<Value> mapOperands = targetOp.getMapOperands();
+  ArrayAttr mapTypes = targetOp.getMapTypes().value();
+
+  llvm::OpenMPIRBuilder::MapInfosTy combinedInfos;
+  auto genMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
+      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    builder.restoreIP(codeGenIP);
+    genMapInfos(builder, moduleTranslation, DL, combinedInfos, mapOperands,
+                mapTypes, {}, {}, true);
+    return combinedInfos;
+  };
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
-      ompLoc, builder.saveIP(), entryInfo, defaultValTeams, defaultValThreads,
-      inputs, bodyCB));
+      ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
+      defaultValThreads, inputs, genMapInfoCB, bodyCB));
 
   return bodyGenStatus;
 }

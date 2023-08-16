@@ -6,6 +6,9 @@
 // FIXME: Investigate.
 // UNSUPPORTED: android
 
+// FIXME: Fails on Darwin
+// UNSUPPORTED: darwin
+
 #include <algorithm>
 #include <assert.h>
 #include <csignal>

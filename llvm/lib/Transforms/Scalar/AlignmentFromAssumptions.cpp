@@ -179,6 +179,9 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
     // Added to suppress a crash because consumer doesn't expect non-constant
     // alignments in the assume bundle.  TODO: Consider generalizing caller.
     return false;
+  if (!cast<SCEVConstant>(AlignSCEV)->getAPInt().isPowerOf2())
+    // Only power of two alignments are supported.
+    return false;
   if (AlignOB.Inputs.size() == 3)
     OffSCEV = SE->getSCEV(AlignOB.Inputs[2].get());
   else

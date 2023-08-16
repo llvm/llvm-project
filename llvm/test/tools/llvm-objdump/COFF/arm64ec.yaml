@@ -27,8 +27,8 @@
 # ARM64EC: file format coff-arm64ec
 # ARM64X:  file format coff-arm64x
 
-# WARN1: llvm-objdump: warning: '{{.*}}': unable to get target for 'x86_64--', see --version and --triple.
-# WARN2: llvm-objdump: warning: '{{.*}}': unable to get target for 'x86_64-w64-windows-gnu', see --version and --triple.
+# WARN1: warning: '{{.*}}': unable to get target for 'x86_64--', see --version and --triple.
+# WARN2: warning: '{{.*}}': unable to get target for 'x86_64-w64-windows-gnu', see --version and --triple.
 
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:

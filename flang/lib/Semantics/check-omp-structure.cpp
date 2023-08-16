@@ -400,6 +400,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     EnterDirectiveNest(SIMDNest);
   }
 
+  // Combined target loop constructs are target device constructs. Keep track of
+  // whether any such construct has been visited to later check that REQUIRES
+  // directives for target-related options don't appear after them.
+  if (llvm::omp::allTargetSet.test(beginDir.v)) {
+    deviceConstructFound_ = true;
+  }
+
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
     // 2.7.1 do-clause -> private-clause |
     //                    firstprivate-clause |
@@ -790,6 +797,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   }
 
   CheckNoBranching(block, beginDir.v, beginDir.source);
+
+  // Target block constructs are target device constructs. Keep track of
+  // whether any such construct has been visited to later check that REQUIRES
+  // directives for target-related options don't appear after them.
+  if (llvm::omp::allTargetSet.test(beginDir.v)) {
+    deviceConstructFound_ = true;
+  }
 
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_target:
@@ -1189,22 +1203,47 @@ void OmpStructureChecker::CheckSymbolNames(
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
+  // Handle both forms of DECLARE TARGET.
+  // - Extended list: It behaves as if there was an ENTER/TO clause with the
+  //   list of objects as argument. It accepts no explicit clauses.
+  // - With clauses.
   if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
+    deviceConstructFound_ = true;
     CheckSymbolNames(dir.source, *objectList);
     CheckIsVarPartOfAnotherVar(dir.source, *objectList);
     CheckThreadprivateOrDeclareTargetVar(*objectList);
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
+    bool toClauseFound{false}, deviceTypeClauseFound{false};
     for (const auto &clause : clauseList->v) {
-      if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        CheckSymbolNames(dir.source, toClause->v);
-        CheckIsVarPartOfAnotherVar(dir.source, toClause->v);
-        CheckThreadprivateOrDeclareTargetVar(toClause->v);
-      } else if (const auto *linkClause{
-                     std::get_if<parser::OmpClause::Link>(&clause.u)}) {
-        CheckSymbolNames(dir.source, linkClause->v);
-        CheckIsVarPartOfAnotherVar(dir.source, linkClause->v);
-        CheckThreadprivateOrDeclareTargetVar(linkClause->v);
+      common::visit(
+          common::visitors{
+              [&](const parser::OmpClause::To &toClause) {
+                toClauseFound = true;
+                CheckSymbolNames(dir.source, toClause.v);
+                CheckIsVarPartOfAnotherVar(dir.source, toClause.v);
+                CheckThreadprivateOrDeclareTargetVar(toClause.v);
+              },
+              [&](const parser::OmpClause::Link &linkClause) {
+                CheckSymbolNames(dir.source, linkClause.v);
+                CheckIsVarPartOfAnotherVar(dir.source, linkClause.v);
+                CheckThreadprivateOrDeclareTargetVar(linkClause.v);
+              },
+              [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
+                deviceTypeClauseFound = true;
+                if (deviceTypeClause.v.v !=
+                    parser::OmpDeviceTypeClause::Type::Host) {
+                  // Function / subroutine explicitly marked as runnable by the
+                  // target device.
+                  deviceConstructFound_ = true;
+                }
+              },
+              [&](const auto &) {},
+          },
+          clause.u);
+
+      if (toClauseFound && !deviceTypeClauseFound) {
+        deviceConstructFound_ = true;
       }
     }
   }
@@ -1721,6 +1760,9 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
   if (rightHandClauseList) {
     checkForValidMemoryOrderClause(rightHandClauseList);
   }
+  if (numMemoryOrderClause == 0) {
+    atomicDirectiveDefaultOrderFound_ = true;
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
@@ -1917,7 +1959,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
 // Following clauses do not have a separate node in parse-tree.h.
 CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
-CHECK_SIMPLE_CLAUSE(AtomicDefaultMemOrder, OMPC_atomic_default_mem_order)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
@@ -1926,7 +1967,6 @@ CHECK_SIMPLE_CLAUSE(Destroy, OMPC_destroy)
 CHECK_SIMPLE_CLAUSE(Detach, OMPC_detach)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
-CHECK_SIMPLE_CLAUSE(DynamicAllocators, OMPC_dynamic_allocators)
 CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
@@ -1939,7 +1979,6 @@ CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
 CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
 CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
-CHECK_SIMPLE_CLAUSE(ReverseOffload, OMPC_reverse_offload)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
@@ -1960,8 +1999,6 @@ CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
 CHECK_SIMPLE_CLAUSE(Sizes, OMPC_sizes)
 CHECK_SIMPLE_CLAUSE(TaskReduction, OMPC_task_reduction)
 CHECK_SIMPLE_CLAUSE(To, OMPC_to)
-CHECK_SIMPLE_CLAUSE(UnifiedAddress, OMPC_unified_address)
-CHECK_SIMPLE_CLAUSE(UnifiedSharedMemory, OMPC_unified_shared_memory)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
 CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
@@ -2960,6 +2997,51 @@ const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
           },
       },
       clause.u);
+}
+
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::AtomicDefaultMemOrder &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_atomic_default_mem_order);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_dynamic_allocators);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::ReverseOffload &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_reverse_offload);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::UnifiedAddress &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_unified_address);
+}
+
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::UnifiedSharedMemory &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_unified_shared_memory);
+}
+
+void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
+  CheckAllowed(clause);
+
+  if (clause == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
+    // Check that it does not appear after an atomic operation without memory
+    // order
+    if (atomicDirectiveDefaultOrderFound_) {
+      context_.Say(GetContext().clauseSource,
+          "REQUIRES directive with '%s' clause found lexically after atomic "
+          "operation without a memory order clause"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+    }
+  } else {
+    // Check that it does not appear after a device construct
+    if (deviceConstructFound_) {
+      context_.Say(GetContext().clauseSource,
+          "REQUIRES directive with '%s' clause found lexically after device "
+          "construct"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+    }
+  }
 }
 
 } // namespace Fortran::semantics

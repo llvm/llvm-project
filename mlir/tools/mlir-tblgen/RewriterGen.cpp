@@ -715,11 +715,20 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
 
       os << formatv("auto {0} = (*v{1}.begin()).getDefiningOp();\n", argName,
                     i);
+
+      // Indent emitMatchCheck and emitMatch because they declare local
+      // variables.
+      os << "{\n";
+      os.indent();
+
       emitMatchCheck(
           opName, /*matchStr=*/argName,
           formatv("\"There's no operation that defines operand {0} of {1}\"",
                   operandIndex++, opName));
       emitMatch(argTree, argName, depth + 1);
+
+      os.unindent() << "}\n";
+
       // `tblgen_ops` is used to collect the matched operations. In either, we
       // need to queue the operation only if the matching success. Thus we emit
       // the code at the end.

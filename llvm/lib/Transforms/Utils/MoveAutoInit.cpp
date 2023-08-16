@@ -50,7 +50,7 @@ static std::optional<MemoryLocation> writeToAlloca(const Instruction &I) {
   else if (auto *SI = dyn_cast<StoreInst>(&I))
     ML = MemoryLocation::get(SI);
   else
-    assert(false && "memory location set");
+    return std::nullopt;
 
   if (isa<AllocaInst>(getUnderlyingObject(ML.Ptr)))
     return ML;

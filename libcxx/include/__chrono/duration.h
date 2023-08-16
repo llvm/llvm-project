@@ -116,14 +116,10 @@ struct __duration_cast<_FromDuration, _ToDuration, _Period, false, false>
     }
 };
 
-template <class _ToDuration, class _Rep, class _Period>
+template <class _ToDuration, class _Rep, class _Period, __enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    _ToDuration
->::type
+_ToDuration
 duration_cast(const duration<_Rep, _Period>& __fd)
 {
     return __duration_cast<duration<_Rep, _Period>, _ToDuration>()(__fd);
@@ -147,13 +143,9 @@ public:
 };
 
 #if _LIBCPP_STD_VER >= 17
-template <class _ToDuration, class _Rep, class _Period>
+template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    _ToDuration
->::type
+_ToDuration
 floor(const duration<_Rep, _Period>& __d)
 {
     _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
@@ -162,13 +154,9 @@ floor(const duration<_Rep, _Period>& __d)
     return __t;
 }
 
-template <class _ToDuration, class _Rep, class _Period>
+template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    _ToDuration
->::type
+_ToDuration
 ceil(const duration<_Rep, _Period>& __d)
 {
     _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
@@ -177,13 +165,9 @@ ceil(const duration<_Rep, _Period>& __d)
     return __t;
 }
 
-template <class _ToDuration, class _Rep, class _Period>
+template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    _ToDuration
->::type
+_ToDuration
 round(const duration<_Rep, _Period>& __d)
 {
     _ToDuration __lower = chrono::floor<_ToDuration>(__d);
@@ -462,14 +446,11 @@ operator-(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 
 // Duration *
 
-template <class _Rep1, class _Period, class _Rep2>
+template <class _Rep1, class _Period, class _Rep2,
+          __enable_if_t<is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value,
-    duration<typename common_type<_Rep1, _Rep2>::type, _Period>
->::type
+duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator*(const duration<_Rep1, _Period>& __d, const _Rep2& __s)
 {
     typedef typename common_type<_Rep1, _Rep2>::type _Cr;
@@ -477,14 +458,11 @@ operator*(const duration<_Rep1, _Period>& __d, const _Rep2& __s)
     return _Cd(_Cd(__d).count() * static_cast<_Cr>(__s));
 }
 
-template <class _Rep1, class _Period, class _Rep2>
+template <class _Rep1, class _Period, class _Rep2,
+          __enable_if_t<is_convertible<_Rep1, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_convertible<_Rep1, typename common_type<_Rep1, _Rep2>::type>::value,
-    duration<typename common_type<_Rep1, _Rep2>::type, _Period>
->::type
+duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator*(const _Rep1& __s, const duration<_Rep2, _Period>& __d)
 {
     return __d * __s;
@@ -492,15 +470,11 @@ operator*(const _Rep1& __s, const duration<_Rep2, _Period>& __d)
 
 // Duration /
 
-template <class _Rep1, class _Period, class _Rep2>
+template <class _Rep1, class _Period, class _Rep2,
+          __enable_if_t<!__is_duration<_Rep2>::value && is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    !__is_duration<_Rep2>::value &&
-      is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value,
-    duration<typename common_type<_Rep1, _Rep2>::type, _Period>
->::type
+duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator/(const duration<_Rep1, _Period>& __d, const _Rep2& __s)
 {
     typedef typename common_type<_Rep1, _Rep2>::type _Cr;
@@ -520,15 +494,11 @@ operator/(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 
 // Duration %
 
-template <class _Rep1, class _Period, class _Rep2>
+template <class _Rep1, class _Period, class _Rep2,
+          __enable_if_t<!__is_duration<_Rep2>::value && is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    !__is_duration<_Rep2>::value &&
-      is_convertible<_Rep2, typename common_type<_Rep1, _Rep2>::type>::value,
-    duration<typename common_type<_Rep1, _Rep2>::type, _Period>
->::type
+duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator%(const duration<_Rep1, _Period>& __d, const _Rep2& __s)
 {
     typedef typename common_type<_Rep1, _Rep2>::type _Cr;

@@ -2759,9 +2759,6 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
-  This option currently works with ``-fprofile-arcs`` and ``-fprofile-instr-generate``,
-  but not with ``-fprofile-generate``.
-
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

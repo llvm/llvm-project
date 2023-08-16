@@ -48,6 +48,24 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
   return success();
 }
 
+/// Checks if 'memref' may or must alias a MemRef in 'memrefList'. It is often a
+/// requirement of optimization patterns that there cannot be any aliasing
+/// memref in order to perform the desired simplification. The 'allowSelfAlias'
+/// argument indicates whether 'memref' may be present in 'memrefList' which
+/// makes this helper function applicable to situations where we already know
+/// that 'memref' is in the list but also when we don't want it in the list.
+static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
+                                     ValueRange memrefList, Value memref,
+                                     bool allowSelfAlias) {
+  for (auto mr : memrefList) {
+    if (allowSelfAlias && mr == memref)
+      continue;
+    if (!analysis.alias(mr, memref).isNo())
+      return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
@@ -176,15 +194,6 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
                                             AliasAnalysis &aliasAnalysis)
       : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
 
-  bool potentiallyAliasesMemref(DeallocOp deallocOp,
-                                Value retainedMemref) const {
-    for (auto memref : deallocOp.getMemrefs()) {
-      if (!aliasAnalysis.alias(memref, retainedMemref).isNo())
-        return true;
-    }
-    return false;
-  }
-
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newRetainedMemrefs, replacements;
@@ -197,7 +206,8 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
     };
 
     for (auto retainedMemref : deallocOp.getRetained()) {
-      if (potentiallyAliasesMemref(deallocOp, retainedMemref)) {
+      if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
+                                   retainedMemref, false)) {
         newRetainedMemrefs.push_back(retainedMemref);
         replacements.push_back({});
         continue;
@@ -226,6 +236,85 @@ private:
   AliasAnalysis &aliasAnalysis;
 };
 
+/// Split off memrefs to separate dealloc operations to reduce the number of
+/// runtime checks required and enable further canonicalization of the new and
+/// simpler dealloc operations. A memref can be split off if it is guaranteed to
+/// not alias with any other memref in the `memref` operand list.  The results
+/// of the old and the new dealloc operation have to be combined by computing
+/// the element-wise disjunction of them.
+///
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%m0, %m1 : memref<2xi32>, memref<2xi32>)
+///                           if (%cond0, %cond1)
+///                       retain (%r0, %r1 : memref<2xi32>, memref<2xi32>)
+/// return %0#0, %0#1
+/// ```
+/// Given that `%m0` is guaranteed to never alias with `%m1`, the above IR is
+/// canonicalized to the following, thus reducing the number of runtime alias
+/// checks by 1 and potentially enabling further canonicalization of the new
+/// split-up dealloc operations.
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%m0 : memref<2xi32>) if (%cond0)
+///                       retain (%r0, %r1 : memref<2xi32>, memref<2xi32>)
+/// %1:2 = bufferization.dealloc (%m1 : memref<2xi32>) if (%cond1)
+///                       retain (%r0, %r1 : memref<2xi32>, memref<2xi32>)
+/// %2 = arith.ori %0#0, %1#0
+/// %3 = arith.ori %0#1, %1#1
+/// return %2, %3
+/// ```
+struct SplitDeallocWhenNotAliasingAnyOther
+    : public OpRewritePattern<DeallocOp> {
+  SplitDeallocWhenNotAliasingAnyOther(MLIRContext *context,
+                                      AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    if (deallocOp.getMemrefs().size() <= 1)
+      return failure();
+
+    SmallVector<Value> newMemrefs, newConditions, replacements;
+    DenseSet<Operation *> exceptedUsers;
+    replacements = deallocOp.getUpdatedConditions();
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
+                                   memref, true)) {
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
+        continue;
+      }
+
+      auto newDeallocOp = rewriter.create<DeallocOp>(
+          deallocOp.getLoc(), memref, cond, deallocOp.getRetained());
+      replacements = SmallVector<Value>(llvm::map_range(
+          llvm::zip(replacements, newDeallocOp.getUpdatedConditions()),
+          [&](auto replAndNew) -> Value {
+            auto orOp = rewriter.create<arith::OrIOp>(deallocOp.getLoc(),
+                                                      std::get<0>(replAndNew),
+                                                      std::get<1>(replAndNew));
+            exceptedUsers.insert(orOp);
+            return orOp.getResult();
+          }));
+    }
+
+    if (newMemrefs.size() == deallocOp.getMemrefs().size())
+      return failure();
+
+    rewriter.replaceUsesWithIf(deallocOp.getUpdatedConditions(), replacements,
+                               [&](OpOperand &operand) {
+                                 return !exceptedUsers.contains(
+                                     operand.getOwner());
+                               });
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+
+private:
+  AliasAnalysis &aliasAnalysis;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -244,8 +333,9 @@ struct BufferDeallocationSimplificationPass
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
     RewritePatternSet patterns(&getContext());
     patterns.add<DeallocRemoveDeallocMemrefsContainedInRetained,
-                 RemoveRetainedMemrefsGuaranteedToNotAlias>(&getContext(),
-                                                            aliasAnalysis);
+                 RemoveRetainedMemrefsGuaranteedToNotAlias,
+                 SplitDeallocWhenNotAliasingAnyOther>(&getContext(),
+                                                      aliasAnalysis);
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))

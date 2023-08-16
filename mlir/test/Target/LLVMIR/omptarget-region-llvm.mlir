@@ -12,7 +12,7 @@ module attributes {omp.is_target_device = false} {
     %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr<i32>
     llvm.store %1, %3 : !llvm.ptr<i32>
     llvm.store %0, %5 : !llvm.ptr<i32>
-    omp.target   {
+    omp.target map((to -> %3 : !llvm.ptr<i32>), (to -> %5 : !llvm.ptr<i32>), (from -> %7 : !llvm.ptr<i32>)) {
       %8 = llvm.load %3 : !llvm.ptr<i32>
       %9 = llvm.load %5 : !llvm.ptr<i32>
       %10 = llvm.add %8, %9  : i32
@@ -23,7 +23,13 @@ module attributes {omp.is_target_device = false} {
   }
 }
 
-// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE:.*]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE:.*]].region_id, ptr %kernel_args)
+
+// CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
+// CHECK: omp_offload.failed:
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+// CHECK: omp_offload.cont:
+
 // CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
 // CHECK: %[[VAL_A:.*]] = load i32, ptr %[[ADDR_A]], align 4
 // CHECK: %[[VAL_B:.*]] = load i32, ptr %[[ADDR_B]], align 4

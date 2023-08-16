@@ -237,23 +237,14 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
       buf.readInt(runCount);
       buf.readInt(dummy);
-      // clang<11 uses a fake 4.2 format which sets length to 9.
-      if (length == 9)
-        buf.readInt(runCount);
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
-      // clang<11 uses a fake 4.2 format which sets length to 0.
-      if (length > 0) {
-        buf.readInt(dummy);
-        buf.readInt(dummy);
-        buf.readInt(runCount);
-      }
+      buf.readInt(dummy);
+      buf.readInt(dummy);
+      buf.readInt(runCount);
       ++programCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       if (length == 0) // Placeholder
         continue;
-      // As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger than 3.
-      // However, clang<11 uses a fake 4.2 format which may set length larger
-      // than 3.
       if (length < 2 || !buf.readInt(ident))
         return false;
       auto It = identToFunction.find(ident);
