@@ -9,7 +9,7 @@
 define i16 @bitcast_v1f16_i16(<1 x half> %a) {
 ; CHECK-LABEL: bitcast_v1f16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x half> %a to i16
@@ -19,7 +19,7 @@ define i16 @bitcast_v1f16_i16(<1 x half> %a) {
 define half @bitcast_v1f16_f16(<1 x half> %a) {
 ; CHECK-LABEL: bitcast_v1f16_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x half> %a to half
@@ -29,7 +29,7 @@ define half @bitcast_v1f16_f16(<1 x half> %a) {
 define i32 @bitcast_v2f16_i32(<2 x half> %a) {
 ; CHECK-LABEL: bitcast_v2f16_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x half> %a to i32
@@ -39,7 +39,7 @@ define i32 @bitcast_v2f16_i32(<2 x half> %a) {
 define i32 @bitcast_v1f32_i32(<1 x float> %a) {
 ; CHECK-LABEL: bitcast_v1f32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x float> %a to i32
@@ -49,7 +49,7 @@ define i32 @bitcast_v1f32_i32(<1 x float> %a) {
 define float @bitcast_v2f16_f32(<2 x half> %a) {
 ; CHECK-LABEL: bitcast_v2f16_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x half> %a to float
@@ -59,7 +59,7 @@ define float @bitcast_v2f16_f32(<2 x half> %a) {
 define float @bitcast_v1f32_f32(<1 x float> %a) {
 ; CHECK-LABEL: bitcast_v1f32_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x float> %a to float
@@ -78,7 +78,7 @@ define i64 @bitcast_v4f16_i64(<4 x half> %a) {
 ;
 ; RV64-FP-LABEL: bitcast_v4f16_i64:
 ; RV64-FP:       # %bb.0:
-; RV64-FP-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-FP-NEXT:    vmv.x.s a0, v8
 ; RV64-FP-NEXT:    ret
   %b = bitcast <4 x half> %a to i64
@@ -97,7 +97,7 @@ define i64 @bitcast_v2f32_i64(<2 x float> %a) {
 ;
 ; RV64-FP-LABEL: bitcast_v2f32_i64:
 ; RV64-FP:       # %bb.0:
-; RV64-FP-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-FP-NEXT:    vmv.x.s a0, v8
 ; RV64-FP-NEXT:    ret
   %b = bitcast <2 x float> %a to i64
@@ -116,7 +116,7 @@ define i64 @bitcast_v1f64_i64(<1 x double> %a) {
 ;
 ; RV64-FP-LABEL: bitcast_v1f64_i64:
 ; RV64-FP:       # %bb.0:
-; RV64-FP-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-FP-NEXT:    vmv.x.s a0, v8
 ; RV64-FP-NEXT:    ret
   %b = bitcast <1 x double> %a to i64
@@ -126,7 +126,7 @@ define i64 @bitcast_v1f64_i64(<1 x double> %a) {
 define double @bitcast_v4f16_f64(<4 x half> %a) {
 ; CHECK-LABEL: bitcast_v4f16_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <4 x half> %a to double
@@ -136,7 +136,7 @@ define double @bitcast_v4f16_f64(<4 x half> %a) {
 define double @bitcast_v2f32_f64(<2 x float> %a) {
 ; CHECK-LABEL: bitcast_v2f32_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x float> %a to double
@@ -146,7 +146,7 @@ define double @bitcast_v2f32_f64(<2 x float> %a) {
 define double @bitcast_v1f64_f64(<1 x double> %a) {
 ; CHECK-LABEL: bitcast_v1f64_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x double> %a to double
