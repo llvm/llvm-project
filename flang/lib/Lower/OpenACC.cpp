@@ -2854,7 +2854,7 @@ void Fortran::lower::attachDeclarePostDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
   std::stringstream fctName;
-  fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
+  fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation &op = builder.getInsertionBlock()->back();
   op.setAttr(mlir::acc::getDeclareActionAttrName(),
              mlir::acc::DeclareActionAttr::get(
