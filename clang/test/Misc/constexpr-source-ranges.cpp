@@ -25,3 +25,12 @@ static_assert(divByZero() == 0, "");
 /// evaluating the static_assert above.
 // CHECK: constexpr-source-ranges.cpp:23:15:{23:15-23:31}
 // CHECK: constexpr-source-ranges.cpp:21:12:{21:14-21:20}
+
+constexpr int div(bool a, bool b) {
+  return 1 / (int)b;
+}
+constexpr int ints(int a, int b, int c, int d) {
+  return 1;
+}
+static_assert(ints(1, div(true, false), 2, div(false, true)) == 1, "");
+// CHECK: constexpr-source-ranges.cpp:35:23:{35:23-35:39}
