@@ -18,6 +18,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
@@ -728,27 +729,25 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
-  DenseMap<Value, BaseMemRefType> fixedTypes;
-  return getBufferType(value, options, fixedTypes);
+  SmallVector<Value> invocationStack;
+  return getBufferType(value, options, invocationStack);
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
-FailureOr<BaseMemRefType> bufferization::getBufferType(
-    Value value, const BufferizationOptions &options,
-    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+FailureOr<BaseMemRefType>
+bufferization::getBufferType(Value value, const BufferizationOptions &options,
+                             SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) &&
          "unexpected non-tensor type");
-
-  // If the `value` is in `fixedTypes`, return the mapped type.
-  const auto &it = fixedTypes.find(value);
-  if (it != fixedTypes.end())
-    return it->second;
+  invocationStack.push_back(value);
+  auto popFromStack =
+      llvm::make_scope_exit([&]() { invocationStack.pop_back(); });
 
   // Try querying BufferizableOpInterface.
   Operation *op = getOwnerOfValue(value);
   auto bufferizableOp = options.dynCastBufferizableOp(op);
   if (bufferizableOp)
-    return bufferizableOp.getBufferType(value, options, fixedTypes);
+    return bufferizableOp.getBufferType(value, options, invocationStack);
 
   // Op is not bufferizable.
   if (!options.defaultMemorySpace.has_value())
@@ -996,7 +995,7 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
 
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     Value value, const BufferizationOptions &options,
-    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+    SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
 
   // No further analysis is possible for a block argument.
@@ -1013,7 +1012,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     // If the OpResult has an equivalent OpOperand, both OpResult and
     // OpOperand bufferize to the exact same buffer type.
     Value equivalentOperand = aliases.getAliases().front().opOperand->get();
-    return getBufferType(equivalentOperand, options, fixedTypes);
+    return getBufferType(equivalentOperand, options, invocationStack);
   }
 
   // If we do not know the memory space and there is no default memory space,
