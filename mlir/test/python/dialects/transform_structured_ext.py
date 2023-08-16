@@ -200,6 +200,85 @@ def testMatchOpNamesList():
 
 
 @run
+def testMaskedVectorizeStatic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [16, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeStatic
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, 4]
+
+
+@run
+def testMaskedVectorizeArray():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sizes = Attribute.parse("[16, 4]")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, sizes)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeArray
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, 4]
+
+
+@run
+def testMaskedVectorizeMixed():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
+        sz2 = Attribute.parse("4")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [sz1, sz2])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeMixed
+    # CHECK: transform.sequence
+    # CHECK: %[[V0:.*]] = transform.structured.match
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [%[[V0]] : !transform.any_op, 4]
+
+
+@run
+def testMaskedVectorizeScalable():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
+        sz2 = Attribute.parse("4")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [16, [sz1], [sz2], [8]])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeScalable
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[V0:.*]] = transform.structured.match
+    # CHECK-DAG: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, [%[[V0]] : !transform.any_op], [4], [8]]
+
+
+@run
+def testMaskedVectorizeArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MaskedVectorizeOp(
+            sequence.bodyTarget, [16, 4], vectorize_nd_extract=True
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeArgs
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME: vectorize_nd_extract
+
+
+@run
 def testMatchOpNamesTyped():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
