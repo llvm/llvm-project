@@ -925,6 +925,10 @@ bool TargetInfo::validateInputConstraint(
   return true;
 }
 
+bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
+  return false;
+}
+
 void TargetInfo::CheckFixedPointBits() const {
   // Check that the number of fractional and integral bits (and maybe sign) can
   // fit into the bits given for a fixed point type.
