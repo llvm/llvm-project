@@ -1,13 +1,23 @@
 //
 // NOTE: this test requires gpu-sm80
 //
+// with RT lib:
+//
+// RUN: mlir-opt %s \
+// RUN:   --sparse-compiler="enable-runtime-library=true enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71"  \
+// RUN: | mlir-cpu-runner \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
+// RUN:   --e main --entry-point-result=void \
+// RUN: | FileCheck %s
+//
 // without RT lib:
 //
 // RUN: mlir-opt %s \
 // RUN:   --sparse-compiler="enable-runtime-library=false enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71"  \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
 // RUN: | FileCheck %s
 
