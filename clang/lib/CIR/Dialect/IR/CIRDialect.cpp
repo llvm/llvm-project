@@ -1232,6 +1232,20 @@ LogicalResult GlobalOp::verify() {
       return failure();
   }
 
+  // Verify that the constructor region, if present, has only one block which is
+  // not empty.
+  auto &ctorRegion = getCtorRegion();
+  if (!ctorRegion.empty()) {
+    if (!ctorRegion.hasOneBlock()) {
+      return emitError() << "ctor region must have exactly one block.";
+    }
+
+    auto &block = ctorRegion.front();
+    if (block.empty()) {
+      return emitError() << "ctor region shall not be empty.";
+    }
+  }
+
   if (std::optional<uint64_t> alignAttr = getAlignment()) {
     uint64_t alignment = alignAttr.value();
     if (!llvm::isPowerOf2_64(alignment))
