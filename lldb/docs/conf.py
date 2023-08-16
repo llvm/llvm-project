@@ -49,6 +49,12 @@ autodoc_default_options = {
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
 if not building_man_page:
+    try:
+        import sphinx_automodapi.automodapi
+    except ModuleNotFoundError:
+        print(
+            f"install sphinx_automodapi with {sys.executable} -m pip install sphinx_automodapi"
+        )
     extensions.append("sphinx_automodapi.automodapi")
 
 # Add any paths that contain templates here, relative to this directory.
