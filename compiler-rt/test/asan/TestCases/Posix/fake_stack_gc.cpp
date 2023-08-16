@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 const size_t kStackSize = 0x100000;
 
@@ -62,8 +63,11 @@ void *Thread(void *arg) {
 
 int main(void) {
   // Allocate main and alt stack for future thread.
-  void *main_stack = malloc(kStackSize);
-  void *alt_stack = malloc(kStackSize);
+  void *main_stack;
+  void *alt_stack;
+  size_t const kPageSize = sysconf(_SC_PAGESIZE);
+  assert(posix_memalign(&main_stack, kPageSize, kStackSize) == 0);
+  assert(posix_memalign(&alt_stack, kPageSize, kStackSize) == 0);
 
   // Pick the lower stack as the main stack, as we want to trigger GC in
   // FakeStack from alt stack in a such way that main stack is allocated below.
