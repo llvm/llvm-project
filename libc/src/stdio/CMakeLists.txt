@@ -20,10 +20,11 @@ endfunction(add_stdio_entrypoint_object)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-elseif(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
+endif()
 
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
