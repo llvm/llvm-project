@@ -713,7 +713,6 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
   Value *CmpLHS = IC->getOperand(0);
   Value *CmpRHS = IC->getOperand(1);
 
-  Value *V;
   unsigned C1Log;
   bool IsEqualZero;
   bool NeedAnd = false;
@@ -725,12 +724,10 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
     if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
       return nullptr;
 
-    V = CmpLHS;
     C1Log = C1->logBase2();
     IsEqualZero = IC->getPredicate() == ICmpInst::ICMP_EQ;
   } else {
-    // We also need to recognize (icmp slt (trunc (X)), 0) and
-    // (icmp sgt (trunc (X)), -1).
+    // We also need to recognize (icmp slt X, 0) and (icmp sgt X, -1).
     if (IC->getPredicate() == ICmpInst::ICMP_SGT && match(CmpRHS, m_AllOnes()))
       IsEqualZero = true;
     if (IC->getPredicate() == ICmpInst::ICMP_SLT && match(CmpRHS, m_Zero()))
@@ -738,14 +735,11 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
     else
       return nullptr;
 
-    if (!match(CmpLHS, m_OneUse(m_Trunc(m_Value(V)))))
-      return nullptr;
-
     C1Log = CmpLHS->getType()->getScalarSizeInBits() - 1;
     NeedAnd = true;
   }
 
-  Value *Or, *Y;
+  Value *Or, *Y, *V = CmpLHS;
   const APInt *C2;
   bool NeedXor;
   if (match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)))) {
@@ -767,7 +761,7 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
                        V->getType()->getScalarSizeInBits();
 
   // Make sure we don't create more instructions than we save.
-  if ((NeedShift + NeedXor + NeedZExtTrunc) >
+  if ((NeedShift + NeedXor + NeedZExtTrunc + NeedAnd) >
       (IC->hasOneUse() + Or->hasOneUse()))
     return nullptr;
 
