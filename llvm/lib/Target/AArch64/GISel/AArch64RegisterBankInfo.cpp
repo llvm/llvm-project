@@ -431,6 +431,7 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXIMUM:
