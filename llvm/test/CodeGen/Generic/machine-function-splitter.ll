@@ -16,10 +16,10 @@
 
 ;; Check that MFS is on for X86 targets.
 ; MFS_ON: Machine Function Splitter Transformation
-; MFS_ON_NO: warning: -fsplit-machine-functions is not valid for
+; MFS_ON-NOT: warning:
 ;; Check that MFS is not on for non-X86 targets.
 ; MFS_OFF: warning: -fsplit-machine-functions is not valid for
-; MFS_OFF_NO: Machine Function Splitter Transformation
+; MFS_OFF-NOT: Machine Function Splitter Transformation
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ;; Check that cold block is moved to .text.split.
