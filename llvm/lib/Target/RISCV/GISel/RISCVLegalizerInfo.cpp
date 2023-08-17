@@ -113,5 +113,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
   }
 
+  if (ST.hasStdExtM()) {
+    getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
+        .legalFor({XLenLLT})
+        .libcallFor({DoubleXLenLLT})
+        .clampScalar(0, XLenLLT, DoubleXLenLLT)
+        .widenScalarToNextPow2(0);
+  } else {
+    getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
+        .libcallFor({XLenLLT, DoubleXLenLLT})
+        .clampScalar(0, XLenLLT, DoubleXLenLLT)
+        .widenScalarToNextPow2(0);
+  }
+
   getLegacyLegalizerInfo().computeTables();
 }
