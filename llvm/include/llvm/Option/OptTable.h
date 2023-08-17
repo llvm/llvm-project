@@ -184,6 +184,7 @@ public:
   ///
   /// \return The vector of flags which start with Cur.
   std::vector<std::string> findByPrefix(StringRef Cur,
+                                        Visibility VisibilityMask,
                                         unsigned int DisableFlags) const;
 
   /// Find the OptTable option that most closely matches the given string.
@@ -207,6 +208,7 @@ public:
                        unsigned MinimumLength = 4,
                        unsigned MaximumDistance = UINT_MAX) const;
 
+  LLVM_DEPRECATED("Use the VisibilityMask overload instead", "")
   unsigned findNearest(StringRef Option, std::string &NearestString,
                        unsigned FlagsToInclude, unsigned FlagsToExclude = 0,
                        unsigned MinimumLength = 4,
@@ -224,6 +226,7 @@ public:
     return findNearest(Option, ExactString, VisibilityMask, 4, 0) == 0;
   }
 
+  LLVM_DEPRECATED("Use the VisibilityMask overload instead", "")
   bool findExact(StringRef Option, std::string &ExactString,
                  unsigned FlagsToInclude, unsigned FlagsToExclude = 0) const {
     return findNearest(Option, ExactString, FlagsToInclude, FlagsToExclude, 4,
@@ -246,6 +249,7 @@ public:
   ParseOneArg(const ArgList &Args, unsigned &Index,
               Visibility VisibilityMask = Visibility()) const;
 
+  LLVM_DEPRECATED("Use the VisibilityMask overload instead", "")
   std::unique_ptr<Arg> ParseOneArg(const ArgList &Args, unsigned &Index,
                                    unsigned FlagsToInclude,
                                    unsigned FlagsToExclude) const;
@@ -276,6 +280,7 @@ public:
                          unsigned &MissingArgCount,
                          Visibility VisibilityMask = Visibility()) const;
 
+  LLVM_DEPRECATED("Use the VisibilityMask overload instead", "")
   InputArgList ParseArgs(ArrayRef<const char *> Args, unsigned &MissingArgIndex,
                          unsigned &MissingArgCount, unsigned FlagsToInclude,
                          unsigned FlagsToExclude = 0) const;
@@ -315,6 +320,7 @@ public:
                  bool ShowHidden = false, bool ShowAllAliases = false,
                  Visibility VisibilityMask = Visibility()) const;
 
+  LLVM_DEPRECATED("Use the VisibilityMask overload instead", "")
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  unsigned FlagsToInclude, unsigned FlagsToExclude,
                  bool ShowAllAliases) const;

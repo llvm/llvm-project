@@ -205,11 +205,14 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 }
 
 std::vector<std::string>
-OptTable::findByPrefix(StringRef Cur, unsigned int DisableFlags) const {
+OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
+                       unsigned int DisableFlags) const {
   std::vector<std::string> Ret;
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
     if (In.Prefixes.empty() || (!In.HelpText && !In.GroupID))
+      continue;
+    if (!(In.Visibility & VisibilityMask))
       continue;
     if (In.Flags & DisableFlags)
       continue;

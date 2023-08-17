@@ -15,6 +15,8 @@
 using namespace llvm;
 using namespace llvm::opt;
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
