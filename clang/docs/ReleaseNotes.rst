@@ -46,6 +46,8 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
+  be split between a register and a stack slot.
 
 What's New in Clang |release|?
 ==============================
