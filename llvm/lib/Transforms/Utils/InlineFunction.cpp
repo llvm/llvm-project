@@ -1331,13 +1331,15 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
   }
 }
 
-static bool MayContainThrowingOrExitingCall(Instruction *Begin,
-                                            Instruction *End) {
+static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
+                                                   ReturnInst *End) {
 
   assert(Begin->getParent() == End->getParent() &&
          "Expected to be in same basic block!");
+  auto BeginIt = Begin->getIterator();
+  assert(BeginIt != End->getIterator() && "Non-empty BB has empty iterator");
   return !llvm::isGuaranteedToTransferExecutionToSuccessor(
-      Begin->getIterator(), End->getIterator(), InlinerAttributeWindow + 1);
+      ++BeginIt, End->getIterator(), InlinerAttributeWindow + 1);
 }
 
 static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
@@ -1393,7 +1395,7 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // limit the check to both RetVal and RI are in the same basic block and
     // there are no throwing/exiting instructions between these instructions.
     if (RI->getParent() != RetVal->getParent() ||
-        MayContainThrowingOrExitingCall(RetVal, RI))
+        MayContainThrowingOrExitingCallAfterCB(RetVal, RI))
       continue;
     // Add to the existing attributes of NewRetVal, i.e. the cloned call
     // instruction.

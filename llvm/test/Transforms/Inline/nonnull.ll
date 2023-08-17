@@ -159,7 +159,7 @@ define nonnull ptr @callee8() {
 
 define ptr @caller8() {
 ; CHECK-LABEL: define ptr @caller8() {
-; CHECK-NEXT:    [[R_I:%.*]] = call ptr @buz()
+; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz()
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee8()
