@@ -20014,12 +20014,14 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   }
 
   // Sub-128-bit truncation - widen to 128-bit src and pack in the lower half.
+  // On pre-AVX512, pack the src in both halves to help value tracking.
   if (SrcSizeInBits <= 128) {
     InVT = EVT::getVectorVT(Ctx, InVT, 128 / InVT.getSizeInBits());
     OutVT = EVT::getVectorVT(Ctx, OutVT, 128 / OutVT.getSizeInBits());
     In = widenSubVector(In, false, Subtarget, DAG, DL, 128);
-    In = DAG.getBitcast(InVT, In);
-    SDValue Res = DAG.getNode(Opcode, DL, OutVT, In, DAG.getUNDEF(InVT));
+    SDValue LHS = DAG.getBitcast(InVT, In);
+    SDValue RHS = Subtarget.hasAVX512() ? DAG.getUNDEF(InVT) : LHS;
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT, LHS, RHS);
     Res = extractSubVector(Res, 0, DAG, DL, SrcSizeInBits / 2);
     Res = DAG.getBitcast(PackedVT, Res);
     return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
@@ -50844,46 +50846,6 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// This function transforms vector truncation of 'extended sign-bits' or
-/// 'extended zero-bits' values.
-/// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS/PACKUS operations.
-/// TODO: Remove this and just use LowerTruncateVecPackWithSignBits.
-static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
-                                               SelectionDAG &DAG,
-                                               const X86Subtarget &Subtarget) {
-  // Requires SSE2.
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  if (!N->getValueType(0).isVector() || !N->getValueType(0).isSimple())
-    return SDValue();
-
-  SDValue In = N->getOperand(0);
-  if (!In.getValueType().isSimple())
-    return SDValue();
-
-  MVT VT = N->getValueType(0).getSimpleVT();
-  MVT InVT = In.getValueType().getSimpleVT();
-
-  // AVX512 has fast truncate, but if the input is already going to be split,
-  // there's no harm in trying pack.
-  if (Subtarget.hasAVX512() &&
-      !(!Subtarget.useAVX512Regs() && VT.is256BitVector() &&
-        InVT.is512BitVector())) {
-    // PACK should still be worth it for 128-bit vectors if the sources were
-    // originally concatenated from subvectors.
-    if (VT.getSizeInBits() > 128 || !isFreeToSplitVector(In.getNode(), DAG))
-      return SDValue();
-  }
-
-  unsigned PackOpcode;
-  if (SDValue Src =
-          matchTruncateWithPACK(PackOpcode, VT, In, DL, DAG, Subtarget))
-    return truncateVectorWithPACK(PackOpcode, VT, Src, DL, DAG, Subtarget);
-
-  return SDValue();
-}
-
 // Try to form a MULHU or MULHS node by looking for
 // (trunc (srl (mul ext, ext), 16))
 // TODO: This is X86 specific because we want to be able to handle wide types
@@ -51139,10 +51101,6 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
     if (BCSrc.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MMX_MOVD2W, DL, MVT::i32, BCSrc);
   }
-
-  // Try to truncate extended sign/zero bits with PACKSS/PACKUS.
-  if (SDValue V = combineVectorSignBitsTruncation(N, DL, DAG, Subtarget))
-    return V;
 
   return SDValue();
 }

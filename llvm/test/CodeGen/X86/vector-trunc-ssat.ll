@@ -3827,7 +3827,7 @@ define <4 x i8> @trunc_ssat_v4i32_v4i8(<4 x i32> %a0) {
 ; AVX2-FAST-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
 ; AVX2-FAST-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
 ; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_ssat_v4i32_v4i8:
