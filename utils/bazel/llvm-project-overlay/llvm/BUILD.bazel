@@ -3065,7 +3065,7 @@ cc_binary(
     srcs = glob([
         "tools/dsymutil/*.cpp",
         "tools/dsymutil/*.h",
-    ]) + ["dsymutil-driver.cpp"],
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -3930,21 +3930,12 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-expand_template(
-    name = "ml_main",
-    out = "llvm-ml-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_ml",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
 cc_binary(
     name = "llvm-ml",
     srcs = glob([
         "tools/llvm-ml/*.cpp",
         "tools/llvm-ml/*.h",
-    ]) + ["llvm-ml-driver.cpp"],
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4181,21 +4172,12 @@ binary_alias(
     binary = ":llvm-objcopy",
 )
 
-expand_template(
-    name = "objdump_main",
-    out = "llvm-objdump-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_objdump",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
 cc_binary(
     name = "llvm-objdump",
     srcs = glob([
         "tools/llvm-objdump/*.cpp",
         "tools/llvm-objdump/*.h",
-    ]) + ["llvm-objdump-driver.cpp"],
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4595,21 +4577,12 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-expand_template(
-    name = "symbolizer_main",
-    out = "llvm-symbolizer-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_symbolizer",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
 cc_binary(
     name = "llvm-symbolizer",
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
         "tools/llvm-symbolizer/*.h",
-    ]) + [ "llvm-symbolizer-driver.cpp"],
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
