@@ -28,17 +28,20 @@ TEST(StringPoolTest, TestStringPool) {
     std::pair<StringEntry *, bool> Entry = Strings.insert("test");
     EXPECT_TRUE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == "test");
+    EXPECT_TRUE(Entry.first->second == nullptr);
 
     StringEntry *EntryPtr = Entry.first;
 
     Entry = Strings.insert("test");
     EXPECT_FALSE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == "test");
+    EXPECT_TRUE(Entry.first->second == nullptr);
     EXPECT_TRUE(EntryPtr == Entry.first);
 
     Entry = Strings.insert("test2");
     EXPECT_TRUE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == "test2");
+    EXPECT_TRUE(Entry.first->second == nullptr);
     EXPECT_TRUE(EntryPtr != Entry.first);
   });
 }
@@ -51,6 +54,7 @@ TEST(StringPoolTest, TestStringPoolParallel) {
     std::pair<StringEntry *, bool> Entry = Strings.insert(std::to_string(Idx));
     EXPECT_TRUE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == std::to_string(Idx));
+    EXPECT_TRUE(Entry.first->second == nullptr);
   });
 
   // Check data.
@@ -58,6 +62,7 @@ TEST(StringPoolTest, TestStringPoolParallel) {
     std::pair<StringEntry *, bool> Entry = Strings.insert(std::to_string(Idx));
     EXPECT_FALSE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == std::to_string(Idx));
+    EXPECT_TRUE(Entry.first->second == nullptr);
   });
 }
 
