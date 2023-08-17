@@ -3,9 +3,8 @@
 define i8 @flip_add_of_shift_neg(i8 %v, i8 %sh, i8 %x) {
 ; CHECK-LABEL: define i8 @flip_add_of_shift_neg
 ; CHECK-SAME: (i8 [[V:%.*]], i8 [[SH:%.*]], i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[NV:%.*]] = sub i8 0, [[V]]
-; CHECK-NEXT:    [[SV:%.*]] = shl nuw nsw i8 [[NV]], [[SH]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SV]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[V]], [[SH]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nv = sub i8 0, %v
@@ -18,9 +17,8 @@ define <2 x i8> @flip_add_of_shift_neg_vec(<2 x i8> %v, <2 x i8> %sh, <2 x i8> %
 ; CHECK-LABEL: define <2 x i8> @flip_add_of_shift_neg_vec
 ; CHECK-SAME: (<2 x i8> [[V:%.*]], <2 x i8> [[SH:%.*]], <2 x i8> [[XX:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[XX]], [[XX]]
-; CHECK-NEXT:    [[NV:%.*]] = sub <2 x i8> zeroinitializer, [[V]]
-; CHECK-NEXT:    [[SV:%.*]] = shl <2 x i8> [[NV]], [[SH]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[X]], [[SV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[V]], [[SH]]
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = mul <2 x i8> %xx, %xx
