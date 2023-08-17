@@ -3447,7 +3447,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto Res_ULT_LHS =
         MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, Res, LHS);
     auto And = MIRBuilder.buildAnd(CondTy, Res_EQ_LHS, CarryIn);
-    auto Or = MIRBuilder.buildOr(CarryOut, And, Res_ULT_LHS);
+    MIRBuilder.buildOr(CarryOut, And, Res_ULT_LHS);
 
     MI.eraseFromParent();
     return Legalized;
