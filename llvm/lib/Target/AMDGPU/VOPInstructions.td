@@ -1316,10 +1316,14 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
 
 multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
   def _e64 : VOP3InstBase<OpName, P, node>;
-  let SubtargetPredicate = isGFX11Plus in {
-    if P.HasExtVOP3DPP then
-      def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;
-  } // end SubtargetPredicate = isGFX11Plus
+  if P.HasExtVOP3DPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
+      let SubtargetPredicate = isGFX11Plus;
+    }
+  else if P.HasExt64BitDPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
+      let OtherPredicates = [Has64BitDPP];
+    }
 }
 
 class UniformUnaryFragOrOp<SDPatternOperator Op> {
@@ -1492,29 +1496,32 @@ multiclass VOP3_Real_dpp_with_name<GFXGen Gen, bits<10> op, string opName,
 
 multiclass VOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-  def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
-    let AssemblerPredicate = Gen.AssemblerPredicate;
-  }
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
+      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let AssemblerPredicate = Gen.AssemblerPredicate;
+    }
 }
 
 multiclass VOP3Dot_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-  def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
-    let Inst{11} = ?;
-    let Inst{12} = ?;
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
-    let AssemblerPredicate = Gen.AssemblerPredicate;
-  }
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
+      let Inst{11} = ?;
+      let Inst{12} = ?;
+      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let AssemblerPredicate = Gen.AssemblerPredicate;
+    }
 }
 
 multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-  let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
-      DecoderNamespace = "DPP8"#Gen.DecoderNamespace,
-      AssemblerPredicate = Gen.AssemblerPredicate in {
-    defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
+        DecoderNamespace = "DPP8"#Gen.DecoderNamespace,
+        AssemblerPredicate = Gen.AssemblerPredicate in {
+      defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }
 
@@ -1541,10 +1548,11 @@ multiclass VOP3be_Real_dpp<GFXGen Gen, bits<10> op, string opName,
 multiclass VOP3be_Real_dpp8<GFXGen Gen, bits<10> op, string opName,
                             string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(opName #"_e64");
-  def _e64_dpp8#Gen.Suffix : VOP3b_DPP8_Base<op, ps, asmName> {
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
-    let AssemblerPredicate = Gen.AssemblerPredicate;
-  }
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    def _e64_dpp8#Gen.Suffix : VOP3b_DPP8_Base<op, ps, asmName> {
+      let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+      let AssemblerPredicate = Gen.AssemblerPredicate;
+    }
 }
 
 // VOP1 and VOP2 depend on these triple defs

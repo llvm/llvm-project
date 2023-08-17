@@ -162,10 +162,14 @@ multiclass VOP2Inst_e64<string opName,
     def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-    let SubtargetPredicate = isGFX11Plus in {
-      if P.HasExtVOP3DPP then
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
+    if P.HasExtVOP3DPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let SubtargetPredicate = isGFX11Plus;
+      }
+    else if P.HasExt64BitDPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let OtherPredicates = [Has64BitDPP];
+      }
   } // End renamedInGFX9 = GFX9Renamed
 }
 
@@ -273,10 +277,14 @@ multiclass VOP2bInst <string opName,
       def _e64 : VOP3InstBase <opName, P, node, 1>,
                  Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-      let SubtargetPredicate = isGFX11Plus in {
-        if P.HasExtVOP3DPP then
-          def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-      } // End SubtargetPredicate = isGFX11Plus
+      if P.HasExtVOP3DPP then
+        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+          let SubtargetPredicate = isGFX11Plus;
+        }
+      else if P.HasExt64BitDPP then
+        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+          let OtherPredicates = [Has64BitDPP];
+      }
     }
   }
 }
@@ -332,10 +340,14 @@ multiclass
                  VOPD_Component<VOPDOp, VOPDName>;
     }
 
-    let SubtargetPredicate = isGFX11Plus in {
-      if P.HasExtVOP3DPP then
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
+    if P.HasExtVOP3DPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let SubtargetPredicate = isGFX11Plus;
+      }
+    else if P.HasExt64BitDPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let OtherPredicates = [Has64BitDPP];
+      }
   }
 }
 
@@ -718,10 +730,6 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32, i32]> {
   let HasExtSDWA9 = 0;
 }
 
-def VOP2_I64_I64_I64_ARITH : VOPProfile <[i64, i64, i64, untyped], /*EnableClamp=*/1> {
-  let HasExtVOP3DPP = 1;
-}
-
 //===----------------------------------------------------------------------===//
 // VOP2 Instructions
 //===----------------------------------------------------------------------===//
@@ -791,8 +799,8 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 }
 
 let SubtargetPredicate = isGFX12_10Plus in {
-defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP2_I64_I64_I64_ARITH>;
-defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP2_I64_I64_I64_ARITH>;
+defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
+defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SubtargetPredicate = HasGFX1210Insts
 } // End isReMaterializable = 1
 
@@ -1366,8 +1374,9 @@ multiclass VOP2_Real_dpp<GFXGen Gen, bits<6> op> {
 }
 
 multiclass VOP2_Real_dpp8<GFXGen Gen, bits<6> op> {
-  if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP then
-  def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, !cast<VOP2_Pseudo>(NAME#"_e32"), Gen>;
+  defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
+  if !and(ps.Pfl.HasExtDPP, !not(ps.Pfl.HasExt64BitDPP)) then
+    def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, ps, Gen>;
 }
 
 //===------------------------- VOP2 (with name) -------------------------===//
@@ -1402,10 +1411,10 @@ multiclass VOP2_Real_dpp_with_name<GFXGen Gen, bits<6> op, string opName,
 multiclass VOP2_Real_dpp8_with_name<GFXGen Gen, bits<6> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
-  if ps.Pfl.HasExtDPP then
-  def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, ps, Gen> {
-    let AsmString = asmName # ps.Pfl.AsmDPP8;
-  }
+  if !and(ps.Pfl.HasExtDPP, !not(ps.Pfl.HasExt64BitDPP)) then
+    def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, ps, Gen> {
+      let AsmString = asmName # ps.Pfl.AsmDPP8;
+    }
 }
 
 //===------------------------------ VOP2be ------------------------------===//
@@ -1446,32 +1455,32 @@ multiclass VOP2be_Real_dpp<GFXGen Gen, bits<6> op, string opName, string asmName
     }
 }
 multiclass VOP2be_Real_dpp8<GFXGen Gen, bits<6> op, string opName, string asmName> {
-  if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP then
+  defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
+  if !and(ps.Pfl.HasExtDPP, !not(ps.Pfl.HasExt64BitDPP)) then {
   def _dpp8#Gen.Suffix :
-    VOP2_DPP8_Gen<op, !cast<VOP2_Pseudo>(opName#"_e32"), Gen> {
-      string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
+    VOP2_DPP8_Gen<op, ps, Gen> {
+      string AsmDPP8 = ps.Pfl.AsmDPP8;
       let AsmString = asmName # !subst(", vcc", "", AsmDPP8);
     }
-  if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP then
   def _dpp8_w32#Gen.Suffix :
-    VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
-      string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
+    VOP2_DPP8<op, ps> {
+      string AsmDPP8 = ps.Pfl.AsmDPP8;
       let AsmString = asmName # !subst("vcc", "vcc_lo", AsmDPP8);
       let isAsmParserOnly = 1;
       let WaveSizePredicate = isWave32;
       let AssemblerPredicate = Gen.AssemblerPredicate;
       let DecoderNamespace = Gen.DecoderNamespace;
     }
-  if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP then
   def _dpp8_w64#Gen.Suffix :
-    VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
-      string AsmDPP8 = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP8;
+    VOP2_DPP8<op, ps> {
+      string AsmDPP8 = ps.Pfl.AsmDPP8;
       let AsmString = asmName # AsmDPP8;
       let isAsmParserOnly = 1;
       let WaveSizePredicate = isWave64;
       let AssemblerPredicate = Gen.AssemblerPredicate;
       let DecoderNamespace = Gen.DecoderNamespace;
     }
+  }
 }
 
 // We don't want to override separate decoderNamespaces within these

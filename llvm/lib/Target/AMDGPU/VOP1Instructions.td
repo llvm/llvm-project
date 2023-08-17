@@ -136,10 +136,14 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   if P.HasExtDPP then
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
 
-  let SubtargetPredicate = isGFX11Plus in {
-    if P.HasExtVOP3DPP then
-      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-  } // End SubtargetPredicate = isGFX11Plus
+  if P.HasExtVOP3DPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+      let SubtargetPredicate = isGFX11Plus;
+    }
+  else if P.HasExt64BitDPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+      let OtherPredicates = [Has64BitDPP];
+    }
 
   def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
   def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
@@ -224,9 +228,7 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
-def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]> {
-  let HasExtVOP3DPP = 1;
-}
+def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
@@ -833,14 +835,16 @@ multiclass VOP1_Real_dpp_with_name<GFXGen Gen, bits<9> op, string opName,
 
 multiclass VOP1_Real_dpp8<GFXGen Gen, bits<9> op, string opName = NAME> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  def _dpp8#Gen.Suffix : VOP1_DPP8_Gen<op{7-0}, ps, Gen>;
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    def _dpp8#Gen.Suffix : VOP1_DPP8_Gen<op{7-0}, ps, Gen>;
 }
 
 multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
   let AsmString = asmName # ps.Pfl.AsmDPP8 in {
-    defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
+    if !not(ps.Pfl.HasExt64BitDPP) then
+      defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
   }
 }
 

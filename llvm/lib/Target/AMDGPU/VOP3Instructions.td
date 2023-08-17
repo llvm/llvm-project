@@ -53,6 +53,7 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
 
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
   let HasExtVOP3DPP = 1;
+  let HasExt64BitDPP = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1248,7 +1249,10 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+let SubtargetPredicate = isGFX12_10Plus in {
 defm V_LSHL_ADD_U64        : VOP3Only_Realtriple_gfx12<0x252>;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX10.
