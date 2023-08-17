@@ -580,7 +580,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 30,
+  static_assert(DeclContext::NumFunctionDeclBits == 31,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -1495,7 +1495,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 21,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 20,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 
