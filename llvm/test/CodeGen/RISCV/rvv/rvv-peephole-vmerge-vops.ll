@@ -1065,12 +1065,12 @@ define <vscale x 2 x i32> @vmerge_larger_vl_poison_passthru(<vscale x 2 x i32> %
   ret <vscale x 2 x i32> %b
 }
 
-; FIXME: The vadd's new policy should be tail undisturbed since the false op of
-; the vmerge moves from the the body to the tail, and we need to preserve it.
+; The vadd's new policy should be tail undisturbed since the false op of the
+; vmerge moves from the the body to the tail, and we need to preserve it.
 define <vscale x 2 x i32> @vmerge_larger_vl_false_becomes_tail(<vscale x 2 x i32> %false, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_larger_vl_false_becomes_tail:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i64 2)
