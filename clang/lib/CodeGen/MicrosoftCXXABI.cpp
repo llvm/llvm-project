@@ -1379,8 +1379,7 @@ llvm::GlobalValue::LinkageTypes MicrosoftCXXABI::getCXXDestructorLinkage(
   case Dtor_Base:
     // The base destructor most closely tracks the user-declared constructor, so
     // we delegate back to the normal declarator case.
-    return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage,
-                                           /*IsConstantVariable=*/false);
+    return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage);
   case Dtor_Complete:
     // The complete destructor is like an inline function, but it may be
     // imported and therefore must be exported as well. This requires changing
