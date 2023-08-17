@@ -2090,7 +2090,7 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
   return isRegClass(AMDGPU::VGPR_32RegClassID) ||
          // GFX90A allows DPP on 64-bit operands.
          (isRegClass(AMDGPU::VReg_64RegClassID) &&
-          AsmParser->getFeatureBits()[AMDGPU::Feature64BitDPP]);
+          AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
 bool AMDGPUOperand::isT16VRegWithInputMods() const {

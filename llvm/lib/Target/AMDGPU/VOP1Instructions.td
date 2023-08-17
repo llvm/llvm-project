@@ -142,7 +142,7 @@ multiclass VOP1Inst <string opName, VOPProfile P,
     }
   else if P.HasExt64BitDPP then
     def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-      let OtherPredicates = [Has64BitDPP];
+      let OtherPredicates = [HasDPALU_DPP];
     }
 
   def : MnemonicAlias<opName#"_e32", opName>, LetDummies;

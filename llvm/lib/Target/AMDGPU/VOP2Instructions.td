@@ -168,7 +168,7 @@ multiclass VOP2Inst_e64<string opName,
       }
     else if P.HasExt64BitDPP then
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-        let OtherPredicates = [Has64BitDPP];
+        let OtherPredicates = [HasDPALU_DPP];
       }
   } // End renamedInGFX9 = GFX9Renamed
 }
@@ -283,7 +283,7 @@ multiclass VOP2bInst <string opName,
         }
       else if P.HasExt64BitDPP then
         def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-          let OtherPredicates = [Has64BitDPP];
+          let OtherPredicates = [HasDPALU_DPP];
       }
     }
   }
@@ -346,7 +346,7 @@ multiclass
       }
     else if P.HasExt64BitDPP then
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-        let OtherPredicates = [Has64BitDPP];
+        let OtherPredicates = [HasDPALU_DPP];
       }
   }
 }
