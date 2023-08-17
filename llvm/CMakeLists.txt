@@ -706,9 +706,12 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
 endif()
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
+message (STATUS "CMAKE CROSS COMPILING ${CMAKE_CROSSCOMPILING}")
 if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
+
+message (STATUS "LLVM USE HOST TOOLS ${LLVM_USE_HOST_TOOLS}")
 
 option(LLVM_OMIT_DAGISEL_COMMENTS "Do not add comments to DAG ISel" ON)
 if (CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE MATCHES "^(RELWITHDEBINFO|DEBUG)$")
@@ -1071,6 +1074,7 @@ if(LLVM_USE_HOST_TOOLS)
   include(CrossCompile)
   llvm_create_cross_target(LLVM NATIVE "" Release)
 endif(LLVM_USE_HOST_TOOLS)
+
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # Dummy use to avoid CMake Warning: Manually-specified variables were not used
 # (this is a variable that CrossCompile sets on recursive invocations)
@@ -1089,6 +1093,7 @@ set(LLVM_EXTRACT_SYMBOLS_FLAGS ""
   CACHE STRING "Additional options to pass to llvm/utils/extract_symbols.py.
   These cannot override the options set by cmake, but can add extra options
   such as --tools.")
+
 
 include(AddLLVM)
 include(TableGen)

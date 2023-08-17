@@ -10,6 +10,8 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
+  message(STATUS "Function tablegen start")
+
   # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
   if(CMAKE_GENERATOR MATCHES "Ninja")
     # Make output path relative to build.ninja, assuming located on
@@ -100,8 +102,10 @@ function(tablegen project ofn)
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
 
+  message(STATUS "Function tablegen exe ${tablegen_exe}")
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
-    COMMAND $<TARGET_FILE:llvm-tblgen> ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
@@ -159,8 +163,13 @@ macro(add_tablegen target project)
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
   set(${project}_TABLEGEN_TARGET ${${project}_TABLEGEN} PARENT_SCOPE)
 
+  message(STATUS "Effective tblgen before cross compile executable ${LLVM_TABLEGEN}")
+  message(STATUS "Effective tblgen before cross compile target ${LLVM_TABLEGEN_TARGET}")
+
   if(LLVM_USE_HOST_TOOLS)
     if( ${${project}_TABLEGEN} STREQUAL "${target}" )
+      # message(FATAL_ERROR "Native tblgen executable use host tools ${LLVM_USE_HOST_TOOLS} project ${project} ${LLVM_TABLEGEN_EXE}")
+
       # The NATIVE tablegen executable *must* depend on the current target one
       # otherwise the native one won't get rebuilt when the tablgen sources
       # change, and we end up with incorrect builds.
@@ -203,5 +212,12 @@ macro(add_tablegen target project)
                                COMPONENT ${target})
     endif()
   endif()
+
+  # message(FATAL_ERROR "Effective tblgen after cross compile executable ${LLVM_TABLEGEN_EXE}")
+  # message(STATUS "Effective tblgen after cross compile target ${LLVM_TABLEGEN_TARGET}")
+
+  # message(FATAL_ERROR "TABLE GEN ${${project}_TABLEGEN}")
+  # message(FATAL_ERROR "TABLE GEN EXE ${LLVM_TABLEGEN_EXE}")
+  # message(FATAL_ERROR "TABLE GEN TARGET ${LLVM_TABLEGEN_TARGET}")
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${target})
 endmacro()

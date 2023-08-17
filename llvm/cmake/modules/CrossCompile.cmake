@@ -4,6 +4,7 @@ include(LLVMExternalProjectUtils)
 
 function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
+
   if(NOT DEFINED ${project_name}_${target_name}_BUILD)
     set(${project_name}_${target_name}_BUILD
       "${CMAKE_CURRENT_BINARY_DIR}/${target_name}")
@@ -101,11 +102,11 @@ endfunction()
 function(build_native_tool target output_path_var)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
-  if(CMAKE_CONFIGURATION_TYPES)
-    set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/Release/bin/${target}")
-  else()
+  # if(CMAKE_CONFIGURATION_TYPES)
+  #   set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/Release/bin/${target}")
+  # else()
     set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/bin/${target}")
-  endif()
+  # endif()
   set(output_path ${output_path}${LLVM_HOST_EXECUTABLE_SUFFIX})
 
   llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
@@ -116,5 +117,7 @@ function(build_native_tool target output_path_var)
                      WORKING_DIRECTORY "${${PROJECT_NAME}_NATIVE_BUILD}"
                      COMMENT "Building native ${target}..."
                      USES_TERMINAL)
+  # message(FATAL_ERROR "Native ${target} OUTPUT PATH ${output_path} BUILD COMMAND ${build_cmd}")
   set(${output_path_var} "${output_path}" PARENT_SCOPE)
+
 endfunction()

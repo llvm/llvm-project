@@ -917,6 +917,8 @@ macro(add_llvm_executable name)
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
+
+  message(STATUS "ADD LLVM EXECUTABLE ${name} ${ARG_UNPARSED_ARGUMENTS}")
   generate_llvm_objects(${name} ${ARG_UNPARSED_ARGUMENTS})
   add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
 
