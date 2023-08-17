@@ -163,7 +163,7 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
     U.set(nullptr);
 
   // Remove incoming blocks.
-  std::remove_if(const_cast<block_iterator>(block_begin()),
+  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
                  const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
                    return RemoveIndices.contains(&BB - block_begin());
                  });
