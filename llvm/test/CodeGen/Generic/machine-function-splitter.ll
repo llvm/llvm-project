@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; REQUIRES: x86-registered-target
 
 ; COM: Machine function splitting with FDO profiles
