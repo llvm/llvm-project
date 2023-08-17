@@ -9796,6 +9796,12 @@ def warn_comparison_bitwise_always : Warning<
 def warn_comparison_bitwise_or : Warning<
   "bitwise or with non-zero value always evaluates to true">,
   InGroup<TautologicalBitwiseCompare>, DefaultIgnore;
+def warn_tautological_negation_and_compare: Warning<
+  "'&&' of a value and its negation always evaluates to false">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
+def warn_tautological_negation_or_compare: Warning<
+  "'||' of a value and its negation always evaluates to true">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
   "overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
