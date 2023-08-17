@@ -9154,7 +9154,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     bool HasPrototype =
         (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype) ||
         (D.getDeclSpec().isTypeRep() &&
-         D.getDeclSpec().getRepAsType().get()->isFunctionProtoType()) ||
+         SemaRef.GetTypeFromParser(D.getDeclSpec().getRepAsType(), nullptr)
+             ->isFunctionProtoType()) ||
         (!R->getAsAdjusted<FunctionType>() && R->isFunctionProtoType());
     assert(
         (HasPrototype || !SemaRef.getLangOpts().requiresStrictPrototypes()) &&
