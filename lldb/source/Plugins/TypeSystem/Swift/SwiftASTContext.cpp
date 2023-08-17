@@ -1762,6 +1762,16 @@ static bool IsDWARFImported(swift::ModuleDecl &module) {
                      });
 }
 
+/// Detect whether this is a proper Swift module.
+static bool IsSerializedAST(swift::ModuleDecl &module) {
+  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
+                     [](swift::FileUnit *file_unit) {
+                       return (file_unit->getKind() ==
+                               swift::FileUnitKind::SerializedAST);
+                     });
+}
+
+
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
                                 TypeSystemSwiftTypeRef &typeref_typesystem,
@@ -1868,7 +1878,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     bool got_serialized_options = false;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-    // Implicit search paths will be discoverd by ValidateSecionModules().
+    // Implicit search paths will be discovered by ValidateSecionModules().
     bool discover_implicit_search_paths = false;
 
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
@@ -8336,10 +8346,42 @@ bool SwiftASTContextForExpressions::CacheUserImports(
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        if (!LoadOneModule(module_info, *this, process_sp,
-                           /*import_dylibs=*/true, error))
+        auto *module_decl = LoadOneModule(module_info, *this, process_sp,
+                                          /*import_dylibs=*/true, error);
+        if (!module_decl)
           return false;
+        if (IsSerializedAST(*module_decl)) {
+          // Parse additional search paths from the module.
+          StringRef ast_file = module_decl->getModuleLoadedFilename();
+          if (llvm::sys::path::is_absolute(ast_file)) {
+            auto file_or_err =
+                llvm::MemoryBuffer::getFile(ast_file, /*IsText=*/false,
+                                            /*RequiresNullTerminator=*/false);
+            if (!file_or_err.getError() && file_or_err->get()) {
+              PathMappingList path_remap;
+              llvm::SmallString<0> error;
+              bool found_swift_modules = false;
+              bool got_serialized_options = false;
+              llvm::raw_svector_ostream errs(error);
+              bool discover_implicit_search_paths = false;
+              swift::CompilerInvocation &invocation = GetCompilerInvocation();
 
+              LOG_PRINTF(GetLog(LLDBLog::Types),
+                         "Scanning for search paths in %s",
+                         ast_file.str().c_str());
+              if (DeserializeAllCompilerFlags(
+                      invocation, ast_file, {file_or_err->get()->getBuffer()},
+                      path_remap, discover_implicit_search_paths,
+                      m_description.str().str(), errs, got_serialized_options,
+                      found_swift_modules)) {
+                LOG_PRINTF(GetLog(LLDBLog::Types), "Could not parse %s: %s",
+                           ast_file.str().c_str(), error.str().str().c_str());
+              }
+              if (got_serialized_options)
+                LogConfiguration();
+            }
+          }
+        }
         // How do we tell we are in REPL or playground mode?
         AddHandLoadedModule(module_const_str, attributed_import);
       }
