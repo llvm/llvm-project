@@ -98,6 +98,7 @@ tools = [
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
+    add_runtime("mlir_float16_utils"),
     "mlir-linalg-ods-yaml-gen",
     "mlir-reduce",
     "mlir-pdll",
