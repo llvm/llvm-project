@@ -1180,6 +1180,21 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   return nullptr;
 }
 
+// Transform:
+//  (add A, (shl (neg B), Y))
+//      -> (sub A, (shl B, Y))
+static Instruction *combineAddSubWithShlAddSub(InstCombiner::BuilderTy &Builder,
+                                               const BinaryOperator &I) {
+  Value *A, *B, *Cnt;
+  if (match(&I,
+            m_c_Add(m_OneUse(m_Shl(m_OneUse(m_Neg(m_Value(B))), m_Value(Cnt))),
+                    m_Value(A)))) {
+    Value *NewShl = Builder.CreateShl(B, Cnt);
+    return BinaryOperator::CreateSub(A, NewShl);
+  }
+  return nullptr;
+}
+
 /// Try to reduce signed division by power-of-2 to an arithmetic shift right.
 static Instruction *foldAddToAshr(BinaryOperator &Add) {
   // Division must be by power-of-2, but not the minimum signed value.
@@ -1418,6 +1433,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return X;
 
   if (Instruction *R = foldBinOpShiftWithShift(I))
+    return R;
+
+  if (Instruction *R = combineAddSubWithShlAddSub(Builder, I))
     return R;
 
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
