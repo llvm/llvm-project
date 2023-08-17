@@ -891,7 +891,7 @@ unsigned getFunctionInfoSize(const FunctionInfo &FI) {
 }
 
 /// Emit a serialized representation of the function information.
-static void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
+void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   emitCommonEntityInfo(OS, FI);
 
   uint8_t flags = 0;
