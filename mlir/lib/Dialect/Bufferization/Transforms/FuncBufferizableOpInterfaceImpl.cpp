@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -374,37 +375,11 @@ struct FuncOpInterface
     assert(returnOp && "expected func with single return op");
     Location loc = returnOp.getLoc();
 
-    // 1. Rewrite the bbArgs. Turn every tensor bbArg into a memref bbArg.
-    Block &frontBlock = funcOp.getBody().front();
-    for (BlockArgument &bbArg : frontBlock.getArguments()) {
-      auto tensorType = dyn_cast<TensorType>(bbArg.getType());
-      // Non-tensor types stay the same.
-      if (!tensorType)
-        continue;
-
-      // Collect all uses of the bbArg.
-      SmallVector<OpOperand *> bbArgUses;
-      for (OpOperand &use : bbArg.getUses())
-        bbArgUses.push_back(&use);
-
-      // Change the bbArg type to memref.
-      FailureOr<BaseMemRefType> memrefType =
-          bufferization::getBufferType(bbArg, options);
-      if (failed(memrefType))
+    // 1. Bufferize every block.
+    for (Block &block : funcOp.getBody())
+      if (failed(bufferization::bufferizeBlockSignature(&block, rewriter,
+                                                        options)))
         return failure();
-      bbArg.setType(*memrefType);
-
-      // Replace all uses of the original tensor bbArg.
-      rewriter.setInsertionPointToStart(&frontBlock);
-      if (!bbArgUses.empty()) {
-        // Insert to_tensor because the remaining function body has not been
-        // bufferized yet.
-        Value toTensorOp =
-            rewriter.create<bufferization::ToTensorOp>(funcOp.getLoc(), bbArg);
-        for (OpOperand *use : bbArgUses)
-          use->set(toTensorOp);
-      }
-    }
 
     // 2. For each result, keep track of which inplace argument it reuses.
     SmallVector<Value> returnValues;
