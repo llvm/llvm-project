@@ -158,6 +158,17 @@ public:
     return false;
   }
 
+  void logicAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
+    if (HasMacroID(B))
+      return;
+
+    unsigned DiagID = isAlwaysTrue
+                          ? diag::warn_tautological_negation_or_compare
+                          : diag::warn_tautological_negation_and_compare;
+    SourceRange DiagRange = B->getSourceRange();
+    S.Diag(B->getExprLoc(), DiagID) << DiagRange;
+  }
+
   void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
     if (HasMacroID(B))
       return;
@@ -188,7 +199,8 @@ public:
   static bool hasActiveDiagnostics(DiagnosticsEngine &Diags,
                                    SourceLocation Loc) {
     return !Diags.isIgnored(diag::warn_tautological_overlap_comparison, Loc) ||
-           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc);
+           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc) ||
+           !Diags.isIgnored(diag::warn_tautological_negation_and_compare, Loc);
   }
 };
 } // anonymous namespace
