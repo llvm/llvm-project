@@ -180,7 +180,7 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) {
 ; ZVBB-LABEL: reverse_v2i8:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVBB-NEXT:    vror.vi v8, v8, 8
+; ZVBB-NEXT:    vrev8.v v8, v8
 ; ZVBB-NEXT:    ret
   %res = call <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
   ret <2 x i8> %res
