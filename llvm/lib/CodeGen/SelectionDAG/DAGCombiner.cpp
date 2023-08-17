@@ -20716,7 +20716,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
               TypeSize::isKnownLE(ST1->getMemoryVT().getStoreSize(),
                                   ST->getMemoryVT().getStoreSize())) {
             CombineTo(ST1, ST1->getChain());
-            return SDValue();
+            return SDValue(N, 0);
           }
         } else {
           const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
@@ -20729,7 +20729,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
                               ChainBase,
                               ST1->getMemoryVT().getFixedSizeInBits())) {
             CombineTo(ST1, ST1->getChain());
-            return SDValue();
+            return SDValue(N, 0);
           }
         }
       }
