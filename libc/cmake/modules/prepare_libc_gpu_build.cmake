@@ -30,12 +30,12 @@ endif()
 
 # Identify any locally installed AMD GPUs on the system using 'amdgpu-arch'.
 find_program(LIBC_AMDGPU_ARCH
-             NAMES amdgpu-arch
+             NAMES amdgpu-arch NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin /opt/rocm/llvm/bin/)
 
 # Identify any locally installed NVIDIA GPUs on the system using 'nvptx-arch'.
 find_program(LIBC_NVPTX_ARCH
-             NAMES nvptx-arch
+             NAMES nvptx-arch NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin)
 
 # Get the list of all natively supported GPU architectures.
@@ -64,7 +64,7 @@ message(STATUS "Building libc for the following GPU architecture(s): "
 
 # Identify the program used to package multiple images into a single binary.
 find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-             NAMES clang-offload-packager
+             NAMES clang-offload-packager NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin)
 if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
   message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
