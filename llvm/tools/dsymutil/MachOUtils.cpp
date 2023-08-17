@@ -10,6 +10,7 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
@@ -29,24 +30,30 @@ namespace dsymutil {
 namespace MachOUtils {
 
 llvm::Error ArchAndFile::createTempFile() {
-  llvm::SmallString<128> TmpModel;
-  llvm::sys::path::system_temp_directory(true, TmpModel);
-  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
-  Expected<sys::fs::TempFile> T = sys::fs::TempFile::create(TmpModel);
+  SmallString<256> SS;
+  std::error_code EC = sys::fs::createTemporaryFile("dsym", "dwarf", FD, SS);
 
-  if (!T)
-    return T.takeError();
+  if (EC)
+    return errorCodeToError(EC);
 
-  File = std::make_unique<sys::fs::TempFile>(std::move(*T));
+  Path = SS.str();
+
   return Error::success();
 }
 
-llvm::StringRef ArchAndFile::path() const { return File->TmpName; }
+llvm::StringRef ArchAndFile::getPath() const {
+  assert(!Path.empty() && "path called before createTempFile");
+  return Path;
+}
+
+int ArchAndFile::getFD() const {
+  assert((FD != -1) && "path called before createTempFile");
+  return FD;
+}
 
 ArchAndFile::~ArchAndFile() {
-  if (File)
-    if (auto E = File->discard())
-      llvm::consumeError(std::move(E));
+  if (!Path.empty())
+    sys::fs::remove(Path);
 }
 
 std::string getArchName(StringRef Arch) {
@@ -82,11 +89,17 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              bool Fat64) {
   // No need to merge one file into a universal fat binary.
   if (ArchFiles.size() == 1) {
-    if (auto E = ArchFiles.front().File->keep(OutputFileName)) {
-      WithColor::error() << "while keeping " << ArchFiles.front().path()
-                         << " as " << OutputFileName << ": "
-                         << toString(std::move(E)) << "\n";
-      return false;
+    llvm::StringRef TmpPath = ArchFiles.front().getPath();
+    if (auto EC = sys::fs::rename(TmpPath, OutputFileName)) {
+      // If we can't rename, try to copy to work around cross-device link
+      // issues.
+      EC = sys::fs::copy_file(TmpPath, OutputFileName);
+      if (EC) {
+        WithColor::error() << "while keeping " << TmpPath << " as "
+                           << OutputFileName << ": " << EC.message() << "\n";
+        return false;
+      }
+      sys::fs::remove(TmpPath);
     }
     return true;
   }
@@ -96,7 +109,7 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.path());
+    Args.push_back(Thin.getPath());
 
   // Align segments to match dsymutil-classic alignment.
   for (auto &Thin : ArchFiles) {
