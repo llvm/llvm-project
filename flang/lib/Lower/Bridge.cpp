@@ -350,6 +350,8 @@ public:
         fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
                                              bridge.getEnvironmentDefaults());
       });
+
+    finalizeOpenACCLowering();
   }
 
   /// Declare a function.
@@ -2248,7 +2250,8 @@ private:
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), getEval(), accDecl);
+                                   bridge.fctCtx(), getEval(), accDecl,
+                                   accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     builder->restoreInsertionPoint(insertPt);
@@ -4683,6 +4686,13 @@ private:
         expr.u);
   }
 
+  /// Performing OpenACC lowering action that were deferred to the end of
+  /// lowering.
+  void finalizeOpenACCLowering() {
+    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
+                                                     accRoutineInfos);
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -4726,6 +4736,9 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
+
+  /// Deferred OpenACC routine attachment.
+  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 };
 
 } // namespace
