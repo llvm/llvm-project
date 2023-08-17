@@ -762,6 +762,7 @@ Expected<SmallVector<RefTy>> loadAllRefs(MCObjectProxy Obj) {
 /// * NewBlockCallback is called to indicate that data from a new CAS block is
 /// about to be read.
 Error visitDebugInfo(
+    SmallVector<StringRef, 0> &TotAbbrevEntries,
     Expected<DIETopLevelRef> TopLevelRef,
     std::function<void(StringRef)> HeaderCallback,
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
