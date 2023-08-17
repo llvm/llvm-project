@@ -34,7 +34,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
@@ -396,7 +395,7 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   Filter.finish();
 }
 
-int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
+int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 

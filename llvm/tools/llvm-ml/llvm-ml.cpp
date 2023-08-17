@@ -35,7 +35,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -186,7 +185,7 @@ static int AssembleInput(StringRef ProgName, const Target *TheTarget,
   return Res;
 }
 
-int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
+int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   StringRef ProgName = sys::path::filename(Argv[0]);
 
