@@ -2058,19 +2058,6 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
-static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
-  auto type_system_or_err =
-      module.GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-  if (!type_system_or_err) {
-    llvm::consumeError(type_system_or_err.takeError());
-    return {};
-  }
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
-  if (!ts)
-    return {};
-  return ts->GetSwiftASTContext();
-}
-
 /// Scan a newly added lldb::Module for Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
 static void ProcessModule(
@@ -2307,10 +2294,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     auto get_executable_triple = [&]() -> llvm::Triple {
       if (!exe_module_sp)
         return {};
-      auto *exe_ast_ctx = GetModuleSwiftASTContext(*exe_module_sp);
-      if (!exe_ast_ctx)
-        return {};
-      return exe_ast_ctx->GetLanguageOptions().Target;
+      return exe_module_sp->GetArchitecture().GetTriple();
     };
 
     llvm::Triple computed_triple;
