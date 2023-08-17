@@ -549,6 +549,42 @@ public:
 
   void Post(const parser::Name &);
 
+  void Post(const parser::SpecificationPart &x) {
+    // Look at USE statements from here so that we also have access to a source
+    // object, needed to tie the statement to a scope.
+    for (auto &stmt :
+        std::get<
+            std::list<parser::Statement<common::Indirection<parser::UseStmt>>>>(
+            x.t)) {
+      const parser::UseStmt &useStmt = stmt.statement.value();
+      Symbol *moduleSym{useStmt.moduleName.symbol};
+      if (!moduleSym) {
+        continue;
+      }
+
+      // Gather information from the imported module's symbol details.
+      WithOmpDeclarative::RequiresFlags flags;
+      std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_base_of_v<ModuleDetails,
+                              std::decay_t<decltype(details)>>) {
+              if (details.has_ompRequires()) {
+                flags = *details.ompRequires();
+              }
+              if (details.has_ompAtomicDefaultMemOrder()) {
+                memOrder = *details.ompAtomicDefaultMemOrder();
+              }
+            }
+          },
+          moduleSym->details());
+
+      // Merge requires clauses into USE statement's parents.
+      Scope &scope = context_.FindScope(stmt.source);
+      AddOmpRequiresToScope(scope, flags, memOrder);
+    }
+  }
+
   // Keep track of labels in the statements that causes jumps to target labels
   void Post(const parser::GotoStmt &gotoStmt) { CheckSourceLabel(gotoStmt.v); }
   void Post(const parser::ComputedGotoStmt &computedGotoStmt) {
@@ -2279,7 +2315,7 @@ void ResolveOmpTopLevelParts(
 
   // Gather REQUIRES clauses from all non-module top-level program unit symbols,
   // combine them together ensuring compatibility and apply them to all these
-  // program units. Modules are skipped because their REQUIRES clauses should be
+  // program units. Modules are skipped because their REQUIRES clauses are
   // propagated via USE statements instead.
   WithOmpDeclarative::RequiresFlags combinedFlags;
   std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
