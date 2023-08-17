@@ -1427,17 +1427,15 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     if (A->getOption().matches(options::OPT_munsafe_fp_atomics))
       DAL->append(A);
 
-    // pass code objection version to device toolchain
-    // correctly set meta-data in intermediate files
-    if (A->getOption().matches(options::OPT_mcode_object_version_EQ))
-      DAL->append(A);
-
     // Exclude flags which may only apply to the host toolchain.
     // Do not exclude flags when the host triple (AuxTriple)
     // matches the current toolchain triple. If it is not present
     // at all, target and host share a toolchain.
     if (A->getOption().matches(options::OPT_m_Group)) {
-      if (SameTripleAsHost)
+      // Pass code object version to device toolchain
+      // to correctly set metadata in intermediate files.
+      if (SameTripleAsHost ||
+          A->getOption().matches(options::OPT_mcode_object_version_EQ))
         DAL->append(A);
       else
         Modified = true;

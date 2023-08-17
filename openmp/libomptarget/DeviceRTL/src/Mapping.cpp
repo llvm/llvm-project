@@ -48,7 +48,17 @@ const llvm::omp::GV &getGridValue() {
 }
 
 uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
-  return external_get_local_size(Dim);
+  // PRINT(">> getNumberOfThreadsInBlock\n");
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_workgroup_size_x();
+  case 1:
+    return __builtin_amdgcn_workgroup_size_y();
+  case 2:
+    return __builtin_amdgcn_workgroup_size_z();
+  };
+  UNREACHABLE("Dim outside range!");
+  return 0; // removes compile warning
 }
 
 LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
@@ -113,7 +123,16 @@ uint32_t getBlockIdInKernel(int32_t Dim) {
 }
 
 uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
-  return external_get_num_groups(Dim);
+  // DP(">> getNumberOfBlocksInKernel\n");
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
+  case 1:
+    return __builtin_amdgcn_grid_size_y() / __builtin_amdgcn_workgroup_size_y();
+  case 2:
+    return __builtin_amdgcn_grid_size_z() / __builtin_amdgcn_workgroup_size_z();
+  };
+  UNREACHABLE("Dim outside range!");
 }
 
 uint32_t getWarpIdInBlock() {

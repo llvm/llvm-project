@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/TargetOptions.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -274,6 +275,8 @@ public:
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
+  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
+
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
@@ -355,6 +358,29 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 }
 
+/// Emits control constants used to change per-architecture behaviour in the
+/// AMDGPU ROCm device libraries.
+void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
+    CodeGen::CodeGenModule &CGM) const {
+  StringRef Name = "llvm.amdgcn.abi.version";
+  if (CGM.getModule().getNamedGlobal(Name))
+    return;
+
+  auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
+  llvm::Constant *COV = llvm::ConstantInt::get(
+      Type, CGM.getTarget().getTargetOpts().CodeObjectVersion);
+
+  // It needs to be constant weak_odr without externally_initialized so that
+  // the load instuction can be eliminated by the IPSCCP.
+  auto *GV = new llvm::GlobalVariable(
+      CGM.getModule(), Type, true, llvm::GlobalValue::WeakODRLinkage, COV, Name,
+      nullptr, llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
+
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
+  GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
+}
+
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
   if (requiresAMDGPUProtectedVisibility(D, GV)) {
@@ -414,6 +440,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return DefaultGlobalAS;
 
   LangAS AddrSpace = D->getType().getAddressSpace();
+  assert(AddrSpace == LangAS::Default || isTargetAddressSpace(AddrSpace));
   if (AddrSpace != LangAS::Default)
     return AddrSpace;
 

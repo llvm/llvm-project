@@ -25,6 +25,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 
 #include "llvm/Support/YAMLTraits.h"
+using namespace llvm::ELF;
 
 #include "elf_common.h"
 
@@ -36,47 +37,6 @@ namespace utils {
 
 /// A list of offsets required by the ABI of code object versions 4 and 5.
 enum COV_OFFSETS : uint32_t {
-  COV4_SIZE = 56,
-  COV4_HOSTCALL_PTR_OFFSET = 24,
-  HOSTCALL_PTR_SIZE = 8,
-
-  COV5_SIZE = 256,
-
-  COV5_BLOCK_COUNT_X_OFFSET = 0,
-  COV5_BLOCK_COUNT_X_SIZE = 4,
-
-  COV5_BLOCK_COUNT_Y_OFFSET = 4,
-  COV5_BLOCK_COUNT_Y_SIZE = 4,
-
-  COV5_BLOCK_COUNT_Z_OFFSET = 8,
-  COV5_BLOCK_COUNT_Z_SIZE = 4,
-
-  COV5_GROUP_SIZE_X_OFFSET = 12,
-  COV5_GROUP_SIZE_X_SIZE = 2,
-
-  COV5_GROUP_SIZE_Y_OFFSET = 14,
-  COV5_GROUP_SIZE_Y_SIZE = 2,
-
-  COV5_GROUP_SIZE_Z_OFFSET = 16,
-  COV5_GROUP_SIZE_Z_SIZE = 2,
-
-  COV5_REMAINDER_X_OFFSET = 18,
-  COV5_REMAINDER_X_SIZE = 2,
-
-  COV5_REMAINDER_Y_OFFSET = 20,
-  COV5_REMAINDER_Y_SIZE = 2,
-
-  COV5_REMAINDER_Z_OFFSET = 22,
-  COV5_REMAINDER_Z_SIZE = 2,
-
-  COV5_GRID_DIMS_OFFSET = 64,
-  COV5_GRID_DIMS_SIZE = 2,
-
-  COV5_HOSTCALL_PTR_OFFSET = 80,
-
-  COV5_HEAPV1_PTR_OFFSET = 96,
-  COV5_HEAPV1_PTR_SIZE = 8,
-
   // 128 KB
   PER_DEVICE_PREALLOC_SIZE = 131072
 };
@@ -87,6 +47,30 @@ enum XnackBuildMode : short {
   XNACK_PLUS = 1,
   XNACK_ANY = 2
 };
+// The implicit arguments of COV5 AMDGPU kernels.
+struct AMDGPUImplicitArgsTy {
+  uint32_t BlockCountX;
+  uint32_t BlockCountY;
+  uint32_t BlockCountZ;
+  uint16_t GroupSizeX;
+  uint16_t GroupSizeY;
+  uint16_t GroupSizeZ;
+  uint8_t Unused0[46]; // 46 byte offset.
+  uint16_t GridDims;
+  uint8_t Unused2[30]; // 30 byte offset.
+  uint64_t HeapV1Ptr;
+  uint8_t Unused3[152]; // 152 byte offset.
+};
+// Dummy struct for COV4 implicitargs.
+struct AMDGPUImplicitArgsTyCOV4 {
+  uint8_t Unused[56];
+};
+
+uint32_t getImplicitArgsSize(uint16_t Version) {
+  return Version < ELF::ELFABIVERSION_AMDGPU_HSA_V5
+             ? sizeof(AMDGPUImplicitArgsTyCOV4)
+             : sizeof(AMDGPUImplicitArgsTy);
+}
 
 /// Parse a TargetID to get processor arch and feature map.
 /// Returns processor subarch.

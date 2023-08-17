@@ -173,14 +173,14 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataBc, &numNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (numNames != 2) {
+  if (numNames != 3) {
     printf("amd_populate_mangled_names Failed: "
            "produced %zu bitcode names (expected 2)\n",
            numNames);
     exit(1);
   }
 
-  const char *bcNames[] = {"source1", "source2"};
+  const char *bcNames[] = {"llvm.amdgcn.abi.version", "source1", "source2"};
 
   for (size_t I = 0; I < numNames; ++I) {
     size_t Size;

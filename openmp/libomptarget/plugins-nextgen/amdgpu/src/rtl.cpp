@@ -631,9 +631,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     }
 
     ImplicitArgsSize =
-        (AMDImage.getELFABIVersion() < llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5)
-            ? utils::COV4_SIZE
-            : utils::COV5_SIZE;
+        utils::getImplicitArgsSize(AMDImage.getELFABIVersion()); // COV 5 patch
+
     DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
 
     // Get additional kernel info read from image
@@ -3266,8 +3265,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Get the address of pointer to the preallocated device memory pool.
-  void **getPreAllocatedDeviceMemoryPool() {
-    return &PreAllocatedDeviceMemoryPool;
+  void *getPreAllocatedDeviceMemoryPool() {
+    return PreAllocatedDeviceMemoryPool;
   }
 
   /// Allocate and zero initialize a small memory pool from the coarse grained
@@ -4019,9 +4018,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     GroupSize += MaxDynCGroupMem;
   }
 
-  // Initialize implicit arguments.
-  uint8_t *ImplArgs =
-      static_cast<uint8_t *>(advanceVoidPtr(AllArgs, KernelArgsSize));
+  utils::AMDGPUImplicitArgsTy *ImplArgs =
+      reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
+          advanceVoidPtr(AllArgs, KernelArgsSize));
 
   // Initialize the implicit arguments to zero.
   std::memset(ImplArgs, 0, ImplicitArgsSize);
@@ -4062,46 +4061,17 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     DP("No hostrpc buffer or service thread required\n");
   }
 
-  if (getImplicitArgsSize() < utils::COV5_SIZE) {
-    DP("Setting fields of ImplicitArgs for COV4\n");
-    memcpy(&ImplArgs[utils::COV4_HOSTCALL_PTR_OFFSET], &Buffer,
-           utils::HOSTCALL_PTR_SIZE);
-  } else {
+  if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     DP("Setting fields of ImplicitArgs for COV5\n");
-    uint16_t Remainder = 0;
-    uint16_t GridDims = 1;
-    uint32_t NumThreadsYZ = 1;
-    uint16_t NumBlocksYZ = 0;
-    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_X_OFFSET], &NumBlocks,
-           utils::COV5_BLOCK_COUNT_X_SIZE);
-    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_Y_OFFSET], &NumBlocksYZ,
-           utils::COV5_BLOCK_COUNT_Y_SIZE);
-    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_Z_OFFSET], &NumBlocksYZ,
-           utils::COV5_BLOCK_COUNT_Z_SIZE);
 
-    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_X_OFFSET], &NumThreads,
-           utils::COV5_GROUP_SIZE_X_SIZE);
-    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_Y_OFFSET], &NumThreadsYZ,
-           utils::COV5_GROUP_SIZE_Y_SIZE);
-    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_Z_OFFSET], &NumThreadsYZ,
-           utils::COV5_GROUP_SIZE_Z_SIZE);
-
-    memcpy(&ImplArgs[utils::COV5_REMAINDER_X_OFFSET], &Remainder,
-           utils::COV5_REMAINDER_X_SIZE);
-    memcpy(&ImplArgs[utils::COV5_REMAINDER_Y_OFFSET], &Remainder,
-           utils::COV5_REMAINDER_Y_SIZE);
-    memcpy(&ImplArgs[utils::COV5_REMAINDER_Z_OFFSET], &Remainder,
-           utils::COV5_REMAINDER_Z_SIZE);
-
-    memcpy(&ImplArgs[utils::COV5_GRID_DIMS_OFFSET], &GridDims,
-           utils::COV5_GRID_DIMS_SIZE);
-
-    memcpy(&ImplArgs[utils::COV5_HOSTCALL_PTR_OFFSET], &Buffer,
-           utils::HOSTCALL_PTR_SIZE);
-
-    memcpy(&ImplArgs[utils::COV5_HEAPV1_PTR_OFFSET],
-           AMDGPUDevice.getPreAllocatedDeviceMemoryPool(),
-           utils::COV5_HEAPV1_PTR_SIZE);
+    // ImplArgs->BlockCountZ , ImplArgs->BlockCountZ actually 0?
+    ImplArgs->BlockCountX = NumBlocks;
+    ImplArgs->GroupSizeX = NumThreads;
+    ImplArgs->GroupSizeY = 1;
+    ImplArgs->GroupSizeZ = 1;
+    ImplArgs->GridDims = 1;
+    ImplArgs->HeapV1Ptr =
+        (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
   }
 
   // If this kernel requires an RPC server we attach its pointer to the stream.
