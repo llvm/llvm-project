@@ -1293,14 +1293,14 @@ module __ppc_intrinsics
   end interface vsx_lxvp
   public :: vsx_lxvp
 
-#undef VEC_VP_I_VP
-#undef VEC_VP_I_VR
-#undef VEC_VP_I_VU
-#undef VEC_VP_I_VI
-#undef VP_I_VP
-#undef VP_I_VR
-#undef VP_I_VU
-#undef VP_I_VI
+#undef VEC_VP_I0_VP
+#undef VEC_VP_I0_VR
+#undef VEC_VP_I0_VU
+#undef VEC_VP_I0_VI
+#undef VP_I0_VP
+#undef VP_I0_VR
+#undef VP_I0_VU
+#undef VP_I0_VI
 
 !-----------------------------------------
 ! vector function(vector, vector, vector)
