@@ -1188,36 +1188,34 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
 
   case 'w':
-    if (Name.startswith("wasm.fma.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_madd, F->getReturnType());
-      return true;
-    }
-    if (Name.startswith("wasm.fms.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_nmadd, F->getReturnType());
-      return true;
-    }
-    if (Name.startswith("wasm.laneselect.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_laneselect,
-          F->getReturnType());
-      return true;
-    }
-    if (Name == "wasm.dot.i8x16.i7x16.signed") {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_dot_i8x16_i7x16_signed);
-      return true;
-    }
-    if (Name == "wasm.dot.i8x16.i7x16.add.signed") {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_dot_i8x16_i7x16_add_signed);
-      return true;
+    if (Name.consume_front("wasm.")) {
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .StartsWith("fma.", Intrinsic::wasm_relaxed_madd)
+              .StartsWith("fms.", Intrinsic::wasm_relaxed_nmadd)
+              .StartsWith("laneselect.", Intrinsic::wasm_relaxed_laneselect)
+              .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn =
+            Intrinsic::getDeclaration(F->getParent(), ID, F->getReturnType());
+        return true;
+      }
+
+      if (Name.consume_front("dot.i8x16.i7x16.")) {
+        ID = StringSwitch<Intrinsic::ID>(Name)
+                 .Case("signed", Intrinsic::wasm_relaxed_dot_i8x16_i7x16_signed)
+                 .Case("add.signed",
+                       Intrinsic::wasm_relaxed_dot_i8x16_i7x16_add_signed)
+                 .Default(Intrinsic::not_intrinsic);
+        if (ID != Intrinsic::not_intrinsic) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other 'wasm.dot.i8x16.i7x16.*'.
+      }
+      break; // No other 'wasm.*'.
     }
     break;
 
