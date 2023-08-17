@@ -29,9 +29,11 @@ add_llvm_unittest(CASTests
   OnDiskGraphDBTest.cpp
   OnDiskHashMappedTrieTest.cpp
   OnDiskKeyValueDBTest.cpp
+  PluginCASTest.cpp
   ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
   UnifiedOnDiskCacheTest.cpp
   )
 
 target_link_libraries(CASTests PRIVATE LLVMTestingSupport)
+add_dependencies(CASTests CASPluginTest)

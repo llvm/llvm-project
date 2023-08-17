@@ -29,6 +29,8 @@ public:
 
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
 
+  Expected<bool> isMaterialized(ObjectRef Ref) const final;
+
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
   void print(raw_ostream &OS) const final;
@@ -89,6 +91,10 @@ std::optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   if (!ObjID)
     return std::nullopt;
   return convertRef(*ObjID);
+}
+
+Expected<bool> OnDiskCAS::isMaterialized(ObjectRef ExternalRef) const {
+  return DB->containsObject(convertRef(ExternalRef));
 }
 
 ArrayRef<char> OnDiskCAS::getDataConst(ObjectHandle Node) const {
