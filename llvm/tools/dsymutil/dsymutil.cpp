@@ -595,7 +595,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path.str()), ResourceDir);
 }
 
-int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
+int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   // Parse arguments.

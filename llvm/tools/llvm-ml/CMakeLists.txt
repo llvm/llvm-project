@@ -18,5 +18,4 @@ add_public_tablegen_target(MLTableGen)
 add_llvm_tool(llvm-ml
   llvm-ml.cpp
   Disassembler.cpp
-  GENERATE_DRIVER
   )

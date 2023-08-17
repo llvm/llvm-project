@@ -73,7 +73,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -3248,7 +3247,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     InputFilenames.push_back("a.out");
 }
 
-int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
+int main(int argc, char **argv) {
   using namespace llvm;
   InitLLVM X(argc, argv);
 
