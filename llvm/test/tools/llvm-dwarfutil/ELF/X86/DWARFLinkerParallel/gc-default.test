@@ -1,26 +1,10 @@
-## This test checks that debug info removal optimization (--garbage-collection)
-## does not affect files which do not have dead debug info.
+## This test checks that debug info related to deleted code (marked with
+## default tombstone value) is removed.
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfutil --tombstone=maxpc --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: llvm-dwarfutil --linker llvm %t.o %t1.out 2>&1 | FileCheck %s --allow-empty
 
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_name{{.*}}"CU1"
-# CHECK: DW_TAG_class_type
-# CHECK: DW_AT_name{{.*}}"class1"
-# CHECK: DW_TAG_class_type
-# CHECK: "class2"
-# CHECK: DW_TAG_subprogram
-# CHECK: DW_AT_name{{.*}}"foo1"
-# CHECK: DW_AT_low_pc{{.*}}0x0000000000001000
-# CHECK: DW_AT_high_pc{{.*}}0x0000000000001010
-# CHECK: DW_AT_type{{.*}}"class1"
-# CHECK: DW_TAG_subprogram
-# CHECK: "foo2"
-# CHECK: DW_AT_low_pc{{.*}}0x0000000000001010
-# CHECK: DW_AT_high_pc{{.*}}0x000000000000101b
-# CHECK: DW_AT_type{{.*}}"class2"
-
+#CHECK: LLVM parallel dwarflinker is not implemented yet.
 
 --- !ELF
 FileHeader:
@@ -112,7 +96,7 @@ DWARF:
             - CStr: class1
         - AbbrCode: 4
           Values:
-            - Value:  0x00000056
+            - Value:  0x0000006c
             - CStr: member1
         - AbbrCode: 0
         - AbbrCode: 3
@@ -120,7 +104,15 @@ DWARF:
             - CStr: class2
         - AbbrCode: 4
           Values:
-            - Value:  0x00000056
+            - Value:  0x0000006c
+            - CStr: member1
+        - AbbrCode: 0
+        - AbbrCode: 3
+          Values:
+            - CStr: class3
+        - AbbrCode: 4
+          Values:
+            - Value:  0x0000006c
             - CStr: member1
         - AbbrCode: 0
         - AbbrCode: 8
@@ -135,8 +127,8 @@ DWARF:
         - AbbrCode: 2
           Values:
             - CStr: foo2
-            - Value:  0x1010
-            - Value:  0xb
+            - Value:  0x0
+            - Value:  0x100
             - Value:  0x00000040
         - AbbrCode: 0
 ...
