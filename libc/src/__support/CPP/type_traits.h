@@ -11,6 +11,8 @@
 
 #include "src/__support/macros/attributes.h"
 
+#include <stddef.h> // For size_t.
+
 namespace __llvm_libc {
 namespace cpp {
 
@@ -29,6 +31,8 @@ template <typename T, T v> struct integral_constant {
 };
 using true_type = cpp::integral_constant<bool, true>;
 using false_type = cpp::integral_constant<bool, false>;
+
+template <bool V> using bool_constant = integral_constant<bool, V>;
 
 template <class T>
 struct is_trivially_copyable
@@ -213,6 +217,131 @@ constexpr bool
     is_convertible_v<F, T,
                      details::void_t<decltype(details::convertible_to_helper<T>(
                          declval<F>()))>> = true;
+
+namespace details {
+#if __has_builtin(__is_lvalue_reference) &&                                    \
+    __has_builtin(__is_rvalue_reference) && __has_builtin(__is_reference)
+
+template <typename T>
+struct is_lvalue_reference : bool_constant<__is_lvalue_reference(T)> {};
+template <typename T>
+struct is_rvalue_reference : bool_constant<__is_rvalue_reference(T)> {};
+template <typename T> struct is_reference : bool_constant<__is_reference(T)> {};
+
+#else // __has_builtin(__is_lvalue_reference) && etc...
+
+template <typename T> struct is_lvalue_reference : public false_type {};
+template <typename T> struct is_lvalue_reference<T &> : public true_type {};
+
+template <typename T> struct is_rvalue_reference : public false_type {};
+template <typename T> struct is_rvalue_reference<T &&> : public true_type {};
+
+template <typename T> struct is_reference : public false_type {};
+template <typename T> struct is_reference<T &> : public true_type {};
+template <typename T> struct is_reference<T &&> : public true_type {};
+
+#endif // __has_builtin(__is_lvalue_reference) && etc...
+
+#if __has_builtin(__remove_all_extents)
+template <typename T> using __remove_all_extents_t = __remove_all_extents(T);
+#else
+template <typename T> struct remove_all_extents {
+  typedef T type;
+};
+template <typename T> struct remove_all_extents<T[]> {
+  typedef typename remove_all_extents<T>::type type;
+};
+template <typename T, size_t _Np> struct remove_all_extents<T[_Np]> {
+  typedef typename remove_all_extents<T>::type type;
+};
+
+template <typename T>
+using __remove_all_extents_t = typename remove_all_extents<T>::type;
+#endif // __has_builtin(__remove_all_extents)
+
+#if __has_builtin(__is_function)
+
+template <typename T>
+struct is_function : integral_constant<bool, __is_function(T)> {};
+
+#else
+
+template <typename T>
+struct is_function
+    : public integral_constant<bool, !(is_reference<T>::value ||
+                                       is_const<const T>::value)> {};
+
+#endif // __has_builtin(__is_function)
+
+#if __has_builtin(__is_destructible)
+
+template <typename T>
+struct is_destructible : bool_constant<__is_destructible(T)> {};
+
+#else // __has_builtin(__is_destructible)
+
+//  if it's a reference, return true
+//  if it's a function, return false
+//  if it's   void,     return false
+//  if it's an array of unknown bound, return false
+//  Otherwise, return "declval<T&>().~T()" is well-formed
+//    where T is remove_all_extents<T>::type
+
+template <typename> struct __is_destructible_apply {
+  typedef int type;
+};
+
+template <typename T> struct __is_destructor_wellformed {
+  template <typename T1>
+  static true_type __test(
+      typename __is_destructible_apply<decltype(declval<T1 &>().~T1())>::type);
+
+  template <typename T1> static false_type __test(...);
+
+  static const bool value = decltype(__test<T>(12))::value;
+};
+
+template <typename T, bool> struct __destructible_imp;
+
+template <typename T>
+struct __destructible_imp<T, false>
+    : public integral_constant<
+          bool, __is_destructor_wellformed<__remove_all_extents_t<T>>::value> {
+};
+
+template <typename T> struct __destructible_imp<T, true> : public true_type {};
+
+template <typename T, bool> struct __destructible_false;
+template <typename T>
+struct __destructible_false<T, false>
+    : public __destructible_imp<T, is_reference<T>::value> {};
+template <typename T>
+struct __destructible_false<T, true> : public false_type {};
+
+template <typename T>
+struct is_destructible : public __destructible_false<T, is_function<T>::value> {
+};
+template <typename T> struct is_destructible<T[]> : public false_type {};
+template <> struct is_destructible<void> : public false_type {};
+
+#endif // __has_builtin(__is_destructible)
+} // namespace details
+
+#if __has_builtin(__is_trivially_destructible)
+
+template <typename T>
+struct is_trivially_destructible
+    : public integral_constant<bool, __is_trivially_destructible(T)> {};
+
+#elif __has_builtin(__has_trivial_destructor)
+
+template <typename T>
+struct is_trivially_destructible
+    : public integral_constant<
+          bool, __llvm_libc::cpp::details::is_destructible<T>::value
+                    &&__has_trivial_destructor(T)> {};
+
+#endif // __has_builtin(__is_trivially_destructible)
 
 } // namespace cpp
 } // namespace __llvm_libc
