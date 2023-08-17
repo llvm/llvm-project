@@ -1951,9 +1951,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
+  Value *ConvergenceControlToken = nullptr;
   if (CB.hasOperandBundles()) {
     for (int i = 0, e = CB.getNumOperandBundles(); i != e; ++i) {
-      uint32_t Tag = CB.getOperandBundleAt(i).getTagID();
+      auto OBUse = CB.getOperandBundleAt(i);
+      uint32_t Tag = OBUse.getTagID();
       // ... but it knows how to inline through "deopt" operand bundles ...
       if (Tag == LLVMContext::OB_deopt)
         continue;
@@ -1964,8 +1966,34 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         continue;
       if (Tag == LLVMContext::OB_kcfi)
         continue;
+      if (Tag == LLVMContext::OB_convergencectrl) {
+        ConvergenceControlToken = OBUse.Inputs[0].get();
+        continue;
+      }
 
       return InlineResult::failure("unsupported operand bundle");
+    }
+  }
+
+  // FIXME: The check below is redundant and incomplete. According to spec, if a
+  // convergent call is missing a token, then the caller is using uncontrolled
+  // convergence. If the callee has an entry intrinsic, then the callee is using
+  // controlled convergence, and the call cannot be inlined. A proper
+  // implemenation of this check requires a whole new analysis that identifies
+  // convergence in every function. For now, we skip that and just do this one
+  // cursory check. The underlying assumption is that in a compiler flow that
+  // fully implements convergence control tokens, there is no mixing of
+  // controlled and uncontrolled convergent operations in the whole program.
+  if (CB.isConvergent()) {
+    auto *I = CalledFunc->getEntryBlock().getFirstNonPHI();
+    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
+      if (IntrinsicCall->getIntrinsicID() ==
+          Intrinsic::experimental_convergence_entry) {
+        if (!ConvergenceControlToken) {
+          return InlineResult::failure(
+              "convergent call needs convergencectrl operand");
+        }
+      }
     }
   }
 
@@ -2256,6 +2284,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         for (Instruction &I : NewBlock)
           if (auto *II = dyn_cast<AssumeInst>(&I))
             IFI.GetAssumptionCache(*Caller).registerAssumption(II);
+  }
+
+  if (ConvergenceControlToken) {
+    auto *I = FirstNewBlock->getFirstNonPHI();
+    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
+      if (IntrinsicCall->getIntrinsicID() ==
+          Intrinsic::experimental_convergence_entry) {
+        IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+        IntrinsicCall->eraseFromParent();
+      }
+    }
   }
 
   // If there are any alloca instructions in the block that used to be the entry
