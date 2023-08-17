@@ -78,6 +78,15 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
                           const OpFilter *opFilter = nullptr,
                           BufferizationStatistics *statistics = nullptr);
 
+/// Bufferize the signature of `block`. All block argument types are changed to
+/// memref types.
+///
+/// It is expected that the parent op of this block implements the
+/// `BufferizableOpInterface`. The buffer types of tensor block arguments are
+/// computed with `BufferizableOpIntercace::getBufferType`.
+LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
+                                      const BufferizationOptions &options);
+
 BufferizationOptions getPartialBufferizationOptions();
 
 } // namespace bufferization
