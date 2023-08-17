@@ -847,7 +847,13 @@ fp16_fml_fallthrough:
             llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2 &&
             llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6M)
               D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
-        else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
+        else if (llvm::ARM::parseArch(Triple.getArchName()) == llvm::ARM::ArchKind::ARMV6M) {
+          if (Arg *PIArg = Args.getLastArg(options::OPT_fropi, options::OPT_frwpi,
+                                           options::OPT_fpic, options::OPT_fpie,
+                                           options::OPT_fPIC, options::OPT_fPIE))
+            D.Diag(diag::err_opt_not_valid_with_opt_on_target)
+                << A->getAsString(Args) << PIArg->getAsString(Args) << Triple.getArchName();
+        } else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
           D.Diag(diag::err_opt_not_valid_with_opt)
               << A->getAsString(Args) << B->getAsString(Args);
         Features.push_back("+execute-only");
