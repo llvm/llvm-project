@@ -147,16 +147,12 @@ std::string CompleteNodeLabelString(
   enum { MaxColumns = 80 };
   std::string Str;
   raw_string_ostream OS(Str);
-
-  if (Node->getName().empty()) {
-    Node->printAsOperand(OS, false);
-    OS << ':';
-  }
-
   HandleBasicBlock(OS, *Node);
   std::string OutStr = OS.str();
-  if (OutStr[0] == '\n')
+  // Remove "%" from BB name
+  if (OutStr[0] == '%') {
     OutStr.erase(OutStr.begin());
+  }
 
   unsigned ColNum = 0;
   unsigned LastSpace = 0;
@@ -182,6 +178,8 @@ std::string CompleteNodeLabelString(
     if (OutStr[i] == ' ')
       LastSpace = i;
   }
+  // Replace \l after BB name with | to separate it into header
+  OutStr.replace(OutStr.find_first_of('\\') + 1, 1, "|");
   return OutStr;
 }
 
@@ -206,11 +204,20 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return SimpleNodeLabelString(Node);
   }
 
+  static void printBasicBlock(raw_string_ostream &OS, const BasicBlock &Node) {
+    // Prepend label name
+    Node.printAsOperand(OS, false);
+    OS << ":\n";
+    for (auto J = Node.begin(), JE = Node.end(); J != JE; ++J) {
+      const Instruction *Inst = &*J;
+      OS << *Inst << "\n";
+    }
+  }
+
   static std::string getCompleteNodeLabel(
       const BasicBlock *Node, DOTFuncInfo *,
       function_ref<void(raw_string_ostream &, const BasicBlock &)>
-          HandleBasicBlock = [](raw_string_ostream &OS,
-                                const BasicBlock &Node) -> void { OS << Node; },
+          HandleBasicBlock = printBasicBlock,
       function_ref<void(std::string &, unsigned &, unsigned)>
           HandleComment = eraseComment) {
     return CompleteNodeLabelString(Node, HandleBasicBlock, HandleComment);
