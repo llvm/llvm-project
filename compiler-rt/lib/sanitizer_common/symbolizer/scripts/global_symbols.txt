@@ -11,6 +11,8 @@ _ZN11__sanitizer16internal_iserrorEjPi U
 _ZN11__sanitizer16internal_iserrorEmPi U
 _ZN11__sanitizer17internal_snprintfEPcjPKcz U
 _ZN11__sanitizer17internal_snprintfEPcmPKcz U
+__ashldi3 U
+__ashrdi3 U
 __ctype_b_loc U
 __ctype_get_mb_cur_max U
 __cxa_atexit U
@@ -36,6 +38,7 @@ __interceptor_realpath w
 __isinf U
 __isoc99_sscanf U
 __isoc99_vsscanf U
+__lshrdi3 U
 __moddi3 U
 __sanitizer_internal_memcpy U
 __sanitizer_internal_memmove U
