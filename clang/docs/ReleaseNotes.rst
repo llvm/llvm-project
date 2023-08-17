@@ -177,6 +177,9 @@ Bug Fixes to C++ Support
   requires-expression. This fixes:
   (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
 
+- Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
+  (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
