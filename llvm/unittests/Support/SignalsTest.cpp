@@ -25,6 +25,10 @@ using testing::Not;
 
 #define TAG_BEGIN "\\{\\{\\{"
 #define TAG_END "\\}\\}\\}"
+// %p in the Symbolizer Markup Format spec
+#define P_REGEX "(0+|0x[0-9a-fA-F]+)"
+// %i in the Symbolizer Markup Format spec
+#define I_REGEX "(0x[0-9a-fA-F]+|0[0-7]+|[0-9]+)"
 
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
@@ -43,14 +47,10 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
                            "module:0:[^:]*SupportTests:elf:[0-9a-f]+" TAG_END
                            ".*"));
   // Text segment for main binary
-  EXPECT_THAT(
-      Res,
-      MatchesRegex(".*" TAG_BEGIN
-                   "mmap:[0-9a-f]+:[0-9a-f]+:load:0:rx:[0-9a-f]+" TAG_END
-                   ".*"));
+  EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "mmap:" P_REGEX ":" I_REGEX
+                                ":load:0:rx:" P_REGEX TAG_END ".*"));
   // Backtrace line
-  EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "bt:0:[0-9a-f]+"
-                                ".*"));
+  EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "bt:0:" P_REGEX ".*"));
 }
 
 TEST(SignalsTest, SymbolizerMarkupDisabled) {
