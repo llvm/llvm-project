@@ -205,10 +205,10 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
   // Parse the arguments.
   const OptTable &OptTbl = getDriverOptTable();
 
-  const unsigned IncludedFlagsBitmask = options::CC1AsOption;
+  llvm::opt::Visibility VisibilityMask(options::CC1AsOption);
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = OptTbl.ParseArgs(Argv, MissingArgIndex, MissingArgCount,
-                                       IncludedFlagsBitmask);
+                                       VisibilityMask);
 
   // Check for missing argument error.
   if (MissingArgCount) {
@@ -221,7 +221,7 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
   for (const Arg *A : Args.filtered(OPT_UNKNOWN)) {
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (OptTbl.findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1) {
+    if (OptTbl.findNearest(ArgString, Nearest, VisibilityMask) > 1) {
       Diags.Report(diag::err_drv_unknown_argument) << ArgString;
     } else {
       Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
