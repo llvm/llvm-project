@@ -13,6 +13,10 @@
 
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -163,6 +167,7 @@ struct LowerGpuOpsToROCDLOpsPass
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
+      arith::populateExpandBFloat16Patterns(patterns);
       (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
     }
 
