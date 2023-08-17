@@ -293,13 +293,12 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
                                            ArrayRef<StringRef> AbbrevEntries,
                                            uint64_t &MaxDIEAbbrevCount) {
   uint64_t WrittenSize = 0;
-  uint64_t AbbrevCode = MaxDIEAbbrevCount;
   for (auto EntryData : AbbrevEntries) {
     // Dwarf 5: Section 7.5.3:
     // Each declaration begins with an unsigned LEB128 number representing the
     // abbreviation code itself. [...] The abbreviation code 0 is reserved for
     // null debugging information entries.
-    WrittenSize += encodeULEB128(AbbrevCode, OS);
+    WrittenSize += encodeULEB128(MaxDIEAbbrevCount, OS);
     BinaryStreamReader Reader(EntryData, support::endianness::little);
     // [uleb(Tag), has_children]
     uint64_t TagAsInt;
@@ -338,8 +337,7 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
     // for the name and 0 for the form.
     OS.write_zeros(2);
     WrittenSize += 2;
-    AbbrevCode++;
+    MaxDIEAbbrevCount++;
   }
-  MaxDIEAbbrevCount = AbbrevCode;
   return WrittenSize;
 }

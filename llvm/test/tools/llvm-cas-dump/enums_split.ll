@@ -5,19 +5,19 @@
 ; DWARF-DIE:        mc:debug_DIE_top_level llvmcas://{{.*}}
 ; DWARF-DIE-NEXT:   Header = [68 0 0 0 4 0 0 0 0 0 8]
 ; DWARF-DIE-NEXT:   CAS Block: llvmcas://{{.*}}
-; DWARF-DIE-NEXT:   DW_TAG_compile_unit  AbbrevCode = 2
+; DWARF-DIE-NEXT:   DW_TAG_compile_unit  AbbrevIdx = 2
 ; DWARF-DIE:        CAS Block: llvmcas://{{.*}}
-; DWARF-DIE-NEXT:   DW_TAG_enumeration_type     AbbrevCode = 3
+; DWARF-DIE-NEXT:   DW_TAG_enumeration_type     AbbrevIdx = 3
 ; DWARF-DIE-NEXT:     DW_AT_type                     DW_FORM_ref4_cas           [distinct] [47]
 ; DWARF-DIE-NEXT:     DW_AT_enum_class               DW_FORM_flag_present       [dedups]   []
 ; DWARF-DIE-NEXT:     DW_AT_name                     DW_FORM_strp_cas           [distinct] [88 1]
 ; DWARF-DIE-NEXT:     DW_AT_byte_size                DW_FORM_data1              [dedups]   [4]
 ; DWARF-DIE-NEXT:     DW_AT_decl_file                DW_FORM_data1              [distinct] [1]
 ; DWARF-DIE-NEXT:     DW_AT_decl_line                DW_FORM_data1              [dedups]   [3]
-; DWARF-DIE-NEXT:     DW_TAG_enumerator         AbbrevCode = 4
+; DWARF-DIE-NEXT:     DW_TAG_enumerator         AbbrevIdx = 4
 ; DWARF-DIE-NEXT:       DW_AT_name                     DW_FORM_strp_cas           [distinct] [96 1]
 ; DWARF-DIE-NEXT:       DW_AT_const_value              DW_FORM_sdata              [dedups]   [0]
-; DWARF-DIE-NEXT:     DW_TAG_enumerator         AbbrevCode = 4
+; DWARF-DIE-NEXT:     DW_TAG_enumerator         AbbrevIdx = 4
 ; DWARF-DIE-NEXT:       DW_AT_name                     DW_FORM_strp_cas           [distinct] [9B 1]
 ; DWARF-DIE-NEXT:       DW_AT_const_value              DW_FORM_sdata              [dedups]   [1]
 
