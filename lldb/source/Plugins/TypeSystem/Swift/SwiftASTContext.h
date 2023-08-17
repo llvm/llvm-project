@@ -13,7 +13,6 @@
 #ifndef liblldb_SwiftASTContext_h_
 #define liblldb_SwiftASTContext_h_
 
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 
@@ -22,6 +21,8 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Utility/Either.h"
 
+#include "swift/AST/Import.h"
+#include "swift/AST/Module.h"
 #include "swift/Parse/ParseVersion.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
@@ -805,30 +806,6 @@ public:
 
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
 
-  /// Retrieves the modules that need to be implicitly imported in a given
-  /// execution scope. This includes the modules imported by both the compile
-  /// unit as well as any imports from previous expression evaluations.
-  static bool GetImplicitImports(
-      SwiftASTContext &swift_ast_context, SymbolContext &sc,
-      ExecutionContextScope &exe_scope, lldb::ProcessSP process_sp,
-      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-          &modules,
-      Status &error);
-
-  // FIXME: the correct thing to do would be to get the modules by calling
-  // CompilerInstance::getImplicitImportInfo, instead of loading these
-  // modules manually. However, we currently don't have  access to a
-  // CompilerInstance, which is why this function is needed.
-  void LoadImplicitModules(lldb::TargetSP target, lldb::ProcessSP process,
-                           ExecutionContextScope &exe_scope);
-  /// Cache the user's imports from a SourceFile in a given execution scope such
-  /// that they are carried over into future expression evaluations.
-  static bool CacheUserImports(SwiftASTContext &swift_ast_context,
-                               SymbolContext &sc,
-                               ExecutionContextScope &exe_scope,
-                               lldb::ProcessSP process_sp,
-                               swift::SourceFile &source_file, Status &error);
-
   /// Retrieve/import the modules imported by the compilation
   /// unit. Early-exists with false if there was an import failure.
   bool GetCompileUnitImports(
@@ -1035,6 +1012,42 @@ public:
   PersistentExpressionState *GetPersistentExpressionState() override;
 
   void ModulesDidLoad(ModuleList &module_list);
+
+  typedef llvm::StringMap<swift::AttributedImport<swift::ImportedModule>>
+      HandLoadedModuleSet;
+
+  // Insert to the list of hand-loaded modules, (no actual loading occurs).
+  void AddHandLoadedModule(
+      ConstString module_name,
+      swift::AttributedImport<swift::ImportedModule> attributed_import) {
+    m_hand_loaded_modules.insert_or_assign(module_name.GetStringRef(),
+                                           attributed_import);
+  }
+
+  /// Retrieves the modules that need to be implicitly imported in a given
+  /// execution scope. This includes the modules imported by both the compile
+  /// unit as well as any imports from previous expression evaluations.
+  bool GetImplicitImports(
+      SymbolContext &sc, lldb::ProcessSP process_sp,
+      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+          &modules,
+      Status &error);
+
+  // FIXME: the correct thing to do would be to get the modules by calling
+  // CompilerInstance::getImplicitImportInfo, instead of loading these
+  // modules manually. However, we currently don't have  access to a
+  // CompilerInstance, which is why this function is needed.
+  void LoadImplicitModules(lldb::TargetSP target, lldb::ProcessSP process,
+                           ExecutionContextScope &exe_scope);
+  /// Cache the user's imports from a SourceFile in a given execution scope such
+  /// that they are carried over into future expression evaluations.
+  bool CacheUserImports(lldb::ProcessSP process_sp,
+                        swift::SourceFile &source_file, Status &error);
+
+protected:
+  /// These are the names of modules that we have loaded by hand into
+  /// the Contexts we make for parsing.
+  HandLoadedModuleSet m_hand_loaded_modules;
 
 private:
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;

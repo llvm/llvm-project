@@ -10,19 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "swift/AST/ASTContext.h"
-#include "swift/AST/GenericEnvironment.h"
-#include "swift/Demangling/Demangler.h"
-#include <stdio.h>
-#if HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
 #include "SwiftASTManipulator.h"
 #include "SwiftExpressionParser.h"
 #include "SwiftExpressionSourceCode.h"
+#include "SwiftPersistentExpressionState.h"
 #include "SwiftREPLMaterializer.h"
-#include "SwiftASTManipulator.h"
+
+#include "swift/AST/ASTContext.h"
+#include "swift/AST/GenericEnvironment.h"
+#include "swift/Demangling/Demangler.h"
+#if HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/Module.h"
@@ -46,8 +45,6 @@
 #include "swift/Demangling/Demangler.h"
 #include "swift/AST/GenericEnvironment.h"
 
-
-#include <cstdlib>
 #include <map>
 #include <string>
 
@@ -712,8 +709,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (status.Fail() || !module_decl)
     return error("could not load Swift Standard Library", status.AsCString());
 
-  persistent_state->AddHandLoadedModule(ConstString("Swift"),
-                                        swift::ImportedModule(module_decl));
+  m_swift_ast_ctx->AddHandLoadedModule(ConstString("Swift"),
+                                       swift::ImportedModule(module_decl));
   m_result_delegate.RegisterPersistentState(persistent_state);
   m_error_delegate.RegisterPersistentState(persistent_state);
  

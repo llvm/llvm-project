@@ -15,6 +15,8 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 
+#include "lldb/Utility/StreamString.h"
+
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticsClangImporter.h"
 #include "swift/AST/DiagnosticsSema.h"

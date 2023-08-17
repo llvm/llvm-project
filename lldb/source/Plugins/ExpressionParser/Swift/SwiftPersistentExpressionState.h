@@ -15,18 +15,12 @@
 
 #include "SwiftExpressionVariable.h"
 
-#include "swift/AST/Import.h"
-#include "swift/AST/Module.h"
-
-#include "lldb/Core/SwiftForward.h"
 #include "lldb/Expression/ExpressionVariable.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <set>
 #include <string>
-#include <unordered_map>
 
 namespace lldb_private {
 
@@ -38,31 +32,26 @@ namespace lldb_private {
 /// Also provides an increasing, 0-based counter for naming result
 /// variables.
 class SwiftPersistentExpressionState : public PersistentExpressionState {
-
-  typedef llvm::StringMap<swift::AttributedImport<swift::ImportedModule>>
-      HandLoadedModuleSet;
-
 public:
   class SwiftDeclMap {
   public:
-    void AddDecl(swift::ValueDecl *decl, bool check_existing, ConstString name);
+    void AddDecl(CompilerDecl value_decl, bool check_existing,
+                 llvm::StringRef name);
 
     /// Find decls matching `name`, excluding decls that are equivalent to
     /// decls in `excluding_equivalents`, and put the results in `matches`.
     /// Return true if there are any results.
     bool FindMatchingDecls(
-        ConstString name,
-        const std::vector<swift::ValueDecl *> &excluding_equivalents,
-        std::vector<swift::ValueDecl *> &matches);
+        llvm::StringRef name,
+        const std::vector<CompilerDecl> &excluding_equivalents,
+        std::vector<CompilerDecl> &matches);
 
     void CopyDeclsTo(SwiftDeclMap &target_map);
-    static bool DeclsAreEquivalent(swift::Decl *lhs, swift::Decl *rhs);
+    static bool DeclsAreEquivalent(CompilerDecl lhs, CompilerDecl rhs);
 
   private:
-    typedef std::unordered_multimap<std::string, swift::ValueDecl *>
-        SwiftDeclMapTy;
-    typedef SwiftDeclMapTy::iterator iterator;
-    SwiftDeclMapTy m_swift_decls;
+    /// Each decl also stores the context it comes from.
+    llvm::StringMap<llvm::SmallVector<CompilerDecl, 1>> m_swift_decls;
   };
 
   //----------------------------------------------------------------------
@@ -98,10 +87,10 @@ public:
   llvm::Optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
-  void RegisterSwiftPersistentDecl(swift::ValueDecl *value_decl);
+  void RegisterSwiftPersistentDecl(CompilerDecl value_decl);
 
-  void RegisterSwiftPersistentDeclAlias(swift::ValueDecl *value_decl,
-                                        ConstString name);
+  void RegisterSwiftPersistentDeclAlias(CompilerDecl value_decl,
+                                        llvm::StringRef name);
 
   void CopyInSwiftPersistentDecls(SwiftDeclMap &source_map);
 
@@ -109,21 +98,9 @@ public:
   /// in `excluding_equivalents`, and put the results in `matches`.  Return true
   /// if there are any results.
   bool GetSwiftPersistentDecls(
-      ConstString name,
-      const std::vector<swift::ValueDecl *> &excluding_equivalents,
-      std::vector<swift::ValueDecl *> &matches);
-
-  // This just adds this module to the list of hand-loaded modules, it doesn't
-  // actually load it.
-  void AddHandLoadedModule(
-      ConstString module_name,
-      swift::AttributedImport<swift::ImportedModule> attributed_import) {
-    m_hand_loaded_modules.insert_or_assign(module_name.GetStringRef(),
-                                           attributed_import);
-  }
-
-  /// This returns the list of hand-loaded modules.
-  HandLoadedModuleSet GetHandLoadedModules() { return m_hand_loaded_modules; }
+      llvm::StringRef name,
+      const std::vector<CompilerDecl> &excluding_equivalents,
+      std::vector<CompilerDecl> &matches);
 
 private:
   /// The counter used by GetNextResultName().
@@ -132,9 +109,6 @@ private:
   uint32_t m_next_persistent_error_id;
   /// The persistent functions declared by the user.
   SwiftDeclMap m_swift_persistent_decls;
-  /// These are the names of modules that we have loaded by hand into
-  /// the Contexts we make for parsing.
-  HandLoadedModuleSet m_hand_loaded_modules;
 };
 } // namespace lldb_private
 

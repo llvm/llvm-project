@@ -15,6 +15,7 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftMetadataCache.h"
 
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Utility/ARM64_DWARF_Registers.h"
@@ -1510,7 +1511,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       if (!persistent_state)
         return;
 
-      persistent_state->RegisterSwiftPersistentDecl(var_decl);
+      persistent_state->RegisterSwiftPersistentDecl({ast_context, var_decl});
 
       ConstString mangled_name;
 

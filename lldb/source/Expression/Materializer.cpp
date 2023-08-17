@@ -27,6 +27,7 @@
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #endif //LLDB_ENABLE_SWIFT
 
 #include <memory>

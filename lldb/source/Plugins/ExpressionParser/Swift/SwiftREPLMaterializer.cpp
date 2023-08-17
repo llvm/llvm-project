@@ -12,6 +12,7 @@
 
 #include "SwiftREPLMaterializer.h"
 #include "SwiftASTManipulator.h"
+#include "SwiftPersistentExpressionState.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"
@@ -186,7 +187,11 @@ public:
 
     if (m_swift_decl) {
       llvm::cast<SwiftPersistentExpressionState>(persistent_state)
-          ->RegisterSwiftPersistentDeclAlias(m_swift_decl, name);
+          ->RegisterSwiftPersistentDeclAlias(
+              {SwiftASTContext::GetSwiftASTContext(
+                   &m_swift_decl->getASTContext()),
+               m_swift_decl},
+              name.GetStringRef());
     }
 
     return;
