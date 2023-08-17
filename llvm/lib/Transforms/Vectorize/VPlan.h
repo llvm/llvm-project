@@ -1744,15 +1744,12 @@ public:
 class VPReductionRecipe : public VPRecipeBase, public VPValue {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
-  /// Pointer to the TTI, needed to create the target reduction
-  const TargetTransformInfo *TTI;
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    const TargetTransformInfo *TTI)
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp)
       : VPRecipeBase(VPDef::VPReductionSC, {ChainOp, VecOp}), VPValue(this, I),
-        RdxDesc(R), TTI(TTI) {
+        RdxDesc(R) {
     if (CondOp)
       addOperand(CondOp);
   }
