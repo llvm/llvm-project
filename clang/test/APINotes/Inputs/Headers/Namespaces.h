@@ -30,4 +30,5 @@ namespace Nested1 { namespace Namespace1 {} }
 
 namespace Namespace1 {
 typedef int my_typedef;
+using my_using_decl = int;
 }
