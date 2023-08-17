@@ -5164,6 +5164,17 @@ CompilerType SwiftASTContext::GetReferentType(opaque_compiler_type_t type) {
   return ToCompilerType({ref_type});
 }
 
+CompilerType
+SwiftASTContext::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
+  VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
+
+  swift::Type swift_type = GetSwiftType(type);
+  if (auto *dyn_self =
+          llvm::dyn_cast_or_null<swift::DynamicSelfType>(swift_type))
+    return ToCompilerType({dyn_self->getSelfType().getPointer()});
+  return {weak_from_this(), type};
+}
+
 bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
   if (swift::CanType swift_can_type = ::GetCanonicalSwiftType(compiler_type)) {
     if (swift::isa<swift::MetatypeType>(swift_can_type))
