@@ -54,6 +54,8 @@ def Tosa_ApplyScaleOp :
   let extraClassDeclaration = [{
     std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -73,6 +75,8 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
   let arguments = (ins
     Variadic<Tosa_Tensor>:$inputs
   );
+
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs)";
 }
 
 #endif // TOSA_UTIL_OPS

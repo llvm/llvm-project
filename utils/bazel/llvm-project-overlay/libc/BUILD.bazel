@@ -147,6 +147,7 @@ libc_support_library(
     name = "__support_cpp_algorithm",
     hdrs = ["src/__support/CPP/algorithm.h"],
     deps = [
+        ":__support_macros_attributes",
         ":libc_root",
     ],
 )

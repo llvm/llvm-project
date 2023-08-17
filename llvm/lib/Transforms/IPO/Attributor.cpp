@@ -226,10 +226,10 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA && InstanceInfoAA->isAssumedUniqueForAnalysis();
 }
 
-Constant *AA::getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
-                                    const TargetLibraryInfo *TLI,
-                                    const DataLayout &DL,
-                                    AA::RangeTy *RangePtr) {
+Constant *
+AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
+                          Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
+                          const DataLayout &DL, AA::RangeTy *RangePtr) {
   if (isa<AllocaInst>(Obj))
     return UndefValue::get(&Ty);
   if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
@@ -242,7 +242,7 @@ Constant *AA::getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
   Constant *Initializer = nullptr;
   if (A.hasGlobalVariableSimplificationCallback(*GV)) {
     auto AssumedGV = A.getAssumedInitializerFromCallBack(
-        *GV, /* const AbstractAttribute *AA */ nullptr, UsedAssumedInformation);
+        *GV, &QueryingAA, UsedAssumedInformation);
     Initializer = *AssumedGV;
     if (!Initializer)
       return nullptr;
@@ -526,8 +526,8 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
-      Value *InitialValue =
-          AA::getInitialValueForObj(A, Obj, *I.getType(), TLI, DL, &Range);
+      Value *InitialValue = AA::getInitialValueForObj(
+          A, QueryingAA, Obj, *I.getType(), TLI, DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");

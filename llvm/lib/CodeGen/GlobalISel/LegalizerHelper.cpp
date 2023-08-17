@@ -689,7 +689,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
     LLT OpLLT = MRI.getType(Reg);
     Type *OpTy = nullptr;
     if (OpLLT.isPointer())
-      OpTy = Type::getInt8PtrTy(Ctx, OpLLT.getAddressSpace());
+      OpTy = PointerType::get(Ctx, OpLLT.getAddressSpace());
     else
       OpTy = IntegerType::get(Ctx, OpLLT.getSizeInBits());
     Args.push_back({Reg, OpTy, 0});
@@ -2647,6 +2647,22 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_FMAX:
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    Register VecReg = MI.getOperand(1).getReg();
+    LLT VecTy = MRI.getType(VecReg);
+    LLT WideVecTy = VecTy.isVector()
+                        ? LLT::vector(VecTy.getElementCount(), WideTy)
+                        : WideTy;
+    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
   }
 }
 
@@ -4428,73 +4444,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
   return Legalized;
 }
 
-static unsigned getScalarOpcForReduction(unsigned Opc) {
-  unsigned ScalarOpc;
-  switch (Opc) {
-  case TargetOpcode::G_VECREDUCE_FADD:
-    ScalarOpc = TargetOpcode::G_FADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMUL:
-    ScalarOpc = TargetOpcode::G_FMUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMAX:
-    ScalarOpc = TargetOpcode::G_FMAXNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMIN:
-    ScalarOpc = TargetOpcode::G_FMINNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_ADD:
-    ScalarOpc = TargetOpcode::G_ADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_MUL:
-    ScalarOpc = TargetOpcode::G_MUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_AND:
-    ScalarOpc = TargetOpcode::G_AND;
-    break;
-  case TargetOpcode::G_VECREDUCE_OR:
-    ScalarOpc = TargetOpcode::G_OR;
-    break;
-  case TargetOpcode::G_VECREDUCE_XOR:
-    ScalarOpc = TargetOpcode::G_XOR;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMAX:
-    ScalarOpc = TargetOpcode::G_SMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMIN:
-    ScalarOpc = TargetOpcode::G_SMIN;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMAX:
-    ScalarOpc = TargetOpcode::G_UMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMIN:
-    ScalarOpc = TargetOpcode::G_UMIN;
-    break;
-  default:
-    llvm_unreachable("Unhandled reduction");
-  }
-  return ScalarOpc;
-}
-
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
-  unsigned Opc = MI.getOpcode();
-  assert(Opc != TargetOpcode::G_VECREDUCE_SEQ_FADD &&
-         Opc != TargetOpcode::G_VECREDUCE_SEQ_FMUL &&
-         "Sequential reductions not expected");
+  auto &RdxMI = cast<GVecReduce>(MI);
 
   if (TypeIdx != 1)
     return UnableToLegalize;
 
   // The semantics of the normal non-sequential reductions allow us to freely
   // re-associate the operation.
-  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  auto [DstReg, DstTy, SrcReg, SrcTy] = RdxMI.getFirst2RegLLTs();
 
   if (NarrowTy.isVector() &&
       (SrcTy.getNumElements() % NarrowTy.getNumElements() != 0))
     return UnableToLegalize;
 
-  unsigned ScalarOpc = getScalarOpcForReduction(Opc);
+  unsigned ScalarOpc = RdxMI.getScalarOpcForReduction();
   SmallVector<Register> SplitSrcs;
   // If NarrowTy is a scalar then we're being asked to scalarize.
   const unsigned NumParts =
@@ -4539,9 +4504,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   SmallVector<Register> PartialReductions;
   for (unsigned Part = 0; Part < NumParts; ++Part) {
     PartialReductions.push_back(
-        MIRBuilder.buildInstr(Opc, {DstTy}, {SplitSrcs[Part]}).getReg(0));
+        MIRBuilder.buildInstr(RdxMI.getOpcode(), {DstTy}, {SplitSrcs[Part]})
+            .getReg(0));
   }
-
 
   // If the types involved are powers of 2, we can generate intermediate vector
   // ops, before generating a final reduction operation.
@@ -4889,6 +4854,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FREEZE:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:

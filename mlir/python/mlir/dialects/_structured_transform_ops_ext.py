@@ -11,19 +11,67 @@ except ImportError as e:
 
 from typing import List, Optional, Sequence, Tuple, Union, overload
 
+StaticIntLike = Union[int, IntegerAttr]
+ValueLike = Union[Operation, OpView, Value]
+MixedInt = Union[StaticIntLike, ValueLike]
+
 IntOrAttrList = Sequence[Union[IntegerAttr, int]]
 OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
 
 BoolOrAttrList = Sequence[Union[BoolAttr, bool]]
 OptionalBoolList = Optional[Union[ArrayAttr, BoolOrAttrList]]
 
-MixedValues = Union[
-    Sequence[Union[int, IntegerAttr, Operation, Value, OpView]],
-    ArrayAttr,
-    Operation,
-    Value,
-    OpView,
-]
+MixedValues = Union[Sequence[Union[StaticIntLike, ValueLike]], ArrayAttr, ValueLike]
+
+DynamicIndexList = Sequence[Union[MixedInt, Sequence[MixedInt]]]
+
+
+def _dispatch_dynamic_index_list(
+    indices: Union[DynamicIndexList, ArrayAttr],
+) -> Tuple[List[ValueLike], Union[List[int], ArrayAttr], List[bool]]:
+    """Dispatches a list of indices to the appropriate form.
+
+    This is similar to the custom `DynamicIndexList` directive upstream:
+    provided indices may be in the form of dynamic SSA values or static values,
+    and they may be scalable (i.e., as a singleton list) or not. This function
+    dispatches each index into its respective form. It also extracts the SSA
+    values and static indices from various similar structures, respectively.
+    """
+    dynamic_indices = []
+    static_indices = [ShapedType.get_dynamic_size()] * len(indices)
+    scalable_indices = [False] * len(indices)
+
+    # ArrayAttr: Extract index values.
+    if isinstance(indices, ArrayAttr):
+        indices = [idx for idx in indices]
+
+    def process_nonscalable_index(i, index):
+        """Processes any form of non-scalable index.
+
+        Returns False if the given index was scalable and thus remains
+        unprocessed; True otherwise.
+        """
+        if isinstance(index, int):
+            static_indices[i] = index
+        elif isinstance(index, IntegerAttr):
+            static_indices[i] = index.value  # pytype: disable=attribute-error
+        elif isinstance(index, (Operation, Value, OpView)):
+            dynamic_indices.append(index)
+        else:
+            return False
+        return True
+
+    # Process each index at a time.
+    for i, index in enumerate(indices):
+        if not process_nonscalable_index(i, index):
+            # If it wasn't processed, it must be a scalable index, which is
+            # provided as a Sequence of one value, so extract and process that.
+            scalable_indices[i] = True
+            assert len(index) == 1
+            ret = process_nonscalable_index(i, index[0])
+            assert ret
+
+    return dynamic_indices, static_indices, scalable_indices
 
 
 # Dispatches `MixedValues` that all represents integers in various forms into
@@ -82,6 +130,40 @@ def _get_int_int_array_attr(
         ]
 
     return ArrayAttr.get(values)
+
+
+class BufferizeToAllocationOp:
+    """Specialization for BufferizeToAllocationOp class."""
+
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        memory_space: Optional[Union[int, str, Attribute]] = None,
+        memcpy_op: Optional[str] = None,
+        alloc_op: Optional[str] = None,
+        bufferize_destination_only: Optional[bool] = None,
+        loc=None,
+        ip=None,
+    ):
+        # No other types are allowed, so hard-code those here.
+        allocated_buffer_type = transform.AnyValueType.get()
+        new_ops_type = transform.AnyOpType.get()
+
+        if isinstance(memory_space, int):
+            memory_space = str(memory_space)
+        if isinstance(memory_space, str):
+            memory_space = Attribute.parse(memory_space)
+
+        super().__init__(
+            allocated_buffer_type,
+            new_ops_type,
+            target,
+            memory_space=memory_space,
+            memcpy_op=memcpy_op,
+            alloc_op=alloc_op,
+            bufferize_destination_only=bufferize_destination_only,
+        )
 
 
 class DecomposeOp:
@@ -184,6 +266,103 @@ class InterchangeOp:
             iterator_interchange=iterator_interchange,
             loc=loc,
             ip=ip,
+        )
+
+
+class MapCopyToThreadsOp:
+    """Specialization for MapCopyToThreadsOp class."""
+
+    @overload
+    def __init__(
+        self,
+        forall_op_type: Type,
+        tiled_op_type: Type,
+        target: Union[Operation, OpView, Value],
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        forall_op_type_or_target: Union[Operation, OpView, Type, Value],
+        tiled_op_type_or_none: Optional[Type] = None,
+        target_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        *,
+        total_num_threads: Union[int, IntegerAttr],
+        desired_bit_alignment: Union[int, IntegerAttr],
+        loc=None,
+        ip=None,
+    ):
+        if isinstance(forall_op_type_or_target, Type):
+            forall_op_type = forall_op_type_or_target
+            tiled_op_type = tiled_op_type_or_none
+            target = target_or_none
+        else:
+            forall_op_type = transform.AnyOpType.get()
+            tiled_op_type = transform.AnyOpType.get()
+            target = forall_op_type_or_target
+
+        super().__init__(
+            forall_op_type,
+            tiled_op_type,
+            target,
+            total_num_threads=total_num_threads,
+            desired_bit_alignment=desired_bit_alignment,
+            loc=loc,
+            ip=ip,
+        )
+
+
+class MaskedVectorizeOp:
+    """Specialization for MaskedVectorizeOp class."""
+
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        vector_sizes: Union[DynamicIndexList, ArrayAttr],
+        *,
+        vectorize_nd_extract: Optional[bool] = None,
+        scalable_sizes: OptionalBoolList = None,
+        static_vector_sizes: OptionalIntList = None,
+        loc=None,
+        ip=None,
+    ):
+        if scalable_sizes is None and static_vector_sizes is None:
+            (
+                dynamic_vector_sizes,
+                static_vector_sizes,
+                scalable_sizes,
+            ) = _dispatch_dynamic_index_list(vector_sizes)
+        elif scalable_sizes is None or static_vector_sizes is None:
+            raise TypeError(
+                "'scalable_sizes' and 'static_vector_sizes' must either both "
+                "be given explicitly or both be given as part of 'vector_sizes'."
+            )
+        else:
+            dynamic_vector_sizes = vector_sizes
+
+        super().__init__(
+            target,
+            vector_sizes=dynamic_vector_sizes,
+            static_vector_sizes=static_vector_sizes,
+            scalable_sizes=scalable_sizes,
+            vectorize_nd_extract=vectorize_nd_extract,
         )
 
 

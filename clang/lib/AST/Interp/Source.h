@@ -43,6 +43,7 @@ public:
   }
 
   bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
+  const std::byte *operator*() const { return Ptr; }
 
   operator bool() const { return Ptr; }
 

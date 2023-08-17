@@ -90,3 +90,7 @@ extern typeof(D) C;                // C has type "double[2]"
 typeof(D) D = { 5, 8.9, 0.1, 99 }; // D is now completed to "double[4]"
 extern double E[4];
 extern typeof(D) E;                // E has type "double[4]" from D’s completed type
+
+// GH64713 -- this used to trigger an infinite loop when creating the function
+// declaration for F from the function designator specified by typeof.
+typeof(int(int)) F;                // F has type "int(int)"

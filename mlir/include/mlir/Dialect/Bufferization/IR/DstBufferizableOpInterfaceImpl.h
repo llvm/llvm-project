@@ -36,8 +36,8 @@ struct DstBufferizableOpInterfaceExternalModel
     return dstOp.isDpsInit(&opOperand);
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     // Output operands alias with their respective tied OpResults.
     auto dstOp = cast<DestinationStyleOpInterface>(op);
     if (dstOp.isDpsInit(&opOperand))

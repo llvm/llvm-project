@@ -224,16 +224,15 @@ bool AllocTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
   return false;
 }
 
-AliasingOpResultList
-AllocTensorOp::getAliasingOpResults(OpOperand &opOperand,
-                                    const AnalysisState &state) {
+AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
+                                                   const AnalysisState &state) {
   // This is a new allocation. It does not alias with any other buffer.
   return {};
 }
 
-FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
-    Value value, const BufferizationOptions &options,
-    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+FailureOr<BaseMemRefType>
+AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
+                             SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
   // Compute memory space of this allocation.
@@ -242,7 +241,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
     auto copyBufferType =
-        bufferization::getBufferType(getCopy(), options, fixedTypes);
+        bufferization::getBufferType(getCopy(), options, invocationStack);
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
@@ -460,9 +459,8 @@ bool CopyTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
   return false;
 }
 
-AliasingOpResultList
-CopyTensorOp::getAliasingOpResults(OpOperand &opOperand,
-                                   const AnalysisState &state) {
+AliasingValueList CopyTensorOp::getAliasingValues(OpOperand &opOperand,
+                                                  const AnalysisState &state) {
   if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   return {};

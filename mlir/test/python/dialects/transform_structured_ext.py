@@ -13,8 +13,45 @@ def run(f):
         with InsertionPoint(module.body):
             print("\nTEST:", f.__name__)
             f()
+        module.operation.verify()
         print(module)
     return f
+
+
+@run
+def testBufferizeToAllocationOpCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.BufferizeToAllocationOp(sequence.bodyTarget)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testBufferizeToAllocationOpCompact
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.bufferize_to_allocation
+
+
+@run
+def testBufferizeToAllocationOpArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.BufferizeToAllocationOp(
+            sequence.bodyTarget,
+            memory_space=3,
+            memcpy_op="memref.copy",
+            alloc_op="memref.alloca",
+            bufferize_destination_only=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testBufferizeToAllocationOpArgs
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.bufferize_to_allocation
+    # CHECK-SAME: alloc_op = "memref.alloca"
+    # CHECK-SAME: bufferize_destination_only
+    # CHECK-SAME: memcpy_op = "memref.copy"
+    # CHECK-SAME: memory_space = 3
 
 
 @run
@@ -97,6 +134,44 @@ def testInterchange():
 
 
 @run
+def testMapCopyToThreadsOpCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MapCopyToThreadsOp(
+            sequence.bodyTarget, total_num_threads=32, desired_bit_alignment=128
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMapCopyToThreadsOpCompact
+    # CHECK: = transform.structured.gpu.map_copy_to_threads
+    # CHECK-SAME: total_num_threads = 32
+    # CHECK-SAME: desired_bit_alignment = 128
+    # CHECK-SAME:  (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+def testMapCopyToThreadsOpTypes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MapCopyToThreadsOp(
+            transform.OperationType.get("test.opA"),
+            transform.OperationType.get("test.opB"),
+            sequence.bodyTarget,
+            total_num_threads=32,
+            desired_bit_alignment=128,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMapCopyToThreadsOpTypes
+    # CHECK: = transform.structured.gpu.map_copy_to_threads
+    # CHECK-SAME: total_num_threads = 32
+    # CHECK-SAME: desired_bit_alignment = 128
+    # CHECK-SAME:  (!transform.any_op) -> (!transform.op<"test.opA">, !transform.op<"test.opB">)
+
+
+@run
 def testMatchOpNamesString():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
@@ -122,6 +197,85 @@ def testMatchOpNamesList():
     # CHECK: transform.structured.match ops
     # CHECK-SAME: ["test.dummy"]
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+def testMaskedVectorizeStatic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [16, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeStatic
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, 4]
+
+
+@run
+def testMaskedVectorizeArray():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sizes = Attribute.parse("[16, 4]")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, sizes)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeArray
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, 4]
+
+
+@run
+def testMaskedVectorizeMixed():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
+        sz2 = Attribute.parse("4")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [sz1, sz2])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeMixed
+    # CHECK: transform.sequence
+    # CHECK: %[[V0:.*]] = transform.structured.match
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [%[[V0]] : !transform.any_op, 4]
+
+
+@run
+def testMaskedVectorizeScalable():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
+        sz2 = Attribute.parse("4")
+        structured.MaskedVectorizeOp(sequence.bodyTarget, [16, [sz1], [sz2], [8]])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeScalable
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[V0:.*]] = transform.structured.match
+    # CHECK-DAG: transform.structured.masked_vectorize
+    # CHECK-SAME:     vector_sizes [16, [%[[V0]] : !transform.any_op], [4], [8]]
+
+
+@run
+def testMaskedVectorizeArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MaskedVectorizeOp(
+            sequence.bodyTarget, [16, 4], vectorize_nd_extract=True
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMaskedVectorizeArgs
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-SAME: vectorize_nd_extract
 
 
 @run

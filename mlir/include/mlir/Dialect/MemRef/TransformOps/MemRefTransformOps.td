@@ -32,13 +32,22 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
     - `use_opaque_pointers`: Generate LLVM IR using opaque pointers instead of
       typed pointers.
+    // TODO: the following two options don't really make sense for 
+    // memref_to_llvm_type_converter specifically.
+    // We should have a single to_llvm_type_converter.
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+      pointers to the MemRef element types.
+    - `data-layout`: String description (LLVM format) of the data layout that is
+      expected on the produced module.
   }];
 
   let arguments = (ins
-      DefaultValuedAttr<BoolAttr, "false">:$use_aligned_alloc,
-      DefaultValuedAttr<I64Attr, "0">:$index_bitwidth,
-      DefaultValuedAttr<BoolAttr, "false">:$use_generic_functions,
-      DefaultValuedAttr<BoolAttr, "false">:$use_opaque_pointers);
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_aligned_alloc,
+      DefaultValuedOptionalAttr<I64Attr, "64">:$index_bitwidth,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_opaque_pointers,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
+      OptionalAttr<StrAttr>:$data_layout);
   let assemblyFormat = "attr-dict";
 }
 

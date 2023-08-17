@@ -60,7 +60,7 @@ public:
   /// a previously emitted object is released.
   virtual void notifyFreeingObject(ObjectKey K) {}
 
-  // Get a pointe to the GDB debugger registration listener.
+  // Get a pointer to the GDB debugger registration listener.
   static JITEventListener *createGDBRegistrationListener();
 
 #if LLVM_USE_INTEL_JITEVENTS

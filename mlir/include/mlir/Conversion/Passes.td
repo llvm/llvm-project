@@ -23,6 +23,12 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     `ConvertToLLVMPatternInterface` dialect interface to delegate to dialects
     the injection of conversion patterns.
   }];
+
+  let constructor = "mlir::createConvertToLLVMPass()";
+  let options = [
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "Test conversion patterns of only the specified dialects">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

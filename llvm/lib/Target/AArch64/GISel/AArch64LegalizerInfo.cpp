@@ -243,8 +243,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT,
-                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FMA,
+                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_FNEARBYINT, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
@@ -850,6 +850,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .lower();
 
+  getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
+                               G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
+      .legalFor({{s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[1];
+        return Query.Types[0] == s16 && (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .minScalarOrElt(0, MinFPScalar)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       // Try to break down into smaller vectors as long as they're at least 64
@@ -924,7 +937,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
   getActionDefinitionsBuilder(
-      {G_FABS, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
+      {G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];

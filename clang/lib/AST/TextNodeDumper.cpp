@@ -734,6 +734,66 @@ void TextNodeDumper::dumpCleanupObject(
     llvm_unreachable("unexpected cleanup type");
 }
 
+void clang::TextNodeDumper::dumpTemplateSpecializationKind(
+    TemplateSpecializationKind TSK) {
+  switch (TSK) {
+  case TSK_Undeclared:
+    break;
+  case TSK_ImplicitInstantiation:
+    OS << " implicit_instantiation";
+    break;
+  case TSK_ExplicitSpecialization:
+    OS << " explicit_specialization";
+    break;
+  case TSK_ExplicitInstantiationDeclaration:
+    OS << " explicit_instantiation_declaration";
+    break;
+  case TSK_ExplicitInstantiationDefinition:
+    OS << " explicit_instantiation_definition";
+    break;
+  }
+}
+
+void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+  if (!NNS)
+    return;
+
+  AddChild([=] {
+    OS << "NestedNameSpecifier";
+
+    switch (NNS->getKind()) {
+    case NestedNameSpecifier::Identifier:
+      OS << " Identifier";
+      OS << " '" << NNS->getAsIdentifier()->getName() << "'";
+      break;
+    case NestedNameSpecifier::Namespace:
+      OS << " Namespace";
+      dumpBareDeclRef(NNS->getAsNamespace());
+      break;
+    case NestedNameSpecifier::NamespaceAlias:
+      OS << " NamespaceAlias";
+      dumpBareDeclRef(NNS->getAsNamespaceAlias());
+      break;
+    case NestedNameSpecifier::TypeSpec:
+      OS << " TypeSpec";
+      dumpType(QualType(NNS->getAsType(), 0));
+      break;
+    case NestedNameSpecifier::TypeSpecWithTemplate:
+      OS << " TypeSpecWithTemplate";
+      dumpType(QualType(NNS->getAsType(), 0));
+      break;
+    case NestedNameSpecifier::Global:
+      OS << " Global";
+      break;
+    case NestedNameSpecifier::Super:
+      OS << " Super";
+      break;
+    }
+
+    dumpNestedNameSpecifier(NNS->getPrefix());
+  });
+}
+
 void TextNodeDumper::dumpDeclRef(const Decl *D, StringRef Label) {
   if (!D)
     return;
@@ -995,6 +1055,14 @@ void TextNodeDumper::VisitCaseStmt(const CaseStmt *Node) {
     OS << " gnu_range";
 }
 
+void clang::TextNodeDumper::VisitReturnStmt(const ReturnStmt *Node) {
+  if (const VarDecl *Cand = Node->getNRVOCandidate()) {
+    OS << " nrvo_candidate(";
+    dumpBareDeclRef(Cand);
+    OS << ")";
+  }
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -1037,6 +1105,7 @@ void TextNodeDumper::VisitImplicitCastExpr(const ImplicitCastExpr *Node) {
 void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   OS << " ";
   dumpBareDeclRef(Node->getDecl());
+  dumpNestedNameSpecifier(Node->getQualifier());
   if (Node->getDecl() != Node->getFoundDecl()) {
     OS << " (";
     dumpBareDeclRef(Node->getFoundDecl());
@@ -1050,6 +1119,12 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   }
   if (Node->isImmediateEscalating())
     OS << " immediate-escalating";
+}
+
+void clang::TextNodeDumper::VisitDependentScopeDeclRefExpr(
+    const DependentScopeDeclRefExpr *Node) {
+
+  dumpNestedNameSpecifier(Node->getQualifier());
 }
 
 void TextNodeDumper::VisitUnresolvedLookupExpr(
@@ -1146,6 +1221,7 @@ void TextNodeDumper::VisitUnaryExprOrTypeTraitExpr(
 void TextNodeDumper::VisitMemberExpr(const MemberExpr *Node) {
   OS << " " << (Node->isArrow() ? "->" : ".") << *Node->getMemberDecl();
   dumpPointer(Node->getMemberDecl());
+  dumpNestedNameSpecifier(Node->getQualifier());
   switch (Node->isNonOdrUse()) {
   case NOUR_None: break;
   case NOUR_Unevaluated: OS << " non_odr_use_unevaluated"; break;
@@ -1541,7 +1617,64 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
     OS << " &&";
     break;
   }
-  // FIXME: Exception specification.
+
+  switch (EPI.ExceptionSpec.Type) {
+  case EST_None:
+    break;
+  case EST_DynamicNone:
+    OS << " exceptionspec_dynamic_none";
+    break;
+  case EST_Dynamic:
+    OS << " exceptionspec_dynamic";
+    break;
+  case EST_MSAny:
+    OS << " exceptionspec_ms_any";
+    break;
+  case EST_NoThrow:
+    OS << " exceptionspec_nothrow";
+    break;
+  case EST_BasicNoexcept:
+    OS << " exceptionspec_basic_noexcept";
+    break;
+  case EST_DependentNoexcept:
+    OS << " exceptionspec_dependent_noexcept";
+    break;
+  case EST_NoexceptFalse:
+    OS << " exceptionspec_noexcept_false";
+    break;
+  case EST_NoexceptTrue:
+    OS << " exceptionspec_noexcept_true";
+    break;
+  case EST_Unevaluated:
+    OS << " exceptionspec_unevaluated";
+    break;
+  case EST_Uninstantiated:
+    OS << " exceptionspec_uninstantiated";
+    break;
+  case EST_Unparsed:
+    OS << " exceptionspec_unparsed";
+    break;
+  }
+  if (!EPI.ExceptionSpec.Exceptions.empty()) {
+    AddChild([=] {
+      OS << "Exceptions:";
+      for (unsigned I = 0, N = EPI.ExceptionSpec.Exceptions.size(); I != N;
+           ++I) {
+        if (I)
+          OS << ",";
+        dumpType(EPI.ExceptionSpec.Exceptions[I]);
+      }
+    });
+  }
+  if (EPI.ExceptionSpec.NoexceptExpr) {
+    AddChild([=] {
+      OS << "NoexceptExpr: ";
+      Visit(EPI.ExceptionSpec.NoexceptExpr);
+    });
+  }
+  dumpDeclRef(EPI.ExceptionSpec.SourceDecl, "ExceptionSourceDecl");
+  dumpDeclRef(EPI.ExceptionSpec.SourceTemplate, "ExceptionSourceTemplate");
+
   // FIXME: Consumed parameters.
   VisitFunctionType(T);
 }
@@ -1687,6 +1820,7 @@ void TextNodeDumper::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
 void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   dumpName(D);
   dumpType(D->getType());
+  dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
 
   StorageClass SC = D->getStorageClass();
   if (SC != SC_None)
@@ -1781,8 +1915,10 @@ void TextNodeDumper::VisitFieldDecl(const FieldDecl *D) {
 }
 
 void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
+  dumpNestedNameSpecifier(D->getQualifier());
   dumpName(D);
   dumpType(D->getType());
+  dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
   StorageClass SC = D->getStorageClass();
   if (SC != SC_None)
     OS << ' ' << VarDecl::getStorageClassSpecifierString(SC);
@@ -1971,6 +2107,11 @@ void TextNodeDumper::VisitTypeAliasTemplateDecl(
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   VisitRecordDecl(D);
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
+
+  dumpNestedNameSpecifier(D->getQualifier());
+
   if (!D->isCompleteDefinition())
     return;
 
@@ -2170,6 +2311,7 @@ void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   if (D->getQualifier())
     D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
+  dumpNestedNameSpecifier(D->getQualifier());
 }
 
 void TextNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *D) {

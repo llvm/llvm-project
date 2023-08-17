@@ -29,6 +29,9 @@ class DeadBlock;
 class Pointer;
 enum PrimType : unsigned;
 
+class Pointer;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
+
 /// A pointer to a memory block, live or dead.
 ///
 /// This object can be allocated into interpreter stack frames. If pointing to
@@ -350,7 +353,17 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << Pointee << " {" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {";
+    if (Base == RootPtrMark)
+      OS << "rootptr, ";
+    else
+      OS << Base << ", ";
+
+    if (Offset == PastEndMark)
+      OS << "pastend, ";
+    else
+      OS << Offset << ", ";
+
     if (Pointee)
       OS << Pointee->getSize();
     else

@@ -248,6 +248,12 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
         return ABIArgInfo::getDirect();
       }
     }
+
+    // Use pass-by-reference in stead of pass-by-value for struct arguments in
+    // function ABI.
+    return ABIArgInfo::getIndirectAliased(
+        getContext().getTypeAlignInChars(Ty),
+        getContext().getTargetAddressSpace(LangAS::opencl_private));
   }
 
   // Otherwise just do the default thing.
@@ -412,7 +418,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return AddrSpace;
 
   // Only promote to address space 4 if VarDecl has constant initialization.
-  if (CGM.isTypeConstant(D->getType(), false, false) &&
+  if (D->getType().isConstantStorage(CGM.getContext(), false, false) &&
       D->hasConstantInitialization()) {
     if (auto ConstAS = CGM.getTarget().getConstantAddressSpace())
       return *ConstAS;

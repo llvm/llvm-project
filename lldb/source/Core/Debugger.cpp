@@ -929,15 +929,6 @@ void Debugger::Clear() {
   });
 }
 
-bool Debugger::GetCloseInputOnEOF() const {
-  //    return m_input_comm.GetCloseOnEOF();
-  return false;
-}
-
-void Debugger::SetCloseInputOnEOF(bool b) {
-  //    m_input_comm.SetCloseOnEOF(b);
-}
-
 bool Debugger::GetAsyncExecution() {
   return !m_command_interpreter_up->GetSynchronous();
 }

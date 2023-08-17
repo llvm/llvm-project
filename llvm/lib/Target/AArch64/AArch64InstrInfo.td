@@ -4348,6 +4348,34 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<1, "ucvtf", any_uint_to_fp>;
 
+def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
+          (SCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
+def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
+          (SCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
+def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
+          (SCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
+
+def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
+          (SCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
+def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
+          (SCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
+def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
+          (SCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
+
+def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
+          (UCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
+def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
+          (UCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
+def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
+          (UCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
+
+def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
+          (UCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
+def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
+          (UCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
+def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
+          (UCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
+
 //===----------------------------------------------------------------------===//
 // Unscaled integer to floating point conversion instruction.
 //===----------------------------------------------------------------------===//

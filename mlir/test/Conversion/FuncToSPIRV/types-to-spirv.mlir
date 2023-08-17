@@ -105,6 +105,9 @@ func.func @integer2(%arg0: i8) { return }
 // CHECK: spirv.func @integer4(%{{.+}}: i32)
 func.func @integer4(%arg0: i4) { return }
 
+// CHECK: spirv.func @v3i4(%{{.+}}: vector<3xi32>)
+func.func @v3i4(%arg0: vector<3xi4>) { return }
+
 } // end module
 
 // -----

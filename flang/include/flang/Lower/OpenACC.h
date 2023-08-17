@@ -40,6 +40,7 @@ struct OpenACCDeclarativeConstruct;
 
 namespace semantics {
 class SemanticsContext;
+class Symbol;
 }
 
 namespace lower {
@@ -50,6 +51,13 @@ class StatementContext;
 namespace pft {
 struct Evaluation;
 } // namespace pft
+
+static constexpr llvm::StringRef declarePostAllocSuffix =
+    "_acc_declare_update_desc_post_alloc";
+static constexpr llvm::StringRef declarePreDeallocSuffix =
+    "_acc_declare_update_desc_pre_dealloc";
+static constexpr llvm::StringRef declarePostDeallocSuffix =
+    "_acc_declare_update_desc_post_dealloc";
 
 void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
@@ -78,6 +86,14 @@ mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(mlir::OpBuilder &,
                                                               llvm::StringRef,
                                                               mlir::Location,
                                                               mlir::Type);
+
+void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                  const Fortran::semantics::Symbol &);
+void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                   mlir::Value beginOpValue,
+                                   const Fortran::semantics::Symbol &);
+void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                    const Fortran::semantics::Symbol &);
 
 } // namespace lower
 } // namespace Fortran

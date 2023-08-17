@@ -343,6 +343,13 @@ enum {
   /// - RegNum - The register to add
   GIR_AddRegister,
 
+  /// Marks the implicit def of a register as dead.
+  /// - InsnID - Instruction ID to modify
+  /// - OpIdx - The implicit def operand index
+  ///
+  /// OpIdx starts at 0 for the first implicit def.
+  GIR_SetImplicitDefDead,
+
   /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - TempRegID - The temporary register ID to add
@@ -360,6 +367,12 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
   GIR_AddImm,
+
+  /// Add an CImm to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - Ty - Type of the constant immediate.
+  /// - Imm - The immediate to add
+  GIR_AddCImm,
 
   /// Render complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -555,7 +568,8 @@ protected:
       const int64_t *MatchTable, const TargetInstrInfo &TII,
       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
       const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-      CodeGenCoverage *CoverageInfo) const;
+      CodeGenCoverage *CoverageInfo,
+      GISelChangeObserver *Observer = nullptr) const;
 
   virtual const int64_t *getMatchTable() const {
     llvm_unreachable("Should have been overridden by tablegen if used");
@@ -583,12 +597,14 @@ protected:
     llvm_unreachable("Subclass does not implement testSimplePredicate!");
   }
 
-  virtual void runCustomAction(unsigned, const MatcherState &State) const {
+  virtual void runCustomAction(unsigned, const MatcherState &State,
+                               NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
-                         const MachineRegisterInfo &MRI) const;
+                         const MachineRegisterInfo &MRI,
+                         bool Splat = false) const;
 
   /// Return true if the specified operand is a G_PTR_ADD with a G_CONSTANT on
   /// the right-hand side. GlobalISel's separation of pointer and integer types

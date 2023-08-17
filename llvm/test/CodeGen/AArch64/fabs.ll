@@ -160,6 +160,128 @@ entry:
   ret <8 x float> %c
 }
 
+define <7 x half> @fabs_v7f16(<7 x half> %a) {
+; CHECK-SD-NOFP16-LABEL: fabs_v7f16:
+; CHECK-SD-NOFP16:       // %bb.0: // %entry
+; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[2]
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h0
+; CHECK-SD-NOFP16-NEXT:    mov h4, v0.h[3]
+; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fabs s3, s3
+; CHECK-SD-NOFP16-NEXT:    fcvt s4, h4
+; CHECK-SD-NOFP16-NEXT:    fabs s5, s1
+; CHECK-SD-NOFP16-NEXT:    fabs s2, s2
+; CHECK-SD-NOFP16-NEXT:    fcvt h1, s3
+; CHECK-SD-NOFP16-NEXT:    fabs s4, s4
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s5
+; CHECK-SD-NOFP16-NEXT:    mov h5, v0.h[4]
+; CHECK-SD-NOFP16-NEXT:    fcvt h2, s2
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[5]
+; CHECK-SD-NOFP16-NEXT:    fcvt s5, h5
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[2], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
+; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
+; CHECK-SD-NOFP16-NEXT:    fabs s4, s5
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[3], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov h2, v0.h[6]
+; CHECK-SD-NOFP16-NEXT:    fabs s3, s3
+; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
+; CHECK-SD-NOFP16-NEXT:    mov h0, v0.h[7]
+; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[4], v4.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fabs s2, s2
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[5], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fabs s0, s0
+; CHECK-SD-NOFP16-NEXT:    fcvt h2, s2
+; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[6], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[7], v0.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NOFP16-NEXT:    ret
+;
+; CHECK-SD-FP16-LABEL: fabs_v7f16:
+; CHECK-SD-FP16:       // %bb.0: // %entry
+; CHECK-SD-FP16-NEXT:    fabs v0.8h, v0.8h
+; CHECK-SD-FP16-NEXT:    ret
+;
+; CHECK-GI-NOFP16-LABEL: fabs_v7f16:
+; CHECK-GI-NOFP16:       // %bb.0: // %entry
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[5]
+; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[3], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    fabs v1.4s, v1.4s
+; CHECK-GI-NOFP16-NEXT:    fabs v0.4s, v0.4s
+; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
+; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[3]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v4.h[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v5.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov h2, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[4], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[7], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    ret
+;
+; CHECK-GI-FP16-LABEL: fabs_v7f16:
+; CHECK-GI-FP16:       // %bb.0: // %entry
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
+; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
+; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
+; CHECK-GI-FP16-NEXT:    fabs v0.8h, v0.8h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
+; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
+; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
+; CHECK-GI-FP16-NEXT:    ret
+entry:
+  %c = call <7 x half> @llvm.fabs.v7f16(<7 x half> %a)
+  ret <7 x half> %c
+}
+
 define <4 x half> @fabs_v4f16(<4 x half> %a) {
 ; CHECK-SD-NOFP16-LABEL: fabs_v4f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
@@ -397,9 +519,9 @@ declare <3 x float> @llvm.fabs.v3f32(<3 x float>)
 declare <4 x double> @llvm.fabs.v4f64(<4 x double>)
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 declare <4 x half> @llvm.fabs.v4f16(<4 x half>)
+declare <7 x half> @llvm.fabs.v7f16(<7 x half>)
 declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
 declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.fabs.f32(float)
 declare half @llvm.fabs.f16(half)
-

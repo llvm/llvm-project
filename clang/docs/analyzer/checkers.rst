@@ -321,10 +321,10 @@ Check for memory leaks. Traces memory managed by new/delete.
    int *p = new int;
  } // warn
 
-.. _cplusplus-PlacementNewChecker:
+.. _cplusplus-PlacementNew:
 
-cplusplus.PlacementNewChecker (C++)
-"""""""""""""""""""""""""""""""""""
+cplusplus.PlacementNew (C++)
+""""""""""""""""""""""""""""
 Check if default placement new is provided with pointers to sufficient storage capacity.
 
 .. code-block:: cpp
@@ -2375,8 +2375,8 @@ The malicious data is injected at the taint source (e.g. ``getenv()`` call)
 which is then propagated through function calls and being used as arguments of
 sensitive operations, also called as taint sinks (e.g. ``system()`` call).
 
-One can defend agains this type of vulnerability by always checking and
-santizing the potentially malicious, untrusted user input.
+One can defend against this type of vulnerability by always checking and
+sanitizing the potentially malicious, untrusted user input.
 
 The goal of the checker is to discover and show to the user these potential
 taint source-sink pairs and the propagation call chain.
@@ -2438,7 +2438,7 @@ Unfortunately, the checker cannot discover automatically that the programmer
 have performed data sanitation, so it still emits the warning.
 
 One can get rid of this superflous warning by telling by specifying the
-sanitation functions in the taint configuation file (see
+sanitation functions in the taint configuration file (see
 :doc:`user-docs/TaintAnalysisConfiguration`).
 
 .. code-block:: YAML
@@ -2499,7 +2499,7 @@ and add the `csa_mark_sanitized` function.
 
 Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
 be used after this point, because its contents are verified. It is the
-responisibility of the programmer to ensure that this verification was indeed
+responsibility of the programmer to ensure that this verification was indeed
 correct. Please note that `csa_mark_sanitized` function is only declared and
 used during Clang Static Analysis and skipped in (production) builds.
 

@@ -1265,7 +1265,15 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             if (!value.getAsInteger(0, pointer_byte_size))
               ++num_keys_decoded;
           } else if (name.equals("addressing_bits")) {
-            if (!value.getAsInteger(0, m_addressing_bits))
+            if (!value.getAsInteger(0, m_low_mem_addressing_bits)) {
+              m_high_mem_addressing_bits = m_low_mem_addressing_bits;
+              ++num_keys_decoded;
+            }
+          } else if (name.equals("high_mem_addressing_bits")) {
+            if (!value.getAsInteger(0, m_high_mem_addressing_bits))
+              ++num_keys_decoded;
+          } else if (name.equals("low_mem_addressing_bits")) {
+            if (!value.getAsInteger(0, m_low_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name.equals("os_version") ||
                      name.equals("version")) // Older debugserver binaries used
@@ -1407,11 +1415,19 @@ GDBRemoteCommunicationClient::GetHostArchitecture() {
   return m_host_arch;
 }
 
-uint32_t GDBRemoteCommunicationClient::GetAddressingBits() {
+AddressableBits GDBRemoteCommunicationClient::GetAddressableBits() {
+  AddressableBits addressable_bits;
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
-  return m_addressing_bits;
+
+  // m_low_mem_addressing_bits and m_high_mem_addressing_bits
+  // will be 0 if we did not receive values; AddressableBits
+  // treats 0 as "unspecified".
+  addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
+                                      m_high_mem_addressing_bits);
+  return addressable_bits;
 }
+
 seconds GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();

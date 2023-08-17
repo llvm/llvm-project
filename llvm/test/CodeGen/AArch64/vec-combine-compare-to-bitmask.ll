@@ -34,11 +34,9 @@ define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; CHECK-NEXT:  ldr	    q1, [x8, lCPI0_0@PAGEOFF]
 ; CHECK-NEXT:  bic.16b	v0, v1, v0
 ; CHECK-NEXT:  ext.16b	v1, v0, v0, #8
-; CHECK-NEXT:  addv.8b	b0, v0
-; CHECK-NEXT:  addv.8b	b1, v1
-; CHECK-NEXT:  fmov	    w9, s0
-; CHECK-NEXT:  fmov	    w8, s1
-; CHECK-NEXT:  orr	    w0, w9, w8, lsl #8
+; CHECK-NEXT:  zip1.16b	v0, v0, v1
+; CHECK-NEXT:  addv.8h	h0, v0
+; CHECK-NEXT:  fmov	    w0, s0
 ; CHECK-NEXT:  ret
 
   %cmp_result = icmp ne <16 x i8> %vec, zeroinitializer
@@ -324,11 +322,9 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 ; CHECK-NEXT:    ldr q1, [x8, lCPI10_0@PAGEOFF]
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-NEXT:    addv.8b b0, v0
-; CHECK-NEXT:    addv.8b b1, v1
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    orr w0, w9, w8, lsl #8
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    addv.8h h0, v0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 
   %bitmask = bitcast <16 x i1> %vec to i16

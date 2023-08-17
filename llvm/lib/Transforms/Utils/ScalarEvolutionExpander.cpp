@@ -170,11 +170,10 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   if (Op == Instruction::IntToPtr) {
     auto *PtrTy = cast<PointerType>(Ty);
     if (DL.isNonIntegralPointerType(PtrTy)) {
-      auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
       assert(DL.getTypeAllocSize(Builder.getInt8Ty()) == 1 &&
              "alloc size of i8 must by 1 byte for the GEP to be correct");
       return Builder.CreateGEP(
-          Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "scevgep");
+          Builder.getInt8Ty(), Constant::getNullValue(PtrTy), V, "scevgep");
     }
   }
   // Short-circuit unnecessary bitcasts.
@@ -1470,20 +1469,21 @@ Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
   if (isa<SCEVConstant>(S))
     return nullptr;
 
-  // Choose a Value from the set which dominates the InsertPt.
-  // InsertPt should be inside the Value's parent loop so as not to break
-  // the LCSSA form.
   for (Value *V : SE.getSCEVValues(S)) {
     Instruction *EntInst = dyn_cast<Instruction>(V);
     if (!EntInst)
       continue;
 
+    // Choose a Value from the set which dominates the InsertPt.
+    // InsertPt should be inside the Value's parent loop so as not to break
+    // the LCSSA form.
     assert(EntInst->getFunction() == InsertPt->getFunction());
-    if (S->getType() == V->getType() &&
-        SE.DT.dominates(EntInst, InsertPt) &&
-        (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-         SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
-      return V;
+    if (S->getType() != V->getType() || !SE.DT.dominates(EntInst, InsertPt) ||
+        !(SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+          SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+      continue;
+
+    return V;
   }
   return nullptr;
 }
@@ -2137,8 +2137,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     bool NeedNegCheck = !SE.isKnownPositive(Step);
 
     if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
-      StartValue = InsertNoopCastOfTo(
-          StartValue, Builder.getInt8PtrTy(ARPtrTy->getAddressSpace()));
+      StartValue = InsertNoopCastOfTo(StartValue, ARPtrTy);
       Value *NegMulV = Builder.CreateNeg(MulV);
       if (NeedPosCheck)
         Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
@@ -2244,7 +2243,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
   // instruction.
   Type *ToTy;
   if (DefI->getType()->isIntegerTy())
-    ToTy = DefI->getType()->getPointerTo();
+    ToTy = PointerType::get(DefI->getContext(), 0);
   else
     ToTy = Type::getInt32Ty(DefI->getContext());
   Instruction *User =

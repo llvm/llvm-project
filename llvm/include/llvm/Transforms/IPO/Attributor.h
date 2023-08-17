@@ -318,8 +318,9 @@ inline bool operator==(const RangeTy &A, const RangeTy &B) {
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-Constant *getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
-                                const TargetLibraryInfo *TLI,
+Constant *getInitialValueForObj(Attributor &A,
+                                const AbstractAttribute &QueryingAA, Value &Obj,
+                                Type &Ty, const TargetLibraryInfo *TLI,
                                 const DataLayout &DL,
                                 RangeTy *RangePtr = nullptr);
 

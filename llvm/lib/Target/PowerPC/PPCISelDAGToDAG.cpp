@@ -7633,20 +7633,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     case PPC::ADDItocL:
       Flags = PPCII::MO_TOC_LO;
       break;
-    case PPC::ADDItoc:
-    case PPC::ADDItoc8:
-      if (RequiresMod4Offset) {
-        if (GlobalAddressSDNode *GA =
-                dyn_cast<GlobalAddressSDNode>(Base.getOperand(0))) {
-          const GlobalValue *GV = GA->getGlobal();
-          Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
-          // XMC_TD global that is underaligned being accessed with a DS form
-          // instruction.
-          if (Alignment < 4)
-            continue;
-        }
-      }
-      break;
     }
 
     SDValue ImmOpnd = Base.getOperand(1);
@@ -7741,27 +7727,12 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       }
     }
 
-    const unsigned BaseOpcode = Base.getMachineOpcode();
-    // ADDItoc and ADDItoc8 are pseudos used exclusively by AIX small code
-    // model when a global is defined in the TOC.
-    const bool OpcodeIsAIXTocData =
-        BaseOpcode == PPC::ADDItoc || BaseOpcode == PPC::ADDItoc8;
-
     if (FirstOp == 1) // Store
-      if (OpcodeIsAIXTocData)
-        (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0),
-                                         Base.getOperand(0), Base.getOperand(1),
-                                         N->getOperand(3));
-      else
-        (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0), ImmOpnd,
-                                         Base.getOperand(0), N->getOperand(3));
+      (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0), ImmOpnd,
+                                       Base.getOperand(0), N->getOperand(3));
     else // Load
-      if (OpcodeIsAIXTocData)
-        (void)CurDAG->UpdateNodeOperands(N, Base.getOperand(0),
-                                         Base.getOperand(1), N->getOperand(2));
-      else
-        (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, Base.getOperand(0),
-                                         N->getOperand(2));
+      (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, Base.getOperand(0),
+                                       N->getOperand(2));
 
     if (UpdateHBase)
       (void)CurDAG->UpdateNodeOperands(HBase.getNode(), HBase.getOperand(0),

@@ -85,6 +85,9 @@ C++2c Feature Support
       int _; // Previously diagnosed under -Wunused, no longer diagnosed
     }
 
+- Attributes now expect unevaluated strings in attributes parameters that are string literals.
+  This is applied to both C++ standard attributes, and other attributes supported by Clang.
+  This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>`_
 
 
 Resolutions to C++ Defect Reports
@@ -96,8 +99,12 @@ C Language Changes
   constant expressions.  This change is more consistent with the behavior of
   GCC.
 
-C2x Feature Support
+C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now accepts ``-std=c23`` and ``-std=gnu23`` as language standard modes,
+  and the ``__STDC_VERSION__`` macro now expands to ``202311L`` instead of its
+  previous placeholder value. Clang continues to accept ``-std=c2x`` and
+  ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -125,6 +132,10 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
+- Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
+  tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
+  makes ``-Winfinite-recursion`` diagnose more cases.
+  (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -134,6 +145,9 @@ Bug Fixes in This Version
   class, which can result in miscompiles in some cases.
 - Fix crash on use of a variadic overloaded operator.
   (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
+- Fix a hang on valid C code passing a function type as an argument to
+  ``typeof`` to form a function declaration.
+  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,17 +165,17 @@ Bug Fixes to C++ Support
 
 - Fix a crash caused by some named unicode escape sequences designating
   a Unicode character whose name contains a ``-``.
-  (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
+  (Fixes `#64161 <https://github.com/llvm/llvm-project/issues/64161>`_)
 
 - Fix cases where we ignore ambiguous name lookup when looking up memebers.
-  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>_`),
-  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
-  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
-  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
+  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>`_),
+  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>`_),
+  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>`_) and
+  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>`_).
 
 - Clang emits an error on substitution failure within lambda body inside a
   requires-expression. This fixes:
-  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>_`).
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -181,12 +195,18 @@ Miscellaneous Clang Crashes Fixed
   terminated. Clang should now also recover better when an @end is missing
   between blocks.
   `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
+- Fixed a crash when check array access on zero-length element.
+  `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
 
 Target Specific Changes
 -----------------------
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+- Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+  arguments in C ABI. Callee is responsible for allocating stack memory and
+  copying the value of the struct if modified. Note that AMDGPU backend still
+  supports byval for struct arguments.
 
 X86 Support
 ^^^^^^^^^^^
@@ -233,17 +253,21 @@ Floating Point Support in Clang
 - Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
 - Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
+- Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
 
 AST Matchers
 ------------
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
+- Add ``macroQualifiedType``.
 
 clang-format
 ------------
 
 libclang
 --------
+
+- Exposed arguments of ``clang::annotate``.
 
 Static Analyzer
 ---------------

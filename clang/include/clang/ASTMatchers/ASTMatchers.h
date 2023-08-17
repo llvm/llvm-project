@@ -7258,6 +7258,18 @@ AST_TYPELOC_TRAVERSE_MATCHER_DECL(
 ///   matches "typedef int X"
 extern const AstTypeMatcher<TypedefType> typedefType;
 
+/// Matches qualified types when the qualifier is applied via a macro.
+///
+/// Given
+/// \code
+///   #define CDECL __attribute__((cdecl))
+///   typedef void (CDECL *X)();
+///   typedef void (__attribute__((cdecl)) *Y)();
+/// \endcode
+/// macroQualifiedType()
+///   matches the type of the typedef declaration of \c X but not \c Y.
+extern const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
+
 /// Matches enum types.
 ///
 /// Given

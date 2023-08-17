@@ -129,3 +129,60 @@ define void @caller6(ptr %arg) {
   ret void
 }
 
+declare ptr @buz()
+define nonnull ptr @callee7() {
+; CHECK-LABEL: define nonnull ptr @callee7() {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @buz() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @buz() willreturn nounwind
+  ret ptr %r
+}
+
+define ptr @caller7() {
+; CHECK-LABEL: define ptr @caller7() {
+; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz() #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[R_I]]
+;
+  %r = call ptr @callee7()
+  ret ptr %r
+}
+
+define nonnull ptr @callee8() {
+; CHECK-LABEL: define nonnull ptr @callee8() {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @buz()
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @buz()
+  ret ptr %r
+}
+
+define ptr @caller8() {
+; CHECK-LABEL: define ptr @caller8() {
+; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz()
+; CHECK-NEXT:    ret ptr [[R_I]]
+;
+  %r = call nonnull ptr @callee8()
+  ret ptr %r
+}
+
+define ptr @callee9() {
+; CHECK-LABEL: define ptr @callee9() {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @buz()
+; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @buz()
+  call void @foo() nounwind
+  ret ptr %r
+}
+
+define ptr @caller9() {
+; CHECK-LABEL: define ptr @caller9() {
+; CHECK-NEXT:    [[R_I:%.*]] = call ptr @buz()
+; CHECK-NEXT:    call void @foo() #[[ATTR1]]
+; CHECK-NEXT:    ret ptr [[R_I]]
+;
+  %r = call nonnull ptr @callee9()
+  ret ptr %r
+}

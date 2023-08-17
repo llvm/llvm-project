@@ -903,7 +903,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
-    if (ST.hasPackedFP32Ops()) {
+    if (ST.hasPkMovB32()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
         .addReg(SrcReg)
@@ -950,7 +950,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (ST.hasMovB64()) {
       Opcode = AMDGPU::V_MOV_B64_e32;
       EltSize = 8;
-    } else if (ST.hasPackedFP32Ops()) {
+    } else if (ST.hasPkMovB32()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
     }
@@ -1990,7 +1990,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPackedFP32Ops() && Lo == Hi && isInlineConstant(Lo)) {
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
           .addImm(SISrcMods::OP_SEL_1)
           .addImm(Lo.getSExtValue())
@@ -2011,7 +2011,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       }
     } else {
       assert(SrcOp.isReg());
-      if (ST.hasPackedFP32Ops() &&
+      if (ST.hasPkMovB32() &&
           !RI.isAGPR(MBB.getParent()->getRegInfo(), SrcOp.getReg())) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
           .addImm(SISrcMods::OP_SEL_1) // src0_mod
@@ -3864,6 +3864,7 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+    return false;
   case AMDGPU::OPERAND_INPUT_MODS:
   case MCOI::OPERAND_IMMEDIATE:
     // Always embedded in the instruction for free.
@@ -5222,9 +5223,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
             return false;
           SGPRsUsed.insert(SGPR);
         }
-      } else if (InstDesc.operands()[i].OperandType == AMDGPU::OPERAND_KIMM32 ||
-                 (AMDGPU::isSISrcOperand(InstDesc, i) &&
-                  !isInlineConstant(Op, InstDesc.operands()[i]))) {
+      } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
+                 !isInlineConstant(Op, InstDesc.operands()[i])) {
         if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)

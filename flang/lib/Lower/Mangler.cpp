@@ -136,9 +136,8 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             if (interface->attrs().test(Fortran::semantics::Attr::MODULE) &&
                 interface->owner().IsSubmodule() && !subpDetails.isInterface())
               interface = subpDetails.moduleInterface();
-            assert(interface && "Separate module procedure must be declared");
-            std::tie(modules, procs, blockId) =
-                ancestors(*interface, scopeBlockIdMap);
+            std::tie(modules, procs, blockId) = ancestors(
+                interface ? *interface : ultimateSymbol, scopeBlockIdMap);
             return fir::NameUniquer::doProcedure(modules, procs, symbolName);
           },
           [&](const Fortran::semantics::ProcEntityDetails &) {

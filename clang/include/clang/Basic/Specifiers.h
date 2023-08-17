@@ -82,10 +82,10 @@ namespace clang {
     TST_class,     // C++ class type
     TST_interface, // C++ (Microsoft-specific) __interface type
     TST_typename,  // Typedef, C++ class-name or enum name, etc.
-    TST_typeofType,        // C2x (and GNU extension) typeof(type-name)
-    TST_typeofExpr,        // C2x (and GNU extension) typeof(expression)
-    TST_typeof_unqualType, // C2x typeof_unqual(type-name)
-    TST_typeof_unqualExpr, // C2x typeof_unqual(expression)
+    TST_typeofType,        // C23 (and GNU extension) typeof(type-name)
+    TST_typeofExpr,        // C23 (and GNU extension) typeof(expression)
+    TST_typeof_unqualType, // C23 typeof_unqual(type-name)
+    TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype, // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/TransformTypeTraits.def"

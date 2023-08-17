@@ -527,28 +527,6 @@ protected:
   /// Returns pointer to kmpc_micro type.
   llvm::Type *getKmpc_MicroPointerTy();
 
-  /// Returns __kmpc_for_static_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned. Will create a distribute call
-  /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
-  llvm::FunctionCallee createForStaticInitFunction(unsigned IVSize,
-                                                   bool IVSigned,
-                                                   bool IsGPUDistribute);
-
-  /// Returns __kmpc_dispatch_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchInitFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
-  /// Returns __kmpc_dispatch_next_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchNextFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
-  /// Returns __kmpc_dispatch_fini_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchFiniFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of
   /// storage that's reserved for use by the OpenMP runtime.

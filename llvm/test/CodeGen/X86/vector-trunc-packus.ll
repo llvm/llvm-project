@@ -910,7 +910,7 @@ define <2 x i16> @trunc_packus_v2i64_v2i16(<2 x i64> %a0) {
 ; AVX2-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-FAST-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm1
 ; AVX2-FAST-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,8,9,10,11,8,9,10,11,12,13,14,15]
 ; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_packus_v2i64_v2i16:
@@ -4092,7 +4092,7 @@ define <4 x i8> @trunc_packus_v4i32_v4i8(<4 x i32> %a0) "min-legal-vector-width"
 ; AVX2-FAST-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-FAST-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
 ; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_packus_v4i32_v4i8:

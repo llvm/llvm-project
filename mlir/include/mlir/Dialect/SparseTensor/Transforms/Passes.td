@@ -123,7 +123,6 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   ];
 }
 
-
 def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules after sparsification";
   let description = [{

@@ -91,6 +91,13 @@ public:
     }
   }
 
+  size_t size() const {
+    size_t Size = 1;
+    for (const auto *Child : Children)
+      Size += Child->size();
+    return Size;
+  }
+
   ~AnnotatedLine() {
     for (AnnotatedLine *Child : Children)
       delete Child;

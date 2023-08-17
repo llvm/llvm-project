@@ -10,8 +10,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import print_function
-
 import sys, os, re, shutil
 from datetime import date
 
@@ -51,6 +49,12 @@ autodoc_default_options = {
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
 if not building_man_page:
+    try:
+        import sphinx_automodapi.automodapi
+    except ModuleNotFoundError:
+        print(
+            f"install sphinx_automodapi with {sys.executable} -m pip install sphinx_automodapi"
+        )
     extensions.append("sphinx_automodapi.automodapi")
 
 # Add any paths that contain templates here, relative to this directory.

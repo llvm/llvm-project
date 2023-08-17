@@ -66,10 +66,11 @@ class GICombineRule<dag defs, dag match, dag apply> : GICombine {
   /// is called. Targets can use this to, for instance, check Subtarget
   /// features.
   list<Predicate> Predicates = [];
-}
 
-/// The operator at the root of a GICombineRule.Defs dag.
-def defs;
+  // Maximum number of permutations of this rule that can be emitted.
+  // Set to -1 to disable the limit.
+  int MaxPermutations = 16;
+}
 
 /// All arguments of the defs operator must be subclasses of GIDefKind or
 /// sub-dags whose operator is GIDefKindWithArgs.
@@ -81,6 +82,30 @@ class GIDefKindWithArgs;
 ///       itself with an overide for situations where the usual determination
 ///       is incorrect.
 def root : GIDefKind;
+
+def gi_mo;
+def gi_imm;
+def pattern;
+
+// This is an equivalent of PatFrags but for MIR Patterns.
+//
+// GICombinePatFrags can be used in place of instructions for 'match' patterns.
+// Much like normal instructions, the defs (outs) come first, and the ins second
+//
+// Out operands can only be of type "root" or "gi_mo", and they must be defined
+// by an instruction pattern in all alternatives.
+//
+// In operands can be gi_imm or gi_mo. They cannot be redefined in any alternative
+// pattern and may only appear in the C++ code, or in the output operand of an
+// instruction pattern.
+class GICombinePatFrag<dag outs, dag ins, list<dag> alts> {
+  dag InOperands = ins;
+  dag OutOperands = outs;
+  list<dag> Alternatives = alts;
+}
+
+/// The operator at the root of a GICombineRule.Defs dag.
+def defs;
 
 /// Declares data that is passed from the match stage to the apply stage.
 class GIDefMatchData<string type> : GIDefKind {

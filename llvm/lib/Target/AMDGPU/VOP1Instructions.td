@@ -584,18 +584,28 @@ let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
 }
 
 class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
-    VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
+    VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
     (f32 (node i32:$src, index)),
-    !if (index,
-         (inst_sdwa 0, $src, 0, 0, index),
-         (inst_e32 $src))
+    (inst_sdwa 0, $src, 0, 0, index)
 >;
 
-foreach Index = [0, 1, 2, 3] in {
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index,
-                       V_CVT_F32_FP8_e32, V_CVT_F32_FP8_sdwa>;
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index,
-                       V_CVT_F32_BF8_e32, V_CVT_F32_BF8_sdwa>;
+let OtherPredicates = [HasCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_sdwa 0, $src, 0, 0, 0)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_sdwa 0, $src, 0, 0, 0)>;
+}
+
+let OtherPredicates = [HasNoCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_e32 $src)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_e32 $src)>;
+}
+
+foreach Index = [1, 2, 3] in {
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index, V_CVT_F32_FP8_sdwa>;
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index, V_CVT_F32_BF8_sdwa>;
 }
 
 class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,

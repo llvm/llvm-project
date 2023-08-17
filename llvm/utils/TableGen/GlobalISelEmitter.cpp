@@ -2366,7 +2366,8 @@ void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
   OS << "void " << getClassName()
-     << "::runCustomAction(unsigned, const MatcherState&) const {\n"
+     << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
+        "{\n"
      << "    llvm_unreachable(\"" + getClassName() +
             " does not support custom C++ actions!\");\n"
      << "}\n";

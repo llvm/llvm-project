@@ -74,6 +74,8 @@ Changes to the AMDGPU Backend
 * `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
   for raw instruction access.
 
+* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -149,12 +151,23 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Methods in SBHostOS related to threads have had their implementations
+  removed. These methods will return a value indicating failure.
+
 Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
+
+* The ``Flags`` field of ``llvm::opt::Option`` has been split into ``Flags``
+  and ``Visibility`` to simplify option sharing between various drivers (such
+  as ``clang``, ``clang-cl``, or ``flang``) that rely on Clang's Options.td.
+  Overloads of ``llvm::opt::OptTable`` that use ``FlagsToInclude`` have been
+  deprecated. There is a script and instructions on how to resolve conflicts -
+  see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
+  details.
 
 External Open Source Projects Using LLVM 15
 ===========================================

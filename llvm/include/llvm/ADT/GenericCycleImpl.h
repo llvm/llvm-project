@@ -370,10 +370,7 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
-  auto MapIt = BlockMap.find(Block);
-  if (MapIt != BlockMap.end())
-    return MapIt->second;
-  return nullptr;
+  return BlockMap.lookup(Block);
 }
 
 /// \brief get the depth for the cycle which containing a given block.

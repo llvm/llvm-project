@@ -82,6 +82,7 @@ struct Configuration {
   llvm::StringRef entry;
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
+  llvm::StringRef soName;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef whyExtract;
 

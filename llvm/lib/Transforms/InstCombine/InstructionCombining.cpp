@@ -908,7 +908,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
-    bool IsZExt = isa<ZExtInst>(CastOp);
+    bool IsZExt = isa<ZExtOperator>(CastOp);
     Constant *C;
 
     if (IsTrueArm) {
@@ -926,13 +926,17 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   // If the value used in the zext/sext is the select condition, or the negated
   // of the select condition, the binop can be simplified.
-  if (CondVal == A)
-    return SelectInst::Create(CondVal, NewFoldedConst(false, TrueVal),
+  if (CondVal == A) {
+    Value *NewTrueVal = NewFoldedConst(false, TrueVal);
+    return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(true, FalseVal));
+  }
 
-  if (match(A, m_Not(m_Specific(CondVal))))
-    return SelectInst::Create(CondVal, NewFoldedConst(true, TrueVal),
+  if (match(A, m_Not(m_Specific(CondVal)))) {
+    Value *NewTrueVal = NewFoldedConst(true, TrueVal);
+    return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(false, FalseVal));
+  }
 
   return nullptr;
 }
@@ -1392,7 +1396,6 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       continue;
     }
 
-    if (isa<PHINode>(InVal)) return nullptr;  // Itself a phi.
     if (NonSimplifiedBB) return nullptr;  // More than one non-simplified value.
 
     NonSimplifiedBB = InBB;

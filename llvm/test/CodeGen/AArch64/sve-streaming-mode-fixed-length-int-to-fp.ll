@@ -1122,3 +1122,201 @@ define void @scvtf_v4i64_v4f64(ptr %a, ptr %b) {
   store <4 x double> %res, ptr %b
   ret void
 }
+
+define half @scvtf_i16_f16(ptr %0) {
+; CHECK-LABEL: scvtf_i16_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsh w8, [x0]
+; CHECK-NEXT:    scvtf h0, w8
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = sitofp i16 %2 to half
+  ret half %3
+}
+
+define float @scvtf_i16_f32(ptr %0) {
+; CHECK-LABEL: scvtf_i16_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsh w8, [x0]
+; CHECK-NEXT:    scvtf s0, w8
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = sitofp i16 %2 to float
+  ret float %3
+}
+
+define double @scvtf_i16_f64(ptr %0) {
+; CHECK-LABEL: scvtf_i16_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsh w8, [x0]
+; CHECK-NEXT:    scvtf d0, w8
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = sitofp i16 %2 to double
+  ret double %3
+}
+
+define half @scvtf_i32_f16(ptr %0) {
+; CHECK-LABEL: scvtf_i32_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf h0, w8
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = sitofp i32 %2 to half
+  ret half %3
+}
+
+define float @scvtf_i32_f32(ptr %0) {
+; CHECK-LABEL: scvtf_i32_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf s0, w8
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = sitofp i32 %2 to float
+  ret float %3
+}
+
+define double @scvtf_i32_f64(ptr %0) {
+; CHECK-LABEL: scvtf_i32_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf d0, w8
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = sitofp i32 %2 to double
+  ret double %3
+}
+
+define half @scvtf_i64_f16(ptr %0) {
+; CHECK-LABEL: scvtf_i64_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf h0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = sitofp i64 %2 to half
+  ret half %3
+}
+
+define float @scvtf_i64_f32(ptr %0) {
+; CHECK-LABEL: scvtf_i64_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = sitofp i64 %2 to float
+  ret float %3
+}
+
+define double @scvtf_i64_f64(ptr %0) {
+; CHECK-LABEL: scvtf_i64_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf d0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = sitofp i64 %2 to double
+  ret double %3
+}
+
+define half @ucvtf_i16_f16(ptr %0) {
+; CHECK-LABEL: ucvtf_i16_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ucvtf h0, w8
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = uitofp i16 %2 to half
+  ret half %3
+}
+
+define float @ucvtf_i16_f32(ptr %0) {
+; CHECK-LABEL: ucvtf_i16_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ucvtf s0, s0
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = uitofp i16 %2 to float
+  ret float %3
+}
+
+define double @ucvtf_i16_f64(ptr %0) {
+; CHECK-LABEL: ucvtf_i16_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ucvtf d0, d0
+; CHECK-NEXT:    ret
+  %2 = load i16, ptr %0, align 64
+  %3 = uitofp i16 %2 to double
+  ret double %3
+}
+
+define half @ucvtf_i32_f16(ptr %0) {
+; CHECK-LABEL: ucvtf_i32_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ucvtf h0, w8
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = uitofp i32 %2 to half
+  ret half %3
+}
+
+define float @ucvtf_i32_f32(ptr %0) {
+; CHECK-LABEL: ucvtf_i32_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ucvtf s0, w8
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = uitofp i32 %2 to float
+  ret float %3
+}
+
+define double @ucvtf_i32_f64(ptr %0) {
+; CHECK-LABEL: ucvtf_i32_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ucvtf d0, d0
+; CHECK-NEXT:    ret
+  %2 = load i32, ptr %0, align 64
+  %3 = uitofp i32 %2 to double
+  ret double %3
+}
+
+define half @ucvtf_i64_f16(ptr %0) {
+; CHECK-LABEL: ucvtf_i64_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf h0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = uitofp i64 %2 to half
+  ret half %3
+}
+
+define float @ucvtf_i64_f32(ptr %0) {
+; CHECK-LABEL: ucvtf_i64_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = uitofp i64 %2 to float
+  ret float %3
+}
+
+define double @ucvtf_i64_f64(ptr %0) {
+; CHECK-LABEL: ucvtf_i64_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf d0, x8
+; CHECK-NEXT:    ret
+  %2 = load i64, ptr %0, align 64
+  %3 = uitofp i64 %2 to double
+  ret double %3
+}

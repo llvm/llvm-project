@@ -26,11 +26,7 @@ clang_target_link_libraries(clangdMain
   clangBasic
   clangFormat
   clangFrontend
-  clangLex
-  clangSema
   clangTooling
-  clangToolingCore
-  clangToolingRefactoring
   clangToolingSyntax
   )
 
@@ -48,11 +44,8 @@ clang_target_link_libraries(clangd
   PRIVATE
   clangAST
   clangBasic
-  clangFormat
-  clangFrontend
   clangLex
   clangSema
-  clangTooling
   clangToolingCore
   clangToolingRefactoring
   clangToolingSyntax

@@ -22,6 +22,7 @@ using namespace llvm;
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const unsigned XLen = ST.getXLen();
   const LLT XLenLLT = LLT::scalar(XLen);
+  const LLT p0 = LLT::pointer(0, XLen);
 
   using namespace TargetOpcode;
 
@@ -43,31 +44,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(1, XLenLLT, XLenLLT)
       .clampScalar(0, XLenLLT, XLenLLT);
 
-  // Extensions
-  auto ExtLegalFunc = [=](const LegalityQuery &Query) {
-    unsigned DstSize = Query.Types[0].getSizeInBits();
-
-    // Make sure that we have something that will fit in a register, and
-    // make sure it's a power of 2.
-    if (DstSize < 8 || DstSize > XLen || !isPowerOf2_32(DstSize))
-      return false;
-
-    const LLT SrcTy = Query.Types[1];
-
-    // Make sure we fit in a register otherwise. Don't bother checking that
-    // the source type is below 2 * XLen bits. We shouldn't be allowing anything
-    // through which is wider than the destination in the first place.
-    unsigned SrcSize = SrcTy.getSizeInBits();
-    if (SrcSize < 8 || !isPowerOf2_32(SrcSize))
-      return false;
-
-    return true;
-  };
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalIf(ExtLegalFunc)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .maxScalar(0, XLenLLT);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({XLenLLT}).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .legalFor({XLenLLT})
+      .maxScalar(0, XLenLLT)
+      .lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -81,21 +64,33 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
-      .legalFor({XLenLLT})
+      .legalFor({XLenLLT, p0})
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{XLenLLT, XLenLLT}})
+      .legalFor({{XLenLLT, XLenLLT}, {XLenLLT, p0}})
       .widenScalarToNextPow2(1)
       .clampScalar(1, XLenLLT, XLenLLT)
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{XLenLLT, XLenLLT}})
+      .legalFor({{XLenLLT, XLenLLT}, {p0, XLenLLT}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT)
       .clampScalar(1, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder(G_BRCOND)
+      .legalFor({XLenLLT})
+      .minScalar(0, XLenLLT);
+
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({p0, XLenLLT})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE)
+      .legalFor({p0});
 
   getLegacyLegalizerInfo().computeTables();
 }

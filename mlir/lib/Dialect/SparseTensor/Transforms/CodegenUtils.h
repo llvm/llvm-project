@@ -420,6 +420,10 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
   return !rtp || rtp.getRank() == 0;
 }
 
+// Generates code to cast a tensor to a memref.
+TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
+                                       Value tensor);
+
 /// Infers the result type and generates `ToPositionsOp`.
 Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
 

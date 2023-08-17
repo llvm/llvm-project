@@ -893,7 +893,7 @@ foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VBF16M1, VF16M1, VF32M1, VF64M1] i
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach vti = !listconcat(GroupIntegerVectors, GroupFloatVectors, GroupBFloatVectors) in
-  let Predicates = GetVTypePredicates<vti>.Predicates in 
+  let Predicates = GetVTypePredicates<vti>.Predicates in
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach mti = AllMasks in
@@ -1052,6 +1052,23 @@ defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU", isSEWAware=1>;
 defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM", isSEWAware=1>;
 
+foreach vtiTowti = AllWidenableIntVectors in {
+  defvar vti = vtiTowti.Vti;
+  defvar wti = vtiTowti.Wti;
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+  def : Pat<
+    (vti.Vector 
+      (riscv_trunc_vector_vl
+        (srem (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs1))),
+              (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs2)))),
+        (vti.Mask true_mask), (XLenVT srcvalue))),
+      (!cast<Instruction>("PseudoVREM_VV_"#vti.LMul.MX#"_E"#!shl(1, vti.Log2SEW))
+        (vti.Vector (IMPLICIT_DEF)), 
+        vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
 // 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, sext_oneuse,
                                    "PseudoVWMUL">;
@@ -1146,7 +1163,7 @@ foreach mti = AllMasks in {
     // Handle rvv_vnot the same as the vmnot.m pseudoinstruction.
     def : Pat<(mti.Mask (rvv_vnot VR:$rs)),
               (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
-                   VR:$rs, VR:$rs, mti.AVL, mti.Log2SEW)>; 
+                   VR:$rs, VR:$rs, mti.AVL, mti.Log2SEW)>;
   }
 }
 
@@ -1303,7 +1320,7 @@ foreach vti = AllFloatVectors in {
               (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
-    
+
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (fneg vti.RegClass:$rs2)))),
               (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)

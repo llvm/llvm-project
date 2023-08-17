@@ -28,21 +28,22 @@ using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
-using BlockCtorFn = void (*)(Block *Storage, char *FieldPtr, bool IsConst,
+using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
                              bool IsMutable, bool IsActive,
                              const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
-using BlockDtorFn = void (*)(Block *Storage, char *FieldPtr,
+using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
                              const Descriptor *FieldDesc);
 
 /// Invoked when a block with pointers referencing it goes out of scope. Such
 /// blocks are persisted: the move function copies all inline descriptors and
 /// non-trivial fields, as existing pointers might need to reference those
 /// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, const char *SrcFieldPtr,
-                             char *DstFieldPtr, const Descriptor *FieldDesc);
+using BlockMoveFn = void (*)(Block *Storage, const std::byte *SrcFieldPtr,
+                             std::byte *DstFieldPtr,
+                             const Descriptor *FieldDesc);
 
 /// Inline descriptor embedded in structures and arrays.
 ///

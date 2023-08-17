@@ -796,8 +796,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     if (ArrayType *ATy = dyn_cast<ArrayType>(GV.getValueType())) {
       StructType *STy = dyn_cast<StructType>(ATy->getElementType());
       PointerType *FuncPtrTy =
-          FunctionType::get(Type::getVoidTy(Context), false)->
-          getPointerTo(DL.getProgramAddressSpace());
+          PointerType::get(Context, DL.getProgramAddressSpace());
       Check(STy && (STy->getNumElements() == 2 || STy->getNumElements() == 3) &&
                 STy->getTypeAtIndex(0u)->isIntegerTy(32) &&
                 STy->getTypeAtIndex(1) == FuncPtrTy,
@@ -5920,6 +5919,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
+
+    Check(Call.paramHasAttr(2, Attribute::InReg),
+          "SGPR arguments must have the `inreg` attribute", &Call);
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
+          "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:

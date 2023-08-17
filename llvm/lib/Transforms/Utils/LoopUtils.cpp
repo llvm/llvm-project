@@ -556,12 +556,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       // Removes all incoming values from all other exiting blocks (including
       // duplicate values from an exiting block).
       // Nuke all entries except the zero'th entry which is the preheader entry.
-      // NOTE! We need to remove Incoming Values in the reverse order as done
-      // below, to keep the indices valid for deletion (removeIncomingValues
-      // updates getNumIncomingValues and shifts all values down into the
-      // operand being deleted).
-      for (unsigned i = 0, e = P.getNumIncomingValues() - 1; i != e; ++i)
-        P.removeIncomingValue(e - i, false);
+      P.removeIncomingValueIf([](unsigned Idx) { return Idx != 0; },
+                              /* DeletePHIIfEmpty */ false);
 
       assert((P.getNumIncomingValues() == 1 &&
               P.getIncomingBlock(PredIndex) == Preheader) &&
@@ -1640,7 +1636,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
                                   SCEVExpander &Exp) {
   LLVMContext &Ctx = Loc->getContext();
-  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, CG->AddressSpace);
+  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
 
   Value *Start = nullptr, *End = nullptr;
   LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
@@ -1693,20 +1689,12 @@ Value *llvm::addRuntimeChecks(
     const PointerBounds &A = Check.first, &B = Check.second;
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
-    unsigned AS0 = A.Start->getType()->getPointerAddressSpace();
-    unsigned AS1 = B.Start->getType()->getPointerAddressSpace();
 
-    assert((AS0 == B.End->getType()->getPointerAddressSpace()) &&
-           (AS1 == A.End->getType()->getPointerAddressSpace()) &&
+    assert((A.Start->getType()->getPointerAddressSpace() ==
+            B.End->getType()->getPointerAddressSpace()) &&
+           (B.Start->getType()->getPointerAddressSpace() ==
+            A.End->getType()->getPointerAddressSpace()) &&
            "Trying to bounds check pointers with different address spaces");
-
-    Type *PtrArithTy0 = Type::getInt8PtrTy(Ctx, AS0);
-    Type *PtrArithTy1 = Type::getInt8PtrTy(Ctx, AS1);
-
-    Value *Start0 = ChkBuilder.CreateBitCast(A.Start, PtrArithTy0, "bc");
-    Value *Start1 = ChkBuilder.CreateBitCast(B.Start, PtrArithTy1, "bc");
-    Value *End0 = ChkBuilder.CreateBitCast(A.End, PtrArithTy1, "bc");
-    Value *End1 = ChkBuilder.CreateBitCast(B.End, PtrArithTy0, "bc");
 
     // [A|B].Start points to the first accessed byte under base [A|B].
     // [A|B].End points to the last accessed byte, plus one.
@@ -1716,8 +1704,8 @@ Value *llvm::addRuntimeChecks(
     // bound0 = (B.Start < A.End)
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
-    Value *Cmp0 = ChkBuilder.CreateICmpULT(Start0, End1, "bound0");
-    Value *Cmp1 = ChkBuilder.CreateICmpULT(Start1, End0, "bound1");
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (MemoryRuntimeCheck) {
       IsConflict =

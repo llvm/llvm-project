@@ -75,15 +75,19 @@ private:
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double& Res0,
-    double& Res1, Constant *copr0, Constant *copr1, Constant *copr2);
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0, double &Res1,
+                              Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   // sqrt
   bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
-  bool insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
-                    const FuncInfo &FInfo);
+  /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
+  /// of cos, sincos call).
+  std::tuple<Value *, Value *, Value *> insertSinCos(Value *Arg,
+                                                     FastMathFlags FMF,
+                                                     IRBuilder<> &B,
+                                                     FunctionCallee Fsincos);
 
   // sin/cos
   bool fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -94,6 +98,21 @@ private:
 
   // Get a scalar native builtin single argument FP function
   FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
+
+  /// Substitute a call to a known libcall with an intrinsic call. If \p
+  /// AllowMinSize is true, allow the replacement in a minsize function.
+  bool shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                         bool AllowMinSizeF32 = false,
+                                         bool AllowF64 = false,
+                                         bool AllowStrictFP = false);
+  void replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                         Intrinsic::ID IntrID);
+
+  bool tryReplaceLibcallWithSimpleIntrinsic(IRBuilder<> &B, CallInst *CI,
+                                            Intrinsic::ID IntrID,
+                                            bool AllowMinSizeF32 = false,
+                                            bool AllowF64 = false,
+                                            bool AllowStrictFP = false);
 
 protected:
   bool isUnsafeMath(const FPMathOperator *FPOp) const;
@@ -563,10 +582,89 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       return true;
 
     // Copy fast flags from the original call.
-    B.setFastMathFlags(FPOp->getFastMathFlags());
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    B.setFastMathFlags(FMF);
 
-    // Specialized optimizations for each function call
+    // Specialized optimizations for each function call.
+    //
+    // TODO: Handle other simple intrinsic wrappers. Sqrt.
+    //
+    // TODO: Handle native functions
     switch (FInfo.getId()) {
+    case AMDGPULibFunc::EI_EXP:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_EXP2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::exp2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_LOG10:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::log10,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_FMIN:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::minnum,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FMAX:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::maxnum,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FMA:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fma, true,
+                                                  true);
+    case AMDGPULibFunc::EI_MAD:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fmuladd,
+                                                  true, true);
+    case AMDGPULibFunc::EI_FABS:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::fabs, true,
+                                                  true, true);
+    case AMDGPULibFunc::EI_COPYSIGN:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::copysign,
+                                                  true, true, true);
+    case AMDGPULibFunc::EI_FLOOR:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::floor, true,
+                                                  true);
+    case AMDGPULibFunc::EI_CEIL:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::ceil, true,
+                                                  true);
+    case AMDGPULibFunc::EI_TRUNC:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::trunc, true,
+                                                  true);
+    case AMDGPULibFunc::EI_RINT:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::rint, true,
+                                                  true);
+    case AMDGPULibFunc::EI_ROUND:
+      return tryReplaceLibcallWithSimpleIntrinsic(B, CI, Intrinsic::round, true,
+                                                  true);
+    case AMDGPULibFunc::EI_LDEXP: {
+      if (!shouldReplaceLibcallWithIntrinsic(CI, true, true))
+        return false;
+
+      Value *Arg1 = CI->getArgOperand(1);
+      if (VectorType *VecTy = dyn_cast<VectorType>(CI->getType());
+          VecTy && !isa<VectorType>(Arg1->getType())) {
+        Value *SplatArg1 = B.CreateVectorSplat(VecTy->getElementCount(), Arg1);
+        CI->setArgOperand(1, SplatArg1);
+      }
+
+      CI->setCalledFunction(Intrinsic::getDeclaration(
+          CI->getModule(), Intrinsic::ldexp,
+          {CI->getType(), CI->getArgOperand(1)->getType()}));
+      return true;
+    }
     case AMDGPULibFunc::EI_POW:
     case AMDGPULibFunc::EI_POWR:
     case AMDGPULibFunc::EI_POWN:
@@ -1018,6 +1116,66 @@ FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
   return getFunction(M, nf);
 }
 
+// Some library calls are just wrappers around llvm intrinsics, but compiled
+// conservatively. Preserve the flags from the original call site by
+// substituting them with direct calls with all the flags.
+bool AMDGPULibCalls::shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                                       bool AllowMinSizeF32,
+                                                       bool AllowF64,
+                                                       bool AllowStrictFP) {
+  Type *FltTy = CI->getType()->getScalarType();
+  const bool IsF32 = FltTy->isFloatTy();
+
+  // f64 intrinsics aren't implemented for most operations.
+  if (!IsF32 && !FltTy->isHalfTy() && (!AllowF64 || !FltTy->isDoubleTy()))
+    return false;
+
+  // We're implicitly inlining by replacing the libcall with the intrinsic, so
+  // don't do it for noinline call sites.
+  if (CI->isNoInline())
+    return false;
+
+  const Function *ParentF = CI->getFunction();
+  // TODO: Handle strictfp
+  if (!AllowStrictFP && ParentF->hasFnAttribute(Attribute::StrictFP))
+    return false;
+
+  if (IsF32 && !AllowMinSizeF32 && ParentF->hasMinSize())
+    return false;
+  return true;
+}
+
+void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
+                                                       CallInst *CI,
+                                                       Intrinsic::ID IntrID) {
+  if (CI->arg_size() == 2) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    VectorType *Arg0VecTy = dyn_cast<VectorType>(Arg0->getType());
+    VectorType *Arg1VecTy = dyn_cast<VectorType>(Arg1->getType());
+    if (Arg0VecTy && !Arg1VecTy) {
+      Value *SplatRHS = B.CreateVectorSplat(Arg0VecTy->getElementCount(), Arg1);
+      CI->setArgOperand(1, SplatRHS);
+    } else if (!Arg0VecTy && Arg1VecTy) {
+      Value *SplatLHS = B.CreateVectorSplat(Arg1VecTy->getElementCount(), Arg0);
+      CI->setArgOperand(0, SplatLHS);
+    }
+  }
+
+  CI->setCalledFunction(
+      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+}
+
+bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
+    IRBuilder<> &B, CallInst *CI, Intrinsic::ID IntrID, bool AllowMinSizeF32,
+    bool AllowF64, bool AllowStrictFP) {
+  if (!shouldReplaceLibcallWithIntrinsic(CI, AllowMinSizeF32, AllowF64,
+                                         AllowStrictFP))
+    return false;
+  replaceLibCallWithSimpleIntrinsic(B, CI, IntrID);
+  return true;
+}
+
 // fold sqrt -> native_sqrt (x)
 bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
                                const FuncInfo &FInfo) {
@@ -1041,32 +1199,14 @@ bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
   return false;
 }
 
-bool AMDGPULibCalls::insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
-                                  const FuncInfo &fInfo) {
-  Value *Arg = Sin->getOperand(0);
-  assert(Arg == Cos->getOperand(0));
-
+std::tuple<Value *, Value *, Value *>
+AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
+                             FunctionCallee Fsincos) {
+  DebugLoc DL = B.getCurrentDebugLocation();
   Function *F = B.GetInsertBlock()->getParent();
-  Module *M = F->getParent();
-  // Merge the sin and cos.
-
-  // for OpenCL 2.0 we have only generic implementation of sincos
-  // function.
-  // FIXME: This is not true anymore
-  AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
-  nf.getLeads()[0].PtrKind =
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
-  FunctionCallee Fsincos = getFunction(M, nf);
-  if (!Fsincos)
-    return false;
-
   B.SetInsertPointPastAllocas(F);
 
-  DILocation *MergedDebugLoc =
-      DILocation::getMergedLocation(Sin->getDebugLoc(), Cos->getDebugLoc());
-  B.SetCurrentDebugLocation(MergedDebugLoc);
-
-  AllocaInst *Alloc = B.CreateAlloca(Sin->getType(), nullptr, "__sincos_");
+  AllocaInst *Alloc = B.CreateAlloca(Arg->getType(), nullptr, "__sincos_");
 
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
@@ -1074,36 +1214,25 @@ bool AMDGPULibCalls::insertSinCos(CallInst *Sin, CallInst *Cos, IRBuilder<> &B,
     // if it's an argument or constant.
 
     B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
-    B.SetCurrentDebugLocation(MergedDebugLoc);
+
+    // SetInsertPoint unwelcomely always tries to set the debug loc.
+    B.SetCurrentDebugLocation(DL);
   }
 
-  Value *P = Alloc;
-  Type *PTy = Fsincos.getFunctionType()->getParamType(1);
+  Type *CosPtrTy = Fsincos.getFunctionType()->getParamType(1);
+
   // The allocaInst allocates the memory in private address space. This need
-  // to be bitcasted to point to the address space of cos pointer type.
+  // to be addrspacecasted to point to the address space of cos pointer type.
   // In OpenCL 2.0 this is generic, while in 1.2 that is private.
-  if (PTy->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    P = B.CreateAddrSpaceCast(Alloc, PTy);
+  Value *CastAlloc = B.CreateAddrSpaceCast(Alloc, CosPtrTy);
 
-  // Intersect the two sets of flags.
-  FastMathFlags FMF = cast<FPMathOperator>(Sin)->getFastMathFlags();
-  FMF &= cast<FPMathOperator>(Cos)->getFastMathFlags();
-  B.setFastMathFlags(FMF);
+  CallInst *SinCos = CreateCallEx2(B, Fsincos, Arg, CastAlloc);
 
-  CallInst *Call = CreateCallEx2(B, Fsincos, Arg, P);
-  LoadInst *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
-  Reload->setDebugLoc(Cos->getDebugLoc());
+  // TODO: Is it worth trying to preserve the location for the cos calls for the
+  // load?
 
-  LLVM_DEBUG(errs() << "AMDIC: fold_sincos (" << *Sin << ", " << *Cos
-                    << ") with " << *Call << '\n');
-
-  Sin->replaceAllUsesWith(Call);
-  Sin->eraseFromParent();
-
-  Cos->replaceAllUsesWith(Reload);
-  Cos->eraseFromParent();
-
-  return true;
+  LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
+  return {SinCos, LoadCos, SinCos};
 }
 
 // fold sin, cos -> sincos.
@@ -1121,46 +1250,109 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   Value *CArgVal = FPOp->getOperand(0);
   CallInst *CI = cast<CallInst>(FPOp);
-  bool Changed = false;
 
+  Function *F = B.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+
+  // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
+  // implementation. Prefer the private form if available.
+  AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
+
+  AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
+
+  FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
+  FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
+  FunctionCallee FSinCos = FSinCosPrivate ? FSinCosPrivate : FSinCosGeneric;
+  if (!FSinCos)
+    return false;
+
+  SmallVector<CallInst *> SinCalls;
+  SmallVector<CallInst *> CosCalls;
+  SmallVector<CallInst *> SinCosCalls;
   FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
                        fInfo);
   const std::string PairName = PartnerInfo.mangle();
 
-  CallInst *UI = nullptr;
+  StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
+  StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
+  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
+  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
 
-  // TODO: Handle repeated uses, the generic implementation does.
+  // Intersect the two sets of flags.
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  MDNode *FPMath = CI->getMetadata(LLVMContext::MD_fpmath);
+
+  SmallVector<DILocation *> MergeDbgLocs = {CI->getDebugLoc()};
+
   for (User* U : CArgVal->users()) {
     CallInst *XI = dyn_cast<CallInst>(U);
-    if (!XI || XI->isNoBuiltin())
+    if (!XI || XI->getFunction() != F || XI->isNoBuiltin())
       continue;
 
     Function *UCallee = XI->getCalledFunction();
-    if (UCallee && UCallee->getName().equals(PairName))
-      UI = XI;
-    else if (UI)
-      return Changed;
+    if (!UCallee)
+      continue;
+
+    bool Handled = true;
+
+    if (UCallee->getName() == SinName)
+      SinCalls.push_back(XI);
+    else if (UCallee->getName() == CosName)
+      CosCalls.push_back(XI);
+    else if (UCallee->getName() == SinCosPrivateName ||
+             UCallee->getName() == SinCosGenericName)
+      SinCosCalls.push_back(XI);
+    else
+      Handled = false;
+
+    if (Handled) {
+      MergeDbgLocs.push_back(XI->getDebugLoc());
+      auto *OtherOp = cast<FPMathOperator>(XI);
+      FMF &= OtherOp->getFastMathFlags();
+      FPMath = MDNode::getMostGenericFPMath(
+          FPMath, XI->getMetadata(LLVMContext::MD_fpmath));
+    }
   }
 
-  if (!UI)
-    return Changed;
+  if (SinCalls.empty() || CosCalls.empty())
+    return false;
 
-  CallInst *Sin = isSin ? CI : UI;
-  CallInst *Cos = isSin ? UI : CI;
-  return insertSinCos(Sin, Cos, B, fInfo) || Changed;
+  B.setFastMathFlags(FMF);
+  B.setDefaultFPMathTag(FPMath);
+  DILocation *DbgLoc = DILocation::getMergedLocations(MergeDbgLocs);
+  B.SetCurrentDebugLocation(DbgLoc);
+
+  auto [Sin, Cos, SinCos] = insertSinCos(CArgVal, FMF, B, FSinCos);
+
+  auto replaceTrigInsts = [](ArrayRef<CallInst *> Calls, Value *Res) {
+    for (CallInst *C : Calls)
+      C->replaceAllUsesWith(Res);
+
+    // Leave the other dead instructions to avoid clobbering iterators.
+  };
+
+  replaceTrigInsts(SinCalls, Sin);
+  replaceTrigInsts(CosCalls, Cos);
+  replaceTrigInsts(SinCosCalls, SinCos);
+
+  // It's safe to delete the original now.
+  CI->eraseFromParent();
+  return true;
 }
 
-bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
-                                            double& Res0, double& Res1,
-                                            Constant *copr0, Constant *copr1,
-                                            Constant *copr2) {
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
+                                            double &Res1, Constant *copr0,
+                                            Constant *copr1) {
   // By default, opr0/opr1/opr3 holds values of float/double type.
   // If they are not float/double, each function has to its
   // operand separately.
-  double opr0=0.0, opr1=0.0, opr2=0.0;
+  double opr0 = 0.0, opr1 = 0.0;
   ConstantFP *fpopr0 = dyn_cast_or_null<ConstantFP>(copr0);
   ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
-  ConstantFP *fpopr2 = dyn_cast_or_null<ConstantFP>(copr2);
   if (fpopr0) {
     opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
              ? fpopr0->getValueAPF().convertToDouble()
@@ -1171,12 +1363,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
              ? fpopr1->getValueAPF().convertToDouble()
              : (double)fpopr1->getValueAPF().convertToFloat();
-  }
-
-  if (fpopr2) {
-    opr2 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr2->getValueAPF().convertToDouble()
-             : (double)fpopr2->getValueAPF().convertToFloat();
   }
 
   switch (FInfo.getId()) {
@@ -1277,10 +1463,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = sin(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_SQRT:
-    Res0 = sqrt(opr0);
-    return true;
-
   case AMDGPULibFunc::EI_TAN:
     Res0 = tan(opr0);
     return true;
@@ -1293,15 +1475,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = tan(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_RECIP:
-    Res0 = 1.0 / opr0;
-    return true;
-
   // two-arg functions
-  case AMDGPULibFunc::EI_DIVIDE:
-    Res0 = opr0 / opr1;
-    return true;
-
   case AMDGPULibFunc::EI_POW:
   case AMDGPULibFunc::EI_POWR:
     Res0 = pow(opr0, opr1);
@@ -1330,12 +1504,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = sin(opr0);
     Res1 = cos(opr0);
     return true;
-
-  // three-arg functions
-  case AMDGPULibFunc::EI_FMA:
-  case AMDGPULibFunc::EI_MAD:
-    Res0 = opr0 * opr1 + opr2;
-    return true;
   }
 
   return false;
@@ -1348,7 +1516,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
 
   Constant *copr0 = nullptr;
   Constant *copr1 = nullptr;
-  Constant *copr2 = nullptr;
   if (numArgs > 0) {
     if ((copr0 = dyn_cast<Constant>(aCI->getArgOperand(0))) == nullptr)
       return false;
@@ -1361,11 +1528,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  if (numArgs > 2) {
-    if ((copr2 = dyn_cast<Constant>(aCI->getArgOperand(2))) == nullptr)
-      return false;
-  }
-
   // At this point, all arguments to aCI are constants.
 
   // max vector size is 16, and sincos will generate two results.
@@ -1373,20 +1535,16 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   int FuncVecSize = getVecSize(FInfo);
   bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
-    if (!evaluateScalarMathFunc(FInfo, DVal0[0],
-                                DVal1[0], copr0, copr1, copr2)) {
+    if (!evaluateScalarMathFunc(FInfo, DVal0[0], DVal1[0], copr0, copr1)) {
       return false;
     }
   } else {
     ConstantDataVector *CDV0 = dyn_cast_or_null<ConstantDataVector>(copr0);
     ConstantDataVector *CDV1 = dyn_cast_or_null<ConstantDataVector>(copr1);
-    ConstantDataVector *CDV2 = dyn_cast_or_null<ConstantDataVector>(copr2);
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
-      Constant *celt2 = CDV2 ? CDV2->getElementAsConstant(i) : nullptr;
-      if (!evaluateScalarMathFunc(FInfo, DVal0[i],
-                                  DVal1[i], celt0, celt1, celt2)) {
+      if (!evaluateScalarMathFunc(FInfo, DVal0[i], DVal1[i], celt0, celt1)) {
         return false;
       }
     }

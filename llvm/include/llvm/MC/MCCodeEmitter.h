@@ -39,7 +39,7 @@ public:
   /// Encode the given \p Inst to bytes and append to \p CB.
   virtual void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                                  SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const {}
+                                 const MCSubtargetInfo &STI) const = 0;
 };
 
 } // end namespace llvm

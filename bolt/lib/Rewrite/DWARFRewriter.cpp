@@ -542,32 +542,34 @@ void DWARFRewriter::updateDebugInfo() {
 
   DebugLoclistWriter::setAddressWriter(AddrWriter.get());
 
-  size_t CUIndex = 0;
-  for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-    const uint16_t DwarfVersion = CU->getVersion();
+  uint32_t CUIndex = 0;
+  std::mutex AccessMutex;
+  // Needs to be invoked in the same order as CUs are processed.
+  auto createRangeLocList = [&](DWARFUnit &CU) -> DebugLocWriter * {
+    std::lock_guard<std::mutex> Lock(AccessMutex);
+    const uint16_t DwarfVersion = CU.getVersion();
     if (DwarfVersion >= 5) {
       LocListWritersByCU[CUIndex] =
-          std::make_unique<DebugLoclistWriter>(*CU.get(), DwarfVersion, false);
+          std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false);
 
-      if (std::optional<uint64_t> DWOId = CU->getDWOId()) {
+      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
         assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
         auto RangeListsSectionWriter =
             std::make_unique<DebugRangeListsSectionWriter>();
-        RangeListsSectionWriter->initSection(*CU.get());
+        RangeListsSectionWriter->initSection(CU);
         RangeListsWritersByCU[*DWOId] = std::move(RangeListsSectionWriter);
       }
 
     } else {
       LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
     }
-    ++CUIndex;
-  }
+    return LocListWritersByCU[CUIndex++].get();
+  };
 
   // Unordered maps to handle name collision if output DWO directory is
   // specified.
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
-  std::mutex AccessMutex;
 
   auto updateDWONameCompDir = [&](DWARFUnit &Unit, DIEBuilder &DIEBldr,
                                   DIE &UnitDIE) -> std::string {
@@ -597,8 +599,7 @@ void DWARFRewriter::updateDebugInfo() {
   DWPState State;
   if (opts::WriteDWP)
     initDWPState(State);
-  auto processUnitDIE = [&](size_t CUIndex, DWARFUnit *Unit,
-                            DIEBuilder *DIEBlder) {
+  auto processUnitDIE = [&](DWARFUnit *Unit, DIEBuilder *DIEBlder) {
     // Check if the unit is a skeleton and we need special updates for it and
     // its matching split/DWO CU.
     std::optional<DWARFUnit *> SplitCU;
@@ -608,8 +609,7 @@ void DWARFRewriter::updateDebugInfo() {
                                 Unit->getStringOffsetsTableContribution());
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
-
-    DebugLocWriter *DebugLocWriter = nullptr;
+    DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
     DebugRangesSectionWriter *RangesSectionWriter =
         Unit->getVersion() >= 5 ? RangeListsSectionWriter.get()
                                 : LegacyRangesSectionWriter.get();
@@ -645,12 +645,6 @@ void DWARFRewriter::updateDebugInfo() {
                      DebugLocDWoWriter);
     }
 
-    {
-      std::lock_guard<std::mutex> Lock(AccessMutex);
-      auto LocListWriterIter = LocListWritersByCU.find(CUIndex);
-      if (LocListWriterIter != LocListWritersByCU.end())
-        DebugLocWriter = LocListWriterIter->second.get();
-    }
     if (Unit->getVersion() >= 5) {
       RangesBase = RangesSectionWriter->getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
@@ -666,7 +660,6 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter->update(*DIEBlder, *Unit);
   };
 
-  CUIndex = 0;
   DIEBuilder DIEBlder(BC.DwCtx.get());
   DIEBlder.buildTypeUnits();
   SmallVector<char, 20> OutBuffer;
@@ -687,17 +680,15 @@ void DWARFRewriter::updateDebugInfo() {
     for (std::vector<DWARFUnit *> &Vec : PartVec) {
       DIEBlder.buildCompileUnits(Vec);
       for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
-        processUnitDIE(CUIndex++, CU, &DIEBlder);
+        processUnitDIE(CU, &DIEBlder);
       finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
                            DIEBlder.getProcessedCUs());
     }
   } else {
     // Update unit debug info in parallel
     ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
-    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-      ThreadPool.async(processUnitDIE, CUIndex, CU.get(), &DIEBlder);
-      CUIndex++;
-    }
+    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
+      ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
     ThreadPool.wait();
   }
 

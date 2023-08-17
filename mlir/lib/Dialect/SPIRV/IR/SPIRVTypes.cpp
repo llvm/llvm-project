@@ -101,17 +101,9 @@ bool CompositeType::classof(Type type) {
 }
 
 bool CompositeType::isValid(VectorType type) {
-  switch (type.getNumElements()) {
-  case 2:
-  case 3:
-  case 4:
-  case 8:
-  case 16:
-    break;
-  default:
-    return false;
-  }
-  return type.getRank() == 1 && llvm::isa<ScalarType>(type.getElementType());
+  return type.getRank() == 1 &&
+         llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
+         llvm::isa<ScalarType>(type.getElementType());
 }
 
 Type CompositeType::getElementType(unsigned index) const {

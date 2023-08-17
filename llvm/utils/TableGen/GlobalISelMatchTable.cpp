@@ -1966,6 +1966,19 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   for (const auto &Renderer : OperandRenderers)
     Renderer->emitRenderOpcodes(Table, Rule);
 
+  for (auto [OpIdx, Def] : enumerate(I->ImplicitDefs)) {
+    auto Namespace =
+        Def->getValue("Namespace") ? Def->getValueAsString("Namespace") : "";
+    if (DeadImplicitDefs.contains(Def)) {
+      Table
+          << MatchTable::Opcode("GIR_SetImplicitDefDead")
+          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment(
+                 ("OpIdx for " + Namespace + "::" + Def->getName() + "").str())
+          << MatchTable::IntValue(OpIdx) << MatchTable::LineBreak;
+    }
+  }
+
   if (I->mayLoad || I->mayStore) {
     Table << MatchTable::Opcode("GIR_MergeMemOperands")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)

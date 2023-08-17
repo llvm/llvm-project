@@ -45,6 +45,49 @@ define amdgpu_cs float @sqrt_rcp(float inreg %arg1) {
   ret float %b
 }
 
+define amdgpu_cs float @div_sqrt_contract(float inreg %arg1) {
+; GCN-LABEL: div_sqrt_contract:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+.entry:
+  %a = call contract float @llvm.sqrt.f32(float %arg1)
+  %b = fdiv afn contract float 1.000000e+00, %a
+  ret float %b
+}
+
+define amdgpu_cs float @sqrt_div_contract(float inreg %arg1) {
+; GCN-LABEL: sqrt_div_contract:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+.entry:
+  %a = fdiv afn contract float 1.000000e+00, %arg1
+  %b = call contract float @llvm.sqrt.f32(float %a)
+  ret float %b
+}
+
+define amdgpu_cs float @rcp_sqrt_contract(float inreg %arg1) {
+; GCN-LABEL: rcp_sqrt_contract:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+.entry:
+  %a = call contract float @llvm.sqrt.f32(float %arg1)
+  %b = call contract float @llvm.amdgcn.rcp.f32(float %a)
+  ret float %b
+}
+
+define amdgpu_cs float @sqrt_rcp_contract(float inreg %arg1) {
+; GCN-LABEL: sqrt_rcp_contract:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+.entry:
+  %a = call contract float @llvm.amdgcn.rcp.f32(float %arg1)
+  %b = call contract float @llvm.sqrt.f32(float %a)
+  ret float %b
+}
 
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.amdgcn.rcp.f32(float)

@@ -182,9 +182,9 @@ static SMLoc findDebugLineInformationForInstructionAt(
   // We use the pointer in SMLoc to store an instance of DebugLineTableRowRef,
   // which occupies 64 bits. Thus, we can only proceed if the struct fits into
   // the pointer itself.
-  assert(sizeof(decltype(SMLoc().getPointer())) >=
-             sizeof(DebugLineTableRowRef) &&
-         "Cannot fit instruction debug line information into SMLoc's pointer");
+  static_assert(
+      sizeof(decltype(SMLoc().getPointer())) >= sizeof(DebugLineTableRowRef),
+      "Cannot fit instruction debug line information into SMLoc's pointer");
 
   SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
   uint32_t RowIndex = LineTable->lookupAddress(
