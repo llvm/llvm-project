@@ -154,7 +154,8 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   int digits = end - p;
   int leadingZeroes{0};
   int editWidth{edit.width.value_or(0)};
-  if (edit.digits && digits <= *edit.digits) { // Iw.m
+  if (edit.descriptor == 'I' && edit.digits && digits <= *edit.digits) {
+    // Only Iw.m can produce leading zeroes, not Gw.d (F'202X 13.7.5.2.2)
     if (*edit.digits == 0 && n == 0) {
       // Iw.0 with zero value: output field must be blank.  For I0.0
       // and a zero value, emit one blank character.
