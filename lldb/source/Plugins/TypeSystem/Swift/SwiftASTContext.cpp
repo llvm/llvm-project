@@ -851,12 +851,11 @@ SwiftASTContext::GetCachedEnumInfo(opaque_compiler_type_t type) {
   if (pos != enum_info_cache->end())
     return pos->second.get();
 
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  if (!SwiftASTContext::IsFullyRealized(ToCompilerType({swift_can_type})))
+  if (IsMeaninglessWithoutDynamicResolution(type))
     return nullptr;
 
   SwiftEnumDescriptorSP enum_info_sp;
-
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (auto *enum_type = swift_can_type->getAs<swift::EnumType>()) {
     enum_info_sp.reset(GetEnumInfoFromEnumDecl(GetASTContext(), swift_can_type,
                                                enum_type->getDecl()));
@@ -5159,17 +5158,6 @@ SwiftASTContext::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
           llvm::dyn_cast_or_null<swift::DynamicSelfType>(swift_type))
     return ToCompilerType({dyn_self->getSelfType().getPointer()});
   return {weak_from_this(), type};
-}
-
-bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
-  if (swift::CanType swift_can_type = ::GetCanonicalSwiftType(compiler_type)) {
-    if (swift::isa<swift::MetatypeType>(swift_can_type))
-      return true;
-    return !swift_can_type->hasArchetype() &&
-           !swift_can_type->hasTypeParameter();
-  }
-
-  return false;
 }
 
 bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
