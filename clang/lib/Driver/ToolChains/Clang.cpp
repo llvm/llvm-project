@@ -7376,22 +7376,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (SplitLTOUnit)
     CmdArgs.push_back("-fsplit-lto-unit");
 
-  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
-                               options::OPT_fno_fat_lto_objects)) {
-    if (IsUsingLTO && A->getOption().matches(options::OPT_ffat_lto_objects)) {
-      assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
-      if (!Triple.isOSBinFormatELF()) {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << TC.getTripleString();
-      }
-      CmdArgs.push_back(Args.MakeArgString(
-          Twine("-flto=") + (LTOMode == LTOK_Thin ? "thin" : "full")));
-      CmdArgs.push_back("-flto-unit");
-      CmdArgs.push_back("-ffat-lto-objects");
-      A->render(Args, CmdArgs);
-    }
-  }
-
   if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
                                options::OPT_fno_global_isel)) {
     CmdArgs.push_back("-mllvm");

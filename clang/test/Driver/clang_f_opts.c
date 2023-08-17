@@ -424,6 +424,7 @@
 // CHECK-WARNING-DAG: optimization flag '-fwhole-program' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fcaller-saves' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
+// CHECK-WARNING-DAG: optimization flag '-ffat-lto-objects' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fmerge-constants' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-small-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ftree-dce' is not supported
