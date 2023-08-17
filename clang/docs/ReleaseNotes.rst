@@ -144,7 +144,10 @@ Bug Fixes in This Version
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
 - Fix crash on use of a variadic overloaded operator.
-  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>`_)
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
+- Fix a hang on valid C code passing a function type as an argument to
+  ``typeof`` to form a function declaration.
+  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
