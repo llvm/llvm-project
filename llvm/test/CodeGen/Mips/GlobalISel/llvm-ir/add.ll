@@ -101,27 +101,34 @@ entry:
 define i128 @add_i128(i128 %a, i128 %b) {
 ; MIPS32-LABEL: add_i128:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    move $8, $4
-; MIPS32-NEXT:    move $3, $5
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    move $4, $6
 ; MIPS32-NEXT:    addiu $1, $sp, 16
 ; MIPS32-NEXT:    lw $2, 0($1)
 ; MIPS32-NEXT:    addiu $1, $sp, 20
-; MIPS32-NEXT:    lw $6, 0($1)
+; MIPS32-NEXT:    lw $8, 0($1)
 ; MIPS32-NEXT:    addiu $1, $sp, 24
-; MIPS32-NEXT:    lw $5, 0($1)
+; MIPS32-NEXT:    lw $6, 0($1)
 ; MIPS32-NEXT:    addiu $1, $sp, 28
 ; MIPS32-NEXT:    lw $1, 0($1)
-; MIPS32-NEXT:    addu $2, $2, $8
-; MIPS32-NEXT:    sltu $8, $2, $8
-; MIPS32-NEXT:    addu $3, $6, $3
-; MIPS32-NEXT:    andi $8, $8, 1
-; MIPS32-NEXT:    addu $3, $3, $8
-; MIPS32-NEXT:    sltu $6, $3, $6
-; MIPS32-NEXT:    addu $4, $5, $4
-; MIPS32-NEXT:    andi $6, $6, 1
-; MIPS32-NEXT:    addu $4, $4, $6
-; MIPS32-NEXT:    sltu $5, $4, $5
+; MIPS32-NEXT:    addu $2, $2, $3
+; MIPS32-NEXT:    sltu $9, $2, $3
+; MIPS32-NEXT:    addu $3, $8, $5
+; MIPS32-NEXT:    andi $5, $9, 1
+; MIPS32-NEXT:    addu $3, $3, $5
+; MIPS32-NEXT:    xor $5, $3, $8
+; MIPS32-NEXT:    sltiu $5, $5, 1
+; MIPS32-NEXT:    sltu $8, $3, $8
+; MIPS32-NEXT:    and $5, $5, $9
+; MIPS32-NEXT:    or $8, $5, $8
+; MIPS32-NEXT:    addu $4, $6, $4
+; MIPS32-NEXT:    andi $5, $8, 1
+; MIPS32-NEXT:    addu $4, $4, $5
+; MIPS32-NEXT:    xor $5, $4, $6
+; MIPS32-NEXT:    sltiu $5, $5, 1
+; MIPS32-NEXT:    sltu $6, $4, $6
+; MIPS32-NEXT:    and $5, $5, $8
+; MIPS32-NEXT:    or $5, $5, $6
 ; MIPS32-NEXT:    addu $1, $1, $7
 ; MIPS32-NEXT:    andi $5, $5, 1
 ; MIPS32-NEXT:    addu $5, $1, $5
