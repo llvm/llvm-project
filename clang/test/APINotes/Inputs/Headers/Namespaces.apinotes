@@ -11,6 +11,8 @@ Namespaces:
     Typedefs:
       - Name: my_typedef
         SwiftName: SwiftTypedef
+      - Name: my_using_decl
+        SwiftName: SwiftUsingDecl
     Globals:
       - Name: varInNamespace
         SwiftName: swiftVarInNamespace
