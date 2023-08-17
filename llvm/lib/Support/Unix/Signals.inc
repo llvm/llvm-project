@@ -539,7 +539,7 @@ public:
       uintptr_t StartAddress = Info->dlpi_addr + Phdr->p_vaddr;
       uintptr_t ModuleRelativeAddress = Phdr->p_vaddr;
       std::array<char, 4> ModeStr = modeStrFromFlags(Phdr->p_flags);
-      OS << format("{{{mmap:%016x:%x:load:%d:%s:%016x}}}\n", StartAddress,
+      OS << format("{{{mmap:%#016x:%#x:load:%d:%s:%#016x}}}\n", StartAddress,
                    Phdr->p_memsz, ModuleCount, &ModeStr[0],
                    ModuleRelativeAddress);
     }
@@ -656,6 +656,10 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   return true;
 }
 
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  return false;
+}
 #else
 /// Backtraces are not enabled or we don't yet know how to find all loaded DSOs
 /// on this platform.
