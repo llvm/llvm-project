@@ -89,10 +89,10 @@ public:
 
   /// Do coverage checks.
   /// For each loaded module map, do header coverage check.
-  /// Starting from the directory of the module.map file,
+  /// Starting from the directory of the module.modulemap file,
   /// Find all header files, optionally looking only at files
   /// covered by the include path options, and compare against
-  /// the headers referenced by the module.map file.
+  /// the headers referenced by the module.modulemap file.
   /// Display warnings for unaccounted-for header files.
   /// \param IncludePaths The include paths to check for files.
   ///   (Note that other directories above these paths are ignored.
