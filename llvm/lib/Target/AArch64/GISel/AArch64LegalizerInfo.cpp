@@ -491,13 +491,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
     unsigned DstSize = Query.Types[0].getSizeInBits();
 
-    if (DstSize == 128 && !Query.Types[0].isVector())
-      return false; // Extending to a scalar s128 needs narrowing.
-
-    // Make sure that we have something that will fit in a register, and
-    // make sure it's a power of 2.
-    if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
+    // Handle legal vectors using legalFor
+    if (Query.Types[0].isVector())
       return false;
+
+    if (DstSize < 8 || DstSize >= 128 || !isPowerOf2_32(DstSize))
+      return false; // Extending to a scalar s128 needs narrowing.
 
     const LLT &SrcTy = Query.Types[1];
 
@@ -512,7 +511,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   };
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalIf(ExtLegalFunc)
-      .clampScalar(0, s64, s64); // Just for s128, others are handled above.
+      .legalFor({{v2s64, v2s32}, {v4s32, v4s16}, {v8s16, v8s8}})
+      .clampScalar(0, s64, s64) // Just for s128, others are handled above.
+      .moreElementsToNextPow2(1)
+      .clampMaxNumElements(1, s8, 8)
+      .clampMaxNumElements(1, s16, 4)
+      .clampMaxNumElements(1, s32, 2)
+      // Tries to convert a large EXTEND into two smaller EXTENDs
+      .lowerIf([=](const LegalityQuery &Query) {
+        return (Query.Types[0].getScalarSizeInBits() >
+                Query.Types[1].getScalarSizeInBits() * 2) &&
+               Query.Types[0].isVector() &&
+               (Query.Types[1].getScalarSizeInBits() == 8 ||
+                Query.Types[1].getScalarSizeInBits() == 16);
+      });
 
   getActionDefinitionsBuilder(G_TRUNC)
       .minScalarOrEltIf(
