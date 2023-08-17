@@ -1328,11 +1328,8 @@ void APINotesWriter::addGlobalVariable(std::optional<Context> context,
                                        const GlobalVariableInfo &info,
                                        VersionTuple swiftVersion) {
   IdentifierID variableID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, variableID};
-  else
-    key = {-1, (uint8_t)-1, variableID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key =
+      getTableKey(context, variableID);
   Impl.GlobalVariables[key].push_back({swiftVersion, info});
 }
 
@@ -1341,11 +1338,7 @@ void APINotesWriter::addGlobalFunction(std::optional<Context> context,
                                        const GlobalFunctionInfo &info,
                                        VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, nameID};
-  else
-    key = {-1, (uint8_t)-1, nameID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, nameID);
   Impl.GlobalFunctions[key].push_back({swiftVersion, info});
 }
 
@@ -1360,11 +1353,7 @@ void APINotesWriter::addTag(std::optional<Context> context,
                             llvm::StringRef name, const TagInfo &info,
                             VersionTuple swiftVersion) {
   IdentifierID tagID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, tagID};
-  else
-    key = {-1, (uint8_t)-1, tagID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, tagID);
   Impl.Tags[key].push_back({swiftVersion, info});
 }
 
@@ -1372,11 +1361,7 @@ void APINotesWriter::addTypedef(std::optional<Context> context,
                                 llvm::StringRef name, const TypedefInfo &info,
                                 VersionTuple swiftVersion) {
   IdentifierID typedefID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, typedefID};
-  else
-    key = {-1, (uint8_t)-1, typedefID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, typedefID);
   Impl.Typedefs[key].push_back({swiftVersion, info});
 }
 
