@@ -1,4 +1,4 @@
-@freestanding(expression) macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "MacroImpl", type: "StringifyMacro")
+import Macro
 
 func testStringify(a: Int, b: Int) {
   print("break here")

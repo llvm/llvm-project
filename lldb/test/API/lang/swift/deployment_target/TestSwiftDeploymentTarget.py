@@ -58,19 +58,10 @@ class TestSwiftDeploymentTarget(TestBase):
         os.unlink(self.getBuildArtifact("a.swiftmodule"))
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
-        lldbutil.run_to_source_breakpoint(self,
-                                          "break here",
-                                          lldb.SBFileSpec('main.swift'))
-        self.expect("expression f", substrs=['i = 23'])
-
-        found_no_ast = False
-        found_triple = False
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        for line in logfile:
-            if 'SwiftASTContextForModule("a.out")::DeserializeAllCompilerFlags() -- Found 0 AST file data entries.' in line:
-                found_no_ast = True
-            if 'SwiftASTContextForModule("a.out")::SetTriple(' in line and 'apple-macosx11.0' in line:
-                found_triple = True
-        self.assertTrue(found_no_ast)
-        self.assertTrue(found_triple)
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+        self.expect("expression f", substrs=["i = 23"])
+        self.filecheck('platform shell cat ""%s"' % log, __file__)
+#       CHECK: SwiftASTContextForExpressions::SetTriple({{.*}}apple-macosx11.0.0
+#       CHECK:  SwiftASTContextForExpressions::RegisterSectionModules("a.out") retrieved 0 AST Data blobs
