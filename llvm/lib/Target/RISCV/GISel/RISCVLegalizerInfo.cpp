@@ -22,6 +22,7 @@ using namespace llvm;
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const unsigned XLen = ST.getXLen();
   const LLT XLenLLT = LLT::scalar(XLen);
+  const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
 
   using namespace TargetOpcode;
@@ -91,6 +92,26 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
       .legalFor({p0});
+
+  if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
+    getActionDefinitionsBuilder(G_MUL)
+        .legalFor({XLenLLT})
+        .widenScalarToNextPow2(0)
+        .clampScalar(0, XLenLLT, XLenLLT);
+
+    // clang-format off
+    getActionDefinitionsBuilder({G_SMULH, G_UMULH})
+        .legalFor({XLenLLT})
+        .lower();
+    // clang-format on
+  } else {
+    getActionDefinitionsBuilder(G_MUL)
+        .libcallFor({XLenLLT, DoubleXLenLLT})
+        .widenScalarToNextPow2(0)
+        .clampScalar(0, XLenLLT, DoubleXLenLLT);
+
+    getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
+  }
 
   getLegacyLegalizerInfo().computeTables();
 }
