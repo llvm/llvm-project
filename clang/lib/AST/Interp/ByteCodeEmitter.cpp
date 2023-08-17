@@ -207,6 +207,25 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
   }
 }
 
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  size_t Size = Val.bytesToSerialize();
+
+  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+    Success = false;
+    return;
+  }
+
+  // Access must be aligned!
+  size_t ValPos = align(Code.size());
+  Size = align(Size);
+  assert(aligned(ValPos + Size));
+  Code.resize(ValPos + Size);
+
+  Val.serialize(Code.data() + ValPos);
+}
+
 template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
   bool Success = true;
