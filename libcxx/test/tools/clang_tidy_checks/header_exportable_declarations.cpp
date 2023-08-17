@@ -38,15 +38,18 @@ header_exportable_declarations::header_exportable_declarations(
       filename_(Options.get("Filename", "")),
       file_type_(Options.get("FileType", header_exportable_declarations::FileType::Unknown)),
       extra_header_(Options.get("ExtraHeader", "")) {
-  if (filename_.empty())
-    llvm::errs() << "No filename is provided.\n";
-
   switch (file_type_) {
   case header_exportable_declarations::FileType::Header:
-    /* DO NOTHING */
+    if (filename_.empty())
+      llvm::errs() << "No filename is provided.\n";
+    if (extra_header_.empty())
+      extra_header_ = "$^"; // Use a never matching regex to silence an error message.
     break;
-  case header_exportable_declarations::FileType::Module:
   case header_exportable_declarations::FileType::ModulePartition:
+    if (filename_.empty())
+      llvm::errs() << "No filename is provided.\n";
+    [[fallthrough]];
+  case header_exportable_declarations::FileType::Module:
     if (!extra_header_.empty())
       llvm::errs() << "Extra headers are not allowed for modules.\n";
     if (Options.get("SkipDeclarations"))
