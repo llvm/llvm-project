@@ -394,7 +394,7 @@ public:
 
   bool useSVEForFixedLengthVectors() const {
     if (!isNeonAvailable())
-      return true;
+      return hasSVE();
 
     // Prefer NEON unless larger SVE registers are available.
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
