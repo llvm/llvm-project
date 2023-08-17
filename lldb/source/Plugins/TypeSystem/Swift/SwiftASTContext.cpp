@@ -12,6 +12,7 @@
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -1033,10 +1034,10 @@ SwiftASTContextForModule::~SwiftASTContextForModule() {
 
 /// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath).
 static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
-                                  FileSpec resource_dir, llvm::Triple triple) {
+                                  StringRef resource_dir, llvm::Triple triple) {
   // Make sure the triple is right:
   invocation.setTargetTriple(triple.str());
-  invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
+  invocation.setRuntimeResourcePath(resource_dir);
 }
 
 static const char *getImportFailureString(swift::serialization::Status status) {
@@ -1928,8 +1929,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   std::string resource_dir =
       HostInfo::GetSwiftResourceDir(triple, swift_ast_sp->GetPlatformSDKPath());
-  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
-                        FileSpec(resource_dir), triple);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
 
   // Apply the working directory to all relative paths.
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
@@ -2388,8 +2389,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   llvm::Triple triple = swift_ast_sp->GetTriple();
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());
-  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
-                        FileSpec(resource_dir), triple);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
   const bool discover_implicit_search_paths =
       target.GetSwiftDiscoverImplicitSearchPaths();
 
@@ -2811,8 +2812,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   llvm::Triple triple(GetTriple());
   std::string resource_dir =
       HostInfo::GetSwiftResourceDir(triple, GetPlatformSDKPath());
-  ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
-                        triple);
+  ConfigureResourceDirs(GetCompilerInvocation(), resource_dir, triple);
 
   std::string sdk_path = GetPlatformSDKPath().str();
   if (TargetSP target_sp = GetTargetWP().lock())
@@ -2851,6 +2851,20 @@ void SwiftASTContext::InitializeSearchPathOptions(
     std::vector<std::string> &lpaths =
         invocation.getSearchPathOptions().LibrarySearchPaths;
     lpaths.insert(lpaths.begin(), "/usr/lib/swift");
+  }
+
+  // Set the default host plugin paths.
+  llvm::SmallString<256> plugin_path;
+  llvm::sys::path::append(plugin_path, resource_dir, "host", "plugins");
+  if (!FileSystem::Instance().Exists(plugin_path)) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Host plugin path %s does not exist",
+               plugin_path.str().str().c_str());
+  } else {
+    std::string server = SwiftASTContext::GetPluginServer(plugin_path);
+    if (!server.empty() && FileSystem::Instance().Exists(server))
+      invocation.getSearchPathOptions().PluginSearchOpts.emplace_back(
+          swift::PluginSearchOption::ExternalPluginPath{plugin_path.str().str(),
+                                                        server});
   }
 
   llvm::StringMap<bool> processed;
@@ -8016,8 +8030,7 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
     std::string description, TypeSystemSwiftTypeRef &typeref_typesystem)
-    : SwiftASTContext(std::move(description), typeref_typesystem),
-      m_persistent_state_up(new SwiftPersistentExpressionState) {
+    : SwiftASTContext(std::move(description), typeref_typesystem) {
   assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(m_typeref_typesystem));
 }
 
@@ -8066,7 +8079,7 @@ UserExpression *SwiftASTContextForExpressions::GetUserExpression(
 
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
-  return m_persistent_state_up.get();
+  return GetTypeSystemSwiftTypeRef().GetPersistentExpressionState();
 }
 
 static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
@@ -8212,24 +8225,18 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   return swift_module;
 }
 
-bool SwiftASTContext::GetImplicitImports(
-    SwiftASTContext &swift_ast_context, SymbolContext &sc,
-    ExecutionContextScope &exe_scope, lldb::ProcessSP process_sp,
+bool SwiftASTContextForExpressions::GetImplicitImports(
+    SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
   LLDB_SCOPED_TIMER();
-  if (!swift_ast_context.GetCompileUnitImports(sc, process_sp, modules,
-                                               error)) {
+  if (!GetCompileUnitImports(sc, process_sp, modules, error)) {
     return false;
   }
 
-  auto *persistent_expression_state =
-      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
-
   // Get the hand-loaded modules from the SwiftPersistentExpressionState.
-  for (auto &module_pair :
-       persistent_expression_state->GetHandLoadedModules()) {
+  for (auto &module_pair : m_hand_loaded_modules) {
 
     auto &attributed_import = module_pair.second;
 
@@ -8243,7 +8250,7 @@ bool SwiftASTContext::GetImplicitImports(
     // Otherwise, try reloading the ModuleDecl using the module name.
     SourceModule module_info;
     module_info.path.emplace_back(module_pair.first());
-    auto *module = LoadOneModule(module_info, swift_ast_context, process_sp,
+    auto *module = LoadOneModule(module_info, *this, process_sp,
                                  /*import_dylibs=*/false, error);
     if (!module)
       return false;
@@ -8254,8 +8261,8 @@ bool SwiftASTContext::GetImplicitImports(
   return true;
 }
 
-void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
-                                          ExecutionContextScope &exe_scope) {
+void SwiftASTContextForExpressions::LoadImplicitModules(
+    TargetSP target, ProcessSP process, ExecutionContextScope &exe_scope) {
   auto load_module = [&](ConstString module_name) {
     SourceModule module_info;
     module_info.path.push_back(module_name);
@@ -8268,8 +8275,6 @@ void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
       return;
     }
 
-    auto *persistent_expression_state =
-        target->GetSwiftPersistentExpressionState(exe_scope);
     swift::ModuleDecl *module = GetModule(module_info, err);
     if (err.Fail()) {
       LOG_PRINTF(
@@ -8279,24 +8284,16 @@ void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
       return;
     }
 
-    persistent_expression_state->AddHandLoadedModule(
-        module_name, swift::ImportedModule(module));
+    AddHandLoadedModule(module_name, swift::ImportedModule(module));
   };
 
   load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME));
   load_module(ConstString(swift::SWIFT_CONCURRENCY_NAME));
 }
 
-bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
-                                       SymbolContext &sc,
-                                       ExecutionContextScope &exe_scope,
-                                       lldb::ProcessSP process_sp,
-                                       swift::SourceFile &source_file,
-                                       Status &error) {
+bool SwiftASTContextForExpressions::CacheUserImports(
+    lldb::ProcessSP process_sp, swift::SourceFile &source_file, Status &error) {
   llvm::SmallString<1> m_description;
-
-  auto *persistent_expression_state =
-      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
   auto src_file_imports = source_file.getImports();
 
@@ -8333,13 +8330,12 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        if (!LoadOneModule(module_info, swift_ast_context, process_sp,
+        if (!LoadOneModule(module_info, *this, process_sp,
                            /*import_dylibs=*/true, error))
           return false;
 
         // How do we tell we are in REPL or playground mode?
-        persistent_expression_state->AddHandLoadedModule(module_const_str,
-                                                         attributed_import);
+        AddHandLoadedModule(module_const_str, attributed_import);
       }
     }
   }

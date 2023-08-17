@@ -29,6 +29,7 @@
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #endif //LLDB_ENABLE_SWIFT
 
 using namespace lldb;

@@ -27,6 +27,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
@@ -1376,8 +1377,8 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, Module &module)
-  : TypeSystemSwiftTypeRef(module),
-    m_target_wp(target.shared_from_this()) {
+    : TypeSystemSwiftTypeRef(module), m_target_wp(target.shared_from_this()),
+      m_persistent_state_up(new SwiftPersistentExpressionState) {
   m_description = "TypeSystemSwiftTypeRefForExpressions(PerModuleFallback)";
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
@@ -1392,7 +1393,8 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
     lldb::LanguageType language, Target &target, const char *extra_options)
-  : m_target_wp(target.shared_from_this()) {
+    : m_target_wp(target.shared_from_this()),
+      m_persistent_state_up(new SwiftPersistentExpressionState) {
   m_description = "TypeSystemSwiftTypeRefForExpressions";
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
@@ -1417,7 +1419,7 @@ Status TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
     process_sp = target_sp->GetProcessSP();
   if (!m_swift_ast_context_initialized)
     // Stash sc, the import will happen lazily when SwiftASTContext is created.
-    m_initial_symbol_context = std::make_unique<SymbolContext>(sc);
+    m_initial_symbol_context_up = std::make_unique<SymbolContext>(sc);
   else if (auto *swift_ast_ctx = GetSwiftASTContext())
     swift_ast_ctx->PerformCompileUnitImports(sc, process_sp, status);
   return status;
@@ -1436,10 +1438,7 @@ UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
 
 PersistentExpressionState *
 TypeSystemSwiftTypeRefForExpressions::GetPersistentExpressionState() {
-  auto *swift_ast_ctx = GetSwiftASTContext();
-  if (!swift_ast_ctx)
-    return nullptr;
-  return swift_ast_ctx->GetPersistentExpressionState();
+  return m_persistent_state_up.get();
 }
 
 SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
@@ -1476,14 +1475,14 @@ TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
     return nullptr;
 
   assert(llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context));
-  if (m_initial_symbol_context) {
+  if (m_initial_symbol_context_up) {
     Status error;
     lldb::ProcessSP process_sp;
     if (TargetSP target_sp = GetTargetWP().lock())
       process_sp = target_sp->GetProcessSP();
-    m_swift_ast_context->PerformCompileUnitImports(*m_initial_symbol_context,
+    m_swift_ast_context->PerformCompileUnitImports(*m_initial_symbol_context_up,
                                                    process_sp, error);
-    m_initial_symbol_context.reset();
+    m_initial_symbol_context_up.reset();
   }
 
   return m_swift_ast_context;

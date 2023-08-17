@@ -12,6 +12,7 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/PluginManager.h"
 #include <lldb/lldb-enumerations.h>
