@@ -130,6 +130,7 @@ public:
                             ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
+  Expected<bool> isMaterialized(ObjectRef Ref) const final;
   Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
   void
   loadIfExistsAsync(ObjectRef Ref,
@@ -223,18 +224,22 @@ PluginObjectStore::getReference(const CASID &ID) const {
           Ctx->c_cas, llcas_digest_t{Hash.data(), Hash.size()}, &c_id, &c_err))
     report_fatal_error(Ctx->errorAndDispose(c_err));
 
-  llcas_lookup_result_t c_result =
-      Ctx->Functions.cas_contains_object(Ctx->c_cas, c_id, &c_err);
+  return ObjectRef::getFromInternalRef(*this, c_id.opaque);
+}
+
+Expected<bool> PluginObjectStore::isMaterialized(ObjectRef Ref) const {
+  llcas_objectid_t c_id{Ref.getInternalRef(*this)};
+  char *c_err = nullptr;
+  llcas_lookup_result_t c_result = Ctx->Functions.cas_contains_object(
+      Ctx->c_cas, c_id, /*globally=*/false, &c_err);
   switch (c_result) {
   case LLCAS_LOOKUP_RESULT_SUCCESS:
-    return ObjectRef::getFromInternalRef(*this, c_id.opaque);
+    return true;
   case LLCAS_LOOKUP_RESULT_NOTFOUND:
-    return std::nullopt;
+    return false;
   case LLCAS_LOOKUP_RESULT_ERROR:
-    report_fatal_error(Ctx->errorAndDispose(c_err));
+    return Ctx->errorAndDispose(c_err);
   }
-
-  return ObjectRef::getFromInternalRef(*this, c_id.opaque);
 }
 
 Expected<std::optional<ObjectHandle>>

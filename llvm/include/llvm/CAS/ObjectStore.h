@@ -151,6 +151,10 @@ public:
   /// Returns \c None if the object is not stored in this CAS.
   virtual std::optional<ObjectRef> getReference(const CASID &ID) const = 0;
 
+  /// \returns true if the object is directly available from the local CAS, for
+  /// implementations that have this kind of distinction.
+  virtual Expected<bool> isMaterialized(ObjectRef Ref) const = 0;
+
   /// Validate the underlying object referred by CASID.
   virtual Error validate(const CASID &ID) = 0;
 
