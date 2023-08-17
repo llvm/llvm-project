@@ -556,7 +556,7 @@ private:
 
   // If the option --debug-info-unopt is not used, create a DebugLineRef CAS
   // object per function contribution to the line table.
-  Error createOptimizedLineSection(StringRef DebugLineStrRef);
+  Expected<uint64_t> createOptimizedLineSection(StringRef DebugLineStrRef);
 
   /// If a DWARF Debug Info section exists, create a DebugInfoCURef CAS object
   /// for each compile unit (CU) inside the section, and a DebugAbbrevRef CAS
@@ -762,7 +762,7 @@ Expected<SmallVector<RefTy>> loadAllRefs(MCObjectProxy Obj) {
 /// * NewBlockCallback is called to indicate that data from a new CAS block is
 /// about to be read.
 Error visitDebugInfo(
-    SmallVector<StringRef, 0> &TotAbbrevEntries,
+    SmallVectorImpl<StringRef> &TotAbbrevEntries,
     Expected<DIETopLevelRef> TopLevelRef,
     std::function<void(StringRef)> HeaderCallback,
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,

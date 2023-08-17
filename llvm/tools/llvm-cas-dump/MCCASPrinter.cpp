@@ -186,6 +186,7 @@ Error MCCASPrinter::printSimpleNested(MCObjectProxy Ref, CASDWARFObject &Obj,
           return Error::success();
         }))
       return E;
+    return Error::success();
   }
 
   return Ref.forEachReference(

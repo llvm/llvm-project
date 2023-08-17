@@ -5,30 +5,30 @@
 ; DWARF-DIE:        mc:debug_DIE_top_level llvmcas://{{.*}}
 ; DWARF-DIE-NEXT:   Header = [CD 0 0 0 4 0 0 0 0 0 8]
 ; DWARF-DIE-NEXT:   CAS Block: llvmcas://{{.*}}
-; DWARF-DIE-NEXT:   DW_TAG_compile_unit  AbbrevCode = 2
+; DWARF-DIE-NEXT:   DW_TAG_compile_unit  AbbrevIdx = 2
 ; DWARF-DIE:        CAS Block: llvmcas://{{.*}}
-; DWARF-DIE-NEXT:   DW_TAG_subprogram    AbbrevCode = 3
+; DWARF-DIE-NEXT:   DW_TAG_subprogram    AbbrevIdx = 3
 ; DWARF-DIE:        CAS Block: llvmcas://{{.*}}
-; DWARF-DIE-NEXT:   DW_TAG_structure_type    AbbrevCode = 6
+; DWARF-DIE-NEXT:   DW_TAG_structure_type    AbbrevIdx = 6
 ; DWARF-DIE-NEXT:     DW_AT_calling_convention       DW_FORM_data1              [dedups]   [5]
 ; DWARF-DIE-NEXT:     DW_AT_name                     DW_FORM_strp_cas           [distinct] [92 1]
 ; DWARF-DIE-NEXT:     DW_AT_byte_size                DW_FORM_data1              [dedups]   [20]
 ; DWARF-DIE-NEXT:     DW_AT_decl_file                DW_FORM_data1              [distinct] [1]
 ; DWARF-DIE-NEXT:     DW_AT_decl_line                DW_FORM_data1              [dedups]   [2]
-; DWARF-DIE-NEXT:     DW_TAG_member             AbbrevCode = 7
+; DWARF-DIE-NEXT:     DW_TAG_member             AbbrevIdx = 7
 ; DWARF-DIE-NEXT:       DW_AT_name                     DW_FORM_strp_cas           [distinct] [9B 1]
 ; DWARF-DIE-NEXT:       DW_AT_type                     DW_FORM_ref4_cas           [distinct] [5B]
 ; DWARF-DIE-NEXT:       DW_AT_decl_file                DW_FORM_data1              [distinct] [1]
 ; DWARF-DIE-NEXT:       DW_AT_decl_line                DW_FORM_data1              [dedups]   [4]
 ; DWARF-DIE-NEXT:       DW_AT_data_member_location     DW_FORM_data1              [dedups]   [0]
 ; DWARF-DIE-NEXT:       DW_AT_accessibility            DW_FORM_data1              [dedups]   [3]
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 7
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 7
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 7
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 8
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 8
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 8
-; DWARF-DIE:          DW_TAG_member             AbbrevCode = 8
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 7
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 7
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 7
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 8
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 8
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 8
+; DWARF-DIE:          DW_TAG_member             AbbrevIdx = 8
 
 
 target triple = "arm64-apple-macosx13.0.0"

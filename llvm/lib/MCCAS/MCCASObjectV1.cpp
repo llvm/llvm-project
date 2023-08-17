@@ -422,7 +422,7 @@ static Expected<SmallVector<RefTy, 0>> findRefs(MCCASReader &Reader,
       TopRefs.push_back(*TopRef);
   }
   if (TopRefs.size())
-    return TopRefs;
+    return std::move(TopRefs);
   return createStringError(inconvertibleErrorCode(),
                            "failed to find reference");
 }
@@ -430,15 +430,9 @@ static Expected<SmallVector<RefTy, 0>> findRefs(MCCASReader &Reader,
 template <typename RefTy>
 static Expected<RefTy> findRef(MCCASReader &Reader,
                                ArrayRef<cas::ObjectRef> Refs) {
-  for (auto ID : Refs) {
-    auto Node = Reader.getObjectProxy(ID);
-    if (!Node)
-      return Node.takeError();
-    if (auto TopRef = RefTy::Cast(*Node))
-      return *TopRef;
-  }
-  return createStringError(inconvertibleErrorCode(),
-                           "failed to find reference");
+  auto FoundRefs = findRefs<RefTy>(Reader, Refs);
+  if (!FoundRefs) return FoundRefs.takeError();
+  return FoundRefs->front();
 }
 
 Expected<uint64_t> materializeAbbrevFromTagImpl(MCCASReader &Reader,
@@ -972,6 +966,11 @@ materializeDebugLineSection(MCCASReader &Reader,
       continue;
     }
     if (auto DistinctRef = DistinctDebugLineRef::Cast(*Node)) {
+      if (DistinctDebugLineRefSeen) {
+        // This is the start of a new line table.
+        DistinctOffset = 0;
+        DistinctData.clear();
+      }
 
       DistinctDebugLineRefSeen = true;
       auto Data = DistinctRef->getData();
@@ -1935,7 +1934,8 @@ inline void copyData(SmallVector<char, 0> &Data, StringRef DebugLineStrRef,
   CurrOffset = Cursor.tell();
 }
 
-Error MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
+Expected<uint64_t>
+MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
   DWARFDataExtractor LineTableDataReader(DebugLineStrRef,
                                          Asm.getBackend().Endian, 8);
   auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
@@ -2033,7 +2033,7 @@ Error MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
   addNode(*DistinctRef);
   for (auto &Node : LineTableVector)
     addNode(Node);
-  return Error::success();
+  return *OffsetPtr;
 }
 
 Error MCCASBuilder::createLineSection() {
@@ -2055,8 +2055,12 @@ Error MCCASBuilder::createLineSection() {
     addNode(*DbgLineUnoptRef);
   } else {
     StringRef DebugLineStrRef(DebugLineData->data(), DebugLineData->size());
-    if (auto E = createOptimizedLineSection(DebugLineStrRef))
-      return E;
+    while (DebugLineStrRef.size()) {
+      auto BytesWritten = createOptimizedLineSection(DebugLineStrRef);
+      if (!BytesWritten)
+        return BytesWritten.takeError();
+      DebugLineStrRef = DebugLineStrRef.drop_front(*BytesWritten);
+    }
   }
 
   if (auto E = createPaddingRef(DwarfSections.Line))
@@ -3031,7 +3035,7 @@ Error DIEVisitor::visitDIERef(DIEDataRef StartDIERef) {
 }
 
 Error mccasformats::v1::visitDebugInfo(
-    SmallVector<StringRef, 0> &TotAbbrevEntries,
+    SmallVectorImpl<StringRef> &TotAbbrevEntries,
     Expected<DIETopLevelRef> MaybeTopLevelRef,
     std::function<void(StringRef)> HeaderCallback,
     std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
@@ -3052,8 +3056,7 @@ Error mccasformats::v1::visitDebugInfo(
     return E;
   HeaderCallback(toStringRef(HeaderData));
 
-  TotAbbrevEntries.append(LoadedTopRef->AbbrevEntries.begin(),
-                          LoadedTopRef->AbbrevEntries.end());
+  append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
   DIEVisitor Visitor{TotAbbrevEntries, DistinctReader,   DistinctData,
                      HeaderCallback,   StartTagCallback, AttrCallback,
                      EndTagCallback,   NewBlockCallback};
