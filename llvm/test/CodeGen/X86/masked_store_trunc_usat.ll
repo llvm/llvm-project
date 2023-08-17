@@ -2205,17 +2205,17 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE4-LABEL: truncstore_v2i64_v2i16:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
-; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    movapd {{.*#+}} xmm3 = [65535,65535]
+; SSE4-NEXT:    pxor %xmm3, %xmm3
+; SSE4-NEXT:    movapd {{.*#+}} xmm4 = [65535,65535]
 ; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = [9223372036854775808,9223372036854775808]
 ; SSE4-NEXT:    pxor %xmm0, %xmm5
 ; SSE4-NEXT:    movdqa {{.*#+}} xmm0 = [9223372036854841343,9223372036854841343]
 ; SSE4-NEXT:    pcmpgtq %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
-; SSE4-NEXT:    packusdw %xmm3, %xmm3
-; SSE4-NEXT:    packusdw %xmm3, %xmm3
-; SSE4-NEXT:    pcmpeqq %xmm1, %xmm4
-; SSE4-NEXT:    movmskpd %xmm4, %eax
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
+; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,2,2,3]
+; SSE4-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; SSE4-NEXT:    pcmpeqq %xmm1, %xmm3
+; SSE4-NEXT:    movmskpd %xmm3, %eax
 ; SSE4-NEXT:    xorl $3, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne .LBB7_1
@@ -2225,11 +2225,11 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE4-NEXT:  .LBB7_4: # %else2
 ; SSE4-NEXT:    retq
 ; SSE4-NEXT:  .LBB7_1: # %cond.store
-; SSE4-NEXT:    pextrw $0, %xmm3, (%rdi)
+; SSE4-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
 ; SSE4-NEXT:    je .LBB7_4
 ; SSE4-NEXT:  .LBB7_3: # %cond.store1
-; SSE4-NEXT:    pextrw $1, %xmm3, 2(%rdi)
+; SSE4-NEXT:    pextrw $1, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: truncstore_v2i64_v2i16:
@@ -2242,8 +2242,8 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX1-NEXT:    # xmm5 = mem[0,0]
 ; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovmskpd %xmm1, %eax
 ; AVX1-NEXT:    xorl $3, %eax
@@ -2271,8 +2271,8 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm5 = [9223372036854841343,9223372036854841343]
 ; AVX2-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
 ; AVX2-NEXT:    vblendvpd %xmm4, %xmm0, %xmm3, %xmm0
-; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovmskpd %xmm1, %eax
 ; AVX2-NEXT:    xorl $3, %eax
