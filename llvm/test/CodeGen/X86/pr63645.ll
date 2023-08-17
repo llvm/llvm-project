@@ -17,6 +17,8 @@ define i32 @main() #1 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $0, c(%rip)
 ; CHECK-NEXT:    movq $64, p(%rip)
+; CHECK-NEXT:    movabsq $214787019555673, %rax # imm = 0xC3590000C359
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpl $42828, -{{[0-9]+}}(%rsp) # imm = 0xA74C
 ; CHECK-NEXT:    jg .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then.1.i
