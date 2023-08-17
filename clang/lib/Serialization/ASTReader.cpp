@@ -208,11 +208,12 @@ bool ChainedASTReaderListener::ReadHeaderSearchOptions(
 }
 
 bool ChainedASTReaderListener::ReadPreprocessorOptions(
-    const PreprocessorOptions &PPOpts, bool Complain,
+    const PreprocessorOptions &PPOpts, bool ReadMacros, bool Complain,
     std::string &SuggestedPredefines) {
-  return First->ReadPreprocessorOptions(PPOpts, Complain,
+  return First->ReadPreprocessorOptions(PPOpts, ReadMacros, Complain,
                                         SuggestedPredefines) ||
-         Second->ReadPreprocessorOptions(PPOpts, Complain, SuggestedPredefines);
+         Second->ReadPreprocessorOptions(PPOpts, ReadMacros, Complain,
+                                         SuggestedPredefines);
 }
 
 void ChainedASTReaderListener::ReadCounter(const serialization::ModuleFile &M,
@@ -658,92 +659,95 @@ enum OptionValidation {
 ///        are no differences in the options between the two.
 static bool checkPreprocessorOptions(
     const PreprocessorOptions &PPOpts,
-    const PreprocessorOptions &ExistingPPOpts, DiagnosticsEngine *Diags,
-    FileManager &FileMgr, std::string &SuggestedPredefines,
-    const LangOptions &LangOpts,
+    const PreprocessorOptions &ExistingPPOpts, bool ReadMacros,
+    DiagnosticsEngine *Diags, FileManager &FileMgr,
+    std::string &SuggestedPredefines, const LangOptions &LangOpts,
     OptionValidation Validation = OptionValidateContradictions) {
-  // Check macro definitions.
-  MacroDefinitionsMap ASTFileMacros;
-  collectMacroDefinitions(PPOpts, ASTFileMacros);
-  MacroDefinitionsMap ExistingMacros;
-  SmallVector<StringRef, 4> ExistingMacroNames;
-  collectMacroDefinitions(ExistingPPOpts, ExistingMacros, &ExistingMacroNames);
+  if (ReadMacros) {
+    // Check macro definitions.
+    MacroDefinitionsMap ASTFileMacros;
+    collectMacroDefinitions(PPOpts, ASTFileMacros);
+    MacroDefinitionsMap ExistingMacros;
+    SmallVector<StringRef, 4> ExistingMacroNames;
+    collectMacroDefinitions(ExistingPPOpts, ExistingMacros,
+                            &ExistingMacroNames);
 
-  // Use a line marker to enter the <command line> file, as the defines and
-  // undefines here will have come from the command line.
-  SuggestedPredefines += "# 1 \"<command line>\" 1\n";
+    // Use a line marker to enter the <command line> file, as the defines and
+    // undefines here will have come from the command line.
+    SuggestedPredefines += "# 1 \"<command line>\" 1\n";
 
-  for (unsigned I = 0, N = ExistingMacroNames.size(); I != N; ++I) {
-    // Dig out the macro definition in the existing preprocessor options.
-    StringRef MacroName = ExistingMacroNames[I];
-    std::pair<StringRef, bool> Existing = ExistingMacros[MacroName];
+    for (unsigned I = 0, N = ExistingMacroNames.size(); I != N; ++I) {
+      // Dig out the macro definition in the existing preprocessor options.
+      StringRef MacroName = ExistingMacroNames[I];
+      std::pair<StringRef, bool> Existing = ExistingMacros[MacroName];
 
-    // Check whether we know anything about this macro name or not.
-    llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/>>::iterator Known =
-        ASTFileMacros.find(MacroName);
-    if (Validation == OptionValidateNone || Known == ASTFileMacros.end()) {
-      if (Validation == OptionValidateStrictMatches) {
-        // If strict matches are requested, don't tolerate any extra defines on
-        // the command line that are missing in the AST file.
+      // Check whether we know anything about this macro name or not.
+      llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/>>::iterator Known =
+          ASTFileMacros.find(MacroName);
+      if (Validation == OptionValidateNone || Known == ASTFileMacros.end()) {
+        if (Validation == OptionValidateStrictMatches) {
+          // If strict matches are requested, don't tolerate any extra defines
+          // on the command line that are missing in the AST file.
+          if (Diags) {
+            Diags->Report(diag::err_pch_macro_def_undef) << MacroName << true;
+          }
+          return true;
+        }
+        // FIXME: Check whether this identifier was referenced anywhere in the
+        // AST file. If so, we should reject the AST file. Unfortunately, this
+        // information isn't in the control block. What shall we do about it?
+
+        if (Existing.second) {
+          SuggestedPredefines += "#undef ";
+          SuggestedPredefines += MacroName.str();
+          SuggestedPredefines += '\n';
+        } else {
+          SuggestedPredefines += "#define ";
+          SuggestedPredefines += MacroName.str();
+          SuggestedPredefines += ' ';
+          SuggestedPredefines += Existing.first.str();
+          SuggestedPredefines += '\n';
+        }
+        continue;
+      }
+
+      // If the macro was defined in one but undef'd in the other, we have a
+      // conflict.
+      if (Existing.second != Known->second.second) {
         if (Diags) {
-          Diags->Report(diag::err_pch_macro_def_undef) << MacroName << true;
+          Diags->Report(diag::err_pch_macro_def_undef)
+              << MacroName << Known->second.second;
         }
         return true;
       }
-      // FIXME: Check whether this identifier was referenced anywhere in the
-      // AST file. If so, we should reject the AST file. Unfortunately, this
-      // information isn't in the control block. What shall we do about it?
 
-      if (Existing.second) {
-        SuggestedPredefines += "#undef ";
-        SuggestedPredefines += MacroName.str();
-        SuggestedPredefines += '\n';
-      } else {
-        SuggestedPredefines += "#define ";
-        SuggestedPredefines += MacroName.str();
-        SuggestedPredefines += ' ';
-        SuggestedPredefines += Existing.first.str();
-        SuggestedPredefines += '\n';
+      // If the macro was #undef'd in both, or if the macro bodies are
+      // identical, it's fine.
+      if (Existing.second || Existing.first == Known->second.first) {
+        ASTFileMacros.erase(Known);
+        continue;
       }
-      continue;
-    }
 
-    // If the macro was defined in one but undef'd in the other, we have a
-    // conflict.
-    if (Existing.second != Known->second.second) {
+      // The macro bodies differ; complain.
       if (Diags) {
-        Diags->Report(diag::err_pch_macro_def_undef)
-          << MacroName << Known->second.second;
+        Diags->Report(diag::err_pch_macro_def_conflict)
+            << MacroName << Known->second.first << Existing.first;
       }
       return true;
     }
 
-    // If the macro was #undef'd in both, or if the macro bodies are identical,
-    // it's fine.
-    if (Existing.second || Existing.first == Known->second.first) {
-      ASTFileMacros.erase(Known);
-      continue;
-    }
+    // Leave the <command line> file and return to <built-in>.
+    SuggestedPredefines += "# 1 \"<built-in>\" 2\n";
 
-    // The macro bodies differ; complain.
-    if (Diags) {
-      Diags->Report(diag::err_pch_macro_def_conflict)
-        << MacroName << Known->second.first << Existing.first;
-    }
-    return true;
-  }
-
-  // Leave the <command line> file and return to <built-in>.
-  SuggestedPredefines += "# 1 \"<built-in>\" 2\n";
-
-  if (Validation == OptionValidateStrictMatches) {
-    // If strict matches are requested, don't tolerate any extra defines in
-    // the AST file that are missing on the command line.
-    for (const auto &MacroName : ASTFileMacros.keys()) {
-      if (Diags) {
-        Diags->Report(diag::err_pch_macro_def_undef) << MacroName << false;
+    if (Validation == OptionValidateStrictMatches) {
+      // If strict matches are requested, don't tolerate any extra defines in
+      // the AST file that are missing on the command line.
+      for (const auto &MacroName : ASTFileMacros.keys()) {
+        if (Diags) {
+          Diags->Report(diag::err_pch_macro_def_undef) << MacroName << false;
+        }
+        return true;
       }
-      return true;
     }
   }
 
@@ -805,24 +809,22 @@ static bool checkPreprocessorOptions(
 }
 
 bool PCHValidator::ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                           bool Complain,
+                                           bool ReadMacros, bool Complain,
                                            std::string &SuggestedPredefines) {
   const PreprocessorOptions &ExistingPPOpts = PP.getPreprocessorOpts();
 
-  return checkPreprocessorOptions(PPOpts, ExistingPPOpts,
-                                  Complain? &Reader.Diags : nullptr,
-                                  PP.getFileManager(),
-                                  SuggestedPredefines,
-                                  PP.getLangOpts());
+  return checkPreprocessorOptions(
+      PPOpts, ExistingPPOpts, ReadMacros, Complain ? &Reader.Diags : nullptr,
+      PP.getFileManager(), SuggestedPredefines, PP.getLangOpts());
 }
 
 bool SimpleASTReaderListener::ReadPreprocessorOptions(
-                                  const PreprocessorOptions &PPOpts,
-                                  bool Complain,
-                                  std::string &SuggestedPredefines) {
-  return checkPreprocessorOptions(PPOpts, PP.getPreprocessorOpts(), nullptr,
-                                  PP.getFileManager(), SuggestedPredefines,
-                                  PP.getLangOpts(), OptionValidateNone);
+    const PreprocessorOptions &PPOpts, bool ReadMacros, bool Complain,
+    std::string &SuggestedPredefines) {
+  return checkPreprocessorOptions(PPOpts, PP.getPreprocessorOpts(), ReadMacros,
+                                  nullptr, PP.getFileManager(),
+                                  SuggestedPredefines, PP.getLangOpts(),
+                                  OptionValidateNone);
 }
 
 /// Check the header search options deserialized from the control block
@@ -5274,10 +5276,10 @@ namespace {
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                 bool Complain,
+                                 bool ReadMacros, bool Complain,
                                  std::string &SuggestedPredefines) override {
       return checkPreprocessorOptions(
-          PPOpts, ExistingPPOpts, /*Diags=*/nullptr, FileMgr,
+          PPOpts, ExistingPPOpts, ReadMacros, /*Diags=*/nullptr, FileMgr,
           SuggestedPredefines, ExistingLangOpts,
           StrictOptionMatches ? OptionValidateStrictMatches
                               : OptionValidateContradictions);
@@ -6048,10 +6050,13 @@ bool ASTReader::ParsePreprocessorOptions(const RecordData &Record,
   unsigned Idx = 0;
 
   // Macro definitions/undefs
-  for (unsigned N = Record[Idx++]; N; --N) {
-    std::string Macro = ReadString(Record, Idx);
-    bool IsUndef = Record[Idx++];
-    PPOpts.Macros.push_back(std::make_pair(Macro, IsUndef));
+  bool ReadMacros = Record[Idx++];
+  if (ReadMacros) {
+    for (unsigned N = Record[Idx++]; N; --N) {
+      std::string Macro = ReadString(Record, Idx);
+      bool IsUndef = Record[Idx++];
+      PPOpts.Macros.push_back(std::make_pair(Macro, IsUndef));
+    }
   }
 
   // Includes
@@ -6070,7 +6075,7 @@ bool ASTReader::ParsePreprocessorOptions(const RecordData &Record,
   PPOpts.ObjCXXARCStandardLibrary =
     static_cast<ObjCXXARCStandardLibraryKind>(Record[Idx++]);
   SuggestedPredefines.clear();
-  return Listener.ReadPreprocessorOptions(PPOpts, Complain,
+  return Listener.ReadPreprocessorOptions(PPOpts, ReadMacros, Complain,
                                           SuggestedPredefines);
 }
 

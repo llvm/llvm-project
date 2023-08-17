@@ -1467,11 +1467,19 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Record.clear();
   const PreprocessorOptions &PPOpts = PP.getPreprocessorOpts();
 
-  // Macro definitions.
-  Record.push_back(PPOpts.Macros.size());
-  for (unsigned I = 0, N = PPOpts.Macros.size(); I != N; ++I) {
-    AddString(PPOpts.Macros[I].first, Record);
-    Record.push_back(PPOpts.Macros[I].second);
+  // If we're building an implicit module with a context hash, the importer is
+  // guaranteed to have the same macros defined on the command line. Skip
+  // writing them.
+  bool SkipMacros = BuildingImplicitModule && !HSOpts.DisableModuleHash;
+  bool WriteMacros = !SkipMacros;
+  Record.push_back(WriteMacros);
+  if (WriteMacros) {
+    // Macro definitions.
+    Record.push_back(PPOpts.Macros.size());
+    for (unsigned I = 0, N = PPOpts.Macros.size(); I != N; ++I) {
+      AddString(PPOpts.Macros[I].first, Record);
+      Record.push_back(PPOpts.Macros[I].second);
+    }
   }
 
   // Includes
@@ -4540,9 +4548,10 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer,
                      InMemoryModuleCache &ModuleCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-                     bool IncludeTimestamps)
+                     bool IncludeTimestamps, bool BuildingImplicitModule)
     : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
-      IncludeTimestamps(IncludeTimestamps) {
+      IncludeTimestamps(IncludeTimestamps),
+      BuildingImplicitModule(BuildingImplicitModule) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
