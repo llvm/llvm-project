@@ -1589,10 +1589,14 @@ static unsigned getAVSpillSaveOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillSaveOpcode(unsigned Size) {
+static unsigned getWWMRegSpillSaveOpcode(unsigned Size,
+                                         bool IsVectorSuperClass) {
   // Currently, there is only 32-bit WWM register spills needed.
   if (Size != 4)
     llvm_unreachable("unknown wwm register spill size");
+
+  if (IsVectorSuperClass)
+    return AMDGPU::SI_SPILL_WWM_AV32_SAVE;
 
   return AMDGPU::SI_SPILL_WWM_V32_SAVE;
 }
@@ -1602,11 +1606,13 @@ static unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                             unsigned Size,
                                             const SIRegisterInfo &TRI,
                                             const SIMachineFunctionInfo &MFI) {
+  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+
   // Choose the right opcode if spilling a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillSaveOpcode(Size);
+    return getWWMRegSpillSaveOpcode(Size, IsVectorSuperClass);
 
-  if (TRI.isVectorSuperClass(RC))
+  if (IsVectorSuperClass)
     return getAVSpillSaveOpcode(Size);
 
   return TRI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(Size)
@@ -1809,10 +1815,14 @@ static unsigned getAVSpillRestoreOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillRestoreOpcode(unsigned Size) {
+static unsigned getWWMRegSpillRestoreOpcode(unsigned Size,
+                                            bool IsVectorSuperClass) {
   // Currently, there is only 32-bit WWM register spills needed.
   if (Size != 4)
     llvm_unreachable("unknown wwm register spill size");
+
+  if (IsVectorSuperClass)
+    return AMDGPU::SI_SPILL_WWM_AV32_RESTORE;
 
   return AMDGPU::SI_SPILL_WWM_V32_RESTORE;
 }
@@ -1821,11 +1831,13 @@ static unsigned
 getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                unsigned Size, const SIRegisterInfo &TRI,
                                const SIMachineFunctionInfo &MFI) {
+  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+
   // Choose the right opcode if restoring a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillRestoreOpcode(Size);
+    return getWWMRegSpillRestoreOpcode(Size, IsVectorSuperClass);
 
-  if (TRI.isVectorSuperClass(RC))
+  if (IsVectorSuperClass)
     return getAVSpillRestoreOpcode(Size);
 
   return TRI.isAGPRClass(RC) ? getAGPRSpillRestoreOpcode(Size)
