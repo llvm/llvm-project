@@ -53,7 +53,7 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
-  SmallVector indicesVec = llvm::to_vector(indices);
+  SmallVector<OpFoldResult> indicesVec = llvm::to_vector(indices);
   if (indices.empty())
     indicesVec.resize(sourceRank, builder.getIndexAttr(0));
   assert(indicesVec.size() == strides.size() &&
