@@ -1380,13 +1380,35 @@ static std::optional<StringRef> getRangeText(SourceRange SR,
   return std::nullopt;
 }
 
+// Returns the begin location of the identifier of the given variable
+// declaration.
+static SourceLocation getVarDeclIdentifierLoc(const VarDecl *VD) {
+  // According to the implementation of `VarDecl`, `VD->getLocation()` actually
+  // returns the begin location of the identifier of the declaration:
+  return VD->getLocation();
+}
+
+// Returns the literal text of the identifier of the given variable declaration.
+static std::optional<StringRef>
+getVarDeclIdentifierText(const VarDecl *VD, const SourceManager &SM,
+                         const LangOptions &LangOpts) {
+  SourceLocation ParmIdentBeginLoc = getVarDeclIdentifierLoc(VD);
+  SourceLocation ParmIdentEndLoc =
+      Lexer::getLocForEndOfToken(ParmIdentBeginLoc, 0, SM, LangOpts);
+
+  if (ParmIdentEndLoc.isMacroID() &&
+      !Lexer::isAtEndOfMacroExpansion(ParmIdentEndLoc, SM, LangOpts))
+    return std::nullopt;
+  return getRangeText({ParmIdentBeginLoc, ParmIdentEndLoc}, SM, LangOpts);
+}
+
 // Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
 // type. The text is obtained through from `TypeLoc`s.  Since `TypeLoc` does not
 // have source ranges of qualifiers ( The `QualifiedTypeLoc` looks hacky too me
 // :( ), `Qualifiers` of the pointee type is returned separately through the
 // output parameter `QualifiersToAppend`.
 static std::optional<std::string>
-getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
+getPointeeTypeText(const VarDecl *VD, const SourceManager &SM,
                    const LangOptions &LangOpts,
                    std::optional<Qualifiers> *QualifiersToAppend) {
   QualType Ty = VD->getType();
@@ -1395,15 +1417,36 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   assert(Ty->isPointerType() && !Ty->isFunctionPointerType() &&
          "Expecting a VarDecl of type of pointer to object type");
   PteTy = Ty->getPointeeType();
-  if (PteTy->hasUnnamedOrLocalType())
-    // If the pointee type is unnamed, we can't refer to it
+
+  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc().getUnqualifiedLoc();
+  TypeLoc PteTyLoc;
+
+  // We only deal with the cases that we know `TypeLoc::getNextTypeLoc` returns
+  // the `TypeLoc` of the pointee type:
+  switch (TyLoc.getTypeLocClass()) {
+  case TypeLoc::ConstantArray:
+  case TypeLoc::IncompleteArray:
+  case TypeLoc::VariableArray:
+  case TypeLoc::DependentSizedArray:
+  case TypeLoc::Decayed:
+    assert(isa<ParmVarDecl>(VD) && "An array type shall not be treated as a "
+                                   "pointer type unless it decays.");
+    PteTyLoc = TyLoc.getNextTypeLoc();
+    break;
+  case TypeLoc::Pointer:
+    PteTyLoc = TyLoc.castAs<PointerTypeLoc>().getPointeeLoc();
+    break;
+  default:
+    return std::nullopt;
+  }
+  if (PteTyLoc.isNull())
+    // Sometimes we cannot get a useful `TypeLoc` for the pointee type, e.g.,
+    // when the pointer type is `auto`.
     return std::nullopt;
 
-  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc();
-  TypeLoc PteTyLoc = TyLoc.getUnqualifiedLoc().getNextTypeLoc();
-  SourceLocation VDNameStartLoc = VD->getLocation();
+  SourceLocation IdentLoc = getVarDeclIdentifierLoc(VD);
 
-  if (!(VDNameStartLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
+  if (!(IdentLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
     // We are expecting these locations to be valid. But in some cases, they are
     // not all valid. It is a Clang bug to me and we are not responsible for
     // fixing it.  So we will just give up for now when it happens.
@@ -1414,7 +1457,11 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   SourceLocation PteEndOfTokenLoc =
       Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
 
-  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, VDNameStartLoc)) {
+  if (!PteEndOfTokenLoc.isValid())
+    // Sometimes we cannot get the end location of the pointee type, e.g., when
+    // there are macros involved.
+    return std::nullopt;
+  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, IdentLoc)) {
     // We only deal with the cases where the source text of the pointee type
     // appears on the left-hand side of the variable identifier completely,
     // including the following forms:
@@ -1739,6 +1786,32 @@ Handler.addDebugNoteForVar((D), (D)->getBeginLoc(), "failed to produce fixit for
 #define DEBUG_NOTE_DECL_FAIL(D, Msg)
 #endif
 
+// For the given variable declaration with a pointer-to-T type, returns the text
+// `std::span<T>`.  If it is unable to generate the text, returns
+// `std::nullopt`.
+static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
+                                                           const ASTContext &Ctx) {
+  assert(VD->getType()->isPointerType());
+
+  std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
+  std::optional<std::string> PteTyText = getPointeeTypeText(
+      VD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
+
+  if (!PteTyText)
+    return std::nullopt;
+
+  std::string SpanTyText = "std::span<";
+
+  SpanTyText.append(*PteTyText);
+  // Append qualifiers to span element type if any:
+  if (PteTyQualifiers) {
+    SpanTyText.append(" ");
+    SpanTyText.append(PteTyQualifiers->getAsString());
+  }
+  SpanTyText.append(">");
+  return SpanTyText;
+}
+
 // For a `VarDecl` of the form `T  * var (= Init)?`, this
 // function generates a fix-it for the declaration, which re-declares `var` to
 // be of `span<T>` type and transforms the initializer, if present, to a span
@@ -1995,39 +2068,22 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     return {};
   }
 
-  std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
-  std::optional<std::string> PteTyText = getPointeeTypeText(
-      PVD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
-
-  if (!PteTyText) {
-    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid pointee type");
-    return {};
-  }
-
-  std::optional<StringRef> PVDNameText = PVD->getIdentifier()->getName();
-
-  if (!PVDNameText) {
-    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid identifier name");
-    return {};
-  }
-
-  std::string SpanOpen = "std::span<";
-  std::string SpanClose = ">";
-  std::string SpanTyText;
   std::stringstream SS;
+  std::optional<std::string> SpanTyText = createSpanTypeForVarDecl(PVD, Ctx);
+  std::optional<StringRef> ParmIdentText;
 
-  SS << SpanOpen << *PteTyText;
-  // Append qualifiers to span element type:
-  if (PteTyQualifiers)
-    SS << " " << PteTyQualifiers->getAsString();
-  SS << SpanClose;
-  // Save the Span type text:
-  SpanTyText = SS.str();
+  if (!SpanTyText)
+    return {};
+  SS << *SpanTyText;
   // Append qualifiers to the type of the parameter:
   if (PVD->getType().hasQualifiers())
     SS << " " << PVD->getType().getQualifiers().getAsString();
+  ParmIdentText =
+      getVarDeclIdentifierText(PVD, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (!ParmIdentText)
+    return {};
   // Append parameter's name:
-  SS << " " << PVDNameText->str();
+  SS << " " << ParmIdentText->str();
 
   FixItList Fixes;
   unsigned ParmIdx = 0;
@@ -2040,7 +2096,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     ParmIdx++;
   }
   if (ParmIdx < FD->getNumParams())
-    if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, SpanTyText,
+    if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, *SpanTyText,
                                                          FD, Ctx, Handler)) {
       Fixes.append(*OverloadFix);
       return Fixes;
