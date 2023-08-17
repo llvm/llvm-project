@@ -79,13 +79,16 @@ AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
-if [[ ! -d ${LIBCXX_BUILD} ]]; then
+if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+  rm -rf ${LIBCXX_BUILD}
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
   cmake -GNinja \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER_WORKS=ON \
+    -DCMAKE_CXX_COMPILER_WORKS=ON \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
     -DCMAKE_C_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
@@ -108,13 +111,17 @@ LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
 LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include -isystem ${LIBCXX_BUILD}/include/c++/v1"
 
 # Build LLVM.
-if [[ ! -d ${LLVM_BUILD} ]]; then
+if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+  rm -rf ${LLVM_BUILD}
   mkdir -p ${LLVM_BUILD}
   cd ${LLVM_BUILD}
   cmake -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER_WORKS=ON \
+    -DCMAKE_CXX_COMPILER_WORKS=ON \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
+    -DLLVM_ENABLE_LIBCXX=ON \
     -DCMAKE_C_FLAGS="${LLVM_CFLAGS}" \
     -DCMAKE_CXX_FLAGS="${LLVM_CXXFLAGS}" \
     -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
