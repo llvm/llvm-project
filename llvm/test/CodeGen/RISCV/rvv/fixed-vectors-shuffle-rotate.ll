@@ -202,13 +202,13 @@ define <8 x i8> @shuffle_v8i8_as_i16(<8 x i8> %v) {
 ; ZVBB-V-LABEL: shuffle_v8i8_as_i16:
 ; ZVBB-V:       # %bb.0:
 ; ZVBB-V-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVBB-V-NEXT:    vror.vi v8, v8, 8
+; ZVBB-V-NEXT:    vrev8.v v8, v8
 ; ZVBB-V-NEXT:    ret
 ;
 ; ZVBB-ZVE32X-LABEL: shuffle_v8i8_as_i16:
 ; ZVBB-ZVE32X:       # %bb.0:
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 4, e16, m2, ta, ma
-; ZVBB-ZVE32X-NEXT:    vror.vi v8, v8, 8
+; ZVBB-ZVE32X-NEXT:    vrev8.v v8, v8
 ; ZVBB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x i8> %shuffle
