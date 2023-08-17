@@ -1307,6 +1307,9 @@ void ModuleMap::setInferredModuleAllowedBy(Module *M,
 
 std::error_code
 ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
+  FileManager &FM = SourceMgr.getFileManager();
+  FM.makeAbsolutePath(Path);
+
   StringRef Dir = llvm::sys::path::parent_path({Path.data(), Path.size()});
 
   // Do not canonicalize within the framework; the module map parser expects
@@ -1317,8 +1320,7 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
       Dir = Parent;
   }
 
-  FileManager &FM = SourceMgr.getFileManager();
-  auto DirEntry = FM.getDirectoryRef(Dir.empty() ? "." : Dir);
+  auto DirEntry = FM.getDirectoryRef(Dir);
   if (!DirEntry)
     return llvm::errorToErrorCode(DirEntry.takeError());
 

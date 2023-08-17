@@ -1372,11 +1372,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Record.clear();
 
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-    AddPath(WritingModule->PresumedModuleMapFile.empty()
-                ? Map.getModuleMapFileForUniquing(WritingModule)
-                      ->getNameAsRequested()
-                : StringRef(WritingModule->PresumedModuleMapFile),
-            Record);
+
+    if (!WritingModule->PresumedModuleMapFile.empty()) {
+      AddPath(WritingModule->PresumedModuleMapFile, Record);
+    } else {
+      auto FE = Map.getModuleMapFileForUniquing(WritingModule);
+      SmallString<128> ModuleMapPath = FE->getNameAsRequested();
+      Map.canonicalizeModuleMapPath(ModuleMapPath);
+      AddPath(ModuleMapPath, Record);
+    }
 
     // Additional module map files.
     if (auto *AdditionalModMaps =

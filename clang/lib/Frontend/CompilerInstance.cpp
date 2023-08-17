@@ -1338,7 +1338,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     Result = compileModuleImpl(
         ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
         FrontendInputFile(ModuleMapFilePath, IK, +Module->IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+        ModMap.getModuleMapFileForUniquing(Module)->getNameAsRequested(),
+        ModuleFileName);
   } else {
     // FIXME: We only need to fake up an input file here as a way of
     // transporting the module's directory to the module map parser. We should
@@ -1355,7 +1356,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     Result = compileModuleImpl(
         ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
         FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(),
+        ModMap.getModuleMapFileForUniquing(Module)->getNameAsRequested(),
         ModuleFileName,
         [&](CompilerInstance &Instance) {
       std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =

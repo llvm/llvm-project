@@ -482,16 +482,9 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
 
-  ModuleMap &ModMapInfo =
-      MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-
-  OptionalFileEntryRef ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
-
-  if (ModuleMap) {
-    SmallString<128> Path = ModuleMap->getNameAsRequested();
-    ModMapInfo.canonicalizeModuleMapPath(Path);
-    MD.ClangModuleMapFile = std::string(Path);
-  }
+  assert(!M->PresumedModuleMapFile.empty() &&
+         "Precompiled module missing presumed module map");
+  MD.ClangModuleMapFile = M->PresumedModuleMapFile;
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
@@ -505,7 +498,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
         if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
-          MDC.addFileDep(MD, ModuleMap->getName());
+          auto FE = MDC.ScanInstance.getFileManager().getOptionalFileRef(
+              MD.ClangModuleMapFile);
+          assert(FE && "Module map of precompiled module still exists");
+          MDC.addFileDep(MD, FE->getName());
           return;
         }
         MDC.addFileDep(MD, IFI.Filename);
