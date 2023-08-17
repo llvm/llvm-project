@@ -1808,9 +1808,18 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
-  for (auto *I : Insts)
+  for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
+
+    // swifterror pointers can only be used by a load or store; sinking a load
+    // or store would require introducing a select for the pointer operand,
+    // which isn't allowed for swifterror pointers.
+    if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
+      return false;
+    if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+  }
 
   // All instructions in Insts are known to be the same opcode. If they have a
   // use, check that the only user is a PHI or in the same block as the
