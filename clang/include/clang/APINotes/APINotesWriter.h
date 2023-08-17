@@ -1,4 +1,4 @@
-//===--- APINotesWriter.h - API Notes Writer ----------------------*- C++ -*-===//
+//===-- APINotesWriter.h - API Notes Writer ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,10 @@
 
 #include "clang/APINotes/Types.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <memory>
 
 namespace llvm {
   class raw_ostream;
@@ -37,13 +41,12 @@ class APINotesWriter {
 public:
   /// Create a new API notes writer with the given module name and
   /// (optional) source file.
-  APINotesWriter(llvm::StringRef moduleName, const FileEntry *sourceFile);
+  APINotesWriter(llvm::StringRef moduleName, const FileEntry *SF);
   ~APINotesWriter();
 
   APINotesWriter(const APINotesWriter &) = delete;
   APINotesWriter &operator=(const APINotesWriter &) = delete;
 
-  /// Write the API notes data to the given stream.
   void writeToStream(llvm::raw_ostream &os);
 
   /// Add information about a specific Objective-C class or protocol.
@@ -122,4 +125,3 @@ public:
 } // end namespace clang
 
 #endif // LLVM_CLANG_API_NOTES_WRITER_H
-

@@ -1,4 +1,4 @@
-//===--- APINotesWriter.cpp - API Notes Writer --------------------*- C++ -*-===//
+//===-- APINotesWriter.cpp - API Notes Writer -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,11 +47,7 @@ class APINotesWriter::Implementation {
   SmallVector<uint64_t, 64> ScratchRecord;
 
 public:
-  /// The name of the module
   std::string ModuleName;
-
-  /// The source file from which this binary representation was
-  /// created, if known.
   const FileEntry *SourceFile;
 
   bool SwiftInferImportAsMember = false;
@@ -63,7 +59,7 @@ public:
   /// information describing the context within that module.
   llvm::DenseMap<std::pair<unsigned, char>,
                  std::pair<unsigned, VersionedSmallVector<ObjCContextInfo>>>
-    ObjCContexts;
+      ObjCContexts;
 
   /// Mapping from context IDs to the identifier ID holding the name.
   llvm::DenseMap<unsigned, unsigned> ObjCContextNames;
@@ -72,10 +68,10 @@ public:
   ///
   /// Indexed by the context ID, property name, and whether this is an
   /// instance property.
-  llvm::DenseMap<std::tuple<unsigned, unsigned, char>,
-                 llvm::SmallVector<std::pair<VersionTuple, ObjCPropertyInfo>,
-                 1>>
-    ObjCProperties;
+  llvm::DenseMap<
+      std::tuple<unsigned, unsigned, char>,
+      llvm::SmallVector<std::pair<VersionTuple, ObjCPropertyInfo>, 1>>
+      ObjCProperties;
 
   /// Information about Objective-C methods.
   ///
@@ -83,45 +79,42 @@ public:
   /// char) indicating whether this is a class or instance method.
   llvm::DenseMap<std::tuple<unsigned, unsigned, char>,
                  llvm::SmallVector<std::pair<VersionTuple, ObjCMethodInfo>, 1>>
-    ObjCMethods;
+      ObjCMethods;
 
   /// Information about global variables.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
-                 llvm::SmallVector<std::pair<VersionTuple, GlobalVariableInfo>,
-                                   1>>
-    GlobalVariables;
+  llvm::DenseMap<unsigned, llvm::SmallVector<
+                               std::pair<VersionTuple, GlobalVariableInfo>, 1>>
+      GlobalVariables;
 
   /// Information about global functions.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
-                 llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>,
-                                   1>>
-    GlobalFunctions;
+  llvm::DenseMap<unsigned, llvm::SmallVector<
+                               std::pair<VersionTuple, GlobalFunctionInfo>, 1>>
+      GlobalFunctions;
 
   /// Information about enumerators.
   ///
   /// Indexed by the identifier ID.
-  llvm::DenseMap<unsigned,
-                 llvm::SmallVector<std::pair<VersionTuple, EnumConstantInfo>,
-                                   1>>
-    EnumConstants;
+  llvm::DenseMap<
+      unsigned, llvm::SmallVector<std::pair<VersionTuple, EnumConstantInfo>, 1>>
+      EnumConstants;
 
   /// Information about tags.
   ///
   /// Indexed by the identifier ID.
   llvm::DenseMap<unsigned,
                  llvm::SmallVector<std::pair<VersionTuple, TagInfo>, 1>>
-    Tags;
+      Tags;
 
   /// Information about typedefs.
   ///
   /// Indexed by the identifier ID.
   llvm::DenseMap<unsigned,
                  llvm::SmallVector<std::pair<VersionTuple, TypedefInfo>, 1>>
-    Typedefs;
+      Typedefs;
 
   /// Retrieve the ID for the given identifier.
   IdentifierID getIdentifier(StringRef identifier) {
@@ -1336,4 +1329,3 @@ void APINotesWriter::addTypedef(llvm::StringRef name, const TypedefInfo &info,
 void APINotesWriter::addModuleOptions(ModuleOptions opts) {
   Impl.SwiftInferImportAsMember = opts.SwiftInferImportAsMember;
 }
-
