@@ -365,6 +365,15 @@ public:
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
                .isOptional()) {
         hlfirBase = genHlfirBox();
+        // If the original base is a box too, we could as well
+        // use the HLFIR box as the FIR base: otherwise, the two
+        // boxes are "alive" at the same time, and the FIR box
+        // is used for accessing the base_addr and the HLFIR box
+        // is used for accessing the bounds etc. Using the HLFIR box,
+        // that holds the same base_addr at this point, makes
+        // the representation a little bit more clear.
+        if (hlfirBase.getType() == firBase.getType())
+          firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box
         // may be null and the rebox would be illegal. It is also important to
