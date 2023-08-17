@@ -87,7 +87,7 @@ C++2c Feature Support
 
 - Attributes now expect unevaluated strings in attributes parameters that are string literals.
   This is applied to both C++ standard attributes, and other attributes supported by Clang.
-  This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>_`
+  This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>`_
 
 
 Resolutions to C++ Defect Reports
@@ -140,7 +140,7 @@ Bug Fixes in This Version
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
 - Fix crash on use of a variadic overloaded operator.
-  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -158,17 +158,17 @@ Bug Fixes to C++ Support
 
 - Fix a crash caused by some named unicode escape sequences designating
   a Unicode character whose name contains a ``-``.
-  (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
+  (Fixes `#64161 <https://github.com/llvm/llvm-project/issues/64161>`_)
 
 - Fix cases where we ignore ambiguous name lookup when looking up memebers.
-  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>_`),
-  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
-  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
-  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
+  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>`_),
+  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>`_),
+  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>`_) and
+  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>`_).
 
 - Clang emits an error on substitution failure within lambda body inside a
   requires-expression. This fixes:
-  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>_`).
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
