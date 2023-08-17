@@ -37,6 +37,12 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
+  ``--gcc-toolchain=``) is deprecated and will be removed. Specify
+  ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>` as a
+  replacement.
+  (`#77537 <https://github.com/llvm/llvm-project/pull/77537>`_)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
