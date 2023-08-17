@@ -168,7 +168,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
         /*desc=*/[{Generate constant value.}],
         /*retType=*/"::mlir::Value",
         /*methodName=*/"makeConstantI32",
-        /*args=*/(ins "::mlir::RewriterBase &":$rewriter, "unsigned" : $val),
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter, "int" : $val),
         /*methodBody=*/"",
         /*defaultImpl=*/ [{
             mlir::Operation* op = $_op;
@@ -1470,6 +1470,121 @@ def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned",
   }];
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("wgmma.wait_group.sync.aligned %0;"); }
+  }];
+}
+
+/// Enum attribute type for the negating of input operands
+def WGMMAScaleInNeg : I32EnumAttrCase<"neg", -1>;
+def WGMMAScaleInOne : I32EnumAttrCase<"one", 1>;
+def WGMMAScaleIn : I32EnumAttr<"WGMMAScaleIn", "WGMMA overflow options",
+  [WGMMAScaleInOne, WGMMAScaleInNeg]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def WGMMAScaleInAttr : EnumAttr<NVVM_Dialect, WGMMAScaleIn, "wgmma_scale_in"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+/// Enum attribute type for the output operand
+def WGMMAScaleOutZero : I32EnumAttrCase<"zero", 0>;
+def WGMMAScaleOutOne : I32EnumAttrCase<"one", 1>;
+def WGMMAScaleOut : I32EnumAttr<"WGMMAScaleOut", "WGMMA input predicate",
+  [WGMMAScaleOutZero, WGMMAScaleOutOne]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def WGMMAScaleOutAttr : EnumAttr<NVVM_Dialect, WGMMAScaleOut, "wgmma_scale_out"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_WgmmaMmaSyncOp : NVVM_Op<"wgmma.mma_async", 
+              [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
+                PredOpTrait<"input struct and result struct must be the same type",
+                  TCresIsSameAsOpBase<0, 0>>,]> 
+{
+  let results = (outs LLVM_AnyAggregate:$results);
+  let arguments = (ins 
+    LLVM_AnyAggregate:$inouts,
+    I64:$descriptorA, 
+    I64:$descriptorB, 
+    NVVM_MMAShapeAttr:$shape,
+    MMATypesAttr:$typeA,
+    MMATypesAttr:$typeB,
+    WGMMAScaleOutAttr:$scaleD,
+    WGMMAScaleInAttr:$scaleA,
+    WGMMAScaleInAttr:$scaleB, 
+    MMALayoutAttr:$layoutA,
+    MMALayoutAttr:$layoutB,
+    OptionalAttr<MMAIntOverflowAttr>:$satfinite
+    // OptionalAttr<UnitAttr>:$satfinite
+  );  
+  
+   let assemblyFormat = [{ 
+      $descriptorA `,` $descriptorB `,` $shape `,` 
+      `D` `[` $inouts `,` $scaleD (`,` $satfinite^)? `]` `,`
+      `A` `[` $typeA `,` $scaleA `,` $layoutA `]` `,` 
+      `B` `[` $typeB `,` $scaleB `,` $layoutB `]`
+      attr-dict `:` 
+      type($inouts) `->` type($results)
+    }];
+  
+  let description = [{
+    The warpgroup (128 threads) level matrix multiply and accumulate operation 
+    has either of the following forms, where matrix D is called accumulator:
+      D = A * B + D
+      D = A * B, where the input from accumulator D is disabled.
+
+    Supported shapes:  
+    ```
+    |-------------------|--------------------|----------------|---------------|
+    |                   | f16 += f16 * f16   | s32 += s8 * s8 |               | 
+    |f32 += tf32 * tf32 | f32 += f16 * f16   | s32 += s8 * u8 |s32 += b1 * b1 |
+    |                   | f32 += bf16 * bf16 | s32 += u8 * u8 |               |
+    |-------------------|--------------------|----------------|---------------|
+    |   .m64n8k8        |  .m64n8k16         |  .m64n8k32     |  .m64n8k256   |
+    |   .m64n16k8       |  .m64n16k16        |  .m64n16k32    |  .m64n16k256  |
+    |   .m64n24k8       |  .m64n24k16        |  .m64n24k32    |  .m64n24k256  |
+    |   .m64n32k8       |  .m64n32k16        |  .m64n32k32    |  .m64n32k256  |
+    |   .m64n40k8       |  .m64n40k16        |  .m64n48k32    |  .m64n48k256  |
+    |   .m64n48k8       |  .m64n48k16        |  .m64n64k32    |  .m64n64k256  |
+    |   .m64n56k8       |  .m64n56k16        |  .m64n80k32    |  .m64n80k256  |
+    |   .m64n64k8       |  .m64n64k16        |  .m64n96k32    |  .m64n96k256  |
+    |   .m64n72k8       |  .m64n72k16        |  .m64n112k32   |  .m64n112k256 |
+    |   .m64n80k8       |  .m64n80k16        |  .m64n128k32   |  .m64n128k256 |
+    |   .m64n88k8       |  .m64n88k16        |  .m64n144k32   |  .m64n144k256 |
+    |   .m64n96k8       |  .m64n96k16        |  .m64n160k32   |  .m64n160k256 |
+    |   .m64n104k8      |  .m64n104k16       |  .m64n176k32   |  .m64n176k256 |
+    |   .m64n112k8      |  .m64n112k16       |  .m64n192k32   |  .m64n192k256 |
+    |   .m64n120k8      |  .m64n120k16       |  .m64n208k32   |  .m64n208k256 |
+    |   .m64n128k8      |  .m64n128k16       |  .m64n224k32   |  .m64n224k256 |
+    |   .m64n136k8      |  .m64n136k16       |  .m64n240k32   |  .m64n240k256 |
+    |   .m64n144k8      |  .m64n144k16       |  .m64n256k32   |  .m64n256k256 |
+    |   .m64n152k8      |  .m64n152k16       |                |               | 
+    |   .m64n160k8      |  .m64n160k16       |                |               | 
+    |   .m64n168k8      |  .m64n168k16       |                |               | 
+    |   .m64n176k8      |  .m64n176k16       |                |               | 
+    |   .m64n184k8      |  .m64n184k16       |                |               | 
+    |   .m64n192k8      |  .m64n192k16       |                |               |
+    |   .m64n200k8      |  .m64n200k16       |                |               |
+    |   .m64n208k8      |  .m64n208k16       |                |               |
+    |   .m64n216k8      |  .m64n216k16       |                |               |
+    |   .m64n224k8      |  .m64n224k16       |                |               |
+    |   .m64n232k8      |  .m64n232k16       |                |               |
+    |   .m64n240k8      |  .m64n240k16       |                |               |
+    |   .m64n248k8      |  .m64n248k16       |                |               |
+    |   .m64n256k8      |  .m64n256k16       |                |               |
+    |-------------------|--------------------|----------------|---------------|
+    ```
+
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions
+  }];
+  
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    void getAsmValues(RewriterBase &rewriter, 
+        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
   }];
 }
 

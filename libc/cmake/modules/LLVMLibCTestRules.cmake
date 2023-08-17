@@ -152,7 +152,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_compile_options(
     ${fq_build_target_name}
-    PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    PRIVATE -fpie -ffreestanding ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(

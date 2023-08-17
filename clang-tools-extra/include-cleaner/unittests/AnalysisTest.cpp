@@ -441,9 +441,9 @@ TEST(Hints, Ordering) {
   };
   EXPECT_LT(Hinted(Hints::None), Hinted(Hints::CompleteSymbol));
   EXPECT_LT(Hinted(Hints::CompleteSymbol), Hinted(Hints::PublicHeader));
-  EXPECT_LT(Hinted(Hints::PublicHeader), Hinted(Hints::PreferredHeader));
-  EXPECT_LT(Hinted(Hints::CompleteSymbol | Hints::PublicHeader),
-            Hinted(Hints::PreferredHeader));
+  EXPECT_LT(Hinted(Hints::PreferredHeader), Hinted(Hints::PublicHeader));
+  EXPECT_LT(Hinted(Hints::CompleteSymbol | Hints::PreferredHeader),
+            Hinted(Hints::PublicHeader));
 }
 
 // Test ast traversal & redecl selection end-to-end for templates, as explicit

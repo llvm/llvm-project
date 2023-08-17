@@ -9654,12 +9654,9 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
       }
       assert(!C->getType()->isPointerTy() &&
              "Can only have one pointer, and it must be last");
-      if (auto *PT = dyn_cast<PointerType>(OpC->getType())) {
-        // The offsets have been converted to bytes.  We can add bytes to an
-        // i8* by GEP with the byte count in the first index.
-        Type *DestPtrTy =
-            Type::getInt8PtrTy(PT->getContext(), PT->getAddressSpace());
-        OpC = ConstantExpr::getBitCast(OpC, DestPtrTy);
+      if (OpC->getType()->isPointerTy()) {
+        // The offsets have been converted to bytes.  We can add bytes using
+        // an i8 GEP.
         C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
                                            OpC, C);
       } else {

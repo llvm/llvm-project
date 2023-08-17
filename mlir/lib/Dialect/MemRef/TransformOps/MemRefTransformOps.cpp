@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
+
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -25,6 +27,29 @@ using namespace mlir;
 
 #define DEBUG_TYPE "memref-transforms"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+
+//===----------------------------------------------------------------------===//
+// Apply...ConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConverter>
+transform::MemrefToLLVMTypeConverterOp::getTypeConverter() {
+  LowerToLLVMOptions options(getContext());
+  options.allocLowering =
+      (getUseAlignedAlloc() ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
+                            : LowerToLLVMOptions::AllocLowering::Malloc);
+  options.useGenericFunctions = getUseGenericFunctions();
+  options.useOpaquePointers = getUseOpaquePointers();
+
+  if (getIndexBitwidth() != kDeriveIndexBitwidthFromDataLayout)
+    options.overrideIndexBitwidth(getIndexBitwidth());
+
+  return std::make_unique<LLVMTypeConverter>(getContext(), options);
+}
+
+StringRef transform::MemrefToLLVMTypeConverterOp::getTypeConverterType() {
+  return "LLVMTypeConverter";
+}
 
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp

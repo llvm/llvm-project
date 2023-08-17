@@ -2906,7 +2906,7 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 }
 
 LogicalResult TypeConverter::convertType(Type t,
-                                         SmallVectorImpl<Type> &results) {
+                                         SmallVectorImpl<Type> &results) const {
   auto existingIt = cachedDirectConversions.find(t);
   if (existingIt != cachedDirectConversions.end()) {
     if (existingIt->second)
@@ -2925,7 +2925,7 @@ LogicalResult TypeConverter::convertType(Type t,
   conversionCallStack.push_back(t);
   auto popConversionCallStack =
       llvm::make_scope_exit([this]() { conversionCallStack.pop_back(); });
-  for (ConversionCallbackFn &converter : llvm::reverse(conversions)) {
+  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
     if (std::optional<LogicalResult> result =
             converter(t, results, conversionCallStack)) {
       if (!succeeded(*result)) {
@@ -2943,7 +2943,7 @@ LogicalResult TypeConverter::convertType(Type t,
   return failure();
 }
 
-Type TypeConverter::convertType(Type t) {
+Type TypeConverter::convertType(Type t) const {
   // Use the multi-type result version to convert the type.
   SmallVector<Type, 1> results;
   if (failed(convertType(t, results)))
@@ -2953,31 +2953,35 @@ Type TypeConverter::convertType(Type t) {
   return results.size() == 1 ? results.front() : nullptr;
 }
 
-LogicalResult TypeConverter::convertTypes(TypeRange types,
-                                          SmallVectorImpl<Type> &results) {
+LogicalResult
+TypeConverter::convertTypes(TypeRange types,
+                            SmallVectorImpl<Type> &results) const {
   for (Type type : types)
     if (failed(convertType(type, results)))
       return failure();
   return success();
 }
 
-bool TypeConverter::isLegal(Type type) { return convertType(type) == type; }
-bool TypeConverter::isLegal(Operation *op) {
+bool TypeConverter::isLegal(Type type) const {
+  return convertType(type) == type;
+}
+bool TypeConverter::isLegal(Operation *op) const {
   return isLegal(op->getOperandTypes()) && isLegal(op->getResultTypes());
 }
 
-bool TypeConverter::isLegal(Region *region) {
+bool TypeConverter::isLegal(Region *region) const {
   return llvm::all_of(*region, [this](Block &block) {
     return isLegal(block.getArgumentTypes());
   });
 }
 
-bool TypeConverter::isSignatureLegal(FunctionType ty) {
+bool TypeConverter::isSignatureLegal(FunctionType ty) const {
   return isLegal(llvm::concat<const Type>(ty.getInputs(), ty.getResults()));
 }
 
-LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
-                                                 SignatureConversion &result) {
+LogicalResult
+TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
+                                   SignatureConversion &result) const {
   // Try to convert the given input type.
   SmallVector<Type, 1> convertedTypes;
   if (failed(convertType(type, convertedTypes)))
@@ -2991,9 +2995,10 @@ LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
   result.addInputs(inputNo, convertedTypes);
   return success();
 }
-LogicalResult TypeConverter::convertSignatureArgs(TypeRange types,
-                                                  SignatureConversion &result,
-                                                  unsigned origInputOffset) {
+LogicalResult
+TypeConverter::convertSignatureArgs(TypeRange types,
+                                    SignatureConversion &result,
+                                    unsigned origInputOffset) const {
   for (unsigned i = 0, e = types.size(); i != e; ++i)
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
       return failure();
@@ -3001,16 +3006,16 @@ LogicalResult TypeConverter::convertSignatureArgs(TypeRange types,
 }
 
 Value TypeConverter::materializeConversion(
-    MutableArrayRef<MaterializationCallbackFn> materializations,
-    OpBuilder &builder, Location loc, Type resultType, ValueRange inputs) {
-  for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
+    ArrayRef<MaterializationCallbackFn> materializations, OpBuilder &builder,
+    Location loc, Type resultType, ValueRange inputs) const {
+  for (const MaterializationCallbackFn &fn : llvm::reverse(materializations))
     if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
       return *result;
   return nullptr;
 }
 
-auto TypeConverter::convertBlockSignature(Block *block)
-    -> std::optional<SignatureConversion> {
+std::optional<TypeConverter::SignatureConversion>
+TypeConverter::convertBlockSignature(Block *block) const {
   SignatureConversion conversion(block->getNumArguments());
   if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
     return std::nullopt;
@@ -3052,9 +3057,9 @@ Attribute TypeConverter::AttributeConversionResult::getResult() const {
   return impl.getPointer();
 }
 
-std::optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
-                                                             Attribute attr) {
-  for (TypeAttributeConversionCallbackFn &fn :
+std::optional<Attribute>
+TypeConverter::convertTypeAttribute(Type type, Attribute attr) const {
+  for (const TypeAttributeConversionCallbackFn &fn :
        llvm::reverse(typeAttributeConversions)) {
     AttributeConversionResult res = fn(type, attr);
     if (res.hasResult())

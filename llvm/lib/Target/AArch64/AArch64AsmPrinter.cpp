@@ -1453,8 +1453,13 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
   }
   case AArch64::MOVIv2d_ns:
-    // If the target has <rdar://problem/16473581>, lower this
-    // instruction to movi.16b instead.
+    // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
+    // as movi is more efficient across all cores. Newer cores can eliminate
+    // fmovs early and there is no difference with movi, but this not true for
+    // all implementations.
+    //
+    // The floating-point version doesn't quite work in rare cases on older
+    // CPUs, so on those targets we lower this instruction to movi.16b instead.
     if (STI->hasZeroCycleZeroingFPWorkaround() &&
         MI->getOperand(1).getImm() == 0) {
       MCInst TmpInst;

@@ -115,6 +115,9 @@ def ext_predef_outside_function : Warning<
 def ext_init_from_predefined : ExtWarn<
   "initializing an array from a '%0' predefined identifier is a Microsoft extension">,
   InGroup<MicrosoftInitFromPredefined>;
+def ext_string_literal_from_predefined : ExtWarn<
+  "expansion of predefined identifier '%0' to a string literal is a Microsoft extension">,
+  InGroup<MicrosoftStringLiteralFromPredefined>;
 def warn_float_overflow : Warning<
   "magnitude of floating-point constant too large for type %0; maximum is %1">,
    InGroup<LiteralRange>;
@@ -3627,6 +3630,14 @@ def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
 def err_sme_attr_mismatch : Error<
   "function declared %0 was previously declared %1, which has different SME function attributes">;
+def err_sme_call_in_non_sme_target : Error<
+  "call to a streaming function requires 'sme'">;
+def err_sme_za_call_no_za_state : Error<
+  "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_definition_using_sm_in_non_sme_target : Error<
+  "function executed in streaming-SVE mode requires 'sme'">;
+def err_sme_definition_using_za_in_non_sme_target : Error<
+  "function using ZA state requires 'sme'">;
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
@@ -9875,6 +9886,11 @@ def err_break_not_in_loop_or_switch : Error<
 def warn_loop_ctrl_binds_to_inner : Warning<
   "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
   InGroup<GccCompat>;
+def err_omp_bind_required_on_loop : Error<
+  "expected 'bind' clause for 'loop' construct without an enclosing OpenMP "
+  "construct">;
+def err_omp_loop_reduction_clause : Error<
+  "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
 def warn_break_binds_to_switch : Warning<
   "'break' is bound to loop, GCC binds it to switch">,
   InGroup<GccCompat>;
@@ -11869,10 +11885,6 @@ def err_non_designated_init_used : Error<
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
-// LoongArch-specific Diagnostics
-def err_loongarch_builtin_requires_la64 : Error<
-  "this builtin requires target: loongarch64">;
-
 // Unsafe buffer usage diagnostics.
 def warn_unsafe_buffer_variable : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
@@ -11893,9 +11905,6 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
 def note_safe_buffer_debug_mode : Note<"safe buffers debug: %0">;
 #endif
-
-def err_loongarch_builtin_requires_la32 : Error<
-  "this builtin requires target: loongarch32">;
 
 def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;

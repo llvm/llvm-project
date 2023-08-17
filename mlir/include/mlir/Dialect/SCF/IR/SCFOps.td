@@ -39,7 +39,8 @@ class SCF_Op<string mnemonic, list<Trait> traits = []> :
 
 def ConditionOp : SCF_Op<"condition", [
   HasParent<"WhileOp">,
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+    ["getSuccessorRegions"]>,
   Pure,
   Terminator
 ]> {
@@ -124,7 +125,8 @@ def ForOp : SCF_Op<"for",
         "getSingleUpperBound", "promoteIfSingleIteration"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "for operation";
@@ -334,12 +336,6 @@ def ForOp : SCF_Op<"for",
       return getOperation()->getOpOperand(
         getNumControlOperands() + opResult.getResultNumber());
     }
-
-    /// Return operands used when entering the region at 'index'. These operands
-    /// correspond to the loop iterator operands, i.e., those exclusing the
-    /// induction variable. LoopOp only has one region, so 0 is the only valid
-    /// value for `index`.
-    OperandRange getSuccessorEntryOperands(std::optional<unsigned> index);
 
     /// Returns the step as an `APInt` if it is constant.
     std::optional<APInt> getConstantStep();
@@ -712,7 +708,8 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
 //===----------------------------------------------------------------------===//
 
 def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getNumRegionInvocations", "getRegionInvocationBounds"]>,
+    "getNumRegionInvocations", "getRegionInvocationBounds",
+    "getEntrySuccessorRegions"]>,
     InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "if-then-else operation";
@@ -978,7 +975,8 @@ def ReduceReturnOp :
 //===----------------------------------------------------------------------===//
 
 def WhileOp : SCF_Op<"while",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands"]>,
      RecursiveMemoryEffects]> {
   let summary = "a generic 'while' loop";
   let description = [{
@@ -1108,7 +1106,6 @@ def WhileOp : SCF_Op<"while",
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, ValueRange)>;
 
-    OperandRange getSuccessorEntryOperands(std::optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();
     Block::BlockArgListType getBeforeArguments();
@@ -1127,7 +1124,8 @@ def WhileOp : SCF_Op<"while",
 def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"scf::YieldOp">,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                              ["getRegionInvocationBounds"]>]> {
+                              ["getRegionInvocationBounds",
+                               "getEntrySuccessorRegions"]>]> {
   let summary = "switch-case operation on an index argument";
   let description = [{
     The `scf.index_switch` is a control-flow operation that branches to one of

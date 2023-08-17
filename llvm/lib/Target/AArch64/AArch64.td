@@ -148,6 +148,9 @@ def FeatureExperimentalZeroingPseudos
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
+def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
+  "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
+
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
   "Enable Scalable Vector Extension 2 (SVE2) instructions (FEAT_SVE2)",
   [FeatureSVE, FeatureUseScalarIncVL]>;
@@ -1137,7 +1140,8 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeatureLSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureNoSVEFPLD1R]>;
 
 def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
                                       "Neoverse V2 ARM processors", [

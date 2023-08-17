@@ -64,7 +64,7 @@ class DXILMCCodeEmitter : public MCCodeEmitter {
 public:
   DXILMCCodeEmitter() {}
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override {}
 };

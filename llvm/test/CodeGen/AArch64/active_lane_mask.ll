@@ -315,6 +315,16 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i8(i8 %index, i8 %TC) {
   ret <vscale x 32 x i1> %active.lane.mask
 }
 
+; UTC_ARGS: --disable
+; This test exists to protect against a compiler crash caused by an attempt to
+; convert (via changeVectorElementType) an MVT into an EVT, which is impossible.
+; The test's output is large and not relevant so check lines have been disabled.
+define <vscale x 64 x i1> @lane_mask_nxv64i1_i64(i64 %index, i64 %TC) {
+; CHECK-LABEL: lane_mask_nxv64i1_i64:
+  %active.lane.mask = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64 %index, i64 %TC)
+  ret <vscale x 64 x i1> %active.lane.mask
+}
+; UTC_ARGS: --enable
 
 ; == Fixed width ==
 
@@ -409,9 +419,9 @@ define <2 x i1> @lane_mask_v2i1_i64(i64 %index, i64 %TC) {
 define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v16i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI23_0
+; CHECK-NEXT:    adrp x8, .LCPI24_0
 ; CHECK-NEXT:    dup v1.16b, w0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI23_0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI24_0]
 ; CHECK-NEXT:    uqadd v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    dup v1.16b, w1
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
@@ -423,10 +433,10 @@ define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI24_0
+; CHECK-NEXT:    adrp x8, .LCPI25_0
 ; CHECK-NEXT:    dup v0.8b, w0
 ; CHECK-NEXT:    dup v2.8b, w1
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI24_0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
 ; CHECK-NEXT:    uqadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    cmhi v0.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
@@ -437,11 +447,11 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI25_0
+; CHECK-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-NEXT:    dup v0.4h, w0
 ; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
 ; CHECK-NEXT:    dup v3.4h, w1
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI26_0]
 ; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v3.4h, #255, lsl #8
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
@@ -455,11 +465,11 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI26_0
+; CHECK-NEXT:    adrp x8, .LCPI27_0
 ; CHECK-NEXT:    movi d0, #0x0000ff000000ff
 ; CHECK-NEXT:    dup v1.2s, w0
 ; CHECK-NEXT:    dup v3.2s, w1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI26_0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI27_0]
 ; CHECK-NEXT:    and v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    umin v1.2s, v1.2s, v0.2s
@@ -483,7 +493,7 @@ entry:
 define <vscale x 4 x i1> @lane_mask_nxv4i1_imm5() {
 ; CHECK-LABEL: lane_mask_nxv4i1_imm5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -504,7 +514,7 @@ entry:
 define <vscale x 16 x i1> @lane_mask_nxv16i1_imm10() {
 ; CHECK-LABEL: lane_mask_nxv16i1_imm10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -529,6 +539,7 @@ declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32, i32)
 declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32)
 declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32, i32)
 
+declare <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64, i64)
 declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64, i64)
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)

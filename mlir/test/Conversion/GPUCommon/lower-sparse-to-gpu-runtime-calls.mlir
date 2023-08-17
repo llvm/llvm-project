@@ -120,36 +120,36 @@ module attributes {gpu.container_module} {
     // Used as nullptr
     %alloc = memref.alloc() : memref<0xi8>
     %c0 = arith.constant 0 : index
-    %bufferSz1, %token7 = gpu.spgemm_work_estimation_or_compute async 
+    %bufferSz1, %token7 = gpu.spgemm_work_estimation_or_compute async
                             [%token6]{WORK_ESTIMATION}
-                            %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE}, 
-                            %spmatC, ALG2, %spgemmDesc, %c0, 
+                            %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE},
+                            %spmatC, %spgemmDesc, %c0,
                             %alloc: f32 into memref<0xi8>
     %buf1, %token8 = gpu.alloc async [%token7] (%bufferSz1) : memref<?xi8>
     %bufferSz1_1, %token9 = gpu.spgemm_work_estimation_or_compute async
-                              [%token8]{WORK_ESTIMATION} %spmatA, %spmatB, 
-                              %spmatC, ALG2, %spgemmDesc, %bufferSz1, 
+                              [%token8]{WORK_ESTIMATION} %spmatA, %spmatB,
+                              %spmatC, %spgemmDesc, %bufferSz1,
                               %buf1: f32 into memref<?xi8>
-    %bufferSz3, %dummy, %token10 = gpu.spgemm_estimate_memory async [%token9] 
-                                     %spmatA, %spmatB, %spmatC, ALG2, 
-                                     %spgemmDesc, %c0, %c0, 
+    %bufferSz3, %dummy, %token10 = gpu.spgemm_estimate_memory async [%token9]
+                                     %spmatA, %spmatB, %spmatC,
+                                     %spgemmDesc, %c0, %c0,
                                      %alloc: f32 into memref<0xi8>
     %buf3, %token11 = gpu.alloc async [%token10] (%bufferSz3) : memref<?xi8>
-    %bufferSz3_2, %bufferSz2, %token12 = gpu.spgemm_estimate_memory async 
+    %bufferSz3_2, %bufferSz2, %token12 = gpu.spgemm_estimate_memory async
                                           [%token11] %spmatA, %spmatB, %spmatC,
-                                          ALG2, %spgemmDesc, %bufferSz3, %c0,
+                                          %spgemmDesc, %bufferSz3, %c0,
                                           %buf3: f32 into memref<?xi8>
     %buf2, %token13 = gpu.alloc async [%token12] (%bufferSz2) : memref<?xi8>
-    %bufferSz2_2, %token14 = gpu.spgemm_work_estimation_or_compute async 
-                               [%token13]{COMPUTE} %spmatA, %spmatB, %spmatC, 
-                               ALG2, %spgemmDesc, %bufferSz2, 
+    %bufferSz2_2, %token14 = gpu.spgemm_work_estimation_or_compute async
+                               [%token13]{COMPUTE} %spmatA, %spmatB, %spmatC,
+                               %spgemmDesc, %bufferSz2,
                                %buf2: f32 into memref<?xi8>
     %rows, %cols, %nnz, %token15 = gpu.spgemm_get_size async [%token14] %spmatC
     %mem_columns, %token16 = gpu.alloc async [%token15] (%cols) : memref<?xi32>
     %mem_values, %token17 = gpu.alloc async [%token16] (%nnz) : memref<?xf32>
     gpu.wait [%token17]
     %token18 = gpu.wait async
-    %token19 = gpu.spgemm_copy async [%token18] %spmatA, %spmatB, %spmatC, ALG2, %spgemmDesc: f32
+    %token19 = gpu.spgemm_copy async [%token18] %spmatA, %spmatB, %spmatC, %spgemmDesc: f32
     %token20 = gpu.destroy_sp_mat async [%token19] %spmatA
     %token21 = gpu.destroy_sp_mat async [%token20] %spmatB
     %token22 = gpu.destroy_sp_mat async [%token21] %spmatC
@@ -158,5 +158,3 @@ module attributes {gpu.container_module} {
   }
 
 }
-
-

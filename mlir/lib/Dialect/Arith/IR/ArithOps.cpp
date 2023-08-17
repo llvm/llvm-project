@@ -2387,13 +2387,17 @@ OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
 
 /// Returns the identity value attribute associated with an AtomicRMWKind op.
 TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
-                                            OpBuilder &builder, Location loc) {
+                                            OpBuilder &builder, Location loc,
+                                            bool useOnlyFiniteValue) {
   switch (kind) {
-  case AtomicRMWKind::maxf:
-    return builder.getFloatAttr(
-        resultType,
-        APFloat::getInf(llvm::cast<FloatType>(resultType).getFloatSemantics(),
-                        /*Negative=*/true));
+  case AtomicRMWKind::maxf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getSmallest(semantic, /*Negative=*/true)
+                           : APFloat::getInf(semantic, /*Negative=*/true);
+    return builder.getFloatAttr(resultType, identity);
+  }
   case AtomicRMWKind::addf:
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
@@ -2407,11 +2411,15 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     return builder.getIntegerAttr(
         resultType, APInt::getSignedMinValue(
                         llvm::cast<IntegerType>(resultType).getWidth()));
-  case AtomicRMWKind::minf:
-    return builder.getFloatAttr(
-        resultType,
-        APFloat::getInf(llvm::cast<FloatType>(resultType).getFloatSemantics(),
-                        /*Negative=*/false));
+  case AtomicRMWKind::minf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/false)
+                           : APFloat::getInf(semantic, /*Negative=*/false);
+
+    return builder.getFloatAttr(resultType, identity);
+  }
   case AtomicRMWKind::mins:
     return builder.getIntegerAttr(
         resultType, APInt::getSignedMaxValue(
@@ -2457,17 +2465,28 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
     return std::nullopt;
   }
 
+  bool useOnlyFiniteValue = false;
+  auto fmfOpInterface = dyn_cast<ArithFastMathInterface>(op);
+  if (fmfOpInterface) {
+    arith::FastMathFlagsAttr fmfAttr = fmfOpInterface.getFastMathFlagsAttr();
+    useOnlyFiniteValue =
+        bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::ninf);
+  }
+
   // Builder only used as helper for attribute creation.
   OpBuilder b(op->getContext());
   Type resultType = op->getResult(0).getType();
 
-  return getIdentityValueAttr(*maybeKind, resultType, b, op->getLoc());
+  return getIdentityValueAttr(*maybeKind, resultType, b, op->getLoc(),
+                              useOnlyFiniteValue);
 }
 
 /// Returns the identity value associated with an AtomicRMWKind op.
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
-                                    OpBuilder &builder, Location loc) {
-  auto attr = getIdentityValueAttr(op, resultType, builder, loc);
+                                    OpBuilder &builder, Location loc,
+                                    bool useOnlyFiniteValue) {
+  auto attr =
+      getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
   return builder.create<arith::ConstantOp>(loc, attr);
 }
 

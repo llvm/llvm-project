@@ -1,6 +1,12 @@
 // RUN: mlir-opt -finalize-memref-to-llvm='use-opaque-pointers=1' %s -split-input-file | FileCheck %s
 // RUN: mlir-opt -finalize-memref-to-llvm='index-bitwidth=32 use-opaque-pointers=1' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass. This produces slightly different IR
+// because the conversion target is set up differently. Only one test case is
+// checked.
+// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck --check-prefix=CHECK-INTERFACE %s
+
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
 func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
@@ -88,6 +94,10 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: func @view_empty_memref(
 // CHECK:        %[[ARG0:.*]]: index,
 // CHECK:        %[[ARG1:.*]]: memref<0xi8>)
+
+// CHECK-INTERFACE-LABEL: func @view_empty_memref(
+// CHECK-INTERFACE:        %[[ARG0:.*]]: index,
+// CHECK-INTERFACE:        %[[ARG1:.*]]: memref<0xi8>)
 func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
 
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
@@ -101,6 +111,18 @@ func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mlir.constant(4 : index) : i64
   // CHECK: = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+
+  // CHECK-INTERFACE: llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.constant(0 : index) : i64
+  // CHECK-INTERFACE: llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.constant(4 : index) : i64
+  // CHECK-INTERFACE: llvm.insertvalue %{{.*}}, %{{.*}}[3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.constant(1 : index) : i64
+  // CHECK-INTERFACE: llvm.insertvalue %{{.*}}, %{{.*}}[4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.constant(0 : index) : i64
+  // CHECK-INTERFACE: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.constant(4 : index) : i64
+  // CHECK-INTERFACE: = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   %0 = memref.view %mem[%offset][] : memref<0xi8> to memref<0x4xf32>
 
   return

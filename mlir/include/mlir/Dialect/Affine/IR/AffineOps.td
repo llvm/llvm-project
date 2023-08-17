@@ -123,7 +123,7 @@ def AffineForOp : Affine_Op<"for",
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
       "getSingleUpperBound"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getSuccessorEntryOperands"]>]> {
+     ["getEntrySuccessorOperands"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:

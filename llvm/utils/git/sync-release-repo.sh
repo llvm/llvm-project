@@ -20,13 +20,16 @@ RELEASE_BRANCH="${RELEASE_BRANCH:-release/16.x}"
 MAIN_REMOTE=$(uuidgen)
 RELEASE_REMOTE=$(uuidgen)
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# depth here must make sure to fetch enough history to make a merge,
+# it's an arbritary value at this point. Consider using --shallow-since=
+FETCH_OPTIONS="--prune --no-tags --progress --depth=100"
 
 git remote add $MAIN_REMOTE "https://github.com/llvm/llvm-project"
-git remote add $RELEASE_REMOTE "https://github.com/llvm/llvm-project-release-prs"
+git remote add $RELEASE_REMOTE "https://token:$GH_TOKEN@github.com/llvm/llvm-project-release-prs"
 
 # Make sure we are up to date on all our repos first
-git fetch $MAIN_REMOTE
-git fetch $RELEASE_REMOTE
+git fetch $FETCH_OPTIONS $MAIN_REMOTE $RELEASE_BRANCH
+git fetch $FETCH_OPTIONS $RELEASE_REMOTE $RELEASE_BRANCH
 
 # Create our sync branch. Starting with the main
 # repo first since it's important to get those
@@ -49,8 +52,8 @@ fi
 # the real solution would instead be to fetch
 # in a loop if pushing fails. But that's a very
 # tiny edge-case, so let's not complicate this.
-git fetch $MAIN_REMOTE
-git fetch $RELEASE_REMOTE
+git fetch $FETCH_OPTIONS $MAIN_REMOTE $RELEASE_BRANCH
+git fetch $FETCH_OPTIONS $RELEASE_REMOTE $RELEASE_BRANCH
 
 # And merge all the new data to the current branch
 git merge --ff-only $MAIN_REMOTE/$RELEASE_BRANCH
@@ -58,6 +61,9 @@ git merge --ff-only $MAIN_REMOTE/$RELEASE_BRANCH
 # If anything changed let's merge it
 if ! git diff-index --quiet $RELEASE_REMOTE/$RELEASE_BRANCH; then
   echo "Changes in main - pushing to release"
+  # Remove the token stored by GH Actions, otherwise it
+  # won't use our own token in $GH_TOKEN
+  git config --unset-all http.https://github.com/.extraheader
   git push $RELEASE_REMOTE $MERGE_BRANCH:$RELEASE_BRANCH
 fi
 

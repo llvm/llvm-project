@@ -8,6 +8,7 @@
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_70  \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS
 // CHECK-HEADERS: "-cc1"{{.*}}"-internal-isystem" "{{.*}}include{{.*}}llvm_libc_wrappers"{{.*}}"-isysroot" "./"
+// CHECK-HEADERS: "-cc1"{{.*}}"-internal-isystem" "{{.*}}include{{.*}}llvm_libc_wrappers"{{.*}}"-isysroot" "./"
 
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -nogpulib \
 // RUN:     -nogpuinc %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS-DISABLED

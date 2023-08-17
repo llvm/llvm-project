@@ -1,0 +1,27 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-call-site-change-low-pc-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-call-site-change-low-pc-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-4 -O2 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo &> %t/maindwo.txt
+; RUN: cat %t/maindwo.txt | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> %t/maindwodwo.txt
+; RUN: cat %t/maindwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+
+; Tests that DW_AT_low_pc changes in DW_TAG_GNU_call_site.
+
+; PRE-BOLT-DWO-MAIN: version = 0x0004
+; PRE-BOLT-DWO-MAIN: DW_TAG_GNU_call_site
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_abstract_origin
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_GNU_tail_call
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000004)
+
+; BOLT-DWO-MAIN: version = 0x0004
+; BOLT-DWO-MAIN: DW_TAG_GNU_call_site
+; BOLT-DWO-MAIN-NEXT: DW_AT_abstract_origin
+; BOLT-DWO-MAIN-NEXT: DW_AT_GNU_tail_call
+; BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000005)

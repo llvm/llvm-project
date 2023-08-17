@@ -1525,7 +1525,8 @@ struct InputFileEntry {
   bool IsSystemFile;
   bool IsTransient;
   bool BufferOverridden;
-  bool IsTopLevelModuleMap;
+  bool IsTopLevel;
+  bool IsModuleMap;
   uint32_t ContentHash[2];
 
   InputFileEntry(FileEntryRef File) : File(File) {}
@@ -1547,8 +1548,10 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32)); // Modification time
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Overridden
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Transient
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Top-level
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
-  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File name
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Name as req. len
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name as req. + name
   unsigned IFAbbrevCode = Stream.EmitAbbrev(std::move(IFAbbrev));
 
   // Create input file hash abbreviation.
@@ -1582,8 +1585,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
-    Entry.IsTopLevelModuleMap = isModuleMap(File.getFileCharacteristic()) &&
-                                File.getIncludeLoc().isInvalid();
+    Entry.IsTopLevel = File.getIncludeLoc().isInvalid();
+    Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     auto ContentHash = hash_code(-1);
     if (PP->getHeaderSearchInfo()
@@ -1631,6 +1634,15 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     // Emit size/modification time for this file.
     // And whether this file was overridden.
     {
+      SmallString<128> NameAsRequested = Entry.File.getNameAsRequested();
+      SmallString<128> Name = Entry.File.getName();
+
+      PreparePathForOutput(NameAsRequested);
+      PreparePathForOutput(Name);
+
+      if (Name == NameAsRequested)
+        Name.clear();
+
       RecordData::value_type Record[] = {
           INPUT_FILE,
           InputFileOffsets.size(),
@@ -1638,9 +1650,12 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
           (uint64_t)getTimestampForOutput(Entry.File),
           Entry.BufferOverridden,
           Entry.IsTransient,
-          Entry.IsTopLevelModuleMap};
+          Entry.IsTopLevel,
+          Entry.IsModuleMap,
+          NameAsRequested.size()};
 
-      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File.getNameAsRequested());
+      Stream.EmitRecordWithBlob(IFAbbrevCode, Record,
+                                (NameAsRequested + Name).str());
     }
 
     // Emit content hash for this file.

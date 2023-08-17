@@ -167,7 +167,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
 def Bufferization_CloneOp : Bufferization_Op<"clone", [
     CopyOpInterface,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    MemoryEffectsOpInterface,
     DeclareOpInterfaceMethods<AllocationOpInterface, ["buildDealloc", "buildClone"]>
   ]> {
   let builders = [
@@ -191,8 +191,11 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
     behavior.
   }];
 
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$input);
-  let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "",
+                           [MemRead<DefaultResource>]>:$input);
+  let results = (outs Res<AnyRankedOrUnrankedMemRef, "",
+                          [MemWrite<DefaultResource>,
+                           MemAlloc<DefaultResource>]>:$output);
 
   let extraClassDeclaration = [{
     Value getSource() { return getInput(); }

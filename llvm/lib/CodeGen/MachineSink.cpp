@@ -1385,7 +1385,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
   // If the instruction to move defines a dead physical register which is live
   // when leaving the basic block, don't move it because it could turn into a
-  // "zombie" define of that preg. E.g., EFLAGS. (<rdar://problem/8030636>)
+  // "zombie" define of that preg. E.g., EFLAGS.
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (Reg == 0 || !Reg.isPhysical())

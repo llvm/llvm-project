@@ -19,6 +19,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 
 #include "rpc_util.h"
+#include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/optional.h"
@@ -462,7 +463,7 @@ LIBC_INLINE void Port<T, S>::send_n(const void *const *src, uint64_t *size) {
   send([&](Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
-                                 : max(lane_value(size, id), num_sends);
+                                 : cpp::max(lane_value(size, id), num_sends);
     uint64_t len =
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)
@@ -495,7 +496,7 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
     lane_value(dst, id) =
         reinterpret_cast<uint8_t *>(alloc(lane_value(size, id)));
     num_recvs = is_process_gpu() ? lane_value(size, id)
-                                 : max(lane_value(size, id), num_recvs);
+                                 : cpp::max(lane_value(size, id), num_recvs);
     uint64_t len =
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)

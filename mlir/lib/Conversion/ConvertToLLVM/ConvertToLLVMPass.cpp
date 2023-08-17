@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -62,6 +63,7 @@ class ConvertToLLVMPass
     : public impl::ConvertToLLVMPassBase<ConvertToLLVMPass> {
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
   std::shared_ptr<const ConversionTarget> target;
+  std::shared_ptr<const LLVMTypeConverter> typeConverter;
 
 public:
   using impl::ConvertToLLVMPassBase<ConvertToLLVMPass>::ConvertToLLVMPassBase;
@@ -72,23 +74,26 @@ public:
 
   ConvertToLLVMPass(const ConvertToLLVMPass &other)
       : ConvertToLLVMPassBase(other), patterns(other.patterns),
-        target(other.target) {}
+        target(other.target), typeConverter(other.typeConverter) {}
 
   LogicalResult initialize(MLIRContext *context) final {
     RewritePatternSet tempPatterns(context);
     auto target = std::make_shared<ConversionTarget>(*context);
     target->addLegalDialect<LLVM::LLVMDialect>();
+    auto typeConverter = std::make_shared<LLVMTypeConverter>(context);
     for (Dialect *dialect : context->getLoadedDialects()) {
       // First time we encounter this dialect: if it implements the interface,
       // let's populate patterns !
       auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface)
         continue;
-      iface->populateConvertToLLVMConversionPatterns(*target, tempPatterns);
+      iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
+                                                     tempPatterns);
     }
     patterns =
         std::make_unique<FrozenRewritePatternSet>(std::move(tempPatterns));
     this->target = target;
+    this->typeConverter = typeConverter;
     return success();
   }
 

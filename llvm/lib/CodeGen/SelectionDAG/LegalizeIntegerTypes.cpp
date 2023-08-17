@@ -3614,9 +3614,11 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
     Op = GetPromotedFloat(Op);
 
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf) {
-    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
+    EVT OFPVT = Op.getValueType();
+    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), OFPVT);
     Op = GetSoftPromotedHalf(Op);
-    Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(OFPVT == MVT::f16 ? ISD::FP16_TO_FP : ISD::BF16_TO_FP, dl,
+                     NFPVT, Op);
     Op = DAG.getNode(ISD::FP_TO_SINT, dl, VT, Op);
     SplitInteger(Op, Lo, Hi);
     return;
@@ -3651,9 +3653,11 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
     Op = GetPromotedFloat(Op);
 
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf) {
-    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
+    EVT OFPVT = Op.getValueType();
+    EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), OFPVT);
     Op = GetSoftPromotedHalf(Op);
-    Op = DAG.getNode(ISD::FP16_TO_FP, dl, NFPVT, Op);
+    Op = DAG.getNode(OFPVT == MVT::f16 ? ISD::FP16_TO_FP : ISD::BF16_TO_FP, dl,
+                     NFPVT, Op);
     Op = DAG.getNode(ISD::FP_TO_UINT, dl, VT, Op);
     SplitInteger(Op, Lo, Hi);
     return;

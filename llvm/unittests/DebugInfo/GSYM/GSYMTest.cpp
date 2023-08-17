@@ -1348,9 +1348,9 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1425,9 +1425,9 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1532,9 +1532,9 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1632,14 +1632,14 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   // Only allow addresses between [0x1000 - 0x2000) to be linked into the
   // GSYM.
   AddressRanges TextRanges;
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1835,9 +1835,9 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -2095,9 +2095,9 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -2274,9 +2274,9 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -2414,9 +2414,9 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -3051,9 +3051,9 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   std::string errors;
   raw_string_ostream OS(errors);
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -3278,9 +3278,9 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   std::string errors;
   raw_string_ostream OS(errors);
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -3514,9 +3514,9 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   std::string errors;
   raw_string_ostream OS(errors);
   GsymCreator GC;
-  DwarfTransformer DT(*DwarfContext, OS, GC);
+  DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);

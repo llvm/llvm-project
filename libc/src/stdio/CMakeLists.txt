@@ -1,3 +1,24 @@
+# Helper function that creates an alias if a target specific implementation
+# exists, otherwise it uses a generic one.
+function(add_stdio_entrypoint_object name)
+  if(TARGET libc.src.stdio.${LIBC_TARGET_OS}.${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+  elseif(TARGET libc.src.stdio.generic.${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .generic.${name}
+    )
+  endif()
+endfunction(add_stdio_entrypoint_object)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -322,33 +343,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fputs
-  SRCS
-    fputs.cpp
-  HDRS
-    fputs.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-
-add_entrypoint_object(
-  puts
-  SRCS
-    puts.cpp
-  HDRS
-    puts.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   fseek
   SRCS
     fseek.cpp
@@ -383,42 +377,6 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.CPP.new
     libc.src.__support.File.file
-)
-
-add_entrypoint_object(
-  stdin
-  SRCS
-    stdin.cpp
-  HDRS
-    stdin.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  stdout
-  SRCS
-    stdout.cpp
-  HDRS
-    stdout.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  stderr
-  SRCS
-    stderr.cpp
-  HDRS
-    stderr.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
 )
 
 add_entrypoint_object(
@@ -608,3 +566,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.remove
 )
+
+# These entrypoints have multiple potential implementations.
+add_stdio_entrypoint_object(puts)
+add_stdio_entrypoint_object(fputs)
+add_stdio_entrypoint_object(stdin)
+add_stdio_entrypoint_object(stdout)
+add_stdio_entrypoint_object(stderr)

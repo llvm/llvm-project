@@ -300,32 +300,30 @@ protected:
       llvmIntPtrType,
       {llvmPointerType /*s*/, llvmInt32Type /*ma*/, llvmInt32Type /*mb*/,
        llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
-       llvmInt32Type /*ctp*/, llvmInt32Type /*alg*/, llvmIntPtrType /*bs*/,
-       llvmPointerType /*buf*/, llvmPointerType /*void *stream*/}};
+       llvmInt32Type /*ctp*/, llvmIntPtrType /*bs*/, llvmPointerType /*buf*/,
+       llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMEstimateMemoryBuilder = {
       "mgpuSpGEMMEstimateMemory",
       llvmVoidType,
       {llvmPointerType /*nbs3*/, llvmPointerType /*nbs2*/,
        llvmPointerType /*s*/, llvmInt32Type /*ma*/, llvmInt32Type /*mb*/,
        llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
-       llvmInt32Type /*ctp*/, llvmInt32Type /*alg*/,
-       llvmFloat32Type /*chunk_fraction*/, llvmIntPtrType /*bs3*/,
-       llvmPointerType /*buf3*/, llvmIntPtrType /*bs2*/,
+       llvmInt32Type /*ctp*/, llvmFloat32Type /*chunk_fraction*/,
+       llvmIntPtrType /*bs3*/, llvmPointerType /*buf3*/, llvmIntPtrType /*bs2*/,
        llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMComputeBuilder = {
       "mgpuSpGEMMCompute",
       llvmIntPtrType,
       {llvmPointerType /*s*/, llvmInt32Type /*ma*/, llvmInt32Type /*mb*/,
        llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
-       llvmInt32Type /*ctp*/, llvmInt32Type /*alg*/, llvmIntPtrType /*bs*/,
-       llvmPointerType /*buf*/, llvmPointerType /*void *stream*/}};
+       llvmInt32Type /*ctp*/, llvmIntPtrType /*bs*/, llvmPointerType /*buf*/,
+       llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMCopyBuilder = {
       "mgpuSpGEMMCopy",
       llvmVoidType,
       {llvmPointerType /*s*/, llvmInt32Type /*ma*/, llvmInt32Type /*mb*/,
        llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
-       llvmInt32Type /*ctp*/, llvmInt32Type /*alg*/,
-       llvmPointerType /*void *stream*/}};
+       llvmInt32Type /*ctp*/, llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMCreateDescrBuilder = {
       "mgpuSpGEMMCreateDescr",
       llvmPointerType,
@@ -1735,7 +1733,6 @@ ConvertSpGEMMWorkEstimationOrComputeOpToGpuRuntimeCallPattern::matchAndRewrite(
       rewriter, loc, getCuSparseDataTypeFrom(adaptor.getComputeType()));
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
-  auto alg = genConstInt32From(rewriter, loc, adaptor.getAlg());
   auto stream = adaptor.getAsyncDependencies().front();
 
   Value pBuf =
@@ -1751,7 +1748,7 @@ ConvertSpGEMMWorkEstimationOrComputeOpToGpuRuntimeCallPattern::matchAndRewrite(
         createSpGEMMWorkEstimationBuilder
             .create(loc, rewriter,
                     {adaptor.getDesc(), modeA, modeB, adaptor.getSpmatA(),
-                     adaptor.getSpmatB(), adaptor.getSpmatC(), computeType, alg,
+                     adaptor.getSpmatB(), adaptor.getSpmatC(), computeType,
                      adaptor.getBufferSz(), pBuf, stream})
             .getResult();
   } else {
@@ -1759,7 +1756,7 @@ ConvertSpGEMMWorkEstimationOrComputeOpToGpuRuntimeCallPattern::matchAndRewrite(
         createSpGEMMComputeBuilder
             .create(loc, rewriter,
                     {adaptor.getDesc(), modeA, modeB, adaptor.getSpmatA(),
-                     adaptor.getSpmatB(), adaptor.getSpmatC(), computeType, alg,
+                     adaptor.getSpmatB(), adaptor.getSpmatC(), computeType,
                      adaptor.getBufferSz(), pBuf, stream})
             .getResult();
   }
@@ -1777,7 +1774,6 @@ ConvertSpGEMMEstimateMemoryOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op.getLoc();
   auto computeType = genConstInt32From(
       rewriter, loc, getCuSparseDataTypeFrom(adaptor.getComputeType()));
-  auto alg = genConstInt32From(rewriter, loc, adaptor.getAlg());
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
   auto stream = adaptor.getAsyncDependencies().front();
@@ -1806,7 +1802,7 @@ ConvertSpGEMMEstimateMemoryOpToGpuRuntimeCallPattern::matchAndRewrite(
       loc, rewriter,
       {bufferSizePtr3, bufferSizePtr2, adaptor.getDesc(), modeA, modeB,
        adaptor.getSpmatA(), adaptor.getSpmatB(), adaptor.getSpmatC(),
-       computeType, alg, chunkFraction, adaptor.getBufferSz3(), pBuf3,
+       computeType, chunkFraction, adaptor.getBufferSz3(), pBuf3,
        adaptor.getBufferSz2(), stream});
   auto bufferSize2 =
       rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr2);
@@ -1828,12 +1824,11 @@ LogicalResult ConvertSpGEMMCopyOpToGpuRuntimeCallPattern::matchAndRewrite(
       rewriter, loc, getCuSparseDataTypeFrom(adaptor.getComputeType()));
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
-  auto alg = genConstInt32From(rewriter, loc, adaptor.getAlg());
   auto stream = adaptor.getAsyncDependencies().front();
-  createSpGEMMCopyBuilder.create(
-      loc, rewriter,
-      {adaptor.getDesc(), modeA, modeB, adaptor.getSpmatA(),
-       adaptor.getSpmatB(), adaptor.getSpmatC(), computeType, alg, stream});
+  createSpGEMMCopyBuilder.create(loc, rewriter,
+                                 {adaptor.getDesc(), modeA, modeB,
+                                  adaptor.getSpmatA(), adaptor.getSpmatB(),
+                                  adaptor.getSpmatC(), computeType, stream});
   rewriter.replaceOp(op, {stream});
   return success();
 }

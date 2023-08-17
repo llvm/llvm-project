@@ -262,6 +262,8 @@ def UseNegativeImmediates
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
+def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
+
 def IsNeonAvailable : Predicate<"Subtarget->isNeonAvailable()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
@@ -819,6 +821,12 @@ def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
                         [SDNPHasChain, SDNPOutGlue]>;
+
+def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
+def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
+                            [(AArch64rshrnb node:$rs, node:$i),
+                            (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
 // Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
 // have no common bits.

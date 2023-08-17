@@ -25,7 +25,6 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"

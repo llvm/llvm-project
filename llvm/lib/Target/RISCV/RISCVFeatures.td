@@ -73,7 +73,7 @@ def HasStdExtZihintpause : Predicate<"Subtarget->hasStdExtZihintpause()">,
                                      "'Zihintpause' (Pause Hint)">;
 
 def FeatureStdExtZihintntl
-    : SubtargetFeature<"experimental-zihintntl", "HasStdExtZihintntl", "true",
+    : SubtargetFeature<"zihintntl", "HasStdExtZihintntl", "true",
                        "'Zihintntl' (Non-Temporal Locality Hints)">;
 def HasStdExtZihintntl : Predicate<"Subtarget->hasStdExtZihintntl()">,
                                     AssemblerPredicate<(all_of FeatureStdExtZihintntl),

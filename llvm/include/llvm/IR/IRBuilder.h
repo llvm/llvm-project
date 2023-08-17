@@ -1024,6 +1024,19 @@ public:
                            nullptr, Name);
   }
 
+  /// Create a call to llvm.stacksave
+  CallInst *CreateStackSave(const Twine &Name = "") {
+    const DataLayout &DL = BB->getModule()->getDataLayout();
+    return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
+                           {}, nullptr, Name);
+  }
+
+  /// Create a call to llvm.stackrestore
+  CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::stackrestore, {Ptr->getType()}, {Ptr},
+                           nullptr, Name);
+  }
+
 private:
   /// Create a call to a masked intrinsic with given Id.
   CallInst *CreateMaskedIntrinsic(Intrinsic::ID Id, ArrayRef<Value *> Ops,

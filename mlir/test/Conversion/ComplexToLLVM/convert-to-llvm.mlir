@@ -1,5 +1,9 @@
 // RUN: mlir-opt %s -convert-complex-to-llvm | FileCheck %s
 
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
+
 // CHECK-LABEL: func @complex_create
 // CHECK-SAME:    (%[[REAL0:.*]]: f32, %[[IMAG0:.*]]: f32)
 // CHECK-NEXT:    %[[CPLX0:.*]] = llvm.mlir.undef : !llvm.struct<(f32, f32)>

@@ -945,8 +945,10 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_AddImplicitDef: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RegNum = MatchTable[CurrentIdx++];
+      auto Flags = (uint64_t)MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      OutMIs[InsnID].addDef(RegNum, RegState::Implicit);
+      Flags |= RegState::Implicit;
+      OutMIs[InsnID].addDef(RegNum, Flags);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddImplicitDef(OutMIs["
                              << InsnID << "], " << RegNum << ")\n");

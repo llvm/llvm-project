@@ -1334,6 +1334,30 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
           return DAG.getNode(Opc, DL, VT, SDValue(NE, 0), N00);
       }
     }
+
+    // Reassociate the operands from (OR/AND (OR/AND(N00, N001)), N1) to (OR/AND
+    // (OR/AND(N00, N1)), N01) when N00 and N1 are comparisons with the same
+    // predicate or to (OR/AND (OR/AND(N1, N01)), N00) when N01 and N1 are
+    // comparisons with the same predicate. This enables optimizations as the
+    // following one:
+    // CMP(A,C)||CMP(B,C) => CMP(MIN/MAX(A,B), C)
+    // CMP(A,C)&&CMP(B,C) => CMP(MIN/MAX(A,B), C)
+    if (Opc == ISD::AND || Opc == ISD::OR) {
+      if (N1->getOpcode() == ISD::SETCC && N00->getOpcode() == ISD::SETCC &&
+          N01->getOpcode() == ISD::SETCC) {
+        ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+        ISD::CondCode CC00 = cast<CondCodeSDNode>(N00.getOperand(2))->get();
+        ISD::CondCode CC01 = cast<CondCodeSDNode>(N01.getOperand(2))->get();
+        if (CC1 == CC00 && CC1 != CC01) {
+          SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1, Flags);
+          return DAG.getNode(Opc, DL, VT, OpNode, N01, Flags);
+        }
+        if (CC1 == CC01 && CC1 != CC00) {
+          SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N01, N1, Flags);
+          return DAG.getNode(Opc, DL, VT, OpNode, N00, Flags);
+        }
+      }
+    }
   }
 
   return SDValue();

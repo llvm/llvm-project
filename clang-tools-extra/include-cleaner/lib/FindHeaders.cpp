@@ -25,6 +25,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
+#include <queue>
+#include <set>
 #include <utility>
 
 namespace clang::include_cleaner {
@@ -188,13 +190,13 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
     if (!PI)
       return {{FE, Hints::PublicHeader | Hints::OriginHeader}};
     bool IsOrigin = true;
+    std::queue<const FileEntry *> Exporters;
     while (FE) {
       Results.emplace_back(FE,
                            isPublicHeader(FE, *PI) |
                                (IsOrigin ? Hints::OriginHeader : Hints::None));
-      // FIXME: compute transitive exporter headers.
       for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
-        Results.emplace_back(Export, isPublicHeader(Export, *PI));
+        Exporters.push(Export);
 
       if (auto Verbatim = PI->getPublic(FE); !Verbatim.empty()) {
         Results.emplace_back(Verbatim,
@@ -208,6 +210,20 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
       FID = SM.getDecomposedIncludedLoc(FID).first;
       FE = SM.getFileEntryForID(FID);
       IsOrigin = false;
+    }
+    // Now traverse provider trees rooted at exporters.
+    // Note that we only traverse export edges, and ignore private -> public
+    // mappings, as those pragmas apply to exporter, and not the main provider
+    // being exported in this header.
+    std::set<const FileEntry *> SeenExports;
+    while (!Exporters.empty()) {
+      auto *Export = Exporters.front();
+      Exporters.pop();
+      if (!SeenExports.insert(Export).second) // In case of cyclic exports
+        continue;
+      Results.emplace_back(Export, isPublicHeader(Export, *PI));
+      for (const auto *Export : PI->getExporters(Export, SM.getFileManager()))
+        Exporters.push(Export);
     }
     return Results;
   }

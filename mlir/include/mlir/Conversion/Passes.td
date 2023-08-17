@@ -284,6 +284,31 @@ def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ControlFlowToSCF
+//===----------------------------------------------------------------------===//
+
+def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
+  let summary = "Lift ControlFlow dialect to SCF dialect";
+  let description = [{
+    Lifts ControlFlow operations to SCF dialect operations.
+
+    This pass is prefixed with "lift" instead of "convert" as it is not always
+    guaranteed to replace all ControlFlow ops.
+    If a region contains only a single kind of return-like operation, all
+    ControlFlow operations will be replaced successfully.
+    Otherwise a single ControlFlow switch branching to one block per return-like
+    operation kind remains.
+  }];
+
+  let dependentDialects = ["scf::SCFDialect",
+                           "arith::ArithDialect",
+                           "ub::UBDialect",
+                           // TODO: This is only necessary until we have a
+                           //       ub.unreachable op.
+                           "func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ControlFlowToSPIRV
 //===----------------------------------------------------------------------===//
 

@@ -65,7 +65,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
       double c2 = fputil::multiply_add(xd, COEFFS[5], COEFFS[4]);
       double p = fputil::polyeval(xsq, c0, c1, c2);
       double r = fputil::multiply_add(p, xd, 1.0);
-      return r;
+      return static_cast<float>(r);
     }
 
     // x >= 128

@@ -4277,15 +4277,13 @@ void CallArgList::allocateArgumentMemory(CodeGenFunction &CGF) {
   assert(!StackBase);
 
   // Save the stack.
-  llvm::Function *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stacksave);
-  StackBase = CGF.Builder.CreateCall(F, {}, "inalloca.save");
+  StackBase = CGF.Builder.CreateStackSave("inalloca.save");
 }
 
 void CallArgList::freeArgumentMemory(CodeGenFunction &CGF) const {
   if (StackBase) {
     // Restore the stack after the call.
-    llvm::Function *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stackrestore);
-    CGF.Builder.CreateCall(F, StackBase);
+    CGF.Builder.CreateStackRestore(StackBase);
   }
 }
 

@@ -2147,7 +2147,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
 }
 
 def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getRegionInvocationBounds"]>, RecursiveMemoryEffects,
+    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
     NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{

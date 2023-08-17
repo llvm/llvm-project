@@ -129,6 +129,14 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   const EnumDecl *ED = T->castAs<EnumType>()->getDecl();
 
   EnumValueVector DeclValues = getDeclValuesForEnum(ED);
+
+  // If the declarator list is empty, bail out.
+  // Every initialization an enum with a fixed underlying type but without any
+  // enumerators would produce a warning if we were to continue at this point.
+  // The most notable example is std::byte in the C++17 standard library.
+  if (DeclValues.size() == 0)
+    return;
+
   // Check if any of the enum values possibly match.
   bool PossibleValueMatch = llvm::any_of(
       DeclValues, ConstraintBasedEQEvaluator(C, *ValueToCast));

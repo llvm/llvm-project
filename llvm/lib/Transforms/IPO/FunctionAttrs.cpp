@@ -110,6 +110,39 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 
 } // end anonymous namespace
 
+static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
+                         ModRefInfo MR, AAResults &AAR) {
+  // Ignore accesses to known-invariant or local memory.
+  MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
+  if (isNoModRef(MR))
+    return;
+
+  const Value *UO = getUnderlyingObject(Loc.Ptr);
+  assert(!isa<AllocaInst>(UO) &&
+         "Should have been handled by getModRefInfoMask()");
+  if (isa<Argument>(UO)) {
+    ME |= MemoryEffects::argMemOnly(MR);
+    return;
+  }
+
+  // If it's not an identified object, it might be an argument.
+  if (!isIdentifiedObject(UO))
+    ME |= MemoryEffects::argMemOnly(MR);
+  ME |= MemoryEffects(IRMemLocation::Other, MR);
+}
+
+static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
+                       ModRefInfo ArgMR, AAResults &AAR) {
+  for (const Value *Arg : Call->args()) {
+    if (!Arg->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    addLocAccess(ME,
+                 MemoryLocation::getBeforeOrAfter(Arg, Call->getAAMetadata()),
+                 ArgMR, AAR);
+  }
+}
+
 /// Returns the memory access attribute for function F using AAR for AA results,
 /// where SCCNodes is the current SCC.
 ///
@@ -135,25 +168,6 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
-  auto AddLocAccess = [&](const MemoryLocation &Loc, ModRefInfo MR) {
-    // Ignore accesses to known-invariant or local memory.
-    MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
-    if (isNoModRef(MR))
-      return;
-
-    const Value *UO = getUnderlyingObject(Loc.Ptr);
-    assert(!isa<AllocaInst>(UO) &&
-           "Should have been handled by getModRefInfoMask()");
-    if (isa<Argument>(UO)) {
-      ME |= MemoryEffects::argMemOnly(MR);
-      return;
-    }
-
-    // If it's not an identified object, it might be an argument.
-    if (!isIdentifiedObject(UO))
-      ME |= MemoryEffects::argMemOnly(MR);
-    ME |= MemoryEffects(IRMemLocation::Other, MR);
-  };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
@@ -190,15 +204,8 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallME.getModRef(IRMemLocation::ArgMem);
-      if (ArgMR != ModRefInfo::NoModRef) {
-        for (const Use &U : Call->args()) {
-          const Value *Arg = U;
-          if (!Arg->getType()->isPtrOrPtrVectorTy())
-            continue;
-
-          AddLocAccess(MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata()), ArgMR);
-        }
-      }
+      if (ArgMR != ModRefInfo::NoModRef)
+        addArgLocs(ME, Call, ArgMR, AAR);
       continue;
     }
 
@@ -222,7 +229,7 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
-    AddLocAccess(*Loc, MR);
+    addLocAccess(ME, *Loc, MR, AAR);
   }
 
   return OrigME & ME;
@@ -1720,7 +1727,8 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 
 template <typename AARGetterT>
 static SmallSet<Function *, 8>
-deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
+deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
+                       bool ArgAttrsOnly) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -1728,6 +1736,10 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
     return {};
 
   SmallSet<Function *, 8> Changed;
+  if (ArgAttrsOnly) {
+    addArgumentAttrs(Nodes.SCCNodes, Changed);
+    return Changed;
+  }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
@@ -1762,10 +1774,13 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
                                                   LazyCallGraph &CG,
                                                   CGSCCUpdateResult &) {
   // Skip non-recursive functions if requested.
+  // Only infer argument attributes for non-recursive functions, because
+  // it can affect optimization behavior in conjunction with noalias.
+  bool ArgAttrsOnly = false;
   if (C.size() == 1 && SkipNonRecursive) {
     LazyCallGraph::Node &N = *C.begin();
     if (!N->lookup(N))
-      return PreservedAnalyses::all();
+      ArgAttrsOnly = true;
   }
 
   FunctionAnalysisManager &FAM =
@@ -1782,7 +1797,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
-  auto ChangedFunctions = deriveAttrsInPostOrder(Functions, AARGetter);
+  auto ChangedFunctions =
+      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
@@ -1818,7 +1834,7 @@ void PostOrderFunctionAttrsPass::printPipeline(
   static_cast<PassInfoMixin<PostOrderFunctionAttrsPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   if (SkipNonRecursive)
-    OS << "<skip-non-recursive>";
+    OS << "<skip-non-recursive-function-attrs>";
 }
 
 template <typename AARGetterT>

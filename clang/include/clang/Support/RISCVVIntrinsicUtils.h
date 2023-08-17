@@ -58,6 +58,13 @@ enum class VectorTypeModifier : uint8_t {
   SFixedLog2LMUL1,
   SFixedLog2LMUL2,
   SFixedLog2LMUL3,
+  SEFixedLog2LMULN3,
+  SEFixedLog2LMULN2,
+  SEFixedLog2LMULN1,
+  SEFixedLog2LMUL0,
+  SEFixedLog2LMUL1,
+  SEFixedLog2LMUL2,
+  SEFixedLog2LMUL3,
   Tuple2,
   Tuple3,
   Tuple4,
@@ -259,7 +266,7 @@ class RVVType {
   std::string Str;
   std::string ShortStr;
 
-  enum class FixedLMULType { LargerThan, SmallerThan };
+  enum class FixedLMULType { LargerThan, SmallerThan, SmallerOrEqual };
 
   RVVType(BasicType BT, int Log2LMUL, const PrototypeDescriptor &Profile);
 

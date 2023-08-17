@@ -70,8 +70,8 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         store { ptr, i64 } %[[VAL_6]], ptr %[[VAL_3]], align 8
 // CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_1]], ptr
 // CHECK:         br label %[[VAL_8:.*]]
-// CHECK:         %[[VAL_11:.*]] = phi 
-// CHECK:         %[[VAL_13:.*]] = phi 
+// CHECK:         %[[VAL_11:.*]] = phi
+// CHECK:         %[[VAL_13:.*]] = phi
 // CHECK:         %[[VAL_15:.*]] = icmp sgt i64 %[[VAL_13]], 0
 // CHECK:         %[[VAL_18:.*]] = getelementptr [10 x [1 x i8]], ptr %[[VAL_1]], i32 0, i64 %[[VAL_11]]
 // CHECK:         store [1 x i8] c" ", ptr %[[VAL_18]], align 1
@@ -80,12 +80,12 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_23:.*]] = call ptr @llvm.adjust.trampoline(ptr %[[VAL_20]])
 // CHECK:         %[[VAL_25:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_23]], 0
 // CHECK:         %[[VAL_26:.*]] = insertvalue { ptr, i64 } %[[VAL_25]], i64 10, 1
-// CHECK:         %[[VAL_27:.*]] = call ptr @llvm.stacksave()
+// CHECK:         %[[VAL_27:.*]] = call ptr @llvm.stacksave.p0()
 // CHECK:         %[[VAL_28:.*]] = extractvalue { ptr, i64 } %[[VAL_26]], 0
 // CHECK:         %[[VAL_29:.*]] = extractvalue { ptr, i64 } %[[VAL_26]], 1
 // CHECK:         %[[VAL_30:.*]] = call { ptr, i64 } @_QPget_message(ptr %[[VAL_0]], i64 40, ptr %[[VAL_28]], i64 %[[VAL_29]])
 // CHECK:         %[[VAL_32:.*]] = call i1 @_FortranAioOutputAscii(ptr %{{.*}}, ptr %[[VAL_0]], i64 40)
-// CHECK:         call void @llvm.stackrestore(ptr %[[VAL_27]])
+// CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_27]])
 
 // CHECK-LABEL: define { ptr, i64 } @_QFtest_proc_dummy_charPgen_message(ptr
 // CHECK-SAME:                %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest %[[VAL_2:.*]])
@@ -115,7 +115,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_5:.*]] = insertvalue { ptr, i64 } %[[VAL_4]], i64 %[[VAL_3]], 1
 // CHECK:         %[[VAL_7:.*]] = extractvalue { ptr, i64 } %[[VAL_5]], 0
 // CHECK:         %[[VAL_8:.*]] = extractvalue { ptr, i64 } %[[VAL_5]], 1
-// CHECK:         %[[VAL_9:.*]] = call ptr @llvm.stacksave()
+// CHECK:         %[[VAL_9:.*]] = call ptr @llvm.stacksave.p0()
 // CHECK:         %[[VAL_10:.*]] = alloca i8, i64 %[[VAL_8]], align 1
 // CHECK:         %[[VAL_12:.*]] = call { ptr, i64 } %[[VAL_7]](ptr %[[VAL_10]], i64 %[[VAL_8]])
 // CHECK:         %[[VAL_13:.*]] = add i64 %[[VAL_8]], 12
@@ -138,7 +138,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_39:.*]] = icmp sgt i64 %[[VAL_37]], 0
 // CHECK:         %[[VAL_42:.*]] = getelementptr [1 x i8], ptr %[[VAL_0]], i64 %[[VAL_35]]
 // CHECK:         store [1 x i8] c" ", ptr %[[VAL_42]], align 1
-// CHECK:         call void @llvm.stackrestore(ptr %[[VAL_9]])
+// CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_9]])
 // CHECK:         %[[VAL_43:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_0]], 0
 // CHECK:         %[[VAL_44:.*]] = insertvalue { ptr, i64 } %[[VAL_43]], i64 40, 1
 // CHECK:         ret { ptr, i64 } %[[VAL_44]]
@@ -190,12 +190,12 @@ func.func @_QPtest_proc_dummy_char() {
   %24 = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
   %25 = fir.insert_value %24, %23, [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
   %26 = fir.insert_value %25, %c10_i64, [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
-  %27 = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
+  %27 = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
   %28 = fir.call @_QPget_message(%0, %c40, %26) : (!fir.ref<!fir.char<1,40>>, index, tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxchar<1>
   %29 = fir.convert %0 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<i8>
   %30 = fir.convert %c40 : (index) -> i64
   %31 = fir.call @_FortranAioOutputAscii(%21, %29, %30) : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
-  fir.call @llvm.stackrestore(%27) : (!fir.ref<i8>) -> ()
+  fir.call @llvm.stackrestore.p0(%27) : (!fir.ref<i8>) -> ()
   %32 = fir.call @_FortranAioEndIoStatement(%21) : (!fir.ref<i8>) -> i32
   return
 }
@@ -246,7 +246,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %2 = fir.extract_value %arg2, [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
   %3 = fir.box_addr %2 : (!fir.boxproc<() -> ()>) -> (() -> ())
   %4 = fir.extract_value %arg2, [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64
-  %5 = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
+  %5 = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
   %6 = fir.alloca !fir.char<1,?>(%4 : i64) {bindc_name = ".result"}
   %7 = fir.convert %3 : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>)
   %8 = fir.convert %4 : (i64) -> index
@@ -293,7 +293,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %39 = arith.subi %34, %c1 : index
   cf.br ^bb4(%38, %39 : index, index)
 ^bb6:  // pred: ^bb4
-  fir.call @llvm.stackrestore(%5) : (!fir.ref<i8>) -> ()
+  fir.call @llvm.stackrestore.p0(%5) : (!fir.ref<i8>) -> ()
   %40 = fir.emboxchar %0, %c40 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   return %40 : !fir.boxchar<1>
 }
@@ -306,8 +306,8 @@ fir.global linkonce @_QQcl.2E2F682E66393000 constant : !fir.char<1,8> {
   %0 = fir.string_lit "./h.f90\00"(8) : !fir.char<1,8>
   fir.has_value %0 : !fir.char<1,8>
 }
-func.func private @llvm.stacksave() -> !fir.ref<i8>
-func.func private @llvm.stackrestore(!fir.ref<i8>)
+func.func private @llvm.stacksave.p0() -> !fir.ref<i8>
+func.func private @llvm.stackrestore.p0(!fir.ref<i8>)
 fir.global linkonce @_QQcl.6D6573736167652069733A20 constant : !fir.char<1,12> {
   %0 = fir.string_lit "message is: "(12) : !fir.char<1,12>
   fir.has_value %0 : !fir.char<1,12>

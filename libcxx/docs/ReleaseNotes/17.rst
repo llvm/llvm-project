@@ -70,6 +70,22 @@ Implemented Papers
 - P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
 - P2474R2 - ``views::repeat``
 - P0009R18 - ``mdspan`` (``layout_stride`` is not done yet)
+- P2093R14 - Formatted output (the ``ostream`` overload is not done yet)
+- P2539R4 - Should the output of ``std::print`` to a terminal be synchronized
+  with the underlying stream? (the ``ostream`` overload is not done yet)
+
+With the ``format`` library  being marked as stable, the
+following papers are now available by default without using
+``-fexperimental-library``:
+
+- P0645 - Text Formatting
+- P1652 - Printf corner cases in std::format
+- P1892 - Extended locale-specific presentation specifiers for std::format
+- P1868 - width: clarifying units of width and precision in std::format
+- P2216 - std::format improvements
+- P2418 - Add support for std::generator-like types to std::format
+- P2286R8 - Formatting Ranges
+- P2508R1 - Exposing std::basic-format-string
 
 Improvements and New Features
 -----------------------------

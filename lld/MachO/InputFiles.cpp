@@ -2106,28 +2106,34 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
       forceHidden(forceHidden) {}
 
 void ArchiveFile::addLazySymbols() {
+  // Avoid calling getMemoryBufferRef() on zero-symbol archive
+  // since that crashes.
+  if (file->isEmpty() || file->getNumberOfSymbols() == 0)
+    return;
+
   Error err = Error::success();
-  Expected<MemoryBufferRef> mbOrErr =
-      this->file->child_begin(err)->getMemoryBufferRef();
-
+  auto child = file->child_begin(err);
   // Ignore the I/O error here - will be reported later.
-  if (!mbOrErr) {
-    llvm::consumeError(mbOrErr.takeError());
-  } else if (!err) {
-    if (identify_magic(mbOrErr->getBuffer()) == file_magic::macho_object) {
-      if (target->wordSize == 8)
-        compatArch = compatWithTargetArch(
-            this, reinterpret_cast<const LP64::mach_header *>(
-                      mbOrErr->getBufferStart()));
-      else
-        compatArch = compatWithTargetArch(
-            this, reinterpret_cast<const ILP32::mach_header *>(
-                      mbOrErr->getBufferStart()));
-
-      if (!compatArch)
-        return;
+  if (!err) {
+    Expected<MemoryBufferRef> mbOrErr = child->getMemoryBufferRef();
+    if (!mbOrErr) {
+      llvm::consumeError(mbOrErr.takeError());
+    } else {
+      if (identify_magic(mbOrErr->getBuffer()) == file_magic::macho_object) {
+        if (target->wordSize == 8)
+          compatArch = compatWithTargetArch(
+              this, reinterpret_cast<const LP64::mach_header *>(
+                        mbOrErr->getBufferStart()));
+        else
+          compatArch = compatWithTargetArch(
+              this, reinterpret_cast<const ILP32::mach_header *>(
+                        mbOrErr->getBufferStart()));
+        if (!compatArch)
+          return;
+      }
     }
   }
+
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazyArchive(sym.getName(), this, sym);
 }

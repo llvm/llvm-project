@@ -787,3 +787,23 @@
 // LA64-FPU0-LP64S: #define __loongarch_lp64 1
 // LA64-FPU0-LP64S-NOT: #define __loongarch_single_float
 // LA64-FPU0-LP64S: #define __loongarch_soft_float 1
+
+/// Check __loongarch_arch and __loongarch_tune.
+
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la464 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la464 -DTUNE=la464 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=loongarch64 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=loongarch64 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -mtune=la464 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la464 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 -mtune=la464 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=loongarch64 -DTUNE=la464 %s
+// RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=la464 -mtune=loongarch64 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la464 -DTUNE=loongarch64 %s
+
+// ARCH-TUNE: #define __loongarch_arch "[[ARCH]]"
+// ARCH-TUNE: #define __loongarch_tune "[[TUNE]]"

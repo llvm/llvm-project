@@ -187,7 +187,7 @@ bar:
 	.size	bar, .Lfunc_end7-.Lfunc_begin7
 
   .global foobar
-  .p2align
+  .p2align 4
   .type foobar,@function
 foobar:
 .Lfunc_begin8:
@@ -195,7 +195,7 @@ foobar:
   paddi 3, 0, .L.str@PCREL, 1
   blr
 .Lfunc_end8:
-  .size foobar, .Lfunc_end8-.Lfunc_end8
+  .size foobar, .Lfunc_end8-.Lfunc_begin8
 
 	.type	local_var,@object
 	.section	.bss,"aw",@nobits

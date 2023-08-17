@@ -1,0 +1,61 @@
+add_header_library(
+  gpu_file
+  HDRS
+    file.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+    libc.src.__support.RPC.rpc_client
+)
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  fputs
+  SRCS
+    fputs.cpp
+  HDRS
+    ../fputs.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    ../stdin.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    ../stdout.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    ../stderr.h
+  DEPENDS
+    libc.include.stdio
+)

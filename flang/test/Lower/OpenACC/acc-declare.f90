@@ -133,7 +133,7 @@ module acc_declare
 ! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_copyin()
     integer :: a(100), b(10), i
@@ -153,7 +153,7 @@ module acc_declare
 ! CHECK: %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[B]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
 ! CHECK: acc.declare_enter dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<10xi32>>)
 
   subroutine acc_declare_copyout()
     integer :: a(100), i
@@ -187,7 +187,7 @@ module acc_declare
 ! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_link(a)
     integer :: a(100), i
@@ -203,7 +203,7 @@ module acc_declare
 ! CHECK: %[[LINK:.*]] = acc.declare_link varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_device_resident(a)
     integer :: a(100), i
@@ -220,7 +220,42 @@ module acc_declare
 ! CHECK: acc.declare_enter dataOperands(%[[DEVICERES]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
 ! CHECK: acc.declare_exit dataOperands(%[[DEVICERES]] : !fir.ref<!fir.array<100xi32>>) 
-! CHECK: acc.delete accPtr(%[[DEVICERES]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) {dataClause = #acc<data_clause acc_declare_device_resident>, name = "a"} 
+! CHECK: acc.delete accPtr(%[[DEVICERES]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) {dataClause = #acc<data_clause acc_declare_device_resident>, name = "a"}
+
+  subroutine acc_declare_device_resident2()
+    integer, parameter :: n = 100
+    real, dimension(n) :: dataparam
+    !$acc declare device_resident(dataparam)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_device_resident2()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32> {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>, bindc_name = "dataparam", uniq_name = "_QMacc_declareFacc_declare_device_resident2Edataparam"}
+! CHECK: %[[DEVICERES:.*]] = acc.declare_device_resident varPtr(%[[ALLOCA]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "dataparam"}
+! CHECK: acc.declare_enter dataOperands(%[[DEVICERES]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: acc.declare_exit dataOperands(%[[DEVICERES]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: acc.delete accPtr(%[[DEVICERES]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) {dataClause = #acc<data_clause acc_declare_device_resident>, name = "dataparam"}
+
+  subroutine acc_declare_link2()
+    integer, parameter :: n = 100
+    real, dimension(n) :: dataparam
+    !$acc declare link(dataparam)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_link2()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32> {acc.declare = #acc.declare<dataClause =  acc_declare_link>, bindc_name = "dataparam", uniq_name = "_QMacc_declareFacc_declare_link2Edataparam"}
+! CHECK: %[[LINK:.*]] = acc.declare_link varPtr(%[[ALLOCA]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "dataparam"}
+! CHECK: acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xf32>>)
+
+  subroutine acc_declare_deviceptr2()
+    integer, parameter :: n = 100
+    real, dimension(n) :: dataparam
+    !$acc declare deviceptr(dataparam)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_deviceptr2()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32> {acc.declare = #acc.declare<dataClause =  acc_deviceptr>, bindc_name = "dataparam", uniq_name = "_QMacc_declareFacc_declare_deviceptr2Edataparam"}
+! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[ALLOCA]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "dataparam"}
+! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xf32>>)
 
 end module
 
@@ -234,6 +269,17 @@ end module
 ! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, implicit = true, name = "data1", structured = false}
 ! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         acc.terminator
+! CHECK:       }
+
+! CHECK-LABEL: func.func private @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_post_alloc() {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:         %[[LOAD:.*]] = fir.load %[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:         %[[BOXADDR:.*]] = fir.box_addr %[[LOAD]] {acc.declare = #acc.declare<dataClause =  acc_create>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[BOXADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>> {name = "data1", structured = false}
+! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1_desc", structured = false}
+! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:         return
 ! CHECK:       }
 
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_allocatable_testEdata1_acc_dtor {

@@ -311,7 +311,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Quiet is true, or normal output if Quiet is false. This can stop the
   // errors and warnings from being displayed and producing too much output
   // when they aren't desired.
-  auto &LogOS = Quiet ? nulls() : outs();
+  raw_ostream *LogOS = Quiet ? nullptr : &outs();
 
   GsymCreator Gsym(Quiet);
 
@@ -344,12 +344,12 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, LogOS, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
   // Convert all DWARF to GSYM.
-  if (auto Err = DT.convert(ThreadCount))
+  if (auto Err = DT.convert(ThreadCount, LogOS))
     return Err;
 
   // Get the UUID and convert symbol table to GSYM.
@@ -375,7 +375,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
   // can be looked up in the GSYM and that all lookups get matching data.
   if (Verify) {
-    if (auto Err = DT.verify(OutFile))
+    if (auto Err = DT.verify(OutFile, OS))
       return Err;
   }
 

@@ -2047,7 +2047,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getEntrySuccessorOperands"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2071,8 +2072,6 @@ def RegionIfOp : TEST_Op<"region_if",
     ::mlir::Block::BlockArgListType getJoinArgs() {
       return getBody(2)->getArguments();
     }
-    ::mlir::OperandRange getSuccessorEntryOperands(
-        ::std::optional<unsigned> index);
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -2083,6 +2082,30 @@ def AnyCondOp : TEST_Op<"any_cond",
        RecursiveMemoryEffects]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$region);
+}
+
+def LoopBlockOp : TEST_Op<"loop_block",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands"]>, RecursiveMemoryEffects]> {
+
+  let results = (outs F32:$floatResult);
+  let arguments = (ins I32:$init);
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    $init `:` functional-type($init, $floatResult) $body
+    attr-dict-with-keyword
+  }];
+}
+
+def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
+     Terminator]> {
+  let arguments = (ins I32:$nextIterArg, F32:$exitArg);
+
+  let assemblyFormat = [{
+    `iter` $nextIterArg `exit` $exitArg attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2824,7 +2847,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Terminator, NoMemoryEffect]> {
+    [ReturnLike, Terminator, NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
 }
 

@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 
 using namespace llvm;
 
@@ -1043,7 +1044,8 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 }
 
 static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
-                          bool StackProtector, bool FPRMask, bool VRMask) {
+                          bool StackProtector, bool FPRMask, bool VRMask,
+                          bool HasName) {
   enum class PPA1Flag1 : uint8_t {
     DSA64Bit = (0x80 >> 0),
     VarArg = (0x80 >> 7),
@@ -1069,7 +1071,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   auto Flags1 = PPA1Flag1(0);
   auto Flags2 = PPA1Flag2::ExternalProcedure;
   auto Flags3 = PPA1Flag3(0);
-  auto Flags4 = PPA1Flag4::EPMOffsetPresent | PPA1Flag4::ProcedureNamePresent;
+  auto Flags4 = PPA1Flag4::EPMOffsetPresent;
 
   Flags1 |= PPA1Flag1::DSA64Bit;
 
@@ -1085,6 +1087,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
   if (VRMask)
     Flags4 |= PPA1Flag4::VRMask; // Add emit VR mask flag.
+
+  if (HasName)
+    Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
 
   OutStreamer->AddComment("PPA1 Flags 1");
   if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
@@ -1113,8 +1118,35 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->AddComment("PPA1 Flags 4");
   if ((Flags4 & PPA1Flag4::VRMask) == PPA1Flag4::VRMask)
     OutStreamer->AddComment("  Bit 2: 1 = Vector Reg Mask is in optional area");
+  if ((Flags4 & PPA1Flag4::ProcedureNamePresent) ==
+      PPA1Flag4::ProcedureNamePresent)
+    OutStreamer->AddComment("  Bit 7: 1 = Name Length and Name");
   OutStreamer->emitInt8(static_cast<uint8_t>(
       Flags4)); // Flags 4 (optional sections, always emit these).
+}
+
+static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
+                         StringRef OutName) {
+  size_t NameSize = OutName.size();
+  uint16_t OutSize;
+  if (NameSize < UINT16_MAX) {
+    OutSize = static_cast<uint16_t>(NameSize);
+  } else {
+    OutName = OutName.substr(0, UINT16_MAX);
+    OutSize = UINT16_MAX;
+  }
+  // Emit padding to ensure that the next optional field word-aligned.
+  uint8_t ExtraZeros = 4 - ((2 + OutSize) % 4);
+
+  SmallString<512> OutnameConv;
+  ConverterEBCDIC::convertToEBCDIC(OutName, OutnameConv);
+  OutName = OutnameConv.str();
+
+  OutStreamer->AddComment("Length of Name");
+  OutStreamer->emitInt16(OutSize);
+  OutStreamer->AddComment("Name of Function");
+  OutStreamer->emitBytes(OutName);
+  OutStreamer->emitZeros(ExtraZeros);
 }
 
 void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
@@ -1208,9 +1240,12 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   OutStreamer->AddComment("Saved GPR Mask");
   OutStreamer->emitInt16(SavedGPRMask);
 
+  bool HasName =
+      MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
+
   emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
                 MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0);
+                TargetHasVector && SavedVRMask != 0, HasName);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
@@ -1251,6 +1286,10 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
                                 .str());
     OutStreamer->emitInt32(FrameAndVROffset);
   }
+
+  // Emit name length and name optional section (0x01 of flags 4)
+  if (HasName)
+    emitPPA1Name(OutStreamer, MF->getFunction().getName());
 
   // Emit offset to entry point optional section (0x80 of flags 4).
   OutStreamer->emitAbsoluteSymbolDiff(CurrentFnEPMarkerSym, CurrentFnPPA1Sym,

@@ -605,11 +605,10 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSDDMM(int32_t ma, int32_t mb,
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMWorkEstimation(
     void *s, int32_t ma, int32_t mb, void *a, void *b, void *c, int32_t ctp,
-    int32_t alg, intptr_t bs, void *buf, CUstream /*stream*/) {
+    intptr_t bs, void *buf, CUstream /*stream*/) {
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
   cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
-  cusparseSpGEMMAlg_t algorithm = static_cast<cusparseSpGEMMAlg_t>(alg);
   cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
   cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
   cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
@@ -619,15 +618,15 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMWorkEstimation(
 
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_workEstimation(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
-      algorithm, spgemmDesc, &newBufferSize, buf))
+      CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize, buf))
   return newBufferSize == 0 ? 1 : newBufferSize; // avoid zero-alloc
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuSpGEMMEstimateMemory(void *nbs3, void *nbs2, void *s, int32_t ma,
                          int32_t mb, void *a, void *b, void *c, int32_t ctp,
-                         int32_t alg, float chunk_fraction, intptr_t bs3,
-                         void *buf3, intptr_t bs2, CUstream /*stream*/) {
+                         float chunk_fraction, intptr_t bs3, void *buf3,
+                         intptr_t bs2, CUstream /*stream*/) {
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
   cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
@@ -640,11 +639,10 @@ mgpuSpGEMMEstimateMemory(void *nbs3, void *nbs2, void *s, int32_t ma,
   size_t *newBufferSize3 = reinterpret_cast<size_t *>(nbs3);
   *newBufferSize2 = bs2;
   *newBufferSize3 = bs3;
-  auto algorithm = static_cast<cusparseSpGEMMAlg_t>(alg);
 
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_estimateMemory(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
-      algorithm, spgemmDesc, chunk_fraction, newBufferSize3, buf3,
+      CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, chunk_fraction, newBufferSize3, buf3,
       newBufferSize2))
   // avoid zero-alloc
   if (*newBufferSize2 == 0) {
@@ -656,13 +654,12 @@ mgpuSpGEMMEstimateMemory(void *nbs3, void *nbs2, void *s, int32_t ma,
   return;
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMCompute(
-    void *s, int32_t ma, int32_t mb, void *a, void *b, void *c, int32_t ctp,
-    int32_t alg, intptr_t bsz2, void *buf2, CUstream /*stream*/) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
+mgpuSpGEMMCompute(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
+                  int32_t ctp, intptr_t bsz2, void *buf2, CUstream /*stream*/) {
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
   cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
-  cusparseSpGEMMAlg_t algorithm = static_cast<cusparseSpGEMMAlg_t>(alg);
   cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
   cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
   cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
@@ -671,13 +668,13 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMCompute(
   size_t newBufferSize2 = bsz2;
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_compute(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
-      algorithm, spgemmDesc, &newBufferSize2, buf2))
+      CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize2, buf2))
   return newBufferSize2 == 0 ? 1 : newBufferSize2; // avoid zero-alloc
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuSpGEMMCopy(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
-               int32_t ctp, int32_t alg, CUstream /*stream*/) {
+               int32_t ctp, CUstream /*stream*/) {
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
   cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
@@ -685,17 +682,15 @@ mgpuSpGEMMCopy(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
   cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
   cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
   auto cTp = static_cast<cudaDataType_t>(ctp);
-  auto algorithm = static_cast<cusparseSpGEMMAlg_t>(alg);
   ALPHABETA(cTp, alpha, beta)
 
-  CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_copy(cusparse_env, modeA, modeB,
-                                               alphap, matA, matB, betap, matC,
-                                               cTp, algorithm, spgemmDesc))
+  CUSPARSE_REPORT_IF_ERROR(
+      cusparseSpGEMM_copy(cusparse_env, modeA, modeB, alphap, matA, matB, betap,
+                          matC, cTp, CUSPARSE_SPGEMM_DEFAULT, spgemmDesc))
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
 mgpuSpGEMMCreateDescr(CUstream /*stream*/) {
-  // cusparseSpGEMMDescr_t is a pointer type
   cusparseSpGEMMDescr_t spgemmDesc = nullptr;
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_createDescr(&spgemmDesc))
   return reinterpret_cast<void *>(spgemmDesc);
@@ -703,7 +698,6 @@ mgpuSpGEMMCreateDescr(CUstream /*stream*/) {
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuSpGEMMDestroyDescr(void *s, CUstream /*stream*/) {
-  // cusparseSpGEMMDescr_t is a pointer type
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_destroyDescr(spgemmDesc))
 }

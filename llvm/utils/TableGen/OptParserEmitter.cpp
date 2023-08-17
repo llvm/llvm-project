@@ -34,30 +34,14 @@ static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
   return OS;
 }
 
-static std::string getOptionSpelling(const Record &R, size_t &PrefixLength) {
+static std::string getOptionPrefixedName(const Record &R) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
 
-  if (Prefixes.empty()) {
-    PrefixLength = 0;
+  if (Prefixes.empty())
     return Name.str();
-  }
 
-  PrefixLength = Prefixes[0].size();
-  return (Twine(Prefixes[0]) + Twine(Name)).str();
-}
-
-static std::string getOptionSpelling(const Record &R) {
-  size_t PrefixLength;
-  return getOptionSpelling(R, PrefixLength);
-}
-
-static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
-  size_t PrefixLength;
-  OS << "llvm::StringLiteral(";
-  write_cstring(
-      OS, StringRef(getOptionSpelling(R, PrefixLength)).substr(PrefixLength));
-  OS << ")";
+  return (Prefixes[0] + Twine(Name)).str();
 }
 
 class MarshallingInfo {
@@ -105,8 +89,6 @@ struct SimpleEnumValueTable {
   }
 
   void emit(raw_ostream &OS) const {
-    write_cstring(OS, StringRef(getOptionSpelling(R)));
-    OS << ", ";
     OS << ShouldParse;
     OS << ", ";
     OS << ShouldAlwaysEmit;
@@ -346,8 +328,8 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
-    // The option string.
-    emitNameUsingSpelling(OS, R);
+    // The option prefixed name.
+    write_cstring(OS, getOptionPrefixedName(R));
 
     // The option identifier name.
     OS << ", " << getOptionName(R);

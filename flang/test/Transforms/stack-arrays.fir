@@ -176,9 +176,9 @@ func.func @placement3() {
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
 // CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:     %[[SP:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
+// CHECK-NEXT:     %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:     fir.call @llvm.stackrestore(%[[SP]])
+// CHECK-NEXT:     fir.call @llvm.stackrestore.p0(%[[SP]])
 // CHECK-NEXT:     fir.result
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
@@ -209,9 +209,9 @@ func.func @placement4(%arg0 : i1) {
 // CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:   %[[SP:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
+// CHECK-NEXT:   %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
 // CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:   fir.call @llvm.stackrestore(%[[SP]]) : (!fir.ref<i8>) -> ()
+// CHECK-NEXT:   fir.call @llvm.stackrestore.p0(%[[SP]]) : (!fir.ref<i8>) -> ()
 // CHECK-NEXT:   cf.cond_br %arg0, ^bb1, ^bb2
 // CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   return

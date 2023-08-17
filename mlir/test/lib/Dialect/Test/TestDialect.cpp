@@ -932,14 +932,13 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 OperandRange
-RegionIfOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
+RegionIfOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
   assert(index && *index < 2 && "invalid region index");
   return getOperands();
 }
 
 void RegionIfOp::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (index.has_value()) {
     if (index.value() < 2)
@@ -966,7 +965,6 @@ void RegionIfOp::getRegionInvocationBounds(
 //===----------------------------------------------------------------------===//
 
 void AnyCondOp::getSuccessorRegions(std::optional<unsigned> index,
-                                    ArrayRef<Attribute> operands,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op branches into the only region, and the region branches back
   // to the parent op.
@@ -980,6 +978,37 @@ void AnyCondOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<InvocationBounds> &invocationBounds) {
   invocationBounds.emplace_back(1, 1);
+}
+
+//===----------------------------------------------------------------------===//
+// LoopBlockOp
+//===----------------------------------------------------------------------===//
+
+void LoopBlockOp::getSuccessorRegions(
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody(), getBody().getArguments());
+  if (!index)
+    return;
+
+  regions.emplace_back((*this)->getResults());
+}
+
+OperandRange
+LoopBlockOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
+  assert(index == 0);
+  return getInitMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopBlockTerminatorOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange LoopBlockTerminatorOp::getMutableSuccessorOperands(
+    std::optional<unsigned> index) {
+  assert(!index || index == 0);
+  if (!index)
+    return getExitArgMutable();
+  return getNextIterArgMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1268,18 +1297,12 @@ MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
 }
 
 void TestStoreWithARegion::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!index) {
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   } else {
     regions.emplace_back();
   }
-}
-
-MutableOperandRange TestStoreWithARegionTerminator::getMutableSuccessorOperands(
-    std::optional<unsigned> index) {
-  return MutableOperandRange(getOperation());
 }
 
 LogicalResult

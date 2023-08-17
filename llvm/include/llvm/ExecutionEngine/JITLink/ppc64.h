@@ -80,25 +80,29 @@ inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
         isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
     // Skip save r2.
     Content = Content.slice(4);
+    size_t Offset = isLE ? 0 : 2;
     return PLTCallStubInfo{
         Content,
-        {{TOCDelta16HA, 0, 0}, {TOCDelta16LO, 4, 0}},
+        {{TOCDelta16HA, Offset, 0}, {TOCDelta16LO, Offset + 4, 0}},
     };
   }
   case LongBranchSaveR2: {
     ArrayRef<char> Content =
         isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
+    size_t Offset = isLE ? 4 : 6;
     return PLTCallStubInfo{
         Content,
-        {{TOCDelta16HA, 4, 0}, {TOCDelta16LO, 8, 0}},
+        {{TOCDelta16HA, Offset, 0}, {TOCDelta16LO, Offset + 4, 0}},
     };
   }
   case LongBranchNoTOC: {
     ArrayRef<char> Content = isLE ? PointerJumpStubNoTOCContent_little
                                   : PointerJumpStubNoTOCContent_big;
+    size_t Offset = isLE ? 16 : 18;
+    Edge::AddendT Addend = isLE ? 8 : 10;
     return PLTCallStubInfo{
         Content,
-        {{Delta16HA, 16, 8}, {Delta16LO, 20, 12}},
+        {{Delta16HA, Offset, Addend}, {Delta16LO, Offset + 4, Addend + 4}},
     };
   }
   }

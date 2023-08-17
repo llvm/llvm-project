@@ -531,7 +531,7 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FS1]]
 //
-// CHECK:          ptr @llvm.stacksave()
+// CHECK:          ptr @llvm.stacksave.p0()
 // CHECK-64:       store i32 %{{.+}}, ptr [[B_CADDR:%.+]],
 // CHECK-64:       [[B_CVAL:%.+]] = load i[[SZ]], ptr [[B_CADDR]],
 

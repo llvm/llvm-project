@@ -29,6 +29,12 @@ module __ppc_intrinsics
     vector(integer(VKIND)), intent(in) :: arg1; \
   end function ;
 
+! vector(u) function f(vector(u))
+#define ELEM_FUNC_VUVU(VKIND) \
+  elemental vector(unsigned(VKIND)) function elem_func_vu##VKIND##vu##VKIND(arg1); \
+    vector(unsigned(VKIND)), intent(in) :: arg1; \
+  end function ;
+
 ! vector(r) function f(vector(r))
 #define ELEM_FUNC_VRVR_2(VKIND1, VKIND2) \
   elemental vector(real(VKIND1)) function elem_func_vr##VKIND1##vr##VKIND2(arg1); \
@@ -37,11 +43,13 @@ module __ppc_intrinsics
 #define ELEM_FUNC_VRVR(VKIND) ELEM_FUNC_VRVR_2(VKIND, VKIND)
 
   ELEM_FUNC_VIVI(1) ELEM_FUNC_VIVI(2) ELEM_FUNC_VIVI(4) ELEM_FUNC_VIVI(8)
+  ELEM_FUNC_VUVU(1)
   ELEM_FUNC_VRVR_2(4,8) ELEM_FUNC_VRVR_2(8,4)
   ELEM_FUNC_VRVR(4) ELEM_FUNC_VRVR(8)
 
 #undef ELEM_FUNC_VRVR
 #undef ELEM_FUNC_VRVR_2
+#undef ELEM_FUNC_VUVU
 #undef ELEM_FUNC_VIVI
 
 !! ================ 2 arguments function interface ================
@@ -427,11 +435,14 @@ module __ppc_intrinsics
 ! vector function(vector)
 !-------------------------
 #define VI_VI(NAME, VKIND) __ppc_##NAME##_vi##VKIND##vi##VKIND
+#define VU_VU(NAME, VKIND) __ppc_##NAME##_vu##VKIND##vu##VKIND
 #define VR_VR_2(NAME, VKIND1, VKIND2) __ppc_##NAME##_vr##VKIND1##vr##VKIND2
 #define VR_VR(NAME, VKIND) VR_VR_2(NAME, VKIND, VKIND)
 
 #define VEC_VI_VI(NAME, VKIND) \
   procedure(elem_func_vi##VKIND##vi##VKIND) :: VI_VI(NAME, VKIND);
+#define VEC_VU_VU(NAME, VKIND) \
+  procedure(elem_func_vu##VKIND##vu##VKIND) :: VU_VU(NAME, VKIND);
 #define VEC_VR_VR_2(NAME, VKIND1, VKIND2) \
   procedure(elem_func_vr##VKIND1##vr##VKIND2) :: VR_VR_2(NAME, VKIND1, VKIND2);
 #define VEC_VR_VR(NAME, VKIND) VEC_VR_VR_2(NAME, VKIND, VKIND)
@@ -452,11 +463,27 @@ module __ppc_intrinsics
   end interface vec_cvf
   public :: vec_cvf
 
+! vec_cvbf16spn
+  VEC_VU_VU(vec_cvbf16spn,1)
+  interface vec_cvbf16spn
+    procedure :: VU_VU(vec_cvbf16spn,1)
+  end interface
+  public vec_cvbf16spn
+
+! vec_cvspbf16
+  VEC_VU_VU(vec_cvspbf16_,1)
+  interface vec_cvspbf16
+    procedure :: VU_VU(vec_cvspbf16_,1)
+  end interface
+  public vec_cvspbf16
+
 #undef VEC_VR_VR
 #undef VEC_VR_VR_2
+#undef VEC_VU_VU
 #undef VEC_VI_VI
 #undef VR_VR
 #undef VR_VR_2
+#undef VU_VU
 #undef VI_VI
   
 !---------------------------------

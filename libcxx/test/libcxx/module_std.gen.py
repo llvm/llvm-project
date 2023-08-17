@@ -119,6 +119,9 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 
+# newline needs to be escaped for the module partition output.
+nl = '\\\\n'
+
 # Create empty file with all parts.
 print(
     f"""\
@@ -140,14 +143,30 @@ for header in toplevel_headers:
     if header.endswith(".h"):  # Skip C compatibility headers
         continue
 
+    # Generate a module partition for the header module includes. This
+    # makes it possible to verify that all headers export all their
+    # named declarations.
+    #
+    # TODO MODULES This needs to take the header restrictions into account.
+    print(
+        f"// RUN{BLOCKLIT}: echo -e \""
+        f"module;{nl}"
+        f"#include <{header}>{nl}"
+        f"{nl}"
+        f"// Use __libcpp_module_<HEADER> to ensure that modules {nl}"
+        f"// are not named as keywords or reserved names.{nl}"
+        f"export module std:__libcpp_module_{header};{nl}"
+        f'#include \\"%{{module}}/std/{header}.inc\\"{nl}'
+        f"\" > %t.{header}.cppm")
+
     # Dump the information as found in the module's cppm file.
     print(
-        f"// RUN{BLOCKLIT}: %{{clang-tidy}} %{{module}}/std/{header}.cppm "
+        f"// RUN{BLOCKLIT}: %{{clang-tidy}} %t.{header}.cppm "
         "  --checks='-*,libcpp-header-exportable-declarations' "
         "  -config='{CheckOptions: [ "
         "    {"
         "      key: libcpp-header-exportable-declarations.Filename, "
-        f"     value: {header}.cppm"
+        f"     value: {header}.inc"
         "    }, {"
         "      key: libcpp-header-exportable-declarations.FileType, "
         "      value: ModulePartition"

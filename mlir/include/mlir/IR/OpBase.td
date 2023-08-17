@@ -2178,7 +2178,7 @@ def SameVariadicOperandSize : GenInternalOpTrait<"SameVariadicOperandSize">;
 // to have the same array size.
 def SameVariadicResultSize : GenInternalOpTrait<"SameVariadicResultSize">;
 
-// Uses an attribute named `operand_segment_sizes` to specify how many actual
+// Uses an attribute named `operandSegmentSizes` to specify how many actual
 // operand each ODS-declared operand (variadic or not) corresponds to.
 // This trait is used for ops that have multiple variadic operands but do
 // not know statically their size relationship. The attribute must be a 1D
@@ -2188,7 +2188,7 @@ def SameVariadicResultSize : GenInternalOpTrait<"SameVariadicResultSize">;
 def AttrSizedOperandSegments :
   NativeOpTrait<"AttrSizedOperandSegments">, StructuralOpTrait;
 // Similar to AttrSizedOperandSegments, but used for results. The attribute
-// should be named as `result_segment_sizes`.
+// should be named as `resultSegmentSizes`.
 def AttrSizedResultSegments  :
   NativeOpTrait<"AttrSizedResultSegments">, StructuralOpTrait;
 

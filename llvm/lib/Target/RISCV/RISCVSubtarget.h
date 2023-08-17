@@ -220,6 +220,8 @@ public:
 
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
                               &Mutations) const override;
+
+  bool useAA() const override;
 };
 } // End llvm namespace
 

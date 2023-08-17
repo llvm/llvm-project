@@ -312,6 +312,8 @@ public:
   void emitTestSimplePredicate(raw_ostream &OS) override;
   void emitRunCustomAction(raw_ostream &OS) override;
 
+  void postProcessRule(RuleMatcher &M);
+
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override { return ClassName; }
 
@@ -2370,6 +2372,31 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "}\n";
 }
 
+void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
+  SmallPtrSet<Record *, 16> UsedRegs;
+
+  // TODO: deal with subregs?
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Use : MI->getCGI()->ImplicitUses)
+      UsedRegs.insert(Use);
+  }
+
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Def : MI->getCGI()->ImplicitDefs) {
+      if (!UsedRegs.contains(Def))
+        MI->setDeadImplicitDef(Def);
+    }
+  }
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2427,6 +2454,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                      "Pattern is not covered by a test");
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
+    postProcessRule(Rules.back());
   }
 
   // Comparison function to order records by name.

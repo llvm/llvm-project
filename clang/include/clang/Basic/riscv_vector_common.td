@@ -97,6 +97,11 @@
 //      and LMUL), and computes another vector type which only changed LMUL as
 //      given value. The new LMUL should be smaller than the old one. Ignore to
 //      define a new builtin if its equivalent type has illegal lmul.
+//   (SEFixedLog2LMUL:Value): Smaller or Equal Fixed Log2LMUL. Given a vector
+//      type (SEW and LMUL), and computes another vector type which only
+//      changed LMUL as given value. The new LMUL should be smaller than or
+//      equal to the old one. Ignore to define a new builtin if its equivalent
+//      type has illegal lmul.
 //   (LFixedLog2LMUL:Value): Larger Fixed Log2LMUL. Given a vector type (SEW
 //      and LMUL), and computes another vector type which only changed LMUL as
 //      given value. The new LMUL should be larger than the old one. Ignore to

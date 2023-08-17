@@ -15,6 +15,33 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.memref.memref_to_llvm_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["getTypeConverterType"]>]> {
+  let description = [{
+    This operation provides an "LLVMTypeConverter" that lowers memref types to
+    LLVM types.
+
+    The type converter can be customized as follows:
+    - `use_aligned_alloc`: Use aligned_alloc in place of malloc for heap
+      allocations.
+    - `index_bitwidth`: Bitwidth of the index type, "0" indicates the size of a
+      machine word.
+    - `use_generic_functions`: Use generic allocation and deallocation functions
+      instead of the classic "malloc", "aligned_alloc" and "free" functions.
+    - `use_opaque_pointers`: Generate LLVM IR using opaque pointers instead of
+      typed pointers.
+  }];
+
+  let arguments = (ins
+      DefaultValuedAttr<BoolAttr, "false">:$use_aligned_alloc,
+      DefaultValuedAttr<I64Attr, "0">:$index_bitwidth,
+      DefaultValuedAttr<BoolAttr, "false">:$use_generic_functions,
+      DefaultValuedAttr<BoolAttr, "false">:$use_opaque_pointers);
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyExpandOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.memref.expand_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

@@ -44,7 +44,7 @@ public:
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
     ArrayRef<StringLiteral> Prefixes;
-    StringRef Name;
+    StringLiteral PrefixedName;
     const char *HelpText;
     const char *MetaVar;
     unsigned ID;
@@ -55,6 +55,11 @@ public:
     unsigned short AliasID;
     const char *AliasArgs;
     const char *Values;
+
+    StringRef getName() const {
+      unsigned PrefixLength = Prefixes.empty() ? 0 : Prefixes[0].size();
+      return PrefixedName.drop_front(PrefixLength);
+    }
   };
 
 private:
@@ -111,7 +116,9 @@ public:
   const Option getOption(OptSpecifier Opt) const;
 
   /// Lookup the name of the given option.
-  StringRef getOptionName(OptSpecifier id) const { return getInfo(id).Name; }
+  StringRef getOptionName(OptSpecifier id) const {
+    return getInfo(id).getName();
+  }
 
   /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
@@ -298,31 +305,31 @@ protected:
 
 } // end namespace llvm
 
-#define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(ID_PREFIX, PREFIX, NAME, ID, KIND,     \
-                                        GROUP, ALIAS, ALIASARGS, FLAGS, PARAM, \
-                                        HELPTEXT, METAVAR, VALUES)             \
+#define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(ID_PREFIX, PREFIX, PREFIXED_NAME, ID,  \
+                                        KIND, GROUP, ALIAS, ALIASARGS, FLAGS,  \
+                                        PARAM, HELPTEXT, METAVAR, VALUES)      \
   ID_PREFIX##ID
 
-#define LLVM_MAKE_OPT_ID(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,      \
-                         FLAGS, PARAM, HELPTEXT, METAVAR, VALUES)              \
-  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OPT_, PREFIX, NAME, ID, KIND, GROUP, ALIAS,  \
-                                  ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR,  \
-                                  VALUE)
+#define LLVM_MAKE_OPT_ID(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS,        \
+                         ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR, VALUES)   \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OPT_, PREFIX, PREFIXED_NAME, ID, KIND,       \
+                                  GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,       \
+                                  HELPTEXT, METAVAR, VALUE)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
-    ID_PREFIX, PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-    HELPTEXT, METAVAR, VALUES)                                                 \
+    ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+    FLAGS, PARAM, HELPTEXT, METAVAR, VALUES)                                   \
   llvm::opt::OptTable::Info {                                                  \
-    PREFIX, NAME, HELPTEXT, METAVAR, ID_PREFIX##ID,                            \
+    PREFIX, PREFIXED_NAME, HELPTEXT, METAVAR, ID_PREFIX##ID,                   \
         llvm::opt::Option::KIND##Class, PARAM, FLAGS, ID_PREFIX##GROUP,        \
         ID_PREFIX##ALIAS, ALIASARGS, VALUES                                    \
   }
 
-#define LLVM_CONSTRUCT_OPT_INFO(PREFIX, NAME, ID, KIND, GROUP, ALIAS,          \
+#define LLVM_CONSTRUCT_OPT_INFO(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, \
                                 ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR,    \
                                 VALUES)                                        \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OPT_, PREFIX, NAME, ID, KIND, GROUP,  \
-                                         ALIAS, ALIASARGS, FLAGS, PARAM,       \
-                                         HELPTEXT, METAVAR, VALUES)
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OPT_, PREFIX, PREFIXED_NAME, ID,      \
+                                         KIND, GROUP, ALIAS, ALIASARGS, FLAGS, \
+                                         PARAM, HELPTEXT, METAVAR, VALUES)
 
 #endif // LLVM_OPTION_OPTTABLE_H

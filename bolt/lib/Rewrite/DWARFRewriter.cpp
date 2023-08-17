@@ -57,7 +57,6 @@
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
 
-LLVM_ATTRIBUTE_UNUSED
 static void printDie(const DWARFDie &DIE) {
   DIDumpOptions DumpOpts;
   DumpOpts.ShowForm = true;
@@ -65,6 +64,28 @@ static void printDie(const DWARFDie &DIE) {
   DumpOpts.ChildRecurseDepth = 0;
   DumpOpts.ShowChildren = false;
   DIE.dump(dbgs(), 0, DumpOpts);
+}
+
+/// Lazily parse DWARF DIE and print it out.
+LLVM_ATTRIBUTE_UNUSED
+static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
+  uint64_t OriginalOffsets = DIEOffset;
+  uint64_t NextCUOffset = DU.getNextUnitOffset();
+  DWARFDataExtractor DebugInfoData = DU.getDebugInfoExtractor();
+  DWARFDebugInfoEntry DIEEntry;
+  if (DIEEntry.extractFast(DU, &DIEOffset, DebugInfoData, NextCUOffset, 0)) {
+    if (const DWARFAbbreviationDeclaration *AbbrDecl =
+            DIEEntry.getAbbreviationDeclarationPtr()) {
+      DWARFDie DDie(&DU, &DIEEntry);
+      printDie(DDie);
+    } else {
+      dbgs() << "Failed to extract abbreviation for"
+             << Twine::utohexstr(OriginalOffsets) << "\n";
+    }
+  } else {
+    dbgs() << "Failed to extract DIE for " << Twine::utohexstr(OriginalOffsets)
+           << " \n";
+  }
 }
 
 namespace llvm {
@@ -1102,46 +1123,31 @@ void DWARFRewriter::updateUnitDebugInfo(
                   DIEBldr.addValue(NewAttr, *Itr);
                   std::advance(Itr, 1);
                 }
-                PrevOffset = CurEndOffset;
-                continue;
-              }
-
-              const uint64_t Index = Expr.getRawOperand(0);
-              std::optional<object::SectionedAddress> EntryAddress =
-                  Unit.getAddrOffsetSectionItem(Index);
-              assert(EntryAddress && "Address is not found.");
-              assert(Index <= std::numeric_limits<uint32_t>::max() &&
-                     "Invalid Operand Index.");
-              if (Expr.getCode() == dwarf::DW_OP_addrx) {
-                const uint32_t Index = AddrWriter->getIndexFromAddress(
+              } else {
+                const uint64_t Index = Expr.getRawOperand(0);
+                std::optional<object::SectionedAddress> EntryAddress =
+                    Unit.getAddrOffsetSectionItem(Index);
+                assert(EntryAddress && "Address is not found.");
+                assert(Index <= std::numeric_limits<uint32_t>::max() &&
+                       "Invalid Operand Index.");
+                const uint32_t AddrIndex = AddrWriter->getIndexFromAddress(
                     EntryAddress->Address, Unit);
-                // update Index for DW_AT_location. The Size field is not stored
-                // in IR, we need to minus 1 in offset for each expr.
+                // update Index into .debug_address section for DW_AT_location.
+                // The Size field is not stored in IR, we need to minus 1 in
+                // offset for each expr.
                 SmallString<8> Tmp;
                 raw_svector_ostream OSE(Tmp);
-                encodeULEB128(Index, OSE);
+                encodeULEB128(AddrIndex, OSE);
 
                 DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
                                  dwarf::DW_FORM_data1,
-                                 DIEInteger(dwarf::DW_OP_addrx));
+                                 DIEInteger(Expr.getCode()));
                 NewExprSize += 1;
                 for (uint8_t Byte : Tmp) {
                   DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
                                    dwarf::DW_FORM_data1, DIEInteger(Byte));
                   NewExprSize += 1;
                 }
-              } else {
-                // TODO: Re-do this as DWARF5.
-                auto Itr = AttrLocValList->values().begin();
-                std::advance(Itr, PrevOffset);
-                uint32_t CopyNum = CurEndOffset - PrevOffset;
-                NewExprSize += CopyNum;
-                while (CopyNum--) {
-                  DIEBldr.addValue(NewAttr, *Itr);
-                  std::advance(Itr, 1);
-                }
-                AddrWriter->addIndexAddress(EntryAddress->Address,
-                                            static_cast<uint32_t>(Index), Unit);
               }
               PrevOffset = CurEndOffset;
             }
@@ -1175,18 +1181,8 @@ void DWARFRewriter::updateUnitDebugInfo(
           assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
                  "DW_FORM_LLVM_addrx_offset is not supported");
           std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
-          if (Form == dwarf::DW_FORM_GNU_addr_index) {
-            // If there is no new address, storing old address.
-            // Re-using Index to make implementation easier.
-            // DW_FORM_GNU_addr_index is variable lenght encoding
-            // so we either have to create indices of same sizes, or use same
-            // index.
-            // TODO: We can now re-write .debug_info. This can be simplified to
-            // just getting a new index and creating a patch.
-            const uint64_t Index = *Result;
-            AddrWriter->addIndexAddress(NewAddress ? NewAddress : Address,
-                                        Index, Unit);
-          } else if (Form == dwarf::DW_FORM_addrx) {
+          if (Form == dwarf::DW_FORM_addrx ||
+              Form == dwarf::DW_FORM_GNU_addr_index) {
             const uint32_t Index = AddrWriter->getIndexFromAddress(
                 NewAddress ? NewAddress : Address, Unit);
             DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),

@@ -2009,6 +2009,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   if (isa<Constant>(V))
     return OrZero ? match(V, m_Power2OrZero()) : match(V, m_Power2());
 
+  // i1 is by definition a power of 2 or zero.
+  if (OrZero && V->getType()->getScalarSizeInBits() == 1)
+    return true;
+
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return false;
@@ -2036,6 +2040,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   switch (I->getOpcode()) {
   case Instruction::ZExt:
     return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+  case Instruction::Trunc:
+    return OrZero && isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
   case Instruction::Shl:
     if (OrZero || Q.IIQ.hasNoUnsignedWrap(I) || Q.IIQ.hasNoSignedWrap(I))
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
@@ -2048,11 +2054,15 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     if (Q.IIQ.isExact(cast<BinaryOperator>(I)))
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
     return false;
+  case Instruction::Mul:
+    return OrZero &&
+           isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
   case Instruction::And:
     if (OrZero) {
       // A power of two and'd with anything is a power of two or zero.
-      if (isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q) ||
-          isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q))
+      if (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
+          isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q))
         return true;
       // X & (-X) is always a power of two or zero.
       if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
@@ -2120,11 +2130,31 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return isKnownToBeAPowerOfTwo(U.get(), OrZero, NewDepth, RecQ);
     });
   }
+  case Instruction::Invoke:
   case Instruction::Call: {
-    Value *X, *Y;
-    if (match(I, m_MaxOrMin(m_Value(X), m_Value(Y))))
-      return isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q) &&
-             isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q);
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+      case Intrinsic::smax:
+      case Intrinsic::umin:
+      case Intrinsic::smin:
+        return isKnownToBeAPowerOfTwo(II->getArgOperand(1), OrZero, Depth, Q) &&
+               isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+      // bswap/bitreverse just move around bits, but don't change any 1s/0s
+      // thus dont change pow2/non-pow2 status.
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+        return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+      case Intrinsic::fshr:
+      case Intrinsic::fshl:
+        // If Op0 == Op1, this is a rotate. is_pow2(rotate(x, y)) == is_pow2(x)
+        if (II->getArgOperand(0) == II->getArgOperand(1))
+          return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+        break;
+      default:
+        break;
+      }
+    }
     return false;
   }
   default:

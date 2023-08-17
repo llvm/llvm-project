@@ -620,7 +620,7 @@ multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
    : VWMAC_MV_X<opcodestr, funct6> {
   let RVVConstraint = WidenV in
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", /*EarlyClobber*/1>,
+  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                          "ReadVIWMulAddV">;
 }
@@ -721,10 +721,10 @@ multiclass VMAC_FV_V_F<string opcodestr, bits<6> funct6> {
 
 multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", /*EarlyClobber*/1>,
+  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddV", "ReadVFWMulAddV", "ReadVFWMulAddV",
                          "ReadVFWMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", /*EarlyClobber*/1>,
+  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddF", "ReadVFWMulAddV", "ReadVFWMulAddF",
                          "ReadVFWMulAddV">;
   }

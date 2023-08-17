@@ -285,6 +285,10 @@ def ext_ms_reserved_user_defined_literal : ExtWarn<
 def err_unsupported_string_concat : Error<
   "unsupported non-standard concatenation of string literals">;
 
+def warn_unevaluated_string_prefix : Warning<
+  "encoding prefix '%0' on an unevaluated string literal has no effect"
+  "%select{| and is incompatible with c++2c}1">,
+  InGroup<DiagGroup<"invalid-unevaluated-string">>;
 def err_unevaluated_string_prefix : Error<
   "an unevaluated string literal cannot have an encoding prefix">;
 def err_unevaluated_string_udl : Error<

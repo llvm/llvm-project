@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"

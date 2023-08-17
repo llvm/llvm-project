@@ -26,6 +26,7 @@ class CallOpInterface;
 class CallableOpInterface;
 class BranchOpInterface;
 class RegionBranchOpInterface;
+class RegionBranchTerminatorOpInterface;
 
 namespace dataflow {
 
@@ -207,7 +208,8 @@ private:
   /// Visit the given terminator operation that exits a region under an
   /// operation with control-flow semantics. These are terminators with no CFG
   /// successors.
-  void visitRegionTerminator(Operation *op, RegionBranchOpInterface branch);
+  void visitRegionTerminator(RegionBranchTerminatorOpInterface op,
+                             RegionBranchOpInterface branch);
 
   /// Visit the given terminator operation that exits a callable region. These
   /// are terminators with no CFG successors.
