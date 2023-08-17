@@ -839,7 +839,7 @@ void SymbolGraphSerializer::visitObjCCategoryRecord(
     return;
 
   // Check if the current Category' parent has been visited before, if so skip.
-  if (!(visitedCategories.contains(Record.Interface.Name) > 0)) {
+  if (!visitedCategories.contains(Record.Interface.Name)) {
     visitedCategories.insert(Record.Interface.Name);
     Object Obj;
     serializeObject(Obj, "identifier",
