@@ -2509,7 +2509,7 @@ struct VariantMember {
   explicit VariantMember(DWARFDIE &die, ModuleSP module_sp);
   bool IsDefault() const;
 
-  std::optional<u_int32_t> discr_value;
+  std::optional<uint32_t> discr_value;
   DWARFFormValue type_ref;
   ConstString variant_name;
   uint32_t byte_offset;
