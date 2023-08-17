@@ -249,6 +249,17 @@ struct StoredObjCSelector {
   unsigned NumPieces;
   llvm::SmallVector<IdentifierID, 2> Identifiers;
 };
+
+inline std::tuple<uint32_t, uint8_t, uint32_t>
+getTableKey(std::optional<Context> context, IdentifierID nameID) {
+  std::tuple<uint32_t, uint8_t, uint32_t> key;
+  if (context)
+    key = {context->id.Value, (uint8_t)context->kind, nameID};
+  else
+    key = {(uint32_t)-1, (uint8_t)-1, nameID};
+  return key;
+}
+
 } // namespace api_notes
 } // namespace clang
 

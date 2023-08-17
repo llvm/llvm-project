@@ -1949,11 +1949,7 @@ auto APINotesReader::lookupGlobalVariable(std::optional<Context> context,
   if (!nameID)
     return std::nullopt;
 
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, *nameID};
-  else
-    key = {-1, (uint8_t)-1, *nameID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, *nameID);
 
   auto known = Impl.GlobalVariableTable->find(key);
   if (known == Impl.GlobalVariableTable->end())
@@ -1972,11 +1968,7 @@ auto APINotesReader::lookupGlobalFunction(std::optional<Context> context,
   if (!nameID)
     return std::nullopt;
 
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, *nameID};
-  else
-    key = {-1, (uint8_t)-1, *nameID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, *nameID);
 
   auto known = Impl.GlobalFunctionTable->find(key);
   if (known == Impl.GlobalFunctionTable->end())
@@ -2010,11 +2002,7 @@ auto APINotesReader::lookupTag(std::optional<Context> context, StringRef name)
   if (!nameID)
     return std::nullopt;
 
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, *nameID};
-  else
-    key = {-1, (uint8_t)-1, *nameID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, *nameID);
 
   auto known = Impl.TagTable->find(key);
   if (known == Impl.TagTable->end())
@@ -2033,11 +2021,7 @@ auto APINotesReader::lookupTypedef(std::optional<Context> context,
   if (!nameID)
     return std::nullopt;
 
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, *nameID};
-  else
-    key = {-1, (uint8_t)-1, *nameID};
+  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, *nameID);
 
   auto known = Impl.TypedefTable->find(key);
   if (known == Impl.TypedefTable->end())
