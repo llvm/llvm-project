@@ -11318,6 +11318,8 @@ def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
 
 // C++ Modules
+def err_module_import_non_interface_nor_parition : Error<
+  "import of module '%0' imported non C++20 importable modules">;
 def err_module_decl_not_at_start : Error<
   "module declaration must occur at the start of the translation unit">;
 def note_global_module_introducer_missing : Note<
