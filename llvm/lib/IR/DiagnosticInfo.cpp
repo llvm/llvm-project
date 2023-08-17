@@ -449,3 +449,7 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
   if (!getNote().empty())
     DP << ": " << getNote();
 }
+
+void DiagnosticInfoMachineFunctionSplit::print(DiagnosticPrinter &DP) const {
+  DP << "-fsplit-machine-functions is not valid for " << TargetTriple;
+}
