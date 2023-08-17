@@ -45,6 +45,10 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   assert(box.getType().isa<fir::BaseBoxType>() &&
          "expect fir.box or fir.class");
+  // Note that with the HLFIR lowering the 'box' is the FIR box
+  // which may not have correct local lbounds. As long as we only
+  // use the extents, it should be okay to read the dimensions
+  // from this box.
   for (unsigned dim = 0; dim < dataExv.rank(); ++dim) {
     mlir::Value d = builder.createIntegerConstant(loc, idxTy, dim);
     mlir::Value baseLb =
