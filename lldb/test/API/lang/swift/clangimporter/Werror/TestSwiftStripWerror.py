@@ -14,7 +14,7 @@ class TestSwiftWerror(TestBase):
     @swiftTest
     def test(self):
         """This tests that -Werror is removed from ClangImporter options by
-           introducing two conflicting macro definitions in idfferent dylibs.
+           introducing two conflicting macro definitions in different dylibs.
         """
         self.build()
         target,  _, _, _ = lldbutil.run_to_source_breakpoint(
@@ -23,16 +23,13 @@ class TestSwiftWerror(TestBase):
 
         # Turn on logging.
         log = self.getBuildArtifact("types.log")
-        self.expect("log enable lldb types -f "+log)
-        
+        self.expect('log enable lldb types -f "%s"' % log)
+
         self.expect("expression foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
-        sanity = 0
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        for line in logfile:
-            self.assertFalse("-Werror" in line)
-            if "-DCONFLICT" in line:
-                sanity += 1
-        # We see -DCONFLICT twice in the expression context and once in each of
-        # the two Module contexts.
-        self.assertEqual(sanity, 2+2)
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+#       CHECK-NOT: SwiftASTContextForExpressions{{.*}}-Werror
+#       CHECK:     SwiftASTContextForExpressions{{.*}}-DCONFLICT
+#       CHECK-NOT: SwiftASTContextForExpressions{{.*}}-Werror
+#       CHECK:     SwiftASTContextForExpressions{{.*}}-DCONFLICT
+#       CHECK-NOT: SwiftASTContextForExpressions{{.*}}-DCONFLICT
+#       CHECK-NOT: SwiftASTContextForExpressions{{.*}}-Werror
