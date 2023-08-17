@@ -1824,7 +1824,7 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->emitCallBI(Func, E))
+  if (!this->emitCallBI(Func, E, E))
     return false;
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());

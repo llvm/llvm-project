@@ -174,7 +174,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *Call);
 
 enum class ArithOp { Add, Sub };
 
@@ -1741,13 +1742,14 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
   return Call(S, OpPC, Func);
 }
 
-inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+                   const CallExpr *CE) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func)) {
+  if (InterpretBuiltin(S, PC, Func, CE)) {
     NewFrame.release();
     return true;
   }
