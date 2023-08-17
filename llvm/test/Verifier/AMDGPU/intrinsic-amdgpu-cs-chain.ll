@@ -10,6 +10,20 @@ define amdgpu_cs_chain void @bad_flags(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr
   unreachable
 }
 
+define amdgpu_cs_chain void @bad_vgpr_args(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } inreg %vgpr) {
+  ; CHECK: VGPR arguments must not have the `inreg` attribute
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } inreg %vgpr, i32 0)
+  unreachable
+}
+
+define amdgpu_cs_chain void @bad_sgpr_args(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr) {
+  ; CHECK: SGPR arguments must have the `inreg` attribute
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
+  unreachable
+}
+
 define amdgpu_cs_chain void @bad_exec(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 %flags) {
   ; CHECK: Intrinsic called with incompatible signature
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
