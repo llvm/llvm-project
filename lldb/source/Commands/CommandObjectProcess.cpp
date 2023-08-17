@@ -1178,7 +1178,7 @@ public:
     UnixSignalsSP signals = m_exe_ctx.GetProcessPtr()->GetUnixSignals();
     int signo = signals->GetFirstSignalNumber();
     while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-      request.TryCompleteCurrentArg(signals->GetSignalAsCString(signo));
+      request.TryCompleteCurrentArg(signals->GetSignalAsStringRef(signo));
       signo = signals->GetNextSignalNumber(signo);
     }
   }
@@ -1635,13 +1635,13 @@ public:
     str.Printf("===========  =====  =====  ======\n");
   }
 
-  void PrintSignal(Stream &str, int32_t signo, const char *sig_name,
+  void PrintSignal(Stream &str, int32_t signo, llvm::StringRef sig_name,
                    const UnixSignalsSP &signals_sp) {
     bool stop;
     bool suppress;
     bool notify;
 
-    str.Printf("%-11s  ", sig_name);
+    str.Format("{0, -11}  ", sig_name);
     if (signals_sp->GetSignalInfo(signo, suppress, stop, notify)) {
       bool pass = !suppress;
       str.Printf("%s  %s  %s", (pass ? "true " : "false"),
@@ -1668,7 +1668,7 @@ public:
     {
       int32_t signo = signals_sp->GetFirstSignalNumber();
       while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-        PrintSignal(str, signo, signals_sp->GetSignalAsCString(signo),
+        PrintSignal(str, signo, signals_sp->GetSignalAsStringRef(signo),
                     signals_sp);
         signo = signals_sp->GetNextSignalNumber(signo);
       }
