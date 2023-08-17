@@ -29,7 +29,7 @@ set_target_properties(libgcc_s
     POSITION_INDEPENDENT_CODE ON)
 string(REGEX MATCH "[^-]+" LLVM_LIBGCC_TARGET_ARCH ${CMAKE_C_COMPILER_TARGET})
 target_link_libraries(libgcc_s PRIVATE
-  $<TARGET_OBJECTS:unwind_static>
+  $<TARGET_OBJECTS:unwind_static_objects>
   $<TARGET_OBJECTS:clang_rt.builtins-${LLVM_LIBGCC_TARGET_ARCH}>
 )
 target_link_options(libgcc_s PRIVATE
