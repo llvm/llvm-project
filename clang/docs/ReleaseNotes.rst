@@ -132,6 +132,10 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
+- Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
+  tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
+  makes ``-Winfinite-recursion`` diagnose more cases.
+  (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
 
 Bug Fixes in This Version
 -------------------------
