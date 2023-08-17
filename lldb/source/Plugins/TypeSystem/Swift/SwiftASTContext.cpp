@@ -1086,7 +1086,7 @@ static void printASTValidationError(
     llvm::raw_ostream &errs,
     const swift::serialization::ValidationInfo &ast_info,
     const swift::serialization::ExtendedValidationInfo &ext_ast_info,
-    Module &module, StringRef module_buf, bool invalid_name,
+    StringRef module_name, StringRef module_buf, bool invalid_name,
     bool invalid_size) {
   const char *error = getImportFailureString(ast_info.status);
   errs << "AST validation error";
@@ -1111,9 +1111,9 @@ static void printASTValidationError(
   - SDK path: {7}
   - Clang Importer Options:
 )",
-           ast_info.name, module.GetSpecificationDescription(), error,
-           ast_info.targetTriple, ast_info.shortVersion, ast_info.bytes,
-           module_buf.size(), ext_ast_info.getSDKPath());
+           ast_info.name, module_name, error, ast_info.targetTriple,
+           ast_info.shortVersion, ast_info.bytes, module_buf.size(),
+           ext_ast_info.getSDKPath());
   for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
@@ -1171,7 +1171,9 @@ static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
 static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
-                                        Module &module,
+                                        llvm::StringRef module_name,
+                                        llvm::ArrayRef<StringRef> buffers,
+                                        const PathMappingList &path_map,
                                         bool discover_implicit_search_paths,
                                         const std::string &m_description,
                                         llvm::raw_ostream &error,
@@ -1179,13 +1181,6 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                         bool &found_swift_modules) {
   bool found_validation_errors = false;
   got_serialized_options = false;
-  auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries.",
-             (int)ast_file_datas.size());
-
-  // If no N_AST symbols exist, this is not an error.
-  if (ast_file_datas.empty())
-    return false;
 
   auto &search_path_options = invocation.getSearchPathOptions();
   auto get_override_server = [&](llvm::StringRef plugin_path) -> std::string {
@@ -1258,9 +1253,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
 
   // An AST section consists of one or more AST modules, optionally
   // with headers. Iterate over all AST modules.
-  for (auto ast_file_data_sp : ast_file_datas) {
-    llvm::StringRef buf((const char *)ast_file_data_sp->GetBytes(),
-                        ast_file_data_sp->GetByteSize());
+  for (auto buf : buffers) {
     swift::serialization::ValidationInfo info;
     for (; !buf.empty(); buf = buf.substr(info.bytes)) {
       llvm::SmallVector<swift::serialization::SearchPath> searchPaths;
@@ -1275,8 +1268,8 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
       if (invalid_ast || invalid_size || invalid_name) {
         // Validation errors are diagnosed, but not fatal for the context.
         found_validation_errors = true;
-        printASTValidationError(error, info, extended_validation_info, module,
-                                buf, invalid_name, invalid_size);
+        printASTValidationError(error, info, extended_validation_info,
+                                module_name, buf, invalid_name, invalid_size);
         // If there's a size error, quit the loop early, otherwise try the next.
         if (invalid_size)
           break;
@@ -1288,8 +1281,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
 
       auto remap = [&](const std::string &path) {
         ConstString remapped;
-        if (module.GetSourceMappingList().RemapPath(ConstString(path),
-                                                    remapped))
+        if (path_map.RemapPath(ConstString(path), remapped))
           return remapped.GetStringRef().str();
         return path;
       };
@@ -1878,13 +1870,28 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     llvm::raw_svector_ostream errs(error);
     // Implicit search paths will be discoverd by ValidateSecionModules().
     bool discover_implicit_search_paths = false;
-    if (DeserializeAllCompilerFlags(swift_ast_sp->GetCompilerInvocation(),
-                                    module, discover_implicit_search_paths,
-                                    m_description, errs, got_serialized_options,
-                                    found_swift_modules)) {
-      // Validation errors are not fatal for the context.
-      swift_ast_sp->AddDiagnostic(eDiagnosticSeverityError, errs.str());
-    }
+
+    auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
+    std::string module_name = module.GetSpecificationDescription();
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries in %s.",
+               (int)ast_file_datas.size(), module_name.c_str());
+    std::vector<llvm::StringRef> buffers;
+    for (auto &data : ast_file_datas)
+      if (data)
+        buffers.push_back(
+            StringRef((const char *)data->GetBytes(), data->GetByteSize()));
+
+    // If no N_AST symbols exist, this is not an error.
+    if (!buffers.empty())
+      if (DeserializeAllCompilerFlags(
+              swift_ast_sp->GetCompilerInvocation(),
+              module_name, buffers,
+              module.GetSourceMappingList(), discover_implicit_search_paths,
+              m_description, errs, got_serialized_options,
+              found_swift_modules)) {
+        // Validation errors are not fatal for the context.
+        swift_ast_sp->AddDiagnostic(eDiagnosticSeverityError, errs.str());
+      }
 
     llvm::StringRef serialized_triple =
         swift_ast_sp->GetCompilerInvocation().getTargetTriple();
@@ -2178,13 +2185,27 @@ static void ProcessModule(
   llvm::SmallString<0> error;
   llvm::raw_svector_ostream errs(error);
   swift::CompilerInvocation invocation;
-  if (DeserializeAllCompilerFlags(
-          invocation, *module_sp, discover_implicit_search_paths, m_description,
-          errs, got_serialized_options, found_swift_modules)) {
-    // TODO: After removing DeserializeAllCompilerFlags from
-    //       CreateInstance(per-Module), errs will need to be
-    //       collected here and surfaced.
-  }
+
+  auto ast_file_datas = module_sp->GetASTData(eLanguageTypeSwift);
+  std::string module_name = module_sp->GetSpecificationDescription();
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries in %s.",
+             (int)ast_file_datas.size(), module_name.c_str());
+  std::vector<llvm::StringRef> buffers;
+  for (auto &data : ast_file_datas)
+    if (data)
+      buffers.push_back(
+          StringRef((const char *)data->GetBytes(), data->GetByteSize()));
+
+  // If no N_AST symbols exist, this is not an error.
+  if (!buffers.empty())
+    if (DeserializeAllCompilerFlags(
+            invocation, module_name, buffers, module_sp->GetSourceMappingList(),
+            discover_implicit_search_paths, m_description, errs,
+            got_serialized_options, found_swift_modules)) {
+      // TODO: After removing DeserializeAllCompilerFlags from
+      //       CreateInstance(per-Module), errs will need to be
+      //       collected here and surfaced.
+    }
 
   // Copy the interesting deserialized flags to the out parameters.
   const auto &opts = invocation.getSearchPathOptions();
