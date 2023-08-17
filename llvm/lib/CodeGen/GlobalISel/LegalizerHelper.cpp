@@ -3601,6 +3601,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerMemCpyFamily(MI);
   case G_MEMCPY_INLINE:
     return lowerMemcpyInline(MI);
+  case G_ZEXT:
+  case G_SEXT:
+  case G_ANYEXT:
+    return lowerEXT(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
   }
@@ -5953,6 +5957,48 @@ LegalizerHelper::lowerFunnelShift(MachineInstr &MI) {
   if (Result == UnableToLegalize)
     return lowerFunnelShiftAsShifts(MI);
   return Result;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerEXT(MachineInstr &MI) {
+  auto [Dst, Src] = MI.getFirst2Regs();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  uint32_t DstTySize = DstTy.getSizeInBits();
+  uint32_t DstTyScalarSize = DstTy.getScalarSizeInBits();
+  uint32_t SrcTyScalarSize = SrcTy.getScalarSizeInBits();
+
+  if (!isPowerOf2_32(DstTySize) || !isPowerOf2_32(DstTyScalarSize) ||
+      !isPowerOf2_32(SrcTyScalarSize))
+    return UnableToLegalize;
+
+  // The step between extend is too large, split it by creating an intermediate
+  // extend instruction
+  if (SrcTyScalarSize * 2 < DstTyScalarSize) {
+    LLT MidTy = SrcTy.changeElementSize(SrcTyScalarSize * 2);
+    // If the destination type is illegal, split it into multiple statements
+    // zext x -> zext(merge(zext(unmerge), zext(unmerge)))
+    auto NewExt = MIRBuilder.buildInstr(MI.getOpcode(), {MidTy}, {Src});
+    // Unmerge the vector
+    LLT EltTy = MidTy.changeElementCount(
+        MidTy.getElementCount().divideCoefficientBy(2));
+    auto UnmergeSrc = MIRBuilder.buildUnmerge(EltTy, NewExt);
+
+    // ZExt the vectors
+    LLT ZExtResTy = DstTy.changeElementCount(
+        DstTy.getElementCount().divideCoefficientBy(2));
+    auto ZExtRes1 = MIRBuilder.buildInstr(MI.getOpcode(), {ZExtResTy},
+                                          {UnmergeSrc.getReg(0)});
+    auto ZExtRes2 = MIRBuilder.buildInstr(MI.getOpcode(), {ZExtResTy},
+                                          {UnmergeSrc.getReg(1)});
+
+    // Merge the ending vectors
+    MIRBuilder.buildMergeLikeInstr(Dst, {ZExtRes1, ZExtRes2});
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  return UnableToLegalize;
 }
 
 LegalizerHelper::LegalizeResult

@@ -5,21 +5,7 @@
 ; Test efficient codegen of vector extends up from legal type to 128 bit
 ; and 256 bit vector types.
 
-; CHECK-GI:       warning: Instruction selection used fallback path for func3
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for func4
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for afunc3
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for afunc4
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for bfunc1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for bfunc2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zfunc1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zfunc2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for bfunc3
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cfunc4
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v4i8_to_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sext_v4i8_to_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v8i8_to_v8i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sext_v8i8_to_v8i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v32i1
+; CHECK-GI:        warning: Instruction selection used fallback path for zext_v32i1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sext_v32i1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v64i1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sext_v64i1
@@ -47,21 +33,35 @@ define <8 x i16> @func2(<8 x i8> %v0) nounwind {
 }
 
 define <16 x i16> @func3(<16 x i8> %v0) nounwind {
-; CHECK-LABEL: func3:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2.8h v1, v0, #0
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: func3:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: func3:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
+; CHECK-GI-NEXT:    ushll.8h v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <16 x i8> %v0 to <16 x i16>
   ret <16 x i16> %r
 }
 
 define <16 x i16> @func4(<16 x i8> %v0) nounwind {
-; CHECK-LABEL: func4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll2.8h v1, v0, #0
-; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: func4:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    sshll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: func4:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
+; CHECK-GI-NEXT:    sshll.8h v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <16 x i8> %v0 to <16 x i16>
   ret <16 x i16> %r
 }
@@ -89,43 +89,73 @@ define <4 x i32> @afunc2(<4 x i16> %v0) nounwind {
 }
 
 define <8 x i32> @afunc3(<8 x i16> %v0) nounwind {
-; CHECK-LABEL: afunc3:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2.4s v1, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: afunc3:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll2.4s v1, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: afunc3:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    ushll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <8 x i16> %v0 to <8 x i32>
   ret <8 x i32> %r
 }
 
 define <8 x i32> @afunc4(<8 x i16> %v0) nounwind {
-; CHECK-LABEL: afunc4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll2.4s v1, v0, #0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: afunc4:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll2.4s v1, v0, #0
+; CHECK-SD-NEXT:    sshll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: afunc4:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
+; CHECK-GI-NEXT:    sshll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <8 x i16> %v0 to <8 x i32>
   ret <8 x i32> %r
 }
 
 define <8 x i32> @bfunc1(<8 x i8> %v0) nounwind {
-; CHECK-LABEL: bfunc1:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v1, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bfunc1:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ushll2.4s v1, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bfunc1:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    ushll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <8 x i8> %v0 to <8 x i32>
   ret <8 x i32> %r
 }
 
 define <8 x i32> @bfunc2(<8 x i8> %v0) nounwind {
-; CHECK-LABEL: bfunc2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v1, v0, #0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bfunc2:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll.8h v0, v0, #0
+; CHECK-SD-NEXT:    sshll2.4s v1, v0, #0
+; CHECK-SD-NEXT:    sshll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bfunc2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
+; CHECK-GI-NEXT:    sshll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <8 x i8> %v0 to <8 x i32>
   ret <8 x i32> %r
 }
@@ -135,100 +165,182 @@ define <8 x i32> @bfunc2(<8 x i8> %v0) nounwind {
 ;-----
 
 define <4 x i64> @zfunc1(<4 x i32> %v0) nounwind {
-; CHECK-LABEL: zfunc1:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2.2d v1, v0, #0
-; CHECK-NEXT:    ushll.2d v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: zfunc1:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: zfunc1:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <4 x i32> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <4 x i64> @zfunc2(<4 x i32> %v0) nounwind {
-; CHECK-LABEL: zfunc2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll2.2d v1, v0, #0
-; CHECK-NEXT:    sshll.2d v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: zfunc2:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    sshll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: zfunc2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
+; CHECK-GI-NEXT:    sshll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <4 x i32> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <4 x i64> @bfunc3(<4 x i16> %v0) nounwind {
-; CHECK-LABEL: bfunc3:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.2d v1, v0, #0
-; CHECK-NEXT:    ushll.2d v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bfunc3:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ushll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bfunc3:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <4 x i16> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <4 x i64> @cfunc4(<4 x i16> %v0) nounwind {
-; CHECK-LABEL: cfunc4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.2d v1, v0, #0
-; CHECK-NEXT:    sshll.2d v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cfunc4:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll.4s v0, v0, #0
+; CHECK-SD-NEXT:    sshll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    sshll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cfunc4:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
+; CHECK-GI-NEXT:    sshll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <4 x i16> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <4 x i64> @zext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
-; CHECK-LABEL: zext_v4i8_to_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.2d v1, v0, #0
-; CHECK-NEXT:    ushll.2d v0, v0, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: zext_v4i8_to_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ushll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: zext_v4i8_to_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    and.16b v0, v0, v2
+; CHECK-GI-NEXT:    and.16b v1, v1, v2
+; CHECK-GI-NEXT:    ret
   %r = zext <4 x i8> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <4 x i64> @sext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
-; CHECK-LABEL: sext_v4i8_to_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll.2d v1, v0, #0
-; CHECK-NEXT:    ushll2.2d v0, v0, #0
-; CHECK-NEXT:    shl.2d v2, v1, #56
-; CHECK-NEXT:    shl.2d v0, v0, #56
-; CHECK-NEXT:    sshr.2d v1, v0, #56
-; CHECK-NEXT:    sshr.2d v0, v2, #56
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_v4i8_to_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v1, v0, #0
+; CHECK-SD-NEXT:    ushll2.2d v0, v0, #0
+; CHECK-SD-NEXT:    shl.2d v2, v1, #56
+; CHECK-SD-NEXT:    shl.2d v0, v0, #56
+; CHECK-SD-NEXT:    sshr.2d v1, v0, #56
+; CHECK-SD-NEXT:    sshr.2d v0, v2, #56
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_v4i8_to_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    shl.2d v0, v0, #56
+; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    sshr.2d v0, v0, #56
+; CHECK-GI-NEXT:    shl.2d v1, v1, #56
+; CHECK-GI-NEXT:    sshr.2d v1, v1, #56
+; CHECK-GI-NEXT:    ret
   %r = sext <4 x i8> %v0 to <4 x i64>
   ret <4 x i64> %r
 }
 
 define <8 x i64> @zext_v8i8_to_v8i64(<8 x i8> %v0) nounwind {
-; CHECK-LABEL: zext_v8i8_to_v8i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v2, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.2d v3, v2, #0
-; CHECK-NEXT:    ushll2.2d v1, v0, #0
-; CHECK-NEXT:    ushll.2d v0, v0, #0
-; CHECK-NEXT:    ushll.2d v2, v2, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: zext_v8i8_to_v8i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    ushll2.2d v3, v2, #0
+; CHECK-SD-NEXT:    ushll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v0, v0, #0
+; CHECK-SD-NEXT:    ushll.2d v2, v2, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: zext_v8i8_to_v8i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov d2, v0[1]
+; CHECK-GI-NEXT:    ushll.4s v3, v1, #0
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    mov d4, v3[1]
+; CHECK-GI-NEXT:    ushll.2d v1, v2, #0
+; CHECK-GI-NEXT:    ushll.2d v2, v3, #0
+; CHECK-GI-NEXT:    ushll.2d v3, v4, #0
+; CHECK-GI-NEXT:    ret
   %r = zext <8 x i8> %v0 to <8 x i64>
   ret <8 x i64> %r
 }
 
 define <8 x i64> @sext_v8i8_to_v8i64(<8 x i8> %v0) nounwind {
-; CHECK-LABEL: sext_v8i8_to_v8i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v2, v0, #0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.2d v3, v2, #0
-; CHECK-NEXT:    sshll2.2d v1, v0, #0
-; CHECK-NEXT:    sshll.2d v0, v0, #0
-; CHECK-NEXT:    sshll.2d v2, v2, #0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_v8i8_to_v8i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll.8h v0, v0, #0
+; CHECK-SD-NEXT:    sshll2.4s v2, v0, #0
+; CHECK-SD-NEXT:    sshll.4s v0, v0, #0
+; CHECK-SD-NEXT:    sshll2.2d v3, v2, #0
+; CHECK-SD-NEXT:    sshll2.2d v1, v0, #0
+; CHECK-SD-NEXT:    sshll.2d v0, v0, #0
+; CHECK-SD-NEXT:    sshll.2d v2, v2, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_v8i8_to_v8i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
+; CHECK-GI-NEXT:    mov d1, v0[1]
+; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov d2, v0[1]
+; CHECK-GI-NEXT:    sshll.4s v3, v1, #0
+; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
+; CHECK-GI-NEXT:    mov d4, v3[1]
+; CHECK-GI-NEXT:    sshll.2d v1, v2, #0
+; CHECK-GI-NEXT:    sshll.2d v2, v3, #0
+; CHECK-GI-NEXT:    sshll.2d v3, v4, #0
+; CHECK-GI-NEXT:    ret
   %r = sext <8 x i8> %v0 to <8 x i64>
   ret <8 x i64> %r
 }
