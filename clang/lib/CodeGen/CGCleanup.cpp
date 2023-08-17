@@ -873,8 +873,13 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
       // If there's exactly one branch-after and no other threads,
       // we can route it without a switch.
+      // Skip for SEH, since ExitSwitch is used to generate code to indicate
+      // abnormal termination. (SEH: Except _leave and fall-through at
+      // the end, all other exits in a _try (return/goto/continue/break)
+      // are considered as abnormal terminations, using NormalCleanupDestSlot
+      // to indicate abnormal termination)
       if (!Scope.hasBranchThroughs() && !HasFixups && !HasFallthrough &&
-          Scope.getNumBranchAfters() == 1) {
+          !currentFunctionUsesSEHTry() && Scope.getNumBranchAfters() == 1) {
         assert(!BranchThroughDest || !IsActive);
 
         // Clean up the possibly dead store to the cleanup dest slot.
