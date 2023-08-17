@@ -380,6 +380,10 @@ public:
   }
 };
 
+static auto toSupportedVariable() {
+  return to(varDecl());
+}
+
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
 
@@ -566,7 +570,8 @@ public:
   static Matcher matcher() {
     auto PtrInitStmt = declStmt(hasSingleDecl(varDecl(
                                  hasInitializer(ignoringImpCasts(declRefExpr(
-                                                  hasPointerType()).
+                                                  hasPointerType(),
+                                                    toSupportedVariable()).
                                                   bind(PointerInitRHSTag)))).
                                               bind(PointerInitLHSTag)));
 
@@ -616,10 +621,10 @@ public:
   static Matcher matcher() {
     auto PtrAssignExpr = binaryOperator(allOf(hasOperatorName("="),
       hasRHS(ignoringParenImpCasts(declRefExpr(hasPointerType(),
-                                               to(varDecl())).
+                                               toSupportedVariable()).
                                    bind(PointerAssignRHSTag))),
                                    hasLHS(declRefExpr(hasPointerType(),
-                                                      to(varDecl())).
+                                                      toSupportedVariable()).
                                           bind(PointerAssignLHSTag))));
 
     return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
@@ -691,7 +696,8 @@ public:
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
     auto BaseIsArrayOrPtrDRE =
-        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr)));
+        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr,
+                                                  toSupportedVariable())));
     auto Target =
         arraySubscriptExpr(BaseIsArrayOrPtrDRE).bind(ULCArraySubscriptTag);
 
@@ -733,7 +739,8 @@ public:
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
     auto target = expr(
-        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr, to(varDecl()))).bind(DeclRefExprTag)));
+        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr, 
+                              toSupportedVariable())).bind(DeclRefExprTag)));
     return stmt(isInUnspecifiedPointerContext(target));
   }
 
@@ -769,7 +776,7 @@ public:
         unaryOperator(
             hasOperatorName("*"),
             has(expr(ignoringParenImpCasts(
-                declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)))))
+                declRefExpr(toSupportedVariable()).bind(BaseDeclRefExprTag)))))
             .bind(OperatorTag);
 
     return expr(isInUnspecifiedLvalueContext(Target));
@@ -809,7 +816,8 @@ public:
     return expr(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
         unaryOperator(hasOperatorName("&"),
                       hasUnaryOperand(arraySubscriptExpr(
-                          hasBase(ignoringParenImpCasts(declRefExpr())))))
+                          hasBase(ignoringParenImpCasts(declRefExpr(
+                                                  toSupportedVariable()))))))
             .bind(UPCAddressofArraySubscriptTag)))));
   }
 
@@ -961,7 +969,8 @@ public:
     // things right.
     return stmt(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
 								    unaryOperator(isPreInc(),
-										  hasUnaryOperand(declRefExpr())
+										  hasUnaryOperand(declRefExpr(
+                                                    toSupportedVariable()))
 										  ).bind(UPCPreIncrementTag)))));
   }
 
@@ -999,7 +1008,8 @@ public:
   static Matcher matcher() {
     // clang-format off
     auto ThePtr = expr(hasPointerType(),
-                       ignoringImpCasts(declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)));
+                       ignoringImpCasts(declRefExpr(toSupportedVariable()).
+                                        bind(BaseDeclRefExprTag)));
     auto PlusOverPtrAndInteger = expr(anyOf(
           binaryOperator(hasOperatorName("+"), hasLHS(ThePtr),
                          hasRHS(integerLiteral().bind(OffsetTag)))
@@ -1106,7 +1116,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
             // In parallel, match all DeclRefExprs so that to find out
             // whether there are any uncovered by gadgets.
             declRefExpr(anyOf(hasPointerType(), hasArrayType()),
-                        to(varDecl())).bind("any_dre"),
+                        to(anyOf(varDecl(), bindingDecl()))).bind("any_dre"),
             // Also match DeclStmts because we'll need them when fixing
             // their underlying VarDecls that otherwise don't have
             // any backreferences to DeclStmts.
