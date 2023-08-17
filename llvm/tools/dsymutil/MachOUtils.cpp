@@ -328,8 +328,9 @@ static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
       VMAddr = alignTo(VMAddr, Alignment);
       FileOffset = alignTo(FileOffset, Alignment);
       if (FileOffset > UINT32_MAX)
-        return error("section " + Sec->getName() + "'s file offset exceeds 4GB."
-            " Refusing to produce an invalid Mach-O file.");
+        return error("section " + Sec->getName() +
+                     "'s file offset exceeds 4GB."
+                     " Refusing to produce an invalid Mach-O file.");
     }
     Writer.writeSection(Layout, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
@@ -414,7 +415,7 @@ bool generateDsymCompanion(
       ++NumLoadCommands;
       LoadCommandSize += sizeof(UUIDCmd);
       break;
-   case MachO::LC_BUILD_VERSION: {
+    case MachO::LC_BUILD_VERSION: {
       MachO::build_version_command Cmd;
       memset(&Cmd, 0, sizeof(Cmd));
       Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
