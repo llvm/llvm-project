@@ -805,6 +805,7 @@ public:
                       CompilerType *original_type) override;
 
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) override;
 
   /// Retrieve/import the modules imported by the compilation
   /// unit. Early-exists with false if there was an import failure.

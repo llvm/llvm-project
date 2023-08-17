@@ -128,6 +128,8 @@ public:
   virtual CompilerType GetReferentType(lldb::opaque_compiler_type_t type) = 0;
   static CompilerType GetInstanceType(CompilerType ct);
   virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) = 0;
+  /// Return the static type if this is a DynamicSelf type else the input type.
+  virtual CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) = 0;
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };
   struct TupleElement {
     ConstString element_name;

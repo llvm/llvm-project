@@ -2422,20 +2422,9 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   }
 
   Demangler dem;
-  NodePointer canonical = TypeSystemSwiftTypeRef::Transform(
-      dem, dem.demangleSymbol(mangled_name.GetStringRef()),
-      [](NodePointer node) {
-        if (node->getKind() != Node::Kind::DynamicSelf)
-          return node;
-        // Substitute the static type for dynamic self.
-        assert(node->getNumChildren() == 1);
-        if (node->getNumChildren() != 1)
-          return node;
-        NodePointer type = node->getChild(0);
-        if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
-          return node;
-        return type->getChild(0);
-      });
+
+  NodePointer canonical = TypeSystemSwiftTypeRef::GetStaticSelfType(
+      dem, dem.demangleSymbol(mangled_name.GetStringRef()));
 
   // Build the list of type substitutions.
   swift::reflection::GenericArgumentMap substitutions;
