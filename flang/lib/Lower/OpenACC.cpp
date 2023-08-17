@@ -2925,29 +2925,53 @@ GetConstExpr(Fortran::semantics::SemanticsContext &semanticsContext,
   return std::nullopt;
 }
 
+static void attachRoutineInfo(mlir::func::FuncOp func,
+                              mlir::SymbolRefAttr routineAttr) {
+  llvm::SmallVector<mlir::SymbolRefAttr> routines;
+  if (func.getOperation()->hasAttr(mlir::acc::getRoutineInfoAttrName())) {
+    auto routineInfo =
+        func.getOperation()->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+            mlir::acc::getRoutineInfoAttrName());
+    routines.append(routineInfo.getAccRoutines().begin(),
+                    routineInfo.getAccRoutines().end());
+  }
+  routines.push_back(routineAttr);
+  func.getOperation()->setAttr(
+      mlir::acc::getRoutineInfoAttrName(),
+      mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
+}
+
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenACCRoutineConstruct &routineConstruct) {
+       const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
+       Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.genLocation(routineConstruct.source);
   std::optional<Fortran::parser::Name> name =
       std::get<std::optional<Fortran::parser::Name>>(routineConstruct.t);
   const auto &clauses =
       std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
-  if (name)
-    TODO(loc, "acc routine with name");
 
-  mlir::func::FuncOp func = builder.getFunction();
   mlir::ModuleOp mod = builder.getModule();
+  mlir::func::FuncOp funcOp;
+  std::string funcName;
+  if (name) {
+    funcName = converter.mangleName(*name->symbol);
+    funcOp = builder.getNamedFunction(funcName);
+  } else {
+    funcOp = builder.getFunction();
+    funcName = funcOp.getName();
+  }
+
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   std::stringstream routineOpName;
   routineOpName << accRoutinePrefix.str() << routineCounter++;
   auto routineOp = modBuilder.create<mlir::acc::RoutineOp>(
-      loc, routineOpName.str(), func.getName(), mlir::StringAttr{},
+      loc, routineOpName.str(), funcName, mlir::StringAttr{}, mlir::UnitAttr{},
       mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{},
-      mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::IntegerAttr{});
+      mlir::UnitAttr{}, mlir::IntegerAttr{});
 
   for (const Fortran::parser::AccClause &clause : clauses.v) {
     if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
@@ -2994,18 +3018,27 @@ genACC(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  llvm::SmallVector<mlir::SymbolRefAttr> routines;
-  if (func.getOperation()->hasAttr(mlir::acc::getRoutineInfoAttrName())) {
-    auto routineInfo =
-        func.getOperation()->getAttrOfType<mlir::acc::RoutineInfoAttr>(
-            mlir::acc::getRoutineInfoAttrName());
-    routines.append(routineInfo.getAccRoutines().begin(),
-                    routineInfo.getAccRoutines().end());
+  if (funcOp)
+    attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpName.str()));
+  else
+    // FuncOp is not lowered yet. Keep the information so the routine info
+    // can be attached later to the funcOp.
+    accRoutineInfos.push_back(std::make_pair(
+        funcName, builder.getSymbolRefAttr(routineOpName.str())));
+}
+
+void Fortran::lower::finalizeOpenACCRoutineAttachment(
+    mlir::ModuleOp &mod,
+    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
+  for (auto &mapping : accRoutineInfos) {
+    mlir::func::FuncOp funcOp =
+        mod.lookupSymbol<mlir::func::FuncOp>(mapping.first);
+    if (!funcOp)
+      llvm::report_fatal_error(
+          "could not find function to attach OpenACC routine information.");
+    attachRoutineInfo(funcOp, mapping.second);
   }
-  routines.push_back(builder.getSymbolRefAttr(routineOpName.str()));
-  func.getOperation()->setAttr(
-      mlir::acc::getRoutineInfoAttrName(),
-      mlir::acc::RoutineInfoAttr::get(builder.getContext(), routines));
+  accRoutineInfos.clear();
 }
 
 void Fortran::lower::genOpenACCConstruct(
@@ -3050,7 +3083,8 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &fctCtx,
     Fortran::lower::pft::Evaluation &eval,
-    const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
+    const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct,
+    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
 
   std::visit(
       common::visitors{
@@ -3061,7 +3095,8 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            genACC(converter, semanticsContext, eval, routineConstruct);
+            genACC(converter, semanticsContext, eval, routineConstruct,
+                   accRoutineInfos);
           },
       },
       accDeclConstruct.u);
