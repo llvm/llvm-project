@@ -1492,6 +1492,43 @@ public:
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// ControlBarrierOp conversion
+//===----------------------------------------------------------------------===//
+
+class ControlBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::ControlBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ControlBarrierOp>::SPIRVToLLVMConversion;
+  LogicalResult
+  matchAndRewrite(spirv::ControlBarrierOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto i32Ty = IntegerType::get(rewriter.getContext(), 32);
+    LLVM::LLVMFuncOp function = [&] {
+      auto *module = op->getParentWithTrait<OpTrait::SymbolTable>();
+      StringRef functionName = "_Z22__spirv_ControlBarrierjjj";
+      if (auto *function = SymbolTable::lookupSymbolIn(module, functionName))
+        return cast<LLVM::LLVMFuncOp>(function);
+      auto voidTy = LLVM::LLVMVoidType::get(rewriter.getContext());
+      return OpBuilder::atBlockBegin(&module->getRegion(0).front())
+          .create<LLVM::LLVMFuncOp>(
+              loc, functionName,
+              LLVM::LLVMFunctionType::get(voidTy, {i32Ty, i32Ty, i32Ty}));
+    }();
+    auto executionScope = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Ty, static_cast<uint32_t>(op.getExecutionScope()));
+    auto memoryScope = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Ty, static_cast<uint32_t>(op.getMemoryScope()));
+    auto memorySemantics = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Ty, static_cast<uint32_t>(op.getMemorySemantics()));
+    SmallVector<Value> arguments = {executionScope, memoryScope,
+                                    memorySemantics};
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, function, arguments);
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1617,7 +1654,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       CompositeExtractPattern, CompositeInsertPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
-      VectorShufflePattern,
+      VectorShufflePattern, ControlBarrierPattern,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,
