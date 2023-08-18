@@ -24,6 +24,7 @@ class StringRef;
 namespace mlir {
 class Location;
 class Type;
+class ModuleOp;
 class OpBuilder;
 class Value;
 } // namespace mlir
@@ -52,6 +53,9 @@ namespace pft {
 struct Evaluation;
 } // namespace pft
 
+using AccRoutineInfoMappingList =
+    llvm::SmallVector<std::pair<std::string, mlir::SymbolRefAttr>>;
+
 static constexpr llvm::StringRef declarePostAllocSuffix =
     "_acc_declare_update_desc_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
@@ -62,10 +66,14 @@ static constexpr llvm::StringRef declarePostDeallocSuffix =
 void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
-void genOpenACCDeclarativeConstruct(
-    AbstractConverter &, Fortran::semantics::SemanticsContext &,
-    StatementContext &, pft::Evaluation &,
-    const parser::OpenACCDeclarativeConstruct &);
+void genOpenACCDeclarativeConstruct(AbstractConverter &,
+                                    Fortran::semantics::SemanticsContext &,
+                                    StatementContext &, pft::Evaluation &,
+                                    const parser::OpenACCDeclarativeConstruct &,
+                                    AccRoutineInfoMappingList &);
+
+void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
+                                      AccRoutineInfoMappingList &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
