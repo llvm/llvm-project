@@ -22,11 +22,5 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.expect("expression 1", substrs=["1"])
 
         # Scan through the types log.
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        found = 0
-        for line in logfile:
-            if line.startswith(' SwiftASTContextForModule("a.out")::RemapClangImporterOptions() -- remapped'):
-                if '/LocalSDK/' in line:
-                    found += 1
-        self.assertEqual(found, 1)
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+#       CHECK:  SwiftASTContextForExpressions::RemapClangImporterOptions() -- remapped{{.*}}/LocalSDK/
