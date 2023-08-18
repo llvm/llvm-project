@@ -1,0 +1,54 @@
+--- !Analysis
+Pass:            generic-remarks-pass
+Name:            Remark 
+DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+Function:        func1
+Args:
+  - count:           '1'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Missed
+Pass:            generic-remarks-pass
+Name:            Remark 
+DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+Function:        func1
+Args:
+  - count:           '3'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Passed
+Pass:            generic-remarks-pass
+Name:            Remark 
+DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+Function:        func2
+Args:
+  - count:           '3'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Analysis
+Pass:            generic-remarks-pass2
+Name:            Remark 
+DebugLoc:        { File: path/to/anno3.c, Line: 1, Column: 2 }
+Function:        func1
+Args:
+  - count:           '3'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Analysis
+Pass:            generic-remarks-pass3
+Name:            Remark 
+DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+Function:        func2
+Args:
+  - count:           '2'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Analysis
+Pass:            generic-remarks-pass4
+Name:            Remark 
+DebugLoc:        { File: path/to/anno2.c, Line: 1, Column: 2 }
+Function:        func3
+Args:
+  - count:           '2'
+  - String:          ' instructions with '
+  - type:            remark
