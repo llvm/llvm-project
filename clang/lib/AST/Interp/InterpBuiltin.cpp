@@ -32,65 +32,6 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
   return R;
 }
 
-/// Pushes \p Val to the stack, as a target-dependent 'int'.
-static void pushInt(InterpState &S, int32_t Val) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned IntWidth = TI.getIntWidth();
-
-  if (IntWidth == 32)
-    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
-  else if (IntWidth == 16)
-    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
-  else
-    llvm_unreachable("Int isn't 16 or 32 bit?");
-}
-
-static bool retInt(InterpState &S, CodePtr OpPC, APValue &Result) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned IntWidth = TI.getIntWidth();
-
-  if (IntWidth == 32)
-    return Ret<PT_Sint32>(S, OpPC, Result);
-  else if (IntWidth == 16)
-    return Ret<PT_Sint16>(S, OpPC, Result);
-  llvm_unreachable("Int isn't 16 or 32 bit?");
-}
-
-static void pushSizeT(InterpState &S, uint64_t Val) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
-
-  switch (SizeTWidth) {
-  case 64:
-    S.Stk.push<Integral<64, false>>(Integral<64, false>::from(Val));
-    break;
-  case 32:
-    S.Stk.push<Integral<32, false>>(Integral<32, false>::from(Val));
-    break;
-  case 16:
-    S.Stk.push<Integral<16, false>>(Integral<16, false>::from(Val));
-    break;
-  default:
-    llvm_unreachable("We don't handle this size_t size.");
-  }
-}
-
-static bool retSizeT(InterpState &S, CodePtr OpPC, APValue &Result) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
-
-  switch (SizeTWidth) {
-  case 64:
-    return Ret<PT_Uint64>(S, OpPC, Result);
-  case 32:
-    return Ret<PT_Uint32>(S, OpPC, Result);
-  case 16:
-    return Ret<PT_Uint16>(S, OpPC, Result);
-  }
-
-  llvm_unreachable("size_t isn't 64 or 32 bit?");
-}
-
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame) {
   const Pointer &A = getParam<Pointer>(Frame, 0);
@@ -126,35 +67,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
       break;
   }
 
-  pushInt(S, Result);
-  return true;
-}
-
-static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame) {
-  const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
-
-  if (!CheckArray(S, OpPC, StrPtr))
-    return false;
-
-  if (!CheckLive(S, OpPC, StrPtr, AK_Read))
-    return false;
-
-  assert(StrPtr.getFieldDesc()->isPrimitiveArray());
-
-  size_t Len = 0;
-  for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
-    const Pointer &ElemPtr = StrPtr.atIndex(I);
-
-    if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
-      return false;
-
-    uint8_t Val = ElemPtr.deref<uint8_t>();
-    if (Val == 0)
-      break;
-  }
-
-  pushSizeT(S, Len);
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Result));
   return true;
 }
 
@@ -287,7 +200,7 @@ static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame, const Function *F) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
-  pushInt(S, Arg.isNan());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isNan()));
   return true;
 }
 
@@ -298,9 +211,10 @@ static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
   bool IsInf = Arg.isInf();
 
   if (CheckSign)
-    pushInt(S, IsInf ? (Arg.isNegative() ? -1 : 1) : 0);
+    S.Stk.push<Integral<32, true>>(
+        Integral<32, true>::from(IsInf ? (Arg.isNegative() ? -1 : 1) : 0));
   else
-    pushInt(S, Arg.isInf());
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isInf()));
   return true;
 }
 
@@ -309,7 +223,7 @@ static bool interp__builtin_isfinite(InterpState &S, CodePtr OpPC,
                                      const Function *F) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
-  pushInt(S, Arg.isFinite());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isFinite()));
   return true;
 }
 
@@ -318,7 +232,7 @@ static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
                                      const Function *F) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
-  pushInt(S, Arg.isNormal());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isNormal()));
   return true;
 }
 
@@ -335,12 +249,12 @@ static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
 
   int32_t Result =
       static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
-  pushInt(S, Result);
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Result));
 
   return true;
 }
 
-/// Five int values followed by one floating value.
+/// Five int32 values followed by one floating value.
 static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func) {
@@ -366,9 +280,8 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   unsigned Offset = align(primSize(PT_Float)) +
                     ((1 + (4 - Index)) * align(primSize(PT_Sint32)));
 
-  // FIXME: The size of the value we're peeking here is target-dependent.
   const Integral<32, true> &I = S.Stk.peek<Integral<32, true>>(Offset);
-  pushInt(S, static_cast<int32_t>(I));
+  S.Stk.push<Integral<32, true>>(I);
   return true;
 }
 
@@ -399,11 +312,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return RetVoid(S, OpPC, Dummy);
   case Builtin::BI__builtin_strcmp:
     if (interp__builtin_strcmp(S, OpPC, Frame))
-      return retInt(S, OpPC, Dummy);
-    break;
-  case Builtin::BI__builtin_strlen:
-    if (interp__builtin_strlen(S, OpPC, Frame))
-      return retSizeT(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_nan:
   case Builtin::BI__builtin_nanf:
@@ -463,34 +372,34 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_isnan:
     if (interp__builtin_isnan(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
   case Builtin::BI__builtin_isinf:
     if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
   case Builtin::BI__builtin_isinf_sign:
     if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
   case Builtin::BI__builtin_isfinite:
     if (interp__builtin_isfinite(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_isnormal:
     if (interp__builtin_isnormal(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_isfpclass:
     if (interp__builtin_isfpclass(S, OpPC, Frame, F, Call))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_fpclassify:
     if (interp__builtin_fpclassify(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
   case Builtin::BI__builtin_fabs:
