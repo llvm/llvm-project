@@ -227,7 +227,7 @@ void no_crash_on_symsym_cast_to_long(void) {
   globalA == 3;
   (long)globalA << 48;
   #ifdef BIT32
-  // expected-warning@-2{{The result of the left shift is undefined due to shifting by '48', which is greater or equal to the width of type 'long'}}
+  // expected-warning@-2{{Left shift by '48' overflows the capacity of 'long'}}
   #else
   // expected-no-diagnostics
   #endif
