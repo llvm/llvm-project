@@ -355,6 +355,14 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("func");
     Kind["displayName"] = "Function";
     break;
+  case APIRecord::RK_GlobalFunctionTemplate:
+    Kind["identifier"] = AddLangPrefix("func");
+    Kind["displayName"] = "Function Template";
+    break;
+  case APIRecord::RK_GlobalFunctionTemplateSpecialization:
+    Kind["identifier"] = AddLangPrefix("func");
+    Kind["displayName"] = "Function Template Specialization";
+    break;
   case APIRecord::RK_GlobalVariableTemplate:
     Kind["identifier"] = AddLangPrefix("var");
     Kind["displayName"] = "Global Variable Template";
@@ -932,6 +940,22 @@ void SymbolGraphSerializer::
   if (!GlobalVariableTemplatePartialSpecialization)
     return;
   Symbols.emplace_back(std::move(*GlobalVariableTemplatePartialSpecialization));
+}
+
+void SymbolGraphSerializer::visitGlobalFunctionTemplateRecord(
+    const GlobalFunctionTemplateRecord &Record) {
+  auto GlobalFunctionTemplate = serializeAPIRecord(Record);
+  if (!GlobalFunctionTemplate)
+    return;
+  Symbols.emplace_back(std::move(*GlobalFunctionTemplate));
+}
+
+void SymbolGraphSerializer::visitGlobalFunctionTemplateSpecializationRecord(
+    const GlobalFunctionTemplateSpecializationRecord &Record) {
+  auto GlobalFunctionTemplateSpecialization = serializeAPIRecord(Record);
+  if (!GlobalFunctionTemplateSpecialization)
+    return;
+  Symbols.emplace_back(std::move(*GlobalFunctionTemplateSpecialization));
 }
 
 void SymbolGraphSerializer::visitObjCContainerRecord(
