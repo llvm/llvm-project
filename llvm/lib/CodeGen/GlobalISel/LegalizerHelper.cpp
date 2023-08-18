@@ -3439,15 +3439,22 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     const LLT CondTy = MRI.getType(CarryOut);
     const LLT Ty = MRI.getType(Res);
 
+    // Initial add of the two operands.
     auto TmpRes = MIRBuilder.buildAdd(Ty, LHS, RHS);
+
+    // Initial check for carry.
+    auto Carry = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, TmpRes, LHS);
+
+    // Add the sum and the carry.
     auto ZExtCarryIn = MIRBuilder.buildZExt(Ty, CarryIn);
     MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
 
-    auto Res_EQ_LHS = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, Res, LHS);
-    auto Res_ULT_LHS =
-        MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, Res, LHS);
-    auto And = MIRBuilder.buildAnd(CondTy, Res_EQ_LHS, CarryIn);
-    MIRBuilder.buildOr(CarryOut, And, Res_ULT_LHS);
+    // Second check for carry. We can only carry if the initial sum is all 1s
+    // and the carry is set, resulting in a new sum of 0.
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
+    auto ResEqZero = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, Res, Zero);
+    auto Carry2 = MIRBuilder.buildAnd(CondTy, ResEqZero, CarryIn);
+    MIRBuilder.buildOr(CarryOut, Carry, Carry2);
 
     MI.eraseFromParent();
     return Legalized;
@@ -3466,13 +3473,23 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     const LLT CondTy = MRI.getType(BorrowOut);
     const LLT Ty = MRI.getType(Res);
 
+    // Initial subtract of the two operands.
     auto TmpRes = MIRBuilder.buildSub(Ty, LHS, RHS);
+
+    // Initial check for borrow.
+    auto Borrow = MIRBuilder.buildICmp(CmpInst::ICMP_UGT, CondTy, TmpRes, LHS);
+
+    // Subtract the borrow from the first subtract.
     auto ZExtBorrowIn = MIRBuilder.buildZExt(Ty, BorrowIn);
     MIRBuilder.buildSub(Res, TmpRes, ZExtBorrowIn);
 
-    auto LHS_EQ_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, LHS, RHS);
-    auto LHS_ULT_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, LHS, RHS);
-    MIRBuilder.buildSelect(BorrowOut, LHS_EQ_RHS, BorrowIn, LHS_ULT_RHS);
+    // Second check for borrow. We can only borrow if the initial difference is
+    // 0 and the borrow is set, resulting in a new difference of all 1s.
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
+    auto TmpResEqZero =
+        MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, TmpRes, Zero);
+    auto Borrow2 = MIRBuilder.buildAnd(CondTy, TmpResEqZero, BorrowIn);
+    MIRBuilder.buildOr(BorrowOut, Borrow, Borrow2);
 
     MI.eraseFromParent();
     return Legalized;
