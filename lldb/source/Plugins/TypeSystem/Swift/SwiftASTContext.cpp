@@ -1747,6 +1747,20 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
   return GetSDKPath(m_description, sdk);
 }
 
+static std::vector<llvm::StringRef>
+GetASTBuffersFromModule(const std::string &m_description,
+                        llvm::ArrayRef<lldb::DataBufferSP> ast_file_datas,
+                        std::string &module_name) {
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries in %s.",
+             (int)ast_file_datas.size(), module_name.c_str());
+  std::vector<llvm::StringRef> buffers;
+  for (auto &data : ast_file_datas)
+    if (data)
+      buffers.push_back(
+          StringRef((const char *)data->GetBytes(), data->GetByteSize()));
+  return buffers;
+}
+
 /// Detect whether a Swift module was "imported" by DWARFImporter.
 /// All this *really* means is that it couldn't be loaded through any
 /// other mechanism.
@@ -1872,16 +1886,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     llvm::raw_svector_ostream errs(error);
     // Implicit search paths will be discovered by ValidateSecionModules().
     bool discover_implicit_search_paths = false;
-
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
     std::string module_name = module.GetSpecificationDescription();
-    LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries in %s.",
-               (int)ast_file_datas.size(), module_name.c_str());
-    std::vector<llvm::StringRef> buffers;
-    for (auto &data : ast_file_datas)
-      if (data)
-        buffers.push_back(
-            StringRef((const char *)data->GetBytes(), data->GetByteSize()));
+    std::vector<llvm::StringRef> buffers =
+        GetASTBuffersFromModule(m_description, ast_file_datas, module_name);
 
     // If no N_AST symbols exist, this is not an error.
     if (!buffers.empty())
@@ -2187,16 +2195,10 @@ static void ProcessModule(
   llvm::SmallString<0> error;
   llvm::raw_svector_ostream errs(error);
   swift::CompilerInvocation invocation;
-
   auto ast_file_datas = module_sp->GetASTData(eLanguageTypeSwift);
   std::string module_name = module_sp->GetSpecificationDescription();
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Found %d AST file data entries in %s.",
-             (int)ast_file_datas.size(), module_name.c_str());
-  std::vector<llvm::StringRef> buffers;
-  for (auto &data : ast_file_datas)
-    if (data)
-      buffers.push_back(
-          StringRef((const char *)data->GetBytes(), data->GetByteSize()));
+  std::vector<llvm::StringRef> buffers =
+      GetASTBuffersFromModule(m_description, ast_file_datas, module_name);
 
   // If no N_AST symbols exist, this is not an error.
   if (!buffers.empty())
