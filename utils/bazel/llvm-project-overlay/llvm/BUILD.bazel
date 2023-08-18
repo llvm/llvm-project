@@ -1126,6 +1126,7 @@ cc_library(
     hdrs = [
         "include/llvm-c/BitWriter.h",
         "include/llvm/Bitcode/BitcodeCommon.h",
+        "include/llvm/Bitcode/BitcodeConvenience.h",
         "include/llvm/Bitcode/BitcodeWriter.h",
         "include/llvm/Bitcode/BitcodeWriterPass.h",
         "include/llvm/Bitcode/LLVMBitCodes.h",
