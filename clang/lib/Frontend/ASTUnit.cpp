@@ -581,7 +581,8 @@ public:
     return false;
   }
 
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override {
     this->PPOpts = PPOpts;
     return false;
