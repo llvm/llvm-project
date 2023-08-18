@@ -552,7 +552,9 @@ public:
 
   void removeDuplicateDivs();
 
-  /// Attempts to simplify the constraints.
+  /// Simplify iteratively attempt to remove redundant equations by Gaussian
+  /// elimination and attempt to remove duplicate inequalities until a fixed
+  /// point is reached.
   void simplify();
 
   /// Converts variables of kind srcKind in the range [varStart, varLimit) to

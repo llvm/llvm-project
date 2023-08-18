@@ -2338,18 +2338,20 @@ bool IntegerRelation::removeDuplicateConstraints() {
     // sum of their constant terms is positive.
     unsigned l = hashTable[nRow];
     auto sum = atIneq(l, cols - 1) + atIneq(k, cols - 1);
-    if (sum > 0)
+    if (sum > 0 || l == k)
       continue;
 
     // A sum of constant terms equal to zero combines two inequalities into one
     // equation, less than zero means the set is empty.
     negChanged = true;
     changed = true;
+    if (k < l)
+      std::swap(l, k);
     if (sum == 0) {
       addEquality(getInequality(k));
       removeInequality(ineqs);
-      removeInequality(l);
       removeInequality(k);
+      removeInequality(l);
     } else
       markSetEmpty();
     break;
