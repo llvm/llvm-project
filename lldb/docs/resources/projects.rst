@@ -1,5 +1,5 @@
-Projects
-========
+Open Projects
+=============
 
 The following is a mostly unordered set of the ideas for improvements to the
 LLDB debugger. Some are fairly deep, some would require less effort.
