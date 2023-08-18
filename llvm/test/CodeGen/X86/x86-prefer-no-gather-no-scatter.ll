@@ -1,6 +1,6 @@
 ; Check that if option prefer-no-gather/scatter can disable gather/scatter instructions.
-; RUN: llc -mattr=+avx2,+fast-gather %s -o - | FileCheck %s --check-prefixes=GATHER
-; RUN: llc -mattr=+avx2,+fast-gather,+prefer-no-gather %s -o - | FileCheck %s --check-prefixes=NO-GATHER
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2,+fast-gather %s -o - | FileCheck %s --check-prefixes=GATHER
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2,+fast-gather,+prefer-no-gather %s -o - | FileCheck %s --check-prefixes=NO-GATHER
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq < %s | FileCheck %s --check-prefix=SCATTER
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq,+prefer-no-gather < %s | FileCheck %s --check-prefix=SCATTER-NO-GATHER
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl,+avx512dq,+prefer-no-scatter < %s | FileCheck %s --check-prefix=GATHER-NO-SCATTER
