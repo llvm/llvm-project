@@ -1661,9 +1661,9 @@ getT2AddrModeImm8OffsetOpValue(const MCInst &MI, unsigned OpNum,
 
   // FIXME: Needs fixup support.
   unsigned Value = 0;
-  int32_t tmp = (int32_t)MO1.getImm();
-  if (tmp < 0)
-    tmp = abs(tmp);
+  auto tmp = static_cast<uint32_t>(MO1.getImm());
+  if (static_cast<int32_t>(tmp) < 0)
+    tmp = -tmp;
   else
     Value |= 256; // Set the ADD bit
   Value |= tmp & 255;
