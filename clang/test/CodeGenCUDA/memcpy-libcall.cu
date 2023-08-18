@@ -1,3 +1,6 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
 // RUN: %clang_cc1 -x cuda -triple nvptx64-nvidia-cuda- -fcuda-is-device \
 // RUN:     -O3 -S %s -o - | FileCheck -check-prefix=PTX %s
 // RUN: %clang_cc1 -x cuda -triple nvptx64-nvidia-cuda- -fcuda-is-device \
