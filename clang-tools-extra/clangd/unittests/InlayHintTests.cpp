@@ -919,6 +919,26 @@ TEST(ParameterHints, ImplicitConstructor) {
   )cpp");
 }
 
+TEST(ParameterHints, FunctionPointer) {
+  assertParameterHints(
+      R"cpp(
+    void (*f1)(int param);
+    void (__stdcall *f2)(int param);
+    using f3_t = void(*)(int param);
+    f3_t f3;
+    using f4_t = void(__stdcall *)(int param);
+    f4_t f4;
+    void bar() {
+      f1($f1[[42]]);
+      f2($f2[[42]]);
+      f3($f3[[42]]);
+      f4($f4[[42]]);
+    }
+  )cpp",
+      ExpectedHint{"param: ", "f1"}, ExpectedHint{"param: ", "f2"},
+      ExpectedHint{"param: ", "f3"}, ExpectedHint{"param: ", "f4"});
+}
+
 TEST(ParameterHints, ArgMatchesParam) {
   assertParameterHints(R"cpp(
     void foo(int param);
