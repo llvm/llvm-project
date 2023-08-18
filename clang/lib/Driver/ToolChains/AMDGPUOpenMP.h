@@ -16,6 +16,16 @@
 namespace clang {
 namespace driver {
 
+/// Is -Ofast used?
+bool isOFastUsed(const llvm::opt::ArgList &Args);
+
+/// Is -fopenmp-target-fast or -Ofast used
+bool isTargetFastUsed(const llvm::opt::ArgList &Args);
+
+/// Ignore possibility of environment variables if either
+/// -fopenmp-target-fast or -Ofast is used.
+bool shouldIgnoreEnvVars(const llvm::opt::ArgList &Args);
+
 namespace toolchains {
 class AMDGPUOpenMPToolChain;
 }

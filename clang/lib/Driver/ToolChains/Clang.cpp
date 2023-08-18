@@ -676,7 +676,7 @@ static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
 }
 
 /// Is -Ofast used?
-static bool isOFastUsed(const ArgList &Args) {
+bool clang::driver::isOFastUsed(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
     if (A->getOption().matches(options::OPT_Ofast))
       return true;
@@ -684,14 +684,14 @@ static bool isOFastUsed(const ArgList &Args) {
 }
 
 /// Is -fopenmp-target-fast or -Ofast used
-static bool isTargetFastUsed(const ArgList &Args) {
+bool clang::driver::isTargetFastUsed(const ArgList &Args) {
   return Args.hasFlag(options::OPT_fopenmp_target_fast,
                       options::OPT_fno_openmp_target_fast, isOFastUsed(Args));
 }
 
 /// Ignore possibility of environment variables if either
 /// -fopenmp-target-fast or -Ofast is used.
-static bool shouldIgnoreEnvVars(const ArgList &Args) {
+bool clang::driver::shouldIgnoreEnvVars(const ArgList &Args) {
   if (Args.hasFlag(options::OPT_fno_openmp_target_fast,
                    options::OPT_fopenmp_target_fast, false))
     return false;

@@ -123,7 +123,9 @@ static void addOptLevelArg(const llvm::opt::ArgList &Args,
                  .Default("0");
     }
     CmdArgs.push_back(Args.MakeArgString("-O" + OOpt));
-  } else
+  } else if (isTargetFastUsed(Args))
+    CmdArgs.push_back(Args.MakeArgString("-O3"));
+  else
     CmdArgs.push_back(Args.MakeArgString("-O0"));
 }
 
