@@ -638,8 +638,11 @@ bool DwarfLinkerForBinary::linkImpl(
   GeneralLinker->setNumThreads(Options.Threads);
   GeneralLinker->setPrependPath(Options.PrependPath);
   GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
-  GeneralLinker->setInputVerificationHandler([&](const OutDwarfFile &File) {
-    reportWarning("input verification failed", File.FileName);
+  GeneralLinker->setInputVerificationHandler([&](const OutDwarfFile &File, llvm::StringRef Output) {
+    std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+    if (Options.Verbose)
+      errs() << Output;
+    warn("input verification failed", File.FileName);
     HasVerificationErrors = true;
   });
   auto Loader = [&](StringRef ContainerName,
