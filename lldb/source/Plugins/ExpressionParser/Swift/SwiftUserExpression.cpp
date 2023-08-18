@@ -115,10 +115,7 @@ struct SwiftSelfInfo {
 
   /// Adjusted type of `self`. If we're in a static method, this is an instance
   /// type.
-  CompilerType type = {};
-
-  /// Underlying Swift type for the adjusted type of `self`.
-  swift::TypeBase *swift_type = nullptr;
+  CompilerType type;
 
   /// Type flags for the adjusted type of `self`.
   Flags type_flags = {};
@@ -143,7 +140,7 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
 
   // 3) If (1) and (2) fail, give up.
   if (!info.type.IsValid())
-    return llvm::None;
+    return {};
 
   // 4) If `self` is a metatype, get its instance type.
   if (Flags(info.type.GetTypeInfo())
@@ -152,20 +149,15 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
     info.is_metatype = true;
   }
 
-  info.swift_type = GetSwiftType(info.type).getPointer();
-  if (auto *dyn_self =
-          llvm::dyn_cast_or_null<swift::DynamicSelfType>(info.swift_type))
-    info.swift_type = dyn_self->getSelfType().getPointer();
-
-  // 5) If the adjusted type isn't equal to the type according to the runtime,
-  // switch it to the latter type.
-  if (info.swift_type && (info.swift_type != info.type.GetOpaqueQualType()))
-    info.type = ToCompilerType(info.swift_type);
+  auto ts = info.type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts)
+    return {};
+  info.type = ts->GetStaticSelfType(info.type.GetOpaqueQualType());
 
   info.type_flags = Flags(info.type.GetTypeInfo());
 
   if (!info.type.IsValid())
-    return llvm::None;
+    return {};
   return info;
 }
 
@@ -255,12 +247,18 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     m_is_class |= info.type_flags.Test(lldb::eTypeIsClass);
 
   // Handle weak self.
-  auto *ref_type =
-      llvm::dyn_cast_or_null<swift::ReferenceStorageType>(info.swift_type);
-  if (ref_type && ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
-    m_is_class = true;
-    m_is_weak_self = true;
-  }
+
+  auto ts = info.type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts)
+    return;
+
+  if (auto ownership_kind = ts->GetNonTriviallyManagedReferenceKind(
+          info.type.GetOpaqueQualType()))
+    if (*ownership_kind ==
+        SwiftASTContext::NonTriviallyManagedReferenceKind::eWeak) {
+      m_is_class = true;
+      m_is_weak_self = true;
+    }
 
   m_needs_object_ptr = !m_in_static_method;
 

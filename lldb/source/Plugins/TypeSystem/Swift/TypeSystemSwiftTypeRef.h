@@ -274,6 +274,11 @@ public:
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) override;
+  static swift::Demangle::NodePointer
+  GetStaticSelfType(swift::Demangle::Demangler &dem,
+                    swift::Demangle::NodePointer node);
+
   /// Wrap type inside a SILPackType.
   CompilerType CreateSILPackType(CompilerType type, bool indirect);
   struct PackTypeInfo {
