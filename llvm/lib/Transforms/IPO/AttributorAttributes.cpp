@@ -4776,23 +4776,53 @@ identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
                         AbstractAttribute &AA,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   bool UsedAssumedInformation = false;
-  std::optional<Constant *> C =
-      A.getAssumedConstant(*SI.getCondition(), AA, UsedAssumedInformation);
-  if (!C || isa_and_nonnull<UndefValue>(*C)) {
-    // No value yet, assume all edges are dead.
-  } else if (isa_and_nonnull<ConstantInt>(*C)) {
-    for (const auto &CaseIt : SI.cases()) {
-      if (CaseIt.getCaseValue() == *C) {
-        AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
-        return UsedAssumedInformation;
-      }
-    }
-    AliveSuccessors.push_back(&SI.getDefaultDest()->front());
-    return UsedAssumedInformation;
-  } else {
+  SmallVector<AA::ValueAndContext> Values;
+  if (!A.getAssumedSimplifiedValues(IRPosition::value(*SI.getCondition()), &AA,
+                                    Values, AA::AnyScope,
+                                    UsedAssumedInformation)) {
+    // Something went wrong, assume all successors are live.
     for (const BasicBlock *SuccBB : successors(SI.getParent()))
       AliveSuccessors.push_back(&SuccBB->front());
+    return false;
   }
+
+  if (Values.empty() ||
+      (Values.size() == 1 &&
+       isa_and_nonnull<UndefValue>(Values.front().getValue()))) {
+    // No valid value yet, assume all edges are dead.
+    return UsedAssumedInformation;
+  }
+
+  Type &Ty = *SI.getCondition()->getType();
+  SmallPtrSet<ConstantInt *, 8> Constants;
+  auto CheckForConstantInt = [&](Value *V) {
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(AA::getWithType(*V, Ty))) {
+      Constants.insert(CI);
+      return true;
+    }
+    return false;
+  };
+
+  if (!all_of(Values, [&](AA::ValueAndContext &VAC) {
+        return CheckForConstantInt(VAC.getValue());
+      })) {
+    for (const BasicBlock *SuccBB : successors(SI.getParent()))
+      AliveSuccessors.push_back(&SuccBB->front());
+    return UsedAssumedInformation;
+  }
+
+  unsigned MatchedCases = 0;
+  for (const auto &CaseIt : SI.cases()) {
+    if (Constants.count(CaseIt.getCaseValue())) {
+      ++MatchedCases;
+      AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
+    }
+  }
+
+  // If all potential values have been matched, we will not visit the default
+  // case.
+  if (MatchedCases < Constants.size())
+    AliveSuccessors.push_back(&SI.getDefaultDest()->front());
   return UsedAssumedInformation;
 }
 
