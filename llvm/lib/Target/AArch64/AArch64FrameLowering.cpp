@@ -2740,7 +2740,7 @@ static void computeCalleeSaveRegisterPairs(
     int OffsetPost = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPost % Scale == 0);
     // If filling top down (default), we want the offset after incrementing it.
-    // If fillibg bootom up (WinCFI) we need the original offset.
+    // If filling bottom up (WinCFI) we need the original offset.
     int Offset = NeedsWinCFI ? OffsetPre : OffsetPost;
 
     // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
