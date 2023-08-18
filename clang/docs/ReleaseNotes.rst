@@ -122,6 +122,8 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+* ``-Woverriding-t-option`` is renamed to ``-Woverriding-option``.
+
 Removed Compiler Flags
 -------------------------
 
