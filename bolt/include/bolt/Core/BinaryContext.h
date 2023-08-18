@@ -871,6 +871,15 @@ public:
     return nullptr;
   }
 
+  /// Retrieves a reference to ELF's _GLOBAL_OFFSET_TABLE_ symbol, which points
+  /// at GOT, or null if it is not present in the input binary symtab.
+  BinaryData *getGOTSymbol();
+
+  /// Checks if symbol name refers to ELF's _GLOBAL_OFFSET_TABLE_ symbol
+  bool isGOTSymbol(StringRef SymName) const {
+    return SymName == "_GLOBAL_OFFSET_TABLE_";
+  }
+
   /// Return true if \p SymbolName was generated internally and was not present
   /// in the input binary.
   bool isInternalSymbolName(const StringRef Name) {
