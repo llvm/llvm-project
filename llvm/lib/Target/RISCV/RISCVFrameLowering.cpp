@@ -25,6 +25,8 @@
 
 #include <algorithm>
 
+#define DEBUG_TYPE "frame-info"
+
 using namespace llvm;
 
 static const Register AllPopRegs[] = {
@@ -451,6 +453,167 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
 
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
                                         Comment.str());
+}
+
+// Return true if MI is a load or store for which there exist a compressed
+// version.
+static bool isCompressibleLdOrSt(const MachineInstr &MI) {
+  const RISCVSubtarget &STI = MI.getMF()->getSubtarget<RISCVSubtarget>();
+  switch (MI.getOpcode()) {
+  case RISCV::LW:
+  case RISCV::SW:
+  case RISCV::LD:
+  case RISCV::SD:
+    if (STI.hasStdExtCOrZca() || STI.hasStdExtZce())
+      return true;
+    break;
+  case RISCV::FLW:
+  case RISCV::FSW:
+    // C.FLW/C.FSW/C.FLWSP/C.SWSP is only supported by RV32FC
+    if ((STI.hasStdExtC() || STI.hasStdExtZcf() || (STI.hasStdExtZce())) &&
+        (STI.getFLen() == 32))
+      return true;
+    break;
+  case RISCV::FLD:
+  case RISCV::FSD:
+    // C.FLD/C.FSD/C.FLDSP/C.FSDSP is only supported by RV32DC and RV64DC
+    if ((STI.hasStdExtC() || STI.hasStdExtZcd()) && STI.getFLen() <= 64)
+      return true;
+    break;
+  default:
+    return false;
+  }
+  return false;
+}
+
+void RISCVFrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+  // It's only used to reduce codesize.
+  if (!MF.getFunction().hasOptSize())
+    return;
+  // Don't waste time if there's nothing to do.
+  if (ObjectsToAllocate.empty())
+    return;
+
+  // Struct that helps sort the stack objects.
+  struct RISCVFrameSortingObject {
+    unsigned ObjectIndex = 0;         // Index of Object in MFI list.
+    unsigned ObjectSize = 0;          // Size of Object in bytes
+    Align ObjectAlignment = Align(1); // Alignment of Object in bytes.
+    unsigned ObjectNumUses = 0;       // Object static number of uses.
+  };
+
+  // Key: index of object in MFI list.
+  // Value: index of sorting object in SortingObjects vector.
+  DenseMap<int, unsigned> ObjIdxToSortIdx;
+  std::vector<RISCVFrameSortingObject> SortingObjects(ObjectsToAllocate.size());
+
+  // Init SortingObjects.
+  // The stack address of dynamic objects(size is zero) is only affected by
+  // total stack size, so it doesn't need to handle it specially.
+  for (const auto &[Idx, Obj] : enumerate(ObjectsToAllocate)) {
+    SortingObjects[Idx].ObjectIndex = Obj;
+    SortingObjects[Idx].ObjectAlignment = MFI.getObjectAlign(Obj);
+    SortingObjects[Idx].ObjectSize = MFI.getObjectSize(Obj);
+    // Save index mapping info.
+    ObjIdxToSortIdx[Obj] = Idx;
+  }
+
+  // Count the number of uses for each object.
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        // Check to see if it's a local stack symbol.
+        if (!MO.isFI())
+          continue;
+        int Index = MO.getIndex();
+        // Check to see if it falls within our range, and is tagged
+        // to require ordering.
+        if (Index >= 0 && Index < MFI.getObjectIndexEnd()) {
+          if (ObjIdxToSortIdx.find(Index) != ObjIdxToSortIdx.end()) {
+            if (isCompressibleLdOrSt(MI))
+              // ld/st is more possible to be compressed so increase its
+              // weight and 2 is estimate.
+              SortingObjects[ObjIdxToSortIdx[Index]].ObjectNumUses += 2;
+            else
+              SortingObjects[ObjIdxToSortIdx[Index]].ObjectNumUses++;
+          }
+        }
+      }
+    }
+  }
+
+  bool UseSpAsBase = true;
+  // Access offset of the FP.
+  if (!RI->hasStackRealignment(MF) && hasFP(MF))
+    UseSpAsBase = false;
+
+  // Split SortingObjects into multiple groups that have objects with
+  // same alignment and sort them in each group to avoid increasing
+  // extra padding.
+  // For example, supposed that each alignment size of objects in
+  // SortingObjets is as follows：
+  // 1B 1B 4B 1B 4B 4B
+  // They're splitted into four groups:
+  // group0(1B, 1B)
+  // group1(4B)
+  // group2(1B)
+  // group3(4B, 4B)
+  for (auto SortBegin = SortingObjects.begin(), SortEnd = SortingObjects.end();
+       SortBegin != SortEnd;) {
+    auto SortGroupEnd = std::next(SortBegin);
+    while (SortGroupEnd != SortingObjects.end() &&
+           SortGroupEnd->ObjectAlignment == SortBegin->ObjectAlignment)
+      ++SortGroupEnd;
+    // The current comparison algorithm is to use an estimated
+    // "density". This takes into consideration the size and number of
+    // uses each object has in order to roughly minimize code size.
+    // So, for example, an object of size 16B that is referenced 5 times
+    // will get higher priority than 4B objects referenced 1 time.
+    // The stack symbols with higher piority have shorter offset relative
+    // to sp/fp so that stack related instructions about them are more
+    // possible to be improved.
+    std::stable_sort(SortBegin, SortGroupEnd,
+                     [&UseSpAsBase](const RISCVFrameSortingObject &A,
+                                    const RISCVFrameSortingObject &B) {
+                       uint64_t DensityAScaled, DensityBScaled;
+
+                       // The density is calculated by doing :
+                       //     (double)DensityA = A.ObjectNumUses / A.ObjectSize
+                       //     (double)DensityB = B.ObjectNumUses / B.ObjectSize
+                       // Since this approach may cause inconsistencies in
+                       // the floating point <, >, == comparisons, depending on
+                       // the floating point model with which the compiler was
+                       // built, we're going to scale both sides by multiplying
+                       // with A.ObjectSize * B.ObjectSize. This ends up
+                       // factoring away the division and, with it, the need for
+                       // any floating point arithmetic.
+                       DensityAScaled = static_cast<uint64_t>(A.ObjectNumUses) *
+                                        static_cast<uint64_t>(B.ObjectSize);
+                       DensityBScaled = static_cast<uint64_t>(B.ObjectNumUses) *
+                                        static_cast<uint64_t>(A.ObjectSize);
+                       // Make sure object with highest density is cloest to
+                       // sp/fp.
+                       return UseSpAsBase ? DensityAScaled < DensityBScaled
+                                          : DensityAScaled > DensityBScaled;
+                     });
+
+    SortBegin = SortGroupEnd;
+  }
+  // Now modify the original list to represent the final order that
+  // we want.
+  for (const auto &[Idx, Obj] : enumerate(SortingObjects)) {
+    ObjectsToAllocate[Idx] = Obj.ObjectIndex;
+  }
+
+  LLVM_DEBUG(dbgs() << "Final frame order:\n"; for (auto &Obj
+                                                    : ObjectsToAllocate) {
+    dbgs() << "Frame object index: " << Obj << "\n";
+  });
 }
 
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,

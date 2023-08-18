@@ -79,6 +79,14 @@ public:
     return StackId != TargetStackID::ScalableVector;
   }
 
+  /// Order the symbols in the local stack.
+  /// We want to place the local stack objects in some sort of sensible order.
+  /// The heuristic we use is to try and pack them according to static number
+  /// of uses(hot).
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
+
 protected:
   const RISCVSubtarget &STI;
 
