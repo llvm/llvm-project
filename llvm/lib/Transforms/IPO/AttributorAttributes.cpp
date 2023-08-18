@@ -7017,13 +7017,17 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
           << **DI->PotentialAllocationCalls.begin() << "\n");
       return false;
     }
-    Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
-    if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "[H2S] unique free call might not be executed with the allocation "
-          << *UniqueFree << "\n");
-      return false;
+
+    // __kmpc_alloc_shared and __kmpc_alloc_free are by construction matched.
+    if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
+      Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
+      if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
+        LLVM_DEBUG(
+            dbgs()
+            << "[H2S] unique free call might not be executed with the allocation "
+            << *UniqueFree << "\n");
+        return false;
+      }
     }
     return true;
   };
