@@ -261,6 +261,7 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
     return forceScalarizeMaskedGather(VTy, Alignment);
   }
+  bool isLegalMaskedGatherScatter(Type *DataType, Align Alignment);
   bool isLegalMaskedGather(Type *DataType, Align Alignment);
   bool isLegalMaskedScatter(Type *DataType, Align Alignment);
   bool isLegalMaskedExpandLoad(Type *DataType);

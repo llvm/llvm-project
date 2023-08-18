@@ -5821,6 +5821,10 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
+def mno_gather : Flag<["-"], "mno-gather">, Group<m_x86_Features_Group>,
+                 HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_x86_Features_Group>,
+                  HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 } // let Flags = [TargetSpecific]
 
 // These are legacy user-facing driver-level option spellings. They are always
@@ -7894,6 +7898,10 @@ def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   Alias<mbranches_within_32B_boundaries>;
 def _SLASH_arm64EC : CLFlag<"arm64EC">,
   HelpText<"Set build target to arm64ec">;
+def : CLFlag<"Qgather-">, Alias<mno_gather>,
+      HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
+      HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 
 // Non-aliases:
 
