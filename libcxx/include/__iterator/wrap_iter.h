@@ -45,9 +45,8 @@ public:
                 : __i_()
     {
     }
-    template <class _Up> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-        __wrap_iter(const __wrap_iter<_Up>& __u,
-            typename enable_if<is_convertible<_Up, iterator_type>::value>::type* = nullptr) _NOEXCEPT
+    template <class _Up, __enable_if_t<is_convertible<_Up, iterator_type>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_Up>& __u) _NOEXCEPT
             : __i_(__u.base())
     {
     }

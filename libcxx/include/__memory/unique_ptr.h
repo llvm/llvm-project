@@ -58,9 +58,9 @@ struct _LIBCPP_TEMPLATE_VIS default_delete {
 #else
   _LIBCPP_INLINE_VISIBILITY default_delete() {}
 #endif
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(
-      const default_delete<_Up>&, typename enable_if<is_convertible<_Up*, _Tp*>::value>::type* = 0) _NOEXCEPT {}
+      const default_delete<_Up>&) _NOEXCEPT {}
 
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Tp* __ptr) const _NOEXCEPT {
     static_assert(sizeof(_Tp) >= 0, "cannot delete an incomplete type");
@@ -221,12 +221,10 @@ public:
       : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {}
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-  template <class _Up>
+  template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value &&
+                                     is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-  unique_ptr(auto_ptr<_Up>&& __p,
-             typename enable_if<is_convertible<_Up*, _Tp*>::value &&
-                                    is_same<_Dp, default_delete<_Tp> >::value,
-                                __nat>::type = __nat()) _NOEXCEPT
+  unique_ptr(auto_ptr<_Up>&& __p) _NOEXCEPT
       : __ptr_(__p.release(), __value_init_tag()) {}
 #endif
 
