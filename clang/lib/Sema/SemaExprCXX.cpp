@@ -6500,10 +6500,10 @@ static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
 
 static bool isValidSizelessVectorForConditionalCondition(ASTContext &Ctx,
                                                          QualType CondTy) {
-  if (!CondTy->isSveVLSBuiltinType())
+  if (!CondTy->isVLSBuiltinType())
     return false;
   const QualType EltTy =
-      cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx);
+      cast<BuiltinType>(CondTy.getCanonicalType())->getVLSEltType(Ctx);
   assert(!EltTy->isEnumeralType() && "Vectors cant be enum types");
   return EltTy->isIntegralType(Ctx);
 }
@@ -6606,16 +6606,16 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
 
   QualType CondType = Cond.get()->getType();
   const auto *CondBT = CondType->castAs<BuiltinType>();
-  QualType CondElementTy = CondBT->getSveEltType(Context);
+  QualType CondElementTy = CondBT->getVLSEltType(Context);
   llvm::ElementCount CondElementCount =
       Context.getBuiltinVectorTypeInfo(CondBT).EC;
 
   QualType LHSType = LHS.get()->getType();
   const auto *LHSBT =
-      LHSType->isSveVLSBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
+      LHSType->isVLSBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
   QualType RHSType = RHS.get()->getType();
   const auto *RHSBT =
-      RHSType->isSveVLSBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
+      RHSType->isVLSBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
 
   QualType ResultType;
 
@@ -6657,10 +6657,10 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
   }
 
-  assert(!ResultType.isNull() && ResultType->isSveVLSBuiltinType() &&
+  assert(!ResultType.isNull() && ResultType->isVLSBuiltinType() &&
          "Result should have been a vector type");
   auto *ResultBuiltinTy = ResultType->castAs<BuiltinType>();
-  QualType ResultElementTy = ResultBuiltinTy->getSveEltType(Context);
+  QualType ResultElementTy = ResultBuiltinTy->getVLSEltType(Context);
   llvm::ElementCount ResultElementCount =
       Context.getBuiltinVectorTypeInfo(ResultBuiltinTy).EC;
 
