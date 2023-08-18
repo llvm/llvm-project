@@ -159,6 +159,50 @@ APISet::addCXXClass(StringRef Name, StringRef USR, PresumedLoc Loc,
                            SubHeading, Kind, IsFromSystemHeader);
 }
 
+ClassTemplateRecord *APISet::addClassTemplate(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    Template Template, bool IsFromSystemHeader) {
+
+  return addTopLevelRecord(USRBasedLookupTable, ClassTemplates, USR, Name, Loc,
+                           std::move(Availability), Comment, Declaration,
+                           SubHeading, Template, IsFromSystemHeader);
+}
+
+ClassTemplateSpecializationRecord *APISet::addClassTemplateSpecialization(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    bool IsFromSystemHeader) {
+  return addTopLevelRecord(USRBasedLookupTable, ClassTemplateSpecializations,
+                           USR, Name, Loc, std::move(Availability), Comment,
+                           Declaration, SubHeading, IsFromSystemHeader);
+}
+
+ClassTemplatePartialSpecializationRecord *
+APISet::addClassTemplatePartialSpecialization(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    Template Template, bool IsFromSystemHeader) {
+  return addTopLevelRecord(USRBasedLookupTable,
+                           ClassTemplatePartialSpecializations, USR, Name, Loc,
+                           std::move(Availability), Comment, Declaration,
+                           SubHeading, Template, IsFromSystemHeader);
+}
+
+ConceptRecord *APISet::addConcept(StringRef Name, StringRef USR,
+                                  PresumedLoc Loc, AvailabilitySet Availability,
+                                  const DocComment &Comment,
+                                  DeclarationFragments Declaration,
+                                  DeclarationFragments SubHeading,
+                                  Template Template, bool IsFromSystemHeader) {
+  return addTopLevelRecord(USRBasedLookupTable, Concepts, USR, Name, Loc,
+                           std::move(Availability), Comment, Declaration,
+                           SubHeading, Template, IsFromSystemHeader);
+}
+
 CXXMethodRecord *APISet::addCXXMethod(
     CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
     PresumedLoc Loc, AvailabilitySet Availability, const DocComment &Comment,

@@ -36,6 +36,86 @@
 namespace clang {
 namespace extractapi {
 
+class Template {
+  struct TemplateParameter {
+    // "class", "typename", or concept name
+    std::string Type;
+    std::string Name;
+    unsigned int Index;
+    unsigned int Depth;
+    bool IsParameterPack;
+
+    TemplateParameter(std::string Type, std::string Name, unsigned int Index,
+                      unsigned int Depth, bool IsParameterPack)
+        : Type(Type), Name(Name), Index(Index), Depth(Depth),
+          IsParameterPack(IsParameterPack) {}
+  };
+
+  struct TemplateConstraint {
+    // type name of the constraint, if it has one
+    std::string Type;
+    std::string Kind;
+    std::string LHS, RHS;
+  };
+  llvm::SmallVector<TemplateParameter> Parameters;
+  llvm::SmallVector<TemplateConstraint> Constraints;
+
+public:
+  Template() = default;
+
+  Template(const TemplateDecl *Decl) {
+    for (auto *const Parameter : *Decl->getTemplateParameters()) {
+      const auto *Param = dyn_cast<TemplateTypeParmDecl>(Parameter);
+      if (!Param) // some params are null
+        continue;
+      std::string Type;
+      if (Param->hasTypeConstraint())
+        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+      else if (Param->wasDeclaredWithTypename())
+        Type = "typename";
+      else
+        Type = "class";
+
+      addTemplateParameter(Type, Param->getName().str(), Param->getIndex(),
+                           Param->getDepth(), Param->isParameterPack());
+    }
+  }
+
+  Template(const ClassTemplatePartialSpecializationDecl *Decl) {
+    for (auto *const Parameter : *Decl->getTemplateParameters()) {
+      const auto *Param = dyn_cast<TemplateTypeParmDecl>(Parameter);
+      if (!Param) // some params are null
+        continue;
+      std::string Type;
+      if (Param->hasTypeConstraint())
+        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+      else if (Param->wasDeclaredWithTypename())
+        Type = "typename";
+      else
+        Type = "class";
+
+      addTemplateParameter(Type, Param->getName().str(), Param->getIndex(),
+                           Param->getDepth(), Param->isParameterPack());
+    }
+  }
+
+  const llvm::SmallVector<TemplateParameter> &getParameters() const {
+    return Parameters;
+  }
+
+  const llvm::SmallVector<TemplateConstraint> &getConstraints() const {
+    return Constraints;
+  }
+
+  void addTemplateParameter(std::string Type, std::string Name,
+                            unsigned int Index, unsigned int Depth,
+                            bool IsParameterPack) {
+    Parameters.emplace_back(Type, Name, Index, Depth, IsParameterPack);
+  }
+
+  bool empty() const { return Parameters.empty() && Constraints.empty(); }
+};
+
 /// DocComment is a vector of RawComment::CommentLine.
 ///
 /// Each line represents one line of striped documentation comment,
@@ -69,6 +149,10 @@ struct APIRecord {
     RK_StaticField,
     RK_CXXField,
     RK_CXXClass,
+    RK_ClassTemplate,
+    RK_ClassTemplateSpecialization,
+    RK_ClassTemplatePartialSpecialization,
+    RK_Concept,
     RK_CXXStaticMethod,
     RK_CXXInstanceMethod,
     RK_CXXConstructorMethod,
@@ -644,6 +728,75 @@ private:
   virtual void anchor();
 };
 
+struct ClassTemplateRecord : CXXClassRecord {
+  Template Templ;
+
+  ClassTemplateRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
+                      AvailabilitySet Availabilities, const DocComment &Comment,
+                      DeclarationFragments Declaration,
+                      DeclarationFragments SubHeading, Template Template,
+                      bool IsFromSystemHeader)
+      : CXXClassRecord(USR, Name, Loc, std::move(Availabilities), Comment,
+                       Declaration, SubHeading, RK_ClassTemplate,
+                       IsFromSystemHeader),
+        Templ(Template) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ClassTemplate;
+  }
+};
+
+struct ClassTemplateSpecializationRecord : CXXClassRecord {
+  ClassTemplateSpecializationRecord(StringRef USR, StringRef Name,
+                                    PresumedLoc Loc,
+                                    AvailabilitySet Availabilities,
+                                    const DocComment &Comment,
+                                    DeclarationFragments Declaration,
+                                    DeclarationFragments SubHeading,
+                                    bool IsFromSystemHeader)
+      : CXXClassRecord(USR, Name, Loc, std::move(Availabilities), Comment,
+                       Declaration, SubHeading, RK_ClassTemplateSpecialization,
+                       IsFromSystemHeader) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ClassTemplateSpecialization;
+  }
+};
+
+struct ClassTemplatePartialSpecializationRecord : CXXClassRecord {
+  Template Templ;
+  ClassTemplatePartialSpecializationRecord(
+      StringRef USR, StringRef Name, PresumedLoc Loc,
+      AvailabilitySet Availabilities, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
+      Template Template, bool IsFromSystemHeader)
+      : CXXClassRecord(USR, Name, Loc, std::move(Availabilities), Comment,
+                       Declaration, SubHeading, RK_ClassTemplateSpecialization,
+                       IsFromSystemHeader),
+        Templ(Template) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ClassTemplatePartialSpecialization;
+  }
+};
+
+struct ConceptRecord : APIRecord {
+  Template Templ;
+  ConceptRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
+                AvailabilitySet Availabilities, const DocComment &Comment,
+                DeclarationFragments Declaration,
+                DeclarationFragments SubHeading, Template Template,
+                bool IsFromSystemHeader)
+      : APIRecord(RK_Concept, USR, Name, Loc, std::move(Availabilities),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
+        Templ(Template) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_Concept;
+  }
+};
+
 /// This holds information associated with Objective-C categories.
 struct ObjCCategoryRecord : ObjCContainerRecord {
   SymbolReference Interface;
@@ -779,6 +932,13 @@ template <typename RecordTy> struct has_access : public std::false_type {};
 template <> struct has_access<CXXMethodRecord> : public std::true_type {};
 template <> struct has_access<CXXFieldRecord> : public std::true_type {};
 
+template <typename RecordTy> struct has_template : public std::false_type {};
+template <> struct has_template<ClassTemplateRecord> : public std::true_type {};
+template <>
+struct has_template<ClassTemplatePartialSpecializationRecord>
+    : public std::true_type {};
+template <> struct has_template<ConceptRecord> : public std::true_type {};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
@@ -876,6 +1036,26 @@ public:
               DeclarationFragments Declaration, DeclarationFragments SubHeading,
               APIRecord::RecordKind Kind, bool IsFromSystemHeader);
 
+  ClassTemplateRecord *
+  addClassTemplate(StringRef Name, StringRef USR, PresumedLoc Loc,
+                   AvailabilitySet Availability, const DocComment &Comment,
+                   DeclarationFragments Declaration,
+                   DeclarationFragments SubHeading, Template Template,
+                   bool IsFromSystemHeader);
+
+  ClassTemplateSpecializationRecord *addClassTemplateSpecialization(
+      StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
+      bool IsFromSystemHeader);
+
+  ClassTemplatePartialSpecializationRecord *
+  addClassTemplatePartialSpecialization(
+      StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
+      Template Template, bool IsFromSystemHeader);
+
   CXXMethodRecord *
   addCXXMethod(CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
                PresumedLoc Loc, AvailabilitySet Availability,
@@ -889,6 +1069,13 @@ public:
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
       FunctionSignature Signature, bool IsConstructor, AccessControl Access,
       bool IsFromSystemHeader);
+
+  ConceptRecord *addConcept(StringRef Name, StringRef USR, PresumedLoc Loc,
+                            AvailabilitySet Availability,
+                            const DocComment &Comment,
+                            DeclarationFragments Declaration,
+                            DeclarationFragments SubHeading, Template Template,
+                            bool IsFromSystemHeader);
 
   /// Create and add an Objective-C category record into the API set.
   ///
@@ -1018,6 +1205,19 @@ public:
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
   const RecordMap<StructRecord> &getStructs() const { return Structs; }
   const RecordMap<CXXClassRecord> &getCXXClasses() const { return CXXClasses; }
+  const RecordMap<ConceptRecord> &getConcepts() const { return Concepts; }
+  const RecordMap<ClassTemplateRecord> &getClassTemplates() const {
+    return ClassTemplates;
+  }
+  const RecordMap<ClassTemplateSpecializationRecord> &
+  getClassTemplateSpecializations() const {
+    return ClassTemplateSpecializations;
+  }
+  const RecordMap<ClassTemplatePartialSpecializationRecord> &
+  getClassTemplatePartialSpecializations() const {
+    return ClassTemplatePartialSpecializations;
+  }
+  const RecordMap<ConceptRecord> &getRecords() const { return Concepts; }
   const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
     return ObjCCategories;
   }
@@ -1071,10 +1271,15 @@ private:
   llvm::DenseMap<StringRef, APIRecord *> USRBasedLookupTable;
   RecordMap<GlobalFunctionRecord> GlobalFunctions;
   RecordMap<GlobalVariableRecord> GlobalVariables;
+  RecordMap<ConceptRecord> Concepts;
   RecordMap<StaticFieldRecord> StaticFields;
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
   RecordMap<CXXClassRecord> CXXClasses;
+  RecordMap<ClassTemplateRecord> ClassTemplates;
+  RecordMap<ClassTemplateSpecializationRecord> ClassTemplateSpecializations;
+  RecordMap<ClassTemplatePartialSpecializationRecord>
+      ClassTemplatePartialSpecializations;
   RecordMap<ObjCCategoryRecord> ObjCCategories;
   RecordMap<ObjCInterfaceRecord> ObjCInterfaces;
   RecordMap<ObjCProtocolRecord> ObjCProtocols;
