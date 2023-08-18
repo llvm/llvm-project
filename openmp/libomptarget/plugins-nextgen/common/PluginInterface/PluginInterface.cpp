@@ -1460,8 +1460,13 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
   if (!Plugin::isActive())
     return false;
 
+
   if (!__tgt_rtl_is_valid_binary(TgtImage))
     return false;
+
+  // Need to call this method before 'isImageCompatibleCheck' in order to adjust
+  // settings.
+  Plugin::get().checkAndAdjustXnackStatus(TgtImage);
 
   // A subarchitecture was not specified. Assume it is compatible.
   if (!Info->Arch)

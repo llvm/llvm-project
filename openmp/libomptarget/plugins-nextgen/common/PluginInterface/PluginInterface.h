@@ -1004,6 +1004,8 @@ struct GenericPluginTy {
   virtual bool IsFineGrainedMemoryEnabled() { return false; }
 
   virtual void setUpEnv() {}
+  virtual void
+  checkAndAdjustXnackStatus(__tgt_device_image *TgtImage) const {}
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;

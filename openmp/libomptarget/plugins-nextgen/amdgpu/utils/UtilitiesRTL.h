@@ -26,6 +26,8 @@
 
 #include "llvm/Support/YAMLTraits.h"
 
+#include "elf_common.h"
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -165,6 +167,27 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
      ImageTargetID.data(), EnvTargetID.data());
 
   return true;
+}
+
+// Check target image for XNACK option (XNACK+, XNACK-ANY, XNACK-)
+[[nodiscard]] bool
+wasBinaryBuiltWithXnackEnabled(__tgt_device_image *TgtImage) {
+  assert((TgtImage != nullptr) && "TgtImage is nullptr.");
+  u_int16_t EFlags = elf_get_eflags(TgtImage);
+
+  unsigned XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
+
+  switch (XnackFlags) {
+  case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+  case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
+    return true;
+  case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+  case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+    return false;
+  default:
+    FAILURE_MESSAGE("Unknown XNACK flag!\n");
+  }
+  return false;
 }
 
 struct KernelMetaDataTy {

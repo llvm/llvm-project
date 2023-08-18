@@ -86,3 +86,14 @@ int32_t elf_is_dynamic(__tgt_device_image *Image) {
                         reinterpret_cast<char *>(Image->ImageEnd),
                         CheckDynType);
 }
+
+u_int16_t elf_get_eflags(__tgt_device_image *Image) {
+  auto extractElfFlags = [](const ELFObjectFileBase *Object) {
+    const ELF64LEObjectFile *ELFFile = dyn_cast<ELF64LEObjectFile>(Object);
+    return ELFFile->getELFFile().getHeader().e_flags;
+  };
+
+  return withBytesAsElf(reinterpret_cast<char *>(Image->ImageStart),
+                        reinterpret_cast<char *>(Image->ImageEnd),
+                        extractElfFlags);
+}

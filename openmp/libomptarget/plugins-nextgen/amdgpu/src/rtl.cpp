@@ -3633,6 +3633,14 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return false;
   }
 
+  void
+  checkAndAdjustXnackStatus(__tgt_device_image *TgtImage) const override final {
+    if (utils::wasBinaryBuiltWithXnackEnabled(TgtImage)) {
+      // TODO: Implement me. This is part of another ticket. It requries methods
+      // to manipulate the XNACK status.
+    }
+  }
+
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
     return false;
