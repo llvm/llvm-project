@@ -194,6 +194,12 @@ public:
   void visitGlobalVariableTemplatePartialSpecializationRecord(
       const GlobalVariableTemplatePartialSpecializationRecord &Record);
 
+  void
+  visitGlobalFunctionTemplateRecord(const GlobalFunctionTemplateRecord &Record);
+
+  void visitGlobalFunctionTemplateSpecializationRecord(
+      const GlobalFunctionTemplateSpecializationRecord &Record);
+
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);
 
