@@ -8662,7 +8662,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
   if (SIInstrInfo::isGenericAtomicRMWOpcode(opcode) ||
       opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
+      AMDGPU::isGenericAtomic(opcode)) {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;

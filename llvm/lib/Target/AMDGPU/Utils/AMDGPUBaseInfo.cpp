@@ -512,6 +512,28 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11;
 }
 
+bool isGenericAtomic(unsigned Opc) {
+  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
