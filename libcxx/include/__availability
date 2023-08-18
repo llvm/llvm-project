@@ -120,7 +120,7 @@
 // LLVM 4
 #  if defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000
 #    define _LIBCPP_INTRODUCED_IN_LLVM_4 0
-#    define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE __attribute__((availability(watchos, strict, introduced = 5.0)))
+#    define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE __attribute__((availability(watchos, introduced = 5.0)))
 #  else
 #    define _LIBCPP_INTRODUCED_IN_LLVM_4 1
 #    define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE /* nothing */
@@ -135,16 +135,14 @@
 // clang-format on
 #    define _LIBCPP_INTRODUCED_IN_LLVM_9 0
 #    define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE                                                                     \
-      __attribute__((availability(macos, strict, introduced = 10.15)))                                                 \
-      __attribute__((availability(ios, strict, introduced = 13.0)))                                                    \
-      __attribute__((availability(tvos, strict, introduced = 13.0)))                                                   \
-      __attribute__((availability(watchos, strict, introduced = 6.0)))
+      __attribute__((availability(macos, introduced = 10.15))) __attribute__((availability(ios, introduced = 13.0)))   \
+      __attribute__((availability(tvos, introduced = 13.0))) __attribute__((availability(watchos, introduced = 6.0)))
 // clang-format off
-#    define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH                                                                               \
-      _Pragma("clang attribute push(__attribute__((availability(macos,strict,introduced=10.15))), apply_to=any(function,record))") \
-      _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")    \
-      _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")   \
-      _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
+#    define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH                                                                       \
+      _Pragma("clang attribute push(__attribute__((availability(macos, introduced=10.15))), apply_to=any(function, record))") \
+      _Pragma("clang attribute push(__attribute__((availability(ios, introduced=13.0))), apply_to=any(function, record))")    \
+      _Pragma("clang attribute push(__attribute__((availability(tvos, introduced=13.0))), apply_to=any(function, record))")   \
+      _Pragma("clang attribute push(__attribute__((availability(watchos, introduced=6.0))), apply_to=any(function, record))")
 #    define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP                                                                    \
       _Pragma("clang attribute pop") \
       _Pragma("clang attribute pop") \
@@ -167,10 +165,8 @@
 // clang-format on
 #    define _LIBCPP_INTRODUCED_IN_LLVM_10 0
 #    define _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE                                                                    \
-      __attribute__((availability(macos, strict, introduced = 11.0)))                                                  \
-      __attribute__((availability(ios, strict, introduced = 14.0)))                                                    \
-      __attribute__((availability(tvos, strict, introduced = 14.0)))                                                   \
-      __attribute__((availability(watchos, strict, introduced = 7.0)))
+      __attribute__((availability(macos, introduced = 11.0))) __attribute__((availability(ios, introduced = 14.0)))    \
+      __attribute__((availability(tvos, introduced = 14.0))) __attribute__((availability(watchos, introduced = 7.0)))
 #  else
 #    define _LIBCPP_INTRODUCED_IN_LLVM_10 1
 #    define _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE /* nothing */
@@ -185,10 +181,8 @@
 // clang-format on
 #    define _LIBCPP_INTRODUCED_IN_LLVM_12 0
 #    define _LIBCPP_INTRODUCED_IN_LLVM_12_ATTRIBUTE                                                                    \
-      __attribute__((availability(macos, strict, introduced = 12.0)))                                                  \
-      __attribute__((availability(ios, strict, introduced = 15.0)))                                                    \
-      __attribute__((availability(tvos, strict, introduced = 15.0)))                                                   \
-      __attribute__((availability(watchos, strict, introduced = 8.0)))
+      __attribute__((availability(macos, introduced = 12.0))) __attribute__((availability(ios, introduced = 15.0)))    \
+      __attribute__((availability(tvos, introduced = 15.0))) __attribute__((availability(watchos, introduced = 8.0)))
 #  else
 #    define _LIBCPP_INTRODUCED_IN_LLVM_12 1
 #    define _LIBCPP_INTRODUCED_IN_LLVM_12_ATTRIBUTE /* nothing */
@@ -203,10 +197,8 @@
 // clang-format on
 #    define _LIBCPP_INTRODUCED_IN_LLVM_14 0
 #    define _LIBCPP_INTRODUCED_IN_LLVM_14_ATTRIBUTE                                                                    \
-      __attribute__((availability(macos, strict, introduced = 13.4)))                                                  \
-      __attribute__((availability(ios, strict, introduced = 16.5)))                                                    \
-      __attribute__((availability(tvos, strict, introduced = 16.5)))                                                   \
-      __attribute__((availability(watchos, strict, introduced = 9.5)))
+      __attribute__((availability(macos, introduced = 13.4))) __attribute__((availability(ios, introduced = 16.5)))    \
+      __attribute__((availability(tvos, introduced = 16.5))) __attribute__((availability(watchos, introduced = 9.5)))
 #  else
 #    define _LIBCPP_INTRODUCED_IN_LLVM_14 1
 #    define _LIBCPP_INTRODUCED_IN_LLVM_14_ATTRIBUTE /* nothing */
@@ -223,10 +215,8 @@
 // clang-format on
 #    define _LIBCPP_INTRODUCED_IN_LLVM_16 0
 #    define _LIBCPP_INTRODUCED_IN_LLVM_16_ATTRIBUTE                                                                    \
-      __attribute__((availability(macos, strict, introduced = 14.0)))                                                  \
-      __attribute__((availability(ios, strict, introduced = 17.0)))                                                    \
-      __attribute__((availability(tvos, strict, introduced = 17.0)))                                                   \
-      __attribute__((availability(watchos, strict, introduced = 10.0)))
+      __attribute__((availability(macos, introduced = 14.0))) __attribute__((availability(ios, introduced = 17.0)))    \
+      __attribute__((availability(tvos, introduced = 17.0))) __attribute__((availability(watchos, introduced = 10.0)))
 #  else
 #    define _LIBCPP_INTRODUCED_IN_LLVM_16 1
 #    define _LIBCPP_INTRODUCED_IN_LLVM_16_ATTRIBUTE /* nothing */

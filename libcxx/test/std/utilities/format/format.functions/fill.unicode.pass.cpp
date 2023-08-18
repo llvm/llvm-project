@@ -11,8 +11,6 @@
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
-// XFAIL: availability-fp_to_chars-missing
-
 // <format>
 
 // The paper

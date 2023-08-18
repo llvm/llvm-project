@@ -13,8 +13,6 @@
 // FIXME PRINT How to test println on Windows?
 // XFAIL: msvc, target={{.+}}-windows-gnu
 
-// XFAIL: availability-fp_to_chars-missing
-
 // <print>
 
 // template<class... Args>

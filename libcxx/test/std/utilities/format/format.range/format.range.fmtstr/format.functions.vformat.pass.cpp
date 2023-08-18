@@ -9,8 +9,6 @@
 
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// XFAIL: availability-fp_to_chars-missing
-
 // <format>
 
 // template<ranges::input_range R, class charT>

@@ -15,9 +15,9 @@
 
 void f() {
     std::latch latch(10);
-    latch.count_down(); // expected-error {{is unavailable}}
-    latch.count_down(3); // expected-error {{is unavailable}}
-    latch.wait(); // expected-error {{is unavailable}}
-    latch.arrive_and_wait(); // expected-error {{is unavailable}}
-    latch.arrive_and_wait(3); // expected-error {{is unavailable}}
+    latch.count_down(); // expected-warning {{'count_down' is only available on}}
+    latch.count_down(3); // expected-warning {{'count_down' is only available on}}
+    latch.wait(); // expected-warning {{'wait' is only available on}}
+    latch.arrive_and_wait(); // expected-warning {{'arrive_and_wait' is only available on}}
+    latch.arrive_and_wait(3); // expected-warning {{'arrive_and_wait' is only available on}}
 }

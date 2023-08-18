@@ -13,8 +13,6 @@
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
 // XFAIL: clang-modules-build
 
-// XFAIL: availability-fp_to_chars-missing
-
 // <print>
 
 // Tests the implementation of
