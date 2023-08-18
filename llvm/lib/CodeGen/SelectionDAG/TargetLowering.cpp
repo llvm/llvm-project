@@ -2152,9 +2152,12 @@ bool TargetLowering::SimplifyDemandedBits(
     break;
   }
   case ISD::UMIN: {
-    // Check if one arg is always less than (or equal) to the other arg.
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
+    // If we're only wanting the msb, then we can simplify to AND node.
+    if (OriginalDemandedBits.isSignMask())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT, Op0, Op1));
+    // Check if one arg is always less than (or equal) to the other arg.
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umin(Known0, Known1);
@@ -2165,9 +2168,12 @@ bool TargetLowering::SimplifyDemandedBits(
     break;
   }
   case ISD::UMAX: {
-    // Check if one arg is always greater than (or equal) to the other arg.
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
+    // If we're only wanting the msb, then we can simplify to OR node.
+    if (OriginalDemandedBits.isSignMask())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT, Op0, Op1));
+    // Check if one arg is always greater than (or equal) to the other arg.
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umax(Known0, Known1);
