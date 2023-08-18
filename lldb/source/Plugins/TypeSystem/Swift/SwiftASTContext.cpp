@@ -1751,20 +1751,16 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
 /// All this *really* means is that it couldn't be loaded through any
 /// other mechanism.
 static bool IsDWARFImported(swift::ModuleDecl &module) {
-  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
-                     [](swift::FileUnit *file_unit) {
-                       return (file_unit->getKind() ==
-                               swift::FileUnitKind::DWARFModule);
-                     });
+  return llvm::any_of(module.getFiles(), [](swift::FileUnit *file_unit) {
+    return (file_unit->getKind() == swift::FileUnitKind::DWARFModule);
+  });
 }
 
 /// Detect whether this is a proper Swift module.
 static bool IsSerializedAST(swift::ModuleDecl &module) {
-  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
-                     [](swift::FileUnit *file_unit) {
-                       return (file_unit->getKind() ==
-                               swift::FileUnitKind::SerializedAST);
-                     });
+  return llvm::any_of(module.getFiles(), [](swift::FileUnit *file_unit) {
+    return (file_unit->getKind() == swift::FileUnitKind::SerializedAST);
+  });
 }
 
 
