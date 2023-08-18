@@ -185,6 +185,15 @@ public:
 
   void visitConceptRecord(const ConceptRecord &Record);
 
+  void
+  visitGlobalVariableTemplateRecord(const GlobalVariableTemplateRecord &Record);
+
+  void visitGlobalVariableTemplateSpecializationRecord(
+      const GlobalVariableTemplateSpecializationRecord &Record);
+
+  void visitGlobalVariableTemplatePartialSpecializationRecord(
+      const GlobalVariableTemplatePartialSpecializationRecord &Record);
+
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);
 

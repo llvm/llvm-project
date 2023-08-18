@@ -99,6 +99,24 @@ public:
     }
   }
 
+  Template(const VarTemplatePartialSpecializationDecl *Decl) {
+    for (auto *const Parameter : *Decl->getTemplateParameters()) {
+      const auto *Param = dyn_cast<TemplateTypeParmDecl>(Parameter);
+      if (!Param) // some params are null
+        continue;
+      std::string Type;
+      if (Param->hasTypeConstraint())
+        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+      else if (Param->wasDeclaredWithTypename())
+        Type = "typename";
+      else
+        Type = "class";
+
+      addTemplateParameter(Type, Param->getName().str(), Param->getIndex(),
+                           Param->getDepth(), Param->isParameterPack());
+    }
+  }
+
   const llvm::SmallVector<TemplateParameter> &getParameters() const {
     return Parameters;
   }
@@ -141,6 +159,9 @@ struct APIRecord {
     RK_Unknown,
     RK_GlobalFunction,
     RK_GlobalVariable,
+    RK_GlobalVariableTemplate,
+    RK_GlobalVariableTemplateSpecialization,
+    RK_GlobalVariableTemplatePartialSpecialization,
     RK_EnumConstant,
     RK_Enum,
     RK_StructField,
@@ -279,12 +300,75 @@ struct GlobalVariableRecord : APIRecord {
                   Linkage, Comment, Declaration, SubHeading,
                   IsFromSystemHeader) {}
 
+  GlobalVariableRecord(RecordKind Kind, StringRef USR, StringRef Name,
+                       PresumedLoc Loc, AvailabilitySet Availabilities,
+                       LinkageInfo Linkage, const DocComment &Comment,
+                       DeclarationFragments Declaration,
+                       DeclarationFragments SubHeading, bool IsFromSystemHeader)
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availabilities), Linkage,
+                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_GlobalVariable;
   }
 
 private:
   virtual void anchor();
+};
+
+struct GlobalVariableTemplateRecord : GlobalVariableRecord {
+  Template Templ;
+
+  GlobalVariableTemplateRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
+                               AvailabilitySet Availabilities,
+                               LinkageInfo Linkage, const DocComment &Comment,
+                               DeclarationFragments Declaration,
+                               DeclarationFragments SubHeading,
+                               class Template Template, bool IsFromSystemHeader)
+      : GlobalVariableRecord(RK_GlobalVariableTemplate, USR, Name, Loc,
+                             std::move(Availabilities), Linkage, Comment,
+                             Declaration, SubHeading, IsFromSystemHeader),
+        Templ(Template) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_GlobalVariableTemplate;
+  }
+};
+
+struct GlobalVariableTemplateSpecializationRecord : GlobalVariableRecord {
+  GlobalVariableTemplateSpecializationRecord(
+      StringRef USR, StringRef Name, PresumedLoc Loc,
+      AvailabilitySet Availabilities, LinkageInfo Linkage,
+      const DocComment &Comment, DeclarationFragments Declaration,
+      DeclarationFragments SubHeading, bool IsFromSystemHeader)
+      : GlobalVariableRecord(RK_GlobalVariableTemplateSpecialization, USR, Name,
+                             Loc, std::move(Availabilities), Linkage, Comment,
+                             Declaration, SubHeading, IsFromSystemHeader) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_GlobalVariableTemplateSpecialization;
+  }
+};
+
+struct GlobalVariableTemplatePartialSpecializationRecord
+    : GlobalVariableRecord {
+  Template Templ;
+
+  GlobalVariableTemplatePartialSpecializationRecord(
+      StringRef USR, StringRef Name, PresumedLoc Loc,
+      AvailabilitySet Availabilities, LinkageInfo Linkage,
+      const DocComment &Comment, DeclarationFragments Declaration,
+      DeclarationFragments SubHeading, class Template Template,
+      bool IsFromSystemHeader)
+      : GlobalVariableRecord(RK_GlobalVariableTemplatePartialSpecialization,
+                             USR, Name, Loc, std::move(Availabilities), Linkage,
+                             Comment, Declaration, SubHeading,
+                             IsFromSystemHeader),
+        Templ(Template) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_GlobalVariableTemplatePartialSpecialization;
+  }
 };
 
 /// This holds information associated with enum constants.
@@ -782,6 +866,7 @@ struct ClassTemplatePartialSpecializationRecord : CXXClassRecord {
 
 struct ConceptRecord : APIRecord {
   Template Templ;
+
   ConceptRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                 AvailabilitySet Availabilities, const DocComment &Comment,
                 DeclarationFragments Declaration,
@@ -791,10 +876,6 @@ struct ConceptRecord : APIRecord {
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
                   IsFromSystemHeader),
         Templ(Template) {}
-
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_Concept;
-  }
 };
 
 /// This holds information associated with Objective-C categories.
@@ -938,6 +1019,11 @@ template <>
 struct has_template<ClassTemplatePartialSpecializationRecord>
     : public std::true_type {};
 template <> struct has_template<ConceptRecord> : public std::true_type {};
+template <>
+struct has_template<GlobalVariableTemplateRecord> : public std::true_type {};
+template <>
+struct has_template<GlobalVariableTemplatePartialSpecializationRecord>
+    : public std::true_type {};
 
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
@@ -953,6 +1039,14 @@ public:
                AvailabilitySet Availability, LinkageInfo Linkage,
                const DocComment &Comment, DeclarationFragments Declaration,
                DeclarationFragments SubHeadin, bool IsFromSystemHeaderg);
+
+  GlobalVariableTemplateRecord *
+  addGlobalVariableTemplate(StringRef Name, StringRef USR, PresumedLoc Loc,
+                            AvailabilitySet Availability, LinkageInfo Linkage,
+                            const DocComment &Comment,
+                            DeclarationFragments Declaration,
+                            DeclarationFragments SubHeading, Template Template,
+                            bool IsFromSystemHeader);
 
   /// Create and add a function record into the API set.
   ///
@@ -1055,6 +1149,21 @@ public:
       AvailabilitySet Availability, const DocComment &Comment,
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
       Template Template, bool IsFromSystemHeader);
+
+  GlobalVariableTemplateSpecializationRecord *
+  addGlobalVariableTemplateSpecialization(
+      StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, LinkageInfo Linkage,
+      const DocComment &Comment, DeclarationFragments Declaration,
+      DeclarationFragments SubHeading, bool IsFromSystemHeader);
+
+  GlobalVariableTemplatePartialSpecializationRecord *
+  addGlobalVariableTemplatePartialSpecialization(
+      StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, LinkageInfo Linkage,
+      const DocComment &Comment, DeclarationFragments Declaration,
+      DeclarationFragments SubHeading, Template Template,
+      bool IsFromSystemHeader);
 
   CXXMethodRecord *
   addCXXMethod(CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
@@ -1199,8 +1308,20 @@ public:
   const RecordMap<GlobalVariableRecord> &getGlobalVariables() const {
     return GlobalVariables;
   }
+  const RecordMap<GlobalVariableTemplateRecord> &
+  getGlobalVariableTemplates() const {
+    return GlobalVariableTemplates;
+  }
   const RecordMap<StaticFieldRecord> &getStaticFields() const {
     return StaticFields;
+  }
+  const RecordMap<GlobalVariableTemplateSpecializationRecord> &
+  getGlobalVariableTemplateSpecializations() const {
+    return GlobalVariableTemplateSpecializations;
+  }
+  const RecordMap<GlobalVariableTemplatePartialSpecializationRecord> &
+  getGlobalVariableTemplatePartialSpecializations() const {
+    return GlobalVariableTemplatePartialSpecializations;
   }
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
   const RecordMap<StructRecord> &getStructs() const { return Structs; }
@@ -1271,6 +1392,11 @@ private:
   llvm::DenseMap<StringRef, APIRecord *> USRBasedLookupTable;
   RecordMap<GlobalFunctionRecord> GlobalFunctions;
   RecordMap<GlobalVariableRecord> GlobalVariables;
+  RecordMap<GlobalVariableTemplateRecord> GlobalVariableTemplates;
+  RecordMap<GlobalVariableTemplateSpecializationRecord>
+      GlobalVariableTemplateSpecializations;
+  RecordMap<GlobalVariableTemplatePartialSpecializationRecord>
+      GlobalVariableTemplatePartialSpecializations;
   RecordMap<ConceptRecord> Concepts;
   RecordMap<StaticFieldRecord> StaticFields;
   RecordMap<EnumRecord> Enums;
