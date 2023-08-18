@@ -1890,10 +1890,8 @@ public:
   }
   void Unparse(const AccBindClause &x) {
     common::visit(common::visitors{
-                      [&](const Name &y) { Put('('), Walk(y), Put(')'); },
-                      [&](const ScalarDefaultCharExpr &y) {
-                        Put('('), Walk(y), Put(')');
-                      },
+                      [&](const Name &y) { Walk(y); },
+                      [&](const ScalarDefaultCharExpr &y) { Walk(y); },
                   },
         x.u);
   }
