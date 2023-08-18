@@ -25620,7 +25620,8 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   // Simplify scalar inserts into an undef vector:
   // insert_subvector undef, (splat X), N2 -> splat X
   if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
-    return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
+    if (DAG.isConstantValueOfAnyType(N1.getOperand(0)) || N1.hasOneUse())
+      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
 
   // If we are inserting a bitcast value into an undef, with the same
   // number of elements, just use the bitcast input of the extract.
