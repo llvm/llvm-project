@@ -273,7 +273,7 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(E->getMember()).str();
     }
     std::string
-    VisitDependentScopeMemberExpr(const DependentScopeDeclRefExpr *E) {
+    VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
       return getSimpleName(E->getDeclName()).str();
     }
     std::string VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *E) {
@@ -534,7 +534,7 @@ public:
 
     // Do not show parameter hints for operator calls written using operator
     // syntax or user-defined literals. (Among other reasons, the resulting
-    // hints can look awkard, e.g. the expression can itself be a function
+    // hints can look awkward, e.g. the expression can itself be a function
     // argument and then we'd get two hints side by side).
     if (isa<CXXOperatorCallExpr>(E) || isa<UserDefinedLiteral>(E))
       return true;
