@@ -72,6 +72,8 @@
 ! HELP-NEXT: -fppc-native-vector-element-order
 ! HELP-NEXT:                         Specifies PowerPC native vector element order (default)
 ! HELP-NEXT: -freciprocal-math       Allow division operations to be reassociated
+! HELP-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! HELP-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! HELP-NEXT: -fsave-optimization-record=<format>
 ! HELP-NEXT:                         Generate an optimization record file in a specific format
 ! HELP-NEXT: -fsave-optimization-record
@@ -117,6 +119,7 @@
 ! HELP-NEXT: --target=<value>        Generate code for the given target
 ! HELP-NEXT: -U <macro>              Undefine macro <macro>
 ! HELP-NEXT: --version               Print version information
+! HELP-NEXT: -v                      Show commands to run and use verbose output
 ! HELP-NEXT: -W<warning>             Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>           Pass <arg> to the flang compiler
 ! HELP-NEXT: -x <language>           Treat subsequent input files as having type <language>
