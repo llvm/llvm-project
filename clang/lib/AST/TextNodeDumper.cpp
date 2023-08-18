@@ -300,6 +300,17 @@ void TextNodeDumper::Visit(const Decl *D) {
     }
   }
 
+  switch (D->getFriendObjectKind()) {
+  case Decl::FOK_None:
+    break;
+  case Decl::FOK_Declared:
+    OS << " friend";
+    break;
+  case Decl::FOK_Undeclared:
+    OS << " friend_undeclared";
+    break;
+  }
+
   ConstDeclVisitor<TextNodeDumper>::Visit(D);
 }
 
