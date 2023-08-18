@@ -949,6 +949,7 @@ class TextCrashLogParser(CrashLogParser):
                                 self.thread.reason += (
                                     " (%s)" % self.crashlog.thread_exception_data
                                 )
+                            self.thread.crashed = True
                         if self.app_specific_backtrace:
                             self.crashlog.backtraces.append(self.thread)
                         else:
@@ -1437,6 +1438,10 @@ def SymbolicateCrashLog(crash_log, options):
             print()
 
     for thread in crash_log.threads:
+        if options.crashed_only and not (
+            thread.crashed or thread.app_specific_backtrace
+        ):
+            continue
         thread.dump_symbolicated(crash_log, options)
         print()
 
