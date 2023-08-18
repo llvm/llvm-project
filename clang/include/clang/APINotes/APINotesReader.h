@@ -12,8 +12,8 @@
 // method parameters.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_API_NOTES_READER_H
-#define LLVM_CLANG_API_NOTES_READER_H
+#ifndef LLVM_CLANG_APINOTES_READER_H
+#define LLVM_CLANG_APINOTES_READER_H
 
 #include "clang/APINotes/Types.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -226,4 +226,4 @@ public:
 } // end namespace api_notes
 } // end namespace clang
 
-#endif // LLVM_CLANG_API_NOTES_READER_H
+#endif // LLVM_CLANG_APINOTES_READER_H
