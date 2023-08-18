@@ -543,3 +543,25 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+CONVERT-FOR-TESTING COMMAND
+---------------------------
+
+.. warning::
+  This command is for the LLVM developers who are working on ``llvm-cov`` only.
+
+SYNOPSIS
+^^^^^^^^
+
+:program:`llvm-cov convert-for-testing` *BIN* -o *OUT*
+
+DESCRIPTION
+^^^^^^^^^^^
+
+The :program:`llvm-cov convert-for-testing` command serves the purpose of
+testing `llvm-cov` itself. It can extract all code coverage data from the
+binary *BIN* to the file *OUT*, thereby reducing the size of test files. The
+output file typically bears the :program:`.covmapping` extension.
+
+The :program:`.covmapping` files can be read back by ``llvm-cov`` just as
+ordinary binary files.
