@@ -710,6 +710,14 @@ bool delinearizeLaneId(OpBuilder &builder, Location loc,
                        ArrayRef<int64_t> originalShape,
                        ArrayRef<int64_t> distributedShape, int64_t warpSize,
                        Value laneId, SmallVectorImpl<Value> &delinearizedIds) {
+  // If the original shape and the distributed shape is the same, we don't
+  // distribute at all--every thread is handling the whole. For such case, we
+  // should not rely on lane IDs later. So just return an empty lane ID vector.
+  if (originalShape == distributedShape) {
+    delinearizedIds.clear();
+    return true;
+  }
+
   SmallVector<int64_t> sizes;
   for (auto [large, small] : llvm::zip_equal(originalShape, distributedShape)) {
     if (large % small != 0)
@@ -794,8 +802,9 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
                            warpOp.getLaneid(), delinearizedIds))
       return rewriter.notifyMatchFailure(
           read, "cannot delinearize lane ID for distribution");
+    assert(!delinearizedIds.empty() || map.getNumResults() == 0);
 
-    for (auto it : llvm::zip(indexMap.getResults(), map.getResults())) {
+    for (auto it : llvm::zip_equal(indexMap.getResults(), map.getResults())) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
       auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
