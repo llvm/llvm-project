@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+
 namespace bufferization {
 struct OneShotBufferizationOptions;
 } // namespace bufferization
@@ -215,11 +216,12 @@ std::unique_ptr<Pass> createStorageSpecifierToLLVMPass();
 
 //===----------------------------------------------------------------------===//
 // The mini-pipeline for sparsification and bufferization.
-//
-// Note that this mini-pipeline is not defined through the tablegen pass
-// mechanism, and, thus, is not individually available through the command-line.
-// It is solely used as part of the full sparse compiler pipeline.
 //===----------------------------------------------------------------------===//
+
+bufferization::OneShotBufferizationOptions
+getBufferizationOptionsForSparsification(bool analysisOnly);
+
+std::unique_ptr<Pass> createSparsificationAndBufferizationPass();
 
 std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
