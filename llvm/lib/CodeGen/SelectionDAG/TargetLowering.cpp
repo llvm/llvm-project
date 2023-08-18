@@ -1886,15 +1886,15 @@ bool TargetLowering::SimplifyDemandedBits(
 
       // Narrow shift to lower half - similar to ShrinkDemandedOp.
       // (srl i64:x, K) -> (i64 zero_extend (srl (i32 (trunc i64:x)), K))
-      if ((BitWidth % 2) == 0 && !VT.isVector() &&
-          ((InDemandedMask.countLeadingZeros() >= (BitWidth / 2)) ||
-           TLO.DAG.MaskedValueIsZero(
-               Op0, APInt::getHighBitsSet(BitWidth, BitWidth / 2)))) {
+      if ((BitWidth % 2) == 0 && !VT.isVector()) {
+        APInt HiBits = APInt::getHighBitsSet(BitWidth, BitWidth / 2);
         EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), BitWidth / 2);
         if (isNarrowingProfitable(VT, HalfVT) &&
             isTypeDesirableForOp(ISD::SRL, HalfVT) &&
             isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
-            (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT))) {
+            (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT)) &&
+            ((InDemandedMask.countLeadingZeros() >= (BitWidth / 2)) ||
+             TLO.DAG.MaskedValueIsZero(Op0, HiBits))) {
           SDValue NewOp = TLO.DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Op0);
           SDValue NewShiftAmt = TLO.DAG.getShiftAmountConstant(
               ShAmt, HalfVT, dl, TLO.LegalTypes());
