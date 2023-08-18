@@ -151,7 +151,7 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
     return;  // Try again when we have a thread.
   auto top = curr_thread->stack_top();
   auto bottom = curr_thread->stack_bottom();
-  if (real_stack < top || real_stack > bottom)
+  if (real_stack < bottom || real_stack > top)
     return;  // Not the default stack.
 
   for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
@@ -162,7 +162,7 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
       FakeFrame *ff = reinterpret_cast<FakeFrame *>(
           GetFrame(stack_size_log(), class_id, i));
       // GC only on the default stack.
-      if (ff->real_stack < real_stack && ff->real_stack >= top) {
+      if (bottom < ff->real_stack && ff->real_stack < real_stack) {
         flags[i] = 0;
         // Poison the frame, so the any access will be reported as UAR.
         SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),
