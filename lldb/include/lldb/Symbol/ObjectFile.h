@@ -13,6 +13,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindTable.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
@@ -494,13 +495,18 @@ public:
 
   /// Some object files may have the number of bits used for addressing
   /// embedded in them, e.g. a Mach-O core file using an LC_NOTE.  These
-  /// object files can return the address mask that should be used in
-  /// the Process.
+  /// object files can return an AddressableBits object that can can be
+  /// used to set the address masks in the Process.
+  ///
+  /// \param[out] address_bits
+  ///     Can be used to set the Process address masks.
+  ///
   /// \return
-  ///     The mask will have bits set which aren't used for addressing --
-  ///     typically, the high bits.
-  ///     Zero is returned when no address bits mask is available.
-  virtual lldb::addr_t GetAddressMask() { return 0; }
+  ///     Returns true if addressable bits metadata was found.
+  virtual bool GetAddressableBits(lldb_private::AddressableBits &address_bits) {
+    address_bits.Clear();
+    return false;
+  }
 
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
   /// the core file.  lldb can iterate over the pages looking for a valid

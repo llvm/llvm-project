@@ -899,10 +899,9 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
              process_arch.GetTriple().getTriple());
   }
 
-  if (int addressable_bits = m_gdb_comm.GetAddressingBits()) {
-    lldb::addr_t address_mask = ~((1ULL << addressable_bits) - 1);
-    SetCodeAddressMask(address_mask);
-    SetDataAddressMask(address_mask);
+  AddressableBits addressable_bits;
+  if (m_gdb_comm.GetAddressableBits(addressable_bits)) {
+    addressable_bits.SetProcessMasks(*this);
   }
 
   if (process_arch.IsValid()) {

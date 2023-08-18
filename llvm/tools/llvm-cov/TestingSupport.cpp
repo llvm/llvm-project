@@ -111,7 +111,6 @@ int convertForTestingMain(int argc, const char *argv[]) {
   encodeULEB128(ProfileNamesData.size(), OS);
   encodeULEB128(ProfileNamesAddress, OS);
   OS << ProfileNamesData;
-  encodeULEB128(CoverageMappingData.size(), OS);
   // Coverage mapping data is expected to have an alignment of 8.
   for (unsigned Pad = offsetToAlignment(OS.tell(), Align(8)); Pad; --Pad)
     OS.write(uint8_t(0));
