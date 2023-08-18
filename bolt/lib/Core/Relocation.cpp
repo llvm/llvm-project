@@ -35,6 +35,7 @@ static bool isSupportedX86(uint64_t Type) {
   case ELF::R_X86_64_PC32:
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_PLT32:
+  case ELF::R_X86_64_GOTPC64:
   case ELF::R_X86_64_GOTPCREL:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_TPOFF32:
@@ -136,6 +137,7 @@ static size_t getSizeForTypeX86(uint64_t Type) {
     return 4;
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_64:
+  case ELF::R_X86_64_GOTPC64:
     return 8;
   }
 }
@@ -655,6 +657,7 @@ static bool isPCRelativeX86(uint64_t Type) {
   case ELF::R_X86_64_PLT32:
   case ELF::R_X86_64_GOTOFF64:
   case ELF::R_X86_64_GOTPC32:
+  case ELF::R_X86_64_GOTPC64:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_GOTPCRELX:
   case ELF::R_X86_64_REX_GOTPCRELX:
@@ -795,6 +798,12 @@ bool Relocation::isX86GOTPCRELX(uint64_t Type) {
   if (Arch != Triple::x86_64)
     return false;
   return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
+}
+
+bool Relocation::isX86GOTPC64(uint64_t Type) {
+  if (Arch != Triple::x86_64)
+    return false;
+  return Type == ELF::R_X86_64_GOTPC64;
 }
 
 bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }
