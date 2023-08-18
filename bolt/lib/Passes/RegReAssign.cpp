@@ -140,7 +140,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
   std::fill(RegScore.begin(), RegScore.end(), 0);
   std::fill(RankedRegs.begin(), RankedRegs.end(), 0);
 
-  for (BinaryBasicBlock &BB : Function) {
+  auto countRegScore = [&](BinaryBasicBlock &BB) {
     for (MCInst &Inst : BB) {
       const bool CannotUseREX = BC.MIB->cannotUseREX(Inst);
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
@@ -191,7 +191,15 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         RegScore[RegEC] += BB.getKnownExecutionCount();
       }
     }
+  };
+  for (BinaryBasicBlock &BB : Function)
+    countRegScore(BB);
+
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    for (BinaryBasicBlock &BB : *ChildFrag)
+      countRegScore(BB);
   }
+
   std::iota(RankedRegs.begin(), RankedRegs.end(), 0); // 0, 1, 2, 3...
   llvm::sort(RankedRegs,
              [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
@@ -212,6 +220,17 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
 void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
   rankRegisters(Function);
+
+  // If there is a situation where function:
+  //   A() -> A.cold()
+  //   A.localalias() -> A.cold()
+  // simply swapping these two calls can cause issues.
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    if (ChildFrag->getParentFragments()->size() > 1)
+      return;
+    if (ChildFrag->empty())
+      return;
+  }
 
   // Bail early if our registers are all black listed, before running expensive
   // analysis passes
@@ -304,6 +323,10 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
                       << " with " << BC.MRI->getName(ExtReg) << "\n\n");
     swap(Function, ClassicReg, ExtReg);
     FuncsChanged.insert(&Function);
+    for (BinaryFunction *ChildFrag : Function.getFragments()) {
+      swap(*ChildFrag, ClassicReg, ExtReg);
+      FuncsChanged.insert(ChildFrag);
+    }
     ++Begin;
     if (Begin == End)
       break;
@@ -314,6 +337,13 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
 bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
   rankRegisters(Function);
+
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    if (ChildFrag->getParentFragments()->size() > 1)
+      return false;
+    if (ChildFrag->empty())
+      return false;
+  }
 
   // Try swapping R12, R13, R14 or R15 with RBX (we work with all callee-saved
   // regs except RBP)
@@ -345,6 +375,10 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   (void)BC;
   swap(Function, RBX, Candidate);
   FuncsChanged.insert(&Function);
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    swap(*ChildFrag, RBX, Candidate);
+    FuncsChanged.insert(ChildFrag);
+  }
   return true;
 }
 
@@ -404,7 +438,7 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
   for (auto &I : BC.getBinaryFunctions()) {
     BinaryFunction &Function = I.second;
 
-    if (!Function.isSimple() || Function.isIgnored())
+    if (!Function.isSimple() || Function.isIgnored() || Function.isFragment())
       continue;
 
     LLVM_DEBUG(dbgs() << "====================================\n");
