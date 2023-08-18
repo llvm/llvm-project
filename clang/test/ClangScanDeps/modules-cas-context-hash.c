@@ -63,14 +63,38 @@
 //--- cdb1.json.template
 [{
   "directory": "DIR",
-  "command": "clang -Xclang -fcas-plugin-path -Xclang /1 -Xclang -fcas-plugin-option -Xclang a=x -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache1",
+  "arguments": [
+    "clang",
+    "-fsyntax-only",
+    "DIR/tu.c",
+    "-fmodules",
+    "-fimplicit-module-maps",
+
+    "-Xclang", "-fcas-plugin-path", "-Xclang", "/1",
+    "-Xclang", "-fcas-plugin-option", "-Xclang", "a=x",
+    "-fmodules-cache-path=DIR/cache1",
+    "-fmessage-length=1",
+    "-fcolor-diagnostics",
+  ],
   "file": "DIR/tu.c"
 }]
 
 //--- cdb2.json.template
 [{
   "directory": "DIR",
-  "command": "clang -Xclang -fcas-plugin-path -Xclang /2 -Xclang -fcas-plugin-option -Xclang b=y -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache2",
+  "arguments": [
+    "clang",
+    "-fsyntax-only",
+    "DIR/tu.c",
+    "-fmodules",
+    "-fimplicit-module-maps",
+
+    "-Xclang", "-fcas-plugin-path", "-Xclang", "/2",
+    "-Xclang", "-fcas-plugin-option", "-Xclang", "b=y",
+    "-fmodules-cache-path=DIR/cache2",
+    "-fmessage-length=2",
+    "-fno-color-diagnostics",
+  ],
   "file": "DIR/tu.c"
 }]
 

@@ -98,7 +98,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   // differ between identical modules discovered from different translation
   // units.
   CI.getFrontendOpts().Inputs.clear();
-  CI.getFrontendOpts().OutputFile.clear();
+  // CAS: OutputFile cannot be empty when computing a cache key.
+  CI.getFrontendOpts().OutputFile = "-";
   // FIXME: a build system may want to provide a new path.
   CI.getFrontendOpts().IndexUnitOutputPath.clear();
 
@@ -118,7 +119,9 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
     CI.getDiagnosticOpts().DiagnosticSerializationFile = "-";
   if (!CI.getDependencyOutputOpts().OutputFile.empty())
     CI.getDependencyOutputOpts().OutputFile = "-";
-  CI.getDependencyOutputOpts().Targets.clear();
+  // CAS: -MT must be preserved for cache key.
+  if (!CI.getDependencyOutputOpts().Targets.empty())
+    CI.getDependencyOutputOpts().Targets = {"-"};
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
@@ -289,6 +292,22 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
       HashBuilder;
   SmallString<32> Scratch;
 
+  auto FormatHash = [&](llvm::BLAKE3Result<16> Hash) {
+    std::array<uint64_t, 2> Words;
+    static_assert(sizeof(Hash) == sizeof(Words), "Hash must match Words");
+    std::memcpy(Words.data(), Hash.data(), sizeof(Hash));
+    return toString(llvm::APInt(sizeof(Words) * 8, Words), 36,
+                    /*Signed=*/false);
+  };
+
+  if (MD.ModuleCacheKey) {
+    // Cache keys have better canonicalization, so use them as the context hash.
+    // This reduces the number of modules needed when compatible configurations
+    // are used (e.g. change in -fmessage-length).
+    HashBuilder.add(*MD.ModuleCacheKey);
+    return FormatHash(HashBuilder.final());
+  }
+
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
@@ -324,13 +343,30 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   }
 
   HashBuilder.add(EagerLoadModules);
-
-  llvm::BLAKE3Result<16> Hash = HashBuilder.final();
-  std::array<uint64_t, 2> Words;
-  static_assert(sizeof(Hash) == sizeof(Words), "Hash must match Words");
-  std::memcpy(Words.data(), Hash.data(), sizeof(Hash));
-  return toString(llvm::APInt(sizeof(Words) * 8, Words), 36, /*Signed=*/false);
+  return FormatHash(HashBuilder.final());
 }
+
+#ifndef NDEBUG
+static void checkCompileCacheKeyMatch(cas::ObjectStore &CAS,
+                                      StringRef OldKeyStr, cas::CASID NewKey) {
+  if (NewKey.toString() == OldKeyStr)
+    return;
+
+  // Mismatched keys, report error.
+  auto OldKey = CAS.parseID(OldKeyStr);
+  if (!OldKey)
+    llvm::report_fatal_error(OldKey.takeError());
+  SmallString<256> Err;
+  llvm::raw_svector_ostream OS(Err);
+  OS << "Compile cache key for module changed; previously:";
+  if (auto E = printCompileJobCacheKey(CAS, *OldKey, OS))
+    OS << std::move(E);
+  OS << "\nkey is now:";
+  if (auto E = printCompileJobCacheKey(CAS, NewKey, OS))
+    OS << std::move(E);
+  llvm::report_fatal_error(OS.str());
+}
+#endif
 
 void ModuleDepCollector::associateWithContextHash(const CompilerInvocation &CI,
                                                   ModuleDeps &Deps) {
@@ -552,17 +588,27 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   if (auto E = MDC.Controller.finalizeModuleInvocation(CI, MD))
     Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
 
-  MDC.associateWithContextHash(CI, MD);
-
-  // Finish the compiler invocation. Requires dependencies and the context hash.
-  MDC.addOutputPaths(CI, MD);
-
-  // Compute the cache key, if needed. Requires dependencies and outputs.
+  // Compute the cache key, if needed. Requires dependencies.
   if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
     if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
       MD.ModuleCacheKey = Key->toString();
   }
+
+  MDC.associateWithContextHash(CI, MD);
+
+  // Finish the compiler invocation. Requires dependencies and the context hash.
+  MDC.addOutputPaths(CI, MD);
+
+#ifndef NDEBUG
+  // Verify the key has not changed with final arguments.
+  if (MD.ModuleCacheKey) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    auto Key = createCompileJobCacheKey(CAS, Diags, CI);
+    assert(Key);
+    checkCompileCacheKeyMatch(CAS, *MD.ModuleCacheKey, *Key);
+  }
+#endif
 
   MD.BuildArguments = CI.getCC1CommandLine();
 
