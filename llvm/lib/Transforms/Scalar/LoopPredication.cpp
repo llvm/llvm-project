@@ -802,18 +802,13 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(BI->dump());
 
-  Value *Cond, *WC;
-  BasicBlock *IfTrueBB, *IfFalseBB;
-  bool Parsed = parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB);
-  assert(Parsed && "Must be able to parse widenable branch");
-  (void)Parsed;
-
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
   SmallVector<Value *> WidenedChecks;
   parseWidenableGuard(BI, Checks);
   // At the moment, our matching logic for wideable conditions implicitly
   // assumes we preserve the form: (br (and Cond, WC())).  FIXME
+  auto WC = extractWidenableCondition(BI);
   Checks.push_back(WC);
   widenChecks(Checks, WidenedChecks, Expander, BI);
   if (WidenedChecks.empty())
@@ -827,6 +822,7 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   auto *OldCond = BI->getCondition();
   BI->setCondition(AllChecks);
   if (InsertAssumesOfPredicatedGuardsConditions) {
+    BasicBlock *IfTrueBB = BI->getSuccessor(0);
     Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
     // If this block has other predecessors, we might not be able to use Cond.
     // In this case, create a Phi where every other input is `true` and input
@@ -1033,13 +1029,9 @@ static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   } while (true);
 
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    auto *Term = Pred->getTerminator();
-
-    Value *Cond, *WC;
-    BasicBlock *IfTrueBB, *IfFalseBB;
-    if (parseWidenableBranch(Term, Cond, WC, IfTrueBB, IfFalseBB) &&
-        IfTrueBB == BB)
-      return cast<BranchInst>(Term);
+    if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
+      if (BI->getSuccessor(0) == BB && isWidenableBranch(BI))
+        return BI;
   }
   return nullptr;
 }
@@ -1127,13 +1119,13 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (!BI)
       continue;
 
-    Use *Cond, *WC;
-    BasicBlock *IfTrueBB, *IfFalseBB;
-    if (parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB) &&
-        L->contains(IfTrueBB)) {
-      WC->set(ConstantInt::getTrue(IfTrueBB->getContext()));
-      ChangedLoop = true;
-    }
+    if (auto WC = extractWidenableCondition(BI))
+      if (L->contains(BI->getSuccessor(0))) {
+        assert(WC->hasOneUse() && "Not appropriate widenable branch!");
+        WC->user_back()->replaceUsesOfWith(
+            WC, ConstantInt::getTrue(BI->getContext()));
+        ChangedLoop = true;
+      }
   }
   if (ChangedLoop)
     SE->forgetLoop(L);

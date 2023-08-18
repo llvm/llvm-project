@@ -1939,8 +1939,8 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
   SDValue NewMask = DAG.getConstant(0xff, DL, XVT);
   SDValue Srl = DAG.getNode(ISD::SRL, DL, XVT, X, Eight);
   SDValue And = DAG.getNode(ISD::AND, DL, XVT, Srl, NewMask);
-  SDValue ShlCount = DAG.getConstant(ScaleLog, DL, MVT::i8);
   SDValue Ext = DAG.getZExtOrTrunc(And, DL, VT);
+  SDValue ShlCount = DAG.getConstant(ScaleLog, DL, MVT::i8);
   SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, Ext, ShlCount);
 
   // Insert the new nodes into the topological ordering. We must do this in
@@ -1949,12 +1949,11 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
   // essentially a pre-flattened and pre-sorted sequence of nodes. There is no
   // hierarchy left to express.
   insertDAGNode(DAG, N, Eight);
-  insertDAGNode(DAG, N, Srl);
   insertDAGNode(DAG, N, NewMask);
+  insertDAGNode(DAG, N, Srl);
   insertDAGNode(DAG, N, And);
+  insertDAGNode(DAG, N, Ext);
   insertDAGNode(DAG, N, ShlCount);
-  if (Ext != And)
-    insertDAGNode(DAG, N, Ext);
   insertDAGNode(DAG, N, Shl);
   DAG.ReplaceAllUsesWith(N, Shl);
   DAG.RemoveDeadNode(N.getNode());
