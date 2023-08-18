@@ -946,11 +946,6 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
   if (Cycle->contains(DivTermBlock))
     return nullptr;
 
-  if (Cycle->isReducible()) {
-    assert(Cycle->getHeader() == JoinBlock);
-    return nullptr;
-  }
-
   const auto *Parent = Cycle->getParentCycle();
   while (Parent && !Parent->contains(DivTermBlock)) {
     // If the join is inside a child, then the parent must be
@@ -959,6 +954,11 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
     assert(!Parent->isReducible());
     Cycle = Parent;
     Parent = Cycle->getParentCycle();
+  }
+
+  if (Cycle->isReducible()) {
+    assert(Cycle->getHeader() == JoinBlock);
+    return nullptr;
   }
 
   LLVM_DEBUG(dbgs() << "cycle made divergent by external branch\n");
