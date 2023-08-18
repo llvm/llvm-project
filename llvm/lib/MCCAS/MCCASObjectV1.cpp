@@ -104,7 +104,7 @@ public:
 };
 
 struct CUInfo {
-  size_t CUSize;
+  uint64_t CUSize;
   uint32_t AbbrevOffset;
 };
 static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
