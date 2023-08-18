@@ -56,7 +56,7 @@ public:
   Frame *getCaller() const override;
 
   /// Returns the location of the call to the frame.
-  SourceLocation getCallLocation() const override;
+  SourceRange getCallRange() const override;
 
   /// Returns the caller.
   const FunctionDecl *getCallee() const override;

@@ -494,18 +494,31 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           This method is useful when the bufferized type of value must be
           predicted before modifying any IR.
+
+          Implementations may call `bufferization::getBufferType` to compute the
+          bufferized type of another SSA value. The same (unmodified)
+          `invocationStack` must be passed to that function. The stack contains
+          all SSA values for which a buffer type computation is currently in
+          progress. Implementations may inspect the stack to detect repetitive
+          computations for the same SSA value. (E.g., when bufferized types of a
+          loop.)
+
+          Note: This interface method should never be called directly from user
+          code. Always use `bufferization::getBufferType`.
         }],
         /*retType=*/"::mlir::FailureOr<::mlir::BaseMemRefType>",
         /*methodName=*/"getBufferType",
         /*args=*/(ins "::mlir::Value":$value,
                       "const ::mlir::bufferization::BufferizationOptions &":$options,
-                      "const ::mlir::DenseMap<::mlir::Value, ::mlir::BaseMemRefType>":$fixedTypes),
+                      "::llvm::SmallVector<::mlir::Value> &":$invocationStack),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(getOwnerOfValue(value) == $_op.getOperation() &&
                  "expected that value belongs to this op");
+          assert(invocationStack.back() == value &&
+                 "inconsistant invocation stack");
           return ::mlir::bufferization::detail::defaultGetBufferType(
-              value, options, fixedTypes);
+              value, options, invocationStack);
         }]
       >,
       InterfaceMethod<

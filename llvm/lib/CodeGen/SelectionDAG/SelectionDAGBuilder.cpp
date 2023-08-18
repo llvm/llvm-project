@@ -4192,7 +4192,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
   Type *Ty = I.getType();
   SmallVector<EVT, 4> ValueVTs, MemVTs;
-  SmallVector<uint64_t, 4> Offsets;
+  SmallVector<TypeSize, 4> Offsets;
   ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets, 0);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
@@ -4250,9 +4250,14 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
       ChainI = 0;
     }
 
-    SDValue A = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(Offsets[i]));
-    SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A,
-                            MachinePointerInfo(SV, Offsets[i]), Alignment,
+    // TODO: MachinePointerInfo only supports a fixed length offset.
+    MachinePointerInfo PtrInfo =
+        !Offsets[i].isScalable() || Offsets[i].isZero()
+            ? MachinePointerInfo(SV, Offsets[i].getKnownMinValue())
+            : MachinePointerInfo();
+
+    SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
+    SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, PtrInfo, Alignment,
                             MMOFlags, AAInfo, Ranges);
     Chains[ChainI] = L.getValue(1);
 
@@ -4354,7 +4359,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   }
 
   SmallVector<EVT, 4> ValueVTs, MemVTs;
-  SmallVector<uint64_t, 4> Offsets;
+  SmallVector<TypeSize, 4> Offsets;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   SrcV->getType(), ValueVTs, &MemVTs, &Offsets, 0);
   unsigned NumValues = ValueVTs.size();
@@ -4385,13 +4390,18 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       ChainI = 0;
     }
 
-    SDValue Add = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(Offsets[i]));
+    // TODO: MachinePointerInfo only supports a fixed length offset.
+    MachinePointerInfo PtrInfo =
+        !Offsets[i].isScalable() || Offsets[i].isZero()
+            ? MachinePointerInfo(PtrV, Offsets[i].getKnownMinValue())
+            : MachinePointerInfo();
+
+    SDValue Add = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
     SDValue St =
-        DAG.getStore(Root, dl, Val, Add, MachinePointerInfo(PtrV, Offsets[i]),
-                     Alignment, MMOFlags, AAInfo);
+        DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags, AAInfo);
     Chains[ChainI] = St;
   }
 

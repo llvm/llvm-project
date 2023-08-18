@@ -952,7 +952,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
   (void)OutlinedFnID;
 
   // Return value of the runtime offloading call.
-  Value *Return;
+  Value *Return = nullptr;
 
   // Arguments for the target kernel.
   SmallVector<Value *> ArgsVector;
@@ -4356,6 +4356,66 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   }
 
   return Builder.saveIP();
+}
+
+FunctionCallee
+OpenMPIRBuilder::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
+                                             bool IsGPUDistribute) {
+  assert((IVSize == 32 || IVSize == 64) &&
+         "IV size is not compatible with the omp runtime");
+  RuntimeFunction Name;
+  if (IsGPUDistribute)
+    Name = IVSize == 32
+               ? (IVSigned ? omp::OMPRTL___kmpc_distribute_static_init_4
+                           : omp::OMPRTL___kmpc_distribute_static_init_4u)
+               : (IVSigned ? omp::OMPRTL___kmpc_distribute_static_init_8
+                           : omp::OMPRTL___kmpc_distribute_static_init_8u);
+  else
+    Name = IVSize == 32 ? (IVSigned ? omp::OMPRTL___kmpc_for_static_init_4
+                                    : omp::OMPRTL___kmpc_for_static_init_4u)
+                        : (IVSigned ? omp::OMPRTL___kmpc_for_static_init_8
+                                    : omp::OMPRTL___kmpc_for_static_init_8u);
+
+  return getOrCreateRuntimeFunction(M, Name);
+}
+
+FunctionCallee OpenMPIRBuilder::createDispatchInitFunction(unsigned IVSize,
+                                                           bool IVSigned) {
+  assert((IVSize == 32 || IVSize == 64) &&
+         "IV size is not compatible with the omp runtime");
+  RuntimeFunction Name = IVSize == 32
+                             ? (IVSigned ? omp::OMPRTL___kmpc_dispatch_init_4
+                                         : omp::OMPRTL___kmpc_dispatch_init_4u)
+                             : (IVSigned ? omp::OMPRTL___kmpc_dispatch_init_8
+                                         : omp::OMPRTL___kmpc_dispatch_init_8u);
+
+  return getOrCreateRuntimeFunction(M, Name);
+}
+
+FunctionCallee OpenMPIRBuilder::createDispatchNextFunction(unsigned IVSize,
+                                                           bool IVSigned) {
+  assert((IVSize == 32 || IVSize == 64) &&
+         "IV size is not compatible with the omp runtime");
+  RuntimeFunction Name = IVSize == 32
+                             ? (IVSigned ? omp::OMPRTL___kmpc_dispatch_next_4
+                                         : omp::OMPRTL___kmpc_dispatch_next_4u)
+                             : (IVSigned ? omp::OMPRTL___kmpc_dispatch_next_8
+                                         : omp::OMPRTL___kmpc_dispatch_next_8u);
+
+  return getOrCreateRuntimeFunction(M, Name);
+}
+
+FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
+                                                           bool IVSigned) {
+  assert((IVSize == 32 || IVSize == 64) &&
+         "IV size is not compatible with the omp runtime");
+  RuntimeFunction Name = IVSize == 32
+                             ? (IVSigned ? omp::OMPRTL___kmpc_dispatch_fini_4
+                                         : omp::OMPRTL___kmpc_dispatch_fini_4u)
+                             : (IVSigned ? omp::OMPRTL___kmpc_dispatch_fini_8
+                                         : omp::OMPRTL___kmpc_dispatch_fini_8u);
+
+  return getOrCreateRuntimeFunction(M, Name);
 }
 
 // Copy input from pointer or i64 to the expected argument type.

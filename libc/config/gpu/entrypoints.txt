@@ -82,6 +82,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.puts
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fread
     libc.src.stdio.fputs
     libc.src.stdio.stdin
     libc.src.stdio.stdout

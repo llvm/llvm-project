@@ -85,5 +85,12 @@ LIBC_INLINE uint64_t read_from_stream(uintptr_t file, void *buf, size_t size) {
   return ret;
 }
 
+LIBC_INLINE uint64_t read(FILE *f, void *data, size_t size) {
+  if (f == stdin)
+    return read_from_stdin(data, size);
+  else
+    return read_from_stream(reinterpret_cast<uintptr_t>(f), data, size);
+}
+
 } // namespace file
 } // namespace __llvm_libc

@@ -438,7 +438,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
       m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_notifications(), m_image_tokens(), m_listener_sp(listener_sp),
+      m_notifications(), m_image_tokens(),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
@@ -474,10 +474,9 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   m_private_state_control_broadcaster.SetEventName(
       eBroadcastInternalStateControlResume, "control-resume");
 
-  m_listener_sp->StartListeningForEvents(
-      this, eBroadcastBitStateChanged | eBroadcastBitInterrupt |
-                eBroadcastBitSTDOUT | eBroadcastBitSTDERR |
-                eBroadcastBitProfileData | eBroadcastBitStructuredData);
+  // The listener passed into process creation is the primary listener:
+  // It always listens for all the event bits for Process:
+  SetPrimaryListener(listener_sp);
 
   m_private_state_listener_sp->StartListeningForEvents(
       &m_private_state_broadcaster,
@@ -618,7 +617,7 @@ void Process::SynchronouslyNotifyStateChanged(StateType state) {
 StateType Process::GetNextEvent(EventSP &event_sp) {
   StateType state = eStateInvalid;
 
-  if (m_listener_sp->GetEventForBroadcaster(this, event_sp,
+  if (GetPrimaryListener()->GetEventForBroadcaster(this, event_sp,
                                             std::chrono::seconds(0)) &&
       event_sp)
     state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
@@ -966,7 +965,7 @@ StateType Process::GetStateChangedEvents(EventSP &event_sp,
 
   ListenerSP listener_sp = hijack_listener_sp;
   if (!listener_sp)
-    listener_sp = m_listener_sp;
+    listener_sp = GetPrimaryListener();
 
   StateType state = eStateInvalid;
   if (listener_sp->GetEventForBroadcasterWithType(
@@ -988,7 +987,7 @@ Event *Process::PeekAtStateChangedEvents() {
   LLDB_LOGF(log, "Process::%s...", __FUNCTION__);
 
   Event *event_ptr;
-  event_ptr = m_listener_sp->PeekAtNextEventForBroadcasterWithType(
+  event_ptr = GetPrimaryListener()->PeekAtNextEventForBroadcasterWithType(
       this, eBroadcastBitStateChanged);
   if (log) {
     if (event_ptr) {
@@ -4104,8 +4103,8 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   if (!still_should_stop && does_anybody_have_an_opinion) {
     // We've been asked to continue, so do that here.
     SetRestarted(true);
-    // Use the public resume method here, since this is just extending a
-    // public resume.
+    // Use the private resume method here, since we aren't changing the run
+    // lock state.
     process_sp->PrivateResume();
   } else {
     bool hijacked = process_sp->IsHijackedForEvent(eBroadcastBitStateChanged) &&

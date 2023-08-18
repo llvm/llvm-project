@@ -59,6 +59,7 @@ def BPFHasBswap : Predicate<"Subtarget->hasBswap()">;
 def BPFHasSdivSmod : Predicate<"Subtarget->hasSdivSmod()">;
 def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
+def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
 
 def brtarget : Operand<OtherVT> {
   let PrintMethod = "printBrTargetOperand";
@@ -75,6 +76,12 @@ def i64immSExt32 : PatLeaf<(i64 imm),
                 [{return isInt<32>(N->getSExtValue()); }]>;
 def i32immSExt32 : PatLeaf<(i32 imm),
                 [{return isInt<32>(N->getSExtValue()); }]>;
+def i64immZExt32 : PatLeaf<(i64 imm),
+                [{return isUInt<32>(N->getZExtValue()); }]>;
+
+def imm_to_i64 : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
 
 // Addressing modes.
 def ADDRri : ComplexPattern<i64, 2, "SelectAddr", [], []>;
@@ -449,7 +456,7 @@ class STORE<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
 }
 
 class STOREi64<BPFWidthModifer Opc, string OpcodeStr, PatFrag OpNode>
-    : STORE<Opc, OpcodeStr, [(OpNode i64:$src, ADDRri:$addr)]>;
+    : STORE<Opc, OpcodeStr, [(OpNode GPR:$src, ADDRri:$addr)]>;
 
 let Predicates = [BPFNoALU32] in {
   def STW : STOREi64<BPF_W, "u32", truncstorei32>;
@@ -457,6 +464,50 @@ let Predicates = [BPFNoALU32] in {
   def STB : STOREi64<BPF_B, "u8", truncstorei8>;
 }
 def STD : STOREi64<BPF_DW, "u64", store>;
+
+class STORE_imm<BPFWidthModifer SizeOp,
+                string OpcodeStr, dag Pattern>
+    : TYPE_LD_ST<BPF_MEM.Value, SizeOp.Value,
+                 (outs),
+                 (ins i64imm:$imm, MEMri:$addr),
+                 "*("#OpcodeStr#" *)($addr) = $imm",
+                 [Pattern]> {
+  bits<20> addr;
+  bits<32> imm;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{47-32} = addr{15-0};  // offset
+  let Inst{31-0} = imm;
+  let BPFClass = BPF_ST;
+}
+
+let Predicates = [BPFHasStoreImm] in {
+  // Opcode (BPF_ST | BPF_MEM | BPF_DW) implies sign extension for
+  // value stored to memory:
+  // - it is fine to generate such write when immediate is -1
+  // - it is incorrect to generate such write when immediate is
+  //   +0xffff_ffff.
+  //
+  // In the latter case two instructions would be generated instead of
+  // one BPF_ST:
+  //   rA = 0xffffffff ll     ; LD_imm64
+  //   *(u64 *)(rB + 0) = rA  ; STX
+  //
+  // For BPF_{B,H,W} the size of value stored matches size of the immediate.
+  def STD_imm : STORE_imm<BPF_DW, "u64", (store         (i64 i64immSExt32:$imm), ADDRri:$addr)>;
+  def STW_imm : STORE_imm<BPF_W,  "u32", (truncstorei32 (i64 i64immZExt32:$imm), ADDRri:$addr)>;
+  def STH_imm : STORE_imm<BPF_H,  "u16", (truncstorei16 (i64 i64immZExt32:$imm), ADDRri:$addr)>;
+  def STB_imm : STORE_imm<BPF_B,  "u8",  (truncstorei8  (i64 i64immZExt32:$imm), ADDRri:$addr)>;
+}
+
+let Predicates = [BPFHasALU32, BPFHasStoreImm] in {
+  def : Pat<(store (i32 imm:$src), ADDRri:$dst),
+            (STW_imm (imm_to_i64 $src), ADDRri:$dst)>;
+  def : Pat<(truncstorei16 (i32 imm:$src), ADDRri:$dst),
+            (STH_imm (imm_to_i64 imm:$src), ADDRri:$dst)>;
+  def : Pat<(truncstorei8 (i32 imm:$src), ADDRri:$dst),
+            (STB_imm (imm_to_i64 imm:$src), ADDRri:$dst)>;
+}
 
 // LOAD instructions
 class LOAD<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, list<dag> Pattern>
@@ -1007,7 +1058,7 @@ class STORE32<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
 }
 
 class STOREi32<BPFWidthModifer Opc, string OpcodeStr, PatFrag OpNode>
-    : STORE32<Opc, OpcodeStr, [(OpNode i32:$src, ADDRri:$addr)]>;
+    : STORE32<Opc, OpcodeStr, [(OpNode GPR32:$src, ADDRri:$addr)]>;
 
 let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
   def STW32 : STOREi32<BPF_W, "u32", store>;

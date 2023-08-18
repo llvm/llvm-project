@@ -457,11 +457,15 @@ void applyShuffleVectorPseudo(MachineInstr &MI,
 /// for the imported tablegen patterns to work.
 void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
-  // Tablegen patterns expect an i32 G_CONSTANT as the final op.
-  auto Cst =
-      MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
-  MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
-                        {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
+  if (MatchInfo.SrcOps[2].getImm() == 0)
+    MIRBuilder.buildCopy(MatchInfo.Dst, MatchInfo.SrcOps[0]);
+  else {
+    // Tablegen patterns expect an i32 G_CONSTANT as the final op.
+    auto Cst =
+        MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
+    MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
+                          {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
+  }
   MI.eraseFromParent();
 }
 

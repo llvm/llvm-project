@@ -5634,6 +5634,43 @@ TEST_P(ImportFriendFunctionTemplates, LookupShouldFindPreviousFriend) {
   EXPECT_EQ(Imported->getPreviousDecl(), Friend);
 }
 
+TEST_P(ImportFriendFunctionTemplates, ImportFriendFunctionInsideClassTemplate) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      template <typename T> struct X {
+        template <typename U> friend void f();
+      };
+      )",
+      Lang_CXX03, "", Lang_CXX03, "X");
+
+  auto *FromFriend = FirstDeclMatcher<FriendDecl>().match(From, friendDecl());
+  auto *ToFriend = FirstDeclMatcher<FriendDecl>().match(To, friendDecl());
+
+  EXPECT_TRUE(FromFriend ==
+              LastDeclMatcher<FriendDecl>().match(From, friendDecl()));
+  EXPECT_TRUE(ToFriend ==
+              LastDeclMatcher<FriendDecl>().match(To, friendDecl()));
+
+  auto *FromDecl = FromFriend->getFriendDecl();
+  auto *FromDC = FromFriend->getDeclContext();
+  auto *FromLexicalDC = FromFriend->getLexicalDeclContext();
+
+  EXPECT_TRUE(FromDC->containsDecl(FromFriend));
+  EXPECT_FALSE(FromDC->containsDecl(FromDecl));
+  EXPECT_TRUE(FromLexicalDC->containsDecl(FromFriend));
+  EXPECT_FALSE(FromLexicalDC->containsDecl(FromDecl));
+
+  auto *ToDecl = ToFriend->getFriendDecl();
+  auto *ToDC = ToFriend->getDeclContext();
+  auto *ToLexicalDC = ToFriend->getLexicalDeclContext();
+
+  EXPECT_TRUE(ToDC->containsDecl(ToFriend));
+  EXPECT_FALSE(ToDC->containsDecl(ToDecl));
+  EXPECT_TRUE(ToLexicalDC->containsDecl(ToFriend));
+  EXPECT_FALSE(ToLexicalDC->containsDecl(ToDecl));
+}
+
 struct ASTImporterWithFakeErrors : ASTImporter {
   using ASTImporter::ASTImporter;
   bool returnWithErrorInTest() override { return true; }
@@ -8636,6 +8673,24 @@ TEST_P(ImportInjectedClassNameType, ImportTypedefType) {
   EXPECT_TRUE(isa<InjectedClassNameType>(ToInjTypedef));
   EXPECT_TRUE(isa<InjectedClassNameType>(ToInjParmVar));
   EXPECT_TRUE(ToCtx.hasSameType(ToInjTypedef, ToInjParmVar));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportMacroQualifiedType) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+        #define CDECL __attribute__((cdecl))
+        typedef void (CDECL *X)();
+      )",
+      Lang_CXX03, "", Lang_CXX03, "X");
+
+  auto *FromTy =
+      FirstDeclMatcher<MacroQualifiedType>().match(From, macroQualifiedType());
+  auto *ToTy =
+      FirstDeclMatcher<MacroQualifiedType>().match(To, macroQualifiedType());
+
+  EXPECT_TRUE(isa<AttributedType>(FromTy->getUnderlyingType()));
+  EXPECT_TRUE(isa<AttributedType>(ToTy->getUnderlyingType()));
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportCorrectTemplateName) {

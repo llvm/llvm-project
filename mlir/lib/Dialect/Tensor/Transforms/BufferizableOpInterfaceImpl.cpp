@@ -48,10 +48,10 @@ struct CastOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto castOp = cast<tensor::CastOp>(op);
-    auto maybeSrcBufferType =
-        bufferization::getBufferType(castOp.getSource(), options, fixedTypes);
+    auto maybeSrcBufferType = bufferization::getBufferType(
+        castOp.getSource(), options, invocationStack);
     if (failed(maybeSrcBufferType))
       return failure();
     Attribute memorySpace = maybeSrcBufferType->getMemorySpace();
@@ -133,10 +133,10 @@ struct CollapseShapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
     auto maybeSrcBufferType = bufferization::getBufferType(
-        collapseShapeOp.getSrc(), options, fixedTypes);
+        collapseShapeOp.getSrc(), options, invocationStack);
     if (failed(maybeSrcBufferType))
       return failure();
     auto srcBufferType = llvm::cast<MemRefType>(*maybeSrcBufferType);
@@ -302,10 +302,10 @@ struct ExpandShapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
     auto maybeSrcBufferType = bufferization::getBufferType(
-        expandShapeOp.getSrc(), options, fixedTypes);
+        expandShapeOp.getSrc(), options, invocationStack);
     if (failed(maybeSrcBufferType))
       return failure();
     auto srcBufferType = llvm::cast<MemRefType>(*maybeSrcBufferType);
@@ -383,11 +383,11 @@ struct ExtractSliceOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     assert(value == extractSliceOp.getResult() && "invalid value");
     auto srcMemrefType = bufferization::getBufferType(
-        extractSliceOp.getSource(), options, fixedTypes);
+        extractSliceOp.getSource(), options, invocationStack);
     if (failed(srcMemrefType))
       return failure();
     SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
@@ -853,11 +853,11 @@ struct PadOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     // Infer memory space from the source tensor.
     auto padOp = cast<tensor::PadOp>(op);
-    auto maybeSrcBufferType =
-        bufferization::getBufferType(padOp.getSource(), options, fixedTypes);
+    auto maybeSrcBufferType = bufferization::getBufferType(
+        padOp.getSource(), options, invocationStack);
     if (failed(maybeSrcBufferType))
       return failure();
     MemRefLayoutAttrInterface layout;
@@ -1002,11 +1002,11 @@ struct ReshapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+                SmallVector<Value> &invocationStack) const {
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
     assert(value == reshapeOp.getResult() && "unexpected value provided");
     auto maybeSourceBufferType = bufferization::getBufferType(
-        reshapeOp.getSource(), options, fixedTypes);
+        reshapeOp.getSource(), options, invocationStack);
     if (failed(maybeSourceBufferType))
       return failure();
     return getMemRefTypeWithStaticIdentityLayout(

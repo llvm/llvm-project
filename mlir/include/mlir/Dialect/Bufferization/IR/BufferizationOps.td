@@ -108,7 +108,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
-        const DenseMap<Value, BaseMemRefType> &fixedTypes);
+        SmallVector<Value> &invocationStack);
 
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
@@ -388,7 +388,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
-        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+        SmallVector<Value> &invocationStack) {
       return ::llvm::cast<BaseMemRefType>(getMemref().getType());
     }
   }];

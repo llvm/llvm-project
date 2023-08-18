@@ -4,6 +4,7 @@ declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
 
 declare double @llvm.amdgcn.sqrt.f64(double) #0
+declare float @llvm.amdgcn.sqrt.f32(float) #0
 declare double @llvm.sqrt.f64(double) #0
 declare float @llvm.sqrt.f32(float) #0
 
@@ -66,8 +67,28 @@ define amdgpu_kernel void @unsafe_f32_denormals_rcp_pat_f32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_f32:
 ; SI: v_rsq_f32_e32
 define amdgpu_kernel void @safe_rsq_rcp_pat_f32(ptr addrspace(1) %out, float %src) #1 {
-  %sqrt = call float @llvm.sqrt.f32(float %src)
-  %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
+  %sqrt = call contract float @llvm.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_amdgcn_sqrt_f32:
+; SI: v_sqrt_f32_e32
+; SI: v_rcp_f32_e32
+define amdgpu_kernel void @safe_rsq_rcp_pat_amdgcn_sqrt_f32(ptr addrspace(1) %out, float %src) #1 {
+  %sqrt = call contract float @llvm.amdgcn.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_amdgcn_sqrt_f32_nocontract:
+; SI: v_sqrt_f32_e32
+; SI: v_rcp_f32_e32
+define amdgpu_kernel void @safe_rsq_rcp_pat_amdgcn_sqrt_f32_nocontract(ptr addrspace(1) %out, float %src) #1 {
+  %sqrt = call float @llvm.amdgcn.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }

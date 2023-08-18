@@ -44,12 +44,12 @@ extern ompt_set_frame_enter_t ompt_set_frame_enter_fn;
 class Interface {
 public:
   /// Top-level function for invoking callback before device data allocation
-  void beginTargetDataAlloc(int64_t DeviceId, void *TgtPtrBegin, size_t Size,
-                            void *Code);
+  void beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
+                            void **TgtPtrBegin, size_t Size, void *Code);
 
   /// Top-level function for invoking callback after device data allocation
-  void endTargetDataAlloc(int64_t DeviceId, void *TgtPtrBegin, size_t Size,
-                          void *Code);
+  void endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
+                          void **TgtPtrBegin, size_t Size, void *Code);
 
   /// Top-level function for invoking callback before data submit
   void beginTargetDataSubmit(int64_t DeviceId, void *HstPtrBegin,
