@@ -1176,11 +1176,7 @@ groupWarningGadgetsByVar(const WarningGadgetList &AllUnsafeOperations) {
 }
 
 struct FixableGadgetSets {
-  std::map<const VarDecl *, std::set<const FixableGadget *>,
-           // To keep keys sorted by their locations in the map so that the
-           // order is deterministic:
-           CompareNode<VarDecl>>
-      byVar;
+  std::map<const VarDecl *, std::set<const FixableGadget *>> byVar;
 };
 
 static FixableGadgetSets
@@ -1386,7 +1382,7 @@ static std::optional<StringRef> getRangeText(SourceRange SR,
                                              const SourceManager &SM,
                                              const LangOptions &LangOpts) {
   bool Invalid = false;
-  CharSourceRange CSR = CharSourceRange::getCharRange(SR);
+  CharSourceRange CSR = CharSourceRange::getCharRange(SR.getBegin(), SR.getEnd());
   StringRef Text = Lexer::getSourceText(CSR, SM, LangOpts, &Invalid);
 
   if (!Invalid)
@@ -2229,7 +2225,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 	  ASTContext &Ctx,
           /* The function decl under analysis */ const Decl *D,
           const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
-          const VariableGroupsManager &VarGrpMgr) {
+          const DefMapTy &VarGrpMap) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
   for (const auto &[VD, Fixables] : FixablesForAllVars.byVar) {
     FixItsForVariable[VD] =
@@ -2265,10 +2261,9 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
       continue;
     }
 
-    
-   {
-      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(VD);
-      for (const VarDecl * V : VarGroupForVD) {
+    const auto VarGroupForVD = VarGrpMap.find(VD);
+    if (VarGroupForVD != VarGrpMap.end()) {
+      for (const VarDecl * V : VarGroupForVD->second) {
         if (V == VD) {
           continue;
         }
@@ -2280,7 +2275,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 
       if (ImpossibleToFix) {
         FixItsForVariable.erase(VD);
-        for (const VarDecl * V : VarGroupForVD) {
+        for (const VarDecl * V : VarGroupForVD->second) {
           FixItsForVariable.erase(V);
         }
         continue;
@@ -2298,24 +2293,30 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
     }
   }
 
-  // The map that maps each variable `v` to fix-its for the whole group where
-  // `v` is in:
-  std::map<const VarDecl *, FixItList> FinalFixItsForVariable{
-      FixItsForVariable};
+  for (auto VD : FixItsForVariable) {
+    const auto VarGroupForVD = VarGrpMap.find(VD.first);
+    const Strategy::Kind ReplacementTypeForVD = S.lookup(VD.first);
+    if (VarGroupForVD != VarGrpMap.end()) {
+      for (const VarDecl * Var : VarGroupForVD->second) {
+        if (Var == VD.first) {
+          continue;
+        }
 
-  for (auto &[Var, Ignore] : FixItsForVariable) {
-    const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Var);
+        FixItList GroupFix;
+        if (FixItsForVariable.find(Var) == FixItsForVariable.end()) {
+          GroupFix = fixVariable(Var, ReplacementTypeForVD, D, Tracker,
+                                 Var->getASTContext(), Handler);
+        } else {
+          GroupFix = FixItsForVariable[Var];
+        }
 
-    for (const VarDecl *GrpMate : VarGroupForVD) {
-      if (Var == GrpMate)
-        continue;
-      if (FixItsForVariable.count(GrpMate))
-        FinalFixItsForVariable[Var].insert(FinalFixItsForVariable[Var].end(),
-                                           FixItsForVariable[GrpMate].begin(),
-                                           FixItsForVariable[GrpMate].end());
+        for (auto Fix : GroupFix) {
+          FixItsForVariable[VD.first].push_back(Fix);
+        }
+      }
     }
   }
-  return FinalFixItsForVariable;
+  return FixItsForVariable;
 }
 
 
@@ -2327,24 +2328,6 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
   }
   return S;
 }
-
-//  Manages variable groups:
-class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
-  const std::map<const VarDecl *, unsigned> &VarGrpMap;
-
-public:
-  VariableGroupsManagerImpl(
-      const std::vector<VarGrpTy> &Groups,
-      const std::map<const VarDecl *, unsigned> &VarGrpMap)
-      : Groups(Groups), VarGrpMap(VarGrpMap) {}
-
-  VarGrpRef getGroupOfVar(const VarDecl *Var) const override {
-    auto I = VarGrpMap.find(Var);
-    assert(I != VarGrpMap.end());
-    return Groups[I->second];
-  }
-};
 
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
@@ -2425,6 +2408,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
+  DefMapTy VariableGroupsMap{};
 
   // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
   for (auto it = FixablesForAllVars.byVar.cbegin();
@@ -2467,7 +2451,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     UnsafeVars.push_back(VD);
 
   // Fixpoint iteration for pointer assignments
-  using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
+  using DepMapTy = DenseMap<const VarDecl *, std::set<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 
@@ -2476,7 +2460,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       std::optional<std::pair<const VarDecl *, const VarDecl *>> ImplPair =
                                   fixable->getStrategyImplications();
       if (ImplPair) {
-        std::pair<const VarDecl *, const VarDecl *> Impl = std::move(*ImplPair);
+        std::pair<const VarDecl *, const VarDecl *> Impl = ImplPair.value();
         PtrAssignmentGraph[Impl.first].insert(Impl.second);
       }
     }
@@ -2521,21 +2505,14 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     }
   }
 
-  // `Groups` stores the set of Connected Components in the graph.
-  std::vector<VarGrpTy> Groups;
-  // `VarGrpMap` maps variables that need fix to the groups (indexes) that the
-  // variables belong to.  Group indexes refer to the elements in `Groups`.
-  // `VarGrpMap` is complete in that every variable that needs fix is in it.
-  std::map<const VarDecl *, unsigned> VarGrpMap;
-
   // Group Connected Components for Unsafe Vars
   // (Dependencies based on pointer assignments)
   std::set<const VarDecl *> VisitedVars{};
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVars.find(Var) == VisitedVars.end()) {
-      VarGrpTy &VarGroup = Groups.emplace_back();
-      std::queue<const VarDecl*> Queue{};
+      std::vector<const VarDecl *> VarGroup{};
 
+      std::queue<const VarDecl*> Queue{};
       Queue.push(Var);
       while(!Queue.empty()) {
         const VarDecl* CurrentVar = Queue.front();
@@ -2549,10 +2526,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
           }
         }
       }
-      unsigned GrpIdx = Groups.size() - 1;
-
-      for (const VarDecl *V : VarGroup) {
-        VarGrpMap[V] = GrpIdx;
+      for (const VarDecl * V : VarGroup) {
+        if (UnsafeOps.byVar.find(V) != UnsafeOps.byVar.end()) {
+          VariableGroupsMap[V] = VarGroup;
+        }
       }
     }
   }
@@ -2586,11 +2563,12 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   }
 
   Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
-  VariableGroupsManagerImpl VarGrpMgr(Groups, VarGrpMap);
 
   FixItsForVariableGroup =
       getFixIts(FixablesForAllVars, NaiveStrategy, D->getASTContext(), D,
-                Tracker, Handler, VarGrpMgr);
+                Tracker, Handler, VariableGroupsMap);
+
+  // FIXME Detect overlapping FixIts.
 
   for (const auto &G : UnsafeOps.noVar) {
     Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
@@ -2598,7 +2576,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
     auto FixItsIt = FixItsForVariableGroup.find(VD);
-    Handler.handleUnsafeVariableGroup(VD, VarGrpMgr,
+    Handler.handleUnsafeVariableGroup(VD, VariableGroupsMap,
                                       FixItsIt != FixItsForVariableGroup.end()
                                       ? std::move(FixItsIt->second)
                                       : FixItList{});
