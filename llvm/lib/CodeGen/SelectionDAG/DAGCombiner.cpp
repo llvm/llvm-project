@@ -25597,25 +25597,10 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     return N0;
 
   // If this is an insert of an extracted vector into an undef vector, we can
-  // just use the input to the extract if the types match, and can simplify
-  // in some cases even if they don't..
+  // just use the input to the extract.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      N1.getOperand(1) == N2) {
-    EVT SrcVT = N1.getOperand(0).getValueType();
-    if (SrcVT == VT)
-      return N1.getOperand(0);
-    // TODO: To remove the zero check, need to adjust the offset to
-    // a multiple of the new src type.
-    if (isNullConstant(N2) &&
-        VT.isScalableVector() == SrcVT.isScalableVector()) {
-      if (VT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements())
-        return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
-                           VT, N0, N1.getOperand(0), N2);
-      else
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N),
-                           VT, N1.getOperand(0), N2);
-    }
-  }
+      N1.getOperand(1) == N2 && N1.getOperand(0).getValueType() == VT)
+    return N1.getOperand(0);
 
   // Simplify scalar inserts into an undef vector:
   // insert_subvector undef, (splat X), N2 -> splat X

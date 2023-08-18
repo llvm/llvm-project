@@ -159,10 +159,8 @@ define <vscale x 1 x i32> @extract_vector_multiuse2(ptr %p, ptr %p2, i32 %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -177,10 +175,8 @@ define void @extract_vector_mixed1(ptr %p, ptr %p2, i32 %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -200,8 +196,6 @@ define void @extract_vector_mixed2(ptr %p, ptr %p2, i32 %v) {
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -219,12 +213,9 @@ define void @extract_vector_mixed3(ptr %p, ptr %p2, i32 %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a2
-; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v9, (a1)
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
