@@ -924,15 +924,18 @@ checkPPCMathOperationsRange(llvm::StringRef name) {
 
 // Helper functions for vector element ordering.
 bool PPCIntrinsicLibrary::isBEVecElemOrderOnLE() {
-  return (Fortran::evaluate::isHostLittleEndian &&
+  const auto triple{fir::getTargetTriple(builder.getModule())};
+  return (triple.isLittleEndian() &&
           converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
 }
 bool PPCIntrinsicLibrary::isNativeVecElemOrderOnLE() {
-  return (Fortran::evaluate::isHostLittleEndian &&
+  const auto triple{fir::getTargetTriple(builder.getModule())};
+  return (triple.isLittleEndian() &&
           !converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
 }
 bool PPCIntrinsicLibrary::changeVecElemOrder() {
-  return (Fortran::evaluate::isHostLittleEndian !=
+  const auto triple{fir::getTargetTriple(builder.getModule())};
+  return (triple.isLittleEndian() !=
           converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
 }
 
@@ -2205,12 +2208,19 @@ PPCIntrinsicLibrary::genVecShift(mlir::Type resultType,
       shiftVal = shiftVal << 2;
     shiftVal &= 0xF;
     llvm::SmallVector<int64_t, 16> mask;
-    for (int i = 16; i < 32; ++i)
-      mask.push_back(i - shiftVal);
-
-    // Shuffle with mask
-    shftRes = builder.create<mlir::vector::ShuffleOp>(loc, mlirVecArgs[1],
-                                                      mlirVecArgs[0], mask);
+    // Shuffle with mask based on the endianness
+    const auto triple{fir::getTargetTriple(builder.getModule())};
+    if (triple.isLittleEndian()) {
+      for (int i = 16; i < 32; ++i)
+        mask.push_back(i - shiftVal);
+      shftRes = builder.create<mlir::vector::ShuffleOp>(loc, mlirVecArgs[1],
+                                                        mlirVecArgs[0], mask);
+    } else {
+      for (int i = 0; i < 16; ++i)
+        mask.push_back(i + shiftVal);
+      shftRes = builder.create<mlir::vector::ShuffleOp>(loc, mlirVecArgs[0],
+                                                        mlirVecArgs[1], mask);
+    }
 
     // Bitcast to the original type
     if (shftRes.getType() != mlirTyArgs[0])
@@ -2593,7 +2603,8 @@ void PPCIntrinsicLibrary::genMmaIntr(llvm::ArrayRef<fir::ExtendedValue> args) {
   } else if (HandlerOp == MMAHandlerOp::SubToFuncReverseArgOnLE) {
     // Reverse argument order on little-endian target only.
     // The reversal does not depend on the setting of non-native-order option.
-    if (Fortran::evaluate::isHostLittleEndian) {
+    const auto triple{fir::getTargetTriple(builder.getModule())};
+    if (triple.isLittleEndian()) {
       // Load the arguments in reverse order.
       argStart = args.size() - 1;
       // The first argument becomes function result. Stop at the second
