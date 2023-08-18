@@ -735,6 +735,174 @@ DeclarationFragmentsBuilder::getFragmentsForOverloadedOperator(
   return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
+// Get fragments for template parameters, e.g. T in tempalte<typename T> ...
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
+    ArrayRef<NamedDecl *> ParameterArray) {
+  DeclarationFragments Fragments;
+  for (unsigned i = 0, end = ParameterArray.size(); i != end; ++i) {
+    if (i)
+      Fragments.append(",", DeclarationFragments::FragmentKind::Text)
+          .appendSpace();
+
+    const auto *TemplateParam =
+        dyn_cast<TemplateTypeParmDecl>(ParameterArray[i]);
+    if (!TemplateParam)
+      continue;
+    if (TemplateParam->hasTypeConstraint())
+      Fragments.append(TemplateParam->getTypeConstraint()
+                           ->getNamedConcept()
+                           ->getName()
+                           .str(),
+                       DeclarationFragments::FragmentKind::TypeIdentifier);
+    else if (TemplateParam->wasDeclaredWithTypename())
+      Fragments.append("typename", DeclarationFragments::FragmentKind::Keyword);
+    else
+      Fragments.append("class", DeclarationFragments::FragmentKind::Keyword);
+
+    if (TemplateParam->isParameterPack())
+      Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+
+    Fragments.appendSpace().append(
+        TemplateParam->getName(),
+        DeclarationFragments::FragmentKind::GenericParameter);
+  }
+  return Fragments;
+}
+
+// Find the name of a template argument from the template's parameters.
+std::string DeclarationFragmentsBuilder::getNameForTemplateArgument(
+    const ArrayRef<NamedDecl *> TemplateParameters, std::string TypeParameter) {
+  // The arg is a generic parameter from a partial spec, e.g.
+  // T in template<typename T> Foo<T, int>.
+  //
+  // Those names appear as "type-parameter-<index>-<depth>", so we must find its
+  // name from the template's parameter list.
+  for (unsigned i = 0; i < TemplateParameters.size(); ++i) {
+    const auto *Parameter =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParameters[i]);
+    if (TypeParameter.compare("type-parameter-" +
+                              std::to_string(Parameter->getDepth()) + "-" +
+                              std::to_string(Parameter->getIndex())) == 0)
+      return std::string(TemplateParameters[i]->getName());
+  }
+  llvm_unreachable("Could not find the name of a template argument.");
+}
+
+// Get fragments for template arguments, e.g. int in template<typename T>
+// Foo<int>;
+//
+// Note: TemplateParameters is only necessary if the Decl is a
+// PartialSpecialization, where we need the parameters to deduce the name of the
+// generic arguments.
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
+    const ArrayRef<TemplateArgument> TemplateArguments, ASTContext &Context,
+    const std::optional<ArrayRef<NamedDecl *>> TemplateParameters) {
+  DeclarationFragments Fragments;
+  for (unsigned i = 0, end = TemplateArguments.size(); i != end; ++i) {
+    if (i)
+      Fragments.append(",", DeclarationFragments::FragmentKind::Text)
+          .appendSpace();
+
+    std::string Type = TemplateArguments[i].getAsType().getAsString();
+    DeclarationFragments After;
+    DeclarationFragments ArgumentFragment =
+        getFragmentsForType(TemplateArguments[i].getAsType(), Context, After);
+
+    if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
+            "type-parameter") == 0) {
+      std::string ProperArgName = getNameForTemplateArgument(
+          TemplateParameters.value(), ArgumentFragment.begin()->Spelling);
+      ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+    }
+    Fragments.append(std::move(ArgumentFragment));
+
+    if (TemplateArguments[i].isPackExpansion())
+      Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+  }
+  return Fragments;
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForConcept(
+    const ConceptDecl *Concept) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          Concept->getTemplateParameters()->asArray()))
+      .append("> ", DeclarationFragments::FragmentKind::Text)
+      .append("concept", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace()
+      .append(Concept->getName().str(),
+              DeclarationFragments::FragmentKind::Identifier)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(
+    const RedeclarableTemplateDecl *RedeclarableTemplate) {
+  DeclarationFragments Fragments;
+  Fragments.append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          RedeclarableTemplate->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace();
+
+  if (isa<TypeAliasTemplateDecl>(RedeclarableTemplate))
+    Fragments.appendSpace()
+        .append("using", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace()
+        .append(RedeclarableTemplate->getName(),
+                DeclarationFragments::FragmentKind::Identifier);
+  // the templated records will be resposbible for injecting their templates
+  return Fragments.appendSpace();
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
+    const ClassTemplateSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
+          cast<CXXRecordDecl>(Decl)))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(
+          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
+                                           Decl->getASTContext(), std::nullopt))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForClassTemplatePartialSpecialization(
+    const ClassTemplatePartialSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
+          cast<CXXRecordDecl>(Decl)))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForMacro(StringRef Name,
                                                   const MacroDirective *MD) {
