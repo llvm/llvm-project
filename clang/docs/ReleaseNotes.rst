@@ -349,6 +349,12 @@ Attribute Changes in Clang
 - Improve the AST fidelity of ``alignas`` and ``_Alignas`` attribute. Before, we
   model ``alignas(type-id)`` as though the user wrote ``alignas(alignof(type-id))``,
   now we directly use ``alignas(type-id)``.
+- When a non-variadic function is decorated with the ``format`` attribute,
+  Clang now checks that the format string would match the function's parameters'
+  types after default argument promotion. As a result, it's no longer an
+  automatic diagnostic to use parameters of types that the format style
+  supports but that are never the result of default argument promotion, such as
+  ``float``. (`#59824: <https://github.com/llvm/llvm-project/issues/59824>`_)
 
 Improvements to Clang's diagnostics
 -----------------------------------

@@ -94,13 +94,9 @@ void call_nonvariadic(void) {
   d3("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 }
 
-__attribute__((format(printf, 1, 2))) void forward_fixed(const char *fmt, int i) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
-  forward_fixed(fmt, i);
-  a(fmt, i);
-}
-
-__attribute__((format(printf, 1, 2))) void forward_fixed_2(const char *fmt, int i, int j) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
-  forward_fixed_2(fmt, i, j);
-  a(fmt, i);
+__attribute__((format(printf, 1, 2)))
+void forward_fixed(const char *fmt, _Bool b, char i, short j, int k, float l, double m) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+  forward_fixed(fmt, b, i, j, k, l, m);
+  a(fmt, b, i, j, k, l, m);
 }
 
