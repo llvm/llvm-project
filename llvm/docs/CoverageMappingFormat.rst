@@ -641,7 +641,7 @@ The only difference between Version1 and Version2 is in the encoding of the
 ``coverageMapping`` fields, which is explained later.
 
 Profile Names
-------------
+-------------
 
 ``profileNames``, ``coverageMapping`` and ``coverageRecords`` are 3 sections
 extracted from the original binary file.
@@ -651,7 +651,7 @@ extracted from the original binary file.
 ``[profileNamesSize : LEB128, profileNamesAddr : LEB128, profileNamesData : bytes]``
 
 Coverage Mapping
----------------
+----------------
 
 This field is padded with zero bytes to make it 8-byte aligned.
 
@@ -668,7 +668,7 @@ Version 2 relaxes this restriction by encoding the size of
 The current version is 2.
 
 Coverage Records
----------------
+----------------
 
 This field is padded with zero bytes to make it 8-byte aligned.
 
