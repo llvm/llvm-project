@@ -1590,10 +1590,10 @@ def CreateSymbolicateCrashLogOptions(
     arg_parser.add_argument(
         "--crashed-only",
         "-c",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         dest="crashed_only",
         help="only symbolicate the crashed thread",
-        default=False,
+        default=True,
     )
     arg_parser.add_argument(
         "--disasm-depth",
