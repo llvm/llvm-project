@@ -5,9 +5,6 @@
 ;
 ; RUN: llc -mtriple=x86_64-linux-unknown -o /dev/null -basic-block-sections=labels -mbb-profile-dump=- %s | FileCheck %s
 
-; bb profile dump is not supported on NVPTX
-; UNSUPPORTED: target=nvptx{{.*}}
-
 ; Check that given a simple case, we can return the default MBFI
 
 define i64 @f2(i64 %a, i64 %b) {

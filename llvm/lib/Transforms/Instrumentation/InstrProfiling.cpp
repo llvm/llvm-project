@@ -1057,12 +1057,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
           llvm::dwarf::DW_MSPACE_LLVM_none, /*AlignInBits=*/0, Annotations);
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
-    } else {
-      std::string Msg = ("Missing debug info for function " + Fn->getName() +
-                         "; required for profile correlation.")
-                            .str();
-      Ctx.diagnose(
-          DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
     }
   }
 

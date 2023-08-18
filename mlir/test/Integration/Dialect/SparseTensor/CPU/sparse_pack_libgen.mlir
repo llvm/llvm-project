@@ -20,7 +20,7 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with VLA vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=4
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true vl=4
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 // TODO: This is considered to be a short-living tests and should be merged with sparse_pack.mlir

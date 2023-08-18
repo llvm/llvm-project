@@ -648,6 +648,13 @@ def FeatureStdExtZvksg
                        "other extensions: Zvks and Zvkg.",
                        [FeatureStdExtZvks, FeatureStdExtZvkg]>;
 
+def FeatureStdExtZicfilp
+    : SubtargetFeature<"experimental-zicfilp", "HasStdExtZicfilp", "true",
+                       "'Zicfilp' (Landing pad)">;
+def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZicfilp),
+                                 "'Zicfilp' (Landing pad)">;
+
 def FeatureStdExtZicond
     : SubtargetFeature<"experimental-zicond", "HasStdExtZicond", "true",
                        "'Zicond' (Integer Conditional Operations)">;

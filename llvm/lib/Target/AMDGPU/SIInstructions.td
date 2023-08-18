@@ -270,7 +270,7 @@ let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses 
   }
 }
 
-let usesCustomInserter = 1, Defs = [VCC, EXEC] in {
+let usesCustomInserter = 1, Defs = [VCC] in {
 def V_ADD_U64_PSEUDO : VPseudoInstSI <
   (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
   [(set VReg_64:$vdst, (DivergentBinFrag<add> i64:$src0, i64:$src1))]
@@ -280,7 +280,7 @@ def V_SUB_U64_PSEUDO : VPseudoInstSI <
   (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
   [(set VReg_64:$vdst, (DivergentBinFrag<sub> i64:$src0, i64:$src1))]
 >;
-} // End usesCustomInserter = 1, Defs = [VCC, EXEC]
+} // End usesCustomInserter = 1, Defs = [VCC]
 
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <

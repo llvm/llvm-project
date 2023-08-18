@@ -43,7 +43,7 @@ namespace types {
 
   /// getTypeTempSuffix - Return the suffix to use when creating a
   /// temp file of this type, or null if unspecified.
-  const char *getTypeTempSuffix(ID Id, bool CLMode = false);
+  const char *getTypeTempSuffix(ID Id, bool CLStyle = false);
 
   /// onlyAssembleType - Should this type only be assembled.
   bool onlyAssembleType(ID Id);

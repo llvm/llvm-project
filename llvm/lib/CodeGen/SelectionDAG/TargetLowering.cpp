@@ -3852,8 +3852,12 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
     return SDValue();
   }
 
+  // TODO: We should invert (X & Y) eq/ne 0 -> (X & Y) ne/eq Y if
+  // `isXAndYEqZeroPreferableToXAndYEqY` is false. This is a bit difficult as
+  // its liable to create and infinite loop.
   SDValue Zero = DAG.getConstant(0, DL, OpVT);
-  if (DAG.isKnownToBeAPowerOfTwo(Y)) {
+  if (isXAndYEqZeroPreferableToXAndYEqY(Cond, OpVT) &&
+      DAG.isKnownToBeAPowerOfTwo(Y)) {
     // Simplify X & Y == Y to X & Y != 0 if Y has exactly one bit set.
     // Note that where Y is variable and is known to have at most one bit set
     // (for example, if it is Z & 1) we cannot do this; the expressions are not

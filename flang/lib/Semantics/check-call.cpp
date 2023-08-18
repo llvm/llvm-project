@@ -313,8 +313,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   allowActualArgumentConversions &= !typesCompatibleWithIgnoreTKR;
   if (allowActualArgumentConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
+    ConvertLogicalActual(actual, dummy.type, actualType);
   }
-  ConvertLogicalActual(actual, dummy.type, actualType);
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};

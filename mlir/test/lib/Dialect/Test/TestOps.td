@@ -985,7 +985,7 @@ def OpF : TEST_Op<"op_f">, Arguments<(ins I32)>, Results<(outs I32)>;
 def OpG : TEST_Op<"op_g">, Arguments<(ins I32)>, Results<(outs I32)>;
 // Verify that bumping benefit results in selecting different op.
 def : Pat<(OpD $input), (OpE $input)>;
-def : Pat<(OpD $input), (OpF $input), [], (addBenefit 10)>;
+def : Pat<(OpD $input), (OpF $input), [], [], (addBenefit 10)>;
 // Verify that patterns with more source nodes are selected before those with fewer.
 def : Pat<(OpG $input), (OpB $input, ConstantAttr<I32Attr, "20">:$attr)>;
 def : Pat<(OpG (OpG $input)), (OpB $input, ConstantAttr<I32Attr, "34">:$attr)>;
@@ -1803,7 +1803,7 @@ def : Pat<(ILLegalOpB), (LegalOpA Test_LegalizerEnum_Failure)>;
 def : Pat<(ILLegalOpC), (ILLegalOpD)>;
 def : Pat<(ILLegalOpD), (LegalOpA Test_LegalizerEnum_Failure)>;
 
-def : Pat<(ILLegalOpC), (ILLegalOpE), [], (addBenefit 10)>;
+def : Pat<(ILLegalOpC), (ILLegalOpE), [], [], (addBenefit 10)>;
 def : Pat<(ILLegalOpE), (LegalOpA Test_LegalizerEnum_Success)>;
 
 // Check that patterns use the most up-to-date value when being replaced.

@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -69,6 +70,10 @@ static cl::opt<unsigned> CBZDisplacementBits(
 static cl::opt<unsigned>
     BCCDisplacementBits("aarch64-bcc-offset-bits", cl::Hidden, cl::init(19),
                         cl::desc("Restrict range of Bcc instructions (DEBUG)"));
+
+static cl::opt<unsigned>
+    BDisplacementBits("aarch64-b-offset-bits", cl::Hidden, cl::init(26),
+                      cl::desc("Restrict range of B instructions (DEBUG)"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
@@ -203,7 +208,7 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
   default:
     llvm_unreachable("unexpected opcode!");
   case AArch64::B:
-    return 64;
+    return BDisplacementBits;
   case AArch64::TBNZW:
   case AArch64::TBZW:
   case AArch64::TBNZX:
@@ -246,6 +251,68 @@ AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case AArch64::Bcc:
     return MI.getOperand(1).getMBB();
   }
+}
+
+void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                            MachineBasicBlock &NewDestBB,
+                                            MachineBasicBlock &RestoreBB,
+                                            const DebugLoc &DL,
+                                            int64_t BrOffset,
+                                            RegScavenger *RS) const {
+  assert(RS && "RegScavenger required for long branching");
+  assert(MBB.empty() &&
+         "new block should be inserted for expanding unconditional branch");
+  assert(MBB.pred_size() == 1);
+  assert(RestoreBB.empty() &&
+         "restore block should be inserted for restoring clobbered registers");
+
+  auto buildIndirectBranch = [&](Register Reg, MachineBasicBlock &DestBB) {
+    // Offsets outside of the signed 33-bit range are not supported for ADRP +
+    // ADD.
+    if (!isInt<33>(BrOffset))
+      report_fatal_error(
+          "Branch offsets outside of the signed 33-bit range not supported");
+
+    BuildMI(MBB, MBB.end(), DL, get(AArch64::ADRP), Reg)
+        .addSym(DestBB.getSymbol(), AArch64II::MO_PAGE);
+    BuildMI(MBB, MBB.end(), DL, get(AArch64::ADDXri), Reg)
+        .addReg(Reg)
+        .addSym(DestBB.getSymbol(), AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
+        .addImm(0);
+    BuildMI(MBB, MBB.end(), DL, get(AArch64::BR)).addReg(Reg);
+  };
+
+  RS->enterBasicBlockEnd(MBB);
+  Register Reg = RS->FindUnusedReg(&AArch64::GPR64RegClass);
+
+  // If there's a free register, manually insert the indirect branch using it.
+  if (Reg != AArch64::NoRegister) {
+    buildIndirectBranch(Reg, NewDestBB);
+    RS->setRegUsed(Reg);
+    return;
+  }
+
+  // Otherwise, spill and use X16. This briefly moves the stack pointer, making
+  // it incompatible with red zones.
+  AArch64FunctionInfo *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  if (!AFI || AFI->hasRedZone().value_or(true))
+    report_fatal_error(
+        "Unable to insert indirect branch inside function that has red zone");
+
+  Reg = AArch64::X16;
+  BuildMI(MBB, MBB.end(), DL, get(AArch64::STRXpre))
+      .addReg(AArch64::SP, RegState::Define)
+      .addReg(Reg)
+      .addReg(AArch64::SP)
+      .addImm(-16);
+
+  buildIndirectBranch(Reg, RestoreBB);
+
+  BuildMI(RestoreBB, RestoreBB.end(), DL, get(AArch64::LDRXpost))
+      .addReg(AArch64::SP, RegState::Define)
+      .addReg(Reg, RegState::Define)
+      .addReg(AArch64::SP)
+      .addImm(16);
 }
 
 // Branch analysis.

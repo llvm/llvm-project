@@ -1871,7 +1871,7 @@ VETargetLowering::getCustomOperationAction(SDNode &Op) const {
 }
 
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
-  LLVM_DEBUG(dbgs() << "::LowerOperation"; Op->print(dbgs()););
+  LLVM_DEBUG(dbgs() << "::LowerOperation "; Op.dump(&DAG));
   unsigned Opcode = Op.getOpcode();
 
   /// Scalar isel.
@@ -1922,7 +1922,6 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 
   /// Vector isel.
-  LLVM_DEBUG(dbgs() << "::LowerOperation_VVP"; Op->print(dbgs()););
   if (ISD::isVPOpcode(Opcode))
     return lowerToVVP(Op, DAG);
 

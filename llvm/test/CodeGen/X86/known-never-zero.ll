@@ -8,6 +8,8 @@ declare i32 @llvm.cttz.i32(i32, i1)
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.bswap.i32(i32)
 declare i32 @llvm.bitreverse.i32(i32)
 declare i32 @llvm.ctpop.i32(i32)
@@ -246,6 +248,78 @@ define i32 @umin_maybe_zero(i32 %x, i32 %y) {
   ret i32 %r
 }
 
+define i32 @smin_known_nonzero(i32 %xx, i32 %yy) {
+; CHECK-LABEL: smin_known_nonzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    addl $4, %esi
+; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    cmovll %eax, %esi
+; CHECK-NEXT:    rep bsfl %esi, %eax
+; CHECK-NEXT:    retq
+  %x = shl nuw i32 4, %xx
+  %y = add nuw nsw i32 %yy, 4
+  %z = call i32 @llvm.smin.i32(i32 %x, i32 %y)
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @smin_maybe_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: smin_maybe_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $54, %edi
+; CHECK-NEXT:    movl $54, %eax
+; CHECK-NEXT:    cmovll %edi, %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    je .LBB15_1
+; CHECK-NEXT:  # %bb.2: # %cond.false
+; CHECK-NEXT:    rep bsfl %eax, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB15_1:
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    retq
+  %z = call i32 @llvm.smin.i32(i32 %x, i32 54)
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @smax_known_nonzero(i32 %xx, i32 %yy) {
+; CHECK-LABEL: smax_known_nonzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    addl $4, %esi
+; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    cmovgl %eax, %esi
+; CHECK-NEXT:    rep bsfl %esi, %eax
+; CHECK-NEXT:    retq
+  %x = shl nuw i32 4, %xx
+  %y = add nuw nsw i32 %yy, 4
+  %z = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @smax_maybe_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: smax_maybe_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $55, %edi
+; CHECK-NEXT:    movl $54, %eax
+; CHECK-NEXT:    cmovgel %edi, %eax
+; CHECK-NEXT:    bsfl %eax, %ecx
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    retq
+  %z = call i32 @llvm.smax.i32(i32 %x, i32 54)
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
 define i32 @rotr_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-LABEL: rotr_known_nonzero:
 ; CHECK:       # %bb.0:
@@ -254,11 +328,11 @@ define i32 @rotr_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    rorl %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB14_1
+; CHECK-NEXT:    je .LBB18_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB14_1:
+; CHECK-NEXT:  .LBB18_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 256
@@ -277,11 +351,11 @@ define i32 @rotr_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    rorl %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB15_1
+; CHECK-NEXT:    je .LBB19_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB15_1:
+; CHECK-NEXT:  .LBB19_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %shr = lshr i32 %x, %y
@@ -314,11 +388,11 @@ define i32 @rotr_with_fshr_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    rorl %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB17_1
+; CHECK-NEXT:    je .LBB21_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB17_1:
+; CHECK-NEXT:  .LBB21_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %y)
@@ -334,11 +408,11 @@ define i32 @rotl_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB18_1
+; CHECK-NEXT:    je .LBB22_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB18_1:
+; CHECK-NEXT:  .LBB22_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 256
@@ -357,11 +431,11 @@ define i32 @rotl_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB19_1
+; CHECK-NEXT:    je .LBB23_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB19_1:
+; CHECK-NEXT:  .LBB23_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %shl = shl i32 %x, %y
@@ -394,11 +468,11 @@ define i32 @rotl_with_fshl_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB21_1
+; CHECK-NEXT:    je .LBB25_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB21_1:
+; CHECK-NEXT:  .LBB25_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %y)
@@ -442,11 +516,11 @@ define i32 @sra_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %esi
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB24_1
+; CHECK-NEXT:    je .LBB28_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB24_1:
+; CHECK-NEXT:  .LBB28_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = ashr exact i32 %y, %x
@@ -490,11 +564,11 @@ define i32 @srl_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %esi
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB27_1
+; CHECK-NEXT:    je .LBB31_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB27_1:
+; CHECK-NEXT:  .LBB31_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = lshr exact i32 %y, %x
@@ -524,11 +598,11 @@ define i32 @udiv_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB29_1
+; CHECK-NEXT:    je .LBB33_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB29_1:
+; CHECK-NEXT:  .LBB33_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = udiv exact i32 %x, %y
@@ -558,11 +632,11 @@ define i32 @sdiv_maybe_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %esi
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB31_1
+; CHECK-NEXT:    je .LBB35_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB31_1:
+; CHECK-NEXT:  .LBB35_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = sdiv exact i32 %x, %y
@@ -588,11 +662,11 @@ define i32 @add_maybe_zero(i32 %xx, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl $1, %edi
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    je .LBB33_1
+; CHECK-NEXT:    je .LBB37_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB33_1:
+; CHECK-NEXT:  .LBB37_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 1
@@ -639,11 +713,11 @@ define i32 @sub_maybe_zero(i32 %x) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    orl $64, %eax
 ; CHECK-NEXT:    subl %edi, %eax
-; CHECK-NEXT:    je .LBB36_1
+; CHECK-NEXT:    je .LBB40_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB36_1:
+; CHECK-NEXT:  .LBB40_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %x, 64
@@ -656,11 +730,11 @@ define i32 @sub_maybe_zero2(i32 %x) {
 ; CHECK-LABEL: sub_maybe_zero2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    je .LBB37_1
+; CHECK-NEXT:    je .LBB41_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB37_1:
+; CHECK-NEXT:  .LBB41_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = sub i32 0, %x
@@ -674,11 +748,11 @@ define i32 @mul_known_nonzero_nsw(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB38_1
+; CHECK-NEXT:    je .LBB42_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB38_1:
+; CHECK-NEXT:  .LBB42_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
@@ -693,11 +767,11 @@ define i32 @mul_known_nonzero_nuw(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB39_1
+; CHECK-NEXT:    je .LBB43_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB39_1:
+; CHECK-NEXT:  .LBB43_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
@@ -711,11 +785,11 @@ define i32 @mul_maybe_zero(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    imull %esi, %edi
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB40_1
+; CHECK-NEXT:    je .LBB44_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB40_1:
+; CHECK-NEXT:  .LBB44_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = mul nuw nsw i32 %y, %x
@@ -748,11 +822,11 @@ define i32 @bitcast_maybe_zero(<2 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB42_1
+; CHECK-NEXT:    je .LBB46_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB42_1:
+; CHECK-NEXT:  .LBB46_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = bitcast <2 x i16> %x to i32
@@ -765,11 +839,11 @@ define i32 @bitcast_from_float(float %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB43_1
+; CHECK-NEXT:    je .LBB47_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB43_1:
+; CHECK-NEXT:  .LBB47_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = bitcast float %x to i32
@@ -797,12 +871,12 @@ define i32 @zext_maybe_zero(i16 %x) {
 ; CHECK-LABEL: zext_maybe_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testw %di, %di
-; CHECK-NEXT:    je .LBB45_1
+; CHECK-NEXT:    je .LBB49_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB45_1:
+; CHECK-NEXT:  .LBB49_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = zext i16 %x to i32
@@ -830,12 +904,12 @@ define i32 @sext_maybe_zero(i16 %x) {
 ; CHECK-LABEL: sext_maybe_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testw %di, %di
-; CHECK-NEXT:    je .LBB47_1
+; CHECK-NEXT:    je .LBB51_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
 ; CHECK-NEXT:    movswl %di, %eax
 ; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB47_1:
+; CHECK-NEXT:  .LBB51_1:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    retq
   %z = sext i16 %x to i32
