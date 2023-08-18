@@ -3417,6 +3417,38 @@ TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
                       (ReconstructType(type)), (ReconstructType(type)));
 }
 
+swift::Demangle::NodePointer
+TypeSystemSwiftTypeRef::GetStaticSelfType(swift::Demangle::Demangler &dem,
+                                          swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
+  return TypeSystemSwiftTypeRef::Transform(dem, node, [](NodePointer node) {
+    if (node->getKind() != Node::Kind::DynamicSelf)
+      return node;
+    // Substitute the static type for dynamic self.
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    NodePointer type = node->getChild(0);
+    if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
+      return node;
+    return type->getChild(0);
+  });
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
+  auto impl = [&]() -> CompilerType {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    auto *type_node = dem.createNode(Node::Kind::Type);
+    type_node->addChild(GetStaticSelfType(dem, node), dem);
+    return RemangleAsType(dem, type_node);
+  };
+  VALIDATE_AND_RETURN(impl, GetStaticSelfType, type, g_no_exe_ctx,
+                      (ReconstructType(type)), (ReconstructType(type)));
+}
+
 CompilerType
 TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
