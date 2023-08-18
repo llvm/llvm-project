@@ -134,7 +134,7 @@ uptr getPageSizeSlow();
 inline uptr getPageSizeCached() {
 #if SCUDO_ANDROID && defined(PAGE_SIZE)
   // Most Android builds have a build-time constant page size.
-  return PAGESIZE;
+  return PAGE_SIZE;
 #endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
