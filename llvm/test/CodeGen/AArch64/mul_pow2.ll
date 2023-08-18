@@ -493,7 +493,7 @@ define i32 @test16(i32 %x) {
   ret i32 %mul
 }
 
-define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test25_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test25_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #2
@@ -510,7 +510,7 @@ define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
   ret i32 %mul
 }
 
-define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test45_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test45_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #2
@@ -546,7 +546,7 @@ define i32 @test45(i32 %x) {
 }
 
 ; Negative test: The shift amount 4 larger than 3
-define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test85_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test85_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #85
@@ -564,7 +564,7 @@ define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
 }
 
 ; Negative test: The shift amount 5 larger than 3
-define i32 @test297_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test297_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test297_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #297
