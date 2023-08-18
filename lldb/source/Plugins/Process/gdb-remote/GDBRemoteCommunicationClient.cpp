@@ -1266,7 +1266,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
               ++num_keys_decoded;
           } else if (name.equals("addressing_bits")) {
             if (!value.getAsInteger(0, m_low_mem_addressing_bits)) {
-              m_high_mem_addressing_bits = m_low_mem_addressing_bits;
               ++num_keys_decoded;
             }
           } else if (name.equals("high_mem_addressing_bits")) {
@@ -1420,11 +1419,11 @@ AddressableBits GDBRemoteCommunicationClient::GetAddressableBits() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
 
-  // m_low_mem_addressing_bits and m_high_mem_addressing_bits
-  // will be 0 if we did not receive values; AddressableBits
-  // treats 0 as "unspecified".
-  addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
-                                      m_high_mem_addressing_bits);
+  if (m_low_mem_addressing_bits == m_high_mem_addressing_bits)
+    addressable_bits.SetAddressableBits(m_low_mem_addressing_bits);
+  else
+    addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
+                                        m_high_mem_addressing_bits);
   return addressable_bits;
 }
 
