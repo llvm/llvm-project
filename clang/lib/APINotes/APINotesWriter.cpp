@@ -528,10 +528,10 @@ public:
 
     uint8_t payload = 0;
     if (auto swiftImportAsNonGeneric = OCI.getSwiftImportAsNonGeneric())
-      payload |= (0x01 << 1) | swiftImportAsNonGeneric.value();
+      payload |= (0x01 << 1) | (uint8_t)swiftImportAsNonGeneric.value();
     payload <<= 2;
     if (auto swiftObjCMembers = OCI.getSwiftObjCMembers())
-      payload |= (0x01 << 1) | swiftObjCMembers.value();
+      payload |= (0x01 << 1) | (uint8_t)swiftObjCMembers.value();
     payload <<= 3;
     if (auto nullable = OCI.getDefaultNullability())
       payload |= (0x01 << 2) | static_cast<uint8_t>(*nullable);
