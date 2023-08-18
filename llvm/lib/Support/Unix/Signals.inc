@@ -539,7 +539,7 @@ public:
       uintptr_t StartAddress = Info->dlpi_addr + Phdr->p_vaddr;
       uintptr_t ModuleRelativeAddress = Phdr->p_vaddr;
       std::array<char, 4> ModeStr = modeStrFromFlags(Phdr->p_flags);
-      OS << format("{{{mmap:%#016x:%#x:load:%d:%s:%#016x}}}\n", StartAddress,
+      OS << format("{{{mmap:%016x:%x:load:%d:%s:%016x}}}\n", StartAddress,
                    Phdr->p_memsz, ModuleCount, &ModeStr[0],
                    ModuleRelativeAddress);
     }

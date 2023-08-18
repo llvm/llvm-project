@@ -46,7 +46,7 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
   EXPECT_THAT(
       Res,
       MatchesRegex(".*" TAG_BEGIN
-                   "mmap:0x[0-9a-f]+:0x[0-9a-f]+:load:0:rx:[0-9a-f]+" TAG_END
+                   "mmap:[0-9a-f]+:[0-9a-f]+:load:0:rx:[0-9a-f]+" TAG_END
                    ".*"));
   // Backtrace line
   EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "bt:0:[0-9a-f]+"
