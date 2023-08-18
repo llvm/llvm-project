@@ -141,6 +141,20 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
             orc::ExecutorAddr(Address), JITSymbolFlags());
         continue;
       }
+
+      if (Linker.BC.isGlobalOffsetTableSym(SymName)) {
+        if (const BinaryData *I = Linker.BC.getGlobalOffsetTableSym()) {
+          uint64_t Address = I->isMoved() && !I->isJumpTable()
+                                 ? I->getOutputAddress()
+                                 : I->getAddress();
+          LLVM_DEBUG(dbgs() << "Resolved to address 0x"
+                            << Twine::utohexstr(Address) << "\n");
+          AllResults[Symbol.first] = orc::ExecutorSymbolDef(
+              orc::ExecutorAddr(Address), JITSymbolFlags());
+          continue;
+        }
+      }
+
       LLVM_DEBUG(dbgs() << "Resolved to address 0x0\n");
       AllResults[Symbol.first] =
           orc::ExecutorSymbolDef(orc::ExecutorAddr(0), JITSymbolFlags());
