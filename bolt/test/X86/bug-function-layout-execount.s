@@ -1,5 +1,7 @@
 # Verifies that llvm-bolt correctly sorts functions by their execution counts.
 
+# REQUIRES: x86_64-linux, asserts
+
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
