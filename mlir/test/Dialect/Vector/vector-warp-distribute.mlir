@@ -1236,3 +1236,18 @@ func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) 
 // CHECK-PROP:   %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<1x1x4xf32> to vector<4xf32>
 // CHECK-PROP:   return %[[CAST]] : vector<4xf32>
 
+// -----
+
+func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<4096xf32>, %index: index) -> vector<1xf32> {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>) {
+    %1 = vector.transfer_read %src[%index], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+    vector.yield %1 : vector<1xf32>
+  }
+  return %r : vector<1xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_uniform_transfer_read
+//  CHECK-PROP-SAME: (%{{.+}}: index, %[[SRC:.+]]: memref<4096xf32>, %[[INDEX:.+]]: index)
+//       CHECK-PROP:   %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %cst {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+//       CHECK-PROP:   return %[[READ]] : vector<1xf32>
