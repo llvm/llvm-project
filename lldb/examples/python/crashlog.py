@@ -586,10 +586,15 @@ class JSONCrashLogParser(CrashLogParser):
             self.parse_threads(self.data["threads"])
             if "asi" in self.data:
                 self.crashlog.asi = self.data["asi"]
+            # FIXME: With the current design, we can either show the ASI or Last
+            # Exception Backtrace, not both. Is there a situation where we would
+            # like to show both ?
             if "asiBacktraces" in self.data:
                 self.parse_app_specific_backtraces(self.data["asiBacktraces"])
             if "lastExceptionBacktrace" in self.data:
-                self.crashlog.asb = self.data["lastExceptionBacktrace"]
+                self.parse_last_exception_backtraces(
+                    self.data["lastExceptionBacktrace"]
+                )
             self.parse_errors(self.data)
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
             reason = self.parse_crash_reason(self.data["exception"])
@@ -792,11 +797,22 @@ class JSONCrashLogParser(CrashLogParser):
         return True
 
     def parse_app_specific_backtraces(self, json_app_specific_bts):
-        for idx, backtrace in enumerate(json_app_specific_bts):
-            thread = self.crashlog.Thread(idx, True, self.crashlog.process_arch)
-            thread.queue = "Application Specific Backtrace"
-            if self.parse_asi_backtrace(thread, backtrace):
-                self.crashlog.threads.append(thread)
+        thread = self.crashlog.Thread(
+            len(self.crashlog.threads), True, self.crashlog.process_arch
+        )
+        thread.queue = "Application Specific Backtrace"
+        if self.parse_asi_backtrace(thread, json_app_specific_bts[0]):
+            self.crashlog.threads.append(thread)
+        else:
+            print("error: Couldn't parse Application Specific Backtrace.")
+
+    def parse_last_exception_backtraces(self, json_last_exc_bts):
+        thread = self.crashlog.Thread(
+            len(self.crashlog.threads), True, self.crashlog.process_arch
+        )
+        thread.queue = "Last Exception Backtrace"
+        self.parse_frames(thread, json_last_exc_bts)
+        self.crashlog.threads.append(thread)
 
     def parse_thread_registers(self, json_thread_state, prefix=None):
         registers = dict()
