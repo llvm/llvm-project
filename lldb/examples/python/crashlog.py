@@ -1274,7 +1274,7 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
         return
     target = exe_ctx.target
     if target:
-        out_file = options.output
+        out_file = options.output[0]
         identifier = target.executable.basename
         process = exe_ctx.process
         if process:
