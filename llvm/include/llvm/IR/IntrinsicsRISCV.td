@@ -1830,16 +1830,18 @@ def int_riscv_sm3p1      : ScalarCryptoGprIntrinsic32;
 // These intrinsics will lower directly into the corresponding instructions
 // added by the vector cyptography extension, if the extension is present.
 let TargetPrefix = "riscv" in {
-  // Zvbb
+  // Zvkb
   defm vandn             : RISCVBinaryAAX;
-  defm vbrev             : RISCVUnaryAA;
   defm vbrev8            : RISCVUnaryAA;
   defm vrev8             : RISCVUnaryAA;
+  defm vrol              : RISCVBinaryAAX;
+  defm vror              : RISCVBinaryAAX;
+
+  // Zvbb
+  defm vbrev             : RISCVUnaryAA;
   defm vclz              : RISCVUnaryAA;
   defm vctz              : RISCVUnaryAA;
   defm vcpopv            : RISCVUnaryAA;
-  defm vrol              : RISCVBinaryAAX;
-  defm vror              : RISCVBinaryAAX;
   defm vwsll             : RISCVBinaryABX;
 
   // Zvbc

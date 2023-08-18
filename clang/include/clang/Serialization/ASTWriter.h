@@ -143,6 +143,11 @@ private:
   /// file is up to date, but not otherwise.
   bool IncludeTimestamps;
 
+  /// Indicates whether the AST file being written is an implicit module.
+  /// If that's the case, we may be able to skip writing some information that
+  /// are guaranteed to be the same in the importer by the context hash.
+  bool BuildingImplicitModule = false;
+
   /// Indicates when the AST writing is actively performing
   /// serialization, rather than just queueing updates.
   bool WritingAST = false;
@@ -571,7 +576,7 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -809,6 +814,7 @@ public:
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
+               bool BuildingImplicitModule = false,
                bool ShouldCacheASTInMemory = false);
   ~PCHGenerator() override;
 

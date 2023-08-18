@@ -3150,7 +3150,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
           if (EDAA && EDAA->getState().isValidState()) {
             const auto &CalleeED = EDAA->getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
-                    CalleeED.IsReachedFromAlignedBarrierOnly;
+                CalleeED.IsReachedFromAlignedBarrierOnly;
             AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
             if (IsNoSync || !CalleeED.IsReachedFromAlignedBarrierOnly)
               ED.EncounteredNonLocalSideEffect |=
@@ -4769,15 +4769,13 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     AAKernelInfo::initialize(A);
 
     CallBase &CB = cast<CallBase>(getAssociatedValue());
-    Function *Callee = getAssociatedFunction();
-
     auto *AssumptionAA = A.getAAFor<AAAssumptionInfo>(
         *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
 
     // Check for SPMD-mode assumptions.
     if (AssumptionAA && AssumptionAA->hasAssumption("ompx_spmd_amenable")) {
-      SPMDCompatibilityTracker.indicateOptimisticFixpoint();
       indicateOptimisticFixpoint();
+      return;
     }
 
     // First weed out calls we do not care about, that is readonly/readnone
@@ -4792,6 +4790,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     // we will handle them explicitly in the switch below. If it is not, we
     // will use an AAKernelInfo object on the callee to gather information and
     // merge that into the current state. The latter happens in the updateImpl.
+    Function *Callee = getAssociatedFunction();
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     const auto &It = OMPInfoCache.RuntimeFunctionIDMap.find(Callee);
     if (It == OMPInfoCache.RuntimeFunctionIDMap.end()) {
@@ -4821,6 +4820,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       return;
     }
 
+    const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;
     RuntimeFunction RF = It->getSecond();
     switch (RF) {
@@ -4839,6 +4839,34 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
     case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
     case OMPRTL___kmpc_nvptx_end_reduce_nowait:
+    case OMPRTL___kmpc_error:
+    case OMPRTL___kmpc_flush:
+    case OMPRTL___kmpc_get_hardware_thread_id_in_block:
+    case OMPRTL___kmpc_get_warp_size:
+    case OMPRTL_omp_get_thread_num:
+    case OMPRTL_omp_get_num_threads:
+    case OMPRTL_omp_get_max_threads:
+    case OMPRTL_omp_in_parallel:
+    case OMPRTL_omp_get_dynamic:
+    case OMPRTL_omp_get_cancellation:
+    case OMPRTL_omp_get_nested:
+    case OMPRTL_omp_get_schedule:
+    case OMPRTL_omp_get_thread_limit:
+    case OMPRTL_omp_get_supported_active_levels:
+    case OMPRTL_omp_get_max_active_levels:
+    case OMPRTL_omp_get_level:
+    case OMPRTL_omp_get_ancestor_thread_num:
+    case OMPRTL_omp_get_team_size:
+    case OMPRTL_omp_get_active_level:
+    case OMPRTL_omp_in_final:
+    case OMPRTL_omp_get_proc_bind:
+    case OMPRTL_omp_get_num_places:
+    case OMPRTL_omp_get_num_procs:
+    case OMPRTL_omp_get_place_proc_ids:
+    case OMPRTL_omp_get_place_num:
+    case OMPRTL_omp_get_partition_num_places:
+    case OMPRTL_omp_get_partition_place_nums:
+    case OMPRTL_omp_get_wtime:
       break;
     case OMPRTL___kmpc_distribute_static_init_4:
     case OMPRTL___kmpc_distribute_static_init_4u:
@@ -4872,9 +4900,13 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_target_deinit:
       KernelDeinitCB = &CB;
       break;
-    case OMPRTL___kmpc_parallel_51:
-      if (auto *ParallelRegion = dyn_cast<Function>(
-              CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts())) {
+    case OMPRTL___kmpc_parallel_51: {
+      auto *ParallelRegionOp =
+          CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts();
+      if (isa<ConstantPointerNull>(ParallelRegionOp))
+        ParallelRegionOp =
+            CB.getArgOperand(NonWrapperFunctionArgNo)->stripPointerCasts();
+      if (auto *ParallelRegion = dyn_cast<Function>(ParallelRegionOp)) {
         ReachedKnownParallelRegions.insert(ParallelRegion);
         /// Check nested parallelism
         auto *FnAA = A.getAAFor<AAKernelInfo>(
@@ -4889,6 +4921,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       // worst.
       ReachedUnknownParallelRegions.insert(&CB);
       break;
+    }
     case OMPRTL___kmpc_omp_task:
       // We do not look into tasks right now, just give up.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();

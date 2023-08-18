@@ -550,12 +550,20 @@ def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                AssemblerPredicate<(all_of FeatureStdExtZawrs),
                                "'Zawrs' (Wait on Reservation Set)">;
 
+def FeatureStdExtZvkb
+    : SubtargetFeature<"experimental-zvkb", "HasStdExtZvkb", "true",
+                       "'Zvkb' (Vector Bit-manipulation used in Cryptography)">;
+def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
+                              AssemblerPredicate<(all_of FeatureStdExtZvkb),
+                              "'Zvkb' (Vector Bit-manipulation used in Cryptography)">;
+
 def FeatureStdExtZvbb
     : SubtargetFeature<"experimental-zvbb", "HasStdExtZvbb", "true",
-                       "'Zvbb' (Vector Bit-manipulation used in Cryptography)">;
+                       "'Zvbb' (Vector basic bit-manipulation instructions.)",
+                       [FeatureStdExtZvkb]>;
 def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvbb),
-                              "'Zvbb' (Vector Bit-manipulation used in Cryptography)">;
+                              "'Zvbb' (Vector basic bit-manipulation instructions.)">;
 
 def FeatureStdExtZvbc
     : SubtargetFeature<"experimental-zvbc", "HasStdExtZvbc", "true",
@@ -613,9 +621,9 @@ def FeatureStdExtZvkt
 def FeatureStdExtZvkn
     : SubtargetFeature<"experimental-zvkn", "HasStdExtZvkn", "true",
                        "This extension is shorthand for the following set of "
-                       "other extensions: Zvkned, Zvknhb, Zvbb and Zvkt.",
+                       "other extensions: Zvkned, Zvknhb, Zvkb and Zvkt.",
                        [FeatureStdExtZvkned, FeatureStdExtZvknhb,
-                        FeatureStdExtZvbb, FeatureStdExtZvkt]>;
+                        FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvknc
     : SubtargetFeature<"experimental-zvknc", "HasStdExtZvknc", "true",
@@ -632,9 +640,9 @@ def FeatureStdExtZvkng
 def FeatureStdExtZvks
     : SubtargetFeature<"experimental-zvks", "HasStdExtZvks", "true",
                        "This extension is shorthand for the following set of "
-                       "other extensions: Zvksed, Zvksh, Zvbb and Zvkt.",
+                       "other extensions: Zvksed, Zvksh, Zvkb and Zvkt.",
                        [FeatureStdExtZvksed, FeatureStdExtZvksh,
-                        FeatureStdExtZvbb, FeatureStdExtZvkt]>;
+                        FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvksc
     : SubtargetFeature<"experimental-zvksc", "HasStdExtZvksc", "true",

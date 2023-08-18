@@ -422,6 +422,7 @@ if(LLVM_LIBC_FULL_BUILD)
  list(APPEND printf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
+      libc.src.__support.File.platform_stdout
   )
 else()
  set(printf_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")

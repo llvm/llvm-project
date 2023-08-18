@@ -137,13 +137,13 @@ Examples:
 
 memref<f32> -> !llvm.struct<(ptr<f32> , ptr<f32>, i64)>
 memref<1 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                 array<1 x 64>, array<1 x i64>)>
+                                 array<1 x i64>, array<1 x i64>)>
 memref<? x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                 array<1 x 64>, array<1 x i64>)>
+                                 array<1 x i64>, array<1 x i64>)>
 memref<10x42x42x43x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                               array<5 x 64>, array<5 x i64>)>
+                                               array<5 x i64>, array<5 x i64>)>
 memref<10x?x42x?x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
-                                             array<5 x 64>, array<5 x i64>)>
+                                             array<5 x i64>, array<5 x i64>)>
 
 // Memref types can have vectors as element types
 memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vector<4 x f32>>,

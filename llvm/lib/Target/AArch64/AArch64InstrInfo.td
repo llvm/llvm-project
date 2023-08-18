@@ -3679,27 +3679,28 @@ let Predicates = [IsLE, UseSTRQro] in {
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecROStoreLane0Pat<ROAddrMode ro, SDPatternOperator storeop,
                               ValueType VecTy, ValueType STy,
+                              ValueType SubRegTy,
                               SubRegIndex SubRegIdx,
                               Instruction STRW, Instruction STRX> {
 
   def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
                      (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
-            (STRW (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx),
+            (STRW (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
   def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
                      (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
-            (STRX (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx),
+            (STRX (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
 }
 
 let AddedComplexity = 19 in {
-  defm : VecROStoreLane0Pat<ro16, truncstorei16, v8i16, i32, hsub, STRHroW, STRHroX>;
-  defm : VecROStoreLane0Pat<ro16,         store, v8f16, f16, hsub, STRHroW, STRHroX>;
-  defm : VecROStoreLane0Pat<ro32,         store, v4i32, i32, ssub, STRSroW, STRSroX>;
-  defm : VecROStoreLane0Pat<ro32,         store, v4f32, f32, ssub, STRSroW, STRSroX>;
-  defm : VecROStoreLane0Pat<ro64,         store, v2i64, i64, dsub, STRDroW, STRDroX>;
-  defm : VecROStoreLane0Pat<ro64,         store, v2f64, f64, dsub, STRDroW, STRDroX>;
+  defm : VecROStoreLane0Pat<ro16, truncstorei16, v8i16, i32, f16, hsub, STRHroW, STRHroX>;
+  defm : VecROStoreLane0Pat<ro16,         store, v8f16, f16, f16, hsub, STRHroW, STRHroX>;
+  defm : VecROStoreLane0Pat<ro32,         store, v4i32, i32, i32, ssub, STRSroW, STRSroX>;
+  defm : VecROStoreLane0Pat<ro32,         store, v4f32, f32, i32, ssub, STRSroW, STRSroX>;
+  defm : VecROStoreLane0Pat<ro64,         store, v2i64, i64, i64, dsub, STRDroW, STRDroX>;
+  defm : VecROStoreLane0Pat<ro64,         store, v2f64, f64, i64, dsub, STRDroW, STRDroX>;
 }
 
 //---
@@ -3818,21 +3819,22 @@ def : Pat<(truncstorei8 GPR64:$Rt, (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
                             ValueType VTy, ValueType STy,
+                            ValueType SubRegTy,
                             SubRegIndex SubRegIdx, Operand IndexType,
                             Instruction STR> {
   def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), 0)),
                      (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
-            (STR (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx),
+            (STR (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                  GPR64sp:$Rn, IndexType:$offset)>;
 }
 
 let AddedComplexity = 19 in {
-  defm : VecStoreLane0Pat<am_indexed16, truncstorei16, v8i16, i32, hsub, uimm12s2, STRHui>;
-  defm : VecStoreLane0Pat<am_indexed16,         store, v8f16, f16, hsub, uimm12s2, STRHui>;
-  defm : VecStoreLane0Pat<am_indexed32,         store, v4i32, i32, ssub, uimm12s4, STRSui>;
-  defm : VecStoreLane0Pat<am_indexed32,         store, v4f32, f32, ssub, uimm12s4, STRSui>;
-  defm : VecStoreLane0Pat<am_indexed64,         store, v2i64, i64, dsub, uimm12s8, STRDui>;
-  defm : VecStoreLane0Pat<am_indexed64,         store, v2f64, f64, dsub, uimm12s8, STRDui>;
+  defm : VecStoreLane0Pat<am_indexed16, truncstorei16, v8i16, i32, f16, hsub, uimm12s2, STRHui>;
+  defm : VecStoreLane0Pat<am_indexed16,         store, v8f16, f16, f16, hsub, uimm12s2, STRHui>;
+  defm : VecStoreLane0Pat<am_indexed32,         store, v4i32, i32, i32, ssub, uimm12s4, STRSui>;
+  defm : VecStoreLane0Pat<am_indexed32,         store, v4f32, f32, i32, ssub, uimm12s4, STRSui>;
+  defm : VecStoreLane0Pat<am_indexed64,         store, v2i64, i64, i64, dsub, uimm12s8, STRDui>;
+  defm : VecStoreLane0Pat<am_indexed64,         store, v2f64, f64, i64, dsub, uimm12s8, STRDui>;
 }
 
 //---
@@ -3961,17 +3963,18 @@ def : Pat<(truncstorei8 GPR64:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
                              ValueType VTy, ValueType STy,
+                             ValueType SubRegTy,
                              SubRegIndex SubRegIdx, Instruction STR> {
-  defm : VecStoreLane0Pat<am_unscaled128, StoreOp, VTy, STy, SubRegIdx, simm9, STR>;
+  defm : VecStoreLane0Pat<am_unscaled128, StoreOp, VTy, STy, SubRegTy, SubRegIdx, simm9, STR>;
 }
 
 let AddedComplexity = 19 in {
-  defm : VecStoreULane0Pat<truncstorei16, v8i16, i32, hsub, STURHi>;
-  defm : VecStoreULane0Pat<store,         v8f16, f16, hsub, STURHi>;
-  defm : VecStoreULane0Pat<store,         v4i32, i32, ssub, STURSi>;
-  defm : VecStoreULane0Pat<store,         v4f32, f32, ssub, STURSi>;
-  defm : VecStoreULane0Pat<store,         v2i64, i64, dsub, STURDi>;
-  defm : VecStoreULane0Pat<store,         v2f64, f64, dsub, STURDi>;
+  defm : VecStoreULane0Pat<truncstorei16, v8i16, i32, f16, hsub, STURHi>;
+  defm : VecStoreULane0Pat<store,         v8f16, f16, f16, hsub, STURHi>;
+  defm : VecStoreULane0Pat<store,         v4i32, i32, i32, ssub, STURSi>;
+  defm : VecStoreULane0Pat<store,         v4f32, f32, i32, ssub, STURSi>;
+  defm : VecStoreULane0Pat<store,         v2i64, i64, i64, dsub, STURDi>;
+  defm : VecStoreULane0Pat<store,         v2f64, f64, i64, dsub, STURDi>;
 }
 
 //---
@@ -4496,7 +4499,7 @@ multiclass FMULScalarFromIndexedLane0Patterns<string inst,
   def : Pat<(f16 (OpNode (f16 FPR16:$Rn),
                          (f16 (vector_extract (v8f16 V128:$Rm), (i64 0))))),
             (!cast<Instruction>(inst # inst_f16_suffix)
-              FPR16:$Rn, (EXTRACT_SUBREG V128:$Rm, hsub))>;
+              FPR16:$Rn, (f16 (EXTRACT_SUBREG V128:$Rm, hsub)))>;
   }
   let Predicates = preds in {
   def : Pat<(f32 (OpNode (f32 FPR32:$Rn),
@@ -7064,19 +7067,19 @@ def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
 // Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 (sext_inreg FPR32:$Rn, i16)), vecshiftR16:$imm)),
-          (SCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
+          (SCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 FPR32:$Rn), vecshiftR16:$imm)),
-          (SCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
+          (SCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
-          (SCVTFh (EXTRACT_SUBREG FPR64:$Rn, hsub), vecshiftR16:$imm)>;
+          (SCVTFh (f16 (EXTRACT_SUBREG FPR64:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp
             (and FPR32:$Rn, (i32 65535)),
             vecshiftR16:$imm)),
-          (UCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
+          (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR16:$imm)),
-          (UCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;
+          (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
-          (UCVTFh (EXTRACT_SUBREG FPR64:$Rn, hsub), vecshiftR16:$imm)>;
+          (UCVTFh (f16 (EXTRACT_SUBREG FPR64:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR32:$imm)),
           (i32 (INSERT_SUBREG
             (i32 (IMPLICIT_DEF)),

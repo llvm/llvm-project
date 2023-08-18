@@ -21,11 +21,25 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   return Frame->getParam<T>(Offset);
 }
 
+PrimType getIntPrimType(const InterpState &S) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned IntWidth = TI.getIntWidth();
+
+  if (IntWidth == 32)
+    return PT_Sint32;
+  else if (IntWidth == 16)
+    return PT_Sint16;
+  llvm_unreachable("Int isn't 16 or 32 bit?");
+}
+
 /// Peek an integer value from the stack into an APSInt.
-static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
+static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
+  if (Offset == 0)
+    Offset = align(primSize(T));
+
   APSInt R;
   INT_TYPE_SWITCH(T, {
-    T Val = Stk.peek<T>();
+    T Val = Stk.peek<T>(Offset);
     R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
   });
 
@@ -34,24 +48,20 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
 
 /// Pushes \p Val to the stack, as a target-dependent 'int'.
 static void pushInt(InterpState &S, int32_t Val) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned IntWidth = TI.getIntWidth();
-
-  if (IntWidth == 32)
+  PrimType IntType = getIntPrimType(S);
+  if (IntType == PT_Sint32)
     S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
-  else if (IntWidth == 16)
+  else if (IntType == PT_Sint16)
     S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
   else
     llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
 static bool retInt(InterpState &S, CodePtr OpPC, APValue &Result) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned IntWidth = TI.getIntWidth();
-
-  if (IntWidth == 32)
+  PrimType IntType = getIntPrimType(S);
+  if (IntType == PT_Sint32)
     return Ret<PT_Sint32>(S, OpPC, Result);
-  else if (IntWidth == 16)
+  else if (IntType == PT_Sint16)
     return Ret<PT_Sint16>(S, OpPC, Result);
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
@@ -363,12 +373,13 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   }
 
   // The last argument is first on the stack.
-  unsigned Offset = align(primSize(PT_Float)) +
-                    ((1 + (4 - Index)) * align(primSize(PT_Sint32)));
+  assert(Index <= 4);
+  unsigned IntSize = primSize(getIntPrimType(S));
+  unsigned Offset =
+      align(primSize(PT_Float)) + ((1 + (4 - Index)) * align(IntSize));
 
-  // FIXME: The size of the value we're peeking here is target-dependent.
-  const Integral<32, true> &I = S.Stk.peek<Integral<32, true>>(Offset);
-  pushInt(S, static_cast<int32_t>(I));
+  APSInt I = peekToAPSInt(S.Stk, getIntPrimType(S), Offset);
+  pushInt(S, I.getZExtValue());
   return true;
 }
 

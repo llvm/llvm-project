@@ -205,9 +205,21 @@ static bool hasInlineInfo(DWARFDie Die, uint32_t Depth) {
   return false;
 }
 
+static AddressRanges
+ConvertDWARFRanges(const DWARFAddressRangesVector &DwarfRanges) {
+  AddressRanges Ranges;
+  for (const DWARFAddressRange &DwarfRange : DwarfRanges) {
+    if (DwarfRange.LowPC < DwarfRange.HighPC)
+      Ranges.insert({DwarfRange.LowPC, DwarfRange.HighPC});
+  }
+  return Ranges;
+}
+
 static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
                             DWARFDie Die, uint32_t Depth, FunctionInfo &FI,
-                            InlineInfo &parent) {
+                            InlineInfo &Parent,
+                            const AddressRanges &AllParentRanges,
+                            bool &WarnIfEmpty) {
   if (!hasInlineInfo(Die, Depth))
     return;
 
@@ -215,26 +227,45 @@ static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
   if (Tag == dwarf::DW_TAG_inlined_subroutine) {
     // create new InlineInfo and append to parent.children
     InlineInfo II;
+    AddressRanges AllInlineRanges;
     Expected<DWARFAddressRangesVector> RangesOrError = Die.getAddressRanges();
     if (RangesOrError) {
-      for (const DWARFAddressRange &Range : RangesOrError.get()) {
-        // Check that the inlined function is within the any of the range the
-        // parent InlineInfo. If it isn't remove it!
-        AddressRange InlineRange(Range.LowPC, Range.HighPC);
+      AllInlineRanges = ConvertDWARFRanges(RangesOrError.get());
+      uint32_t EmptyCount = 0;
+      for (const AddressRange &InlineRange : AllInlineRanges) {
         // Check for empty inline range in case inline function was outlined
         // or has not code
-        if (!InlineRange.empty()) {
-          if (parent.Ranges.contains(InlineRange)) {
+        if (InlineRange.empty()) {
+          ++EmptyCount;
+        } else {
+          if (Parent.Ranges.contains(InlineRange)) {
             II.Ranges.insert(InlineRange);
-          } else if (Log) {
-            *Log << "error: inlined function DIE at " << HEX32(Die.getOffset())
-                 << " has a range [" << HEX64(Range.LowPC) << " - "
-                 << HEX64(Range.HighPC) << ") that isn't contained in any "
-                 << "parent address ranges, this inline range will be "
-                    "removed.\n";
+          } else {
+            // Only warn if the current inline range is not within any of all
+            // of the parent ranges. If we have a DW_TAG_subpgram with multiple
+            // ranges we will emit a FunctionInfo for each range of that
+            // function that only emits information within the current range,
+            // so we only want to emit an error if the DWARF has issues, not
+            // when a range currently just isn't in the range we are currently
+            // parsing for.
+            if (AllParentRanges.contains(InlineRange)) {
+              WarnIfEmpty = false;
+            } else if (Log) {
+              *Log << "error: inlined function DIE at "
+                   << HEX32(Die.getOffset()) << " has a range ["
+                   << HEX64(InlineRange.start()) << " - "
+                   << HEX64(InlineRange.end()) << ") that isn't contained in "
+                   << "any parent address ranges, this inline range will be "
+                      "removed.\n";
+            }
           }
         }
       }
+      // If we have all empty ranges for the inlines, then don't warn if we
+      // have an empty InlineInfo at the top level as all inline functions
+      // were elided.
+      if (EmptyCount == AllInlineRanges.size())
+        WarnIfEmpty = false;
     }
     if (II.Ranges.empty())
       return;
@@ -246,14 +277,16 @@ static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
     II.CallLine = dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_line), 0);
     // parse all children and append to parent
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II);
-    parent.Children.emplace_back(std::move(II));
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II,
+                      AllInlineRanges, WarnIfEmpty);
+    Parent.Children.emplace_back(std::move(II));
     return;
   }
   if (Tag == dwarf::DW_TAG_subprogram || Tag == dwarf::DW_TAG_lexical_block) {
     // skip this Die and just recurse down
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, parent);
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, Parent,
+                      AllParentRanges, WarnIfEmpty);
   }
 }
 
@@ -381,6 +414,13 @@ void DwarfTransformer::handleDie(raw_ostream *OS, CUInfo &CUI, DWARFDie Die) {
       }
       break;
     }
+    // All ranges for the subprogram DIE in case it has multiple. We need to
+    // pass this down into parseInlineInfo so we don't warn about inline
+    // ranges that are not in the current subrange of a function when they
+    // actually are in another subgrange. We do this because when a function
+    // has discontiguos ranges, we create multiple function entries with only
+    // the info for that range contained inside of it.
+    AddressRanges AllSubprogramRanges = ConvertDWARFRanges(Ranges);
 
     // Create a function_info for each range
     for (const DWARFAddressRange &Range : Ranges) {
@@ -422,14 +462,16 @@ void DwarfTransformer::handleDie(raw_ostream *OS, CUInfo &CUI, DWARFDie Die) {
       FunctionInfo FI;
       FI.Range = {Range.LowPC, Range.HighPC};
       FI.Name = *NameIndex;
-      if (CUI.LineTable) {
+      if (CUI.LineTable)
         convertFunctionLineTable(OS, CUI, Die, Gsym, FI);
-      }
+
       if (hasInlineInfo(Die, 0)) {
         FI.Inline = InlineInfo();
         FI.Inline->Name = *NameIndex;
         FI.Inline->Ranges.insert(FI.Range);
-        parseInlineInfo(Gsym, OS, CUI, Die, 0, FI, *FI.Inline);
+        bool WarnIfEmpty = true;
+        parseInlineInfo(Gsym, OS, CUI, Die, 0, FI, *FI.Inline,
+                        AllSubprogramRanges, WarnIfEmpty);
         // Make sure we at least got some valid inline info other than just
         // the top level function. If we didn't then remove the inline info
         // from the function info. We have seen cases where LTO tries to modify
@@ -440,7 +482,7 @@ void DwarfTransformer::handleDie(raw_ostream *OS, CUInfo &CUI, DWARFDie Die) {
         // information object, we will know if we got anything valid from the
         // debug info.
         if (FI.Inline->Children.empty()) {
-          if (OS && !Gsym.isQuiet()) {
+          if (WarnIfEmpty && OS && !Gsym.isQuiet()) {
             *OS << "warning: DIE contains inline function information that has "
                   "no valid ranges, removing inline information:\n";
             Die.dump(*OS, 0, DIDumpOptions::getForSingleDIE());

@@ -12,10 +12,10 @@ uint8_t get_uint8_max() {
 
 void shift_by_undefined_value() {
   uint8_t shift_amount = get_uint8_max(); // expected-note{{'shift_amount' initialized to 255}}
-                                // expected-note@-1{{Calling 'get_uint8_max'}}
-                                // expected-note@-2{{Returning from 'get_uint8_max'}}
-  (void)(TCP_MAXWIN << shift_amount); // expected-warning{{The result of the left shift is undefined due to shifting by '255', which is greater or equal to the width of type 'int'}}
-                                      // expected-note@-1{{The result of the left shift is undefined due to shifting by '255', which is greater or equal to the width of type 'int'}}
+  // expected-note@-1{{Calling 'get_uint8_max'}}
+  // expected-note@-2{{Returning from 'get_uint8_max'}}
+  (void)(TCP_MAXWIN << shift_amount); // expected-warning{{Left shift by '255' overflows the capacity of 'int'}}
+  // expected-note@-1{{The result of left shift is undefined because the right operand '255' is not smaller than 32, the capacity of 'int'}}
 }
 
 namespace array_index_tracking {

@@ -6495,9 +6495,7 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
   if (IsDXCMode())
     return llvm::opt::Visibility(options::DXCOption);
   if (IsFlangMode()) {
-    // TODO: Does flang really want *all* of the clang driver options?
-    // We probably need to annotate more specifically.
-    return llvm::opt::Visibility(options::ClangOption | options::FlangOption);
+    return llvm::opt::Visibility(options::FlangOption);
   }
   return llvm::opt::Visibility(options::ClangOption);
 }

@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +zvl512b \
 // RUN:   -target-feature +experimental-zvbb \
 // RUN:   -target-feature +experimental-zvbc \
+// RUN:   -target-feature +experimental-zvkb \
 // RUN:   -target-feature +experimental-zvkg \
 // RUN:   -target-feature +experimental-zvkned \
 // RUN:   -target-feature +experimental-zvknhb \
