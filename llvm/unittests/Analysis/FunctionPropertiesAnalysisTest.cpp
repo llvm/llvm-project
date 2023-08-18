@@ -137,8 +137,15 @@ define internal i32 @top() {
   EXPECT_EQ(DetailedBranchesFeatures.CastInstructionCount, 0);
   EXPECT_EQ(DetailedBranchesFeatures.FloatingPointInstructionCount, 0);
   EXPECT_EQ(DetailedBranchesFeatures.IntegerInstructionCount, 4);
-  EXPECT_EQ(DetailedBranchesFeatures.IntegerConstantCount, 1);
-  EXPECT_EQ(DetailedBranchesFeatures.FloatingPointConstantCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.ConstantIntOperandCount, 1);
+  EXPECT_EQ(DetailedBranchesFeatures.ConstantFPOperandCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.ConstantOperandCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.InstructionOperandCount, 4);
+  EXPECT_EQ(DetailedBranchesFeatures.BasicBlockOperandCount, 4);
+  EXPECT_EQ(DetailedBranchesFeatures.GlobalValueOperandCount, 2);
+  EXPECT_EQ(DetailedBranchesFeatures.InlineAsmOperandCount, 0);
+  EXPECT_EQ(DetailedBranchesFeatures.ArgumentOperandCount, 3);
+  EXPECT_EQ(DetailedBranchesFeatures.UnknownOperandCount, 0);
   EnableDetailedFunctionProperties.setValue(false);
 }
 
@@ -170,8 +177,15 @@ finally:
   EXPECT_EQ(DetailedF1Properties.CastInstructionCount, 0);
   EXPECT_EQ(DetailedF1Properties.FloatingPointInstructionCount, 0);
   EXPECT_EQ(DetailedF1Properties.IntegerInstructionCount, 0);
-  EXPECT_EQ(DetailedF1Properties.IntegerConstantCount, 3);
-  EXPECT_EQ(DetailedF1Properties.FloatingPointConstantCount, 0);
+  EXPECT_EQ(DetailedF1Properties.ConstantIntOperandCount, 3);
+  EXPECT_EQ(DetailedF1Properties.ConstantFPOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.ConstantOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.InstructionOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlockOperandCount, 2);
+  EXPECT_EQ(DetailedF1Properties.GlobalValueOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.InlineAsmOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.ArgumentOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.UnknownOperandCount, 0);
   EnableDetailedFunctionProperties.setValue(false);
 }
 
@@ -795,5 +809,47 @@ declare void @f3()
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
   EXPECT_EQ(FPI, ExpectedFinal);
+}
+
+TEST_F(FunctionPropertiesAnalysisTest, DetailedOperandCount) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+@a = global i64 1
+
+define i64 @f1(i64 %e) {
+	%b = load i64, i64* @a
+  %c = add i64 %b, 2
+  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)																						
+	%f = add i64 %d, %e
+	ret i64 %f
+}
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  EnableDetailedFunctionProperties.setValue(true);
+  FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithMoreThanTwoSuccessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSinglePredecessor, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoPredecessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BasicBlocksWithMoreThanTwoPredecessors, 0);
+  EXPECT_EQ(DetailedF1Properties.BigBasicBlocks, 0);
+  EXPECT_EQ(DetailedF1Properties.MediumBasicBlocks, 0);
+  EXPECT_EQ(DetailedF1Properties.SmallBasicBlocks, 1);
+  EXPECT_EQ(DetailedF1Properties.CastInstructionCount, 0);
+  EXPECT_EQ(DetailedF1Properties.FloatingPointInstructionCount, 0);
+  EXPECT_EQ(DetailedF1Properties.IntegerInstructionCount, 4);
+  EXPECT_EQ(DetailedF1Properties.ConstantIntOperandCount, 1);
+  EXPECT_EQ(DetailedF1Properties.ConstantFPOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.ConstantOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.InstructionOperandCount, 4);
+  EXPECT_EQ(DetailedF1Properties.BasicBlockOperandCount, 0);
+  EXPECT_EQ(DetailedF1Properties.GlobalValueOperandCount, 1);
+  EXPECT_EQ(DetailedF1Properties.InlineAsmOperandCount, 1);
+  EXPECT_EQ(DetailedF1Properties.ArgumentOperandCount, 1);
+  EXPECT_EQ(DetailedF1Properties.UnknownOperandCount, 0);
+  EnableDetailedFunctionProperties.setValue(false);
 }
 } // end anonymous namespace
