@@ -98,11 +98,10 @@ public:
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(result_type __sd) : __e_(__sd) {__init();}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value &&
+                                        !is_convertible<_Sseq, _Engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit shuffle_order_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, shuffle_order_engine>::value &&
-                           !is_convertible<_Sseq, _Engine>::value>::type* = 0)
+        explicit shuffle_order_engine(_Sseq& __q)
          : __e_(__q) {__init();}
     _LIBCPP_INLINE_VISIBILITY
     void seed() {__e_.seed(); __init();}
