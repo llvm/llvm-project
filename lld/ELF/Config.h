@@ -53,8 +53,8 @@ enum ELFKind : uint8_t {
 };
 
 // For -Bno-symbolic, -Bsymbolic-non-weak-functions, -Bsymbolic-functions,
-// -Bsymbolic.
-enum class BsymbolicKind { None, NonWeakFunctions, Functions, All };
+// -Bsymbolic-non-weak, -Bsymbolic.
+enum class BsymbolicKind { None, NonWeakFunctions, Functions, NonWeak, All };
 
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
