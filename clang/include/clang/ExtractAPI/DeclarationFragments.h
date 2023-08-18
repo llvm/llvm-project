@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
@@ -161,6 +162,11 @@ public:
     return *this;
   }
 
+  DeclarationFragments &pop_back() {
+    Fragments.pop_back();
+    return *this;
+  }
+
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
@@ -291,6 +297,28 @@ public:
 
   static DeclarationFragments
   getFragmentsForOverloadedOperator(const CXXMethodDecl *);
+
+  static DeclarationFragments
+      getFragmentsForTemplateParameters(ArrayRef<NamedDecl *>);
+
+  static std::string getNameForTemplateArgument(const ArrayRef<NamedDecl *>,
+                                                std::string);
+
+  static DeclarationFragments
+  getFragmentsForTemplateArguments(const ArrayRef<TemplateArgument>,
+                                   ASTContext &,
+                                   const std::optional<ArrayRef<NamedDecl *>>);
+
+  static DeclarationFragments getFragmentsForConcept(const ConceptDecl *);
+
+  static DeclarationFragments
+  getFragmentsForRedeclarableTemplate(const RedeclarableTemplateDecl *);
+
+  static DeclarationFragments getFragmentsForClassTemplateSpecialization(
+      const ClassTemplateSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForClassTemplatePartialSpecialization(
+      const ClassTemplatePartialSpecializationDecl *);
 
   /// Build DeclarationFragments for an Objective-C category declaration
   /// ObjCCategoryDecl.

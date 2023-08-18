@@ -33,6 +33,14 @@ public:
 
     getDerived()->traverseCXXClassRecords();
 
+    getDerived()->traverseClassTemplateRecords();
+
+    getDerived()->traverseClassTemplateSpecializationRecords();
+
+    getDerived()->traverseClassTemplatePartialSpecializationRecords();
+
+    getDerived()->traverseConcepts();
+
     getDerived()->traverseStructRecords();
 
     getDerived()->traverseObjCInterfaces();
@@ -76,6 +84,30 @@ public:
       getDerived()->visitCXXClassRecord(*Class.second);
   }
 
+  void traverseClassTemplateRecords() {
+    for (const auto &ClassTemplate : API.getClassTemplates())
+      getDerived()->visitClassTemplateRecord(*ClassTemplate.second);
+  }
+
+  void traverseClassTemplateSpecializationRecords() {
+    for (const auto &ClassTemplateSpecialization :
+         API.getClassTemplateSpecializations())
+      getDerived()->visitClassTemplateSpecializationRecord(
+          *ClassTemplateSpecialization.second);
+  }
+
+  void traverseClassTemplatePartialSpecializationRecords() {
+    for (const auto &ClassTemplatePartialSpecialization :
+         API.getClassTemplatePartialSpecializations())
+      getDerived()->visitClassTemplatePartialSpecializationRecord(
+          *ClassTemplatePartialSpecialization.second);
+  }
+
+  void traverseConcepts() {
+    for (const auto &Concept : API.getConcepts())
+      getDerived()->visitConceptRecord(*Concept.second);
+  }
+
   void traverseObjCInterfaces() {
     for (const auto &Interface : API.getObjCInterfaces())
       getDerived()->visitObjCContainerRecord(*Interface.second);
@@ -116,6 +148,14 @@ public:
   void visitStaticFieldRecord(const StaticFieldRecord &Record){};
 
   void visitCXXClassRecord(const CXXClassRecord &Record){};
+
+  void visitClassTemplateRecord(const ClassTemplateRecord &Record){};
+
+  void visitClassTemplateSpecializationRecord(
+      const ClassTemplateSpecializationRecord &Record){};
+
+  void visitClassTemplatePartialSpecializationRecord(
+      const ClassTemplatePartialSpecializationRecord &Record){};
 
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record){};

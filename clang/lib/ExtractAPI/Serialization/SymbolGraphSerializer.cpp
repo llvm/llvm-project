@@ -393,9 +393,16 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("type.property");
     Kind["displayName"] = "Type Property";
     break;
+  case APIRecord::RK_ClassTemplate:
+  case APIRecord::RK_ClassTemplateSpecialization:
+  case APIRecord::RK_ClassTemplatePartialSpecialization:
   case APIRecord::RK_CXXClass:
     Kind["identifier"] = AddLangPrefix("class");
     Kind["displayName"] = "Class";
+    break;
+  case APIRecord::RK_Concept:
+    Kind["identifier"] = AddLangPrefix("concept");
+    Kind["displayName"] = "Concept";
     break;
   case APIRecord::RK_CXXStaticMethod:
     Kind["identifier"] = AddLangPrefix("type.method");
@@ -545,6 +552,52 @@ void serializeAccessMixin(Object &Paren, const RecordTy &Record) {
   serializeString(Paren, "accessLevel", accessLevel);
 }
 
+template <typename RecordTy>
+std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
+                                                 std::true_type) {
+  const auto &Template = Record.Templ;
+  if (Template.empty())
+    return std::nullopt;
+
+  Object Generics;
+  Array GenericParameters;
+  for (const auto Param : Template.getParameters()) {
+    Object Parameter;
+    Parameter["name"] = Param.Name;
+    Parameter["index"] = Param.Index;
+    Parameter["depth"] = Param.Depth;
+    GenericParameters.emplace_back(std::move(Parameter));
+  }
+  if (!GenericParameters.empty())
+    Generics["parameters"] = std::move(GenericParameters);
+
+  Array GenericConstraints;
+  for (const auto Constr : Template.getConstraints()) {
+    Object Constraint;
+    Constraint["kind"] = Constr.Kind;
+    Constraint["lhs"] = Constr.LHS;
+    Constraint["rhs"] = Constr.RHS;
+    GenericConstraints.emplace_back(std::move(Constraint));
+  }
+
+  if (!GenericConstraints.empty())
+    Generics["constraints"] = std::move(GenericConstraints);
+
+  return Generics;
+}
+
+template <typename RecordTy>
+std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
+                                                 std::false_type) {
+  return std::nullopt;
+}
+
+template <typename RecordTy>
+void serializeTemplateMixin(Object &Paren, const RecordTy &Record) {
+  serializeObject(Paren, "swiftGenerics",
+                  serializeTemplateMixinImpl(Record, has_template<RecordTy>()));
+}
+
 struct PathComponent {
   StringRef USR;
   StringRef Name;
@@ -691,6 +744,7 @@ SymbolGraphSerializer::serializeAPIRecord(const RecordTy &Record) const {
 
   serializeFunctionSignatureMixin(Obj, Record);
   serializeAccessMixin(Obj, Record);
+  serializeTemplateMixin(Obj, Record);
 
   return Obj;
 }
@@ -724,6 +778,16 @@ StringRef SymbolGraphSerializer::getRelationshipString(RelationshipKind Kind) {
     return "extensionTo";
   }
   llvm_unreachable("Unhandled relationship kind");
+}
+
+StringRef SymbolGraphSerializer::getConstraintString(ConstraintKind Kind) {
+  switch (Kind) {
+  case ConstraintKind::Conformance:
+    return "conformance";
+  case ConstraintKind::ConditionalConformance:
+    return "conditionalConformance";
+  }
+  llvm_unreachable("Unhandled constraint kind");
 }
 
 void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
@@ -794,6 +858,56 @@ void SymbolGraphSerializer::visitCXXClassRecord(const CXXClassRecord &Record) {
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitClassTemplateRecord(
+    const ClassTemplateRecord &Record) {
+  auto Class = serializeAPIRecord(Record);
+  if (!Class)
+    return;
+
+  Symbols.emplace_back(std::move(*Class));
+  serializeMembers(Record, Record.Fields);
+  serializeMembers(Record, Record.Methods);
+
+  for (const auto Base : Record.Bases)
+    serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
+    const ClassTemplateSpecializationRecord &Record) {
+  auto Class = serializeAPIRecord(Record);
+  if (!Class)
+    return;
+
+  Symbols.emplace_back(std::move(*Class));
+  serializeMembers(Record, Record.Fields);
+  serializeMembers(Record, Record.Methods);
+
+  for (const auto Base : Record.Bases)
+    serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
+    const ClassTemplatePartialSpecializationRecord &Record) {
+  auto Class = serializeAPIRecord(Record);
+  if (!Class)
+    return;
+
+  Symbols.emplace_back(std::move(*Class));
+  serializeMembers(Record, Record.Fields);
+  serializeMembers(Record, Record.Methods);
+
+  for (const auto Base : Record.Bases)
+    serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitConceptRecord(const ConceptRecord &Record) {
+  auto Concept = serializeAPIRecord(Record);
+  if (!Concept)
+    return;
+
+  Symbols.emplace_back(std::move(*Concept));
 }
 
 void SymbolGraphSerializer::visitObjCContainerRecord(
