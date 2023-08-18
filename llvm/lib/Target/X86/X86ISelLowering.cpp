@@ -40300,7 +40300,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // See if this reduces to a PSHUFD which is no more expensive and can
     // combine with more operations. Note that it has to at least flip the
     // dwords as otherwise it would have been removed as a no-op.
-    if (ArrayRef(Mask).equals({2, 3, 0, 1})) {
+    if (ArrayRef<int>(Mask).equals({2, 3, 0, 1})) {
       int DMask[] = {0, 1, 2, 3};
       int DOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 2;
       DMask[DOffset + 0] = DOffset + 1;
@@ -40335,8 +40335,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         int MappedMask[8];
         for (int i = 0; i < 8; ++i)
           MappedMask[i] = 2 * DMask[WordMask[i] / 2] + WordMask[i] % 2;
-        if (ArrayRef(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
-            ArrayRef(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
+        if (ArrayRef<int>(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
+            ArrayRef<int>(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
           // We can replace all three shuffles with an unpack.
           V = DAG.getBitcast(VT, D.getOperand(0));
           return DAG.getNode(MappedMask[0] == 0 ? X86ISD::UNPCKL
