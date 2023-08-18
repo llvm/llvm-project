@@ -3775,7 +3775,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
     if (!Fields[4].Str.empty()) {
       if (RelAddend < 0) {
         Addend = " - ";
-        RelAddend = std::abs(RelAddend);
+        RelAddend = -static_cast<uint64_t>(RelAddend);
       } else {
         Addend = " + ";
       }
