@@ -6495,7 +6495,7 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
   if (IsDXCMode())
     return llvm::opt::Visibility(options::DXCOption);
   if (IsFlangMode())  {
-    return llvm::opt::Visibility(options::ClangOption | options::FlangOption);
+    return llvm::opt::Visibility(options::FlangOption);
   }
   return llvm::opt::Visibility(options::ClangOption);
 }
