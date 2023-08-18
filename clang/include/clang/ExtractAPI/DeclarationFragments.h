@@ -23,7 +23,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
@@ -268,6 +271,8 @@ public:
   /// Build DeclarationFragments for a variable declaration VarDecl.
   static DeclarationFragments getFragmentsForVar(const VarDecl *);
 
+  static DeclarationFragments getFragmentsForVarTemplate(const VarDecl *);
+
   /// Build DeclarationFragments for a function declaration FunctionDecl.
   static DeclarationFragments getFragmentsForFunction(const FunctionDecl *);
 
@@ -319,6 +324,12 @@ public:
 
   static DeclarationFragments getFragmentsForClassTemplatePartialSpecialization(
       const ClassTemplatePartialSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForVarTemplateSpecialization(
+      const VarTemplateSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForVarTemplatePartialSpecialization(
+      const VarTemplatePartialSpecializationDecl *);
 
   /// Build DeclarationFragments for an Objective-C category declaration
   /// ObjCCategoryDecl.

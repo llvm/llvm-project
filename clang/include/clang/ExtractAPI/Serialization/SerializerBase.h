@@ -41,6 +41,12 @@ public:
 
     getDerived()->traverseConcepts();
 
+    getDerived()->traverseGlobalVariableTemplateRecords();
+
+    getDerived()->traverseGlobalVariableTemplateSpecializationRecords();
+
+    getDerived()->traverseGlobalVariableTemplatePartialSpecializationRecords();
+
     getDerived()->traverseStructRecords();
 
     getDerived()->traverseObjCInterfaces();
@@ -103,6 +109,26 @@ public:
           *ClassTemplatePartialSpecialization.second);
   }
 
+  void traverseGlobalVariableTemplateRecords() {
+    for (const auto &GlobalVariableTemplate : API.getGlobalVariableTemplates())
+      getDerived()->visitGlobalVariableTemplateRecord(
+          *GlobalVariableTemplate.second);
+  }
+
+  void traverseGlobalVariableTemplateSpecializationRecords() {
+    for (const auto &GlobalVariableTemplateSpecialization :
+         API.getGlobalVariableTemplateSpecializations())
+      getDerived()->visitGlobalVariableTemplateSpecializationRecord(
+          *GlobalVariableTemplateSpecialization.second);
+  }
+
+  void traverseGlobalVariableTemplatePartialSpecializationRecords() {
+    for (const auto &GlobalVariableTemplatePartialSpecialization :
+         API.getGlobalVariableTemplatePartialSpecializations())
+      getDerived()->visitGlobalVariableTemplatePartialSpecializationRecord(
+          *GlobalVariableTemplatePartialSpecialization.second);
+  }
+
   void traverseConcepts() {
     for (const auto &Concept : API.getConcepts())
       getDerived()->visitConceptRecord(*Concept.second);
@@ -156,6 +182,15 @@ public:
 
   void visitClassTemplatePartialSpecializationRecord(
       const ClassTemplatePartialSpecializationRecord &Record){};
+
+  void visitGlobalVariableTemplateRecord(
+      const GlobalVariableTemplateRecord &Record) {}
+
+  void visitGlobalVariableTemplateSpecializationRecord(
+      const GlobalVariableTemplateSpecializationRecord &Record){};
+
+  void visitGlobalVariableTemplatePartialSpecializationRecord(
+      const GlobalVariableTemplatePartialSpecializationRecord &Record){};
 
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record){};

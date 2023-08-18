@@ -361,6 +361,18 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("func");
     Kind["displayName"] = "Function";
     break;
+  case APIRecord::RK_GlobalVariableTemplate:
+    Kind["identifier"] = AddLangPrefix("var");
+    Kind["displayName"] = "Global Variable Template";
+    break;
+  case APIRecord::RK_GlobalVariableTemplateSpecialization:
+    Kind["identifier"] = AddLangPrefix("var");
+    Kind["displayName"] = "Global Variable Template Specialization";
+    break;
+  case APIRecord::RK_GlobalVariableTemplatePartialSpecialization:
+    Kind["identifier"] = AddLangPrefix("var");
+    Kind["displayName"] = "Global Variable Template Partial Specialization";
+    break;
   case APIRecord::RK_GlobalVariable:
     Kind["identifier"] = AddLangPrefix("var");
     Kind["displayName"] = "Global Variable";
@@ -908,6 +920,31 @@ void SymbolGraphSerializer::visitConceptRecord(const ConceptRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Concept));
+}
+
+void SymbolGraphSerializer::visitGlobalVariableTemplateRecord(
+    const GlobalVariableTemplateRecord &Record) {
+  auto GlobalVariableTemplate = serializeAPIRecord(Record);
+  if (!GlobalVariableTemplate)
+    return;
+  Symbols.emplace_back(std::move(*GlobalVariableTemplate));
+}
+
+void SymbolGraphSerializer::visitGlobalVariableTemplateSpecializationRecord(
+    const GlobalVariableTemplateSpecializationRecord &Record) {
+  auto GlobalVariableTemplateSpecialization = serializeAPIRecord(Record);
+  if (!GlobalVariableTemplateSpecialization)
+    return;
+  Symbols.emplace_back(std::move(*GlobalVariableTemplateSpecialization));
+}
+
+void SymbolGraphSerializer::
+    visitGlobalVariableTemplatePartialSpecializationRecord(
+        const GlobalVariableTemplatePartialSpecializationRecord &Record) {
+  auto GlobalVariableTemplatePartialSpecialization = serializeAPIRecord(Record);
+  if (!GlobalVariableTemplatePartialSpecialization)
+    return;
+  Symbols.emplace_back(std::move(*GlobalVariableTemplatePartialSpecialization));
 }
 
 void SymbolGraphSerializer::visitObjCContainerRecord(

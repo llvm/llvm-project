@@ -14,10 +14,12 @@
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <typeinfo>
 
 using namespace clang::extractapi;
 using namespace llvm;
@@ -450,6 +452,34 @@ DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
       .append(Var->getName(), DeclarationFragments::FragmentKind::Identifier)
       .append(std::move(After))
       .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplate(const VarDecl *Var) {
+  DeclarationFragments Fragments;
+  if (Var->isConstexpr())
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  QualType T =
+      Var->getTypeSourceInfo()
+          ? Var->getTypeSourceInfo()->getType()
+          : Var->getASTContext().getUnqualifiedObjCPointerType(Var->getType());
+
+  DeclarationFragments After;
+  DeclarationFragments ArgumentFragment =
+      getFragmentsForType(T, Var->getASTContext(), After);
+  if (ArgumentFragment.begin()->Spelling.substr(0, 14).compare(
+          "type-parameter") == 0) {
+    std::string ProperArgName = getNameForTemplateArgument(
+        Var->getDescribedVarTemplate()->getTemplateParameters()->asArray(),
+        ArgumentFragment.begin()->Spelling);
+    ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+  }
+  Fragments.append(std::move(ArgumentFragment))
+      .appendSpace()
+      .append(Var->getName(), DeclarationFragments::FragmentKind::Identifier)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+  return Fragments;
 }
 
 DeclarationFragments
@@ -894,6 +924,47 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplatePartialSpecialization(
       .appendSpace()
       .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
           cast<CXXRecordDecl>(Decl)))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
+    const VarTemplateSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
+      .pop_back() // there is an extra semicolon now
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      .append(
+          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
+                                           Decl->getASTContext(), std::nullopt))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForVarTemplatePartialSpecialization(
+    const VarTemplatePartialSpecializationDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      // Partial specs may have new params.
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
       .append(getFragmentsForTemplateArguments(

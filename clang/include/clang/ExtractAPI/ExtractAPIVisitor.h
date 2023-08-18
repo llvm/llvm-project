@@ -59,6 +59,14 @@ public:
   bool WalkUpFromClassTemplatePartialSpecializationDecl(
       const ClassTemplatePartialSpecializationDecl *Decl);
 
+  bool WalkUpFromVarTemplateDecl(const VarTemplateDecl *Decl);
+
+  bool WalkUpFromVarTemplateSpecializationDecl(
+      const VarTemplateSpecializationDecl *Decl);
+
+  bool WalkUpFromVarTemplatePartialSpecializationDecl(
+      const VarTemplatePartialSpecializationDecl *Decl);
+
   bool VisitRecordDecl(const RecordDecl *Decl);
 
   bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
@@ -70,6 +78,14 @@ public:
 
   bool VisitClassTemplatePartialSpecializationDecl(
       const ClassTemplatePartialSpecializationDecl *Decl);
+
+  bool VisitVarTemplateDecl(const VarTemplateDecl *Decl);
+
+  bool
+  VisitVarTemplateSpecializationDecl(const VarTemplateSpecializationDecl *Decl);
+
+  bool VisitVarTemplatePartialSpecializationDecl(
+      const VarTemplatePartialSpecializationDecl *Decl);
 
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl);
 
@@ -383,6 +399,28 @@ bool ExtractAPIVisitorBase<Derived>::
 }
 
 template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromVarTemplateDecl(
+    const VarTemplateDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplateDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromVarTemplateSpecializationDecl(
+    const VarTemplateSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplateSpecializationDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::
+    WalkUpFromVarTemplatePartialSpecializationDecl(
+        const VarTemplatePartialSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplatePartialSpecializationDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
@@ -559,6 +597,103 @@ bool ExtractAPIVisitorBase<Derived>::
                                                 Decl->fields());
   getDerivedExtractAPIVisitor().recordCXXMethods(ClassTemplatePartialSpecRecord,
                                                  Decl->methods());
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateDecl(
+    const VarTemplateDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForVarTemplate(
+          Decl->getTemplatedDecl());
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  // Inject template fragments before var fragments.
+  Declaration.insert(
+      Declaration.begin(),
+      DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(Decl));
+
+  API.addGlobalVariableTemplate(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
+                                Comment, Declaration, SubHeading,
+                                Template(Decl), isInSystemHeader(Decl));
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateSpecializationDecl(
+    const VarTemplateSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
+          Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  API.addGlobalVariableTemplateSpecialization(
+      Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment, Declaration,
+      SubHeading, isInSystemHeader(Decl));
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplatePartialSpecializationDecl(
+    const VarTemplatePartialSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration = DeclarationFragmentsBuilder::
+      getFragmentsForVarTemplatePartialSpecialization(Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  API.addGlobalVariableTemplatePartialSpecialization(
+      Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment, Declaration,
+      SubHeading, Template(Decl), isInSystemHeader(Decl));
   return true;
 }
 
