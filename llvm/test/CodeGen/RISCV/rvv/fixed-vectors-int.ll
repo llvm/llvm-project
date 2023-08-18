@@ -780,19 +780,19 @@ define void @sdiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: sdiv_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdiv.vv v10, v11, v10
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v9, v8
+; CHECK-NEXT:    vdiv.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 4
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vse16.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
@@ -869,19 +869,19 @@ define void @srem_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: srem_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vrem.vv v10, v11, v10
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vrem.vv v8, v9, v8
+; CHECK-NEXT:    vrem.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 4
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vse16.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
@@ -958,19 +958,19 @@ define void @udiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: udiv_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdivu.vv v10, v11, v10
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vdivu.vv v8, v9, v8
+; CHECK-NEXT:    vdivu.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 4
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vse16.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
@@ -1047,19 +1047,19 @@ define void @urem_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: urem_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vremu.vv v10, v11, v10
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vremu.vv v8, v9, v8
+; CHECK-NEXT:    vremu.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 4
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vse16.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
@@ -1244,22 +1244,22 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vi v9, v9, 12
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdivu.vv v9, v10, v9
 ; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vdivu.vv v9, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vadd.vi v10, v10, 12
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdivu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = udiv <6 x i16> %a, <i16 7, i16 9, i16 10, i16 11, i16 12, i16 13>
