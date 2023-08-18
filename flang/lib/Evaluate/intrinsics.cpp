@@ -778,6 +778,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_int_kind", {{"r", AnyInt, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"selected_logical_kind", {{"bits", AnyInt, Rank::scalar}}, DefaultInt,
+        Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_real_kind",
         {{"p", AnyInt, Rank::scalar},
             {"r", AnyInt, Rank::scalar, Optionality::optional},
