@@ -171,15 +171,15 @@ name:            srem_i72
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i72
-    ; CHECK-I: %xhi:_(s64) = COPY $x10
-    ; CHECK-I-NEXT: %xlo:_(s64) = COPY $x11
-    ; CHECK-I-NEXT: %yhi:_(s64) = COPY $x12
-    ; CHECK-I-NEXT: %ylo:_(s64) = COPY $x13
-    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG %xlo, 8
-    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG %ylo, 8
-    ; CHECK-I-NEXT: $x10 = COPY %xhi(s64)
+    ; CHECK-I: %xlo:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: %xhi:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: %ylo:_(s64) = COPY $x12
+    ; CHECK-I-NEXT: %yhi:_(s64) = COPY $x13
+    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG %xhi, 8
+    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG %yhi, 8
+    ; CHECK-I-NEXT: $x10 = COPY %xlo(s64)
     ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG]](s64)
-    ; CHECK-I-NEXT: $x12 = COPY %yhi(s64)
+    ; CHECK-I-NEXT: $x12 = COPY %ylo(s64)
     ; CHECK-I-NEXT: $x13 = COPY [[SEXT_INREG1]](s64)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__modti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -189,15 +189,15 @@ body:             |
     ; CHECK-I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
     ; CHECK-M-LABEL: name: srem_i72
-    ; CHECK-M: %xhi:_(s64) = COPY $x10
-    ; CHECK-M-NEXT: %xlo:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: %yhi:_(s64) = COPY $x12
-    ; CHECK-M-NEXT: %ylo:_(s64) = COPY $x13
-    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG %xlo, 8
-    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG %ylo, 8
-    ; CHECK-M-NEXT: $x10 = COPY %xhi(s64)
+    ; CHECK-M: %xlo:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: %xhi:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: %ylo:_(s64) = COPY $x12
+    ; CHECK-M-NEXT: %yhi:_(s64) = COPY $x13
+    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG %xhi, 8
+    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG %yhi, 8
+    ; CHECK-M-NEXT: $x10 = COPY %xlo(s64)
     ; CHECK-M-NEXT: $x11 = COPY [[SEXT_INREG]](s64)
-    ; CHECK-M-NEXT: $x12 = COPY %yhi(s64)
+    ; CHECK-M-NEXT: $x12 = COPY %ylo(s64)
     ; CHECK-M-NEXT: $x13 = COPY [[SEXT_INREG1]](s64)
     ; CHECK-M-NEXT: PseudoCALL target-flags(riscv-call) &__modti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -205,19 +205,19 @@ body:             |
     ; CHECK-M-NEXT: $x10 = COPY [[COPY]](s64)
     ; CHECK-M-NEXT: $x11 = COPY [[COPY1]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10, implicit $x11
-    %xhi:_(s64) = COPY $x10
-    %xlo:_(s64) = COPY $x11
-    %yhi:_(s64) = COPY $x12
-    %ylo:_(s64) = COPY $x13
-    %x0:_(s128) = G_MERGE_VALUES %xhi(s64), %xlo(s64)
-    %y0:_(s128) = G_MERGE_VALUES %yhi(s64), %ylo(s64)
+    %xlo:_(s64) = COPY $x10
+    %xhi:_(s64) = COPY $x11
+    %ylo:_(s64) = COPY $x12
+    %yhi:_(s64) = COPY $x13
+    %x0:_(s128) = G_MERGE_VALUES %xlo(s64), %xhi(s64)
+    %y0:_(s128) = G_MERGE_VALUES %ylo(s64), %yhi(s64)
     %x:_(s72) = G_TRUNC %x0
     %y:_(s72) = G_TRUNC %y0
     %z:_(s72) = G_SREM %x, %y
     %z0:_(s128) = G_ANYEXT %z
-    %zhi:_(s64), %zlo:_(s64) = G_UNMERGE_VALUES %z0(s128)
-    $x10 = COPY %zhi(s64)
-    $x11 = COPY %zlo(s64)
+    %zlo:_(s64), %zhi:_(s64) = G_UNMERGE_VALUES %z0(s128)
+    $x10 = COPY %zlo(s64)
+    $x11 = COPY %zhi(s64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -226,14 +226,14 @@ name:            srem_i128
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i128
-    ; CHECK-I: %hi1:_(s64) = COPY $x10
-    ; CHECK-I-NEXT: %lo1:_(s64) = COPY $x11
-    ; CHECK-I-NEXT: %hi2:_(s64) = COPY $x12
-    ; CHECK-I-NEXT: %lo2:_(s64) = COPY $x13
-    ; CHECK-I-NEXT: $x10 = COPY %hi1(s64)
-    ; CHECK-I-NEXT: $x11 = COPY %lo1(s64)
-    ; CHECK-I-NEXT: $x12 = COPY %hi2(s64)
-    ; CHECK-I-NEXT: $x13 = COPY %lo2(s64)
+    ; CHECK-I: %lo1:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: %hi1:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: %lo2:_(s64) = COPY $x12
+    ; CHECK-I-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-I-NEXT: $x10 = COPY %lo1(s64)
+    ; CHECK-I-NEXT: $x11 = COPY %hi1(s64)
+    ; CHECK-I-NEXT: $x12 = COPY %lo2(s64)
+    ; CHECK-I-NEXT: $x13 = COPY %hi2(s64)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__modti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
@@ -242,30 +242,30 @@ body:             |
     ; CHECK-I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
     ; CHECK-M-LABEL: name: srem_i128
-    ; CHECK-M: %hi1:_(s64) = COPY $x10
-    ; CHECK-M-NEXT: %lo1:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: %hi2:_(s64) = COPY $x12
-    ; CHECK-M-NEXT: %lo2:_(s64) = COPY $x13
-    ; CHECK-M-NEXT: $x10 = COPY %hi1(s64)
-    ; CHECK-M-NEXT: $x11 = COPY %lo1(s64)
-    ; CHECK-M-NEXT: $x12 = COPY %hi2(s64)
-    ; CHECK-M-NEXT: $x13 = COPY %lo2(s64)
+    ; CHECK-M: %lo1:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: %hi1:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: %lo2:_(s64) = COPY $x12
+    ; CHECK-M-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-M-NEXT: $x10 = COPY %lo1(s64)
+    ; CHECK-M-NEXT: $x11 = COPY %hi1(s64)
+    ; CHECK-M-NEXT: $x12 = COPY %lo2(s64)
+    ; CHECK-M-NEXT: $x13 = COPY %hi2(s64)
     ; CHECK-M-NEXT: PseudoCALL target-flags(riscv-call) &__modti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-M-NEXT: $x10 = COPY [[COPY]](s64)
     ; CHECK-M-NEXT: $x11 = COPY [[COPY1]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10, implicit $x11
-    %hi1:_(s64) = COPY $x10
-    %lo1:_(s64) = COPY $x11
-    %hi2:_(s64) = COPY $x12
-    %lo2:_(s64) = COPY $x13
-    %x1:_(s128) = G_MERGE_VALUES %hi1(s64), %lo1(s64)
-    %x2:_(s128) = G_MERGE_VALUES %hi2(s64), %lo2(s64)
+    %lo1:_(s64) = COPY $x10
+    %hi1:_(s64) = COPY $x11
+    %lo2:_(s64) = COPY $x12
+    %hi2:_(s64) = COPY $x13
+    %x1:_(s128) = G_MERGE_VALUES %lo1(s64), %hi1(s64)
+    %x2:_(s128) = G_MERGE_VALUES %lo2(s64), %hi2(s64)
     %y:_(s128) = G_SREM %x1, %x2
-    %hiy:_(s64), %loy:_(s64) = G_UNMERGE_VALUES %y(s128)
-    $x10 = COPY %hiy(s64)
-    $x11 = COPY %loy(s64)
+    %loy:_(s64), %hiy:_(s64) = G_UNMERGE_VALUES %y(s128)
+    $x10 = COPY %loy(s64)
+    $x11 = COPY %hiy(s64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -453,18 +453,18 @@ name:            urem_i72
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i72
-    ; CHECK-I: %xhi:_(s64) = COPY $x10
-    ; CHECK-I-NEXT: %xlo:_(s64) = COPY $x11
-    ; CHECK-I-NEXT: %yhi:_(s64) = COPY $x12
-    ; CHECK-I-NEXT: %ylo:_(s64) = COPY $x13
+    ; CHECK-I: %xlo:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: %xhi:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: %ylo:_(s64) = COPY $x12
+    ; CHECK-I-NEXT: %yhi:_(s64) = COPY $x13
     ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-I-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %xhi, [[C]]
-    ; CHECK-I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND %xlo, [[C1]]
+    ; CHECK-I-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %xlo, [[C]]
+    ; CHECK-I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND %xhi, [[C1]]
     ; CHECK-I-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-I-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-I-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND %yhi, [[C2]]
-    ; CHECK-I-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND %ylo, [[C3]]
+    ; CHECK-I-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND %ylo, [[C2]]
+    ; CHECK-I-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND %yhi, [[C3]]
     ; CHECK-I-NEXT: $x10 = COPY [[AND]](s64)
     ; CHECK-I-NEXT: $x11 = COPY [[AND1]](s64)
     ; CHECK-I-NEXT: $x12 = COPY [[AND2]](s64)
@@ -477,18 +477,18 @@ body:             |
     ; CHECK-I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
     ; CHECK-M-LABEL: name: urem_i72
-    ; CHECK-M: %xhi:_(s64) = COPY $x10
-    ; CHECK-M-NEXT: %xlo:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: %yhi:_(s64) = COPY $x12
-    ; CHECK-M-NEXT: %ylo:_(s64) = COPY $x13
+    ; CHECK-M: %xlo:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: %xhi:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: %ylo:_(s64) = COPY $x12
+    ; CHECK-M-NEXT: %yhi:_(s64) = COPY $x13
     ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %xhi, [[C]]
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND %xlo, [[C1]]
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %xlo, [[C]]
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND %xhi, [[C1]]
     ; CHECK-M-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-M-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-M-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND %yhi, [[C2]]
-    ; CHECK-M-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND %ylo, [[C3]]
+    ; CHECK-M-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND %ylo, [[C2]]
+    ; CHECK-M-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND %yhi, [[C3]]
     ; CHECK-M-NEXT: $x10 = COPY [[AND]](s64)
     ; CHECK-M-NEXT: $x11 = COPY [[AND1]](s64)
     ; CHECK-M-NEXT: $x12 = COPY [[AND2]](s64)
@@ -499,19 +499,19 @@ body:             |
     ; CHECK-M-NEXT: $x10 = COPY [[COPY]](s64)
     ; CHECK-M-NEXT: $x11 = COPY [[COPY1]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10, implicit $x11
-    %xhi:_(s64) = COPY $x10
-    %xlo:_(s64) = COPY $x11
-    %yhi:_(s64) = COPY $x12
-    %ylo:_(s64) = COPY $x13
-    %x0:_(s128) = G_MERGE_VALUES %xhi(s64), %xlo(s64)
-    %y0:_(s128) = G_MERGE_VALUES %yhi(s64), %ylo(s64)
+    %xlo:_(s64) = COPY $x10
+    %xhi:_(s64) = COPY $x11
+    %ylo:_(s64) = COPY $x12
+    %yhi:_(s64) = COPY $x13
+    %x0:_(s128) = G_MERGE_VALUES %xlo(s64), %xhi(s64)
+    %y0:_(s128) = G_MERGE_VALUES %ylo(s64), %yhi(s64)
     %x:_(s72) = G_TRUNC %x0
     %y:_(s72) = G_TRUNC %y0
     %z:_(s72) = G_UREM %x, %y
     %z0:_(s128) = G_ANYEXT %z
-    %zhi:_(s64), %zlo:_(s64) = G_UNMERGE_VALUES %z0(s128)
-    $x10 = COPY %zhi(s64)
-    $x11 = COPY %zlo(s64)
+    %zlo:_(s64), %zhi:_(s64) = G_UNMERGE_VALUES %z0(s128)
+    $x10 = COPY %zlo(s64)
+    $x11 = COPY %zhi(s64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -520,14 +520,14 @@ name:            urem_i128
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i128
-    ; CHECK-I: %hi1:_(s64) = COPY $x10
-    ; CHECK-I-NEXT: %lo1:_(s64) = COPY $x11
-    ; CHECK-I-NEXT: %hi2:_(s64) = COPY $x12
-    ; CHECK-I-NEXT: %lo2:_(s64) = COPY $x13
-    ; CHECK-I-NEXT: $x10 = COPY %hi1(s64)
-    ; CHECK-I-NEXT: $x11 = COPY %lo1(s64)
-    ; CHECK-I-NEXT: $x12 = COPY %hi2(s64)
-    ; CHECK-I-NEXT: $x13 = COPY %lo2(s64)
+    ; CHECK-I: %lo1:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: %hi1:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: %lo2:_(s64) = COPY $x12
+    ; CHECK-I-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-I-NEXT: $x10 = COPY %lo1(s64)
+    ; CHECK-I-NEXT: $x11 = COPY %hi1(s64)
+    ; CHECK-I-NEXT: $x12 = COPY %lo2(s64)
+    ; CHECK-I-NEXT: $x13 = COPY %hi2(s64)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__umodti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
@@ -536,30 +536,30 @@ body:             |
     ; CHECK-I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
     ; CHECK-M-LABEL: name: urem_i128
-    ; CHECK-M: %hi1:_(s64) = COPY $x10
-    ; CHECK-M-NEXT: %lo1:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: %hi2:_(s64) = COPY $x12
-    ; CHECK-M-NEXT: %lo2:_(s64) = COPY $x13
-    ; CHECK-M-NEXT: $x10 = COPY %hi1(s64)
-    ; CHECK-M-NEXT: $x11 = COPY %lo1(s64)
-    ; CHECK-M-NEXT: $x12 = COPY %hi2(s64)
-    ; CHECK-M-NEXT: $x13 = COPY %lo2(s64)
+    ; CHECK-M: %lo1:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: %hi1:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: %lo2:_(s64) = COPY $x12
+    ; CHECK-M-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-M-NEXT: $x10 = COPY %lo1(s64)
+    ; CHECK-M-NEXT: $x11 = COPY %hi1(s64)
+    ; CHECK-M-NEXT: $x12 = COPY %lo2(s64)
+    ; CHECK-M-NEXT: $x13 = COPY %hi2(s64)
     ; CHECK-M-NEXT: PseudoCALL target-flags(riscv-call) &__umodti3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-M-NEXT: $x10 = COPY [[COPY]](s64)
     ; CHECK-M-NEXT: $x11 = COPY [[COPY1]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10, implicit $x11
-    %hi1:_(s64) = COPY $x10
-    %lo1:_(s64) = COPY $x11
-    %hi2:_(s64) = COPY $x12
-    %lo2:_(s64) = COPY $x13
-    %x1:_(s128) = G_MERGE_VALUES %hi1(s64), %lo1(s64)
-    %x2:_(s128) = G_MERGE_VALUES %hi2(s64), %lo2(s64)
+    %lo1:_(s64) = COPY $x10
+    %hi1:_(s64) = COPY $x11
+    %lo2:_(s64) = COPY $x12
+    %hi2:_(s64) = COPY $x13
+    %x1:_(s128) = G_MERGE_VALUES %lo1(s64), %hi1(s64)
+    %x2:_(s128) = G_MERGE_VALUES %lo2(s64), %hi2(s64)
     %y:_(s128) = G_UREM %x1, %x2
-    %hiy:_(s64), %loy:_(s64) = G_UNMERGE_VALUES %y(s128)
-    $x10 = COPY %hiy(s64)
-    $x11 = COPY %loy(s64)
+    %loy:_(s64), %hiy:_(s64) = G_UNMERGE_VALUES %y(s128)
+    $x10 = COPY %loy(s64)
+    $x11 = COPY %hiy(s64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
