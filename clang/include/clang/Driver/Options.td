@@ -4132,7 +4132,7 @@ def imultilib : Separate<["-"], "imultilib">, Group<gfortran_Group>;
 def K : Flag<["-"], "K">, Flags<[LinkerInput]>;
 def keep__private__externs : Flag<["-"], "keep_private_externs">;
 def l : JoinedOrSeparate<["-"], "l">, Flags<[LinkerInput, RenderJoined]>,
-        Group<Link_Group>;
+        Visibility<[ClangOption, FlangOption]>, Group<Link_Group>;
 def lazy__framework : Separate<["-"], "lazy_framework">, Flags<[LinkerInput]>;
 def lazy__library : Separate<["-"], "lazy_library">, Flags<[LinkerInput]>;
 def mlittle_endian : Flag<["-"], "mlittle-endian">, Group<m_Group>,
