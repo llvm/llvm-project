@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_WASM_ADDRESS_SPACES_H
-#define LLVM_CODEGEN_WASM_ADDRESS_SPACES_H
+#ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
+#define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
 
 namespace llvm {
 
@@ -45,4 +45,4 @@ inline bool isValidAddressSpace(unsigned AS) {
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_WASM_ADDRESS_SPACES_H
+#endif // LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
