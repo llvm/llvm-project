@@ -148,7 +148,6 @@ interesting areas to contribute to lldb.
    resources/build
    resources/test
    resources/fuzzing
-   resources/bots
    resources/sbapi
    resources/extensions
    resources/caveats
