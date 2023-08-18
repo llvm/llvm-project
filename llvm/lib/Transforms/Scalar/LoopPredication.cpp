@@ -307,8 +307,9 @@ class LoopPredication {
   widenICmpRangeCheckDecrementingLoop(LoopICmp LatchCheck, LoopICmp RangeCheck,
                                       SCEVExpander &Expander,
                                       Instruction *Guard);
-  unsigned widenChecks(SmallVectorImpl<Value *> &Checks, SCEVExpander &Expander,
-                       Instruction *Guard);
+  void widenChecks(SmallVectorImpl<Value *> &Checks,
+                   SmallVectorImpl<Value *> &WidenedChecks,
+                   SCEVExpander &Expander, Instruction *Guard);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
   bool widenWidenableBranchGuardConditions(BranchInst *Guard, SCEVExpander &Expander);
   // If the loop always exits through another block in the loop, we should not
@@ -754,17 +755,15 @@ LoopPredication::widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
   }
 }
 
-unsigned LoopPredication::widenChecks(SmallVectorImpl<Value *> &Checks,
-                                      SCEVExpander &Expander,
-                                      Instruction *Guard) {
-  unsigned NumWidened = 0;
+void LoopPredication::widenChecks(SmallVectorImpl<Value *> &Checks,
+                                  SmallVectorImpl<Value *> &WidenedChecks,
+                                  SCEVExpander &Expander, Instruction *Guard) {
   for (auto &Check : Checks)
     if (ICmpInst *ICI = dyn_cast<ICmpInst>(Check))
       if (auto NewRangeCheck = widenICmpRangeCheck(ICI, Expander, Guard)) {
-        NumWidened++;
+        WidenedChecks.push_back(Check);
         Check = *NewRangeCheck;
       }
-  return NumWidened;
 }
 
 bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
@@ -774,12 +773,13 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
+  SmallVector<Value *> WidenedChecks;
   parseWidenableGuard(Guard, Checks);
-  unsigned NumWidened = widenChecks(Checks, Expander, Guard);
-  if (NumWidened == 0)
+  widenChecks(Checks, WidenedChecks, Expander, Guard);
+  if (WidenedChecks.empty())
     return false;
 
-  TotalWidened += NumWidened;
+  TotalWidened += WidenedChecks.size();
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(Guard, Checks));
@@ -792,7 +792,7 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
   }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
 
-  LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
+  LLVM_DEBUG(dbgs() << "Widened checks = " << WidenedChecks.size() << "\n");
   return true;
 }
 
@@ -810,15 +810,16 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
 
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
+  SmallVector<Value *> WidenedChecks;
   parseWidenableGuard(BI, Checks);
   // At the moment, our matching logic for wideable conditions implicitly
   // assumes we preserve the form: (br (and Cond, WC())).  FIXME
   Checks.push_back(WC);
-  unsigned NumWidened = widenChecks(Checks, Expander, BI);
-  if (NumWidened == 0)
+  widenChecks(Checks, WidenedChecks, Expander, BI);
+  if (WidenedChecks.empty())
     return false;
 
-  TotalWidened += NumWidened;
+  TotalWidened += WidenedChecks.size();
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(BI, Checks));
@@ -830,13 +831,13 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
     // If this block has other predecessors, we might not be able to use Cond.
     // In this case, create a Phi where every other input is `true` and input
     // from guard block is Cond.
-    Value *AssumeCond = Cond;
+    Value *AssumeCond = Builder.CreateAnd(WidenedChecks);
     if (!IfTrueBB->getUniquePredecessor()) {
       auto *GuardBB = BI->getParent();
-      auto *PN = Builder.CreatePHI(Cond->getType(), pred_size(IfTrueBB),
+      auto *PN = Builder.CreatePHI(AssumeCond->getType(), pred_size(IfTrueBB),
                                    "assume.cond");
       for (auto *Pred : predecessors(IfTrueBB))
-        PN->addIncoming(Pred == GuardBB ? Cond : Builder.getTrue(), Pred);
+        PN->addIncoming(Pred == GuardBB ? AssumeCond : Builder.getTrue(), Pred);
       AssumeCond = PN;
     }
     Builder.CreateAssumption(AssumeCond);
@@ -845,7 +846,7 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");
 
-  LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
+  LLVM_DEBUG(dbgs() << "Widened checks = " << WidenedChecks.size() << "\n");
   return true;
 }
 
