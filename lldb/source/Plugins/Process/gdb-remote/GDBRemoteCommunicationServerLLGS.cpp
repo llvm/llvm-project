@@ -2304,7 +2304,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   // Build the reginfos response.
   StreamGDBRemote response;
 
-  RegisterValue reg_value(ArrayRef(m_reg_bytes, reg_size),
+  RegisterValue reg_value(ArrayRef<uint8_t>(m_reg_bytes, reg_size),
                           m_current_process->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
