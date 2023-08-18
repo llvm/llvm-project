@@ -476,14 +476,14 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; UNROLL:       pred.store.continue3:
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; UNROLL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; UNROLL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; UNROLL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; UNROLL:       middle.block:
-; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
+; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
-; UNROLL-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_INC:%.*]] ], [ undef, [[MIDDLE_BLOCK]] ]
-; UNROLL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ undef, [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_INC:%.*]] ], [ 1000, [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ 0, [[MIDDLE_BLOCK]] ]
 ; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[TMP0]]
 ; UNROLL-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
 ; UNROLL-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[FOR_INC]]
@@ -528,14 +528,14 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue3:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
-; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
+; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
-; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ undef, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ undef, [[MIDDLE_BLOCK]] ], [ undef, [[ENTRY]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 1000, [[ENTRY]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -589,14 +589,14 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.continue3:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VEC-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; VEC-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VEC-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VEC:       middle.block:
-; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; VEC:       for.body:
-; VEC-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_INC:%.*]] ], [ undef, [[MIDDLE_BLOCK]] ]
-; VEC-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ undef, [[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_INC:%.*]] ], [ 1000, [[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ 0, [[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[TMP0]]
 ; VEC-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
 ; VEC-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[FOR_INC]]
@@ -618,7 +618,7 @@ entry:
 
 for.body:
   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ]
-  %tmp1 = phi i64 [ %tmp7, %for.inc ], [ undef, %entry ]
+  %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 1000, %entry ]
   %tmp2 = getelementptr i8, ptr undef, i64 %tmp0
   %tmp3 = load i8, ptr %tmp2, align 1
   br i1 %c, label %if.then, label %for.inc
