@@ -11,11 +11,7 @@ import os.path
 
 import libcxx.header_information
 
-public_headers = libcxx.header_information.public_headers
-header_include_requirements = libcxx.header_information.header_include_requirements
-always_available_headers = frozenset(public_headers).difference(
-    *header_include_requirements.values()
-)
+header_restrictions = libcxx.header_information.header_restrictions
 
 libcxx_include_directory = os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "include"
@@ -58,25 +54,11 @@ with open(
     )
     # Include the angle brackets in sorting so that <a.h> sorts before <a>
     # like check-format wants.
-    for include in sorted([f"<{header}>" for header in always_available_headers]):
-        std_clang_module_header.write(f"#include {include}\n")
-
-    for requirements, headers in sorted(
-        header_include_requirements.items(), key=operator.itemgetter(0)
-    ):
-        std_clang_module_header.write("\n")
-        if len(requirements) == 1:
-            std_clang_module_header.write("#ifndef ")
-            std_clang_module_header.write(requirements[0])
-        else:
-            std_clang_module_header.write("#if")
-            for index, requirement in enumerate(requirements):
-                if index > 0:
-                    std_clang_module_header.write(" &&")
-                std_clang_module_header.write(f" !defined({requirement})")
-        std_clang_module_header.write("\n")
-
-        for include in sorted([f"<{header}>" for header in headers]):
+    for include, header in sorted([(f"<{header}>", header) for header in libcxx.header_information.public_headers]):
+        header_restriction = header_restrictions.get(header)
+        if header_restriction:
+            std_clang_module_header.write(f"#if {header_restriction}\n")
             std_clang_module_header.write(f"#  include {include}\n")
-
-        std_clang_module_header.write("#endif\n")
+            std_clang_module_header.write(f"#endif\n")
+        else:
+            std_clang_module_header.write(f"#include {include}\n")

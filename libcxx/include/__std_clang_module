@@ -30,6 +30,12 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#  include <atomic>
+#endif
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <barrier>
+#endif
 #include <bit>
 #include <bitset>
 #include <cassert>
@@ -43,7 +49,13 @@
 #include <cinttypes>
 #include <ciso646>
 #include <climits>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <clocale>
+#endif
 #include <cmath>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <codecvt>
+#endif
 #include <compare>
 #include <complex.h>
 #include <complex>
@@ -63,6 +75,12 @@
 #include <ctime>
 #include <ctype.h>
 #include <cuchar>
+#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#  include <cwchar>
+#endif
+#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#  include <cwctype>
+#endif
 #include <deque>
 #include <errno.h>
 #include <exception>
@@ -75,6 +93,9 @@
 #include <experimental/map>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <experimental/regex>
+#endif
 #include <experimental/set>
 #include <experimental/simd>
 #include <experimental/string>
@@ -88,14 +109,41 @@
 #include <float.h>
 #include <format>
 #include <forward_list>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <fstream>
+#endif
 #include <functional>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <future>
+#endif
 #include <initializer_list>
 #include <inttypes.h>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <iomanip>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <ios>
+#endif
 #include <iosfwd>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <iostream>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <istream>
+#endif
 #include <iterator>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <latch>
+#endif
 #include <limits.h>
 #include <limits>
 #include <list>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <locale.h>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <locale>
+#endif
 #include <map>
 #include <math.h>
 #include <mdspan>
@@ -106,28 +154,58 @@
 #include <numbers>
 #include <numeric>
 #include <optional>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <ostream>
+#endif
 #include <print>
 #include <queue>
 #include <random>
 #include <ranges>
 #include <ratio>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <regex>
+#endif
 #include <scoped_allocator>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <semaphore>
+#endif
 #include <set>
 #include <setjmp.h>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <shared_mutex>
+#endif
 #include <source_location>
 #include <span>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <sstream>
+#endif
 #include <stack>
+#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#  include <stdatomic.h>
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdexcept>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <stop_token>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <streambuf>
+#endif
 #include <string.h>
 #include <string>
 #include <string_view>
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <strstream>
+#endif
 #include <system_error>
 #include <tgmath.h>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  include <thread>
+#endif
 #include <tuple>
 #include <type_traits>
 #include <typeindex>
@@ -140,43 +218,9 @@
 #include <variant>
 #include <vector>
 #include <version>
-
-#ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
-#  include <atomic>
-#  include <stdatomic.h>
-#endif
-
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <clocale>
-#  include <codecvt>
-#  include <experimental/regex>
-#  include <fstream>
-#  include <iomanip>
-#  include <ios>
-#  include <iostream>
-#  include <istream>
-#  include <locale.h>
-#  include <locale>
-#  include <ostream>
-#  include <regex>
-#  include <sstream>
-#  include <streambuf>
-#  include <strstream>
-#endif
-
-#ifndef _LIBCPP_HAS_NO_THREADS
-#  include <barrier>
-#  include <future>
-#  include <latch>
-#  include <semaphore>
-#  include <shared_mutex>
-#  include <stop_token>
-#  include <thread>
-#endif
-
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <cwchar>
-#  include <cwctype>
+#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #  include <wchar.h>
+#endif
+#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #  include <wctype.h>
 #endif
