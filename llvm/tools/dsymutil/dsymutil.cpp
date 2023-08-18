@@ -491,15 +491,17 @@ static Error createBundleDir(StringRef BundleBase) {
 }
 
 static bool verifyOutput(StringRef OutputFile, StringRef Arch,
-                         DsymutilOptions Options) {
+                         DsymutilOptions Options, std::mutex &Mutex) {
 
   if (OutputFile == "-") {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because writing to stdout.\n";
     return true;
   }
 
   if (Options.LinkOpts.NoOutput) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::warning() << "verification skipped for " << Arch
                          << " because --no-output was passed.\n";
     return true;
@@ -507,6 +509,7 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(OutputFile);
   if (!BinOrErr) {
+    std::lock_guard<std::mutex> Guard(Mutex);
     WithColor::error() << OutputFile << ": " << toString(BinOrErr.takeError());
     return false;
   }
@@ -515,16 +518,27 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
     if (DICtx->getMaxVersion() >= 5) {
+      std::lock_guard<std::mutex> Guard(Mutex);
       WithColor::warning() << "verification skipped for " << Arch
                            << " because DWARFv5 is not fully supported yet.\n";
       return true;
     }
-    raw_ostream &os = Options.LinkOpts.Verbose ? errs() : nulls();
-    os << "Verifying DWARF for architecture: " << Arch << "\n";
+
+    if (Options.LinkOpts.Verbose) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << "Verifying DWARF for architecture: " << Arch << "\n";
+    }
+
+    std::string Buffer;
+    raw_string_ostream OS(Buffer);
+
     DIDumpOptions DumpOpts;
-    bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
-    if (!success)
+    bool success = DICtx->verify(OS, DumpOpts.noImplicitRecursion());
+    if (!success) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      errs() << OS.str();
       WithColor::error() << "output verification failed for " << Arch << '\n';
+    }
     return success;
   }
 
@@ -730,15 +744,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
 
-    // Set up a crash recovery context.
-    CrashRecoveryContext::Enable();
-    CrashRecoveryContext CRC;
-    CRC.DumpStackAndCleanupOnFailure = true;
-
     std::atomic_char AllOK(1);
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
 
     std::mutex ErrorHandlerMutex;
+
+    // Set up a crash recovery context.
+    CrashRecoveryContext::Enable();
+    CrashRecoveryContext CRC;
+    CRC.DumpStackAndCleanupOnFailure = true;
 
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
@@ -751,11 +765,13 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         if (!Options.SymbolMap.empty())
           Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
 
-        if (Map->begin() == Map->end())
+        if (Map->begin() == Map->end()) {
+          std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
           WithColor::warning()
               << "no debug symbols in executable (-arch "
               << MachOUtils::getArchName(Map->getTriple().getArchName())
               << ")\n";
+        }
 
         // Using a std::shared_ptr rather than std::unique_ptr because move-only
         // types don't work with std::bind in the ThreadPool implementation.
@@ -767,6 +783,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
           auto E = TempFiles.back().createTempFile();
           if (E) {
+            std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
             WithColor::error() << toString(std::move(E));
             AllOK.fetch_and(false);
             return;
@@ -797,8 +814,9 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
               (flagIsSet(Options.Verify, DWARFVerify::OutputOnValidInput) &&
                !Linker.InputVerificationFailed())) {
-            AllOK.fetch_and(verifyOutput(
-                OutputFile, Map->getTriple().getArchName(), Options));
+            AllOK.fetch_and(verifyOutput(OutputFile,
+                                         Map->getTriple().getArchName(),
+                                         Options, ErrorHandlerMutex));
           }
         };
 
