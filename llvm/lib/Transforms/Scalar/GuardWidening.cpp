@@ -124,9 +124,7 @@ static void eliminateGuard(Instruction *GuardInst, MemorySSAUpdater *MSSAU) {
 /// the one described at https://github.com/llvm/llvm-project/issues/60234. The
 /// safest way to do it is to expand the new condition at WC's block.
 static Instruction *findInsertionPointForWideCondition(Instruction *Guard) {
-  Value *Condition, *WC;
-  BasicBlock *IfTrue, *IfFalse;
-  if (parseWidenableBranch(Guard, Condition, WC, IfTrue, IfFalse))
+  if (auto WC = extractWidenableCondition(Guard))
     return cast<Instruction>(WC);
   return Guard;
 }
