@@ -52,6 +52,7 @@ def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
+def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -188,7 +189,7 @@ def CallVirt : Opcode {
 }
 
 def CallBI : Opcode {
-  let Args = [ArgFunction];
+  let Args = [ArgFunction, ArgCallExpr];
   let Types = [];
 }
 

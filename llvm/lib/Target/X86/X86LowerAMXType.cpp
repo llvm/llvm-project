@@ -494,7 +494,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
   Value *Row = II->getOperand(0);
   Value *Col = II->getOperand(1);
 
-  Instruction *UserI = dyn_cast<Instruction>(U.getUser());
+  Instruction *UserI = cast<Instruction>(U.getUser());
   IRBuilder<> Builder(UserI);
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 4> Args = {Row, Col, Ptr, Stride};

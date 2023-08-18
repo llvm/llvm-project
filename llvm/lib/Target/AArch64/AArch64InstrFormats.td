@@ -8601,7 +8601,7 @@ multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
                    (f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
                    (f16 (vector_extract (v8f16 V128:$Rm), VectorIndexH:$idx)))),
             (!cast<Instruction>(NAME # v1i16_indexed)
-              (EXTRACT_SUBREG V128:$Rn, hsub), V128:$Rm, VectorIndexH:$idx)>;
+              (f16 (EXTRACT_SUBREG V128:$Rn, hsub)), V128:$Rm, VectorIndexH:$idx)>;
   }
 
   let Predicates = [HasNEON] in {
@@ -9157,7 +9157,7 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                     (i64 0))))),
             (!cast<Instruction>(NAME # v1i32_indexed)
                         FPR32Op:$Rd,
-                        (EXTRACT_SUBREG V64:$Rn, hsub),
+                        (f16 (EXTRACT_SUBREG V64:$Rn, hsub)),
                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),
                         (i64 0))>;
 
@@ -9170,7 +9170,7 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                     (i64 0))))),
             (!cast<Instruction>(NAME # v1i32_indexed)
                         FPR32Op:$Rd,
-                        (EXTRACT_SUBREG V64:$Rn, hsub),
+                        (f16 (EXTRACT_SUBREG V64:$Rn, hsub)),
                         V128_lo:$Rm,
                         VectorIndexH:$idx)>;
 

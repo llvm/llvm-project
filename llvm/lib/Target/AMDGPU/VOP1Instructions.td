@@ -1203,14 +1203,17 @@ def : GCNPat <
                        (as_i1timm $bound_ctrl))
 >;
 
-def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl,
+class UpdateDPPPat<ValueType vt> : GCNPat <
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl,
                               timm:$row_mask, timm:$bank_mask,
                               timm:$bound_ctrl)),
   (V_MOV_B32_dpp VGPR_32:$old, VGPR_32:$src, (as_i32timm $dpp_ctrl),
                  (as_i32timm $row_mask), (as_i32timm $bank_mask),
                  (as_i1timm $bound_ctrl))
 >;
+
+def : UpdateDPPPat<i32>;
+def : UpdateDPPPat<f32>;
 
 } // End OtherPredicates = [isGFX8Plus]
 

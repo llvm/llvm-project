@@ -1987,7 +1987,7 @@ CodeGenModule::getFunctionLinkage(GlobalDecl GD) {
     return llvm::GlobalValue::InternalLinkage;
   }
 
-  return getLLVMLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);
+  return getLLVMLinkageForDeclarator(D, Linkage);
 }
 
 llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
@@ -3685,7 +3685,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     // The value must be emitted, but cannot be emitted eagerly.
     assert(!MayBeEmittedEagerly(Global));
     addDeferredDeclToEmit(GD);
-    EmittedDeferredDecls[MangledName] = GD;
   } else {
     // Otherwise, remember that we saw a deferred decl with this name.  The
     // first use of the mangled name will cause it to move into
@@ -4425,7 +4424,6 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
       // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
       // don't need it anymore).
       addDeferredDeclToEmit(DDI->second);
-      EmittedDeferredDecls[DDI->first] = DDI->second;
       DeferredDecls.erase(DDI);
 
       // Otherwise, there are cases we have to worry about where we're
@@ -4685,7 +4683,6 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     // Move the potentially referenced deferred decl to the DeferredDeclsToEmit
     // list, and remove it from DeferredDecls (since we don't need it anymore).
     addDeferredDeclToEmit(DDI->second);
-    EmittedDeferredDecls[DDI->first] = DDI->second;
     DeferredDecls.erase(DDI);
   }
 
@@ -5228,8 +5225,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     AddGlobalAnnotations(D, GV);
 
   // Set the llvm linkage type as appropriate.
-  llvm::GlobalValue::LinkageTypes Linkage =
-      getLLVMLinkageVarDefinition(D, GV->isConstant());
+  llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(D);
 
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
@@ -5422,8 +5418,9 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
   return false;
 }
 
-llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageForDeclarator(
-    const DeclaratorDecl *D, GVALinkage Linkage, bool IsConstantVariable) {
+llvm::GlobalValue::LinkageTypes
+CodeGenModule::getLLVMLinkageForDeclarator(const DeclaratorDecl *D,
+                                           GVALinkage Linkage) {
   if (Linkage == GVA_Internal)
     return llvm::Function::InternalLinkage;
 
@@ -5493,10 +5490,10 @@ llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageForDeclarator(
   return llvm::GlobalVariable::ExternalLinkage;
 }
 
-llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageVarDefinition(
-    const VarDecl *VD, bool IsConstant) {
+llvm::GlobalValue::LinkageTypes
+CodeGenModule::getLLVMLinkageVarDefinition(const VarDecl *VD) {
   GVALinkage Linkage = getContext().GetGVALinkageForVariable(VD);
-  return getLLVMLinkageForDeclarator(VD, Linkage, IsConstant);
+  return getLLVMLinkageForDeclarator(VD, Linkage);
 }
 
 /// Replace the uses of a function that was declared with a non-proto type.
@@ -5708,7 +5705,7 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
     Aliasee = GetOrCreateLLVMGlobal(AA->getAliasee(), DeclTy, LangAS::Default,
                                     /*D=*/nullptr);
     if (const auto *VD = dyn_cast<VarDecl>(GD.getDecl()))
-      LT = getLLVMLinkageVarDefinition(VD, D->getType().isConstQualified());
+      LT = getLLVMLinkageVarDefinition(VD);
     else
       LT = getFunctionLinkage(GD);
   }
@@ -6342,8 +6339,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   }
 
   // Create a global variable for this lifetime-extended temporary.
-  llvm::GlobalValue::LinkageTypes Linkage =
-      getLLVMLinkageVarDefinition(VD, Constant);
+  llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(VD);
   if (Linkage == llvm::GlobalVariable::ExternalLinkage) {
     const VarDecl *InitVD;
     if (VD->isStaticDataMember() && VD->getAnyInitializer(InitVD) &&

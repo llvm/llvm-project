@@ -407,22 +407,6 @@ public:
     return getSamplesFor(CanonName);
   }
 
-  /// Return the samples collected for function \p F, create empty
-  /// FunctionSamples if it doesn't exist.
-  FunctionSamples *getOrCreateSamplesFor(const Function &F) {
-    std::string FGUID;
-    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    CanonName = getRepInFormat(CanonName, useMD5(), FGUID);
-    auto It = Profiles.find(CanonName);
-    if (It != Profiles.end())
-      return &It->second;
-    if (!FGUID.empty()) {
-      assert(useMD5() && "New name should only be generated for md5 profile");
-      CanonName = *MD5NameBuffer.insert(FGUID).first;
-    }
-    return &Profiles[CanonName];
-  }
-
   /// Return the samples collected for function \p F.
   virtual FunctionSamples *getSamplesFor(StringRef Fname) {
     std::string FGUID;

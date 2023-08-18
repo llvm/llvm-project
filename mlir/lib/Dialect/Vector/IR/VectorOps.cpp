@@ -5760,22 +5760,26 @@ static LogicalResult verifyDistributedType(Type expanded, Type distributed,
       expandedVecType.getElementType() != distributedVecType.getElementType())
     return op->emitOpError(
         "expected distributed vectors to have same rank and element type.");
-  bool foundDistributedDim = false;
+
+  SmallVector<int64_t> scales(expandedVecType.getRank(), 1);
   for (int64_t i = 0, e = expandedVecType.getRank(); i < e; i++) {
-    if (expandedVecType.getDimSize(i) == distributedVecType.getDimSize(i))
+    int64_t eDim = expandedVecType.getDimSize(i);
+    int64_t dDim = distributedVecType.getDimSize(i);
+    if (eDim == dDim)
       continue;
-    if (expandedVecType.getDimSize(i) ==
-        distributedVecType.getDimSize(i) * warpSize) {
-      if (foundDistributedDim)
-        return op->emitOpError()
-               << "expected only one dimension to be distributed from "
-               << expandedVecType << " to " << distributedVecType;
-      foundDistributedDim = true;
-      continue;
-    }
-    return op->emitOpError() << "incompatible distribution dimensions from "
-                             << expandedVecType << " to " << distributedVecType;
+    if (eDim % dDim != 0)
+      return op->emitOpError()
+             << "expected expanded vector dimension #" << i << " (" << eDim
+             << ") to be a multipler of the distributed vector dimension ("
+             << dDim << ")";
+    scales[i] = eDim / dDim;
   }
+  if (std::accumulate(scales.begin(), scales.end(), 1,
+                      std::multiplies<int64_t>()) != warpSize)
+    return op->emitOpError()
+           << "incompatible distribution dimensions from " << expandedVecType
+           << " to " << distributedVecType << " with warp size = " << warpSize;
+
   return success();
 }
 

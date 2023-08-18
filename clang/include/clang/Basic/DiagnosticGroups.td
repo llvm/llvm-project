@@ -678,13 +678,15 @@ def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
 def TautologicalBitwiseCompare : DiagGroup<"tautological-bitwise-compare">;
 def TautologicalUndefinedCompare : DiagGroup<"tautological-undefined-compare">;
 def TautologicalObjCBoolCompare : DiagGroup<"tautological-objc-bool-compare">;
+def TautologicalNegationCompare : DiagGroup<"tautological-negation-compare">;
 def TautologicalCompare : DiagGroup<"tautological-compare",
                                     [TautologicalConstantCompare,
                                      TautologicalPointerCompare,
                                      TautologicalOverlapCompare,
                                      TautologicalBitwiseCompare,
                                      TautologicalUndefinedCompare,
-                                     TautologicalObjCBoolCompare]>;
+                                     TautologicalObjCBoolCompare,
+                                     TautologicalNegationCompare]>;
 def HeaderHygiene : DiagGroup<"header-hygiene">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;

@@ -14826,7 +14826,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   // Strip vector types.
   if (isa<VectorType>(Source)) {
-    if (Target->isVLSTBuiltinType() &&
+    if (Target->isSveVLSBuiltinType() &&
         (S.Context.areCompatibleSveTypes(QualType(Target, 0),
                                          QualType(Source, 0)) ||
          S.Context.areLaxCompatibleSveTypes(QualType(Target, 0),
@@ -14877,7 +14877,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   const BuiltinType *TargetBT = dyn_cast<BuiltinType>(Target);
 
   // Strip SVE vector types
-  if (SourceBT && SourceBT->isVLSTBuiltinType()) {
+  if (SourceBT && SourceBT->isSveVLSBuiltinType()) {
     // Need the original target type for vector type checks
     const Type *OriginalTarget = S.Context.getCanonicalType(T).getTypePtr();
     // Handle conversion from scalable to fixed when msve-vector-bits is
@@ -14896,7 +14896,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     Source = SourceBT->getSveEltType(S.Context).getTypePtr();
   }
 
-  if (TargetBT && TargetBT->isVLSTBuiltinType())
+  if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(S.Context).getTypePtr();
 
   // If the source is floating point...

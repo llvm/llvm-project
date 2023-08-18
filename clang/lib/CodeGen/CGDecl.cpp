@@ -202,7 +202,7 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
       return;
 
     llvm::GlobalValue::LinkageTypes Linkage =
-        CGM.getLLVMLinkageVarDefinition(&D, /*IsConstant=*/false);
+        CGM.getLLVMLinkageVarDefinition(&D);
 
     // FIXME: We need to force the emission/use of a guard variable for
     // some variables even if we can constant-evaluate them because

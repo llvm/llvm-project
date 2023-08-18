@@ -2890,6 +2890,11 @@ public:
     return removeIncomingValue(Idx, DeletePHIIfEmpty);
   }
 
+  /// Remove all incoming values for which the predicate returns true.
+  /// The predicate accepts the incoming value index.
+  void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                             bool DeletePHIIfEmpty = true);
+
   /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
   ///

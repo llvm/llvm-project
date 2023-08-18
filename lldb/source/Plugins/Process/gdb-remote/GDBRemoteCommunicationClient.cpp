@@ -1415,17 +1415,17 @@ GDBRemoteCommunicationClient::GetHostArchitecture() {
   return m_host_arch;
 }
 
-bool GDBRemoteCommunicationClient::GetAddressableBits(
-    lldb_private::AddressableBits &addressable_bits) {
-  addressable_bits.Clear();
+AddressableBits GDBRemoteCommunicationClient::GetAddressableBits() {
+  AddressableBits addressable_bits;
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
-  if (m_low_mem_addressing_bits != 0 || m_high_mem_addressing_bits != 0) {
-    addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
-                                        m_high_mem_addressing_bits);
-    return true;
-  }
-  return false;
+
+  // m_low_mem_addressing_bits and m_high_mem_addressing_bits
+  // will be 0 if we did not receive values; AddressableBits
+  // treats 0 as "unspecified".
+  addressable_bits.SetAddressableBits(m_low_mem_addressing_bits,
+                                      m_high_mem_addressing_bits);
+  return addressable_bits;
 }
 
 seconds GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {

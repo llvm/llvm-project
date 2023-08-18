@@ -563,8 +563,7 @@ def MyInterface : OpInterface<"MyInterface"> {
 
         template <typename ConcreteOp>
         struct Model : public Concept {
-          Operation *create(Operation *opaqueOp, OpBuilder &builder,
-                            Location loc) const override {
+          unsigned getNumInputsAndOutputs(Operation *opaqueOp) const override {
             ConcreteOp op = cast<ConcreteOp>(opaqueOp);
             return op.getNumInputs() + op.getNumOutputs();
           }
@@ -593,7 +592,7 @@ def MyInterface : OpInterface<"MyInterface"> {
       public:
         bool isSafeToTransform() {
           ConcreteOp op = cast<ConcreteOp>(this->getOperation());
-          return op.getNumInputs() + op.getNumOutputs();
+          return op.getProperties().hasFlag;
         }
       };
       ```
@@ -619,6 +618,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     }],
       "bool", "isSafeToTransform", (ins), /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
+        return $_op.getProperties().hasFlag;
     }]>,
   ];
 }

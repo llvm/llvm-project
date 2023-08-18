@@ -760,13 +760,28 @@ define i32 @test69_and(i32 %x, i32 %y) {
 
 define i8 @test70(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test70(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp slt i8 %x, 0
+  %or = or i8 %y, 2
+  %select = select i1 %cmp, i8 %or, i8 %y
+  ret i8 %select
+}
+
+define i8 @test70_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @test70_multiuse(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[OR]])
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 [[Y]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %cmp = icmp slt i8 %x, 0
   %or = or i8 %y, 2
+  call void @use(i8 %or)
   %select = select i1 %cmp, i8 %or, i8 %y
   ret i8 %select
 }
@@ -1571,4 +1586,35 @@ define i8 @clear_bits_extra_use2(i8 %x, i1 %b)  {
   call void @use(i8 %or)
   %cond = select i1 %b, i8 %and, i8 %or
   ret i8 %cond
+}
+
+; Tests factoring in cost of saving the `and`
+define i64 @xor_i8_to_i64_shl_save_and_eq(i8 %x, i64 %y) {
+; CHECK-LABEL: @xor_i8_to_i64_shl_save_and_eq(
+; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XX]], 0
+; CHECK-NEXT:    [[Z:%.*]] = xor i64 [[Y:%.*]], -9223372036854775808
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i64 [[Z]], i64 [[Y]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %xx = and i8 %x, 1
+  %cmp = icmp eq i8 %xx, 0
+  %z = xor i64 %y, -9223372036854775808
+  %r = select i1 %cmp, i64 %z, i64 %y
+  ret i64 %r
+}
+
+define i64 @xor_i8_to_i64_shl_save_and_ne(i8 %x, i64 %y) {
+; CHECK-LABEL: @xor_i8_to_i64_shl_save_and_ne(
+; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[XX]], 0
+; CHECK-NEXT:    [[Z:%.*]] = xor i64 [[Y:%.*]], -9223372036854775808
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP_NOT]], i64 [[Y]], i64 [[Z]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %xx = and i8 %x, 1
+  %cmp = icmp ne i8 %xx, 0
+  %z = xor i64 %y, -9223372036854775808
+  %r = select i1 %cmp, i64 %z, i64 %y
+  ret i64 %r
 }

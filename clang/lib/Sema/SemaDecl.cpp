@@ -9235,7 +9235,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     bool HasPrototype =
         (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype) ||
         (D.getDeclSpec().isTypeRep() &&
-         D.getDeclSpec().getRepAsType().get()->isFunctionProtoType()) ||
+         SemaRef.GetTypeFromParser(D.getDeclSpec().getRepAsType(), nullptr)
+             ->isFunctionProtoType()) ||
         (!R->getAsAdjusted<FunctionType>() && R->isFunctionProtoType());
     assert(
         (HasPrototype || !SemaRef.getLangOpts().requiresStrictPrototypes()) &&
@@ -14363,8 +14364,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     bool MSVCEnv =
         Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
     std::optional<QualType::NonConstantStorageReason> Reason;
-    if (var->hasInit() && HasConstInit && !(Reason =
-        var->getType().isNonConstantStorage(Context, true, false))) {
+    if (HasConstInit &&
+        !(Reason = var->getType().isNonConstantStorage(Context, true, false))) {
       Stack = &ConstSegStack;
     } else {
       SectionFlags |= ASTContext::PSF_Write;

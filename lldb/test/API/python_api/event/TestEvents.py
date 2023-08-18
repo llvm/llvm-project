@@ -347,6 +347,9 @@ class EventAPITestCase(TestBase):
             
         return state, restart
 
+    @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
+    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
+    @skipIfNetBSD
     def test_shadow_listener(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

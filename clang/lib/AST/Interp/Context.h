@@ -31,6 +31,11 @@ class Program;
 class State;
 enum PrimType : unsigned;
 
+struct ParamOffset {
+  unsigned Offset;
+  bool IsPtr;
+};
+
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:

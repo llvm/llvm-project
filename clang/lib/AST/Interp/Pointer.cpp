@@ -122,8 +122,8 @@ APValue Pointer::toAPValue() const {
           bool IsVirtual = false;
 
           // Create a path entry for the field.
-          Descriptor *Desc = Ptr.getFieldDesc();
-          if (auto *BaseOrMember = Desc->asDecl()) {
+          const Descriptor *Desc = Ptr.getFieldDesc();
+          if (const auto *BaseOrMember = Desc->asDecl()) {
             Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
             Ptr = Ptr.getBase();
             continue;

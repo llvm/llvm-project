@@ -87,10 +87,17 @@ C++2c Feature Support
       int _; // Previously diagnosed under -Wunused, no longer diagnosed
     }
 
+- Attributes now expect unevaluated strings in attributes parameters that are string literals.
+  This is applied to both C++ standard attributes, and other attributes supported by Clang.
+  This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>`_
 
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `CWG1473 <https://wg21.link/CWG1473>`_ which allows spaces after ``operator""``.
+  Clang used to err on the lack of space when the literal suffix identifier was invalid in
+  all the language modes, which contradicted the deprecation of the whitespaces.
+  Also turn on ``-Wdeprecated-literal-operator`` by default in all the language modes.
 
 C Language Changes
 ------------------
@@ -184,6 +191,10 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
+- Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
+  tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
+  makes ``-Winfinite-recursion`` diagnose more cases.
+  (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -193,6 +204,13 @@ Bug Fixes in This Version
   class, which can result in miscompiles in some cases.
 - Fix crash on use of a variadic overloaded operator.
   (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
+- Fix a hang on valid C code passing a function type as an argument to
+  ``typeof`` to form a function declaration.
+  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
+- Clang now respects ``-fwrapv`` and ``-ftrapv`` for ``__builtin_abs`` and
+  ``abs`` builtins.
+  (`#45129 <https://github.com/llvm/llvm-project/issues/45129>`_,
+  `#45794 <https://github.com/llvm/llvm-project/issues/45794>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -210,17 +228,20 @@ Bug Fixes to C++ Support
 
 - Fix a crash caused by some named unicode escape sequences designating
   a Unicode character whose name contains a ``-``.
-  (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
+  (Fixes `#64161 <https://github.com/llvm/llvm-project/issues/64161>`_)
 
 - Fix cases where we ignore ambiguous name lookup when looking up memebers.
-  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>_`),
-  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
-  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
-  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
+  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>`_),
+  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>`_),
+  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>`_) and
+  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>`_).
 
 - Clang emits an error on substitution failure within lambda body inside a
   requires-expression. This fixes:
-  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>_`).
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
+
+- Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
+  (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -317,10 +338,17 @@ libclang
 Static Analyzer
 ---------------
 
+- Added a new checker ``core.BitwiseShift`` which reports situations where
+  bitwise shift operators produce undefined behavior (because some operand is
+  negative or too large).
+
 .. _release-notes-sanitizers:
 
 Sanitizers
 ----------
+- ``-fsanitize=signed-integer-overflow`` now instruments ``__builtin_abs`` and
+  ``abs`` builtins.
+
 
 Python Binding Changes
 ----------------------

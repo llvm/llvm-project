@@ -473,10 +473,19 @@ private:
   llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
 
   void addEmittedDeferredDecl(GlobalDecl GD) {
-    if (!llvm::isa<FunctionDecl>(GD.getDecl()))
+    // Reemission is only needed in incremental mode.
+    if (!Context.getLangOpts().IncrementalExtensions)
       return;
-    llvm::GlobalVariable::LinkageTypes L = getFunctionLinkage(GD);
-    if (llvm::GlobalValue::isLinkOnceLinkage(L) ||
+
+    // Assume a linkage by default that does not need reemission.
+    auto L = llvm::GlobalValue::ExternalLinkage;
+    if (llvm::isa<FunctionDecl>(GD.getDecl()))
+      L = getFunctionLinkage(GD);
+    else if (auto *VD = llvm::dyn_cast<VarDecl>(GD.getDecl()))
+      L = getLLVMLinkageVarDefinition(VD);
+
+    if (llvm::GlobalValue::isInternalLinkage(L) ||
+        llvm::GlobalValue::isLinkOnceLinkage(L) ||
         llvm::GlobalValue::isWeakLinkage(L)) {
       EmittedDeferredDecls[getMangledName(GD)] = GD;
     }
@@ -1429,12 +1438,11 @@ public:
 
   /// Returns LLVM linkage for a declarator.
   llvm::GlobalValue::LinkageTypes
-  getLLVMLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
-                              bool IsConstantVariable);
+  getLLVMLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage);
 
   /// Returns LLVM linkage for a declarator.
   llvm::GlobalValue::LinkageTypes
-  getLLVMLinkageVarDefinition(const VarDecl *VD, bool IsConstant);
+  getLLVMLinkageVarDefinition(const VarDecl *VD);
 
   /// Emit all the global annotations.
   void EmitGlobalAnnotations();

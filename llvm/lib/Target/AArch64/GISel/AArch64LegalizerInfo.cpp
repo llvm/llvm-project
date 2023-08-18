@@ -243,9 +243,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FMA,
-                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
-                               G_FNEARBYINT, G_INTRINSIC_LRINT})
+  getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(
@@ -936,8 +934,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
-  getActionDefinitionsBuilder(
-      {G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
+  getActionDefinitionsBuilder({G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
@@ -1134,7 +1134,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
     unsigned VaListSize =
@@ -1212,6 +1213,36 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
     MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
+  case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
+  case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv: {
+    MachineIRBuilder MIB(MI);
+    MachineRegisterInfo &MRI = *MIB.getMRI();
+    bool IsSigned = IntrinsicID == Intrinsic::aarch64_neon_saddv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_smaxv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_sminv;
+
+    auto OldDst = MI.getOperand(0).getReg();
+    auto OldDstTy = MRI.getType(OldDst);
+    LLT NewDstTy = MRI.getType(MI.getOperand(2).getReg()).getElementType();
+    if (OldDstTy == NewDstTy)
+      return true;
+
+    auto NewDst = MRI.createGenericVirtualRegister(NewDstTy);
+
+    Helper.Observer.changingInstr(MI);
+    MI.getOperand(0).setReg(NewDst);
+    Helper.Observer.changedInstr(MI);
+
+    MIB.setInsertPt(MIB.getMBB(), ++MIB.getInsertPt());
+    MIB.buildExtOrTrunc(IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT,
+                        OldDst, NewDst);
+
     return true;
   }
   }

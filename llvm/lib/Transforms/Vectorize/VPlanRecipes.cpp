@@ -156,8 +156,13 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
   if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  assert(MiddleVPBB->getNumSuccessors() == 0 &&
+         "the middle block must not have any successors");
+  BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
-                   State.Builder.GetInsertBlock());
+                   MiddleBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -969,14 +974,14 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode()) << " (";
+  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (getCondOp()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (RdxDesc->IntermediateStore)
+  if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
 }

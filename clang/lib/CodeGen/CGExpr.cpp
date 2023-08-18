@@ -2679,8 +2679,7 @@ static LValue EmitGlobalNamedRegister(const VarDecl *VD, CodeGenModule &CGM) {
 /// this context.
 static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
                                                const DeclRefExpr *E,
-                                               const VarDecl *VD,
-                                               bool IsConstant) {
+                                               const VarDecl *VD) {
   // For a variable declared in an enclosing scope, do not emit a spurious
   // reference even if we have a capture, as that will emit an unwarranted
   // reference to our capture state, and will likely generate worse code than
@@ -2713,7 +2712,7 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (CGF.CGM.getLLVMLinkageVarDefinition(VD, IsConstant)) {
+  switch (CGF.CGM.getLLVMLinkageVarDefinition(VD)) {
   case llvm::GlobalValue::ExternalLinkage:
   case llvm::GlobalValue::LinkOnceODRLinkage:
   case llvm::GlobalValue::WeakODRLinkage:
@@ -2744,7 +2743,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // constant value directly instead.
     if (E->isNonOdrUse() == NOUR_Constant &&
         (VD->getType()->isReferenceType() ||
-         !canEmitSpuriousReferenceToVariable(*this, E, VD, true))) {
+         !canEmitSpuriousReferenceToVariable(*this, E, VD))) {
       VD->getAnyInitializer(VD);
       llvm::Constant *Val = ConstantEmitter(*this).emitAbstract(
           E->getLocation(), *VD->evaluateValue(), VD->getType());
@@ -2846,7 +2845,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // some reason; most likely, because it's in an outer function.
     } else if (VD->isStaticLocal()) {
       llvm::Constant *var = CGM.getOrCreateStaticVarDecl(
-          *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false));
+          *VD, CGM.getLLVMLinkageVarDefinition(VD));
       addr = Address(
           var, ConvertTypeForMem(VD->getType()), getContext().getDeclAlign(VD));
 
@@ -3431,14 +3430,12 @@ void CodeGenFunction::EmitCfiCheckStub() {
   llvm::Function *F = llvm::Function::Create(
       llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy}, false),
       llvm::GlobalValue::WeakAnyLinkage, "__cfi_check", M);
+  F->setAlignment(llvm::Align(4096));
   CGM.setDSOLocal(F);
   llvm::BasicBlock *BB = llvm::BasicBlock::Create(Ctx, "entry", F);
-  // FIXME: consider emitting an intrinsic call like
-  // call void @llvm.cfi_check(i64 %0, i8* %1, i8* %2)
-  // which can be lowered in CrossDSOCFI pass to the actual contents of
-  // __cfi_check. This would allow inlining of __cfi_check calls.
-  llvm::CallInst::Create(
-      llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::trap), "", BB);
+  // CrossDSOCFI pass is not executed if there is no executable code.
+  SmallVector<llvm::Value*> Args{F->getArg(2), F->getArg(1)};
+  llvm::CallInst::Create(M->getFunction("__cfi_check_fail"), Args, "", BB);
   llvm::ReturnInst::Create(Ctx, nullptr, BB);
 }
 

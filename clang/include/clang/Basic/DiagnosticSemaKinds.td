@@ -408,7 +408,7 @@ def warn_reserved_extern_symbol: Warning<
   InGroup<ReservedIdentifier>, DefaultIgnore;
 def warn_deprecated_literal_operator_id: Warning<
   "identifier %0 preceded by whitespace in a literal operator declaration "
-  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 
@@ -9778,6 +9778,12 @@ def warn_comparison_bitwise_always : Warning<
 def warn_comparison_bitwise_or : Warning<
   "bitwise or with non-zero value always evaluates to true">,
   InGroup<TautologicalBitwiseCompare>, DefaultIgnore;
+def warn_tautological_negation_and_compare: Warning<
+  "'&&' of a value and its negation always evaluates to false">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
+def warn_tautological_negation_or_compare: Warning<
+  "'||' of a value and its negation always evaluates to true">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
   "overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
@@ -11300,6 +11306,8 @@ def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
 
 // C++ Modules
+def err_module_import_non_interface_nor_parition : Error<
+  "import of module '%0' imported non C++20 importable modules">;
 def err_module_decl_not_at_start : Error<
   "module declaration must occur at the start of the translation unit">;
 def note_global_module_introducer_missing : Note<

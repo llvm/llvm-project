@@ -28,6 +28,9 @@ extern int a __attribute__((section("foo,zed"))); // expected-warning {{section 
 int c;
 int c __attribute__((section("seg1,sec1")));
 
+const int with_init __attribute__((section("init_mix,x"))) = 1;
+const int no_init __attribute__((section("init_mix,x")));
+
 // Also OK.
 struct r_debug {};
 extern struct r_debug _r_debug;

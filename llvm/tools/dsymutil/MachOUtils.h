@@ -26,10 +26,12 @@ namespace MachOUtils {
 
 struct ArchAndFile {
   std::string Arch;
-  std::unique_ptr<llvm::sys::fs::TempFile> File;
+  std::string Path;
+  int FD = -1;
 
   llvm::Error createTempFile();
-  llvm::StringRef path() const;
+  llvm::StringRef getPath() const;
+  int getFD() const;
 
   ArchAndFile(StringRef Arch) : Arch(std::string(Arch)) {}
   ArchAndFile(ArchAndFile &&A) = default;

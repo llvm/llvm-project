@@ -6302,7 +6302,7 @@ static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
 
 static bool isValidSizelessVectorForConditionalCondition(ASTContext &Ctx,
                                                          QualType CondTy) {
-  if (!CondTy->isVLSTBuiltinType())
+  if (!CondTy->isSveVLSBuiltinType())
     return false;
   const QualType EltTy =
       cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx);
@@ -6414,10 +6414,10 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
 
   QualType LHSType = LHS.get()->getType();
   const auto *LHSBT =
-      LHSType->isVLSTBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
+      LHSType->isSveVLSBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
   QualType RHSType = RHS.get()->getType();
   const auto *RHSBT =
-      RHSType->isVLSTBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
+      RHSType->isSveVLSBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
 
   QualType ResultType;
 
@@ -6459,7 +6459,7 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
   }
 
-  assert(!ResultType.isNull() && ResultType->isVLSTBuiltinType() &&
+  assert(!ResultType.isNull() && ResultType->isSveVLSBuiltinType() &&
          "Result should have been a vector type");
   auto *ResultBuiltinTy = ResultType->castAs<BuiltinType>();
   QualType ResultElementTy = ResultBuiltinTy->getSveEltType(Context);
