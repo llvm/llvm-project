@@ -3832,7 +3832,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Macros:
 
-**Macros** (``List of Strings``) :versionbadge:`clang-format 17.0` :ref:`¶ <Macros>`
+**Macros** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <Macros>`
   A list of macros of the form ``<definition>=<expansion>`` .
 
   Code will be parsed with macros expanded, in order to determine how to
