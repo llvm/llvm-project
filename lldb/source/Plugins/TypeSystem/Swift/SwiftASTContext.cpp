@@ -2377,25 +2377,22 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
 
-  for (size_t mi = 0; mi != num_images; ++mi) {
-    std::vector<std::string> extra_clang_args;
-    ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
-                  discover_implicit_search_paths, use_all_compiler_flags,
-                  target, triple, plugin_search_options, module_search_paths,
-                  framework_search_paths, extra_clang_args);
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args);
-  }
+  for (ModuleSP module_sp : target.GetImages().Modules())
+    if (module_sp) {
+      std::vector<std::string> extra_clang_args;
+      ProcessModule(module_sp, m_description, discover_implicit_search_paths,
+                    use_all_compiler_flags, target, triple,
+                    plugin_search_options, module_search_paths,
+                    framework_search_paths, extra_clang_args);
+      swift_ast_sp->AddExtraClangArgs(extra_clang_args);
+    }
 
-  FileSpecList target_module_paths = target.GetSwiftModuleSearchPaths();
-  for (size_t mi = 0, me = target_module_paths.GetSize(); mi != me; ++mi)
-    module_search_paths.push_back(
-        target_module_paths.GetFileSpecAtIndex(mi).GetPath());
+  for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
+    module_search_paths.push_back(path.GetPath());
 
-  FileSpecList target_framework_paths = target.GetSwiftFrameworkSearchPaths();
-  for (size_t fi = 0, fe = target_framework_paths.GetSize(); fi != fe; ++fi)
-    framework_search_paths.push_back(
-        {target_framework_paths.GetFileSpecAtIndex(fi).GetPath(),
-         /*is_system*/ false});
+  for (const FileSpec &path : target.GetSwiftFrameworkSearchPaths())
+    framework_search_paths.push_back({path.GetPath(),
+                                      /*is_system*/ false});
 
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
@@ -2414,6 +2411,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   swift_ast_sp->ApplyDiagnosticOptions();
+
+  // Apply source path remappings found in each module's dSYM.
+  for (ModuleSP module : target.GetImages().Modules())
+    if (module)
+      swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
 
   // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
