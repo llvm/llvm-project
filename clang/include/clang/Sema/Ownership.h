@@ -144,15 +144,15 @@ template <class Ptr> struct IsResultPtrLowBitFree {
 /// The result of parsing/analyzing an expression, statement etc.
 ///
 /// It may be:
-/// - a valid pointer to the result object
-/// - unset (null but valid), for constructs that may legitimately be absent
+/// - usable: a valid pointer to the result object
+/// - unset (null but valid): for constructs that may legitimately be absent
 ///   (for example, the condition of a for loop)
-/// - invalid, indicating an error
+/// - invalid: indicating an error
 ///   (no detail is provided, usually the error has already been diagnosed)
 template <class PtrTy, bool Compress = IsResultPtrLowBitFree<PtrTy>::value>
 class ActionResult {
   PtrTy Val = {};
-  bool Invalid;
+  bool Invalid = false;
 
 public:
   ActionResult(bool Invalid = false) : Val(PtrTy()), Invalid(Invalid) {}
