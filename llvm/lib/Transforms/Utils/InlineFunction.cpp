@@ -30,6 +30,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -2606,6 +2607,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           Builder.CreateRetVoid();
         else
           Builder.CreateRet(NewDeoptCall);
+        // Since the ret type is changed, remove the incompatible attributes.
+        NewDeoptCall->removeRetAttrs(
+            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
       }
 
       // Leave behind the normal returns so we can merge control flow.
