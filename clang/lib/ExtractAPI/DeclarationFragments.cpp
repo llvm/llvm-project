@@ -493,6 +493,16 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
 
   DeclarationFragments TypeFragments =
       getFragmentsForType(T, Param->getASTContext(), After);
+  if (TypeFragments.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
+      0) {
+    std::string ProperArgName = getNameForTemplateArgument(
+        dyn_cast<FunctionDecl>(Param->getDeclContext())
+            ->getDescribedFunctionTemplate()
+            ->getTemplateParameters()
+            ->asArray(),
+        TypeFragments.begin()->Spelling);
+    TypeFragments.begin()->Spelling.swap(ProperArgName);
+  }
 
   if (Param->isObjCMethodParameter())
     Fragments.append("(", DeclarationFragments::FragmentKind::Text)
@@ -536,12 +546,35 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
-  Fragments
-      .append(getFragmentsForType(Func->getReturnType(), Func->getASTContext(),
-                                  After))
+  auto ReturnValueFragment =
+      getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
+  if (ReturnValueFragment.begin()->Spelling.substr(0, 14).compare(
+          "type-parameter") == 0) {
+    std::string ProperArgName =
+        getNameForTemplateArgument(Func->getDescribedFunctionTemplate()
+                                       ->getTemplateParameters()
+                                       ->asArray(),
+                                   ReturnValueFragment.begin()->Spelling);
+    ReturnValueFragment.begin()->Spelling.swap(ProperArgName);
+  }
+
+  Fragments.append(std::move(ReturnValueFragment))
       .appendSpace()
-      .append(Func->getName(), DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(Func->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  if (Func->getTemplateSpecializationInfo()) {
+    Fragments.append("<", DeclarationFragments::FragmentKind::Text);
+
+    for (unsigned i = 0, end = Func->getNumParams(); i != end; ++i) {
+      if (i)
+        Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+      Fragments.append(
+          getFragmentsForType(Func->getParamDecl(i)->getType(),
+                              Func->getParamDecl(i)->getASTContext(), After));
+    }
+    Fragments.append(">", DeclarationFragments::FragmentKind::Text);
+  }
+  Fragments.append(std::move(After));
 
   Fragments.append("(", DeclarationFragments::FragmentKind::Text);
   for (unsigned i = 0, end = Func->getNumParams(); i != end; ++i) {
@@ -972,6 +1005,33 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplatePartialSpecialization(
           Decl->getTemplateParameters()->asArray()))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .append(";", DeclarationFragments::FragmentKind::Text);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForFunctionTemplate(
+    const FunctionTemplateDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<", DeclarationFragments::FragmentKind::Text)
+      // Partial specs may have new params.
+      .append(getFragmentsForTemplateParameters(
+          Decl->getTemplateParameters()->asArray()))
+      .append(">", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForFunction(
+          Decl->getAsFunction()));
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForFunctionTemplateSpecialization(
+    const FunctionDecl *Decl) {
+  DeclarationFragments Fragments;
+  return Fragments
+      .append("template", DeclarationFragments::FragmentKind::Keyword)
+      .append("<>", DeclarationFragments::FragmentKind::Text)
+      .appendSpace()
+      .append(DeclarationFragmentsBuilder::getFragmentsForFunction(Decl));
 }
 
 DeclarationFragments
