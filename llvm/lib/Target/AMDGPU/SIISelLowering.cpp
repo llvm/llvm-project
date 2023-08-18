@@ -10943,21 +10943,13 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         assert(Op.getValueType().isByteSized() &&
                OtherOp.getValueType().isByteSized());
 
-        // Handle potential vectors
-        Op = DAG.getBitcast(MVT::getIntegerVT(Op.getValueSizeInBits()), Op);
-        OtherOp = DAG.getBitcast(
-              MVT::getIntegerVT(OtherOp.getValueSizeInBits()), OtherOp);
-
-        if (Op.getValueSizeInBits() < 32)
-          // If the ultimate src is less than 32 bits, then we will only be
-          // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
-          // CalculateByteProvider would not have returned Op as source if we
-          // used a byte that is outside its ValueType. Thus, we are free to
-          // ANY_EXTEND as the extended bits are dont-cares.
-          Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op);
-
-        if (OtherOp.getValueSizeInBits() < 32)
-          OtherOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, OtherOp);
+        // If the ultimate src is less than 32 bits, then we will only be
+        // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
+        // CalculateByteProvider would not have returned Op as source if we
+        // used a byte that is outside its ValueType. Thus, we are free to
+        // ANY_EXTEND as the extended bits are dont-cares.
+        Op = DAG.getBitcastedAnyExtOrTrunc(Op, DL, MVT::i32);
+        OtherOp = DAG.getBitcastedAnyExtOrTrunc(OtherOp, DL, MVT::i32);
 
         return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
                            DAG.getConstant(PermMask, DL, MVT::i32));
