@@ -702,7 +702,9 @@ define i64 @test_signbits_i64(i64 %a, i64 %b) nounwind {
 ; X86-LABEL: test_signbits_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    cmovbl %ecx, %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    retl
@@ -717,7 +719,8 @@ define i128 @test_signbits_i128(i128 %a, i128 %b) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    sarq $28, %rax
-; X64-NEXT:    andq %rsi, %rax
+; X64-NEXT:    cmpq %rax, %rsi
+; X64-NEXT:    cmovbq %rsi, %rax
 ; X64-NEXT:    movq %rax, %rdx
 ; X64-NEXT:    sarq $63, %rdx
 ; X64-NEXT:    retq
