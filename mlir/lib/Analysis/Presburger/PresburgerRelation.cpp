@@ -164,6 +164,20 @@ PresburgerRelation::intersectDomain(const PresburgerSet &set) const {
   return intersect(other);
 }
 
+PresburgerSet PresburgerRelation::getDomainSet() const {
+  PresburgerSet result = PresburgerSet::getEmpty(space.getDomainSpace());
+  for (const IntegerRelation &cs : disjuncts)
+    result.unionInPlace(cs.getDomainSet());
+  return result;
+}
+
+PresburgerSet PresburgerRelation::getRangeSet() const {
+  PresburgerSet result = PresburgerSet::getEmpty(space.getRangeSpace());
+  for (const IntegerRelation &cs : disjuncts)
+    result.unionInPlace(cs.getRangeSet());
+  return result;
+}
+
 void PresburgerRelation::inverse() {
   for (IntegerRelation &cs : disjuncts)
     cs.inverse();
