@@ -186,6 +186,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   ignore delegate constructors.
 
+- Improved :doc `cppcoreguidelines-pro-bounds-array-to-pointer-decay
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check 
+  to ignore predefined expression (e.g., ``__func__``, ...).
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.
