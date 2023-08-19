@@ -10,10 +10,14 @@ body:             |
     ; CHECK-I-LABEL: name: sdiv_i7
     ; CHECK-I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
-    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 7
-    ; CHECK-I-NEXT: $x10 = COPY [[SEXT_INREG]](s32)
-    ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-I-NEXT: $x10 = COPY [[ASHR]](s32)
+    ; CHECK-I-NEXT: $x11 = COPY [[ASHR1]](s32)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__divsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: $x10 = COPY [[COPY2]](s32)
@@ -22,9 +26,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i7
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
-    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 7
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
     ; CHECK-M-NEXT: $x10 = COPY [[SDIV]](s32)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
@@ -44,10 +52,14 @@ body:             |
     ; CHECK-I-LABEL: name: sdiv_i8
     ; CHECK-I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
-    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
-    ; CHECK-I-NEXT: $x10 = COPY [[SEXT_INREG]](s32)
-    ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-I-NEXT: $x10 = COPY [[ASHR]](s32)
+    ; CHECK-I-NEXT: $x11 = COPY [[ASHR1]](s32)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__divsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: $x10 = COPY [[COPY2]](s32)
@@ -56,9 +68,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i8
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
-    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
     ; CHECK-M-NEXT: $x10 = COPY [[SDIV]](s32)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
@@ -78,10 +94,14 @@ body:             |
     ; CHECK-I-LABEL: name: sdiv_i16
     ; CHECK-I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
-    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK-I-NEXT: $x10 = COPY [[SEXT_INREG]](s32)
-    ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-I-NEXT: $x10 = COPY [[ASHR]](s32)
+    ; CHECK-I-NEXT: $x11 = COPY [[ASHR1]](s32)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__divsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: $x10 = COPY [[COPY2]](s32)
@@ -90,9 +110,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i16
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
-    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
+    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
     ; CHECK-M-NEXT: $x10 = COPY [[SDIV]](s32)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
@@ -141,12 +165,16 @@ body:             |
     ; CHECK-I-NEXT: %xhi:_(s32) = COPY $x11
     ; CHECK-I-NEXT: %ylo:_(s32) = COPY $x12
     ; CHECK-I-NEXT: %yhi:_(s32) = COPY $x13
-    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG %xhi, 16
-    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG %yhi, 16
+    ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %xhi, [[C]](s32)
+    ; CHECK-I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL %yhi, [[C1]](s32)
+    ; CHECK-I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
     ; CHECK-I-NEXT: $x10 = COPY %xlo(s32)
-    ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG]](s32)
+    ; CHECK-I-NEXT: $x11 = COPY [[ASHR]](s32)
     ; CHECK-I-NEXT: $x12 = COPY %ylo(s32)
-    ; CHECK-I-NEXT: $x13 = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-I-NEXT: $x13 = COPY [[ASHR1]](s32)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__divdi3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -159,12 +187,16 @@ body:             |
     ; CHECK-M-NEXT: %xhi:_(s32) = COPY $x11
     ; CHECK-M-NEXT: %ylo:_(s32) = COPY $x12
     ; CHECK-M-NEXT: %yhi:_(s32) = COPY $x13
-    ; CHECK-M-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG %xhi, 16
-    ; CHECK-M-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG %yhi, 16
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %xhi, [[C]](s32)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL %yhi, [[C1]](s32)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]](s32)
     ; CHECK-M-NEXT: $x10 = COPY %xlo(s32)
-    ; CHECK-M-NEXT: $x11 = COPY [[SEXT_INREG]](s32)
+    ; CHECK-M-NEXT: $x11 = COPY [[ASHR]](s32)
     ; CHECK-M-NEXT: $x12 = COPY %ylo(s32)
-    ; CHECK-M-NEXT: $x13 = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-M-NEXT: $x13 = COPY [[ASHR1]](s32)
     ; CHECK-M-NEXT: PseudoCALL target-flags(riscv-call) &__divdi3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
