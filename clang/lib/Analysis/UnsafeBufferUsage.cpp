@@ -2274,7 +2274,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
           VD, F->getBaseStmt()->getBeginLoc(),
           ("gadget '" + F->getDebugName() + "' refused to produce a fix")
               .str());
-#endif      
+#endif
       FixItsForVariable.erase(VD);
       break;
     }
