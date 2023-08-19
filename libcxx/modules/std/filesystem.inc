@@ -18,6 +18,7 @@ export namespace std::filesystem {
   // [fs.class.filesystem.error], filesystem errors
   using std::filesystem::filesystem_error;
 
+#ifndef _LIBCPP_HAS_NO_FILESYSTEM
   // [fs.class.directory.entry], directory entries
   using std::filesystem::directory_entry;
 
@@ -30,6 +31,7 @@ export namespace std::filesystem {
 
   // [fs.class.rec.dir.itr], recursive directory iterators
   using std::filesystem::recursive_directory_iterator;
+#endif // _LIBCPP_HAS_NO_FILESYSTEM
 
   // [fs.rec.dir.itr.nonmembers], range access for recursive directory iterators
 
@@ -56,6 +58,7 @@ export namespace std::filesystem {
   using std::filesystem::operator|=;
   using std::filesystem::operator~;
 
+#ifndef _LIBCPP_HAS_NO_FILESYSTEM
   // [fs.op.funcs], filesystem operations
   using std::filesystem::absolute;
   using std::filesystem::canonical;
@@ -99,10 +102,10 @@ export namespace std::filesystem {
   using std::filesystem::symlink_status;
   using std::filesystem::temp_directory_path;
   using std::filesystem::weakly_canonical;
+#endif // _LIBCPP_HAS_NO_FILESYSTEM
 
   // [depr.fs.path.factory]
   using std::filesystem::u8path;
-
 } // namespace std::filesystem
 
 // [fs.path.hash], hash support
@@ -111,6 +114,8 @@ export namespace std {
 }
 
 export namespace std::ranges {
+#ifndef _LIBCPP_HAS_NO_FILESYSTEM
   using std::ranges::enable_borrowed_range;
   using std::ranges::enable_view;
+#endif // _LIBCPP_HAS_NO_FILESYSTEM
 } // namespace std::ranges
