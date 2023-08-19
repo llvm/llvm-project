@@ -14,6 +14,7 @@
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -24,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -4132,9 +4134,17 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
 
   if (NumTeams > 0)
     OutlinedFn->addFnAttr("omp_target_num_teams", std::to_string(NumTeams));
-  if (NumThreads > 0)
+
+  if (NumThreads > 0) {
+    if (OutlinedFn->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
+      OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
+                            "1," + llvm::utostr(NumThreads));
+    } else {
+      // TODO: Modify or create "maxntidx" module metadata.
+    }
     OutlinedFn->addFnAttr("omp_target_thread_limit",
                           std::to_string(NumThreads));
+  }
 }
 
 Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
