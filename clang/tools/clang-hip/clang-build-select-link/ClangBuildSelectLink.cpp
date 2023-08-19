@@ -19,6 +19,7 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -155,6 +156,11 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   unsigned ApplicableFlags = Flags & Linker::Flags::OverrideFromSrc;
   // Similar to some flags, internalization doesn't apply to the first file.
   for (const auto &File : Files) {
+    if (!llvm::sys::fs::exists(File)) {
+      errs() << "Warning: clang-build-select-link, file: '" << File <<
+	     "'\n         Input file does not exist. File will be skipped.\n";
+      continue;
+    }
     const char *Ext = strrchr(File.c_str(), '.');
     if (!strncmp(Ext, ".a", 2)) {
       if (Verbose)
@@ -187,15 +193,17 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 }
 
 static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
-  // Convert all external functions to LinkOnceODR so they get inlined
-  // and removed by the optimizer unless optnone is set
   for (Module::iterator i = MOUT->begin(), e = MOUT->end(); i != e; ++i) {
     llvm::Function *F = &*i;
     if (!i->isDeclaration()) {
-      if (Verbose)
-        errs() << "Function attribute cleanup for\'"
-               << F->getName().str().c_str() << "\' \n";
       if (i->getCallingConv() != llvm::CallingConv::AMDGPU_KERNEL) {
+        // defined function is not an AMD kernel
+        if (Verbose)
+          errs() << "Modifying Function attributes for function \'"
+                 << F->getName().str().c_str() << "\' \n";
+        // Convert functions to LinkOnceODR with protected visibility
+        F->setLinkage(GlobalValue::LinkOnceODRLinkage);
+        F->setVisibility(GlobalValue::ProtectedVisibility);
         if (!strncmp(F->getName().str().c_str(), "__ockl_devmem_request",
                      strlen("__ockl_devmem_request")))
           continue;
@@ -208,15 +216,26 @@ static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
         if (!strncmp(F->getName().str().c_str(), "hostexec_invoke",
                      strlen("hostexec_invoke")))
           continue;
-
         // all other functions
-        F->setLinkage(GlobalValue::LinkOnceODRLinkage);
-        F->setVisibility(GlobalValue::ProtectedVisibility);
         if (!F->hasOptNone()) {
           F->removeFnAttr(llvm::Attribute::OptimizeNone);
           F->removeFnAttr(llvm::Attribute::NoInline);
           F->addFnAttr(llvm::Attribute::AlwaysInline);
 	}
+      } else {
+        // defined function is an AMD kernel
+        if (F->getName().starts_with("__nv_")) {
+          // Assume FORTRAN kernels start with __nv_
+          if (Verbose)
+            errs() << "Kernel attributes added to FORTRAN kernel\'"
+                   << F->getName().str().c_str() << "\' \n";
+          // Function Attrs: convergent mustprogress norecurse, nounwind
+          F->addFnAttr(llvm::Attribute::Convergent);
+          F->addFnAttr(llvm::Attribute::MustProgress);
+          F->addFnAttr(llvm::Attribute::NoRecurse);
+          F->addFnAttr(llvm::Attribute::NoUnwind);
+          F->setVisibility(GlobalValue::ProtectedVisibility);
+        }
       }
     }
   }
