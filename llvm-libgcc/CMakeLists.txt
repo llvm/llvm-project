@@ -1,19 +1,26 @@
-cmake_minimum_required(VERSION 3.20.0)
+#===============================================================================
+# Setup Project
+#===============================================================================
 
-if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libunwind")
-  message(FATAL_ERROR "llvm-libgcc requires being built in a monorepo layout with libunwind available")
-endif()
+cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
-list(APPEND CMAKE_MODULE_PATH
+# Add path for custom modules
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
-project(llvm-libgcc LANGUAGES C CXX ASM)
+set(LLVM_LIBGCC_LIBUNWIND_PATH "${CMAKE_CURRENT_LIST_DIR}/../libunwind"
+  CACHE PATH "Specify path to libunwind source.")
+set(LLVM_LIBGCC_COMPILER_RT_PATH "${CMAKE_CURRENT_LIST_DIR}/../compiler-rt"
+  CACHE PATH "Specify path to compiler-rt source.")
+
+include(GNUInstallDirs)
 
 if(NOT LLVM_LIBGCC_EXPLICIT_OPT_IN)
   message(FATAL_ERROR
@@ -25,18 +32,102 @@ if(NOT LLVM_LIBGCC_EXPLICIT_OPT_IN)
     "to your CMake invocation and try again.")
 endif()
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib${LLVMLIB_DIR_SUFFIX}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib${LLVMLIB_DIR_SUFFIX}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+if(COMPILER_RT_BUILTINS_HIDE_SYMBOLS AND HAVE_COMPILER_RT)
+  message(FATAL_ERROR
+    "llvm-libgcc requires compiler-rt builtins with default symbol visibility, please"
+    "add -DCOMPILER_RT_BUILTINS_HIDE_SYMBOLS=No to your CMake invocation and try again.")
+endif()
 
-set(COMPILER_RT_BUILD_BUILTINS On)
-set(COMPILER_RT_BUILTINS_HIDE_SYMBOLS Off)
-add_subdirectory("../compiler-rt" "compiler-rt")
+#===============================================================================
+# Configure System
+#===============================================================================
 
-set(LIBUNWIND_ENABLE_STATIC On)
-set(LIBUNWIND_ENABLE_SHARED Off)
-set(LIBUNWIND_HAS_COMMENT_LIB_PRAGMA Off)
-set(LIBUNWIND_USE_COMPILER_RT On)
-add_subdirectory("../libunwind" "libunwind")
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
+      "Path where built libgcc libraries should be installed.")
+  if(LIBCXX_LIBDIR_SUBDIR)
+    string(APPEND LLVM_LIBGCC_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
+    string(APPEND LLVM_LIBGCC_INSTALL_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
+  endif()
+else()
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LLVM_LIBGCC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBGCC_LIBDIR_SUFFIX})
+  endif()
+  set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBGCC_LIBDIR_SUFFIX} CACHE PATH
+      "Path where built libgcc libraries should be installed.")
+endif()
 
-add_subdirectory(lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
+
+#===============================================================================
+# Configure System
+#===============================================================================
+
+set(COMPILER_RT_BUILD_BUILTINS ON)
+set(COMPILER_RT_BUILTINS_HIDE_SYMBOLS OFF)
+
+if(NOT HAVE_COMPILER_RT)
+  add_subdirectory(${LLVM_LIBGCC_COMPILER_RT_PATH} "../compiler-rt")
+endif()
+
+set(LIBUNWIND_ENABLE_STATIC ON)
+set(LIBUNWIND_ENABLE_SHARED ON)
+set(LIBUNWIND_USE_COMPILER_RT ON)
+
+if(NOT HAVE_LIBUNWIND)
+    add_subdirectory(${LLVM_LIBGCC_LIBUNWIND_PATH} "../libunwind")
+endif()
+
+add_custom_target(gcc_s.ver
+  SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/gcc_s.ver.in
+  COMMAND ${CMAKE_C_COMPILER} -E
+    -xc ${CMAKE_CURRENT_SOURCE_DIR}/gcc_s.ver.in
+    -o ${CMAKE_CURRENT_BINARY_DIR}/gcc_s.ver
+)
+
+add_dependencies(unwind_shared gcc_s.ver)
+
+construct_compiler_rt_default_triple()
+
+target_link_options(unwind_shared PUBLIC
+  -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/gcc_s.ver
+)
+
+target_link_libraries(unwind_shared PUBLIC
+  $<TARGET_OBJECTS:clang_rt.builtins-${COMPILER_RT_DEFAULT_TARGET_ARCH}>
+  m
+)
+
+#===============================================================================
+# Install Symlinks
+#===============================================================================
+
+get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir_builtins)
+string(REGEX REPLACE "^lib/" "" install_dir_builtins "${install_dir_builtins}")
+string(FIND "${install_dir_builtins}" "clang" install_path_contains_triple)
+if(install_path_contains_triple EQUAL -1)
+  set(builtins_suffix "-${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+else()
+  string(PREPEND install_dir_builtins "../")
+endif()
+set(LLVM_LIBGCC_COMPILER_RT ${install_dir_builtins}/libclang_rt.builtins${builtins_suffix}.a)
+
+add_custom_target(libgcc ALL
+  DEPENDS unwind_shared
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLVM_LIBGCC_COMPILER_RT} libgcc.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink libunwind.a libgcc_eh.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink libunwind.so libgcc_s.so.1.0
+  COMMAND ${CMAKE_COMMAND} -E create_symlink libgcc_s.so.1.0 libgcc_s.so.1
+  COMMAND ${CMAKE_COMMAND} -E create_symlink libgcc_s.so.1 libgcc_s.so
+)
+
+foreach(VAR libgcc.a libgcc_eh.a libgcc_s.so.1.0 libgcc_s.so.1 libgcc_s.so)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${VAR}
+    DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR}
+    COMPONENT libgcc)
+endforeach()
