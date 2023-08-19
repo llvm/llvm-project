@@ -160,7 +160,14 @@ static void substituteOperandWithArgument(Function *OldF,
   for (Use *Op : OpsToReplace) {
     Value *NewArg = OldValMap.lookup(Op->get());
     auto *NewUser = cast<Instruction>(VMap.lookup(Op->getUser()));
-    NewUser->setOperand(Op->getOperandNo(), NewArg);
+
+    if (PHINode *NewPhi = dyn_cast<PHINode>(NewUser)) {
+      PHINode *OldPhi = cast<PHINode>(Op->getUser());
+      BasicBlock *OldBB = OldPhi->getIncomingBlock(*Op);
+      NewPhi->setIncomingValueForBlock(cast<BasicBlock>(VMap.lookup(OldBB)),
+                                       NewArg);
+    } else
+      NewUser->setOperand(Op->getOperandNo(), NewArg);
   }
 
   // Replace all OldF uses with NewF.
