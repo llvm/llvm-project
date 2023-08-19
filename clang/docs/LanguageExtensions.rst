@@ -2410,7 +2410,7 @@ this always needs to be called to grow the table.
 It takes three arguments. The first argument is the WebAssembly table
 to grow. The second argument is the reference typed value to store in
 the new table entries (the initialization value), and the third argument
-is the amound to grow the table by. It returns the previous table size
+is the amount to grow the table by. It returns the previous table size
 or -1. It will return -1 if not enough space could be allocated.
 
 .. code-block:: c++
