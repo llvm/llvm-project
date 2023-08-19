@@ -34,3 +34,10 @@ constexpr int ints(int a, int b, int c, int d) {
 }
 static_assert(ints(1, div(true, false), 2, div(false, true)) == 1, "");
 // CHECK: constexpr-source-ranges.cpp:35:23:{35:23-35:39}
+
+namespace overflow {
+// CHECK:      :{[[@LINE+1]]:9-[[@LINE+1]]:29}:
+int x = -1 + __INT_MAX__ + 2 + 3;
+// CHECK:      :{[[@LINE+1]]:9-[[@LINE+1]]:19}:
+int a = -(1 << 31) + 1;
+}
