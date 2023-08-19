@@ -2445,6 +2445,15 @@ class JoinVals {
     Val() = default;
 
     bool isAnalyzed() const { return WriteLanes.any(); }
+
+    /// Mark this value as an IMPLICIT_DEF which must be kept as if it were an
+    /// ordinary value.
+    void mustKeepImplicitDef(const TargetRegisterInfo &TRI,
+                             const MachineInstr &ImpDef) {
+      assert(ImpDef.isImplicitDef());
+      ErasableImplicitDef = false;
+      ValidLanes = TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
+    }
   };
 
   /// One entry per value number in LI.
@@ -2786,13 +2795,15 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     //
     // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
     // to erase the IMPLICIT_DEF instruction.
-    MachineBasicBlock *OtherMBB = Indexes->getMBBFromIndex(V.OtherVNI->def);
+    MachineInstr *OtherImpDef =
+        Indexes->getInstructionFromIndex(V.OtherVNI->def);
+    MachineBasicBlock *OtherMBB = OtherImpDef->getParent();
     if (DefMI && DefMI->getParent() != OtherMBB) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " extends into "
                  << printMBBReference(*DefMI->getParent())
                  << ", keeping it.\n");
-      OtherV.ErasableImplicitDef = false;
+      OtherV.mustKeepImplicitDef(*TRI, *OtherImpDef);
     } else if (OtherMBB->hasEHPadSuccessor()) {
       // If OtherV is defined in a basic block that has EH pad successors then
       // we get the same problem not just if OtherV is live beyond its basic
@@ -2801,7 +2812,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
       LLVM_DEBUG(
           dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " may be live into EH pad successors, keeping it.\n");
-      OtherV.ErasableImplicitDef = false;
+      OtherV.mustKeepImplicitDef(*TRI, *OtherImpDef);
     } else {
       // We deferred clearing these lanes in case we needed to save them
       OtherV.ValidLanes &= ~OtherV.WriteLanes;
@@ -2957,20 +2968,6 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     // The other value is going to be pruned if this join is successful.
     assert(V.OtherVNI && "OtherVNI not assigned, can't prune");
     Val &OtherV = Other.Vals[V.OtherVNI->id];
-    // We cannot erase an IMPLICIT_DEF if we don't have valid values for all
-    // its lanes.
-    if (OtherV.ErasableImplicitDef &&
-        TrackSubRegLiveness &&
-        (OtherV.ValidLanes & ~V.ValidLanes).any()) {
-      LLVM_DEBUG(dbgs() << "Cannot erase implicit_def with missing values\n");
-
-      OtherV.ErasableImplicitDef = false;
-      // The valid lanes written by the implicit_def were speculatively cleared
-      // before, so make this more conservative. It may be better to track this,
-      // I haven't found a testcase where it matters.
-      OtherV.ValidLanes = LaneBitmask::getAll();
-    }
-
     OtherV.Pruned = true;
     [[fallthrough]];
   }
