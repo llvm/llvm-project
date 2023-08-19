@@ -1,18 +1,12 @@
-=========================================
-Libc++ 17.0.0 (In-Progress) Release Notes
-=========================================
+============================
+Libc++ 17.0.0  Release Notes
+============================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `Libc++ Team <https://libcxx.llvm.org>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming libc++ 17 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
