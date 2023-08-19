@@ -95,13 +95,15 @@ cl::opt<bool> IRCanonicalizer::PreserveOrder(
     cl::desc("Preserves original instruction order"));
 cl::opt<bool> IRCanonicalizer::RenameAll(
     "rename-all", cl::Hidden,
-    cl::desc("Renames all instructions (including user-named)"));
+    cl::desc("Renames all instructions (including user-named)"), 
+    cl::init(true));
 cl::opt<bool> IRCanonicalizer::FoldPreoutputs(
     "fold-all", cl::Hidden,
     cl::desc("Folds all regular instructions (including pre-outputs)"));
 cl::opt<bool> IRCanonicalizer::ReorderOperands(
     "reorder-operands", cl::Hidden,
-    cl::desc("Sorts and reorders operands in commutative instructions"));
+    cl::desc("Sorts and reorders operands in commutative instructions"),
+    cl::init(true));
 
 /// Entry method to the IRCanonicalizer.
 ///
