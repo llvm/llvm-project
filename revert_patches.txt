@@ -1,27 +1,11 @@
 ee2a35ac4ab [X86] Add AVX-NE-CONVERT instruc
-b1fdeeec1a5a Revert "[LLD] Enable --no-undefined-version by default."
 Revert "[X86] Support -march=sierraforest, grandridge,
-Revert "[clang] Only use major version in resource dir"
-Reverts: e1b88c8a [clang] Only use major version in resource dir
-Revert "[ELF] Enable --no-undefined-version by default"
-Reapply: Revert "[-Wunsafe-buffer-usage] Initial commit - Transition away from raw buffers."
 Revert "[AMDGPU] Enable OMod on more VOP3 instructions"   # rocrand assert fails
-
-# needs to be incorporated into ASO new driver
-a17ab7aa3be0 [OpenMP] Add support for '--offload-arch=native' to OpenMP offloading
-fada90286008 [CUDA][HIP] Support '--offload-arch=native' for the new driver
-56ebfca4bcc0 [CUDA][HIP] Add support for `--offload-arch=native` to CUDA and refactor
 
 #break nekbone, cxx20 offsetof
 e327b52766ed [C2x] reject type definitions in offsetof
 
 7f12efa88  [X86][FP16] Lower half->i16 into vcvttph2[u]w directly
-
-needs new driver enabled
-revert dbb6344b2 "[Libomptarget] Add the CUDA feature to the packager
-
-"Revert D118493 "Set rpath on openmp executables""
-"Revert "[Libomptarget] Update handling of architectures for DeviceRTL"
 
 FP16
 Revert "[X86][MemFold] Update some records for X86MemFoldTables.inc"
@@ -31,9 +15,6 @@ Revert "[SROA] Create additional vector type candidates based on store and load 
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
 d0ed9a9d3 [Libomptarget] Remove unused arguments from bitcode compilation
-
-breaks comgr builds undefined _printf_alloc
-Revert "[Clang] Always use --no-undefined when linking AMDGPU images"
 
 reverted 
 [ADT] Allow `llvm::enumerate` to enumerate over 
@@ -79,7 +60,6 @@ Revert [clang] Add missing field to TLSModelAttr json AST dump
 Revert [clang] Add missing field to VisibilityAttr json AST dump
 
 Revert Complete the implementation of P2361 Unevaluated string literals
-Cherry-Picked AMDGPU: Fix verifier error on splatted opencl fmin/fmax and ldexp calls
 
 Revert "[Attributor] Introduce AAIndirectCallInfo"
   causes snap build time to go from 20 seconds to 35+ minutes, opt attributor 
