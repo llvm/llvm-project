@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
   // [locale], locale
   using std::has_facet;
   using std::locale;
@@ -71,4 +72,5 @@ export namespace std {
 
   // [depr.conversions.string]
   using std::wstring_convert;
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
 } // namespace std
