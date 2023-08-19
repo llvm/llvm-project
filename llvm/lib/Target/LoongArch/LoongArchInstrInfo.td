@@ -182,7 +182,7 @@ def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
 
-def uimm1 : Operand<GRLenVT> {
+def uimm1 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>{
   let ParserMatchClass = UImmAsmOperand<1>;
 }
 
@@ -197,11 +197,11 @@ def uimm2_plus1 : Operand<GRLenVT>,
   let DecoderMethod = "decodeUImmOperand<2, 1>";
 }
 
-def uimm3 : Operand<GRLenVT> {
+def uimm3 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<3>;
 }
 
-def uimm4 : Operand<GRLenVT> {
+def uimm4 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<4>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<4>;
 }
 
