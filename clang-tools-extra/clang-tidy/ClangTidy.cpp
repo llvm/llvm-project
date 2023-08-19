@@ -21,6 +21,7 @@
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
 #include "clang-tidy-config.h"
+#include "utils/OptionsUtils.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Format/Format.h"
@@ -473,8 +474,23 @@ ClangTidyASTConsumerFactory::createASTConsumer(
 
 #if CLANG_ENABLE_CIR
   if (Context.isCheckEnabled(cir::LifetimeCheckName)) {
+    auto OV = ClangTidyCheck::OptionsView(
+        cir::LifetimeCheckName, Context.getOptions().CheckOptions, &Context);
+    // Setup CIR codegen options via config specified information.
+    Compiler.getCodeGenOpts().ClangIRBuildDeferredThreshold =
+        OV.get("CodeGenBuildDeferredThreshold", 500U);
+    Compiler.getCodeGenOpts().ClangIRSkipFunctionsFromSystemHeaders =
+        OV.get("CodeGenSkipFunctionsFromSystemHeaders", false);
+
+    cir::CIROpts opts;
+    opts.RemarksList =
+        utils::options::parseStringList(OV.get("RemarksList", ""));
+    opts.HistoryList =
+        utils::options::parseStringList(OV.get("HistoryList", "all"));
+    opts.HistLimit = OV.get("HistLimit", 1U);
+
     std::unique_ptr<cir::CIRASTConsumer> CIRConsumer =
-        std::make_unique<cir::CIRASTConsumer>(Compiler, File, Context);
+        std::make_unique<cir::CIRASTConsumer>(Compiler, File, Context, opts);
     Consumers.push_back(std::move(CIRConsumer));
   }
 #endif // CLANG_ENABLE_CIR

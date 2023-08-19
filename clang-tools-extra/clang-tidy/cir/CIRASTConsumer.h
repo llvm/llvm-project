@@ -9,11 +9,16 @@ using namespace clang;
 namespace clang::tidy::cir {
 
 constexpr const char *LifetimeCheckName = "cir-lifetime-check";
+struct CIROpts {
+  std::vector<StringRef> RemarksList;
+  std::vector<StringRef> HistoryList;
+  unsigned HistLimit;
+};
 
 class CIRASTConsumer : public ASTConsumer {
 public:
   CIRASTConsumer(CompilerInstance &CI, StringRef inputFile,
-                 clang::tidy::ClangTidyContext &Context);
+                 clang::tidy::ClangTidyContext &Context, CIROpts &cirOpts);
 
 private:
   void Initialize(ASTContext &Context) override;
@@ -22,7 +27,7 @@ private:
   std::unique_ptr<::cir::CIRGenerator> Gen;
   ASTContext *AstContext{nullptr};
   clang::tidy::ClangTidyContext &Context;
-  clang::tidy::ClangTidyCheck::OptionsView OptsView;
+  CIROpts cirOpts;
 };
 
 } // namespace clang::tidy::cir
