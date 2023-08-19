@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -56,6 +57,7 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           implicitCastExpr(
               unless(hasParent(arraySubscriptExpr())),
+              unless(hasSourceExpression(predefinedExpr())),
               unless(hasParentIgnoringImpCasts(explicitCastExpr())),
               unless(isInsideOfRangeBeginEndStmt()),
               unless(hasSourceExpression(ignoringParens(stringLiteral()))),
