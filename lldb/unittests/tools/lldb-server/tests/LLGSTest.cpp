@@ -41,9 +41,10 @@ TEST_F(TestBase, DS_TEST(DebugserverEnv)) {
   // Test that --env takes precedence over inherited environment variables.
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=foobar"));
 
-  auto ClientOr = TestClient::launchCustom(getLogFileName(),
-      { "--env", "LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE" },
-                                     {getInferiorPath("environment_check")});
+  auto ClientOr = TestClient::launchCustom(
+      getLogFileName(), /* disable_stdio */ true,
+      {"--env", "LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"},
+      {getInferiorPath("environment_check")});
   ASSERT_THAT_EXPECTED(ClientOr, Succeeded());
   auto &Client = **ClientOr;
 
