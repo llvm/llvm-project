@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=canon < %s | FileCheck %s
+; RUN: opt -S -passes=canon --rename-all=false < %s | FileCheck %s
 
 ; CHECK: @foo(i32 %a0, i32 %a1)
 define i32 @foo(i32, i32) {

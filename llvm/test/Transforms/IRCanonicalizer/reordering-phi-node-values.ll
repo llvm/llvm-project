@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=canon < %s | FileCheck %s
+; RUN: opt -S -passes=canon --rename-all=false < %s | FileCheck %s
 
 declare double @foo()
 
