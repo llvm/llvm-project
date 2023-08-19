@@ -2287,95 +2287,6 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
 }
 
-/// Compute scalar induction steps. \p ScalarIV is the scalar induction
-/// variable on which to base the steps, \p Step is the size of the step.
-static void buildScalarSteps(Value *ScalarIV, Value *Step,
-                             const InductionDescriptor &ID, VPValue *Def,
-                             VPTransformState &State) {
-  IRBuilderBase &Builder = State.Builder;
-
-  // Ensure step has the same type as that of scalar IV.
-  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
-  if (ScalarIVTy != Step->getType()) {
-    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
-    // avoid separate truncate here.
-    assert(Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    Step = State.Builder.CreateTrunc(Step, ScalarIVTy);
-  }
-
-  // We build scalar steps for both integer and floating-point induction
-  // variables. Here, we determine the kind of arithmetic we will perform.
-  Instruction::BinaryOps AddOp;
-  Instruction::BinaryOps MulOp;
-  if (ScalarIVTy->isIntegerTy()) {
-    AddOp = Instruction::Add;
-    MulOp = Instruction::Mul;
-  } else {
-    AddOp = ID.getInductionOpcode();
-    MulOp = Instruction::FMul;
-  }
-
-  // Determine the number of scalars we need to generate for each unroll
-  // iteration.
-  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(Def);
-  // Compute the scalar steps and save the results in State.
-  Type *IntStepTy = IntegerType::get(ScalarIVTy->getContext(),
-                                     ScalarIVTy->getScalarSizeInBits());
-  Type *VecIVTy = nullptr;
-  Value *UnitStepVec = nullptr, *SplatStep = nullptr, *SplatIV = nullptr;
-  if (!FirstLaneOnly && State.VF.isScalable()) {
-    VecIVTy = VectorType::get(ScalarIVTy, State.VF);
-    UnitStepVec =
-        Builder.CreateStepVector(VectorType::get(IntStepTy, State.VF));
-    SplatStep = Builder.CreateVectorSplat(State.VF, Step);
-    SplatIV = Builder.CreateVectorSplat(State.VF, ScalarIV);
-  }
-
-  unsigned StartPart = 0;
-  unsigned EndPart = State.UF;
-  unsigned StartLane = 0;
-  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  if (State.Instance) {
-    StartPart = State.Instance->Part;
-    EndPart = StartPart + 1;
-    StartLane = State.Instance->Lane.getKnownLane();
-    EndLane = StartLane + 1;
-  }
-  for (unsigned Part = StartPart; Part < EndPart; ++Part) {
-    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
-
-    if (!FirstLaneOnly && State.VF.isScalable()) {
-      auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
-      auto *InitVec = Builder.CreateAdd(SplatStartIdx, UnitStepVec);
-      if (ScalarIVTy->isFloatingPointTy())
-        InitVec = Builder.CreateSIToFP(InitVec, VecIVTy);
-      auto *Mul = Builder.CreateBinOp(MulOp, InitVec, SplatStep);
-      auto *Add = Builder.CreateBinOp(AddOp, SplatIV, Mul);
-      State.set(Def, Add, Part);
-      // It's useful to record the lane values too for the known minimum number
-      // of elements so we do those below. This improves the code quality when
-      // trying to extract the first element, for example.
-    }
-
-    if (ScalarIVTy->isFloatingPointTy())
-      StartIdx0 = Builder.CreateSIToFP(StartIdx0, ScalarIVTy);
-
-    for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
-      Value *StartIdx = Builder.CreateBinOp(
-          AddOp, StartIdx0, getSignedIntOrFpConstant(ScalarIVTy, Lane));
-      // The step returned by `createStepForVF` is a runtime-evaluated value
-      // when VF is scalable. Otherwise, it should be folded into a Constant.
-      assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
-             "Expected StartIdx to be folded to a constant when VF is not "
-             "scalable");
-      auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-      auto *Add = Builder.CreateBinOp(AddOp, ScalarIV, Mul);
-      State.set(Def, Add, VPIteration(Part, Lane));
-    }
-  }
-}
-
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.
@@ -9506,10 +9417,93 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     State.Builder.setFastMathFlags(
         IndDesc.getInductionBinOp()->getFastMathFlags());
 
+  /// Compute scalar induction steps. \p ScalarIV is the scalar induction
+  /// variable on which to base the steps, \p Step is the size of the step.
+
   Value *BaseIV = State.get(getOperand(0), VPIteration(0, 0));
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
+  IRBuilderBase &Builder = State.Builder;
 
-  buildScalarSteps(BaseIV, Step, IndDesc, this, State);
+  // Ensure step has the same type as that of scalar IV.
+  Type *BaseIVTy = BaseIV->getType()->getScalarType();
+  if (BaseIVTy != Step->getType()) {
+    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
+    // avoid separate truncate here.
+    assert(Step->getType()->isIntegerTy() &&
+           "Truncation requires an integer step");
+    Step = State.Builder.CreateTrunc(Step, BaseIVTy);
+  }
+
+  // We build scalar steps for both integer and floating-point induction
+  // variables. Here, we determine the kind of arithmetic we will perform.
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  if (BaseIVTy->isIntegerTy()) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = IndDesc.getInductionOpcode();
+    MulOp = Instruction::FMul;
+  }
+
+  // Determine the number of scalars we need to generate for each unroll
+  // iteration.
+  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
+  // Compute the scalar steps and save the results in State.
+  Type *IntStepTy =
+      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
+  Type *VecIVTy = nullptr;
+  Value *UnitStepVec = nullptr, *SplatStep = nullptr, *SplatIV = nullptr;
+  if (!FirstLaneOnly && State.VF.isScalable()) {
+    VecIVTy = VectorType::get(BaseIVTy, State.VF);
+    UnitStepVec =
+        Builder.CreateStepVector(VectorType::get(IntStepTy, State.VF));
+    SplatStep = Builder.CreateVectorSplat(State.VF, Step);
+    SplatIV = Builder.CreateVectorSplat(State.VF, BaseIV);
+  }
+
+  unsigned StartPart = 0;
+  unsigned EndPart = State.UF;
+  unsigned StartLane = 0;
+  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
+  if (State.Instance) {
+    StartPart = State.Instance->Part;
+    EndPart = StartPart + 1;
+    StartLane = State.Instance->Lane.getKnownLane();
+    EndLane = StartLane + 1;
+  }
+  for (unsigned Part = StartPart; Part < EndPart; ++Part) {
+    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
+
+    if (!FirstLaneOnly && State.VF.isScalable()) {
+      auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
+      auto *InitVec = Builder.CreateAdd(SplatStartIdx, UnitStepVec);
+      if (BaseIVTy->isFloatingPointTy())
+        InitVec = Builder.CreateSIToFP(InitVec, VecIVTy);
+      auto *Mul = Builder.CreateBinOp(MulOp, InitVec, SplatStep);
+      auto *Add = Builder.CreateBinOp(AddOp, SplatIV, Mul);
+      State.set(this, Add, Part);
+      // It's useful to record the lane values too for the known minimum number
+      // of elements so we do those below. This improves the code quality when
+      // trying to extract the first element, for example.
+    }
+
+    if (BaseIVTy->isFloatingPointTy())
+      StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
+
+    for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
+      Value *StartIdx = Builder.CreateBinOp(
+          AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
+      // The step returned by `createStepForVF` is a runtime-evaluated value
+      // when VF is scalable. Otherwise, it should be folded into a Constant.
+      assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
+             "Expected StartIdx to be folded to a constant when VF is not "
+             "scalable");
+      auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+      auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
+      State.set(this, Add, VPIteration(Part, Lane));
+    }
+  }
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
