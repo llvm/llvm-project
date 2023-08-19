@@ -685,7 +685,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
-#    define _LIBCPP_ENUM_VIS
+#    define _LIBCPP_TYPE_VISIBILITY_DEFAULT
 
 #  else
 
@@ -713,20 +713,17 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    endif
 
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      if __has_attribute(__type_visibility__)
-#        define _LIBCPP_TEMPLATE_VIS __attribute__((__type_visibility__("default")))
-#      else
-#        define _LIBCPP_TEMPLATE_VIS __attribute__((__visibility__("default")))
-#      endif
+// GCC doesn't support the type_visibility attribute, so we have to keep the visibility attribute on templates
+#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && !__has_attribute(__type_visibility__)
+#      define _LIBCPP_TEMPLATE_VIS __attribute__((__visibility__("default")))
 #    else
 #      define _LIBCPP_TEMPLATE_VIS
 #    endif
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
-#      define _LIBCPP_ENUM_VIS __attribute__((__type_visibility__("default")))
+#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT __attribute__((__type_visibility__("default")))
 #    else
-#      define _LIBCPP_ENUM_VIS
+#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT
 #    endif
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
@@ -800,7 +797,8 @@ typedef __char32_t char32_t;
 
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
-#  define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_ABI_NAMESPACE {
+#  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
+                               inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }}
 #  define _VSTD std
 
@@ -853,7 +851,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // clang-format on
 
 #  else // _LIBCPP_CXX03_LANG
-#    define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
+#    define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class x
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #  endif // _LIBCPP_CXX03_LANG
 
