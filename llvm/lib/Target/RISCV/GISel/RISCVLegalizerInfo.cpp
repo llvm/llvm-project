@@ -25,6 +25,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
   const LLT s1 = LLT::scalar(1);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
 
   using namespace TargetOpcode;
 
@@ -78,6 +81,25 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT)
       .clampScalar(1, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder({G_LOAD, G_STORE})
+      .legalForTypesWithMemDesc({{XLenLLT, p0, s8, 8},
+                                 {XLenLLT, p0, s16, 16},
+                                 {XLenLLT, p0, s32, 32},
+                                 {XLenLLT, p0, XLenLLT, XLen},
+                                 {p0, p0, XLenLLT, XLen}})
+      .clampScalar(0, XLenLLT, XLenLLT)
+      .lower();
+
+  auto &ZExtLoadActions = getActionDefinitionsBuilder(G_ZEXTLOAD)
+      .legalForTypesWithMemDesc({{XLenLLT, p0, s8, 8},
+                                 {XLenLLT, p0, s16, 16}});
+  if (XLen == 64)
+    ZExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
+  ZExtLoadActions.lower();
+
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalFor({{p0, XLenLLT}});
 
   getActionDefinitionsBuilder(G_BRCOND)
       .legalFor({XLenLLT})
