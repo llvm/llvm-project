@@ -13,12 +13,11 @@
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
-// FIXME: We want that there is only the kernel function left, not two outlined
+// Ensure that there is only the kernel function left, not any outlined
 // parallel regions.
 //
 // CHECK: define
-// CHECK: define
-// CHECK: define
+// CHECK-NOT: define
 
 #include <omp.h>
 void f(long *A, int N) {
