@@ -95,6 +95,10 @@ ELF Improvements
   (`D151768 <https://reviews.llvm.org/D151768>`_)
 * x86-64 large data sections are now placed away from code sections to alleviate relocation overflow pressure.
   (`D150510 <https://reviews.llvm.org/D150510>`_)
+* ``--fat-lto-objects`` option is added to support LLVM FatLTO.
+  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
+  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
+
 
 Breaking changes
 ----------------

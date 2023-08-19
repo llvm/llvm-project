@@ -133,8 +133,6 @@ public:
 
   void SetStopID(uint32_t stop_id);
 
-  std::recursive_mutex &GetMutex() const override;
-
   void Update(ThreadList &rhs);
 
 protected:

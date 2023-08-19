@@ -6,6 +6,10 @@
 # RUN: llvm-dwarfdump --verify %t1 | FileCheck --check-prefix=VERIFY %s
 # RUN: llvm-dwarfdump -a %t1 | FileCheck %s
 
+# RUN: llvm-dwarfutil --linker llvm %t.o %t1 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
 # ERR: error: opcode_operands_table is not supported
 
 # VERIFY: No errors.

@@ -81,3 +81,6 @@ Revert [clang] Add missing field to VisibilityAttr json AST dump
 Revert Complete the implementation of P2361 Unevaluated string literals
 Cherry-Picked AMDGPU: Fix verifier error on splatted opencl fmin/fmax and ldexp calls
 
+Revert "[Attributor] Introduce AAIndirectCallInfo"
+  causes snap build time to go from 20 seconds to 35+ minutes, opt attributor 
+

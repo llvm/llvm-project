@@ -71,7 +71,7 @@ public:
   virtual unsigned getCallStackDepth() = 0;
 
 public:
-  State() : InConstantContext(false) {}
+  State() = default;
   /// Diagnose that the evaluation could not be folded (FF => FoldFailure)
   OptionalDiagnostic
   FFDiag(SourceLocation Loc,
@@ -121,7 +121,7 @@ public:
 
   /// Whether or not we're in a context where the front end requires a
   /// constant value.
-  bool InConstantContext;
+  bool InConstantContext = false;
 
 private:
   void addCallStack(unsigned Limit);

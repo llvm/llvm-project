@@ -5097,7 +5097,7 @@ the configuration (without a prefix: ``Auto``).
       AfterControlStatements: true
       AfterFunctionDefinitionName: true
 
-  * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
+  * ``bool AfterControlStatements`` If ``true``, put space between control statement keywords
     (for/if/while...) and opening parentheses.
 
     .. code-block:: c++

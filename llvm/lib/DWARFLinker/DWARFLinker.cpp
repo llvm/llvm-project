@@ -444,8 +444,10 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
 
     const DWARFExpression::Operation &Op = *It;
     switch (Op.getCode()) {
+    case dwarf::DW_OP_const2u:
     case dwarf::DW_OP_const4u:
     case dwarf::DW_OP_const8u:
+    case dwarf::DW_OP_const2s:
     case dwarf::DW_OP_const4s:
     case dwarf::DW_OP_const8s:
       if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))

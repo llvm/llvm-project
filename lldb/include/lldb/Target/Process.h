@@ -2970,7 +2970,6 @@ protected:
   std::string m_exit_string; ///< A textual description of why a process exited.
   std::mutex m_exit_status_mutex; ///< Mutex so m_exit_status m_exit_string can
                                   ///be safely accessed from multiple threads
-  std::recursive_mutex m_thread_mutex;
   ThreadList m_thread_list_real; ///< The threads for this process as are known
                                  ///to the protocol we are debugging with
   ThreadList m_thread_list; ///< The threads for this process as the user will
@@ -3008,6 +3007,7 @@ protected:
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
   lldb::IOHandlerSP m_process_input_reader;
+  mutable std::mutex m_process_input_reader_mutex;
   ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
@@ -3133,6 +3133,7 @@ protected:
   bool ProcessIOHandlerIsActive();
 
   bool ProcessIOHandlerExists() const {
+    std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
     return static_cast<bool>(m_process_input_reader);
   }
 
