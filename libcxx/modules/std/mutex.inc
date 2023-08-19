@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#ifndef _LIBCPP_HAS_NO_THREADS
   // [thread.mutex.class], class mutex
   using std::mutex;
   // [thread.mutex.recursive], class recursive_mutex
@@ -35,6 +36,7 @@ export namespace std {
   // [thread.lock.algorithm], generic locking algorithms
   using std::lock;
   using std::try_lock;
+#endif // _LIBCPP_HAS_NO_THREADS
 
   using std::once_flag;
 
