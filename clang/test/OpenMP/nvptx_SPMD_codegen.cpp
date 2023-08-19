@@ -7980,7 +7980,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_kernel_environment)
@@ -8061,7 +8061,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_kernel_environment)
@@ -8145,7 +8145,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_kernel_environment)
@@ -8246,7 +8246,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_kernel_environment)
@@ -8326,7 +8326,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_kernel_environment)
@@ -8406,7 +8406,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_kernel_environment)
@@ -8486,7 +8486,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-64-SAME: () #[[ATTR8]] {
+// CHECK-64-SAME: () #[[ATTR10]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_kernel_environment)
@@ -16666,7 +16666,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_kernel_environment)
@@ -16747,7 +16747,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_kernel_environment)
@@ -16831,7 +16831,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_kernel_environment)
@@ -16932,7 +16932,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_kernel_environment)
@@ -17012,7 +17012,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_kernel_environment)
@@ -17092,7 +17092,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_kernel_environment)
@@ -17172,7 +17172,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-SAME: () #[[ATTR8]] {
+// CHECK-32-SAME: () #[[ATTR10]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_kernel_environment)
@@ -25352,7 +25352,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_kernel_environment)
@@ -25433,7 +25433,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_kernel_environment)
@@ -25517,7 +25517,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_kernel_environment)
@@ -25618,7 +25618,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_kernel_environment)
@@ -25698,7 +25698,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_kernel_environment)
@@ -25778,7 +25778,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_kernel_environment)
@@ -25858,7 +25858,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-EX-SAME: () #[[ATTR8]] {
+// CHECK-32-EX-SAME: () #[[ATTR10]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_kernel_environment)
