@@ -55,6 +55,14 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // XR->XR copies.
+  if (LoongArch::LASX256RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(LoongArch::XVORI_B), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
+
   // GPR->CFR copy.
   if (LoongArch::CFRRegClass.contains(DstReg) &&
       LoongArch::GPRRegClass.contains(SrcReg)) {
@@ -103,6 +111,8 @@ void LoongArchInstrInfo::storeRegToStackSlot(
     Opcode = LoongArch::FST_D;
   else if (LoongArch::LSX128RegClass.hasSubClassEq(RC))
     Opcode = LoongArch::VST;
+  else if (LoongArch::LASX256RegClass.hasSubClassEq(RC))
+    Opcode = LoongArch::XVST;
   else if (LoongArch::CFRRegClass.hasSubClassEq(RC))
     Opcode = LoongArch::PseudoST_CFR;
   else
@@ -139,6 +149,8 @@ void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = LoongArch::FLD_D;
   else if (LoongArch::LSX128RegClass.hasSubClassEq(RC))
     Opcode = LoongArch::VLD;
+  else if (LoongArch::LASX256RegClass.hasSubClassEq(RC))
+    Opcode = LoongArch::XVLD;
   else if (LoongArch::CFRRegClass.hasSubClassEq(RC))
     Opcode = LoongArch::PseudoLD_CFR;
   else

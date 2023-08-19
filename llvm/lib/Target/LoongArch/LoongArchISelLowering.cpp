@@ -64,10 +64,16 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   static const MVT::SimpleValueType LSXVTs[] = {
       MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64};
+  static const MVT::SimpleValueType LASXVTs[] = {
+      MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v8f32, MVT::v4f64};
 
   if (Subtarget.hasExtLSX())
     for (MVT VT : LSXVTs)
       addRegisterClass(VT, &LoongArch::LSX128RegClass);
+
+  if (Subtarget.hasExtLASX())
+    for (MVT VT : LASXVTs)
+      addRegisterClass(VT, &LoongArch::LASX256RegClass);
 
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, GRLenVT,
                    MVT::i1, Promote);
@@ -206,6 +212,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasExtLSX())
     setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN},
                        {MVT::v2i64, MVT::v4i32, MVT::v8i16, MVT::v16i8}, Legal);
+
+  if (Subtarget.hasExtLASX())
+    setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN},
+                       {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8},
+                       Legal);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -695,9 +706,17 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vpickve2gr_d:
   case Intrinsic::loongarch_lsx_vpickve2gr_du:
   case Intrinsic::loongarch_lsx_vreplvei_d:
+  case Intrinsic::loongarch_lasx_xvrepl128vei_d:
     return checkIntrinsicImmArg<1>(Op, 2, DAG);
   case Intrinsic::loongarch_lsx_vreplvei_w:
+  case Intrinsic::loongarch_lasx_xvrepl128vei_w:
+  case Intrinsic::loongarch_lasx_xvpickve2gr_d:
+  case Intrinsic::loongarch_lasx_xvpickve2gr_du:
+  case Intrinsic::loongarch_lasx_xvpickve_d:
+  case Intrinsic::loongarch_lasx_xvpickve_d_f:
     return checkIntrinsicImmArg<2>(Op, 2, DAG);
+  case Intrinsic::loongarch_lasx_xvinsve0_d:
+    return checkIntrinsicImmArg<2>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vsat_b:
   case Intrinsic::loongarch_lsx_vsat_bu:
   case Intrinsic::loongarch_lsx_vrotri_b:
@@ -706,7 +725,19 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vsrlri_b:
   case Intrinsic::loongarch_lsx_vsrari_b:
   case Intrinsic::loongarch_lsx_vreplvei_h:
+  case Intrinsic::loongarch_lasx_xvsat_b:
+  case Intrinsic::loongarch_lasx_xvsat_bu:
+  case Intrinsic::loongarch_lasx_xvrotri_b:
+  case Intrinsic::loongarch_lasx_xvsllwil_h_b:
+  case Intrinsic::loongarch_lasx_xvsllwil_hu_bu:
+  case Intrinsic::loongarch_lasx_xvsrlri_b:
+  case Intrinsic::loongarch_lasx_xvsrari_b:
+  case Intrinsic::loongarch_lasx_xvrepl128vei_h:
+  case Intrinsic::loongarch_lasx_xvpickve_w:
+  case Intrinsic::loongarch_lasx_xvpickve_w_f:
     return checkIntrinsicImmArg<3>(Op, 2, DAG);
+  case Intrinsic::loongarch_lasx_xvinsve0_w:
+    return checkIntrinsicImmArg<3>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vsat_h:
   case Intrinsic::loongarch_lsx_vsat_hu:
   case Intrinsic::loongarch_lsx_vrotri_h:
@@ -715,6 +746,14 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vsrlri_h:
   case Intrinsic::loongarch_lsx_vsrari_h:
   case Intrinsic::loongarch_lsx_vreplvei_b:
+  case Intrinsic::loongarch_lasx_xvsat_h:
+  case Intrinsic::loongarch_lasx_xvsat_hu:
+  case Intrinsic::loongarch_lasx_xvrotri_h:
+  case Intrinsic::loongarch_lasx_xvsllwil_w_h:
+  case Intrinsic::loongarch_lasx_xvsllwil_wu_hu:
+  case Intrinsic::loongarch_lasx_xvsrlri_h:
+  case Intrinsic::loongarch_lasx_xvsrari_h:
+  case Intrinsic::loongarch_lasx_xvrepl128vei_b:
     return checkIntrinsicImmArg<4>(Op, 2, DAG);
   case Intrinsic::loongarch_lsx_vsrlni_b_h:
   case Intrinsic::loongarch_lsx_vsrani_b_h:
@@ -728,6 +767,18 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vssrarni_b_h:
   case Intrinsic::loongarch_lsx_vssrlrni_bu_h:
   case Intrinsic::loongarch_lsx_vssrarni_bu_h:
+  case Intrinsic::loongarch_lasx_xvsrlni_b_h:
+  case Intrinsic::loongarch_lasx_xvsrani_b_h:
+  case Intrinsic::loongarch_lasx_xvsrlrni_b_h:
+  case Intrinsic::loongarch_lasx_xvsrarni_b_h:
+  case Intrinsic::loongarch_lasx_xvssrlni_b_h:
+  case Intrinsic::loongarch_lasx_xvssrani_b_h:
+  case Intrinsic::loongarch_lasx_xvssrlni_bu_h:
+  case Intrinsic::loongarch_lasx_xvssrani_bu_h:
+  case Intrinsic::loongarch_lasx_xvssrlrni_b_h:
+  case Intrinsic::loongarch_lasx_xvssrarni_b_h:
+  case Intrinsic::loongarch_lasx_xvssrlrni_bu_h:
+  case Intrinsic::loongarch_lasx_xvssrarni_bu_h:
     return checkIntrinsicImmArg<4>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vsat_w:
   case Intrinsic::loongarch_lsx_vsat_wu:
@@ -746,6 +797,23 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vslti_du:
   case Intrinsic::loongarch_lsx_vbsll_v:
   case Intrinsic::loongarch_lsx_vbsrl_v:
+  case Intrinsic::loongarch_lasx_xvsat_w:
+  case Intrinsic::loongarch_lasx_xvsat_wu:
+  case Intrinsic::loongarch_lasx_xvrotri_w:
+  case Intrinsic::loongarch_lasx_xvsllwil_d_w:
+  case Intrinsic::loongarch_lasx_xvsllwil_du_wu:
+  case Intrinsic::loongarch_lasx_xvsrlri_w:
+  case Intrinsic::loongarch_lasx_xvsrari_w:
+  case Intrinsic::loongarch_lasx_xvslei_bu:
+  case Intrinsic::loongarch_lasx_xvslei_hu:
+  case Intrinsic::loongarch_lasx_xvslei_wu:
+  case Intrinsic::loongarch_lasx_xvslei_du:
+  case Intrinsic::loongarch_lasx_xvslti_bu:
+  case Intrinsic::loongarch_lasx_xvslti_hu:
+  case Intrinsic::loongarch_lasx_xvslti_wu:
+  case Intrinsic::loongarch_lasx_xvslti_du:
+  case Intrinsic::loongarch_lasx_xvbsll_v:
+  case Intrinsic::loongarch_lasx_xvbsrl_v:
     return checkIntrinsicImmArg<5>(Op, 2, DAG);
   case Intrinsic::loongarch_lsx_vseqi_b:
   case Intrinsic::loongarch_lsx_vseqi_h:
@@ -759,6 +827,18 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vslti_h:
   case Intrinsic::loongarch_lsx_vslti_w:
   case Intrinsic::loongarch_lsx_vslti_d:
+  case Intrinsic::loongarch_lasx_xvseqi_b:
+  case Intrinsic::loongarch_lasx_xvseqi_h:
+  case Intrinsic::loongarch_lasx_xvseqi_w:
+  case Intrinsic::loongarch_lasx_xvseqi_d:
+  case Intrinsic::loongarch_lasx_xvslei_b:
+  case Intrinsic::loongarch_lasx_xvslei_h:
+  case Intrinsic::loongarch_lasx_xvslei_w:
+  case Intrinsic::loongarch_lasx_xvslei_d:
+  case Intrinsic::loongarch_lasx_xvslti_b:
+  case Intrinsic::loongarch_lasx_xvslti_h:
+  case Intrinsic::loongarch_lasx_xvslti_w:
+  case Intrinsic::loongarch_lasx_xvslti_d:
     return checkIntrinsicImmArg<5>(Op, 2, DAG, /*IsSigned=*/true);
   case Intrinsic::loongarch_lsx_vsrlni_h_w:
   case Intrinsic::loongarch_lsx_vsrani_h_w:
@@ -774,12 +854,31 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vssrarni_hu_w:
   case Intrinsic::loongarch_lsx_vfrstpi_b:
   case Intrinsic::loongarch_lsx_vfrstpi_h:
+  case Intrinsic::loongarch_lasx_xvsrlni_h_w:
+  case Intrinsic::loongarch_lasx_xvsrani_h_w:
+  case Intrinsic::loongarch_lasx_xvsrlrni_h_w:
+  case Intrinsic::loongarch_lasx_xvsrarni_h_w:
+  case Intrinsic::loongarch_lasx_xvssrlni_h_w:
+  case Intrinsic::loongarch_lasx_xvssrani_h_w:
+  case Intrinsic::loongarch_lasx_xvssrlni_hu_w:
+  case Intrinsic::loongarch_lasx_xvssrani_hu_w:
+  case Intrinsic::loongarch_lasx_xvssrlrni_h_w:
+  case Intrinsic::loongarch_lasx_xvssrarni_h_w:
+  case Intrinsic::loongarch_lasx_xvssrlrni_hu_w:
+  case Intrinsic::loongarch_lasx_xvssrarni_hu_w:
+  case Intrinsic::loongarch_lasx_xvfrstpi_b:
+  case Intrinsic::loongarch_lasx_xvfrstpi_h:
     return checkIntrinsicImmArg<5>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vsat_d:
   case Intrinsic::loongarch_lsx_vsat_du:
   case Intrinsic::loongarch_lsx_vrotri_d:
   case Intrinsic::loongarch_lsx_vsrlri_d:
   case Intrinsic::loongarch_lsx_vsrari_d:
+  case Intrinsic::loongarch_lasx_xvsat_d:
+  case Intrinsic::loongarch_lasx_xvsat_du:
+  case Intrinsic::loongarch_lasx_xvrotri_d:
+  case Intrinsic::loongarch_lasx_xvsrlri_d:
+  case Intrinsic::loongarch_lasx_xvsrari_d:
     return checkIntrinsicImmArg<6>(Op, 2, DAG);
   case Intrinsic::loongarch_lsx_vsrlni_w_d:
   case Intrinsic::loongarch_lsx_vsrani_w_d:
@@ -793,6 +892,18 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vssrarni_w_d:
   case Intrinsic::loongarch_lsx_vssrlrni_wu_d:
   case Intrinsic::loongarch_lsx_vssrarni_wu_d:
+  case Intrinsic::loongarch_lasx_xvsrlni_w_d:
+  case Intrinsic::loongarch_lasx_xvsrani_w_d:
+  case Intrinsic::loongarch_lasx_xvsrlrni_w_d:
+  case Intrinsic::loongarch_lasx_xvsrarni_w_d:
+  case Intrinsic::loongarch_lasx_xvssrlni_w_d:
+  case Intrinsic::loongarch_lasx_xvssrani_w_d:
+  case Intrinsic::loongarch_lasx_xvssrlni_wu_d:
+  case Intrinsic::loongarch_lasx_xvssrani_wu_d:
+  case Intrinsic::loongarch_lasx_xvssrlrni_w_d:
+  case Intrinsic::loongarch_lasx_xvssrarni_w_d:
+  case Intrinsic::loongarch_lasx_xvssrlrni_wu_d:
+  case Intrinsic::loongarch_lasx_xvssrarni_wu_d:
     return checkIntrinsicImmArg<6>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vsrlni_d_q:
   case Intrinsic::loongarch_lsx_vsrani_d_q:
@@ -806,11 +917,28 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vssrarni_d_q:
   case Intrinsic::loongarch_lsx_vssrlrni_du_q:
   case Intrinsic::loongarch_lsx_vssrarni_du_q:
+  case Intrinsic::loongarch_lasx_xvsrlni_d_q:
+  case Intrinsic::loongarch_lasx_xvsrani_d_q:
+  case Intrinsic::loongarch_lasx_xvsrlrni_d_q:
+  case Intrinsic::loongarch_lasx_xvsrarni_d_q:
+  case Intrinsic::loongarch_lasx_xvssrlni_d_q:
+  case Intrinsic::loongarch_lasx_xvssrani_d_q:
+  case Intrinsic::loongarch_lasx_xvssrlni_du_q:
+  case Intrinsic::loongarch_lasx_xvssrani_du_q:
+  case Intrinsic::loongarch_lasx_xvssrlrni_d_q:
+  case Intrinsic::loongarch_lasx_xvssrarni_d_q:
+  case Intrinsic::loongarch_lasx_xvssrlrni_du_q:
+  case Intrinsic::loongarch_lasx_xvssrarni_du_q:
     return checkIntrinsicImmArg<7>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vnori_b:
   case Intrinsic::loongarch_lsx_vshuf4i_b:
   case Intrinsic::loongarch_lsx_vshuf4i_h:
   case Intrinsic::loongarch_lsx_vshuf4i_w:
+  case Intrinsic::loongarch_lasx_xvnori_b:
+  case Intrinsic::loongarch_lasx_xvshuf4i_b:
+  case Intrinsic::loongarch_lasx_xvshuf4i_h:
+  case Intrinsic::loongarch_lasx_xvshuf4i_w:
+  case Intrinsic::loongarch_lasx_xvpermi_d:
     return checkIntrinsicImmArg<8>(Op, 2, DAG);
   case Intrinsic::loongarch_lsx_vshuf4i_d:
   case Intrinsic::loongarch_lsx_vpermi_w:
@@ -819,13 +947,26 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vextrins_h:
   case Intrinsic::loongarch_lsx_vextrins_w:
   case Intrinsic::loongarch_lsx_vextrins_d:
+  case Intrinsic::loongarch_lasx_xvshuf4i_d:
+  case Intrinsic::loongarch_lasx_xvpermi_w:
+  case Intrinsic::loongarch_lasx_xvpermi_q:
+  case Intrinsic::loongarch_lasx_xvbitseli_b:
+  case Intrinsic::loongarch_lasx_xvextrins_b:
+  case Intrinsic::loongarch_lasx_xvextrins_h:
+  case Intrinsic::loongarch_lasx_xvextrins_w:
+  case Intrinsic::loongarch_lasx_xvextrins_d:
     return checkIntrinsicImmArg<8>(Op, 3, DAG);
   case Intrinsic::loongarch_lsx_vrepli_b:
   case Intrinsic::loongarch_lsx_vrepli_h:
   case Intrinsic::loongarch_lsx_vrepli_w:
   case Intrinsic::loongarch_lsx_vrepli_d:
+  case Intrinsic::loongarch_lasx_xvrepli_b:
+  case Intrinsic::loongarch_lasx_xvrepli_h:
+  case Intrinsic::loongarch_lasx_xvrepli_w:
+  case Intrinsic::loongarch_lasx_xvrepli_d:
     return checkIntrinsicImmArg<10>(Op, 1, DAG, /*IsSigned=*/true);
   case Intrinsic::loongarch_lsx_vldi:
+  case Intrinsic::loongarch_lasx_xvldi:
     return checkIntrinsicImmArg<13>(Op, 1, DAG, /*IsSigned=*/true);
   }
 }
@@ -924,22 +1065,27 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::loongarch_lsx_vld:
   case Intrinsic::loongarch_lsx_vldrepl_b:
+  case Intrinsic::loongarch_lasx_xvld:
+  case Intrinsic::loongarch_lasx_xvldrepl_b:
     return !isInt<12>(cast<ConstantSDNode>(Op.getOperand(3))->getSExtValue())
                ? emitIntrinsicWithChainErrorMessage(Op, ErrorMsgOOR, DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vldrepl_h:
+  case Intrinsic::loongarch_lasx_xvldrepl_h:
     return !isShiftedInt<11, 1>(
                cast<ConstantSDNode>(Op.getOperand(3))->getSExtValue())
                ? emitIntrinsicWithChainErrorMessage(
                      Op, "argument out of range or not a multiple of 2", DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vldrepl_w:
+  case Intrinsic::loongarch_lasx_xvldrepl_w:
     return !isShiftedInt<10, 2>(
                cast<ConstantSDNode>(Op.getOperand(3))->getSExtValue())
                ? emitIntrinsicWithChainErrorMessage(
                      Op, "argument out of range or not a multiple of 4", DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vldrepl_d:
+  case Intrinsic::loongarch_lasx_xvldrepl_d:
     return !isShiftedInt<9, 3>(
                cast<ConstantSDNode>(Op.getOperand(3))->getSExtValue())
                ? emitIntrinsicWithChainErrorMessage(
@@ -1064,13 +1210,26 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                              : Op;
   }
   case Intrinsic::loongarch_lsx_vst:
+  case Intrinsic::loongarch_lasx_xvst:
     return !isInt<12>(cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue())
+               ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
+               : SDValue();
+  case Intrinsic::loongarch_lasx_xvstelm_b:
+    return (!isInt<8>(cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
+            !isUInt<5>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vstelm_b:
     return (!isInt<8>(cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
             !isUInt<4>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
+               : SDValue();
+  case Intrinsic::loongarch_lasx_xvstelm_h:
+    return (!isShiftedInt<8, 1>(
+                cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
+            !isUInt<4>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
+               ? emitIntrinsicErrorMessage(
+                     Op, "argument out of range or not a multiple of 2", DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vstelm_h:
     return (!isShiftedInt<8, 1>(
@@ -1079,12 +1238,26 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                ? emitIntrinsicErrorMessage(
                      Op, "argument out of range or not a multiple of 2", DAG)
                : SDValue();
+  case Intrinsic::loongarch_lasx_xvstelm_w:
+    return (!isShiftedInt<8, 2>(
+                cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
+            !isUInt<3>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
+               ? emitIntrinsicErrorMessage(
+                     Op, "argument out of range or not a multiple of 4", DAG)
+               : SDValue();
   case Intrinsic::loongarch_lsx_vstelm_w:
     return (!isShiftedInt<8, 2>(
                 cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
             !isUInt<2>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
                ? emitIntrinsicErrorMessage(
                      Op, "argument out of range or not a multiple of 4", DAG)
+               : SDValue();
+  case Intrinsic::loongarch_lasx_xvstelm_d:
+    return (!isShiftedInt<8, 3>(
+                cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue()) ||
+            !isUInt<2>(cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue()))
+               ? emitIntrinsicErrorMessage(
+                     Op, "argument out of range or not a multiple of 8", DAG)
                : SDValue();
   case Intrinsic::loongarch_lsx_vstelm_d:
     return (!isShiftedInt<8, 3>(
@@ -1304,6 +1477,7 @@ replaceINTRINSIC_WO_CHAINResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                 LoongArchISD::VPICK_SEXT_ELT);
     break;
   case Intrinsic::loongarch_lsx_vpickve2gr_h:
+  case Intrinsic::loongarch_lasx_xvpickve2gr_w:
     replaceVPICKVE2GRResults<3>(N, Results, DAG, Subtarget,
                                 LoongArchISD::VPICK_SEXT_ELT);
     break;
@@ -1316,6 +1490,7 @@ replaceINTRINSIC_WO_CHAINResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                 LoongArchISD::VPICK_ZEXT_ELT);
     break;
   case Intrinsic::loongarch_lsx_vpickve2gr_hu:
+  case Intrinsic::loongarch_lasx_xvpickve2gr_wu:
     replaceVPICKVE2GRResults<3>(N, Results, DAG, Subtarget,
                                 LoongArchISD::VPICK_ZEXT_ELT);
     break;
@@ -1327,10 +1502,15 @@ replaceINTRINSIC_WO_CHAINResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
   case Intrinsic::loongarch_lsx_bz_h:
   case Intrinsic::loongarch_lsx_bz_w:
   case Intrinsic::loongarch_lsx_bz_d:
+  case Intrinsic::loongarch_lasx_xbz_b:
+  case Intrinsic::loongarch_lasx_xbz_h:
+  case Intrinsic::loongarch_lasx_xbz_w:
+  case Intrinsic::loongarch_lasx_xbz_d:
     replaceVecCondBranchResults(N, Results, DAG, Subtarget,
                                 LoongArchISD::VALL_ZERO);
     break;
   case Intrinsic::loongarch_lsx_bz_v:
+  case Intrinsic::loongarch_lasx_xbz_v:
     replaceVecCondBranchResults(N, Results, DAG, Subtarget,
                                 LoongArchISD::VANY_ZERO);
     break;
@@ -1338,10 +1518,15 @@ replaceINTRINSIC_WO_CHAINResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
   case Intrinsic::loongarch_lsx_bnz_h:
   case Intrinsic::loongarch_lsx_bnz_w:
   case Intrinsic::loongarch_lsx_bnz_d:
+  case Intrinsic::loongarch_lasx_xbnz_b:
+  case Intrinsic::loongarch_lasx_xbnz_h:
+  case Intrinsic::loongarch_lasx_xbnz_w:
+  case Intrinsic::loongarch_lasx_xbnz_d:
     replaceVecCondBranchResults(N, Results, DAG, Subtarget,
                                 LoongArchISD::VALL_NONZERO);
     break;
   case Intrinsic::loongarch_lsx_bnz_v:
+  case Intrinsic::loongarch_lasx_xbnz_v:
     replaceVecCondBranchResults(N, Results, DAG, Subtarget,
                                 LoongArchISD::VANY_NONZERO);
     break;
@@ -2114,30 +2299,50 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vadd_h:
   case Intrinsic::loongarch_lsx_vadd_w:
   case Intrinsic::loongarch_lsx_vadd_d:
+  case Intrinsic::loongarch_lasx_xvadd_b:
+  case Intrinsic::loongarch_lasx_xvadd_h:
+  case Intrinsic::loongarch_lasx_xvadd_w:
+  case Intrinsic::loongarch_lasx_xvadd_d:
     return DAG.getNode(ISD::ADD, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vaddi_bu:
   case Intrinsic::loongarch_lsx_vaddi_hu:
   case Intrinsic::loongarch_lsx_vaddi_wu:
   case Intrinsic::loongarch_lsx_vaddi_du:
+  case Intrinsic::loongarch_lasx_xvaddi_bu:
+  case Intrinsic::loongarch_lasx_xvaddi_hu:
+  case Intrinsic::loongarch_lasx_xvaddi_wu:
+  case Intrinsic::loongarch_lasx_xvaddi_du:
     return DAG.getNode(ISD::ADD, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsub_b:
   case Intrinsic::loongarch_lsx_vsub_h:
   case Intrinsic::loongarch_lsx_vsub_w:
   case Intrinsic::loongarch_lsx_vsub_d:
+  case Intrinsic::loongarch_lasx_xvsub_b:
+  case Intrinsic::loongarch_lasx_xvsub_h:
+  case Intrinsic::loongarch_lasx_xvsub_w:
+  case Intrinsic::loongarch_lasx_xvsub_d:
     return DAG.getNode(ISD::SUB, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vsubi_bu:
   case Intrinsic::loongarch_lsx_vsubi_hu:
   case Intrinsic::loongarch_lsx_vsubi_wu:
   case Intrinsic::loongarch_lsx_vsubi_du:
+  case Intrinsic::loongarch_lasx_xvsubi_bu:
+  case Intrinsic::loongarch_lasx_xvsubi_hu:
+  case Intrinsic::loongarch_lasx_xvsubi_wu:
+  case Intrinsic::loongarch_lasx_xvsubi_du:
     return DAG.getNode(ISD::SUB, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vneg_b:
   case Intrinsic::loongarch_lsx_vneg_h:
   case Intrinsic::loongarch_lsx_vneg_w:
   case Intrinsic::loongarch_lsx_vneg_d:
+  case Intrinsic::loongarch_lasx_xvneg_b:
+  case Intrinsic::loongarch_lasx_xvneg_h:
+  case Intrinsic::loongarch_lasx_xvneg_w:
+  case Intrinsic::loongarch_lasx_xvneg_d:
     return DAG.getNode(
         ISD::SUB, DL, N->getValueType(0),
         DAG.getConstant(
@@ -2149,60 +2354,100 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vmax_h:
   case Intrinsic::loongarch_lsx_vmax_w:
   case Intrinsic::loongarch_lsx_vmax_d:
+  case Intrinsic::loongarch_lasx_xvmax_b:
+  case Intrinsic::loongarch_lasx_xvmax_h:
+  case Intrinsic::loongarch_lasx_xvmax_w:
+  case Intrinsic::loongarch_lasx_xvmax_d:
     return DAG.getNode(ISD::SMAX, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmax_bu:
   case Intrinsic::loongarch_lsx_vmax_hu:
   case Intrinsic::loongarch_lsx_vmax_wu:
   case Intrinsic::loongarch_lsx_vmax_du:
+  case Intrinsic::loongarch_lasx_xvmax_bu:
+  case Intrinsic::loongarch_lasx_xvmax_hu:
+  case Intrinsic::loongarch_lasx_xvmax_wu:
+  case Intrinsic::loongarch_lasx_xvmax_du:
     return DAG.getNode(ISD::UMAX, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmaxi_b:
   case Intrinsic::loongarch_lsx_vmaxi_h:
   case Intrinsic::loongarch_lsx_vmaxi_w:
   case Intrinsic::loongarch_lsx_vmaxi_d:
+  case Intrinsic::loongarch_lasx_xvmaxi_b:
+  case Intrinsic::loongarch_lasx_xvmaxi_h:
+  case Intrinsic::loongarch_lasx_xvmaxi_w:
+  case Intrinsic::loongarch_lasx_xvmaxi_d:
     return DAG.getNode(ISD::SMAX, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG, /*IsSigned=*/true));
   case Intrinsic::loongarch_lsx_vmaxi_bu:
   case Intrinsic::loongarch_lsx_vmaxi_hu:
   case Intrinsic::loongarch_lsx_vmaxi_wu:
   case Intrinsic::loongarch_lsx_vmaxi_du:
+  case Intrinsic::loongarch_lasx_xvmaxi_bu:
+  case Intrinsic::loongarch_lasx_xvmaxi_hu:
+  case Intrinsic::loongarch_lasx_xvmaxi_wu:
+  case Intrinsic::loongarch_lasx_xvmaxi_du:
     return DAG.getNode(ISD::UMAX, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vmin_b:
   case Intrinsic::loongarch_lsx_vmin_h:
   case Intrinsic::loongarch_lsx_vmin_w:
   case Intrinsic::loongarch_lsx_vmin_d:
+  case Intrinsic::loongarch_lasx_xvmin_b:
+  case Intrinsic::loongarch_lasx_xvmin_h:
+  case Intrinsic::loongarch_lasx_xvmin_w:
+  case Intrinsic::loongarch_lasx_xvmin_d:
     return DAG.getNode(ISD::SMIN, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmin_bu:
   case Intrinsic::loongarch_lsx_vmin_hu:
   case Intrinsic::loongarch_lsx_vmin_wu:
   case Intrinsic::loongarch_lsx_vmin_du:
+  case Intrinsic::loongarch_lasx_xvmin_bu:
+  case Intrinsic::loongarch_lasx_xvmin_hu:
+  case Intrinsic::loongarch_lasx_xvmin_wu:
+  case Intrinsic::loongarch_lasx_xvmin_du:
     return DAG.getNode(ISD::UMIN, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmini_b:
   case Intrinsic::loongarch_lsx_vmini_h:
   case Intrinsic::loongarch_lsx_vmini_w:
   case Intrinsic::loongarch_lsx_vmini_d:
+  case Intrinsic::loongarch_lasx_xvmini_b:
+  case Intrinsic::loongarch_lasx_xvmini_h:
+  case Intrinsic::loongarch_lasx_xvmini_w:
+  case Intrinsic::loongarch_lasx_xvmini_d:
     return DAG.getNode(ISD::SMIN, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG, /*IsSigned=*/true));
   case Intrinsic::loongarch_lsx_vmini_bu:
   case Intrinsic::loongarch_lsx_vmini_hu:
   case Intrinsic::loongarch_lsx_vmini_wu:
   case Intrinsic::loongarch_lsx_vmini_du:
+  case Intrinsic::loongarch_lasx_xvmini_bu:
+  case Intrinsic::loongarch_lasx_xvmini_hu:
+  case Intrinsic::loongarch_lasx_xvmini_wu:
+  case Intrinsic::loongarch_lasx_xvmini_du:
     return DAG.getNode(ISD::UMIN, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vmul_b:
   case Intrinsic::loongarch_lsx_vmul_h:
   case Intrinsic::loongarch_lsx_vmul_w:
   case Intrinsic::loongarch_lsx_vmul_d:
+  case Intrinsic::loongarch_lasx_xvmul_b:
+  case Intrinsic::loongarch_lasx_xvmul_h:
+  case Intrinsic::loongarch_lasx_xvmul_w:
+  case Intrinsic::loongarch_lasx_xvmul_d:
     return DAG.getNode(ISD::MUL, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmadd_b:
   case Intrinsic::loongarch_lsx_vmadd_h:
   case Intrinsic::loongarch_lsx_vmadd_w:
-  case Intrinsic::loongarch_lsx_vmadd_d: {
+  case Intrinsic::loongarch_lsx_vmadd_d:
+  case Intrinsic::loongarch_lasx_xvmadd_b:
+  case Intrinsic::loongarch_lasx_xvmadd_h:
+  case Intrinsic::loongarch_lasx_xvmadd_w:
+  case Intrinsic::loongarch_lasx_xvmadd_d: {
     EVT ResTy = N->getValueType(0);
     return DAG.getNode(ISD::ADD, SDLoc(N), ResTy, N->getOperand(1),
                        DAG.getNode(ISD::MUL, SDLoc(N), ResTy, N->getOperand(2),
@@ -2211,7 +2456,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vmsub_b:
   case Intrinsic::loongarch_lsx_vmsub_h:
   case Intrinsic::loongarch_lsx_vmsub_w:
-  case Intrinsic::loongarch_lsx_vmsub_d: {
+  case Intrinsic::loongarch_lsx_vmsub_d:
+  case Intrinsic::loongarch_lasx_xvmsub_b:
+  case Intrinsic::loongarch_lasx_xvmsub_h:
+  case Intrinsic::loongarch_lasx_xvmsub_w:
+  case Intrinsic::loongarch_lasx_xvmsub_d: {
     EVT ResTy = N->getValueType(0);
     return DAG.getNode(ISD::SUB, SDLoc(N), ResTy, N->getOperand(1),
                        DAG.getNode(ISD::MUL, SDLoc(N), ResTy, N->getOperand(2),
@@ -2221,125 +2470,188 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vdiv_h:
   case Intrinsic::loongarch_lsx_vdiv_w:
   case Intrinsic::loongarch_lsx_vdiv_d:
+  case Intrinsic::loongarch_lasx_xvdiv_b:
+  case Intrinsic::loongarch_lasx_xvdiv_h:
+  case Intrinsic::loongarch_lasx_xvdiv_w:
+  case Intrinsic::loongarch_lasx_xvdiv_d:
     return DAG.getNode(ISD::SDIV, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vdiv_bu:
   case Intrinsic::loongarch_lsx_vdiv_hu:
   case Intrinsic::loongarch_lsx_vdiv_wu:
   case Intrinsic::loongarch_lsx_vdiv_du:
+  case Intrinsic::loongarch_lasx_xvdiv_bu:
+  case Intrinsic::loongarch_lasx_xvdiv_hu:
+  case Intrinsic::loongarch_lasx_xvdiv_wu:
+  case Intrinsic::loongarch_lasx_xvdiv_du:
     return DAG.getNode(ISD::UDIV, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmod_b:
   case Intrinsic::loongarch_lsx_vmod_h:
   case Intrinsic::loongarch_lsx_vmod_w:
   case Intrinsic::loongarch_lsx_vmod_d:
+  case Intrinsic::loongarch_lasx_xvmod_b:
+  case Intrinsic::loongarch_lasx_xvmod_h:
+  case Intrinsic::loongarch_lasx_xvmod_w:
+  case Intrinsic::loongarch_lasx_xvmod_d:
     return DAG.getNode(ISD::SREM, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vmod_bu:
   case Intrinsic::loongarch_lsx_vmod_hu:
   case Intrinsic::loongarch_lsx_vmod_wu:
   case Intrinsic::loongarch_lsx_vmod_du:
+  case Intrinsic::loongarch_lasx_xvmod_bu:
+  case Intrinsic::loongarch_lasx_xvmod_hu:
+  case Intrinsic::loongarch_lasx_xvmod_wu:
+  case Intrinsic::loongarch_lasx_xvmod_du:
     return DAG.getNode(ISD::UREM, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vand_v:
+  case Intrinsic::loongarch_lasx_xvand_v:
     return DAG.getNode(ISD::AND, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vor_v:
+  case Intrinsic::loongarch_lasx_xvor_v:
     return DAG.getNode(ISD::OR, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vxor_v:
+  case Intrinsic::loongarch_lasx_xvxor_v:
     return DAG.getNode(ISD::XOR, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
-  case Intrinsic::loongarch_lsx_vnor_v: {
+  case Intrinsic::loongarch_lsx_vnor_v:
+  case Intrinsic::loongarch_lasx_xvnor_v: {
     SDValue Res = DAG.getNode(ISD::OR, DL, N->getValueType(0), N->getOperand(1),
                               N->getOperand(2));
     return DAG.getNOT(DL, Res, Res->getValueType(0));
   }
   case Intrinsic::loongarch_lsx_vandi_b:
+  case Intrinsic::loongarch_lasx_xvandi_b:
     return DAG.getNode(ISD::AND, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<8>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vori_b:
+  case Intrinsic::loongarch_lasx_xvori_b:
     return DAG.getNode(ISD::OR, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<8>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vxori_b:
+  case Intrinsic::loongarch_lasx_xvxori_b:
     return DAG.getNode(ISD::XOR, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<8>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsll_b:
   case Intrinsic::loongarch_lsx_vsll_h:
   case Intrinsic::loongarch_lsx_vsll_w:
   case Intrinsic::loongarch_lsx_vsll_d:
+  case Intrinsic::loongarch_lasx_xvsll_b:
+  case Intrinsic::loongarch_lasx_xvsll_h:
+  case Intrinsic::loongarch_lasx_xvsll_w:
+  case Intrinsic::loongarch_lasx_xvsll_d:
     return DAG.getNode(ISD::SHL, DL, N->getValueType(0), N->getOperand(1),
                        truncateVecElts(N, DAG));
   case Intrinsic::loongarch_lsx_vslli_b:
+  case Intrinsic::loongarch_lasx_xvslli_b:
     return DAG.getNode(ISD::SHL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<3>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vslli_h:
+  case Intrinsic::loongarch_lasx_xvslli_h:
     return DAG.getNode(ISD::SHL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<4>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vslli_w:
+  case Intrinsic::loongarch_lasx_xvslli_w:
     return DAG.getNode(ISD::SHL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vslli_d:
+  case Intrinsic::loongarch_lasx_xvslli_d:
     return DAG.getNode(ISD::SHL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrl_b:
   case Intrinsic::loongarch_lsx_vsrl_h:
   case Intrinsic::loongarch_lsx_vsrl_w:
   case Intrinsic::loongarch_lsx_vsrl_d:
+  case Intrinsic::loongarch_lasx_xvsrl_b:
+  case Intrinsic::loongarch_lasx_xvsrl_h:
+  case Intrinsic::loongarch_lasx_xvsrl_w:
+  case Intrinsic::loongarch_lasx_xvsrl_d:
     return DAG.getNode(ISD::SRL, DL, N->getValueType(0), N->getOperand(1),
                        truncateVecElts(N, DAG));
   case Intrinsic::loongarch_lsx_vsrli_b:
+  case Intrinsic::loongarch_lasx_xvsrli_b:
     return DAG.getNode(ISD::SRL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<3>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrli_h:
+  case Intrinsic::loongarch_lasx_xvsrli_h:
     return DAG.getNode(ISD::SRL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<4>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrli_w:
+  case Intrinsic::loongarch_lasx_xvsrli_w:
     return DAG.getNode(ISD::SRL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrli_d:
+  case Intrinsic::loongarch_lasx_xvsrli_d:
     return DAG.getNode(ISD::SRL, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsra_b:
   case Intrinsic::loongarch_lsx_vsra_h:
   case Intrinsic::loongarch_lsx_vsra_w:
   case Intrinsic::loongarch_lsx_vsra_d:
+  case Intrinsic::loongarch_lasx_xvsra_b:
+  case Intrinsic::loongarch_lasx_xvsra_h:
+  case Intrinsic::loongarch_lasx_xvsra_w:
+  case Intrinsic::loongarch_lasx_xvsra_d:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        truncateVecElts(N, DAG));
   case Intrinsic::loongarch_lsx_vsrai_b:
+  case Intrinsic::loongarch_lasx_xvsrai_b:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<3>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrai_h:
+  case Intrinsic::loongarch_lasx_xvsrai_h:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<4>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrai_w:
+  case Intrinsic::loongarch_lasx_xvsrai_w:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<5>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vsrai_d:
+  case Intrinsic::loongarch_lasx_xvsrai_d:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
   case Intrinsic::loongarch_lsx_vpcnt_b:
   case Intrinsic::loongarch_lsx_vpcnt_h:
   case Intrinsic::loongarch_lsx_vpcnt_w:
   case Intrinsic::loongarch_lsx_vpcnt_d:
+  case Intrinsic::loongarch_lasx_xvpcnt_b:
+  case Intrinsic::loongarch_lasx_xvpcnt_h:
+  case Intrinsic::loongarch_lasx_xvpcnt_w:
+  case Intrinsic::loongarch_lasx_xvpcnt_d:
     return DAG.getNode(ISD::CTPOP, DL, N->getValueType(0), N->getOperand(1));
   case Intrinsic::loongarch_lsx_vbitclr_b:
   case Intrinsic::loongarch_lsx_vbitclr_h:
   case Intrinsic::loongarch_lsx_vbitclr_w:
   case Intrinsic::loongarch_lsx_vbitclr_d:
+  case Intrinsic::loongarch_lasx_xvbitclr_b:
+  case Intrinsic::loongarch_lasx_xvbitclr_h:
+  case Intrinsic::loongarch_lasx_xvbitclr_w:
+  case Intrinsic::loongarch_lasx_xvbitclr_d:
     return lowerVectorBitClear(N, DAG);
   case Intrinsic::loongarch_lsx_vbitclri_b:
+  case Intrinsic::loongarch_lasx_xvbitclri_b:
     return lowerVectorBitClearImm<3>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitclri_h:
+  case Intrinsic::loongarch_lasx_xvbitclri_h:
     return lowerVectorBitClearImm<4>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitclri_w:
+  case Intrinsic::loongarch_lasx_xvbitclri_w:
     return lowerVectorBitClearImm<5>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitclri_d:
+  case Intrinsic::loongarch_lasx_xvbitclri_d:
     return lowerVectorBitClearImm<6>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitset_b:
   case Intrinsic::loongarch_lsx_vbitset_h:
   case Intrinsic::loongarch_lsx_vbitset_w:
-  case Intrinsic::loongarch_lsx_vbitset_d: {
+  case Intrinsic::loongarch_lsx_vbitset_d:
+  case Intrinsic::loongarch_lasx_xvbitset_b:
+  case Intrinsic::loongarch_lasx_xvbitset_h:
+  case Intrinsic::loongarch_lasx_xvbitset_w:
+  case Intrinsic::loongarch_lasx_xvbitset_d: {
     EVT VecTy = N->getValueType(0);
     SDValue One = DAG.getConstant(1, DL, VecTy);
     return DAG.getNode(
@@ -2347,17 +2659,25 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::SHL, DL, VecTy, One, truncateVecElts(N, DAG)));
   }
   case Intrinsic::loongarch_lsx_vbitseti_b:
+  case Intrinsic::loongarch_lasx_xvbitseti_b:
     return lowerVectorBitSetImm<3>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitseti_h:
+  case Intrinsic::loongarch_lasx_xvbitseti_h:
     return lowerVectorBitSetImm<4>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitseti_w:
+  case Intrinsic::loongarch_lasx_xvbitseti_w:
     return lowerVectorBitSetImm<5>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitseti_d:
+  case Intrinsic::loongarch_lasx_xvbitseti_d:
     return lowerVectorBitSetImm<6>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitrev_b:
   case Intrinsic::loongarch_lsx_vbitrev_h:
   case Intrinsic::loongarch_lsx_vbitrev_w:
-  case Intrinsic::loongarch_lsx_vbitrev_d: {
+  case Intrinsic::loongarch_lsx_vbitrev_d:
+  case Intrinsic::loongarch_lasx_xvbitrev_b:
+  case Intrinsic::loongarch_lasx_xvbitrev_h:
+  case Intrinsic::loongarch_lasx_xvbitrev_w:
+  case Intrinsic::loongarch_lasx_xvbitrev_d: {
     EVT VecTy = N->getValueType(0);
     SDValue One = DAG.getConstant(1, DL, VecTy);
     return DAG.getNode(
@@ -2365,31 +2685,45 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::SHL, DL, VecTy, One, truncateVecElts(N, DAG)));
   }
   case Intrinsic::loongarch_lsx_vbitrevi_b:
+  case Intrinsic::loongarch_lasx_xvbitrevi_b:
     return lowerVectorBitRevImm<3>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitrevi_h:
+  case Intrinsic::loongarch_lasx_xvbitrevi_h:
     return lowerVectorBitRevImm<4>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitrevi_w:
+  case Intrinsic::loongarch_lasx_xvbitrevi_w:
     return lowerVectorBitRevImm<5>(N, DAG);
   case Intrinsic::loongarch_lsx_vbitrevi_d:
+  case Intrinsic::loongarch_lasx_xvbitrevi_d:
     return lowerVectorBitRevImm<6>(N, DAG);
   case Intrinsic::loongarch_lsx_vfadd_s:
   case Intrinsic::loongarch_lsx_vfadd_d:
+  case Intrinsic::loongarch_lasx_xvfadd_s:
+  case Intrinsic::loongarch_lasx_xvfadd_d:
     return DAG.getNode(ISD::FADD, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vfsub_s:
   case Intrinsic::loongarch_lsx_vfsub_d:
+  case Intrinsic::loongarch_lasx_xvfsub_s:
+  case Intrinsic::loongarch_lasx_xvfsub_d:
     return DAG.getNode(ISD::FSUB, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vfmul_s:
   case Intrinsic::loongarch_lsx_vfmul_d:
+  case Intrinsic::loongarch_lasx_xvfmul_s:
+  case Intrinsic::loongarch_lasx_xvfmul_d:
     return DAG.getNode(ISD::FMUL, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vfdiv_s:
   case Intrinsic::loongarch_lsx_vfdiv_d:
+  case Intrinsic::loongarch_lasx_xvfdiv_s:
+  case Intrinsic::loongarch_lasx_xvfdiv_d:
     return DAG.getNode(ISD::FDIV, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2));
   case Intrinsic::loongarch_lsx_vfmadd_s:
   case Intrinsic::loongarch_lsx_vfmadd_d:
+  case Intrinsic::loongarch_lasx_xvfmadd_s:
+  case Intrinsic::loongarch_lasx_xvfmadd_d:
     return DAG.getNode(ISD::FMA, DL, N->getValueType(0), N->getOperand(1),
                        N->getOperand(2), N->getOperand(3));
   case Intrinsic::loongarch_lsx_vinsgr2vr_b:
@@ -2397,10 +2731,12 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
                        N->getOperand(1), N->getOperand(2),
                        legalizeIntrinsicImmArg<4>(N, 3, DAG, Subtarget));
   case Intrinsic::loongarch_lsx_vinsgr2vr_h:
+  case Intrinsic::loongarch_lasx_xvinsgr2vr_w:
     return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2),
                        legalizeIntrinsicImmArg<3>(N, 3, DAG, Subtarget));
   case Intrinsic::loongarch_lsx_vinsgr2vr_w:
+  case Intrinsic::loongarch_lasx_xvinsgr2vr_d:
     return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2),
                        legalizeIntrinsicImmArg<2>(N, 3, DAG, Subtarget));
@@ -2411,7 +2747,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vreplgr2vr_b:
   case Intrinsic::loongarch_lsx_vreplgr2vr_h:
   case Intrinsic::loongarch_lsx_vreplgr2vr_w:
-  case Intrinsic::loongarch_lsx_vreplgr2vr_d: {
+  case Intrinsic::loongarch_lsx_vreplgr2vr_d:
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_b:
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_h:
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_w:
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_d: {
     EVT ResTy = N->getValueType(0);
     SmallVector<SDValue> Ops(ResTy.getVectorNumElements(), N->getOperand(1));
     return DAG.getBuildVector(ResTy, DL, Ops);
@@ -2420,6 +2760,10 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lsx_vreplve_h:
   case Intrinsic::loongarch_lsx_vreplve_w:
   case Intrinsic::loongarch_lsx_vreplve_d:
+  case Intrinsic::loongarch_lasx_xvreplve_b:
+  case Intrinsic::loongarch_lasx_xvreplve_h:
+  case Intrinsic::loongarch_lasx_xvreplve_w:
+  case Intrinsic::loongarch_lasx_xvreplve_d:
     return DAG.getNode(LoongArchISD::VREPLVE, DL, N->getValueType(0),
                        N->getOperand(1),
                        DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getGRLenVT(),
@@ -2534,6 +2878,36 @@ emitVecCondBranchPseudo(MachineInstr &MI, MachineBasicBlock *BB,
   case LoongArch::PseudoVBNZ_D:
     CondOpc = LoongArch::VSETALLNEZ_D;
     break;
+  case LoongArch::PseudoXVBZ:
+    CondOpc = LoongArch::XVSETEQZ_V;
+    break;
+  case LoongArch::PseudoXVBZ_B:
+    CondOpc = LoongArch::XVSETANYEQZ_B;
+    break;
+  case LoongArch::PseudoXVBZ_H:
+    CondOpc = LoongArch::XVSETANYEQZ_H;
+    break;
+  case LoongArch::PseudoXVBZ_W:
+    CondOpc = LoongArch::XVSETANYEQZ_W;
+    break;
+  case LoongArch::PseudoXVBZ_D:
+    CondOpc = LoongArch::XVSETANYEQZ_D;
+    break;
+  case LoongArch::PseudoXVBNZ:
+    CondOpc = LoongArch::XVSETNEZ_V;
+    break;
+  case LoongArch::PseudoXVBNZ_B:
+    CondOpc = LoongArch::XVSETALLNEZ_B;
+    break;
+  case LoongArch::PseudoXVBNZ_H:
+    CondOpc = LoongArch::XVSETALLNEZ_H;
+    break;
+  case LoongArch::PseudoXVBNZ_W:
+    CondOpc = LoongArch::XVSETALLNEZ_W;
+    break;
+  case LoongArch::PseudoXVBNZ_D:
+    CondOpc = LoongArch::XVSETALLNEZ_D;
+    break;
   }
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -2636,6 +3010,16 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoVBNZ_H:
   case LoongArch::PseudoVBNZ_W:
   case LoongArch::PseudoVBNZ_D:
+  case LoongArch::PseudoXVBZ:
+  case LoongArch::PseudoXVBZ_B:
+  case LoongArch::PseudoXVBZ_H:
+  case LoongArch::PseudoXVBZ_W:
+  case LoongArch::PseudoXVBZ_D:
+  case LoongArch::PseudoXVBNZ:
+  case LoongArch::PseudoXVBNZ_B:
+  case LoongArch::PseudoXVBNZ_H:
+  case LoongArch::PseudoXVBNZ_W:
+  case LoongArch::PseudoXVBNZ_D:
     return emitVecCondBranchPseudo(MI, BB, Subtarget);
   }
 }
@@ -2745,6 +3129,10 @@ const MCPhysReg ArgFPR64s[] = {
 const MCPhysReg ArgVRs[] = {LoongArch::VR0, LoongArch::VR1, LoongArch::VR2,
                             LoongArch::VR3, LoongArch::VR4, LoongArch::VR5,
                             LoongArch::VR6, LoongArch::VR7};
+
+const MCPhysReg ArgXRs[] = {LoongArch::XR0, LoongArch::XR1, LoongArch::XR2,
+                            LoongArch::XR3, LoongArch::XR4, LoongArch::XR5,
+                            LoongArch::XR6, LoongArch::XR7};
 
 // Pass a 2*GRLen argument that has been split into two GRLen values through
 // registers or the stack as necessary.
@@ -2894,6 +3282,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
     Reg = State.AllocateReg(ArgFPR64s);
   else if (ValVT.is128BitVector())
     Reg = State.AllocateReg(ArgVRs);
+  else if (ValVT.is256BitVector())
+    Reg = State.AllocateReg(ArgXRs);
   else
     Reg = State.AllocateReg(ArgGPRs);
 
