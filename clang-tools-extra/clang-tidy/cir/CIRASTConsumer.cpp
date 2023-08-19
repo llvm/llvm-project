@@ -8,7 +8,6 @@
 
 #include "CIRASTConsumer.h"
 
-#include "../utils/OptionsUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/Pass.h"
@@ -23,16 +22,9 @@ namespace clang::tidy::cir {
 
 /// CIR AST Consumer
 CIRASTConsumer::CIRASTConsumer(CompilerInstance &CI, StringRef inputFile,
-                               clang::tidy::ClangTidyContext &Context)
-    : Context(Context),
-      OptsView(ClangTidyCheck::OptionsView(
-          LifetimeCheckName, Context.getOptions().CheckOptions, &Context)) {
-  // Setup CIR codegen options via config specified information.
-  CI.getCodeGenOpts().ClangIRBuildDeferredThreshold =
-      OptsView.get("CodeGenBuildDeferredThreshold", 500U);
-  CI.getCodeGenOpts().ClangIRSkipFunctionsFromSystemHeaders =
-      OptsView.get("CodeGenSkipFunctionsFromSystemHeaders", false);
-
+                               clang::tidy::ClangTidyContext &Context,
+                               CIROpts &O)
+    : Context(Context), cirOpts(O) {
   Gen = std::make_unique<::cir::CIRGenerator>(CI.getDiagnostics(), nullptr,
                                               CI.getCodeGenOpts());
 }
@@ -166,14 +158,9 @@ void CIRASTConsumer::HandleTranslationUnit(ASTContext &C) {
   mlir::PassManager pm(mlirCtx.get());
   pm.addPass(mlir::createMergeCleanupsPass());
 
-  auto remarks =
-      utils::options::parseStringList(OptsView.get("RemarksList", ""));
-  auto hist =
-      utils::options::parseStringList(OptsView.get("HistoryList", "all"));
-  auto hLimit = OptsView.get("HistLimit", 1U);
-
   if (Context.isCheckEnabled(LifetimeCheckName))
-    pm.addPass(mlir::createLifetimeCheckPass(remarks, hist, hLimit, &C));
+    pm.addPass(mlir::createLifetimeCheckPass(
+        cirOpts.RemarksList, cirOpts.HistoryList, cirOpts.HistLimit, &C));
 
   bool Result = !mlir::failed(pm.run(mlirMod));
   if (!Result)

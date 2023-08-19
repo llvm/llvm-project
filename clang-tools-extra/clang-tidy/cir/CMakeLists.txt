@@ -15,19 +15,11 @@ add_clang_library(clangTidyCIRModule
   CIRTidyModule.cpp
 
   LINK_LIBS
-  clangTidy
-  clangTidyUtils
-
-  DEPENDS
-  omp_gen
-
-  LINK_LIBS
   clangASTMatchers
   clangCIR
   clangFrontend
   clangSerialization
   clangTidy
-  clangTidyUtils
   ${dialect_libs}
   MLIRCIR
   MLIRCIRTransforms
@@ -48,6 +40,9 @@ add_clang_library(clangTidyCIRModule
   MLIRMemRefDialect
   MLIRTargetLLVMIRExport
   MLIRTransforms
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyCIRModule
