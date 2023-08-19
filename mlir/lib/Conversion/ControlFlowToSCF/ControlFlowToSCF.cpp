@@ -140,10 +140,11 @@ ControlFlowToSCFTransformation::createUnreachableTerminator(Location loc,
   // TODO: This should create a `ub.unreachable` op. Once such an operation
   //       exists to make the pass independent of the func dialect. For now just
   //       return poison values.
-  auto funcOp = dyn_cast<func::FuncOp>(region.getParentOp());
+  Operation *parentOp = region.getParentOp();
+  auto funcOp = dyn_cast<func::FuncOp>(parentOp);
   if (!funcOp)
-    return emitError(loc, "Expected '")
-           << func::FuncOp::getOperationName() << "' as top level operation";
+    return emitError(loc, "Cannot create unreachable terminator for '")
+           << parentOp->getName() << "'";
 
   return builder
       .create<func::ReturnOp>(
@@ -165,18 +166,29 @@ struct LiftControlFlowToSCF
     ControlFlowToSCFTransformation transformation;
 
     bool changed = false;
-    WalkResult result = getOperation()->walk([&](func::FuncOp funcOp) {
+    Operation *op = getOperation();
+    WalkResult result = op->walk([&](func::FuncOp funcOp) {
       if (funcOp.getBody().empty())
         return WalkResult::advance();
 
-      FailureOr<bool> changedFunc = transformCFGToSCF(
-          funcOp.getBody(), transformation,
-          funcOp != getOperation() ? getChildAnalysis<DominanceInfo>(funcOp)
-                                   : getAnalysis<DominanceInfo>());
-      if (failed(changedFunc))
+      auto &domInfo = funcOp != op ? getChildAnalysis<DominanceInfo>(funcOp)
+                                   : getAnalysis<DominanceInfo>();
+
+      auto visitor = [&](Operation *innerOp) -> WalkResult {
+        for (Region &reg : innerOp->getRegions()) {
+          FailureOr<bool> changedFunc =
+              transformCFGToSCF(reg, transformation, domInfo);
+          if (failed(changedFunc))
+            return WalkResult::interrupt();
+
+          changed |= *changedFunc;
+        }
+        return WalkResult::advance();
+      };
+
+      if (funcOp->walk<WalkOrder::PostOrder>(visitor).wasInterrupted())
         return WalkResult::interrupt();
 
-      changed |= *changedFunc;
       return WalkResult::advance();
     });
     if (result.wasInterrupted())
