@@ -20,6 +20,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 #include <omp-tools.h>
 
@@ -108,6 +109,8 @@ static std::atomic<uint64_t> unique_id_ticket(1);
 static std::mutex set_trace_mutex;
 // Serialize start/stop/flush
 static std::mutex start_stop_flush_trace_mutex;
+// Serialize calls to std::hash
+static std::mutex thread_id_hash_mutex;
 
 /*****************************************************************************
  * Thread local data
@@ -576,7 +579,11 @@ void OmptInterface::set_trace_record_common(ompt_record_ompt_t *data_ptr,
     data_ptr->time = 0; // Currently, no consumer, so no need to set it
   else
     data_ptr->time = ompt_tr_start_time;
-  data_ptr->thread_id = 0; // TODO
+  {
+    std::unique_lock<std::mutex> lck(thread_id_hash_mutex);
+    data_ptr->thread_id =
+        std::hash<std::thread::id>()(std::this_thread::get_id());
+  }
   data_ptr->target_id = ompt_target_data.value;
 }
 
