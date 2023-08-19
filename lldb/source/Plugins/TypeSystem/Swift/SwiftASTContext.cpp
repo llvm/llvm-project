@@ -850,12 +850,11 @@ SwiftASTContext::GetCachedEnumInfo(opaque_compiler_type_t type) {
   if (pos != enum_info_cache->end())
     return pos->second.get();
 
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  if (!SwiftASTContext::IsFullyRealized(ToCompilerType({swift_can_type})))
+  if (IsMeaninglessWithoutDynamicResolution(type))
     return nullptr;
 
   SwiftEnumDescriptorSP enum_info_sp;
-
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (auto *enum_type = swift_can_type->getAs<swift::EnumType>()) {
     enum_info_sp.reset(GetEnumInfoFromEnumDecl(GetASTContext(), swift_can_type,
                                                enum_type->getDecl()));
@@ -2058,19 +2057,6 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
-static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
-  auto type_system_or_err =
-      module.GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-  if (!type_system_or_err) {
-    llvm::consumeError(type_system_or_err.takeError());
-    return {};
-  }
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
-  if (!ts)
-    return {};
-  return ts->GetSwiftASTContext();
-}
-
 /// Scan a newly added lldb::Module for Swift modules and report any errors in
 /// its module SwiftASTContext to Target.
 static void ProcessModule(
@@ -2307,10 +2293,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     auto get_executable_triple = [&]() -> llvm::Triple {
       if (!exe_module_sp)
         return {};
-      auto *exe_ast_ctx = GetModuleSwiftASTContext(*exe_module_sp);
-      if (!exe_ast_ctx)
-        return {};
-      return exe_ast_ctx->GetLanguageOptions().Target;
+      return exe_module_sp->GetArchitecture().GetTriple();
     };
 
     llvm::Triple computed_triple;
@@ -2393,25 +2376,22 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
 
-  for (size_t mi = 0; mi != num_images; ++mi) {
-    std::vector<std::string> extra_clang_args;
-    ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
-                  discover_implicit_search_paths, use_all_compiler_flags,
-                  target, triple, plugin_search_options, module_search_paths,
-                  framework_search_paths, extra_clang_args);
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args);
-  }
+  for (ModuleSP module_sp : target.GetImages().Modules())
+    if (module_sp) {
+      std::vector<std::string> extra_clang_args;
+      ProcessModule(module_sp, m_description, discover_implicit_search_paths,
+                    use_all_compiler_flags, target, triple,
+                    plugin_search_options, module_search_paths,
+                    framework_search_paths, extra_clang_args);
+      swift_ast_sp->AddExtraClangArgs(extra_clang_args);
+    }
 
-  FileSpecList target_module_paths = target.GetSwiftModuleSearchPaths();
-  for (size_t mi = 0, me = target_module_paths.GetSize(); mi != me; ++mi)
-    module_search_paths.push_back(
-        target_module_paths.GetFileSpecAtIndex(mi).GetPath());
+  for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
+    module_search_paths.push_back(path.GetPath());
 
-  FileSpecList target_framework_paths = target.GetSwiftFrameworkSearchPaths();
-  for (size_t fi = 0, fe = target_framework_paths.GetSize(); fi != fe; ++fi)
-    framework_search_paths.push_back(
-        {target_framework_paths.GetFileSpecAtIndex(fi).GetPath(),
-         /*is_system*/ false});
+  for (const FileSpec &path : target.GetSwiftFrameworkSearchPaths())
+    framework_search_paths.push_back({path.GetPath(),
+                                      /*is_system*/ false});
 
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
@@ -2430,6 +2410,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   swift_ast_sp->ApplyDiagnosticOptions();
+
+  // Apply source path remappings found in each module's dSYM.
+  for (ModuleSP module : target.GetImages().Modules())
+    if (module)
+      swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
 
   // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
@@ -5163,17 +5148,6 @@ SwiftASTContext::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
           llvm::dyn_cast_or_null<swift::DynamicSelfType>(swift_type))
     return ToCompilerType({dyn_self->getSelfType().getPointer()});
   return {weak_from_this(), type};
-}
-
-bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
-  if (swift::CanType swift_can_type = ::GetCanonicalSwiftType(compiler_type)) {
-    if (swift::isa<swift::MetatypeType>(swift_can_type))
-      return true;
-    return !swift_can_type->hasArchetype() &&
-           !swift_can_type->hasTypeParameter();
-  }
-
-  return false;
 }
 
 bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,

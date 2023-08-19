@@ -44,26 +44,15 @@ class TestSwiftDedupMacros(TestBase):
 
         # Turn on logging.
         log = self.getBuildArtifact("types.log")
-        self.expect("log enable lldb types -f "+log)
-        
+        self.expect('log enable lldb types -f "%s"' % log)
+
         self.expect("expression foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
-        debug = 0
-        space = 0
-        ndebug = 0
-        space_with_space = 0
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        for line in logfile:
-            if "-DDEBUG=1" in line:
-                debug += 1
-            if "-DSPACE" in line:
-                space += 1
-            if " SPACE" in line:
-                space_with_space += 1
-            if "-UNDEBUG" in line:
-                ndebug += 1
-        # One extra in SwiftASTContextPerModule.
-        self.assertEqual(debug, 3)
-        self.assertEqual(space, 3)
-        self.assertEqual(space_with_space, 0)
-        self.assertEqual(ndebug, 3)
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+#       CHECK: SwiftASTContextForExpressions{{.*}}-DDEBUG=1
+#       CHECK: SwiftASTContextForExpressions{{.*}}-DSPACE
+#       CHECK-NOT: {{ SPACE}}
+#       CHECK: SwiftASTContextForExpressions{{.*}}-UNDEBUG
+#       CHECK: SwiftASTContextForModule("libDylib{{.*}}-DDEBUG=1
+#       CHECK: SwiftASTContextForModule("libDylib{{.*}}-DSPACE
+#       CHECK-NOT: {{ SPACE}}
+#       CHECK: SwiftASTContextForModule("libDylib{{.*}}-UNDEBUG

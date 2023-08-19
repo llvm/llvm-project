@@ -1087,8 +1087,16 @@ bool SwiftASTManipulator::AddExternalVariables(
 
       swift::VarDecl *redirected_var_decl =
           GetVarDeclForVariableInFunction(variable, containing_function);
+      if (!redirected_var_decl) {
+        LLDB_LOG(log, "No var decl.");
+        continue;
+      }
       swift::PatternBindingDecl *pattern_binding =
           GetPatternBindingForVarDecl(redirected_var_decl, containing_function);
+      if (!pattern_binding) {
+        LLDB_LOG(log, "No pattern binding.");
+        continue;
+      }
 
       // Push the var decl and pattern binding so we add them to the function
       // later.
