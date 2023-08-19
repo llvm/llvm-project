@@ -233,7 +233,9 @@ export namespace std {
 #endif
   } // namespace chrono
 
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::formatter;
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
 
   namespace chrono {
     // using std::chrono::parse;
