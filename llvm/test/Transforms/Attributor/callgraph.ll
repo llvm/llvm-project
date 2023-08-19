@@ -49,6 +49,65 @@ define void @func5(i32 %0) {
   ret void
 }
 
+define i32 @musttailCall(i32 %0) {
+; CHECK-LABEL: @musttailCall(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr @func4, ptr @func3
+; CHECK-NEXT:    [[C:%.*]] = musttail call i32 [[TMP3]](i32 0)
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %2 = icmp ne i32 %0, 0
+  %3 = select i1 %2, ptr @func4, ptr @func3
+  %c = musttail call i32 (i32) %3(i32 0)
+  ret i32 %c
+}
+
+declare i32 @retI32()
+declare void @takeI32(i32)
+declare float @retFloatTakeFloat(float)
+declare void @void()
+
+define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
+; CHECK-LABEL: @non_matching_fp1(
+; CHECK-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; CHECK-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
+; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
+  %fp2 = select i1 %c2, ptr @retFloatTakeFloat, ptr @void
+  %fp = select i1 %c, ptr %fp1, ptr %fp2
+  %call = call i32 %fp(i32 42)
+  ret i32 %call
+}
+
+define void @non_matching_fp2(i1 %c1, i1 %c2, i1 %c, ptr %unknown) {
+; CHECK-LABEL: @non_matching_fp2(
+; CHECK-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; CHECK-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
+; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; CHECK-NEXT:    call void [[FP]]()
+; CHECK-NEXT:    ret void
+;
+  %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
+  %fp2 = select i1 %c2, ptr @retFloatTakeFloat, ptr %unknown
+  %fp = select i1 %c, ptr %fp1, ptr %fp2
+  call void %fp()
+  ret void
+}
+
+define i32 @non_matching_unknown(i1 %c, ptr %fn) {
+; CHECK-LABEL: @non_matching_unknown(
+; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %fp = select i1 %c, ptr @retI32, ptr %fn
+  %call = call i32 %fp(i32 42)
+  ret i32 %call
+}
+
 define void @broker(ptr %unknown) !callback !0 {
 ; CHECK-LABEL: @broker(
 ; CHECK-NEXT:    call void [[UNKNOWN:%.*]]()

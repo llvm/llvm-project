@@ -28,8 +28,8 @@ bool isGuard(const User *U);
 /// call
 bool isWidenableCondition(const Value *V);
 
-/// Returns true iff \p U is a widenable branch (that is, parseWidenableBranch
-/// returns true).
+/// Returns true iff \p U is a widenable branch (that is,
+/// extractWidenableCondition returns widenable condition).
 bool isWidenableBranch(const User *U);
 
 /// Returns true iff \p U has semantics of a guard expressed in a form of a
@@ -60,6 +60,10 @@ bool parseWidenableBranch(User *U, Use *&Cond, Use *&WC, BasicBlock *&IfTrueBB,
 //   cond1 && cond2 && cond3 && widenable_contidion ...
 // Method collects the list of checks, but skips widenable_condition.
 void parseWidenableGuard(const User *U, llvm::SmallVectorImpl<Value *> &Checks);
+
+// Returns widenable_condition if it exists in the expression tree rooting from
+// \p U and has only one use.
+Value *extractWidenableCondition(const User *U);
 } // llvm
 
 #endif // LLVM_ANALYSIS_GUARDUTILS_H

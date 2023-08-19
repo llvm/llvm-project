@@ -3545,3 +3545,479 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   StringRef FuncName2 = GR->getString(ExpFI2->Name);
   EXPECT_EQ(FuncName2, "bar");
 }
+
+
+TEST(GSYMTest, TestRangeWarnings) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has two discontiguous ranges. We will create two FunctionInfo objects for
+  // each range in the function that only contains info for each range. We also
+  // want to verify that we only emit errors and warnings for ranges that
+  // aren't contained in any parent address ranges if this is true. Prior to
+  // this fix we would create two FunctionInfo objects and as each one was
+  // being created we would end up warning about all of the ranges that weren't
+  // in the current FunctionInfo's range even though the DWARF was well formed.
+  // Now we don't incorrectly emit errors when there are none.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_ranges	(0x00000000
+  //                    [0x0000000000001000, 0x0000000000001050)
+  //                    [0x0000000000002000, 0x0000000000002050))
+  //
+  // 0x0000001e:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("inline1")
+  //                   DW_AT_ranges	(0x00000030
+  //                      [0x0000000000001010, 0x0000000000001040)
+  //                      [0x0000000000002010, 0x0000000000002040))
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x0000002f:       DW_TAG_inlined_subroutine
+  //                     DW_AT_name	("inline2")
+  //                     DW_AT_ranges	(0x00000060
+  //                        [0x0000000000001015, 0x0000000000001020)
+  //                        [0x0000000000002015, 0x0000000000002020))
+  //                     DW_AT_call_file	("/tmp/inline.h")
+  //                     DW_AT_call_line	(21)
+  //
+  // 0x00000040:       NULL
+  //
+  // 0x00000041:     NULL
+  //
+  // 0x00000042:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inline1
+    - inline2
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x4
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+  debug_ranges:
+    - Offset:          0x0
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1000
+          HighOffset:      0x1050
+        - LowOffset:       0x2000
+          HighOffset:      0x2050
+    - Offset:          0x30
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1010
+          HighOffset:      0x1040
+        - LowOffset:       0x2010
+          HighOffset:      0x2040
+    - Offset:          0x60
+      AddrSize:        0x8
+      Entries:
+        - LowOffset:       0x1015
+          HighOffset:      0x1020
+        - LowOffset:       0x2015
+          HighOffset:      0x2020
+  debug_info:
+    - Length:          0x3F
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x0
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x30
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x1B
+            - Value:           0x60
+            - Value:           0x2
+            - Value:           0x15
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          120
+      Version:         2
+      PrologueLength:  48
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            8192
+        - Opcode:          DW_LNS_advance_line
+          SData:           19
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be two functions in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  // Verify "foo" is present and has a line table
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Verify "foo" is present and has a line table
+  auto ExpFI2 = GR->getFunctionInfo(0x2000);
+  ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
+  ASSERT_EQ(ExpFI2->Range, AddressRange(0x2000, 0x2050));
+  EXPECT_TRUE(ExpFI2->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI2->Inline.has_value());
+  StringRef FuncName2 = GR->getString(ExpFI2->Name);
+  EXPECT_EQ(FuncName2, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}
+
+TEST(GSYMTest, TestEmptyRangeWarnings) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has a function that contains an inlined function that has an empty range.
+  // We want to make sure that if we run into only empty inline functions
+  // inside of a real function, that we don't end up with inline information
+  // in the GSYM and we don't warn about the inline function's range not being
+  // contined in the parent ranges since it is ok for inline functions to be
+  // elided.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:     DW_TAG_inlined_subroutine
+  //                   DW_AT_name	("inline1")
+  //                   DW_AT_low_pc	(0x0000000000001010)
+  //                   DW_AT_high_pc	(0x0000000000001010)
+  //                   DW_AT_call_file	("/tmp/main.cpp")
+  //                   DW_AT_call_line	(11)
+  //
+  // 0x00000047:     NULL
+  //
+  // 0x00000048:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - inline1
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+  debug_info:
+    - Length:          0x45
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x13
+            - Value:           0x1010
+            - Value:           0x1010
+            - Value:           0x1
+            - Value:           0xB
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          89
+      Version:         2
+      PrologueLength:  48
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            48
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}

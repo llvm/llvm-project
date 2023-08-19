@@ -104,11 +104,10 @@ public:
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value &&
+                                        !is_convertible<_Sseq, _Engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit independent_bits_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, independent_bits_engine>::value &&
-                           !is_convertible<_Sseq, _Engine>::value>::type* = 0)
+        explicit independent_bits_engine(_Sseq& __q)
          : __e_(__q) {}
     _LIBCPP_INLINE_VISIBILITY
     void seed() {__e_.seed();}

@@ -97,6 +97,10 @@ public:
   /// Get the string representation of the relationship kind.
   static StringRef getRelationshipString(RelationshipKind Kind);
 
+  enum ConstraintKind { Conformance, ConditionalConformance };
+
+  static StringRef getConstraintString(ConstraintKind Kind);
+
 private:
   /// Just serialize the currently recorded objects in Symbol Graph format.
   Object serializeCurrentGraph();
@@ -170,6 +174,25 @@ public:
   void visitStaticFieldRecord(const StaticFieldRecord &Record);
 
   void visitCXXClassRecord(const CXXClassRecord &Record);
+
+  void visitClassTemplateRecord(const ClassTemplateRecord &Record);
+
+  void visitClassTemplateSpecializationRecord(
+      const ClassTemplateSpecializationRecord &Record);
+
+  void visitClassTemplatePartialSpecializationRecord(
+      const ClassTemplatePartialSpecializationRecord &Record);
+
+  void visitConceptRecord(const ConceptRecord &Record);
+
+  void
+  visitGlobalVariableTemplateRecord(const GlobalVariableTemplateRecord &Record);
+
+  void visitGlobalVariableTemplateSpecializationRecord(
+      const GlobalVariableTemplateSpecializationRecord &Record);
+
+  void visitGlobalVariableTemplatePartialSpecializationRecord(
+      const GlobalVariableTemplatePartialSpecializationRecord &Record);
 
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);

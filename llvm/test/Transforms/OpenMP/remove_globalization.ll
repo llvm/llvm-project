@@ -8,8 +8,9 @@ target triple = "nvptx64"
 ; UTC_ARGS: --disable
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:10:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 ; UTC_ARGS: --enable
 
 @S = external local_unnamed_addr global ptr
@@ -93,9 +94,8 @@ define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
+; CHECK-NEXT:    call void @share(ptr nofree [[DOTH2S]]) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@bar
@@ -225,7 +225,7 @@ exit:
   ret void
 }
 
-; CHECK: declare ptr @__kmpc_alloc_shared(i64)
+; CHECK: declare noalias ptr @__kmpc_alloc_shared(i64)
 declare ptr @__kmpc_alloc_shared(i64)
 
 ; CHECK: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
@@ -260,8 +260,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
-; CHECK: attributes #[[ATTR5]] = { nounwind }
-; CHECK: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
+; CHECK: attributes #[[ATTR5]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }

@@ -84,6 +84,8 @@
 ! CHECK-NEXT: -fppc-native-vector-element-order
 ! CHECK-NEXT:                         Specifies PowerPC native vector element order (default)
 ! CHECK-NEXT: -freciprocal-math       Allow division operations to be reassociated
+! CHECK-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! CHECK-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! CHECK-NEXT: -fsave-optimization-record=<format>
 ! CHECK-NEXT:                         Generate an optimization record file in a specific format
 ! CHECK-NEXT: -fsave-optimization-record
@@ -129,9 +131,11 @@
 ! CHECK-NEXT: --target=<value>        Generate code for the given target
 ! CHECK-NEXT: -U <macro>              Undefine macro <macro>
 ! CHECK-NEXT: --version               Print version information
+! CHECK-NEXT: -v                      Show commands to run and use verbose output
 ! CHECK-NEXT: -W<warning>             Enable the specified warning
 ! CHECK-NEXT: -Xflang <arg>           Pass <arg> to the flang compiler
 ! CHECK-NEXT: -x <language>           Treat subsequent input files as having type <language>
+
 
 ! ERROR-FLANG: error: unknown argument '-help-hidden'; did you mean '--help-hidden'?
 

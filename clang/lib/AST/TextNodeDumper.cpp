@@ -300,6 +300,17 @@ void TextNodeDumper::Visit(const Decl *D) {
     }
   }
 
+  switch (D->getFriendObjectKind()) {
+  case Decl::FOK_None:
+    break;
+  case Decl::FOK_Declared:
+    OS << " friend";
+    break;
+  case Decl::FOK_Undeclared:
+    OS << " friend_undeclared";
+    break;
+  }
+
   ConstDeclVisitor<TextNodeDumper>::Visit(D);
 }
 
@@ -1117,6 +1128,8 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   case NOUR_Constant: OS << " non_odr_use_constant"; break;
   case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
   }
+  if (Node->refersToEnclosingVariableOrCapture())
+    OS << " refers_to_enclosing_variable_or_capture";
   if (Node->isImmediateEscalating())
     OS << " immediate-escalating";
 }

@@ -135,10 +135,9 @@ public:
       seed(__sd);
     }
 #endif
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit mersenne_twister_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value>::type* = 0)
+        explicit mersenne_twister_engine(_Sseq& __q)
         {seed(__q);}
     _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed);
     template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>

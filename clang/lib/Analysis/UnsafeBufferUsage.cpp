@@ -380,6 +380,10 @@ public:
   }
 };
 
+static auto toSupportedVariable() {
+  return to(varDecl());
+}
+
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
 
@@ -566,7 +570,8 @@ public:
   static Matcher matcher() {
     auto PtrInitStmt = declStmt(hasSingleDecl(varDecl(
                                  hasInitializer(ignoringImpCasts(declRefExpr(
-                                                  hasPointerType()).
+                                                  hasPointerType(),
+                                                    toSupportedVariable()).
                                                   bind(PointerInitRHSTag)))).
                                               bind(PointerInitLHSTag)));
 
@@ -616,10 +621,10 @@ public:
   static Matcher matcher() {
     auto PtrAssignExpr = binaryOperator(allOf(hasOperatorName("="),
       hasRHS(ignoringParenImpCasts(declRefExpr(hasPointerType(),
-                                               to(varDecl())).
+                                               toSupportedVariable()).
                                    bind(PointerAssignRHSTag))),
                                    hasLHS(declRefExpr(hasPointerType(),
-                                                      to(varDecl())).
+                                                      toSupportedVariable()).
                                           bind(PointerAssignLHSTag))));
 
     return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
@@ -691,7 +696,8 @@ public:
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
     auto BaseIsArrayOrPtrDRE =
-        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr)));
+        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr,
+                                                  toSupportedVariable())));
     auto Target =
         arraySubscriptExpr(BaseIsArrayOrPtrDRE).bind(ULCArraySubscriptTag);
 
@@ -733,7 +739,8 @@ public:
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
     auto target = expr(
-        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr, to(varDecl()))).bind(DeclRefExprTag)));
+        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr,
+                              toSupportedVariable())).bind(DeclRefExprTag)));
     return stmt(isInUnspecifiedPointerContext(target));
   }
 
@@ -769,7 +776,7 @@ public:
         unaryOperator(
             hasOperatorName("*"),
             has(expr(ignoringParenImpCasts(
-                declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)))))
+                declRefExpr(toSupportedVariable()).bind(BaseDeclRefExprTag)))))
             .bind(OperatorTag);
 
     return expr(isInUnspecifiedLvalueContext(Target));
@@ -809,7 +816,8 @@ public:
     return expr(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
         unaryOperator(hasOperatorName("&"),
                       hasUnaryOperand(arraySubscriptExpr(
-                          hasBase(ignoringParenImpCasts(declRefExpr())))))
+                          hasBase(ignoringParenImpCasts(declRefExpr(
+                                                  toSupportedVariable()))))))
             .bind(UPCAddressofArraySubscriptTag)))));
   }
 
@@ -961,7 +969,8 @@ public:
     // things right.
     return stmt(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
 								    unaryOperator(isPreInc(),
-										  hasUnaryOperand(declRefExpr())
+										  hasUnaryOperand(declRefExpr(
+                                                    toSupportedVariable()))
 										  ).bind(UPCPreIncrementTag)))));
   }
 
@@ -999,7 +1008,8 @@ public:
   static Matcher matcher() {
     // clang-format off
     auto ThePtr = expr(hasPointerType(),
-                       ignoringImpCasts(declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)));
+                       ignoringImpCasts(declRefExpr(toSupportedVariable()).
+                                        bind(BaseDeclRefExprTag)));
     auto PlusOverPtrAndInteger = expr(anyOf(
           binaryOperator(hasOperatorName("+"), hasLHS(ThePtr),
                          hasRHS(integerLiteral().bind(OffsetTag)))
@@ -1106,7 +1116,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
             // In parallel, match all DeclRefExprs so that to find out
             // whether there are any uncovered by gadgets.
             declRefExpr(anyOf(hasPointerType(), hasArrayType()),
-                        to(varDecl())).bind("any_dre"),
+                        to(anyOf(varDecl(), bindingDecl()))).bind("any_dre"),
             // Also match DeclStmts because we'll need them when fixing
             // their underlying VarDecls that otherwise don't have
             // any backreferences to DeclStmts.
@@ -1166,7 +1176,11 @@ groupWarningGadgetsByVar(const WarningGadgetList &AllUnsafeOperations) {
 }
 
 struct FixableGadgetSets {
-  std::map<const VarDecl *, std::set<const FixableGadget *>> byVar;
+  std::map<const VarDecl *, std::set<const FixableGadget *>,
+           // To keep keys sorted by their locations in the map so that the
+           // order is deterministic:
+           CompareNode<VarDecl>>
+      byVar;
 };
 
 static FixableGadgetSets
@@ -1372,12 +1386,34 @@ static std::optional<StringRef> getRangeText(SourceRange SR,
                                              const SourceManager &SM,
                                              const LangOptions &LangOpts) {
   bool Invalid = false;
-  CharSourceRange CSR = CharSourceRange::getCharRange(SR.getBegin(), SR.getEnd());
+  CharSourceRange CSR = CharSourceRange::getCharRange(SR);
   StringRef Text = Lexer::getSourceText(CSR, SM, LangOpts, &Invalid);
 
   if (!Invalid)
     return Text;
   return std::nullopt;
+}
+
+// Returns the begin location of the identifier of the given variable
+// declaration.
+static SourceLocation getVarDeclIdentifierLoc(const VarDecl *VD) {
+  // According to the implementation of `VarDecl`, `VD->getLocation()` actually
+  // returns the begin location of the identifier of the declaration:
+  return VD->getLocation();
+}
+
+// Returns the literal text of the identifier of the given variable declaration.
+static std::optional<StringRef>
+getVarDeclIdentifierText(const VarDecl *VD, const SourceManager &SM,
+                         const LangOptions &LangOpts) {
+  SourceLocation ParmIdentBeginLoc = getVarDeclIdentifierLoc(VD);
+  SourceLocation ParmIdentEndLoc =
+      Lexer::getLocForEndOfToken(ParmIdentBeginLoc, 0, SM, LangOpts);
+
+  if (ParmIdentEndLoc.isMacroID() &&
+      !Lexer::isAtEndOfMacroExpansion(ParmIdentEndLoc, SM, LangOpts))
+    return std::nullopt;
+  return getRangeText({ParmIdentBeginLoc, ParmIdentEndLoc}, SM, LangOpts);
 }
 
 // Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
@@ -1386,7 +1422,7 @@ static std::optional<StringRef> getRangeText(SourceRange SR,
 // :( ), `Qualifiers` of the pointee type is returned separately through the
 // output parameter `QualifiersToAppend`.
 static std::optional<std::string>
-getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
+getPointeeTypeText(const VarDecl *VD, const SourceManager &SM,
                    const LangOptions &LangOpts,
                    std::optional<Qualifiers> *QualifiersToAppend) {
   QualType Ty = VD->getType();
@@ -1395,15 +1431,36 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   assert(Ty->isPointerType() && !Ty->isFunctionPointerType() &&
          "Expecting a VarDecl of type of pointer to object type");
   PteTy = Ty->getPointeeType();
-  if (PteTy->hasUnnamedOrLocalType())
-    // If the pointee type is unnamed, we can't refer to it
+
+  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc().getUnqualifiedLoc();
+  TypeLoc PteTyLoc;
+
+  // We only deal with the cases that we know `TypeLoc::getNextTypeLoc` returns
+  // the `TypeLoc` of the pointee type:
+  switch (TyLoc.getTypeLocClass()) {
+  case TypeLoc::ConstantArray:
+  case TypeLoc::IncompleteArray:
+  case TypeLoc::VariableArray:
+  case TypeLoc::DependentSizedArray:
+  case TypeLoc::Decayed:
+    assert(isa<ParmVarDecl>(VD) && "An array type shall not be treated as a "
+                                   "pointer type unless it decays.");
+    PteTyLoc = TyLoc.getNextTypeLoc();
+    break;
+  case TypeLoc::Pointer:
+    PteTyLoc = TyLoc.castAs<PointerTypeLoc>().getPointeeLoc();
+    break;
+  default:
+    return std::nullopt;
+  }
+  if (PteTyLoc.isNull())
+    // Sometimes we cannot get a useful `TypeLoc` for the pointee type, e.g.,
+    // when the pointer type is `auto`.
     return std::nullopt;
 
-  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc();
-  TypeLoc PteTyLoc = TyLoc.getUnqualifiedLoc().getNextTypeLoc();
-  SourceLocation VDNameStartLoc = VD->getLocation();
+  SourceLocation IdentLoc = getVarDeclIdentifierLoc(VD);
 
-  if (!(VDNameStartLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
+  if (!(IdentLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
     // We are expecting these locations to be valid. But in some cases, they are
     // not all valid. It is a Clang bug to me and we are not responsible for
     // fixing it.  So we will just give up for now when it happens.
@@ -1414,7 +1471,11 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   SourceLocation PteEndOfTokenLoc =
       Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
 
-  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, VDNameStartLoc)) {
+  if (!PteEndOfTokenLoc.isValid())
+    // Sometimes we cannot get the end location of the pointee type, e.g., when
+    // there are macros involved.
+    return std::nullopt;
+  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, IdentLoc)) {
     // We only deal with the cases where the source text of the pointee type
     // appears on the left-hand side of the variable identifier completely,
     // including the following forms:
@@ -1739,6 +1800,32 @@ Handler.addDebugNoteForVar((D), (D)->getBeginLoc(), "failed to produce fixit for
 #define DEBUG_NOTE_DECL_FAIL(D, Msg)
 #endif
 
+// For the given variable declaration with a pointer-to-T type, returns the text
+// `std::span<T>`.  If it is unable to generate the text, returns
+// `std::nullopt`.
+static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
+                                                           const ASTContext &Ctx) {
+  assert(VD->getType()->isPointerType());
+
+  std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
+  std::optional<std::string> PteTyText = getPointeeTypeText(
+      VD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
+
+  if (!PteTyText)
+    return std::nullopt;
+
+  std::string SpanTyText = "std::span<";
+
+  SpanTyText.append(*PteTyText);
+  // Append qualifiers to span element type if any:
+  if (PteTyQualifiers) {
+    SpanTyText.append(" ");
+    SpanTyText.append(PteTyQualifiers->getAsString());
+  }
+  SpanTyText.append(">");
+  return SpanTyText;
+}
+
 // For a `VarDecl` of the form `T  * var (= Init)?`, this
 // function generates a fix-it for the declaration, which re-declares `var` to
 // be of `span<T>` type and transforms the initializer, if present, to a span
@@ -1995,39 +2082,22 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     return {};
   }
 
-  std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
-  std::optional<std::string> PteTyText = getPointeeTypeText(
-      PVD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
-
-  if (!PteTyText) {
-    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid pointee type");
-    return {};
-  }
-
-  std::optional<StringRef> PVDNameText = PVD->getIdentifier()->getName();
-
-  if (!PVDNameText) {
-    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid identifier name");
-    return {};
-  }
-
-  std::string SpanOpen = "std::span<";
-  std::string SpanClose = ">";
-  std::string SpanTyText;
   std::stringstream SS;
+  std::optional<std::string> SpanTyText = createSpanTypeForVarDecl(PVD, Ctx);
+  std::optional<StringRef> ParmIdentText;
 
-  SS << SpanOpen << *PteTyText;
-  // Append qualifiers to span element type:
-  if (PteTyQualifiers)
-    SS << " " << PteTyQualifiers->getAsString();
-  SS << SpanClose;
-  // Save the Span type text:
-  SpanTyText = SS.str();
+  if (!SpanTyText)
+    return {};
+  SS << *SpanTyText;
   // Append qualifiers to the type of the parameter:
   if (PVD->getType().hasQualifiers())
     SS << " " << PVD->getType().getQualifiers().getAsString();
+  ParmIdentText =
+      getVarDeclIdentifierText(PVD, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (!ParmIdentText)
+    return {};
   // Append parameter's name:
-  SS << " " << PVDNameText->str();
+  SS << " " << ParmIdentText->str();
 
   FixItList Fixes;
   unsigned ParmIdx = 0;
@@ -2040,7 +2110,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     ParmIdx++;
   }
   if (ParmIdx < FD->getNumParams())
-    if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, SpanTyText,
+    if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, *SpanTyText,
                                                          FD, Ctx, Handler)) {
       Fixes.append(*OverloadFix);
       return Fixes;
@@ -2159,7 +2229,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 	  ASTContext &Ctx,
           /* The function decl under analysis */ const Decl *D,
           const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
-          const DefMapTy &VarGrpMap) {
+          const VariableGroupsManager &VarGrpMgr) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
   for (const auto &[VD, Fixables] : FixablesForAllVars.byVar) {
     FixItsForVariable[VD] =
@@ -2195,9 +2265,10 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
       continue;
     }
 
-    const auto VarGroupForVD = VarGrpMap.find(VD);
-    if (VarGroupForVD != VarGrpMap.end()) {
-      for (const VarDecl * V : VarGroupForVD->second) {
+    
+   {
+      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(VD);
+      for (const VarDecl * V : VarGroupForVD) {
         if (V == VD) {
           continue;
         }
@@ -2209,7 +2280,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 
       if (ImpossibleToFix) {
         FixItsForVariable.erase(VD);
-        for (const VarDecl * V : VarGroupForVD->second) {
+        for (const VarDecl * V : VarGroupForVD) {
           FixItsForVariable.erase(V);
         }
         continue;
@@ -2227,30 +2298,24 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
     }
   }
 
-  for (auto VD : FixItsForVariable) {
-    const auto VarGroupForVD = VarGrpMap.find(VD.first);
-    const Strategy::Kind ReplacementTypeForVD = S.lookup(VD.first);
-    if (VarGroupForVD != VarGrpMap.end()) {
-      for (const VarDecl * Var : VarGroupForVD->second) {
-        if (Var == VD.first) {
-          continue;
-        }
+  // The map that maps each variable `v` to fix-its for the whole group where
+  // `v` is in:
+  std::map<const VarDecl *, FixItList> FinalFixItsForVariable{
+      FixItsForVariable};
 
-        FixItList GroupFix;
-        if (FixItsForVariable.find(Var) == FixItsForVariable.end()) {
-          GroupFix = fixVariable(Var, ReplacementTypeForVD, D, Tracker,
-                                 Var->getASTContext(), Handler);
-        } else {
-          GroupFix = FixItsForVariable[Var];
-        }
+  for (auto &[Var, Ignore] : FixItsForVariable) {
+    const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Var);
 
-        for (auto Fix : GroupFix) {
-          FixItsForVariable[VD.first].push_back(Fix);
-        }
-      }
+    for (const VarDecl *GrpMate : VarGroupForVD) {
+      if (Var == GrpMate)
+        continue;
+      if (FixItsForVariable.count(GrpMate))
+        FinalFixItsForVariable[Var].insert(FinalFixItsForVariable[Var].end(),
+                                           FixItsForVariable[GrpMate].begin(),
+                                           FixItsForVariable[GrpMate].end());
     }
   }
-  return FixItsForVariable;
+  return FinalFixItsForVariable;
 }
 
 
@@ -2262,6 +2327,24 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
   }
   return S;
 }
+
+//  Manages variable groups:
+class VariableGroupsManagerImpl : public VariableGroupsManager {
+  const std::vector<VarGrpTy> Groups;
+  const std::map<const VarDecl *, unsigned> &VarGrpMap;
+
+public:
+  VariableGroupsManagerImpl(
+      const std::vector<VarGrpTy> &Groups,
+      const std::map<const VarDecl *, unsigned> &VarGrpMap)
+      : Groups(Groups), VarGrpMap(VarGrpMap) {}
+
+  VarGrpRef getGroupOfVar(const VarDecl *Var) const override {
+    auto I = VarGrpMap.find(Var);
+    assert(I != VarGrpMap.end());
+    return Groups[I->second];
+  }
+};
 
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
@@ -2342,7 +2425,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
-  DefMapTy VariableGroupsMap{};
 
   // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
   for (auto it = FixablesForAllVars.byVar.cbegin();
@@ -2385,7 +2467,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     UnsafeVars.push_back(VD);
 
   // Fixpoint iteration for pointer assignments
-  using DepMapTy = DenseMap<const VarDecl *, std::set<const VarDecl *>>;
+  using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 
@@ -2394,7 +2476,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       std::optional<std::pair<const VarDecl *, const VarDecl *>> ImplPair =
                                   fixable->getStrategyImplications();
       if (ImplPair) {
-        std::pair<const VarDecl *, const VarDecl *> Impl = ImplPair.value();
+        std::pair<const VarDecl *, const VarDecl *> Impl = std::move(*ImplPair);
         PtrAssignmentGraph[Impl.first].insert(Impl.second);
       }
     }
@@ -2439,14 +2521,21 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     }
   }
 
+  // `Groups` stores the set of Connected Components in the graph.
+  std::vector<VarGrpTy> Groups;
+  // `VarGrpMap` maps variables that need fix to the groups (indexes) that the
+  // variables belong to.  Group indexes refer to the elements in `Groups`.
+  // `VarGrpMap` is complete in that every variable that needs fix is in it.
+  std::map<const VarDecl *, unsigned> VarGrpMap;
+
   // Group Connected Components for Unsafe Vars
   // (Dependencies based on pointer assignments)
   std::set<const VarDecl *> VisitedVars{};
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVars.find(Var) == VisitedVars.end()) {
-      std::vector<const VarDecl *> VarGroup{};
-
+      VarGrpTy &VarGroup = Groups.emplace_back();
       std::queue<const VarDecl*> Queue{};
+
       Queue.push(Var);
       while(!Queue.empty()) {
         const VarDecl* CurrentVar = Queue.front();
@@ -2460,10 +2549,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
           }
         }
       }
-      for (const VarDecl * V : VarGroup) {
-        if (UnsafeOps.byVar.find(V) != UnsafeOps.byVar.end()) {
-          VariableGroupsMap[V] = VarGroup;
-        }
+      unsigned GrpIdx = Groups.size() - 1;
+
+      for (const VarDecl *V : VarGroup) {
+        VarGrpMap[V] = GrpIdx;
       }
     }
   }
@@ -2497,12 +2586,11 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   }
 
   Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
+  VariableGroupsManagerImpl VarGrpMgr(Groups, VarGrpMap);
 
   FixItsForVariableGroup =
       getFixIts(FixablesForAllVars, NaiveStrategy, D->getASTContext(), D,
-                Tracker, Handler, VariableGroupsMap);
-
-  // FIXME Detect overlapping FixIts.
+                Tracker, Handler, VarGrpMgr);
 
   for (const auto &G : UnsafeOps.noVar) {
     Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
@@ -2510,7 +2598,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
     auto FixItsIt = FixItsForVariableGroup.find(VD);
-    Handler.handleUnsafeVariableGroup(VD, VariableGroupsMap,
+    Handler.handleUnsafeVariableGroup(VD, VarGrpMgr,
                                       FixItsIt != FixItsForVariableGroup.end()
                                       ? std::move(FixItsIt->second)
                                       : FixItList{});

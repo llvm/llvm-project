@@ -5514,9 +5514,7 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
           if (m_data.GetU32(&offset, &version, 1) != nullptr) {
             if (version == 3) {
               uint32_t num_addr_bits = m_data.GetU32_unchecked(&offset);
-              if (num_addr_bits != 0) {
-                addressable_bits.SetAddressableBits(num_addr_bits);
-              }
+              addressable_bits.SetAddressableBits(num_addr_bits);
               LLDB_LOGF(log,
                         "LC_NOTE 'addrable bits' v3 found, value %d "
                         "bits",
@@ -5527,7 +5525,10 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
               uint32_t lo_addr_bits = m_data.GetU32_unchecked(&offset);
               uint32_t hi_addr_bits = m_data.GetU32_unchecked(&offset);
 
-              addressable_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
+              if (lo_addr_bits == hi_addr_bits)
+                addressable_bits.SetAddressableBits(lo_addr_bits);
+              else
+                addressable_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
               LLDB_LOGF(log,
                         "LC_NOTE 'addrable bits' v4 found, value %d & %d bits",
                         lo_addr_bits, hi_addr_bits);

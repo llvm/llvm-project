@@ -1410,10 +1410,6 @@ def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
   MarshallingInfoInt<LangOpts<"MaxTokens">>;
-def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
-def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
-def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
-def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>;
 defm access_control : BoolFOption<"access-control",
   LangOpts<"AccessControl">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -3446,10 +3442,6 @@ def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;
 def fpch_preprocess : Flag<["-"], "fpch-preprocess">, Group<f_Group>;
-def fpic : Flag<["-"], "fpic">, Group<f_Group>;
-def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
-def fpie : Flag<["-"], "fpie">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
-def fno_pie : Flag<["-"], "fno-pie">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 defm pic_data_is_text_relative : SimpleMFlag<"pic-data-is-text-relative",
      "Assume", "Don't assume", " data segments are relative to text segment">;
 def fdirect_access_external_data : Flag<["-"], "fdirect-access-external-data">, Group<f_Group>,
@@ -3465,12 +3457,12 @@ defm plt : BoolFOption<"plt",
   PosFlag<SetFalse>>;
 defm ropi : BoolFOption<"ropi",
   LangOpts<"ROPI">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption, CC1Option],
           "Generate read-only position independent code (ARM only)">,
   NegFlag<SetFalse>>;
 defm rwpi : BoolFOption<"rwpi",
   LangOpts<"RWPI">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption, CC1Option],
           "Generate read-write position independent code (ARM only)">,
   NegFlag<SetFalse>>;
 def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>,
@@ -4225,7 +4217,7 @@ def imultilib : Separate<["-"], "imultilib">, Group<gfortran_Group>;
 def K : Flag<["-"], "K">, Flags<[LinkerInput]>;
 def keep__private__externs : Flag<["-"], "keep_private_externs">;
 def l : JoinedOrSeparate<["-"], "l">, Flags<[LinkerInput, RenderJoined]>,
-        Group<Link_Group>;
+        Visibility<[ClangOption, FlangOption]>, Group<Link_Group>;
 def lazy__framework : Separate<["-"], "lazy_framework">, Flags<[LinkerInput]>;
 def lazy__library : Separate<["-"], "lazy_library">, Flags<[LinkerInput]>;
 def mlittle_endian : Flag<["-"], "mlittle-endian">, Group<m_Group>,
@@ -4339,7 +4331,6 @@ def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   Values<"none,cf,cf-nochecks">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
-def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
 def mfix_and_continue : Flag<["-"], "mfix-and-continue">, Group<clang_ignored_m_Group>;
 def mieee_fp : Flag<["-"], "mieee-fp">, Group<clang_ignored_m_Group>;
 def minline_all_stringops : Flag<["-"], "minline-all-stringops">, Group<clang_ignored_m_Group>;
@@ -5376,7 +5367,7 @@ def undef : Flag<["-"], "undef">, Group<u_Group>,
 def unexported__symbols__list : Separate<["-"], "unexported_symbols_list">;
 def u : JoinedOrSeparate<["-"], "u">, Group<u_Group>;
 def v : Flag<["-"], "v">,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption]>,
   HelpText<"Show commands to run and use verbose output">,
   MarshallingInfoFlag<HeaderSearchOpts<"Verbose">>;
 def altivec_src_compat : Joined<["-"], "faltivec-src-compat=">,
@@ -5569,6 +5560,22 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
+// pie/pic options (clang + flang-new)
+//===----------------------------------------------------------------------===//
+let Visibility = [ClangOption, FlangOption] in {
+
+def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
+def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
+def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
+def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>;
+def fpic : Flag<["-"], "fpic">, Group<f_Group>;
+def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
+def fpie : Flag<["-"], "fpie">, Group<f_Group>;
+def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+
+} // let Vis = [Default, FlangOption]
+
+//===----------------------------------------------------------------------===//
 // Target Options (clang + flang-new)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
@@ -5576,6 +5583,7 @@ let Visibility = [ClangOption, FlangOption] in {
 
 def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>,
   HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
+def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
 
 } // let Vis = [Default, FlangOption]
 } // let Flags = [TargetSpecific]
@@ -5910,6 +5918,10 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
+def mno_gather : Flag<["-"], "mno-gather">, Group<m_x86_Features_Group>,
+                 HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_x86_Features_Group>,
+                  HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 } // let Flags = [TargetSpecific]
 
 // These are legacy user-facing driver-level option spellings. They are always
@@ -8105,7 +8117,7 @@ def _SLASH_ZH_SHA1 : CLFlag<"ZH:SHA1">,
 def _SLASH_ZH_SHA_256 : CLFlag<"ZH:SHA_256">,
   HelpText<"Use SHA256 for file checksums in debug info">,
   Alias<gsrc_hash_EQ>, AliasArgs<["sha256"]>;
-def _SLASH_Zi : CLFlag<"Zi">, Alias<g_Flag>,
+def _SLASH_Zi : CLFlag<"Zi", [CLOption, DXCOption]>, Alias<g_Flag>,
   HelpText<"Like /Z7">;
 def _SLASH_Zp : CLJoined<"Zp">,
   HelpText<"Set default maximum struct packing alignment">,
@@ -8130,6 +8142,10 @@ def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   Alias<mbranches_within_32B_boundaries>;
 def _SLASH_arm64EC : CLFlag<"arm64EC">,
   HelpText<"Set build target to arm64ec">;
+def : CLFlag<"Qgather-">, Alias<mno_gather>,
+      HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
+      HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 
 // Non-aliases:
 
@@ -8544,3 +8560,6 @@ def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
+def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
+  Flags<[Ignored, NoXarchOption]>, Visibility<[DXCOption]>,
+  HelpText<"Embed PDB in shader container (ignored)">;

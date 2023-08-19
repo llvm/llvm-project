@@ -43,7 +43,7 @@
    ;; Floating point constants
    '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
-   '("\\b0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
+   '("\\b[us]?0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
    ;; Keywords
    `(,(regexp-opt
        '(;; Toplevel entities

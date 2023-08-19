@@ -15,6 +15,7 @@
 #define LLVM_CLANG_EXTRACTAPI_EXTRACT_API_VISITOR_H
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
@@ -52,9 +53,39 @@ public:
 
   bool WalkUpFromCXXRecordDecl(const CXXRecordDecl *Decl);
 
+  bool WalkUpFromClassTemplateSpecializationDecl(
+      const ClassTemplateSpecializationDecl *Decl);
+
+  bool WalkUpFromClassTemplatePartialSpecializationDecl(
+      const ClassTemplatePartialSpecializationDecl *Decl);
+
+  bool WalkUpFromVarTemplateDecl(const VarTemplateDecl *Decl);
+
+  bool WalkUpFromVarTemplateSpecializationDecl(
+      const VarTemplateSpecializationDecl *Decl);
+
+  bool WalkUpFromVarTemplatePartialSpecializationDecl(
+      const VarTemplatePartialSpecializationDecl *Decl);
+
   bool VisitRecordDecl(const RecordDecl *Decl);
 
   bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
+
+  bool VisitConceptDecl(const ConceptDecl *Decl);
+
+  bool VisitClassTemplateSpecializationDecl(
+      const ClassTemplateSpecializationDecl *Decl);
+
+  bool VisitClassTemplatePartialSpecializationDecl(
+      const ClassTemplatePartialSpecializationDecl *Decl);
+
+  bool VisitVarTemplateDecl(const VarTemplateDecl *Decl);
+
+  bool
+  VisitVarTemplateSpecializationDecl(const VarTemplateSpecializationDecl *Decl);
+
+  bool VisitVarTemplatePartialSpecializationDecl(
+      const VarTemplatePartialSpecializationDecl *Decl);
 
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl);
 
@@ -127,6 +158,29 @@ protected:
 private:
   Derived &getDerivedExtractAPIVisitor() {
     return *static_cast<Derived *>(this);
+  }
+
+  SmallVector<SymbolReference> getBases(const CXXRecordDecl *Decl) {
+    // FIXME: store AccessSpecifier given by inheritance
+    SmallVector<SymbolReference> Bases;
+    for (const auto BaseSpecifier : Decl->bases()) {
+      // skip classes not inherited as public
+      if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
+        continue;
+      SymbolReference BaseClass;
+      if (BaseSpecifier.getType().getTypePtr()->isTemplateTypeParmType()) {
+        BaseClass.Name = API.copyString(BaseSpecifier.getType().getAsString());
+        BaseClass.USR = API.recordUSR(
+            BaseSpecifier.getType()->getAs<TemplateTypeParmType>()->getDecl());
+      } else {
+        CXXRecordDecl *BaseClassDecl =
+            BaseSpecifier.getType().getTypePtr()->getAsCXXRecordDecl();
+        BaseClass.Name = BaseClassDecl->getName();
+        BaseClass.USR = API.recordUSR(BaseClassDecl);
+      }
+      Bases.emplace_back(BaseClass);
+    }
+    return Bases;
   }
 };
 
@@ -329,6 +383,44 @@ bool ExtractAPIVisitorBase<Derived>::WalkUpFromCXXRecordDecl(
 }
 
 template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromClassTemplateSpecializationDecl(
+    const ClassTemplateSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitClassTemplateSpecializationDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::
+    WalkUpFromClassTemplatePartialSpecializationDecl(
+        const ClassTemplatePartialSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitClassTemplatePartialSpecializationDecl(
+      Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromVarTemplateDecl(
+    const VarTemplateDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplateDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromVarTemplateSpecializationDecl(
+    const VarTemplateSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplateSpecializationDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::
+    WalkUpFromVarTemplatePartialSpecializationDecl(
+        const VarTemplatePartialSpecializationDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitVarTemplatePartialSpecializationDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
@@ -368,7 +460,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
     const CXXRecordDecl *Decl) {
-  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl) ||
+      Decl->isImplicit())
     return true;
 
   StringRef Name = Decl->getName();
@@ -393,26 +486,214 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
   else
     Kind = APIRecord::RecordKind::RK_CXXClass;
 
-  CXXClassRecord *CXXClassRecord =
-      API.addCXXClass(Name, USR, Loc, AvailabilitySet(Decl), Comment,
-                      Declaration, SubHeading, Kind, isInSystemHeader(Decl));
+  CXXClassRecord *CXXClassRecord;
+  if (Decl->getDescribedClassTemplate()) {
+    // Inject template fragments before class fragments.
+    Declaration.insert(
+        Declaration.begin(),
+        DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(
+            Decl->getDescribedClassTemplate()));
+    CXXClassRecord = API.addClassTemplate(
+        Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
+        Template(Decl->getDescribedClassTemplate()), isInSystemHeader(Decl));
+  } else
+    CXXClassRecord =
+        API.addCXXClass(Name, USR, Loc, AvailabilitySet(Decl), Comment,
+                        Declaration, SubHeading, Kind, isInSystemHeader(Decl));
 
-  // FIXME: store AccessSpecifier given by inheritance
-  for (const auto BaseSpecifier : Decl->bases()) {
-    // skip classes not inherited as public
-    if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
-      continue;
-    SymbolReference BaseClass;
-    CXXRecordDecl *BaseClassDecl =
-        BaseSpecifier.getType().getTypePtr()->getAsCXXRecordDecl();
-    BaseClass.Name = BaseClassDecl->getName();
-    BaseClass.USR = API.recordUSR(BaseClassDecl);
-    CXXClassRecord->Bases.emplace_back(BaseClass);
-  }
+  CXXClassRecord->Bases = getBases(Decl);
 
   getDerivedExtractAPIVisitor().recordCXXFields(CXXClassRecord, Decl->fields());
   getDerivedExtractAPIVisitor().recordCXXMethods(CXXClassRecord,
                                                  Decl->methods());
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitConceptDecl(const ConceptDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForConcept(Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+  API.addConcept(Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration,
+                 SubHeading, Template(Decl), isInSystemHeader(Decl));
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitClassTemplateSpecializationDecl(
+    const ClassTemplateSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
+          Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  auto *ClassTemplateSpecializationRecord = API.addClassTemplateSpecialization(
+      Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
+      isInSystemHeader(Decl));
+
+  ClassTemplateSpecializationRecord->Bases = getBases(Decl);
+  getDerivedExtractAPIVisitor().recordCXXFields(
+      ClassTemplateSpecializationRecord, Decl->fields());
+  getDerivedExtractAPIVisitor().recordCXXMethods(
+      ClassTemplateSpecializationRecord, Decl->methods());
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::
+    VisitClassTemplatePartialSpecializationDecl(
+        const ClassTemplatePartialSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+  DeclarationFragments Declaration = DeclarationFragmentsBuilder::
+      getFragmentsForClassTemplatePartialSpecialization(Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  auto *ClassTemplatePartialSpecRecord =
+      API.addClassTemplatePartialSpecialization(
+          Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration,
+          SubHeading, Template(Decl), isInSystemHeader(Decl));
+
+  ClassTemplatePartialSpecRecord->Bases = getBases(Decl);
+
+  getDerivedExtractAPIVisitor().recordCXXFields(ClassTemplatePartialSpecRecord,
+                                                Decl->fields());
+  getDerivedExtractAPIVisitor().recordCXXMethods(ClassTemplatePartialSpecRecord,
+                                                 Decl->methods());
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateDecl(
+    const VarTemplateDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForVarTemplate(
+          Decl->getTemplatedDecl());
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  // Inject template fragments before var fragments.
+  Declaration.insert(
+      Declaration.begin(),
+      DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(Decl));
+
+  API.addGlobalVariableTemplate(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
+                                Comment, Declaration, SubHeading,
+                                Template(Decl), isInSystemHeader(Decl));
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateSpecializationDecl(
+    const VarTemplateSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
+          Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  API.addGlobalVariableTemplateSpecialization(
+      Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment, Declaration,
+      SubHeading, isInSystemHeader(Decl));
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitVarTemplatePartialSpecializationDecl(
+    const VarTemplatePartialSpecializationDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  // Collect symbol information.
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments and sub-heading for the variable.
+  DeclarationFragments Declaration = DeclarationFragmentsBuilder::
+      getFragmentsForVarTemplatePartialSpecialization(Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  API.addGlobalVariableTemplatePartialSpecialization(
+      Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment, Declaration,
+      SubHeading, Template(Decl), isInSystemHeader(Decl));
   return true;
 }
 

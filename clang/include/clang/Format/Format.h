@@ -2963,7 +2963,7 @@ struct FormatStyle {
   ///    A(a, b); // will not be expanded.
   /// \endcode
   ///
-  /// \version 17.0
+  /// \version 17
   std::vector<std::string> Macros;
 
   /// The maximum number of consecutive empty lines to keep.

@@ -656,6 +656,10 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   return true;
 }
 
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  return false;
+}
 #else
 /// Backtraces are not enabled or we don't yet know how to find all loaded DSOs
 /// on this platform.

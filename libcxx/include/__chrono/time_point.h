@@ -49,13 +49,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit time_point(const duration& __d) : __d_(__d) {}
 
     // conversions
-    template <class _Duration2>
+    template <class _Duration2, __enable_if_t<is_convertible<_Duration2, duration>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
-    time_point(const time_point<clock, _Duration2>& __t,
-        typename enable_if
-        <
-            is_convertible<_Duration2, duration>::value
-        >::type* = nullptr)
+    time_point(const time_point<clock, _Duration2>& __t)
             : __d_(__t.time_since_epoch()) {}
 
     // observer

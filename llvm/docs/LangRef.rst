@@ -4093,9 +4093,17 @@ Simple Constants
     The two strings '``true``' and '``false``' are both valid constants
     of the ``i1`` type.
 **Integer constants**
-    Standard integers (such as '4') are constants of the
-    :ref:`integer <t_integer>` type. Negative numbers may be used with
-    integer types.
+    Standard integers (such as '4') are constants of the :ref:`integer
+    <t_integer>` type. They can be either decimal or
+    hexadecimal. Decimal integers can be prefixed with - to represent
+    negative integers, e.g. '``-1234``'. Hexadecimal integers must be
+    prefixed with either u or s to indicate whether they are unsigned
+    or signed respectively. e.g '``u0x8000``' gives 32768, whilst
+    '``s0x8000``' gives -32768.
+
+    Note that hexadecimal integers are sign extended from the number
+    of active bits, i.e. the bit width minus the number of leading
+    zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g. 1.23421e+2), or a more precise
