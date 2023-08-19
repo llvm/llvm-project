@@ -79,7 +79,7 @@ uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
   Expected<StringRef> NameOrErr = getSectionName(Sec);
   if (NameOrErr)
-    return *NameOrErr == ".llvmbc" || *NameOrErr == ".llvm.lto";
+    return *NameOrErr == ".llvm.lto";
   consumeError(NameOrErr.takeError());
   return false;
 }
