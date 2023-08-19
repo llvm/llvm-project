@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#ifndef _LIBCPP_HAS_NO_THREADS
   // [thread.thread.class], class thread
   using std::thread;
 
@@ -28,11 +29,12 @@ export namespace std {
   // [thread.thread.id]
   using std::operator==;
   using std::operator<=>;
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::operator<<;
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
   using std::formatter;
 
   using std::hash;
+#endif // _LIBCPP_HAS_NO_THREADS
 } // namespace std
