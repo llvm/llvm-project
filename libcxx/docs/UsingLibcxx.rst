@@ -133,7 +133,7 @@ IWYU, you should run the tool like so:
 
 .. code-block:: bash
 
-  $ include-what-you-use -Xiwyu /path/to/libcxx/include/libcxx.imp file.cpp
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
 
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
