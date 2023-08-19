@@ -23531,7 +23531,6 @@ static void CustomNonLegalBITCASTResults(SDNode *N,
   SDValue IdxZero = DAG.getVectorIdxConstant(0, DL);
   Results.push_back(
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, CastVal, IdxZero));
-  return;
 }
 
 void AArch64TargetLowering::ReplaceBITCASTResults(

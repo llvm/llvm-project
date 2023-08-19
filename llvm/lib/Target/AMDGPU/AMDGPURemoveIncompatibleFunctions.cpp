@@ -128,7 +128,6 @@ void reportFunctionRemoved(Function &F, unsigned Feature) {
            << getFeatureName(Feature)
            << " is not supported on the current target";
   });
-  return;
 }
 } // end anonymous namespace
 
