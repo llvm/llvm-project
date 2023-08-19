@@ -12077,7 +12077,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
     // Use simplification to find potential callees, if !callees was present,
     // fallback to that set if necessary.
-    bool UsedAssumedInformation;
+    bool UsedAssumedInformation = false;
     SmallVector<AA::ValueAndContext> Values;
     if (!A.getAssumedSimplifiedValues(IRPosition::value(*FP), this, Values,
                                       AA::ValueScope::AnyScope,
