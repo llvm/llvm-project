@@ -24,6 +24,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT XLenLLT = LLT::scalar(XLen);
   const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
+  const LLT s1 = LLT::scalar(1);
 
   using namespace TargetOpcode;
 
@@ -33,11 +34,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
-      .legalFor({{XLenLLT, XLenLLT}})
-      .clampScalar(0, XLenLLT, XLenLLT)
-      .clampScalar(1, XLenLLT, XLenLLT)
-      .widenScalarToNextPow2(0);
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO})
+      .lowerFor({{XLenLLT, s1}});
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
       .legalFor({{XLenLLT, XLenLLT}})
