@@ -491,10 +491,16 @@ CompilerType SwiftExpressionParser::ResolveVariable(
   if (!var_type.IsValid())
     return {};
 
+  auto swift_type_system =
+      var_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!swift_type_system)
+    return {};
+
   // If the type can't be realized and dynamic types are allowed, fall back to
   // the dynamic type. We can only do this when not binding generic types
   // though, as we don't bind the generic parameters in that case.
-  if (!SwiftASTContext::IsFullyRealized(var_type) &&
+  if (swift_type_system->IsMeaninglessWithoutDynamicResolution(
+          var_type.GetOpaqueQualType()) &&
       bind_generic_types != lldb::eDontBind && use_dynamic_value) {
     var_type = GetSwiftTypeForVariableValueObject(
         valobj_sp->GetDynamicValue(use_dynamic), stack_frame_sp, runtime,

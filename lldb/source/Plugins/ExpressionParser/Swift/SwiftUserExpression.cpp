@@ -330,10 +330,19 @@ static bool AddVariableInfo(
     return true;
   }
 
+  // Report a fatal error if self can't be reconstructed as a Swift AST type.
+  if (is_self && !GetSwiftType(target_type))
+    return false;
+
+  auto ts = target_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts)
+    return false;
+
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
   Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
-  if (!is_unbound_pack && !SwiftASTContext::IsFullyRealized(target_type)) {
+  if (!is_unbound_pack && ts->IsMeaninglessWithoutDynamicResolution(
+                              target_type.GetOpaqueQualType())) {
     if (log)
       log->Printf("Discarding local %s because we couldn't fully realize it, "
                   "our best attempt was: %s.",

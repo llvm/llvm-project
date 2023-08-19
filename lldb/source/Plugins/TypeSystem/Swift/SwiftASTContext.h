@@ -411,11 +411,11 @@ public:
   swift::CanType
   GetCanonicalSwiftType(lldb::opaque_compiler_type_t opaque_type);
 
-  // Imports the type from the passed in type into this SwiftASTContext. The
-  // type must be a Swift type. If the type can be imported, returns the
-  // CompilerType for the imported type.
-  // If it cannot be, returns an invalid CompilerType, and sets the error to
-  // indicate what went wrong.
+  /// Imports the type from the passed in type into this SwiftASTContext. The
+  /// type must be a Swift type. If the type can be imported, returns the
+  /// CompilerType for the imported type.
+  /// If it cannot be, returns an invalid CompilerType, and sets the error to
+  /// indicate what went wrong.
   CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
@@ -581,8 +581,6 @@ public:
 
   /// Whether this is the Swift error type.
   bool IsErrorType(lldb::opaque_compiler_type_t type);
-
-  static bool IsFullyRealized(const CompilerType &compiler_type);
 
   struct ProtocolInfo {
     uint32_t m_num_protocols;
