@@ -1073,13 +1073,20 @@ td_library(
 td_library(
     name = "OpBaseTdFiles",
     srcs = [
+        "include/mlir/IR/CommonAttrConstraints.td",
+        "include/mlir/IR/CommonTypeConstraints.td",
+        "include/mlir/IR/Constraints.td",
         "include/mlir/IR/DialectBase.td",
+        "include/mlir/IR/Interfaces.td",
         "include/mlir/IR/OpAsmInterface.td",
         "include/mlir/IR/OpBase.td",
         "include/mlir/IR/PatternBase.td",
+        "include/mlir/IR/Properties.td",
         "include/mlir/IR/RegionKindInterface.td",
         "include/mlir/IR/SymbolInterfaces.td",
         "include/mlir/IR/TensorEncoding.td",
+        "include/mlir/IR/Traits.td",
+        "include/mlir/IR/Utils.td",
     ],
     includes = ["include"],
     deps = [
