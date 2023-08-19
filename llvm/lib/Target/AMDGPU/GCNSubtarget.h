@@ -22,6 +22,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -1376,6 +1377,79 @@ public:
     // the nop.
     return true;
   }
+};
+
+class GCNUserSGPRUsageInfo {
+public:
+  unsigned getNumUsedUserSGPRs() const;
+
+  bool hasImplicitBufferPtr() const { return ImplicitBufferPtr; }
+
+  bool hasPrivateSegmentBuffer() const { return PrivateSegmentBuffer; }
+
+  bool hasDispatchPtr() const { return DispatchPtr; }
+
+  bool hasQueuePtr() const { return QueuePtr; }
+
+  bool hasKernargSegmentPtr() const { return KernargSegmentPtr; }
+
+  bool hasDispatchID() const { return DispatchID; }
+
+  bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  enum UserSGPRID : unsigned {
+    ImplicitBufferPtrID = 0,
+    PrivateSegmentBufferID = 1,
+    DispatchPtrID = 2,
+    QueuePtrID = 3,
+    KernargSegmentPtrID = 4,
+    DispatchIdID = 5,
+    FlatScratchInitID = 6,
+    PrivateSegmentSizeID = 7
+  };
+
+  // Returns the size in number of SGPRs for preload user SGPR field.
+  static constexpr unsigned getNumUserSGPRForField(UserSGPRID ID) {
+    switch (ID) {
+    case ImplicitBufferPtrID:
+      return 2;
+    case PrivateSegmentBufferID:
+      return 4;
+    case DispatchPtrID:
+      return 2;
+    case QueuePtrID:
+      return 2;
+    case KernargSegmentPtrID:
+      return 2;
+    case DispatchIdID:
+      return 2;
+    case FlatScratchInitID:
+      return 2;
+    case PrivateSegmentSizeID:
+      return 1;
+    }
+    llvm_unreachable("Unknown UserSGPRID.");
+  }
+
+  GCNUserSGPRUsageInfo(const Function &F, const GCNSubtarget &ST);
+
+private:
+  // Private memory buffer
+  // Compute directly in sgpr[0:1]
+  // Other shaders indirect 64-bits at sgpr[0:1]
+  bool ImplicitBufferPtr = false;
+
+  bool PrivateSegmentBuffer = false;
+
+  bool DispatchPtr = false;
+
+  bool QueuePtr = false;
+
+  bool KernargSegmentPtr = false;
+
+  bool DispatchID = false;
+
+  bool FlatScratchInit = false;
 };
 
 } // end namespace llvm
