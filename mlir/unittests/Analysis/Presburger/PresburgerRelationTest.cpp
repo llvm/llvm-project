@@ -191,7 +191,7 @@ TEST(PresburgerRelationTest, inverse) {
   }
 }
 
-TEST(IntegerRelationTest, symbolicLexOpt) {
+TEST(PresburgerRelationTest, symbolicLexOpt) {
   PresburgerRelation rel1 = parsePresburgerRelationFromPresburgerSet(
       {"(x, y)[N, M] : (x >= 0, y >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1>= 0, "
        "2 * N - x >= 0, 2 * N - y >= 0)",
@@ -295,4 +295,30 @@ TEST(IntegerRelationTest, symbolicLexOpt) {
   EXPECT_TRUE(lexmin3.lexopt.isEqual(expectedLexMin3));
   EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexMax3));
+}
+
+TEST(PresburgerRelationTest, getDomainAndRangeSet) {
+  PresburgerRelation rel = parsePresburgerRelationFromPresburgerSet(
+      {// (x, y) -> (x + N, y - N)
+       "(x, y, a, b)[N] : (a >= 0, b >= 0, N - a >= 0, N - b >= 0, x - a + N "
+       "== 0, y - b - N == 0)",
+       // (x, y) -> (- y, - x)
+       "(x, y, a, b)[N] : (a >= 0, b >= 0, 2 * N - a >= 0, 2 * N - b >= 0, a + "
+       "y == 0, b + x == 0)"},
+      2);
+
+  PresburgerSet domainSet = rel.getDomainSet();
+
+  PresburgerSet expectedDomainSet = parsePresburgerSet(
+      {"(x, y)[N] : (x + N >= 0, -x >= 0, y - N >= 0, 2 * N - y >= 0)",
+       "(x, y)[N] : (x + 2 * N >= 0, -x >= 0, y + 2 * N >= 0, -y >= 0)"});
+
+  EXPECT_TRUE(domainSet.isEqual(expectedDomainSet));
+
+  PresburgerSet rangeSet = rel.getRangeSet();
+
+  PresburgerSet expectedRangeSet = parsePresburgerSet(
+      {"(x, y)[N] : (x >= 0, 2 * N - x >= 0, y >= 0, 2 * N - y >= 0)"});
+
+  EXPECT_TRUE(rangeSet.isEqual(expectedRangeSet));
 }

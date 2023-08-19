@@ -14,7 +14,11 @@
 #ifndef ATTRTYPEBASE_TD
 #define ATTRTYPEBASE_TD
 
-include "mlir/IR/OpBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/CommonTypeConstraints.td"
+include "mlir/IR/Constraints.td"
+include "mlir/IR/DialectBase.td"
+include "mlir/IR/Traits.td"
 
 //-------------------------------------------------------------------------===//
 // AttrTrait definitions
