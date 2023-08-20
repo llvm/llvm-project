@@ -353,6 +353,12 @@ def InitGlobal : AccessOpcode;
 def InitGlobalTemp : AccessOpcode {
   let Args = [ArgUint32, ArgLETD];
 }
+// [Pointer] -> [Pointer]
+def InitGlobalTempComp : Opcode {
+  let Args = [ArgLETD];
+  let Types = [];
+  let HasGroup = 0;
+}
 // [Value] -> []
 def SetGlobal : AccessOpcode;
 

@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Pointer.h"
+#include "Boolean.h"
+#include "Context.h"
+#include "Floating.h"
 #include "Function.h"
+#include "Integral.h"
 #include "InterpBlock.h"
 #include "PrimType.h"
+#include "Record.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -216,4 +221,35 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
   return hasSameBase(A, B) && A.Base == B.Base && A.getFieldDesc()->IsArray;
+}
+
+APValue Pointer::toRValue(const Context &Ctx) const {
+  // Primitives.
+  if (getFieldDesc()->isPrimitive()) {
+    PrimType PT = *Ctx.classify(getType());
+    TYPE_SWITCH(PT, return deref<T>().toAPValue());
+    llvm_unreachable("Unhandled PrimType?");
+  }
+
+  APValue Result;
+  // Records.
+  if (getFieldDesc()->isRecord()) {
+    const Record *R = getRecord();
+    Result =
+        APValue(APValue::UninitStruct(), R->getNumBases(), R->getNumFields());
+
+    for (unsigned I = 0; I != R->getNumFields(); ++I) {
+      const Pointer &FieldPtr = this->atField(R->getField(I)->Offset);
+      Result.getStructField(I) = FieldPtr.toRValue(Ctx);
+    }
+
+    for (unsigned I = 0; I != R->getNumBases(); ++I) {
+      const Pointer &BasePtr = this->atField(R->getBase(I)->Offset);
+      Result.getStructBase(I) = BasePtr.toRValue(Ctx);
+    }
+  }
+
+  // TODO: Arrays
+
+  return Result;
 }

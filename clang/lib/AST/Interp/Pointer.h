@@ -27,6 +27,7 @@ namespace interp {
 class Block;
 class DeadBlock;
 class Pointer;
+class Context;
 enum PrimType : unsigned;
 
 class Pointer;
@@ -86,6 +87,9 @@ public:
   unsigned getIntegerRepresentation() const {
     return reinterpret_cast<uintptr_t>(Pointee) + Offset;
   }
+
+  /// Converts the pointer to an APValue that is an rvalue.
+  APValue toRValue(const Context &Ctx) const;
 
   /// Offsets a pointer inside an array.
   Pointer atIndex(unsigned Idx) const {
