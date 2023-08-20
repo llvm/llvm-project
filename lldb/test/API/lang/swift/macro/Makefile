@@ -1,10 +1,28 @@
-SWIFT_SOURCES := main.swift
-SWIFTFLAGS_EXTRAS = -enable-experimental-feature Macros \
-	            -load-plugin-library $(BUILDDIR)/libMacroImpl.dylib
+SWIFTFLAGS_EXTRAS = -I.
 
-all: libMacroImpl.dylib $(EXE)
+ifneq "$(SWIFT_SOURCES)" "empty.swift"
+
+SWIFTFLAGS_EXTRAS += -load-plugin-library $(BUILDDIR)/libMacroImpl.dylib
+LD_EXTRAS = -L$(BUILDDIR) -lMacro
+
+endif
+
+all: libMacro.dylib libMacroImpl.dylib $(EXE)
 
 include Makefile.rules
+
+libMacro.dylib:
+	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) \
+		-f $(THIS_FILE_DIR)/Makefile.rules \
+		DYLIB_SWIFT_SOURCES=Macro.swift \
+		DYLIB_NAME=Macro \
+		DYLIB_ONLY=YES \
+		SWIFT_SOURCES= \
+		SWIFTFLAGS_EXTRAS="-load-plugin-library $(BUILDDIR)/libMacroImpl.dylib" \
+		all
+	$(RM) $(BUILDDIR)/Macro.swiftinterface
 
 libMacroImpl.dylib:
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
