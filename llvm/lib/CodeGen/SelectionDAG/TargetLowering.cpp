@@ -2135,6 +2135,24 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::SMIN: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    // If we're only wanting the signbit, then we can simplify to OR node.
+    // TODO: Extend this based on ComputeNumSignBits.
+    if (DemandedBits.isSignMask())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT, Op0, Op1));
+    break;
+  }
+  case ISD::SMAX: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    // If we're only wanting the signbit, then we can simplify to AND node.
+    // TODO: Extend this based on ComputeNumSignBits.
+    if (DemandedBits.isSignMask())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT, Op0, Op1));
+    break;
+  }
   case ISD::UMIN: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
