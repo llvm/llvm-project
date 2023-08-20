@@ -996,6 +996,19 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   return true;
 }
 
+/// 1) Converts the value on top of the stack to an APValue
+/// 2) Sets that APValue on \Temp
+/// 3) Initialized global with index \I with that
+inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
+                               const LifetimeExtendedTemporaryDecl *Temp) {
+  assert(Temp);
+  const Pointer &P = S.Stk.peek<Pointer>();
+  APValue *Cached = Temp->getOrCreateValue(true);
+
+  *Cached = P.toRValue(S.getCtx());
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression())

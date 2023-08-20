@@ -170,9 +170,8 @@ static void moveRecord(Block *B, const std::byte *Src, std::byte *Dst,
                        const Descriptor *D) {
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOff = F.Offset;
-    auto FieldDesc = F.Desc;
+    auto *FieldDesc = F.Desc;
 
-    *(reinterpret_cast<Descriptor **>(Dst + FieldOff) - 1) = FieldDesc;
     if (auto Fn = FieldDesc->MoveFn)
       Fn(B, Src + FieldOff, Dst + FieldOff, FieldDesc);
   }
