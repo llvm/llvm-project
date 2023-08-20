@@ -15896,10 +15896,10 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   /// Bundle together a sequencing region and the expression corresponding
   /// to a specific usage. One Usage is stored for each usage kind in UsageInfo.
   struct Usage {
-    const Expr *UsageExpr;
+    const Expr *UsageExpr = nullptr;
     SequenceTree::Seq Seq;
 
-    Usage() : UsageExpr(nullptr) {}
+    Usage() = default;
   };
 
   struct UsageInfo {
