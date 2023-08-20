@@ -256,7 +256,7 @@ public:
 /// arguments in a call.
 class CallArgList : public SmallVector<CallArg, 8> {
 public:
-  CallArgList() : StackBase(nullptr) {}
+  CallArgList() = default;
 
   struct Writeback {
     /// The original argument.  Note that the argument l-value
@@ -362,7 +362,7 @@ private:
   SmallVector<EndLifetimeInfo, 2> LifetimeCleanups;
 
   /// The stacksave call.  It dominates all of the argument evaluation.
-  llvm::CallInst *StackBase;
+  llvm::CallInst *StackBase = nullptr;
 };
 
 /// FunctionArgList - Type for representing both the decl and type
