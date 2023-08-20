@@ -40,7 +40,7 @@ MATH_MANGLE(pow)(half x, half y)
 
     half ay = BUILTIN_ABS_F16(y);
     bool is_odd_y = is_odd_integer(ay);
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -0.0f : 0.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (x < 0.0h && !is_integer(ay))
@@ -71,7 +71,7 @@ MATH_MANGLE(powr)(half x, half y)
     float p = compute_expylnx_f16(ax, y);
 
     half ay = BUILTIN_ABS_F16(y);
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_integer(ay) & (x < 0.0h)) ? -0.0f : 0.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_integer(ay) & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     half iz = y < 0.0h ? PINF_F16 : 0.0h;
@@ -117,7 +117,7 @@ MATH_MANGLE(pown)(half x, int ny)
 
     int inty = 2 - (ny & 1);
 
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -0.0f : 0.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
@@ -150,7 +150,7 @@ MATH_MANGLE(rootn)(half x, int ny)
     //   inty = 2 means even integer.
     int inty = 2 - (ny & 1);
 
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -0.0f : 0.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)

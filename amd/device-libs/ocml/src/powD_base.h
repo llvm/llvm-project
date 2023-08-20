@@ -46,7 +46,7 @@ MATH_MANGLE(pow)(double x, double y)
     double ay = BUILTIN_ABS_F64(y);
     bool is_odd_y = is_odd_integer(ay);
 
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_y & (x < 0.0)) ? -0.0 : 0.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_y & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     if (x < 0.0 && !is_integer(ay))
@@ -78,7 +78,7 @@ MATH_MANGLE(powr)(double x, double y)
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
     double ay = BUILTIN_ABS_F64(y);
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_integer(ay) & (x < 0.0)) ? -0.0 : 0.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_integer(ay) & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     double iz = y < 0.0 ? PINF_F64 : 0.0;
@@ -118,7 +118,7 @@ MATH_MANGLE(pown)(double x, int ny)
     // y status: 0=not integer, 1=odd, 2=even
     int inty = 2 - (ny & 1);
 
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -0.0 : 0.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
@@ -147,7 +147,7 @@ MATH_MANGLE(rootn)(double x, int ny)
     // y status: 0=not integer, 1=odd, 2=even
     int inty = 2 - (ny & 1);
 
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -0.0 : 0.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
