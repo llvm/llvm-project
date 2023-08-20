@@ -19,56 +19,101 @@ samesign(float x, float y)
     return ((AS_UINT(x) ^ AS_UINT(y)) & 0x80000000) == 0;
 }
 
+static float fast_expylnx(float ax, float y)
+{
+    return BUILTIN_EXP2_F32(y * BUILTIN_LOG2_F32(ax));
+}
+
+static float compute_expylnx_int(float ax, int ny)
+{
+    if (UNSAFE_MATH_OPT())
+        return fast_expylnx(ax, (float)ny);
+
+    int nyh = ny & 0xffff0000;
+    float2 y = fadd((float)nyh, (float)(ny - nyh));
+    return MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
+}
+
+// root version of compute_expylnx_int
+static float compute_exp_inverse_y_lnx_int(float ax, int ny)
+{
+    if (UNSAFE_MATH_OPT()) {
+        float y = MATH_FAST_RCP((float)ny);
+        return fast_expylnx(ax, y);
+    }
+
+    int nyh = ny & 0xffff0000;
+    float2 y = fadd((float)nyh, (float)(ny - nyh));
+    y = rcp(y);
+    return MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
+}
+
+static float compute_expylnx_float(float ax, float y)
+{
+    if (UNSAFE_MATH_OPT())
+        return fast_expylnx(ax, y);
+    return MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
+}
+
+// Check if a float is an integral value, and whether it's even or
+// odd.
+//
+// status: 0=not integer, 1=odd, 2=even
+static int classify_integer(float ay)
+{
+    float tay = BUILTIN_TRUNC_F32(ay);
+    int inty = ay == tay;
+    inty += inty & (BUILTIN_FRACTION_F32(tay*0.5f) == 0.0f);
+    return inty;
+}
+
+#if defined(COMPILING_POW)
+
 CONSTATTR float
-#if defined(COMPILING_POWR)
-MATH_MANGLE(powr)(float x, float y)
-#elif defined(COMPILING_POWN)
-MATH_MANGLE(pown)(float x, int ny)
-#elif defined(COMPILING_ROOTN)
-MATH_MANGLE(rootn)(float x, int ny)
-#else
 MATH_MANGLE(pow)(float x, float y)
-#endif
 {
     float ax = BUILTIN_ABS_F32(x);
-    float expylnx;
+    float expylnx = compute_expylnx_float(ax, y);
 
-    if (UNSAFE_MATH_OPT()) {
-#if defined COMPILING_POWN
-        float y = (float)ny;
-#elif defined COMPILING_ROOTN
-        float y = MATH_FAST_RCP((float)ny);
-#endif
-        expylnx = BUILTIN_EXP2_F32(y * BUILTIN_LOG2_F32(ax));
-    } else {
-#if defined COMPILING_POWN || defined COMPILING_ROOTN
-        int nyh = ny & 0xffff0000;
-        float2 y = fadd((float)nyh, (float)(ny - nyh));
-#if defined(COMPILING_ROOTN)
-        y = rcp(y);
-#endif
-#endif
-
-        expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
-    }
-
-    // y status: 0=not integer, 1=odd, 2=even
-#if defined(COMPILING_POWN) || defined(COMPILING_ROOTN)
-    int inty = 2 - (ny & 1);
-#else
     float ay = BUILTIN_ABS_F32(y);
-    int inty;
-    {
-        float tay = BUILTIN_TRUNC_F32(ay);
-        inty = ay == tay;
-        inty += inty & (BUILTIN_FRACTION_F32(tay*0.5f) == 0.0f);
-    }
-#endif
+    int inty = classify_integer(ay);
 
     float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
 
     // Now all the edge cases
-#if defined COMPILING_POWR
+    if (x < 0.0f && !inty)
+        ret = QNAN_F32;
+
+    if (BUILTIN_ISINF_F32(ay))
+        ret = ax == 1.0f ? ax : (samesign(y, ax - 1.0f) ? ay : 0.0f);
+
+    if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
+        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,
+                                   inty == 1 ? x : 0.0f);
+
+    if (BUILTIN_ISUNORDERED_F32(x, y))
+        ret = QNAN_F32;
+
+    if (x == 1.0f || y == 0.0f)
+        ret = 1.0f;
+    return ret;
+}
+
+#elif defined(COMPILING_POWR)
+
+CONSTATTR float
+MATH_MANGLE(powr)(float x, float y)
+{
+    float ax = BUILTIN_ABS_F32(x);
+
+    float expylnx = compute_expylnx_float(ax, y);
+
+    float ay = BUILTIN_ABS_F32(y);
+    int inty = classify_integer(ay);
+
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
+
+    // Now all the edge cases
     float iz = y < 0.0f ? PINF_F32 : 0.0f;
     float zi = y < 0.0f ? 0.0f : PINF_F32;
 
@@ -89,7 +134,24 @@ MATH_MANGLE(pow)(float x, float y)
 
     if (x < 0.0f || BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
-#elif defined COMPILING_POWN
+
+    return ret;
+}
+
+#elif defined(COMPILING_POWN)
+
+CONSTATTR float
+MATH_MANGLE(pown)(float x, int ny)
+{
+    float ax = BUILTIN_ABS_F32(x);
+
+    float expylnx = compute_expylnx_int(ax, ny);
+
+    int inty = 2 - (ny & 1);
+
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
+
+    // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
                                    inty == 1 ? x : 0.0f);
@@ -99,32 +161,34 @@ MATH_MANGLE(pow)(float x, float y)
 
     if (ny == 0)
         ret = 1.0f;
-#elif defined COMPILING_ROOTN
+
+    return ret;
+}
+
+#elif defined(COMPILING_ROOTN)
+
+CONSTATTR float
+MATH_MANGLE(rootn)(float x, int ny)
+{
+    float ax = BUILTIN_ABS_F32(x);
+    float expylnx = compute_exp_inverse_y_lnx_int(ax, ny);
+
+    int inty = 2 - (ny & 1);
+
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
+
+    // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
                                    inty == 1 ? x : 0.0f);
 
     if ((x < 0.0f && inty != 1) || ny == 0)
         ret = QNAN_F32;
-#else
-    if (x < 0.0f && !inty)
-        ret = QNAN_F32;
-
-    if (BUILTIN_ISINF_F32(ay))
-        ret = ax == 1.0f ? ax : (samesign(y, ax - 1.0f) ? ay : 0.0f);
-
-    if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
-        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,
-                                   inty == 1 ? x : 0.0f);
-
-    if (BUILTIN_ISUNORDERED_F32(x, y))
-        ret = QNAN_F32;
-
-    if (x == 1.0f || y == 0.0f)
-        ret = 1.0f;
-#endif
-
 
     return ret;
 }
+
+#else
+#error missing function macro
+#endif
 
