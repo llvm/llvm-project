@@ -49,10 +49,13 @@ What works
    * ``LIBCXX_ENABLE_RANDOM_DEVICE``
    * ``LIBCXX_ENABLE_UNICODE``
 
+ * A C++20 based extension
+
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  * There is no official build system support, libc++ has experimental CMake support
+ * Requires CMake 3.26 for C++20 support
  * Requires CMake 3.26 for C++23 support
  * Requires CMake 3.27 for C++26 support
  * Requires Ninja 1.11
