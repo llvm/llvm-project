@@ -132,8 +132,22 @@ RegistryManager::getMatcherCompletions(llvm::ArrayRef<ArgKind> acceptedTypes,
 
 VariantMatcher RegistryManager::constructMatcher(
     MatcherCtor ctor, internal::SourceRange nameRange,
-    llvm::ArrayRef<ParserValue> args, internal::Diagnostics *error) {
-  return ctor->create(nameRange, args, error);
+    llvm::StringRef functionName, llvm::ArrayRef<ParserValue> args,
+    internal::Diagnostics *error) {
+
+  VariantMatcher out = ctor->create(nameRange, args, error);
+  if (functionName.empty() || out.isNull())
+    return out;
+
+  std::optional<DynMatcher> result = out.getDynMatcher();
+
+  if (result.has_value()) {
+    result->setFunctionName(functionName);
+    return VariantMatcher::SingleMatcher(*result);
+  }
+
+  // error->addError(NameRange, error->ET_RegistryNotBindable);
+  return out;
 }
 
 } // namespace mlir::query::matcher

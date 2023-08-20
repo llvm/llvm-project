@@ -37,8 +37,12 @@ enum class ErrorType {
   None,
 
   // Parser Errors
+  ParserChainedExprInvalidArg,
+  ParserChainedExprNoCloseParen,
+  ParserChainedExprNoOpenParen,
   ParserFailedToBuildMatcher,
   ParserInvalidToken,
+  ParserMalformedChainedExpr,
   ParserNoCloseParen,
   ParserNoCode,
   ParserNoComma,

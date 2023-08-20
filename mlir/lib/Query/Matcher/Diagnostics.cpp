@@ -57,6 +57,14 @@ static llvm::StringRef errorTypeToFormatString(ErrorType type) {
     return "Unexpected end of code.";
   case ErrorType::ParserOverloadedType:
     return "Input value has unresolved overloaded type: $0";
+  case ErrorType::ParserMalformedChainedExpr:
+    return "Period not followed by valid chained call.";
+  case ErrorType::ParserChainedExprInvalidArg:
+    return "Missing/Invalid argument for the chained call.";
+  case ErrorType::ParserChainedExprNoCloseParen:
+    return "Missing ')' for the chained call.";
+  case ErrorType::ParserChainedExprNoOpenParen:
+    return "Missing '(' for the chained call.";
   case ErrorType::ParserFailedToBuildMatcher:
     return "Failed to build matcher: $0.";
 

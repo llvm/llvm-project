@@ -8,6 +8,8 @@
 
 #include "mlir/Query/Query.h"
 #include "QueryParser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
 #include "mlir/Support/LogicalResult.h"
@@ -32,6 +34,71 @@ static void printMatch(llvm::raw_ostream &os, QuerySession &qs, Operation *op,
       qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
   qs.getSourceManager().PrintMessage(os, smloc, llvm::SourceMgr::DK_Note,
                                      "\"" + binding + "\" binds here");
+}
+
+static Operation *extractFunction(std::vector<Operation *> &ops,
+                                  MLIRContext *context,
+                                  llvm::StringRef functionName) {
+  context->loadDialect<func::FuncDialect>();
+  OpBuilder builder(context);
+  std::vector<Operation *> slice;
+  std::vector<Value> values;
+
+  bool hasReturn = false;
+  TypeRange resultType = std::nullopt;
+
+  for (auto *op : ops) {
+    slice.push_back(op);
+    if (auto returnOp = dyn_cast<func::ReturnOp>(op)) {
+      resultType = returnOp.getOperands().getTypes();
+      hasReturn = true;
+    } else {
+      // Extract all values that might potentially be needed as func
+      // arguments.
+      for (Value value : op->getOperands()) {
+        values.push_back(value);
+      }
+    }
+  }
+
+  auto loc = builder.getUnknownLoc();
+
+  if (!hasReturn) {
+    resultType = slice.back()->getResults().getTypes();
+  }
+
+  func::FuncOp funcOp = func::FuncOp::create(
+      loc, functionName,
+      builder.getFunctionType(ValueRange(values), resultType));
+
+  loc = funcOp.getLoc();
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+  builder.setInsertionPointToEnd(&funcOp.getBody().front());
+
+  IRMapping mapper;
+  for (const auto &arg : llvm::enumerate(values))
+    mapper.map(arg.value(), funcOp.getArgument(arg.index()));
+
+  std::vector<Operation *> clonedOps;
+  for (Operation *slicedOp : slice)
+    clonedOps.push_back(builder.clone(*slicedOp, mapper));
+
+  // Remove func arguments that are not used.
+  unsigned currentIndex = 0;
+  while (currentIndex < funcOp.getNumArguments()) {
+    if (funcOp.getArgument(currentIndex).getUses().empty()) {
+      funcOp.eraseArgument(currentIndex);
+    } else {
+      currentIndex++;
+    }
+  }
+
+  // Add an extra return operation with the result of the final operation
+  if (!hasReturn) {
+    builder.create<func::ReturnOp>(loc, clonedOps.back()->getResults());
+  }
+
+  return funcOp;
 }
 
 Query::~Query() = default;
@@ -65,9 +132,19 @@ mlir::LogicalResult QuitQuery::run(llvm::raw_ostream &os,
 
 mlir::LogicalResult MatchQuery::run(llvm::raw_ostream &os,
                                     QuerySession &qs) const {
+  Operation *rootOp = qs.getRootOp();
   int matchCount = 0;
   std::vector<Operation *> matches =
-      matcher::MatchFinder().getMatches(qs.getRootOp(), matcher);
+      matcher::MatchFinder().getMatches(rootOp, matcher);
+
+  if (matcher.hasFunctionName()) {
+    auto functionName = matcher.getFunctionName();
+    Operation *function =
+        extractFunction(matches, rootOp->getContext(), functionName);
+    os << "\n" << *function << "\n\n";
+    return mlir::success();
+  }
+
   os << "\n";
   for (Operation *op : matches) {
     os << "Match #" << ++matchCount << ":\n\n";
