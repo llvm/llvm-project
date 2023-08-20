@@ -110,6 +110,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
+  Info.IsConvergent = CB.isConvergent();
+
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
     insertSRetOutgoingArgument(MIRBuilder, CB, Info);
