@@ -4777,7 +4777,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z16range_for_singlev
-// CHECK11-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK11-SAME: () #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK11-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ARR]], i8 0, i64 40, i1 false)
@@ -4786,7 +4786,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z16range_for_singlev.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[ARR:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[ARR:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4895,7 +4895,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z19range_for_collapsedv
-// CHECK11-SAME: () #[[ATTR3]] {
+// CHECK11-SAME: () #[[ATTR0]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK11-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ARR]], i8 0, i64 40, i1 false)
@@ -4904,7 +4904,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z19range_for_collapsedv.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[ARR:%.*]]) #[[ATTR5]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[ARR:%.*]]) #[[ATTR4]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
