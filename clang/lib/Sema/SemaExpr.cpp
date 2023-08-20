@@ -7052,15 +7052,16 @@ tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
 
 // Once a call is fully resolved, warn for unqualified calls to specific
 // C++ standard functions, like move and forward.
-static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S, CallExpr *Call) {
+static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
+                                                    const CallExpr *Call) {
   // We are only checking unary move and forward so exit early here.
   if (Call->getNumArgs() != 1)
     return;
 
-  Expr *E = Call->getCallee()->IgnoreParenImpCasts();
+  const Expr *E = Call->getCallee()->IgnoreParenImpCasts();
   if (!E || isa<UnresolvedLookupExpr>(E))
     return;
-  DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E);
+  const DeclRefExpr *DRE = dyn_cast_if_present<DeclRefExpr>(E);
   if (!DRE || !DRE->getLocation().isValid())
     return;
 
@@ -7092,22 +7093,20 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
   // language modes.
-  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn)) {
-    if (ULE->hasExplicitTemplateArgs() &&
-        ULE->decls_begin() == ULE->decls_end()) {
-      Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
-                                 ? diag::warn_cxx17_compat_adl_only_template_id
-                                 : diag::ext_adl_only_template_id)
-          << ULE->getName();
-    }
+  if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn);
+      ULE && ULE->hasExplicitTemplateArgs() &&
+      ULE->decls_begin() == ULE->decls_end()) {
+    Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
+                               ? diag::warn_cxx17_compat_adl_only_template_id
+                               : diag::ext_adl_only_template_id)
+        << ULE->getName();
   }
 
   if (LangOpts.OpenMP)
     Call = ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
                            ExecConfig);
   if (LangOpts.CPlusPlus) {
-    CallExpr *CE = dyn_cast<CallExpr>(Call.get());
-    if (CE)
+    if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
   }
   return Call;
