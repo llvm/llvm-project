@@ -3114,10 +3114,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     }
 
     // Note that this is a destructor name.
-    ParsedType Ty = Actions.getDestructorName(TildeLoc, *ClassName,
-                                              ClassNameLoc, getCurScope(),
-                                              SS, ObjectType,
-                                              EnteringContext);
+    ParsedType Ty =
+        Actions.getDestructorName(*ClassName, ClassNameLoc, getCurScope(), SS,
+                                  ObjectType, EnteringContext);
     if (!Ty)
       return true;
 
