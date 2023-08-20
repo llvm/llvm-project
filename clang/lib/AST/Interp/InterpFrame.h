@@ -139,7 +139,7 @@ private:
     return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
   }
 
-  // Returns the inline descriptor of the local.
+  /// Returns the inline descriptor of the local.
   InlineDescriptor *localInlineDesc(unsigned Offset) const {
     return reinterpret_cast<InlineDescriptor *>(Locals.get() + Offset);
   }
