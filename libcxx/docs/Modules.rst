@@ -47,6 +47,7 @@ What works
    * ``LIBCXX_ENABLE_THREADS``
    * ``LIBCXX_ENABLE_FILESYSTEM``
    * ``LIBCXX_ENABLE_RANDOM_DEVICE``
+   * ``LIBCXX_ENABLE_UNICODE``
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
