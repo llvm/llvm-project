@@ -16,18 +16,18 @@ static float compute_expylnx_f16(half ax, half y)
     return BUILTIN_AMDGPU_EXP2_F32((float)y * BUILTIN_AMDGPU_LOG2_F32((float)ax));
 }
 
-// Check if a half is an integral value, and whether it's even or
-// odd.
-//
-// status: 0=not integer, 1=odd, 2=even
-static int classify_integer(half ay)
+static bool is_integer(half ay)
 {
-    bool inty = BUILTIN_TRUNC_F16(ay) == ay;
-    half half_ay = 0.5h * ay;
+    return BUILTIN_TRUNC_F16(ay) == ay;
+}
 
-    // Even integers are still even after division by 2.
-    inty += inty & (BUILTIN_TRUNC_F16(half_ay) == half_ay);
-    return inty;
+static bool is_even_integer(half ay) {
+    // Even integers are still integers after division by 2.
+    return is_integer(0.5h * ay);
+}
+
+static bool is_odd_integer(half ay) {
+    return is_integer(ay) && !is_even_integer(ay);
 }
 
 #if defined(COMPILING_POW)
@@ -39,12 +39,11 @@ MATH_MANGLE(pow)(half x, half y)
     float p = compute_expylnx_f16(ax, y);
 
     half ay = BUILTIN_ABS_F16(y);
-    int inty = classify_integer(ay);
-
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -0.0f : 0.0f);
+    bool is_odd_y = is_odd_integer(ay);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -0.0f : 0.0f);
 
     // Now all the edge cases
-    if (x < 0.0h && !inty)
+    if (x < 0.0h && !is_integer(ay))
         ret = QNAN_F16;
 
     if (BUILTIN_ISINF_F16(ay))
@@ -52,7 +51,7 @@ MATH_MANGLE(pow)(half x, half y)
 
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (y < 0.0h) ? 0.0h : PINF_F16,
-                                   inty == 1 ? x : 0.0h);
+                                   is_odd_y ? x : 0.0h);
 
     if (BUILTIN_ISUNORDERED_F16(x, y))
         ret = QNAN_F16;
@@ -72,9 +71,7 @@ MATH_MANGLE(powr)(half x, half y)
     float p = compute_expylnx_f16(ax, y);
 
     half ay = BUILTIN_ABS_F16(y);
-    int inty = classify_integer(ay);
-
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -0.0f : 0.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_integer(ay) & (x < 0.0h)) ? -0.0f : 0.0f);
 
     // Now all the edge cases
     half iz = y < 0.0h ? PINF_F16 : 0.0h;

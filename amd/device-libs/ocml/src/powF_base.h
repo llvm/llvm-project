@@ -55,18 +55,18 @@ static float compute_expylnx_float(float ax, float y)
     return MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 }
 
-// Check if a float is an integral value, and whether it's even or
-// odd.
-//
-// status: 0=not integer, 1=odd, 2=even
-static int classify_integer(float ay)
+static bool is_integer(float ay)
 {
-    int inty = BUILTIN_TRUNC_F32(ay) == ay;
-    float half_ay = 0.5f * ay;
+    return BUILTIN_TRUNC_F32(ay) == ay;
+}
 
-    // Even integers are still even after division by 2.
-    inty += inty & (BUILTIN_TRUNC_F32(half_ay) == half_ay);
-    return inty;
+static bool is_even_integer(float ay) {
+    // Even integers are still integers after division by 2.
+    return is_integer(0.5f * ay);
+}
+
+static bool is_odd_integer(float ay) {
+    return is_integer(ay) && !is_even_integer(ay);
 }
 
 #if defined(COMPILING_POW)
@@ -78,12 +78,12 @@ MATH_MANGLE(pow)(float x, float y)
     float expylnx = compute_expylnx_float(ax, y);
 
     float ay = BUILTIN_ABS_F32(y);
-    int inty = classify_integer(ay);
+    bool is_odd_y = is_odd_integer(ay);
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -0.0f : 0.0f);
 
     // Now all the edge cases
-    if (x < 0.0f && !inty)
+    if (x < 0.0f && !is_integer(ay))
         ret = QNAN_F32;
 
     if (BUILTIN_ISINF_F32(ay))
@@ -91,7 +91,7 @@ MATH_MANGLE(pow)(float x, float y)
 
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,
-                                   inty == 1 ? x : 0.0f);
+                                   is_odd_y ? x : 0.0f);
 
     if (BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
@@ -111,9 +111,7 @@ MATH_MANGLE(powr)(float x, float y)
     float expylnx = compute_expylnx_float(ax, y);
 
     float ay = BUILTIN_ABS_F32(y);
-    int inty = classify_integer(ay);
-
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -0.0f : 0.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_integer(ay) & (x < 0.0f)) ? -0.0f : 0.0f);
 
     // Now all the edge cases
     float iz = y < 0.0f ? PINF_F32 : 0.0f;

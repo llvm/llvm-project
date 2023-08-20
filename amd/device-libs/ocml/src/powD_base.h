@@ -21,18 +21,18 @@ samesign(double x, double y)
     return ((xh ^ yh) & 0x80000000U) == 0;
 }
 
-// Check if a double is an integral value, and whether it's even or
-// odd.
-//
-// status: 0=not integer, 1=odd, 2=even
-static int classify_integer(double ay)
+static bool is_integer(double ay)
 {
-    int inty = BUILTIN_TRUNC_F64(ay) == ay;
-    double half_ay = 0.5 * ay;
+    return BUILTIN_TRUNC_F64(ay) == ay;
+}
 
-    // Even integers are still even after division by 2.
-    inty += inty & (BUILTIN_TRUNC_F64(half_ay) == half_ay);
-    return inty;
+static bool is_even_integer(double ay) {
+    // Even integers are still integers after division by 2.
+    return is_integer(0.5 * ay);
+}
+
+static bool is_odd_integer(double ay) {
+    return is_integer(ay) && !is_even_integer(ay);
 }
 
 #if defined(COMPILING_POW)
@@ -44,11 +44,12 @@ MATH_MANGLE(pow)(double x, double y)
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
     double ay = BUILTIN_ABS_F64(y);
-    int inty = classify_integer(ay);
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -0.0 : 0.0);
+    bool is_odd_y = is_odd_integer(ay);
+
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_y & (x < 0.0)) ? -0.0 : 0.0);
 
     // Now all the edge cases
-    if (x < 0.0 && !inty)
+    if (x < 0.0 && !is_integer(ay))
         ret = QNAN_F64;
 
     if (BUILTIN_ISINF_F64(ay))
@@ -56,7 +57,7 @@ MATH_MANGLE(pow)(double x, double y)
 
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : PINF_F64,
-                                   inty == 1 ? x : 0.0);
+                                   is_odd_y ? x : 0.0);
 
     if (BUILTIN_ISUNORDERED_F64(x, y))
         ret = QNAN_F64;
@@ -77,9 +78,7 @@ MATH_MANGLE(powr)(double x, double y)
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
     double ay = BUILTIN_ABS_F64(y);
-    int inty = classify_integer(ay);
-
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -0.0 : 0.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_integer(ay) & (x < 0.0)) ? -0.0 : 0.0);
 
     // Now all the edge cases
     double iz = y < 0.0 ? PINF_F64 : 0.0;
