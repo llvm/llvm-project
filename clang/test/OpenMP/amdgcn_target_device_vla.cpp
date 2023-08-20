@@ -203,7 +203,7 @@ int main() {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[M_CASTED_ASCAST]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo2v_l30_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo2v_l30_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -569,7 +569,7 @@ int main() {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[M_CASTED_ASCAST]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -889,7 +889,7 @@ int main() {
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 2
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52_omp_outlined_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[TMP4]], i64 [[TMP6]], ptr [[TMP8]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52_omp_outlined_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[TMP4]], i64 [[TMP6]], ptr [[TMP8]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -931,7 +931,7 @@ int main() {
 // CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
@@ -1255,6 +1255,6 @@ int main() {
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 2
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76_omp_outlined_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[TMP4]], i64 [[TMP6]], ptr [[TMP8]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76_omp_outlined_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[TMP4]], i64 [[TMP6]], ptr [[TMP8]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //

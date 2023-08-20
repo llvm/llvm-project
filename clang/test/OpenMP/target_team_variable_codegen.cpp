@@ -27,11 +27,6 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
 } omp_allocator_handle_t;
 
-//.
-// CHECK-AMD: @local_a = internal addrspace(3) global [10 x i32] poison, align 4
-//.
-// CHECK-NVIDIA: @local_a = internal addrspace(3) global [10 x i32] poison, align 4
-//.
 int main()
 {
 	int N = 10000;
