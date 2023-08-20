@@ -33,7 +33,9 @@ export namespace std {
   using std::operator<<;
 #  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
+#  if _LIBCPP_STD_VER >= 23
   using std::formatter;
+#  endif
 
   using std::hash;
 #endif // _LIBCPP_HAS_NO_THREADS
