@@ -763,7 +763,7 @@ static const char *const dialectDynamicTypeParserDispatch = R"(
   {
     auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
     if (parseResult.has_value()) {
-      if (::mlir::succeeded(parseResult.getValue()))
+      if (::mlir::succeeded(parseResult.value()))
         return genType;
       return ::mlir::Type();
     }
