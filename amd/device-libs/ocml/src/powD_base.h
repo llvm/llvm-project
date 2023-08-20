@@ -27,9 +27,11 @@ samesign(double x, double y)
 // status: 0=not integer, 1=odd, 2=even
 static int classify_integer(double ay)
 {
-    double tay = BUILTIN_TRUNC_F64(ay);
-    int inty = ay == tay;
-    inty += inty & (BUILTIN_FRACTION_F64(tay*0.5) == 0.0);
+    int inty = BUILTIN_TRUNC_F64(ay) == ay;
+    double half_ay = 0.5 * ay;
+
+    // Even integers are still even after division by 2.
+    inty += inty & (BUILTIN_TRUNC_F64(half_ay) == half_ay);
     return inty;
 }
 

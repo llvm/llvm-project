@@ -61,9 +61,11 @@ static float compute_expylnx_float(float ax, float y)
 // status: 0=not integer, 1=odd, 2=even
 static int classify_integer(float ay)
 {
-    float tay = BUILTIN_TRUNC_F32(ay);
-    int inty = ay == tay;
-    inty += inty & (BUILTIN_FRACTION_F32(tay*0.5f) == 0.0f);
+    int inty = BUILTIN_TRUNC_F32(ay) == ay;
+    float half_ay = 0.5f * ay;
+
+    // Even integers are still even after division by 2.
+    inty += inty & (BUILTIN_TRUNC_F32(half_ay) == half_ay);
     return inty;
 }
 

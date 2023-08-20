@@ -22,9 +22,11 @@ static float compute_expylnx_f16(half ax, half y)
 // status: 0=not integer, 1=odd, 2=even
 static int classify_integer(half ay)
 {
-    half tay = BUILTIN_TRUNC_F16(ay);
-    int inty = ay == tay;
-    inty += inty & (BUILTIN_FRACTION_F16(tay*0.5h) == 0.0h);
+    bool inty = BUILTIN_TRUNC_F16(ay) == ay;
+    half half_ay = 0.5h * ay;
+
+    // Even integers are still even after division by 2.
+    inty += inty & (BUILTIN_TRUNC_F16(half_ay) == half_ay);
     return inty;
 }
 
