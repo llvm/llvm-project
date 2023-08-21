@@ -123,22 +123,16 @@ static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
 /// specific \p DIE related to the warning.
 void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
                                          const DWARFDie *DIE) const {
-  // FIXME: implement warning logging which does not block other threads.
-  if (ErrorHandlerMutex.try_lock()) {
-    warn(Warning, Context);
-    dumpDIE(DIE, Options.Verbose);
-    ErrorHandlerMutex.unlock();
-  }
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  warn(Warning, Context);
+  dumpDIE(DIE, Options.Verbose);
 }
 
 void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
                                        const DWARFDie *DIE) const {
-  // FIXME: implement error logging which does not block other threads.
-  if (ErrorHandlerMutex.try_lock()) {
-    error(Error, Context);
-    dumpDIE(DIE, Options.Verbose);
-    ErrorHandlerMutex.unlock();
-  }
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  error(Error, Context);
+  dumpDIE(DIE, Options.Verbose);
 }
 
 ErrorOr<const object::ObjectFile &>
@@ -239,23 +233,9 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
 
   if (ErrorOrObj) {
     Res = std::make_unique<OutDWARFFile>(
-        Obj.getObjectFilename(),
-        DWARFContext::create(
-            *ErrorOrObj, DWARFContext::ProcessDebugRelocations::Process,
-            nullptr, "",
-            [&](Error Err) {
-              handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
-                reportError(Info.message());
-              });
-            },
-            [&](Error Warning) {
-              handleAllErrors(std::move(Warning), [&](ErrorInfoBase &Info) {
-                reportWarning(Info.message());
-              });
-            }),
+        Obj.getObjectFilename(), DWARFContext::create(*ErrorOrObj),
         std::make_unique<AddressesMap>(*this, *ErrorOrObj, Obj),
-        Obj.empty() ? Obj.getWarnings() : EmptyWarnings,
-        [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+        Obj.empty() ? Obj.getWarnings() : EmptyWarnings);
 
     Error E = RL.link(*ErrorOrObj);
     if (Error NewE = handleErrors(
@@ -1059,10 +1039,8 @@ std::optional<int64_t> DwarfLinkerForBinary::AddressManager<AddressesMapBase>::
   default: {
     assert(false && "Specified operation does not have address operand");
   } break;
-  case dwarf::DW_OP_const2u:
   case dwarf::DW_OP_const4u:
   case dwarf::DW_OP_const8u:
-  case dwarf::DW_OP_const2s:
   case dwarf::DW_OP_const4s:
   case dwarf::DW_OP_const8s:
   case dwarf::DW_OP_addr: {
