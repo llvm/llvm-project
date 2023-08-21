@@ -1111,7 +1111,9 @@ struct has_function_signature<ObjCInstanceMethodRecord>
 template <>
 struct has_function_signature<ObjCClassMethodRecord> : public std::true_type {};
 template <>
-struct has_function_signature<CXXMethodRecord> : public std::true_type {};
+struct has_function_signature<CXXInstanceMethodRecord> : public std::true_type {};
+template <>
+struct has_function_signature<CXXStaticMethodRecord> : public std::true_type {};
 template <>
 struct has_function_signature<CXXMethodTemplateRecord> : public std::true_type {
 };
@@ -1120,7 +1122,8 @@ struct has_function_signature<CXXMethodTemplateSpecializationRecord>
     : public std::true_type {};
 
 template <typename RecordTy> struct has_access : public std::false_type {};
-template <> struct has_access<CXXMethodRecord> : public std::true_type {};
+template <> struct has_access<CXXInstanceMethodRecord> : public std::true_type {};
+template <> struct has_access<CXXStaticMethodRecord> : public std::true_type {};
 template <> struct has_access<CXXFieldRecord> : public std::true_type {};
 template <>
 struct has_access<CXXMethodTemplateRecord> : public std::true_type {};
@@ -1261,7 +1264,7 @@ public:
                  DeclarationFragments SubHeading, SymbolReference Context,
                  AccessControl Access, bool IsFromSystemHeaderg);
 
-  CXXFieldRecord *addCXXField(CXXClassRecord *CXXClass, StringRef Name,
+  CXXFieldRecord *addCXXField(APIRecord *CXXClass, StringRef Name,
                               StringRef USR, PresumedLoc Loc,
                               AvailabilitySet Availabilities,
                               const DocComment &Comment,
@@ -1316,18 +1319,25 @@ public:
       DeclarationFragments SubHeading, Template Template,
       bool IsFromSystemHeader);
 
-  CXXMethodRecord *
-  addCXXMethod(CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-               PresumedLoc Loc, AvailabilitySet Availability,
-               const DocComment &Comment, DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, FunctionSignature Signature,
-               bool IsStatic, AccessControl Access, bool IsFromSystemHeader);
+  CXXMethodRecord *addCXXInstanceMethod(
+      APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
+      FunctionSignature Signature, AccessControl Access,
+      bool IsFromSystemHeader);
+
+  CXXMethodRecord *addCXXStaticMethod(
+      APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
+      FunctionSignature Signature, AccessControl Access,
+      bool IsFromSystemHeader);
 
   CXXMethodRecord *addCXXSpecialMethod(
-      CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-      PresumedLoc Loc, AvailabilitySet Availability, const DocComment &Comment,
+      APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+      AvailabilitySet Availability, const DocComment &Comment,
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
-      FunctionSignature Signature, bool IsConstructor, AccessControl Access,
+      FunctionSignature Signature, AccessControl Access,
       bool IsFromSystemHeader);
 
   CXXMethodTemplateRecord *addCXXMethodTemplate(
@@ -1502,6 +1512,13 @@ public:
   const RecordMap<CXXMethodTemplateRecord> &getCXXMethodTemplates() const {
     return CXXMethodTemplates;
   }
+  const RecordMap<CXXInstanceMethodRecord> &getCXXInstanceMethods() const {
+    return CXXInstanceMethods;
+  }
+  const RecordMap<CXXStaticMethodRecord> &getCXXStaticMethods() const {
+    return CXXStaticMethods;
+  }
+  const RecordMap<CXXFieldRecord> &getCXXFields() const { return CXXFields; }
   const RecordMap<CXXMethodTemplateSpecializationRecord> &
   getCXXMethodTemplateSpecializations() const {
     return CXXMethodTemplateSpecializations;
@@ -1588,6 +1605,10 @@ private:
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
   RecordMap<CXXClassRecord> CXXClasses;
+  RecordMap<CXXFieldRecord> CXXFields;
+  RecordMap<CXXMethodRecord> CXXMethods;
+  RecordMap<CXXInstanceMethodRecord> CXXInstanceMethods;
+  RecordMap<CXXStaticMethodRecord> CXXStaticMethods;
   RecordMap<CXXMethodTemplateRecord> CXXMethodTemplates;
   RecordMap<CXXMethodTemplateSpecializationRecord>
       CXXMethodTemplateSpecializations;

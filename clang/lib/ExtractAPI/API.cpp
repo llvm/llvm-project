@@ -171,18 +171,17 @@ APISet::addStaticField(StringRef Name, StringRef USR, PresumedLoc Loc,
 }
 
 CXXFieldRecord *
-APISet::addCXXField(CXXClassRecord *CXXClass, StringRef Name, StringRef USR,
+APISet::addCXXField(APIRecord *CXXClass, StringRef Name, StringRef USR,
                     PresumedLoc Loc, AvailabilitySet Availabilities,
                     const DocComment &Comment, DeclarationFragments Declaration,
                     DeclarationFragments SubHeading, AccessControl Access,
                     bool IsFromSystemHeader) {
-  auto Record = std::make_unique<CXXFieldRecord>(
-      USR, Name, Loc, std::move(Availabilities), Comment, Declaration,
-      SubHeading, Access, IsFromSystemHeader);
+  auto *Record = addTopLevelRecord(
+      USRBasedLookupTable, CXXFields, USR, Name, Loc, std::move(Availabilities),
+      Comment, Declaration, SubHeading, Access, IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       CXXClass->USR, CXXClass->Name, CXXClass->getKind(), CXXClass);
-  USRBasedLookupTable.insert({USR, Record.get()});
-  return CXXClass->Fields.emplace_back(std::move(Record)).get();
+  return Record;
 }
 
 CXXFieldTemplateRecord *APISet::addCXXFieldTemplate(
@@ -280,50 +279,38 @@ ConceptRecord *APISet::addConcept(StringRef Name, StringRef USR,
                            SubHeading, Template, IsFromSystemHeader);
 }
 
-CXXMethodRecord *APISet::addCXXMethod(
-    CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-    PresumedLoc Loc, AvailabilitySet Availability, const DocComment &Comment,
+CXXMethodRecord *APISet::addCXXInstanceMethod(
+    APIRecord *CXXClassRecord, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
-    FunctionSignature Signature, bool IsStatic, AccessControl Access,
+    FunctionSignature Signature, AccessControl Access,
     bool IsFromSystemHeader) {
-  std::unique_ptr<CXXMethodRecord> Record;
-  if (IsStatic)
-    Record = std::make_unique<CXXStaticMethodRecord>(
-        USR, Name, Loc, std::move(Availability), Comment, Declaration,
-        SubHeading, Signature, Access, IsFromSystemHeader);
-  else
-    Record = std::make_unique<CXXInstanceMethodRecord>(
-        USR, Name, Loc, std::move(Availability), Comment, Declaration,
-        SubHeading, Signature, Access, IsFromSystemHeader);
+  CXXMethodRecord *Record =
+      addTopLevelRecord(USRBasedLookupTable, CXXInstanceMethods, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader);
 
   Record->ParentInformation = APIRecord::HierarchyInformation(
       CXXClassRecord->USR, CXXClassRecord->Name, CXXClassRecord->getKind(),
       CXXClassRecord);
-  USRBasedLookupTable.insert({USR, Record.get()});
-  return CXXClassRecord->Methods.emplace_back(std::move(Record)).get();
+  return Record;
 }
 
-CXXMethodRecord *APISet::addCXXSpecialMethod(
-    CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-    PresumedLoc Loc, AvailabilitySet Availability, const DocComment &Comment,
+CXXMethodRecord *APISet::addCXXStaticMethod(
+    APIRecord *CXXClassRecord, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
-    FunctionSignature Signature, bool IsConstructor, AccessControl Access,
+    FunctionSignature Signature, AccessControl Access,
     bool IsFromSystemHeader) {
-  std::unique_ptr<CXXMethodRecord> Record;
-  if (IsConstructor)
-    Record = std::make_unique<CXXConstructorRecord>(
-        USR, Name, Loc, std::move(Availability), Comment, Declaration,
-        SubHeading, Signature, Access, IsFromSystemHeader);
-  else
-    Record = std::make_unique<CXXDestructorRecord>(
-        USR, Name, Loc, std::move(Availability), Comment, Declaration,
-        SubHeading, Signature, Access, IsFromSystemHeader);
+  CXXMethodRecord *Record =
+      addTopLevelRecord(USRBasedLookupTable, CXXStaticMethods, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader);
 
   Record->ParentInformation = APIRecord::HierarchyInformation(
       CXXClassRecord->USR, CXXClassRecord->Name, CXXClassRecord->getKind(),
       CXXClassRecord);
-  USRBasedLookupTable.insert({USR, Record.get()});
-  return CXXClassRecord->Methods.emplace_back(std::move(Record)).get();
+  return Record;
 }
 
 CXXMethodTemplateRecord *APISet::addCXXMethodTemplate(
