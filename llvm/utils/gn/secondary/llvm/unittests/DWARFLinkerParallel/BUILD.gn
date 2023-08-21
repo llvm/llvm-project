@@ -9,5 +9,6 @@ unittest("DWARFLinkerParallelTests") {
   sources = [
     "DWARFLinkerTest.cpp",
     "StringPoolTest.cpp",
+    "StringTableTest.cpp",
   ]
 }
