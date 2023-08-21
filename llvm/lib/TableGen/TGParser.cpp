@@ -45,10 +45,10 @@ struct SubClassReference {
 
 struct SubMultiClassReference {
   SMRange RefRange;
-  MultiClass *MC;
+  MultiClass *MC = nullptr;
   SmallVector<ArgumentInit *, 4> TemplateArgs;
 
-  SubMultiClassReference() : MC(nullptr) {}
+  SubMultiClassReference() = default;
 
   bool isInvalid() const { return MC == nullptr; }
   void dump() const;
