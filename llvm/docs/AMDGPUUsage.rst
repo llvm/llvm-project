@@ -994,8 +994,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                              half). Not implemented for double. Hardware provides
                                              1ULP accuracy for float, and 0.51ULP for half. Float
                                              instruction does not natively support denormal
-                                             inputs. Backend will optimize out denormal scaling if
-                                             marked with the :ref:`afn <fastmath_afn>` flag.
+                                             inputs.
 
   llvm.amdgcn.wave.reduce.umin               Performs an arithmetic unsigned min reduction on the unsigned values
                                              provided by each lane in the wavefront.
