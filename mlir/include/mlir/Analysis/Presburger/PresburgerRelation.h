@@ -97,6 +97,11 @@ public:
   /// operation returns (A intersection C) -> B.
   PresburgerRelation intersectDomain(const PresburgerSet &set) const;
 
+  /// Return a set corresponding to the domain of the relation.
+  PresburgerSet getDomainSet() const;
+  /// Return a set corresponding to the range of the relation.
+  PresburgerSet getRangeSet() const;
+
   /// Invert the relation, i.e. swap its domain and range.
   ///
   /// Formally, if `this`: A -> B then `inverse` updates `this` in-place to
