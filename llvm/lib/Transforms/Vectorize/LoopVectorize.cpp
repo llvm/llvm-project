@@ -8023,7 +8023,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
     VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
     auto NewInsertionPoint = HeaderVPBB->getFirstNonPhi();
     auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
-    HeaderVPBB->insert(IV, HeaderVPBB->getFirstNonPhi());
+    HeaderVPBB->insert(IV, NewInsertionPoint);
 
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(HeaderVPBB, NewInsertionPoint);
@@ -8805,11 +8805,14 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       }
 
       RecipeBuilder.setRecipe(Instr, Recipe);
-      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) &&
-          HeaderVPBB->getFirstNonPhi() != VPBB->end()) {
-        // Move VPWidenIntOrFpInductionRecipes for optimized truncates to the
+      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe)) {
+        // VPWidenIntOrFpInductionRecipes must be kept in the phi section of
+        // HeaderVPBB. VPWidenIntOrFpInductionRecipes for optimized truncates
+        // may be generated after non-phi recipes and need to be moved to the
         // phi section of HeaderVPBB.
-        assert(isa<TruncInst>(Instr));
+        assert((HeaderVPBB->getFirstNonPhi() == VPBB->end() ||
+                isa<TruncInst>(Instr)) &&
+               "unexpected recipe needs moving");
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       } else
         VPBB->appendRecipe(Recipe);
