@@ -108,7 +108,7 @@ MATH_MANGLE(pown)(half x, int ny)
 
     bool is_odd_y = ny & 1;
 
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
@@ -134,7 +134,7 @@ MATH_MANGLE(rootn)(half x, int ny)
 
     bool is_odd_y = ny & 1;
 
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)

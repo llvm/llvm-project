@@ -80,7 +80,7 @@ MATH_MANGLE(pow)(float x, float y)
     float ay = BUILTIN_ABS_F32(y);
     bool is_odd_y = is_odd_integer(ay);
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (x < 0.0f && !is_integer(ay))
@@ -144,7 +144,7 @@ MATH_MANGLE(pown)(float x, int ny)
 
     bool is_odd_y = ny & 1;
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
@@ -166,7 +166,7 @@ MATH_MANGLE(rootn)(float x, int ny)
 
     bool is_odd_y = ny & 1;
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
