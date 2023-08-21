@@ -107,6 +107,15 @@ lowerCirAttrAsValue(mlir::FloatAttr fltAttr, mlir::Location loc,
       loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
 }
 
+/// ZeroAttr visitor.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::cir::ZeroAttr zeroAttr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  return rewriter.create<mlir::cir::ZeroInitConstOp>(
+      loc, converter->convertType(zeroAttr.getType()));
+}
+
 /// ConstStruct visitor.
 mlir::Value lowerCirAttrAsValue(mlir::cir::ConstStructAttr constStruct,
                                 mlir::Location loc,
@@ -157,10 +166,10 @@ lowerCirAttrAsValue(mlir::Attribute attr, mlir::Location loc,
     return lowerCirAttrAsValue(constStruct, loc, rewriter, converter);
   if (const auto constArr = attr.dyn_cast<mlir::cir::ConstArrayAttr>())
     return lowerCirAttrAsValue(constArr, loc, rewriter, converter);
-  if (const auto zeroAttr = attr.dyn_cast<mlir::cir::BoolAttr>())
+  if (const auto boolAttr = attr.dyn_cast<mlir::cir::BoolAttr>())
     llvm_unreachable("bool attribute is NYI");
   if (const auto zeroAttr = attr.dyn_cast<mlir::cir::ZeroAttr>())
-    llvm_unreachable("zero attribute is NYI");
+    return lowerCirAttrAsValue(zeroAttr, loc, rewriter, converter);
 
   llvm_unreachable("unhandled attribute type");
 }
