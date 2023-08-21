@@ -22,11 +22,13 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StorageUniquerSupport.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -2200,6 +2202,22 @@ VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult CopyOp::verify() {
+
+  // A data layout is required for us to know the number of bytes to be copied.
+  if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
+    return emitError() << "missing data layout for pointee type";
+
+  if (getSrc() == getDst())
+    return emitError() << "source and destination are the same";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
