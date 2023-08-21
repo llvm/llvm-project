@@ -6942,7 +6942,11 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
 void ConstructVisitor::Post(const parser::SelectRankCaseStmt::Rank &x) {
   if (auto *symbol{MakeAssocEntity()}) {
     SetTypeFromAssociation(*symbol);
-    SetAttrsFromAssociation(*symbol);
+    // Don't call SetAttrsFromAssociation() for SELECT RANK.
+    symbol->attrs() |=
+        evaluate::GetAttrs(GetCurrentAssociation().selector.expr) &
+        Attrs{Attr::ALLOCATABLE, Attr::ASYNCHRONOUS, Attr::POINTER,
+            Attr::TARGET, Attr::VOLATILE};
     if (const auto *init{std::get_if<parser::ScalarIntConstantExpr>(&x.u)}) {
       if (auto val{EvaluateInt64(context(), *init)}) {
         auto &details{symbol->get<AssocEntityDetails>()};
@@ -7039,6 +7043,7 @@ void ConstructVisitor::SetTypeFromAssociation(Symbol &symbol) {
 }
 
 // If current selector is a variable, set some of its attributes on symbol.
+// For ASSOCIATE, CHANGE TEAM, and SELECT TYPE only; not SELECT RANK.
 void ConstructVisitor::SetAttrsFromAssociation(Symbol &symbol) {
   Attrs attrs{evaluate::GetAttrs(GetCurrentAssociation().selector.expr)};
   symbol.attrs() |=

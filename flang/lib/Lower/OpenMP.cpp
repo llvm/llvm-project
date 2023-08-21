@@ -1553,7 +1553,8 @@ bool ClauseProcessor::processCopyin() const {
               checkAndCopyHostAssociateVar(&*mem, &insPt);
             break;
           }
-          if (Fortran::semantics::IsAllocatableOrPointer(sym->GetUltimate()))
+          if (Fortran::semantics::IsAllocatableOrObjectPointer(
+                  &sym->GetUltimate()))
             TODO(converter.getCurrentLocation(),
                  "pointer or allocatable variables in Copyin clause");
           assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
@@ -1815,7 +1816,7 @@ static fir::GlobalOp globalInitialization(
       firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
 
   // Create default initialization for non-character scalar.
-  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+  if (Fortran::semantics::IsAllocatableOrObjectPointer(&sym)) {
     mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
     Fortran::lower::createGlobalInitialization(
         firOpBuilder, global, [&](fir::FirOpBuilder &b) {
