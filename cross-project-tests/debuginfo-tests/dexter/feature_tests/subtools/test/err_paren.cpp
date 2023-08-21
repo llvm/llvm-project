@@ -7,9 +7,9 @@
 // Note: Despite using 'lldb' as the debugger, lldb is not actually required
 //       as the test should finish before lldb would be invoked.
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: not %dexter_base test --binary %t --debugger 'lldb' \
-// RUN:     -v -- %s | FileCheck %s --match-full-lines --strict-whitespace
+// RUN: not %dexter_base test --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-O0 -g" -v -- %s \
+// RUN:     | FileCheck %s --match-full-lines --strict-whitespace
 //
 // CHECK:parser error:{{.*}}err_paren.cpp(22): Unbalanced parenthesis starting here
 // CHECK:// {{Dex}}ExpectWatchValue(
