@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-b-offset-bits=64 %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-b-offset-bits=64 -aarch64-tbz-offset-bits=9 -aarch64-cbz-offset-bits=9 %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-tbz-offset-bits=9 -aarch64-cbz-offset-bits=9 %s -o - | FileCheck --check-prefix=INDIRECT %s
 
 --- |
   declare i32 @bar()
@@ -19,6 +20,73 @@
   true_block:                                       ; preds = %1
     %4 = call i32 @bar()
     br label %end
+  }
+
+  define void @tbz_hot_to_cold(i1 zeroext %0) {
+    br i1 %0, label %hot_block, label %cold_block
+  
+  hot_block:                                        ; preds = %1
+    %2 = call i32 @baz()
+    br label %end
+  
+  end:                                              ; preds = %cold_block, %hot_block
+    %3 = tail call i32 @qux()
+    ret void
+  
+  cold_block:                                       ; preds = %1
+    %4 = call i32 @bar()
+    br label %end
+  }
+
+  define void @tbz_no_valid_tramp(i1 zeroext %0) {
+    br i1 %0, label %hot, label %cold
+  
+  hot:                                              ; preds = %1
+    %2 = call i32 @baz()
+    call void asm sideeffect ".space 1024", ""()
+    br label %end
+  
+  end:                                              ; preds = %cold, %hot
+    %3 = tail call i32 @qux()
+    ret void
+  
+  cold:                                             ; preds = %1
+    %4 = call i32 @bar()
+    br label %end
+  }
+
+  define void @tbz_cold_to_hot(i1 zeroext %0) #0 {
+    br i1 %0, label %cold_block, label %hot_block
+  
+  cold_block:                                       ; preds = %1
+    %2 = call i32 @baz()
+    br label %end
+  
+  end:                                              ; preds = %hot_block, %cold_block
+    %3 = tail call i32 @qux()
+    ret void
+  
+  hot_block:                                        ; preds = %1
+    %4 = call i32 @bar()
+    br label %end
+  }
+
+  define void @tbz_tramp_pushed_oob(i1 zeroext %0, i1 zeroext %1) {
+  entry:
+    %x16 = call i64 asm sideeffect "mov x16, 1", "={x16}"()
+    br i1 %0, label %unrelaxable, label %cold
+
+  unrelaxable:                                      ; preds = %entry
+    br i1 %1, label %end, label %cold
+
+  end:                                              ; preds = %unrelaxable
+    call void asm sideeffect ".space 996", ""()
+    call void asm sideeffect "# reg use $0", "{x16}"(i64 %x16)
+    ret void
+
+  cold:                                            ; preds = %entry, %unrelaxable
+    call void asm sideeffect "# reg use $0", "{x16}"(i64 %x16)
+    ret void
   }
 
 ...
@@ -68,4 +136,202 @@ body:             |
     BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
     early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
     TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+...
+---
+name:            tbz_hot_to_cold
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: name: tbz_hot_to_cold
+  ; COM: Check that branch relaxation relaxes cross-section conditional
+  ; COM:   branches by creating trampolines after all other hot basic blocks.
+  ; CHECK: bb.0 (%ir-block.1):
+  ; CHECK-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK:  TBZW
+  ; CHECK-SAME: %bb.3
+  ; CHECK:  bb.1.hot_block:
+  ; CHECK:    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+  ; CHECK:  bb.3 (%ir-block.1):
+  ; CHECK-NEXT:    successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:    B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:  bb.2.cold_block (bbsections Cold):
+  ; CHECK:    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+  bb.0 (%ir-block.1):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    TBZW killed renamable $w0, 0, %bb.2
+
+  bb.1.hot_block:
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+  bb.2.cold_block (bbsections Cold):
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+...
+---
+name:            tbz_no_valid_tramp
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  ; CHECK-LABEL: name: tbz_no_valid_tramp
+  ; COM: Check that branch relaxation doesn't insert a trampoline if there is no
+  ; COM:   viable insertion location.
+  ; CHECK:    bb.0 (%ir-block.1):
+  ; CHECK-NEXT:    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK:    CBNZW
+  ; CHECK-SAME:    %bb.1
+  ; CHECK-NEXT: B
+  ; CHECK-SAME:   %bb.3
+  ; CHECK:  bb.1.hot:
+  ; CHECK:    TCRETURNdi
+  ; CHECK:  bb.2.cold (bbsections Cold):
+  ; CHECK:    TCRETURNdi
+  bb.0 (%ir-block.1):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $lr
+  
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    CBZW killed renamable $w0, %bb.2
+  
+  bb.1.hot:
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    INLINEASM &".space 1024", 1 /* sideeffect attdialect */
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+  
+  bb.2.cold (bbsections Cold):
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+...
+---
+name:            tbz_cold_to_hot
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  ; CHECK-LABEL: name: tbz_cold_to_hot
+  ; COM: Check that relaxation of conditional branches from the Cold section to
+  ; COM:   the Hot section doesn't modify the Hot section.
+  ; CHECK:  bb.0 (%ir-block.1, bbsections Cold):
+  ; CHECK-NEXT:    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:    CBNZW
+  ; CHECK-SAME:     %bb.1
+  ; CHECK-NEXT:    B %bb.2
+  ; CHECK:  bb.1.cold_block (bbsections Cold):
+  ; CHECK:    TCRETURNdi
+  ; CHECK:  bb.2.hot_block:
+  ; CHECK:    TCRETURNdi
+  bb.0 (%ir-block.1, bbsections Cold):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $lr
+  
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    CBZW killed renamable $w0, %bb.2
+  
+  bb.1.cold_block (bbsections Cold):
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+  
+  bb.2.hot_block:
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+...
+---
+name:            tbz_tramp_pushed_oob
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  ; INDIRECT-LABEL: name: tbz_tramp_pushed_oob
+  ; COM: Check that a conditional branch to a trampoline is properly relaxed
+  ; COM:   if the trampoline is pushed out of range.
+  ; INDIRECT:      bb.0.entry:
+  ; INDIRECT-NEXT:   successors: %bb.1(0x40000000), %[[TRAMP1:bb.[0-9]+]](0x40000000)
+  ; INDIRECT:        TBNZW
+  ; INDIRECT-SAME:         %bb.1
+  ; INDIRECT-NEXT:    B{{ }}
+  ; INDIRECT-SAME:           %[[TRAMP1]]
+  ; INDIRECT:      bb.1.unrelaxable:
+  ; INDIRECT-NEXT:   successors: %bb.2(0x40000000), %[[TRAMP2:bb.[0-9]+]](0x40000000)
+  ; INDIRECT:        TBNZW
+  ; INDIRECT-SAME:         %bb.2
+  ; INDIRECT:      [[TRAMP2]]
+  ; INDIRECT-NEXT:   successors: %bb.3(0x80000000)
+  ; INDIRECT:      bb.2.end:
+  ; INDIRECT:        TCRETURNdi
+  ; INDIRECT:      [[TRAMP1]].entry:
+  ; INDIRECT:        successors: %bb.3(0x80000000)
+  ; INDIRECT-NOT:  bbsections Cold
+  ; INDIRECT:      bb.3.cold (bbsections Cold):
+  ; INDIRECT:        TCRETURNdi
+
+  bb.0.entry (%ir-block.entry):
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $w0, $w1, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    INLINEASM &"mov x16, 1", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $x16
+    TBZW killed renamable $w0, 0, %bb.3
+
+  bb.1.unrelaxable:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $w1, $x16
+
+    TBNZW killed renamable $w1, 0, %bb.2
+
+    B %bb.3
+
+  bb.2.end:
+    liveins: $x16
+
+    INLINEASM &".space 996", 1 /* sideeffect attdialect */
+    INLINEASM &"# reg use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, killed $x16
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+  
+  bb.3.cold (bbsections Cold):
+    liveins: $x16
+
+    INLINEASM &"# reg use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, killed $x16
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
 ...
