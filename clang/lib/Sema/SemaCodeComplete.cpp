@@ -98,10 +98,10 @@ private:
 
     /// When the entry contains a single declaration, this is
     /// the index associated with that entry.
-    unsigned SingleDeclIndex;
+    unsigned SingleDeclIndex = 0;
 
   public:
-    ShadowMapEntry() : SingleDeclIndex(0) {}
+    ShadowMapEntry() = default;
     ShadowMapEntry(const ShadowMapEntry &) = delete;
     ShadowMapEntry(ShadowMapEntry &&Move) { *this = std::move(Move); }
     ShadowMapEntry &operator=(const ShadowMapEntry &) = delete;
