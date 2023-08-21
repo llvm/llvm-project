@@ -15,6 +15,7 @@ from dex.command.CommandBase import CommandBase, StepExpectInfo
 
 class DexDeclareAddress(CommandBase):
     def __init__(self, addr_name, expression, **kwargs):
+
         if not isinstance(addr_name, str):
             raise TypeError("invalid argument type")
 
