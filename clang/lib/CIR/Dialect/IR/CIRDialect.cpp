@@ -1147,7 +1147,7 @@ LogicalResult LoopOp::verify() {
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
-                                             mlir::Region& ctorRegion) {
+                                             mlir::Region &ctorRegion) {
   auto printType = [&]() { p << ": " << type; };
   if (!op.isDeclaration()) {
     p << "= ";
@@ -1174,15 +1174,14 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
 static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
                                                     TypeAttr &typeAttr,
                                                     Attribute &initialValueAttr,
-                                                    mlir::Region& ctorRegion) {
+                                                    mlir::Region &ctorRegion) {
   mlir::Type opTy;
   if (parser.parseOptionalEqual().failed()) {
     // Absence of equal means a declaration, so we need to parse the type.
     //  cir.global @a : i32
     if (parser.parseColonType(opTy))
       return failure();
-  }
-  else {
+  } else {
     // Parse contructor, example:
     //  cir.global @rgb = ctor : type { ... }
     if (!parser.parseOptionalKeyword("ctor")) {
@@ -1285,10 +1284,10 @@ LogicalResult GlobalOp::verify() {
   return success();
 }
 
-void GlobalOp::build(
-    OpBuilder &odsBuilder, OperationState &odsState, StringRef sym_name,
-    Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
-    function_ref<void(OpBuilder &, Location)> ctorBuilder) {
+void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                     StringRef sym_name, Type sym_type, bool isConstant,
+                     cir::GlobalLinkageKind linkage,
+                     function_ref<void(OpBuilder &, Location)> ctorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
@@ -2216,6 +2215,23 @@ LogicalResult CopyOp::verify() {
 
   if (getSrc() == getDst())
     return emitError() << "source and destination are the same";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MemCpyOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemCpyOp::verify() {
+  auto voidPtr =
+      cir::PointerType::get(getContext(), cir::VoidType::get(getContext()));
+
+  if (!getLenTy().isUnsigned())
+    return emitError() << "memcpy length must be an unsigned integer";
+
+  if (getSrcTy() != voidPtr || getDstTy() != voidPtr)
+    return emitError() << "memcpy src and dst must be void pointers";
 
   return mlir::success();
 }
