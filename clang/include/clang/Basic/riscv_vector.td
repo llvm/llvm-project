@@ -2830,6 +2830,32 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       def : RVVBuiltin<"Uv" # T # "Uv", T # "Uv" # T # "UvKzUv", "csil">;
     }
   }
+
+  let Name = "vcreate_v",
+      UnMaskedPolicyScheme = NonePolicy,
+      MaskedPolicyScheme = NonePolicy,
+      SupportOverloading = false,
+      ManualCodegen = [{
+      {
+        assert(isa<StructType>(ResultType));
+        unsigned NF = cast<StructType>(ResultType)->getNumElements();
+        llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+        for (unsigned I = 0; I < NF; ++I) {
+          ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+        }
+        return ReturnTuple;
+      }
+      }] in {
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        defvar V = VString<nf, /*signed=*/true>.S;
+        defvar UV = VString<nf, /*signed=*/false>.S;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfd">;
+        def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
+      }
+    }
+  }
 }
 
 multiclass RVVOutBuiltinSetZvbb {
