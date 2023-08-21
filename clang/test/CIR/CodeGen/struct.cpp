@@ -123,6 +123,15 @@ struct A simpleConstInit = {1};
 struct A arrConstInit[1] = {{1}};
 // CHECK: cir.global external @arrConstInit = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2EA22]> : !cir.array<!ty_22struct2EA22 x 1>
 
+// Should locally copy struct members.
+void shouldLocallyCopyStructAssignments(void) {
+  struct A a = { 3 };
+  // CHECK: %[[#SA:]] = cir.alloca !ty_22struct2EA22, cir.ptr <!ty_22struct2EA22>, ["a"] {alignment = 4 : i64}
+  struct A b = a;
+  // CHECK: %[[#SB:]] = cir.alloca !ty_22struct2EA22, cir.ptr <!ty_22struct2EA22>, ["b", init] {alignment = 4 : i64}
+  // cir.copy %[[#SA]] to %[[SB]] : !cir.ptr<!ty_22struct2EA22>
+}
+
 A get_default() { return A{2}; }
 
 struct S {

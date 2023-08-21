@@ -100,6 +100,10 @@ struct UnimplementedFeature {
   static bool fastMathFlags() { return false; }
   static bool fastMathFuncAttributes() { return false; }
 
+  // Type qualifiers.
+  static bool atomicTypes() { return false; }
+  static bool volatileTypes() { return false; }
+
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }

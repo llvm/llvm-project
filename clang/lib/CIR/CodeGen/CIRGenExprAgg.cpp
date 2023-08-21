@@ -16,9 +16,15 @@
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
+#include "mlir/IR/Attributes.h"
 
+#include "clang/AST/Decl.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace clang;
@@ -54,6 +60,32 @@ public:
       : CGF{cgf}, Dest(Dest), IsResultUnused(IsResultUnused) {}
 
   //===--------------------------------------------------------------------===//
+  //                               Utilities
+  //===--------------------------------------------------------------------===//
+
+  /// Given an expression with aggregate type that represents a value lvalue,
+  /// this method emits the address of the lvalue, then loads the result into
+  /// DestPtr.
+  void buildAggLoadOfLValue(const Expr *E);
+
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
+
+  /// Perform the final copy to DestPtr, if desired. SrcIsRValue is true if
+  /// source comes from an RValue.
+  void buildFinalDestCopy(QualType type, const LValue &src,
+                          ExprValueKind SrcValueKind = EVK_NonRValue);
+  void buildCopy(QualType type, const AggValueSlot &dest,
+                 const AggValueSlot &src);
+
+  AggValueSlot::NeedsGCBarriers_t needsGC(QualType T) {
+    if (CGF.getLangOpts().getGC() && TypeRequiresGCollection(T))
+      llvm_unreachable("garbage collection is NYI");
+    return AggValueSlot::DoesNotNeedGCBarriers;
+  }
+
+  bool TypeRequiresGCollection(QualType T);
+
+  //===--------------------------------------------------------------------===//
   //                             Visitor Methods
   //===--------------------------------------------------------------------===//
 
@@ -85,7 +117,7 @@ public:
   void VisitConstantExpr(ConstantExpr *E) { llvm_unreachable("NYI"); }
 
   // l-values
-  void VisitDeclRefExpr(DeclRefExpr *E) { llvm_unreachable("NYI"); }
+  void VisitDeclRefExpr(DeclRefExpr *E) { buildAggLoadOfLValue(E); }
   void VisitMemberExpr(MemberExpr *E) { llvm_unreachable("NYI"); }
   void VisitUnaryDeref(UnaryOperator *E) { llvm_unreachable("NYI"); }
   void VisitStringLiteral(StringLiteral *E) { llvm_unreachable("NYI"); }
@@ -93,7 +125,7 @@ public:
     llvm_unreachable("NYI");
   }
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
-    llvm_unreachable("NYI");
+    buildAggLoadOfLValue(E);
   }
   void VisitPredefinedExpr(const PredefinedExpr *E) { llvm_unreachable("NYI"); }
 
@@ -170,6 +202,88 @@ public:
   void VisitAtomicExpr(AtomicExpr *E) { llvm_unreachable("NYI"); }
 };
 } // namespace
+
+//===----------------------------------------------------------------------===//
+//                                Utilities
+//===----------------------------------------------------------------------===//
+
+/// Given an expression with aggregate type that represents a value lvalue, this
+/// method emits the address of the lvalue, then loads the result into DestPtr.
+void AggExprEmitter::buildAggLoadOfLValue(const Expr *E) {
+  LValue LV = CGF.buildLValue(E);
+
+  // If the type of the l-value is atomic, then do an atomic load.
+  if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV) ||
+      UnimplementedFeature::atomicTypes())
+    llvm_unreachable("atomic load is NYI");
+
+  buildFinalDestCopy(E->getType(), LV);
+}
+
+/// Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::buildFinalDestCopy(QualType type, const LValue &src,
+                                        ExprValueKind SrcValueKind) {
+  // If Dest is ignored, then we're evaluating an aggregate expression
+  // in a context that doesn't care about the result.  Note that loads
+  // from volatile l-values force the existence of a non-ignored
+  // destination.
+  if (Dest.isIgnored())
+    return;
+
+  // Copy non-trivial C structs here.
+  if (Dest.isVolatile() || UnimplementedFeature::volatileTypes())
+    llvm_unreachable("volatile is NYI");
+
+  if (SrcValueKind == EVK_RValue) {
+    llvm_unreachable("rvalue is NYI");
+  } else {
+    if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct)
+      llvm_unreachable("non-trivial primitive copy is NYI");
+  }
+
+  AggValueSlot srcAgg = AggValueSlot::forLValue(
+      src, AggValueSlot::IsDestructed, needsGC(type), AggValueSlot::IsAliased,
+      AggValueSlot::MayOverlap);
+  buildCopy(type, Dest, srcAgg);
+}
+
+/// Perform a copy from the source into the destination.
+///
+/// \param type - the type of the aggregate being copied; qualifiers are
+///   ignored
+void AggExprEmitter::buildCopy(QualType type, const AggValueSlot &dest,
+                               const AggValueSlot &src) {
+  if (dest.requiresGCollection())
+    llvm_unreachable("garbage collection is NYI");
+
+  // If the result of the assignment is used, copy the LHS there also.
+  // It's volatile if either side is.  Use the minimum alignment of
+  // the two sides.
+  LValue DestLV = CGF.makeAddrLValue(dest.getAddress(), type);
+  LValue SrcLV = CGF.makeAddrLValue(src.getAddress(), type);
+  if (dest.isVolatile() || src.isVolatile() ||
+      UnimplementedFeature::volatileTypes())
+    llvm_unreachable("volatile is NYI");
+  CGF.buildAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(), false);
+}
+
+/// True if the given aggregate type requires special GC API calls.
+bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
+  // Only record types have members that might require garbage collection.
+  const RecordType *RecordTy = T->getAs<RecordType>();
+  if (!RecordTy)
+    return false;
+
+  // Don't mess with non-trivial C++ types.
+  RecordDecl *Record = RecordTy->getDecl();
+  if (isa<CXXRecordDecl>(Record) &&
+      (cast<CXXRecordDecl>(Record)->hasNonTrivialCopyConstructor() ||
+       !cast<CXXRecordDecl>(Record)->hasTrivialDestructor()))
+    return false;
+
+  // Check whether the type has an object member.
+  return Record->hasObjectMember();
+}
 
 //===----------------------------------------------------------------------===//
 //                             Visitor Methods
@@ -472,6 +586,15 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     CGF.CGM.buildExplicitCastExprType(ECE, &CGF);
   switch (E->getCastKind()) {
 
+  case CK_LValueToRValue:
+    // If we're loading from a volatile type, force the destination
+    // into existence.
+    if (E->getSubExpr()->getType().isVolatileQualified() ||
+        UnimplementedFeature::volatileTypes()) {
+      llvm_unreachable("volatile is NYI");
+    }
+    [[fallthrough]];
+
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_ConstructorConversion:
@@ -536,6 +659,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_FixedPointToBoolean:
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
+    llvm::errs() << "cast '" << E->getCastKindName()
+                 << "' invalid for aggregate types\n";
     llvm_unreachable("cast kind invalid for aggregate types");
   default: {
     llvm::errs() << "cast kind not implemented: '" << E->getCastKindName()
@@ -904,8 +1029,8 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // this will be touched again soon.
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
-  // Address DestPtr = Dest.getAddress();
-  // Address SrcPtr = Src.getAddress();
+  Address DestPtr = Dest.getAddress();
+  Address SrcPtr = Src.getAddress();
 
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
@@ -924,7 +1049,7 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   }
 
   if (getLangOpts().CUDAIsDevice) {
-    assert(0 && "NYI");
+    llvm_unreachable("CUDA is NYI");
   }
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
@@ -947,13 +1072,18 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   else
     TypeInfo = getContext().getTypeInfoInChars(Ty);
 
-  llvm::Value *SizeVal = nullptr;
+  mlir::Attribute SizeVal = nullptr;
   if (TypeInfo.Width.isZero()) {
-    assert(0 && "NYI");
+    // But note that getTypeInfo returns 0 for a VLA.
+    if (auto *VAT = dyn_cast_or_null<VariableArrayType>(
+            getContext().getAsArrayType(Ty))) {
+      llvm_unreachable("VLA is NYI");
+    }
   }
   if (!SizeVal) {
-    assert(0 && "NYI");
-    // SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity());
+    // NOTE(cir): CIR types already carry info about their sizes. This is here
+    // just for codegen parity.
+    SizeVal = builder.getI64IntegerAttr(TypeInfo.Width.getQuantity());
   }
 
   // FIXME: If we have a volatile struct, the optimizer can remove what might
@@ -969,29 +1099,34 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // we need to use a different call here.  We use isVolatile to indicate when
   // either the source or the destination is volatile.
 
-  assert(0 && "NYI");
-  // DestPtr = Builder.CreateElementBitCast(DestPtr, Int8Ty);
-  // SrcPtr = Builder.CreateElementBitCast(SrcPtr, Int8Ty);
+  // NOTE(cir): original codegen would normally convert DestPtr and SrcPtr to
+  // i8* since memcpy operates on bytes. We don't need that in CIR because
+  // cir.copy will operate on any CIR pointer that points to a sized type.
 
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // fall through
   } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
-    assert(0 && "NYI");
+    RecordDecl *Record = RecordTy->getDecl();
+    if (Record->hasObjectMember()) {
+      llvm_unreachable("ObjC is NYI");
+    }
   } else if (Ty->isArrayType()) {
-    assert(0 && "NYI");
+    QualType BaseType = getContext().getBaseElementType(Ty);
+    if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
+      if (RecordTy->getDecl()->hasObjectMember()) {
+        llvm_unreachable("ObjC is NYI");
+      }
+    }
   }
 
-  assert(0 && "NYI");
-  // auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  builder.createCopy(DestPtr.getPointer(), SrcPtr.getPointer());
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case
   // the optimizer wishes to expand it in to scalar memory operations.
-  assert(!UnimplementedFeature::tbaa());
-  if (CGM.getCodeGenOpts().NewStructPathTBAA) {
-    assert(0 && "NYI");
-  }
+  if (CGM.getCodeGenOpts().NewStructPathTBAA || UnimplementedFeature::tbaa())
+    llvm_unreachable("TBAA is NYI");
 }
 
 AggValueSlot::Overlap_t
