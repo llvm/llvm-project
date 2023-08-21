@@ -5149,16 +5149,11 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   GetExpandedInteger(NewRHS, RHSLo, RHSHi);
 
   if (CCCode == ISD::SETEQ || CCCode == ISD::SETNE) {
-    if (RHSLo == RHSHi) {
-      if (ConstantSDNode *RHSCST = dyn_cast<ConstantSDNode>(RHSLo)) {
-        if (RHSCST->isAllOnes()) {
-          // Equality comparison to -1.
-          NewLHS = DAG.getNode(ISD::AND, dl,
-                               LHSLo.getValueType(), LHSLo, LHSHi);
-          NewRHS = RHSLo;
-          return;
-        }
-      }
+    if (RHSLo == RHSHi && isAllOnesConstant(RHSLo)) {
+      // Equality comparison to -1.
+      NewLHS = DAG.getNode(ISD::AND, dl, LHSLo.getValueType(), LHSLo, LHSHi);
+      NewRHS = RHSLo;
+      return;
     }
 
     NewLHS = DAG.getNode(ISD::XOR, dl, LHSLo.getValueType(), LHSLo, RHSLo);
