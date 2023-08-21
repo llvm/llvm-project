@@ -91,13 +91,13 @@ define i32 @oversized_ADDV_256(ptr noalias nocapture readonly %arg1, ptr noalias
 ; GISEL-NEXT:    usubl v2.4s, v3.4h, v4.4h
 ; GISEL-NEXT:    cmgt v3.4s, v0.4s, v1.4s
 ; GISEL-NEXT:    neg v4.4s, v1.4s
-; GISEL-NEXT:    cmgt v0.4s, v0.4s, v2.4s
 ; GISEL-NEXT:    shl v3.4s, v3.4s, #31
-; GISEL-NEXT:    shl v0.4s, v0.4s, #31
+; GISEL-NEXT:    cmgt v0.4s, v0.4s, v2.4s
 ; GISEL-NEXT:    neg v5.4s, v2.4s
 ; GISEL-NEXT:    sshr v3.4s, v3.4s, #31
-; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
+; GISEL-NEXT:    shl v0.4s, v0.4s, #31
 ; GISEL-NEXT:    bit v1.16b, v4.16b, v3.16b
+; GISEL-NEXT:    sshr v0.4s, v0.4s, #31
 ; GISEL-NEXT:    bsl v0.16b, v5.16b, v2.16b
 ; GISEL-NEXT:    add v0.4s, v1.4s, v0.4s
 ; GISEL-NEXT:    addv s0, v0.4s
@@ -122,9 +122,9 @@ define i32 @oversized_ADDV_512(ptr %arr)  {
 ; SDAG-LABEL: oversized_ADDV_512:
 ; SDAG:       // %bb.0:
 ; SDAG-NEXT:    ldp q0, q1, [x0, #32]
-; SDAG-NEXT:    ldp q3, q2, [x0]
-; SDAG-NEXT:    add v0.4s, v3.4s, v0.4s
-; SDAG-NEXT:    add v1.4s, v2.4s, v1.4s
+; SDAG-NEXT:    ldp q2, q3, [x0]
+; SDAG-NEXT:    add v1.4s, v3.4s, v1.4s
+; SDAG-NEXT:    add v0.4s, v2.4s, v0.4s
 ; SDAG-NEXT:    add v0.4s, v0.4s, v1.4s
 ; SDAG-NEXT:    addv s0, v0.4s
 ; SDAG-NEXT:    fmov w0, s0

@@ -41,7 +41,16 @@ define void @f(ptr %0) {
 ;
 ; AVX512-LABEL: f:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movb $1, 1(%rdi)
+; AVX512-NEXT:    kmovb (%rdi), %k0
+; AVX512-NEXT:    movb $-3, %al
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kandb %k1, %k0, %k0
+; AVX512-NEXT:    movb $1, %al
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512-NEXT:    kshiftrb $6, %k1, %k1
+; AVX512-NEXT:    korb %k1, %k0, %k0
+; AVX512-NEXT:    kmovb %k0, (%rdi)
 ; AVX512-NEXT:    retq
   %2 = load <8 x i1>, ptr %0
   %3 = insertelement <8 x i1> %2, i1 true, i32 1

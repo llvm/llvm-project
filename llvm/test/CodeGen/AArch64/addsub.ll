@@ -232,7 +232,7 @@ define i32 @sub_two_parts_imm_i32_neg(i32 %a) {
 define i32 @add_27962026(i32 %a) {
 ; CHECK-LABEL: add_27962026:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43690
+; CHECK-NEXT:    mov w8, #43690 // =0xaaaa
 ; CHECK-NEXT:    movk w8, #426, lsl #16
 ; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
@@ -243,7 +243,7 @@ define i32 @add_27962026(i32 %a) {
 define i32 @add_65534(i32 %a) {
 ; CHECK-LABEL: add_65534:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65534
+; CHECK-NEXT:    mov w8, #65534 // =0xfffe
 ; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
   %b = add i32 %a, 65534
@@ -259,7 +259,7 @@ define void @add_in_loop(i32 %0) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w19, #43690
+; CHECK-NEXT:    mov w19, #43690 // =0xaaaa
 ; CHECK-NEXT:    movk w19, #170, lsl #16
 ; CHECK-NEXT:  .LBB15_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add w0, w0, w19
@@ -373,7 +373,7 @@ declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 define i1 @uadd_add(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: uadd_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
+; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    add w8, w8, w1, uxtb
 ; CHECK-NEXT:    lsr w0, w8, #8
@@ -398,7 +398,7 @@ define i1 @uadd_add(i8 %a, i8 %b, ptr %p) {
 define i64 @addl_0x80000000(i64 %a) {
 ; CHECK-LABEL: addl_0x80000000:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48576
+; CHECK-NEXT:    mov w8, #48576 // =0xbdc0
 ; CHECK-NEXT:    movk w8, #65520, lsl #16
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
@@ -499,7 +499,7 @@ define i1 @ne_ln(i64 %0) {
 define i1 @reject_eq(i32 %0) {
 ; CHECK-LABEL: reject_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #51712
+; CHECK-NEXT:    mov w8, #51712 // =0xca00
 ; CHECK-NEXT:    movk w8, #15258, lsl #16
 ; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    cset w0, eq
@@ -511,7 +511,7 @@ define i1 @reject_eq(i32 %0) {
 define i1 @reject_non_eqne_csinc(i32 %0) {
 ; CHECK-LABEL: reject_non_eqne_csinc:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4369
+; CHECK-NEXT:    mov w8, #4369 // =0x1111
 ; CHECK-NEXT:    movk w8, #17, lsl #16
 ; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    cset w0, lo
@@ -524,9 +524,9 @@ define i32 @accept_csel(i32 %0) {
 ; CHECK-LABEL: accept_csel:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w9, w0, #273, lsl #12 // =1118208
-; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    mov w8, #17 // =0x11
 ; CHECK-NEXT:    cmp w9, #273
-; CHECK-NEXT:    mov w9, #11
+; CHECK-NEXT:    mov w9, #11 // =0xb
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %2 = icmp eq i32 %0, 1118481
@@ -537,11 +537,11 @@ define i32 @accept_csel(i32 %0) {
 define i32 @reject_non_eqne_csel(i32 %0) {
 ; CHECK-LABEL: reject_non_eqne_csel:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4369
-; CHECK-NEXT:    mov w9, #11
+; CHECK-NEXT:    mov w8, #4369 // =0x1111
+; CHECK-NEXT:    mov w9, #11 // =0xb
 ; CHECK-NEXT:    movk w8, #17, lsl #16
 ; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    mov w8, #17 // =0x11
 ; CHECK-NEXT:    csel w0, w9, w8, lo
 ; CHECK-NEXT:    ret
   %2 = icmp ult i32 %0, 1118481
@@ -573,7 +573,7 @@ define void @accept_branch(i32 %0) {
 define void @reject_non_eqne_branch(i32 %0) {
 ; CHECK-LABEL: reject_non_eqne_branch:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #13398
+; CHECK-NEXT:    mov w8, #13398 // =0x3456
 ; CHECK-NEXT:    movk w8, #18, lsl #16
 ; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    b.le .LBB33_2
@@ -593,20 +593,20 @@ define void @reject_non_eqne_branch(i32 %0) {
 define i32 @reject_multiple_usages(i32 %0) {
 ; CHECK-LABEL: reject_multiple_usages:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4369
-; CHECK-NEXT:    mov w9, #3
+; CHECK-NEXT:    mov w8, #4369 // =0x1111
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    mov w10, #17 // =0x11
 ; CHECK-NEXT:    movk w8, #17, lsl #16
-; CHECK-NEXT:    mov w10, #17
+; CHECK-NEXT:    mov w11, #12 // =0xc
 ; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    mov w11, #12
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    csel w9, w11, w10, hi
+; CHECK-NEXT:    mov w10, #53312 // =0xd040
+; CHECK-NEXT:    movk w10, #2, lsl #16
 ; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    mov w9, #53312
-; CHECK-NEXT:    movk w9, #2, lsl #16
-; CHECK-NEXT:    cmp w0, w9
-; CHECK-NEXT:    mov w9, #26304
+; CHECK-NEXT:    mov w9, #26304 // =0x66c0
+; CHECK-NEXT:    cmp w0, w10
 ; CHECK-NEXT:    movk w9, #1433, lsl #16
 ; CHECK-NEXT:    csel w0, w8, w9, hi
 ; CHECK-NEXT:    ret
@@ -666,11 +666,11 @@ define dso_local i32 @_extract_crng_crng() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, primary_crng
-; CHECK-NEXT:    adrp x9, input_pool
-; CHECK-NEXT:    add x9, x9, :lo12:input_pool
 ; CHECK-NEXT:    ldr w8, [x8, :lo12:primary_crng]
 ; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel x0, xzr, x9, eq
+; CHECK-NEXT:    adrp x8, input_pool
+; CHECK-NEXT:    add x8, x8, :lo12:input_pool
+; CHECK-NEXT:    csel x0, xzr, x8, eq
 ; CHECK-NEXT:    bl crng_reseed
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB36_3: // %if.end
@@ -778,7 +778,7 @@ define i32 @commute_subop0_zext(i16 %x, i32 %y, i32 %z) {
 define i8 @commute_subop0_anyext(i16 %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: commute_subop0_anyext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #111
+; CHECK-NEXT:    mov w8, #111 // =0x6f
 ; CHECK-NEXT:    sub w9, w2, w1
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    lsl w8, w8, #3

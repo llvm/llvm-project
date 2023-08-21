@@ -1788,6 +1788,12 @@ define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI132_0]
 ; CHECK-GI-NEXT:    cmhs v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
+; GISEL-LABEL: cmhsz2xi64:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI132_0
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI132_0]
+; GISEL-NEXT:    cmhs v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    ret
   %tmp3 = icmp uge <2 x i64> %A, <i64 2, i64 2>
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -1916,6 +1922,12 @@ define <2 x i64> @cmhiz2xi64(<2 x i64> %A) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI139_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
+; GISEL-LABEL: cmhiz2xi64:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI139_0
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI139_0]
+; GISEL-NEXT:    cmhi v0.2d, v0.2d, v1.2d
+; GISEL-NEXT:    ret
   %tmp3 = icmp ugt <2 x i64> %A, <i64 1, i64 1>
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -2134,6 +2146,12 @@ define <2 x i64> @cmloz2xi64(<2 x i64> %A) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI153_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
+; GISEL-LABEL: cmloz2xi64:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI153_0
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI153_0]
+; GISEL-NEXT:    cmhi v0.2d, v1.2d, v0.2d
+; GISEL-NEXT:    ret
   %tmp3 = icmp ult <2 x i64> %A, <i64 2, i64 2>
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
@@ -4279,11 +4297,18 @@ define <4 x i32> @fcmule4xfloat_fast_zext(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmule4xfloat_fast_zext:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI322_0
 ; CHECK-GI-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    adrp x8, .LCPI322_0
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI322_0]
 ; CHECK-GI-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
+; GISEL-LABEL: fcmule4xfloat_fast_zext:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    adrp x8, .LCPI322_0
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI322_0]
+; GISEL-NEXT:    bic v0.16b, v1.16b, v0.16b
+; GISEL-NEXT:    ret
   %tmp3 = fcmp fast ule <4 x float> %A, %B
   %tmp4 = zext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
@@ -4310,8 +4335,8 @@ define <4 x i1> @fcmule4xfloat_fast_aext(<4 x float> %A, <4 x float> %B) {
 define <4 x i64> @fcmoeq4xdouble(<4 x double> %A, <4 x double> %B) {
 ; CHECK-SD-LABEL: fcmoeq4xdouble:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcmeq v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    fcmeq v1.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    fcmeq v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fcmoeq4xdouble:
@@ -4331,8 +4356,8 @@ define <4 x i64> @fcmoeq4xdouble(<4 x double> %A, <4 x double> %B) {
 define <8 x i32> @fcmoeq8xfloat(<8 x float> %A, <8 x float> %B) {
 ; CHECK-SD-LABEL: fcmoeq8xfloat:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    fcmeq v1.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fcmoeq8xfloat:

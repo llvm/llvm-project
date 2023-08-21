@@ -1402,7 +1402,7 @@ def ProcessorFeatures {
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations.
-def : ProcessorModel<"generic", CortexA55Model, ProcessorFeatures.Generic,
+def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
                       FeatureEnableSelectOptimize]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,

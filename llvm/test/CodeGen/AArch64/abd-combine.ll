@@ -20,9 +20,9 @@ define <8 x i16> @abdu_const(<8 x i16> %src1) {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sub v2.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    abs v1.4s, v1.4s
 ; CHECK-NEXT:    abs v0.4s, v0.4s
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
@@ -37,11 +37,11 @@ define <8 x i16> @abdu_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const_lhs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    usubw2 v2.4s, v1.4s, v0.8h
-; CHECK-NEXT:    usubw v0.4s, v1.4s, v0.4h
-; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    usubw v2.4s, v1.4s, v0.4h
+; CHECK-NEXT:    usubw2 v0.4s, v1.4s, v0.8h
 ; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -330,9 +330,9 @@ define <8 x i16> @abds_const(<8 x i16> %src1) {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sub v2.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    abs v1.4s, v1.4s
 ; CHECK-NEXT:    abs v0.4s, v0.4s
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
@@ -347,11 +347,11 @@ define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_lhs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ssubw2 v2.4s, v1.4s, v0.8h
-; CHECK-NEXT:    ssubw v0.4s, v1.4s, v0.4h
-; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    ssubw v2.4s, v1.4s, v0.4h
+; CHECK-NEXT:    ssubw2 v0.4s, v1.4s, v0.8h
 ; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    abs v1.4s, v2.4s
+; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -405,11 +405,11 @@ define <8 x i16> @abds_const_bothhigh() {
 define <8 x i16> @abds_undef(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    abs v1.4s, v1.4s
+; CHECK-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
 ; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    abs v1.4s, v1.4s
+; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = sext <8 x i16> undef to <8 x i32>
@@ -530,10 +530,10 @@ define <8 x i16> @abds_i_reassoc(<8 x i16> %src1) {
 define <1 x i64> @recursive() {
 ; CHECK-LABEL: recursive:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.8b, #1
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    uabd v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    uabdl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    uabd v2.8b, v1.8b, v0.8b
+; CHECK-NEXT:    uabdl v0.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    dup v1.8b, v2.b[0]
 ; CHECK-NEXT:    saddlp v0.1d, v0.2s
 ; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b

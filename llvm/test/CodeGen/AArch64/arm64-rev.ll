@@ -306,8 +306,8 @@ define <8 x i8> @test_vrev32D8(ptr %A) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI19_0]
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -327,8 +327,8 @@ define <4 x i16> @test_vrev32D16(ptr %A) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI20_0
-; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI20_0]
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -386,8 +386,8 @@ define <8 x i8> @test_vrev16D8(ptr %A) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
-; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI23_0]
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -451,16 +451,16 @@ define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp {
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add x8, x1, #2
 ; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    add x8, x1, #2
 ; CHECK-SD-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-SD-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add x8, x1, #2
 ; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    add x8, x1, #2
 ; CHECK-GI-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-GI-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-GI-NEXT:    ret
@@ -487,8 +487,8 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ;
 ; CHECK-GI-LABEL: float_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
 ; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
@@ -615,19 +615,19 @@ entry:
 define i64 @test_rev16_x_hwbyteswaps_complex1(i64 %a) nounwind {
 ; CHECK-SD-LABEL: test_rev16_x_hwbyteswaps_complex1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #48
-; CHECK-SD-NEXT:    lsr x9, x0, #8
-; CHECK-SD-NEXT:    lsr x10, x0, #32
-; CHECK-SD-NEXT:    and x11, x9, #0xff000000000000
-; CHECK-SD-NEXT:    lsr x12, x0, #16
-; CHECK-SD-NEXT:    bfi x11, x8, #56, #8
-; CHECK-SD-NEXT:    and x8, x9, #0xff00000000
-; CHECK-SD-NEXT:    orr x8, x11, x8
-; CHECK-SD-NEXT:    and x9, x9, #0xff0000
-; CHECK-SD-NEXT:    bfi x8, x10, #40, #8
-; CHECK-SD-NEXT:    orr x8, x8, x9
+; CHECK-SD-NEXT:    lsr x8, x0, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #48
+; CHECK-SD-NEXT:    and x10, x8, #0xff000000000000
+; CHECK-SD-NEXT:    and x11, x8, #0xff00000000
+; CHECK-SD-NEXT:    and x8, x8, #0xff0000
+; CHECK-SD-NEXT:    bfi x10, x9, #56, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #32
+; CHECK-SD-NEXT:    orr x10, x10, x11
+; CHECK-SD-NEXT:    bfi x10, x9, #40, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #16
+; CHECK-SD-NEXT:    orr x8, x10, x8
+; CHECK-SD-NEXT:    bfi x8, x9, #24, #8
 ; CHECK-SD-NEXT:    ubfiz x9, x0, #8, #8
-; CHECK-SD-NEXT:    bfi x8, x12, #24, #8
 ; CHECK-SD-NEXT:    bfxil x8, x0, #8, #8
 ; CHECK-SD-NEXT:    orr x0, x8, x9
 ; CHECK-SD-NEXT:    ret
@@ -640,16 +640,16 @@ define i64 @test_rev16_x_hwbyteswaps_complex1(i64 %a) nounwind {
 ; CHECK-GI-NEXT:    and x11, x9, #0xff00000000000000
 ; CHECK-GI-NEXT:    and x12, x8, #0xff00000000
 ; CHECK-GI-NEXT:    and x13, x9, #0xff0000000000
+; CHECK-GI-NEXT:    and x14, x8, #0xff0000
 ; CHECK-GI-NEXT:    orr x10, x10, x11
-; CHECK-GI-NEXT:    orr x11, x12, x13
-; CHECK-GI-NEXT:    and x12, x8, #0xff0000
-; CHECK-GI-NEXT:    and x13, x9, #0xff000000
+; CHECK-GI-NEXT:    and x11, x9, #0xff000000
 ; CHECK-GI-NEXT:    orr x12, x12, x13
 ; CHECK-GI-NEXT:    and x8, x8, #0xff
-; CHECK-GI-NEXT:    orr x10, x10, x11
-; CHECK-GI-NEXT:    orr x8, x12, x8
-; CHECK-GI-NEXT:    orr x8, x10, x8
+; CHECK-GI-NEXT:    orr x11, x14, x11
+; CHECK-GI-NEXT:    orr x10, x10, x12
 ; CHECK-GI-NEXT:    and x9, x9, #0xff00
+; CHECK-GI-NEXT:    orr x8, x11, x8
+; CHECK-GI-NEXT:    orr x8, x10, x8
 ; CHECK-GI-NEXT:    orr x0, x8, x9
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -676,14 +676,14 @@ entry:
 define i64 @test_rev16_x_hwbyteswaps_complex2(i64 %a) nounwind {
 ; CHECK-SD-LABEL: test_rev16_x_hwbyteswaps_complex2:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    lsr x8, x0, #8
 ; CHECK-SD-NEXT:    lsr x9, x0, #48
 ; CHECK-SD-NEXT:    lsr x10, x0, #32
-; CHECK-SD-NEXT:    lsr x8, x0, #8
-; CHECK-SD-NEXT:    lsr x11, x0, #16
 ; CHECK-SD-NEXT:    and x8, x8, #0xff00ff00ff00ff
 ; CHECK-SD-NEXT:    bfi x8, x9, #56, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #16
 ; CHECK-SD-NEXT:    bfi x8, x10, #40, #8
-; CHECK-SD-NEXT:    bfi x8, x11, #24, #8
+; CHECK-SD-NEXT:    bfi x8, x9, #24, #8
 ; CHECK-SD-NEXT:    bfi x8, x0, #8, #8
 ; CHECK-SD-NEXT:    mov x0, x8
 ; CHECK-SD-NEXT:    ret
@@ -696,16 +696,16 @@ define i64 @test_rev16_x_hwbyteswaps_complex2(i64 %a) nounwind {
 ; CHECK-GI-NEXT:    and x11, x8, #0xff00000000
 ; CHECK-GI-NEXT:    and x12, x8, #0xff0000
 ; CHECK-GI-NEXT:    and x8, x8, #0xff
+; CHECK-GI-NEXT:    and x13, x9, #0xff00000000000000
 ; CHECK-GI-NEXT:    orr x10, x10, x11
+; CHECK-GI-NEXT:    and x11, x9, #0xff0000000000
 ; CHECK-GI-NEXT:    orr x8, x12, x8
-; CHECK-GI-NEXT:    and x11, x9, #0xff00000000000000
-; CHECK-GI-NEXT:    and x12, x9, #0xff0000000000
-; CHECK-GI-NEXT:    orr x11, x11, x12
 ; CHECK-GI-NEXT:    and x12, x9, #0xff000000
+; CHECK-GI-NEXT:    orr x11, x13, x11
 ; CHECK-GI-NEXT:    orr x8, x10, x8
+; CHECK-GI-NEXT:    and x9, x9, #0xff00
 ; CHECK-GI-NEXT:    orr x10, x11, x12
 ; CHECK-GI-NEXT:    orr x8, x8, x10
-; CHECK-GI-NEXT:    and x9, x9, #0xff00
 ; CHECK-GI-NEXT:    orr x0, x8, x9
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -733,19 +733,19 @@ entry:
 define i64 @test_rev16_x_hwbyteswaps_complex3(i64 %a) nounwind {
 ; CHECK-SD-LABEL: test_rev16_x_hwbyteswaps_complex3:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #48
-; CHECK-SD-NEXT:    lsr x9, x0, #8
-; CHECK-SD-NEXT:    lsr x10, x0, #32
-; CHECK-SD-NEXT:    and x11, x9, #0xff000000000000
-; CHECK-SD-NEXT:    lsr x12, x0, #16
-; CHECK-SD-NEXT:    bfi x11, x8, #56, #8
-; CHECK-SD-NEXT:    and x8, x9, #0xff00000000
-; CHECK-SD-NEXT:    orr x8, x8, x11
-; CHECK-SD-NEXT:    and x9, x9, #0xff0000
-; CHECK-SD-NEXT:    bfi x8, x10, #40, #8
-; CHECK-SD-NEXT:    orr x8, x9, x8
+; CHECK-SD-NEXT:    lsr x8, x0, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #48
+; CHECK-SD-NEXT:    and x10, x8, #0xff000000000000
+; CHECK-SD-NEXT:    and x11, x8, #0xff00000000
+; CHECK-SD-NEXT:    and x8, x8, #0xff0000
+; CHECK-SD-NEXT:    bfi x10, x9, #56, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #32
+; CHECK-SD-NEXT:    orr x10, x11, x10
+; CHECK-SD-NEXT:    bfi x10, x9, #40, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #16
+; CHECK-SD-NEXT:    orr x8, x8, x10
+; CHECK-SD-NEXT:    bfi x8, x9, #24, #8
 ; CHECK-SD-NEXT:    ubfiz x9, x0, #8, #8
-; CHECK-SD-NEXT:    bfi x8, x12, #24, #8
 ; CHECK-SD-NEXT:    bfxil x8, x0, #8, #8
 ; CHECK-SD-NEXT:    orr x0, x9, x8
 ; CHECK-SD-NEXT:    ret
@@ -758,16 +758,16 @@ define i64 @test_rev16_x_hwbyteswaps_complex3(i64 %a) nounwind {
 ; CHECK-GI-NEXT:    and x11, x9, #0xff00000000000000
 ; CHECK-GI-NEXT:    and x12, x8, #0xff00000000
 ; CHECK-GI-NEXT:    and x13, x9, #0xff0000000000
+; CHECK-GI-NEXT:    and x14, x8, #0xff0000
 ; CHECK-GI-NEXT:    orr x10, x11, x10
-; CHECK-GI-NEXT:    orr x11, x13, x12
-; CHECK-GI-NEXT:    and x12, x8, #0xff0000
-; CHECK-GI-NEXT:    and x13, x9, #0xff000000
+; CHECK-GI-NEXT:    and x11, x9, #0xff000000
 ; CHECK-GI-NEXT:    orr x12, x13, x12
 ; CHECK-GI-NEXT:    and x8, x8, #0xff
-; CHECK-GI-NEXT:    orr x10, x11, x10
-; CHECK-GI-NEXT:    orr x8, x8, x12
-; CHECK-GI-NEXT:    orr x8, x8, x10
+; CHECK-GI-NEXT:    orr x11, x11, x14
+; CHECK-GI-NEXT:    orr x10, x12, x10
 ; CHECK-GI-NEXT:    and x9, x9, #0xff00
+; CHECK-GI-NEXT:    orr x8, x8, x11
+; CHECK-GI-NEXT:    orr x8, x8, x10
 ; CHECK-GI-NEXT:    orr x0, x9, x8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -794,11 +794,11 @@ entry:
 define i64 @test_or_and_combine1(i64 %a) nounwind {
 ; CHECK-SD-LABEL: test_or_and_combine1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #24
-; CHECK-SD-NEXT:    lsr x9, x0, #8
-; CHECK-SD-NEXT:    and x10, x9, #0xff000000000000
-; CHECK-SD-NEXT:    bfi x10, x8, #32, #8
-; CHECK-SD-NEXT:    and x8, x9, #0xff0000
+; CHECK-SD-NEXT:    lsr x8, x0, #8
+; CHECK-SD-NEXT:    lsr x9, x0, #24
+; CHECK-SD-NEXT:    and x10, x8, #0xff000000000000
+; CHECK-SD-NEXT:    and x8, x8, #0xff0000
+; CHECK-SD-NEXT:    bfi x10, x9, #32, #8
 ; CHECK-SD-NEXT:    orr x0, x10, x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -808,8 +808,8 @@ define i64 @test_or_and_combine1(i64 %a) nounwind {
 ; CHECK-GI-NEXT:    lsl x9, x0, #8
 ; CHECK-GI-NEXT:    and x10, x8, #0xff000000000000
 ; CHECK-GI-NEXT:    and x9, x9, #0xff00000000
-; CHECK-GI-NEXT:    orr x9, x10, x9
 ; CHECK-GI-NEXT:    and x8, x8, #0xff0000
+; CHECK-GI-NEXT:    orr x9, x10, x9
 ; CHECK-GI-NEXT:    orr x0, x9, x8
 ; CHECK-GI-NEXT:    ret
 entry:
