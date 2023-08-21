@@ -219,6 +219,21 @@ public:
   }
 };
 
+class CIRMemCpyOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::MemCpyOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::MemCpyOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::MemCpyOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+        op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
+        /*isVolatile=*/false);
+    return mlir::success();
+  }
+};
+
 class CIRPtrStrideOpLowering
     : public mlir::OpConversionPattern<mlir::cir::PtrStrideOp> {
 public:
@@ -1769,8 +1784,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
                CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
                CIRStructElementAddrOpLowering, CIRSwitchOpLowering,
-               CIRPtrDiffOpLowering, CIRCopyOpLowering>(converter,
-                                                        patterns.getContext());
+               CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
