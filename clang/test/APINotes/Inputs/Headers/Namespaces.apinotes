@@ -1,8 +1,13 @@
 ---
 Name: Namespaces
+Globals:
+  - Name: varInInlineNamespace
+    SwiftName: swiftVarInInlineNamespace
 Functions:
   - Name: funcInNamespace
     SwiftName: inWrongContext()
+  - Name: funcInInlineNamespace
+    SwiftName: swiftFuncInInlineNamespace()
 Tags:
   - Name: char_box
     SwiftName: InWrongContext
@@ -42,3 +47,7 @@ Namespaces:
         Globals:
           - Name: varInNestedNamespace
             SwiftName: swiftAnotherVarInNestedNamespace
+  - Name: InlineNamespace1
+    Functions:
+      - Name: funcInInlineNamespace
+        SwiftName: shouldNotSpellOutInlineNamespaces()
