@@ -114,6 +114,29 @@ struct CIROpts {
   unsigned HistLimit;
 };
 
+static const char StringsDelimiter[] = ";";
+
+// FIXME(cir): this function was extracted from clang::tidy::utils::options
+// given that ClangTidy.cpp cannot be linked with ClangTidyUtils.
+std::vector<StringRef> parseStringList(StringRef Option) {
+  Option = Option.trim().trim(StringsDelimiter);
+  if (Option.empty())
+    return {};
+  std::vector<StringRef> Result;
+  Result.reserve(Option.count(StringsDelimiter) + 1);
+  StringRef Cur;
+  while (std::tie(Cur, Option) = Option.split(StringsDelimiter),
+         !Option.empty()) {
+    Cur = Cur.trim();
+    if (!Cur.empty())
+      Result.push_back(Cur);
+  }
+  Cur = Cur.trim();
+  if (!Cur.empty())
+    Result.push_back(Cur);
+  return Result;
+}
+
 class CIRASTConsumer : public ASTConsumer {
 public:
   CIRASTConsumer(CompilerInstance &CI, StringRef inputFile,
@@ -666,10 +689,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
         OV.get("CodeGenSkipFunctionsFromSystemHeaders", false);
 
     cir::CIROpts opts;
-    opts.RemarksList =
-        utils::options::parseStringList(OV.get("RemarksList", ""));
-    opts.HistoryList =
-        utils::options::parseStringList(OV.get("HistoryList", "all"));
+    opts.RemarksList = cir::parseStringList(OV.get("RemarksList", ""));
+    opts.HistoryList = cir::parseStringList(OV.get("HistoryList", "all"));
     opts.HistLimit = OV.get("HistLimit", 1U);
 
     std::unique_ptr<cir::CIRASTConsumer> CIRConsumer =
