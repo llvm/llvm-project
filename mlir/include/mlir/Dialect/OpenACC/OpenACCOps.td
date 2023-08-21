@@ -1332,6 +1332,36 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
   let hasVerifier = 0;
 }
 
+def OpenACC_DeclareOp : OpenACC_Op<"declare", [RecursiveMemoryEffects]> {
+  let summary = "declare implicit region";
+
+  let description = [{
+    The "acc.declare" operation represents an implicit declare region in
+    function (and subroutine in Fortran).
+
+    Example:
+
+    ```mlir
+    %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+    acc.declare dataOperands(%pa: memref<10x10xf32>) {
+      // implicit region
+    }
+    ```
+  }];
+
+  let arguments = (ins
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+      `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.15.1 Routine Directive
 //===----------------------------------------------------------------------===//
