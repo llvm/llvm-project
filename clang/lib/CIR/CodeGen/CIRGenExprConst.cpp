@@ -869,8 +869,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
                                              QualType T) {
-    assert(0 && "not implemented");
-    return {};
+    return CGM.getBuilder().getZeroInitAttr(CGM.getCIRType(T));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ILE, QualType T) {
