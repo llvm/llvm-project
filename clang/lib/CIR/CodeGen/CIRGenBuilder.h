@@ -29,6 +29,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 #include <string>
 
 namespace cir {
@@ -469,6 +470,12 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+
+  /// Create a copy with inferred length.
+  mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
+    return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src);
+  }
+
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = value.getType().dyn_cast<mlir::cir::IntType>()) {

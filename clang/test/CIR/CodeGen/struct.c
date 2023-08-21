@@ -68,3 +68,13 @@ void shouldCopyStructAsCallArg(struct S1 s) {
   // CHECK-DAG: %[[#LV:]] = cir.load %{{.+}} : cir.ptr <!ty_22struct2ES122>, !ty_22struct2ES122
   // CHECK-DAG: cir.call @shouldCopyStructAsCallArg(%[[#LV]]) : (!ty_22struct2ES122) -> ()
 }
+
+struct Bar shouldGenerateAndAccessStructArrays(void) {
+  struct Bar s[1] = {{3, 4}};
+  return s[0];
+}
+// CHECK-DAG: cir.func @shouldGenerateAndAccessStructArrays
+// CHECK-DAG: %[[#STRIDE:]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-DAG: %[[#DARR:]] = cir.cast(array_to_ptrdecay, %{{.+}} : !cir.ptr<!cir.array<!ty_22struct2EBar22 x 1>>), !cir.ptr<!ty_22struct2EBar22>
+// CHECK-DAG: %[[#ELT:]] = cir.ptr_stride(%[[#DARR]] : !cir.ptr<!ty_22struct2EBar22>, %[[#STRIDE]] : !s32i), !cir.ptr<!ty_22struct2EBar22>
+// CHECK-DAG: cir.copy %[[#ELT]] to %{{.+}} : !cir.ptr<!ty_22struct2EBar22>
