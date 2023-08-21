@@ -1,0 +1,9 @@
+// RUN: cir-opt %s
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @shouldParseCopyOp(%arg0 : !cir.ptr<!s32i>, %arg1 : !cir.ptr<!s32i>) {
+    cir.copy %arg0 to %arg1 : !cir.ptr<!s32i>
+    cir.return
+  }
+}

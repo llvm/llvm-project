@@ -1821,6 +1821,44 @@ def AwaitOp : CIR_Op<"await",
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
+  let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
+                       Arg<CIR_PointerType, "", [MemRead]>:$src);
+  let summary = "Copies contents from a CIR pointer to another";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
+    pointed by `src` to the memory pointed by `dst`.
+
+    The amount of bytes copied is inferred from the pointee type. Naturally,
+    the pointee type of both `src` and `dst` must match and must implement
+    the `DataLayoutTypeInterface`.
+
+    Examples:
+
+    ```mlir
+      // Copying contents from one struct to another:
+      cir.copy %0 to %1 : !cir.ptr<!struct_ty>
+    ```
+  }];
+
+  let assemblyFormat = "$src `to` $dst attr-dict `:` qualified(type($dst))";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the pointer type being copied.
+    mlir::cir::PointerType getType() { return getSrc().getType(); }
+
+    /// Returns the number of bytes to be copied.
+    unsigned getLength() {
+      return DataLayout::closest(*this).getTypeSize(getType().getPointee());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
