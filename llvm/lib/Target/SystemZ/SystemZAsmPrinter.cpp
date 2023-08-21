@@ -1315,13 +1315,15 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     // EntryPoint Marker
     const MachineFrameInfo &MFFrame = MF->getFrameInfo();
     bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
+    uint32_t DSASize = MFFrame.getStackSize();
+    bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
 
     // Set Flags
     uint8_t Flags = 0;
+    if (IsLeaf)
+      Flags |= 0x08;
     if (IsUsingAlloca)
       Flags |= 0x04;
-
-    uint32_t DSASize = MFFrame.getStackSize();
 
     // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
     uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
@@ -1340,6 +1342,10 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     if (OutStreamer->isVerboseAsm()) {
       OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
       OutStreamer->AddComment("Entry Flags");
+      if (Flags & 0x08)
+        OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
+      else
+        OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
       if (Flags & 0x04)
         OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
       else
