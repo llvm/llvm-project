@@ -1,9 +1,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 //
-// RUN: %clang -O0 -glldb %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -glldb" -- %s
 
 class A {
 public:
