@@ -12,6 +12,7 @@
 
 #include "RISCVLegalizerInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -51,17 +52,23 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(1, s32, XLenLLT)
       .clampScalar(0, s32, XLenLLT);
 
-  if (ST.is64Bit())
+  if (ST.is64Bit()) {
     getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
         .legalFor({{XLenLLT, s32}})
         .maxScalar(0, XLenLLT);
-  else
+
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .customFor({XLenLLT})
+        .maxScalar(0, XLenLLT)
+        .lower();
+  } else {
     getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
         .maxScalar(0, XLenLLT);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .maxScalar(0, XLenLLT)
-      .lower();
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .maxScalar(0, XLenLLT)
+        .lower();
+  }
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -161,4 +168,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getLegacyLegalizerInfo().computeTables();
+}
+
+bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
+                                        MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    // No idea what to do.
+    return false;
+  case TargetOpcode::G_SEXT_INREG: {
+    // Source size of 32 is sext.w.
+    int64_t SizeInBits = MI.getOperand(2).getImm();
+    if (SizeInBits == 32)
+      return true;
+
+    return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
+           LegalizerHelper::Legalized;
+  }
+  }
+
+  llvm_unreachable("expected switch to return");
 }
