@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
 
 // Should implicitly zero-initialize global array elements.
 struct S {
