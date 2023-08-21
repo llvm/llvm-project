@@ -14,51 +14,84 @@ using namespace llvm;
 namespace {
 
 TEST(ShuffleVectorInst, isIdentityMask) {
-  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3}));
-  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3, -1}));
-  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, -1, 3}));
+  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3}, 4));
+  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3, -1}, 5));
+  ASSERT_TRUE(ShuffleVectorInst::isIdentityMask({0, 1, -1, 3}, 4));
 
-  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 4}));
-  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, -1, 2, 4}));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3, -1}, 4));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, -1, 3}, 3));
+
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3}, 5));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 3, -1}, 6));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, -1, 3}, 5));
+
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, 1, 2, 4}, 4));
+  ASSERT_FALSE(ShuffleVectorInst::isIdentityMask({0, -1, 2, 4}, 4));
 }
 
 TEST(ShuffleVectorInst, isSelectMask) {
-  ASSERT_TRUE(ShuffleVectorInst::isSelectMask({0, 5, 6, 3}));
+  ASSERT_TRUE(ShuffleVectorInst::isSelectMask({0, 5, 6, 3}, 4));
 
-  ASSERT_FALSE(ShuffleVectorInst::isSelectMask({0, 1, 2, 3}));
+  ASSERT_FALSE(ShuffleVectorInst::isSelectMask({0, 5, 6, 3}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isSelectMask({0, 5, 6, 3}, 5));
+
+  ASSERT_FALSE(ShuffleVectorInst::isSelectMask({0, 1, 2, 3}, 4));
 }
 
 TEST(ShuffleVectorInst, isReverseMask) {
-  ASSERT_TRUE(ShuffleVectorInst::isReverseMask({3, 2, 1, 0}));
-  ASSERT_TRUE(ShuffleVectorInst::isReverseMask({-1, -1, 1, 0}));
+  ASSERT_TRUE(ShuffleVectorInst::isReverseMask({3, 2, 1, 0}, 4));
+  ASSERT_TRUE(ShuffleVectorInst::isReverseMask({-1, -1, 1, 0}, 4));
 
-  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({4, 3, 2, 1}));
+  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({3, 2, 1, 0}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({-1, -1, 1, 0}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({3, 2, 1, 0}, 5));
+  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({-1, -1, 1, 0}, 5));
+
+  ASSERT_FALSE(ShuffleVectorInst::isReverseMask({4, 3, 2, 1}, 4));
 }
 
 TEST(ShuffleVectorInst, isZeroEltSplatMask) {
-  ASSERT_TRUE(ShuffleVectorInst::isZeroEltSplatMask({0, 0, 0, 0}));
-  ASSERT_TRUE(ShuffleVectorInst::isZeroEltSplatMask({0, -1, 0, -1}));
+  ASSERT_TRUE(ShuffleVectorInst::isZeroEltSplatMask({0, 0, 0, 0}, 4));
+  ASSERT_TRUE(ShuffleVectorInst::isZeroEltSplatMask({0, -1, 0, -1}, 4));
 
-  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({1, 1, 1, 1}));
+  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({0, 0, 0, 0}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({0, -1, 0, -1}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({0, 0, 0, 0}, 5));
+  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({0, -1, 0, -1}, 5));
+
+  ASSERT_FALSE(ShuffleVectorInst::isZeroEltSplatMask({1, 1, 1, 1}, 4));
 }
 
 TEST(ShuffleVectorInst, isTransposeMask) {
-  ASSERT_TRUE(ShuffleVectorInst::isTransposeMask({0, 4, 2, 6}));
-  ASSERT_TRUE(ShuffleVectorInst::isTransposeMask({1, 5, 3, 7}));
+  ASSERT_TRUE(ShuffleVectorInst::isTransposeMask({0, 4, 2, 6}, 4));
+  ASSERT_TRUE(ShuffleVectorInst::isTransposeMask({1, 5, 3, 7}, 4));
 
-  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({2, 6, 4, 8}));
+  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({0, 4, 2, 6}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({1, 5, 3, 7}, 3));
+  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({0, 4, 2, 6}, 5));
+  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({1, 5, 3, 7}, 5));
+
+  ASSERT_FALSE(ShuffleVectorInst::isTransposeMask({2, 6, 4, 8}, 4));
 }
 
 TEST(ShuffleVectorInst, isSpliceMask) {
   int Index;
 
-  ASSERT_TRUE(ShuffleVectorInst::isSpliceMask({0, 1, 2, 3}, Index));
+  ASSERT_TRUE(ShuffleVectorInst::isSpliceMask({0, 1, 2, 3}, 4, Index));
   ASSERT_EQ(0, Index);
 
-  ASSERT_TRUE(ShuffleVectorInst::isSpliceMask({1, 2, 3, 4, 5, 6, 7}, Index));
+  ASSERT_TRUE(ShuffleVectorInst::isSpliceMask({1, 2, 3, 4, 5, 6, 7}, 7, Index));
   ASSERT_EQ(1, Index);
 
-  ASSERT_FALSE(ShuffleVectorInst::isSpliceMask({4, 5, 6, 7}, Index));
+  ASSERT_FALSE(ShuffleVectorInst::isSpliceMask({0, 1, 2, 3}, 3, Index));
+  ASSERT_FALSE(
+      ShuffleVectorInst::isSpliceMask({1, 2, 3, 4, 5, 6, 7}, 6, Index));
+  ASSERT_FALSE(ShuffleVectorInst::isSpliceMask({0, 1, 2, 3}, 5, Index));
+  ASSERT_FALSE(
+      ShuffleVectorInst::isSpliceMask({1, 2, 3, 4, 5, 6, 7}, 8, Index));
+
+  ASSERT_FALSE(ShuffleVectorInst::isSpliceMask({4, 5, 6, 7}, 4, Index));
 }
 
 TEST(ShuffleVectorInst, isExtractSubvectorMask) {
