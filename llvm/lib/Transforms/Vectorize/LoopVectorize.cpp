@@ -408,13 +408,6 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 ///       we always assume predicated blocks have a 50% chance of executing.
 static unsigned getReciprocalPredBlockProb() { return 2; }
 
-/// A helper function that returns an integer or floating-point constant with
-/// value C.
-static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
-  return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
-                           : ConstantFP::get(Ty, C);
-}
-
 /// Returns "best known" trip count for the specified loop \p L as defined by
 /// the following procedure:
 ///   1) Returns exact trip count if it is known.
@@ -1015,14 +1008,6 @@ const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
 
   ScalarEvolution &SE = *PSE.getSE();
   return SE.getTripCountFromExitCount(BackedgeTakenCount, IdxTy, OrigLoop);
-}
-
-static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,
-                                  ElementCount VF) {
-  assert(FTy->isFloatingPointTy() && "Expected floating point type!");
-  Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
-  Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
-  return B.CreateUIToFP(RuntimeVF, FTy);
 }
 
 void reportVectorizationFailure(const StringRef DebugMsg,
@@ -2233,59 +2218,6 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
 // Implementation of LoopVectorizationLegality, InnerLoopVectorizer and
 // LoopVectorizationCostModel and LoopVectorizationPlanner.
 //===----------------------------------------------------------------------===//
-
-/// This function adds
-/// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
-/// to each vector element of Val. The sequence starts at StartIndex.
-/// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
-                            Instruction::BinaryOps BinOp, ElementCount VF,
-                            IRBuilderBase &Builder) {
-  assert(VF.isVector() && "only vector VFs are supported");
-
-  // Create and check the types.
-  auto *ValVTy = cast<VectorType>(Val->getType());
-  ElementCount VLen = ValVTy->getElementCount();
-
-  Type *STy = Val->getType()->getScalarType();
-  assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
-         "Induction Step must be an integer or FP");
-  assert(Step->getType() == STy && "Step has wrong type");
-
-  SmallVector<Constant *, 8> Indices;
-
-  // Create a vector of consecutive numbers from zero to VF.
-  VectorType *InitVecValVTy = ValVTy;
-  if (STy->isFloatingPointTy()) {
-    Type *InitVecValSTy =
-        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
-    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
-  }
-  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
-
-  // Splat the StartIdx
-  Value *StartIdxSplat = Builder.CreateVectorSplat(VLen, StartIdx);
-
-  if (STy->isIntegerTy()) {
-    InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
-    Step = Builder.CreateVectorSplat(VLen, Step);
-    assert(Step->getType() == Val->getType() && "Invalid step vec");
-    // FIXME: The newly created binary instructions should contain nsw/nuw
-    // flags, which can be found from the original scalar operations.
-    Step = Builder.CreateMul(InitVec, Step);
-    return Builder.CreateAdd(Val, Step, "induction");
-  }
-
-  // Floating point induction.
-  assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
-         "Binary Opcode should be specified for FP induction");
-  InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
-  InitVec = Builder.CreateFAdd(InitVec, StartIdxSplat);
-
-  Step = Builder.CreateVectorSplat(VLen, Step);
-  Value *MulOp = Builder.CreateFMul(InitVec, Step);
-  return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
-}
 
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
@@ -9188,107 +9120,6 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
-  assert(!State.Instance && "Int or FP induction being replicated.");
-
-  Value *Start = getStartValue()->getLiveInIRValue();
-  const InductionDescriptor &ID = getInductionDescriptor();
-  TruncInst *Trunc = getTruncInst();
-  IRBuilderBase &Builder = State.Builder;
-  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
-  assert(State.VF.isVector() && "must have vector VF");
-
-  // The value from the original loop to which we are mapping the new induction
-  // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
-    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
-
-  // Now do the actual transformations, and start with fetching the step value.
-  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-
-  assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
-         "Expected either an induction phi-node or a truncate of it!");
-
-  // Construct the initial value of the vector IV in the vector loop preheader
-  auto CurrIP = Builder.saveIP();
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Builder.SetInsertPoint(VectorPH->getTerminator());
-  if (isa<TruncInst>(EntryVal)) {
-    assert(Start->getType()->isIntegerTy() &&
-           "Truncation requires an integer type");
-    auto *TruncType = cast<IntegerType>(EntryVal->getType());
-    Step = Builder.CreateTrunc(Step, TruncType);
-    Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
-  }
-
-  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
-  Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(
-      SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
-
-  // We create vector phi nodes for both integer and floating-point induction
-  // variables. Here, we determine the kind of arithmetic we will perform.
-  Instruction::BinaryOps AddOp;
-  Instruction::BinaryOps MulOp;
-  if (Step->getType()->isIntegerTy()) {
-    AddOp = Instruction::Add;
-    MulOp = Instruction::Mul;
-  } else {
-    AddOp = ID.getInductionOpcode();
-    MulOp = Instruction::FMul;
-  }
-
-  // Multiply the vectorization factor by the step using integer or
-  // floating-point arithmetic as appropriate.
-  Type *StepType = Step->getType();
-  Value *RuntimeVF;
-  if (Step->getType()->isFloatingPointTy())
-    RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
-  else
-    RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
-  Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
-
-  // Create a vector splat to use in the induction update.
-  //
-  // FIXME: If the step is non-constant, we create the vector splat with
-  //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
-  //        handle a constant vector splat.
-  Value *SplatVF = isa<Constant>(Mul)
-                       ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                       : Builder.CreateVectorSplat(State.VF, Mul);
-  Builder.restoreIP(CurrIP);
-
-  // We may need to add the step a number of times, depending on the unroll
-  // factor. The last of those goes into the PHI.
-  PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
-                                    &*State.CFG.PrevBB->getFirstInsertionPt());
-  VecInd->setDebugLoc(EntryVal->getDebugLoc());
-  Instruction *LastInduction = VecInd;
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    State.set(this, LastInduction, Part);
-
-    if (isa<TruncInst>(EntryVal))
-      State.addMetadata(LastInduction, EntryVal);
-
-    LastInduction = cast<Instruction>(
-        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add"));
-    LastInduction->setDebugLoc(EntryVal->getDebugLoc());
-  }
-
-  LastInduction->setName("vec.ind.next");
-  VecInd->addIncoming(SteppedStart, VectorPH);
-  // Add induction update using an incorrect block temporarily. The phi node
-  // will be fixed after VPlan execution. Note that at this point the latch
-  // block cannot be used, as it does not exist yet.
-  // TODO: Model increment value in VPlan, by turning the recipe into a
-  // multi-def and a subclass of VPHeaderPHIRecipe.
-  VecInd->addIncoming(LastInduction, VectorPH);
-}
-
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
@@ -9407,103 +9238,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
   State.set(this, DerivedIV, VPIteration(0, 0));
-}
-
-void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (IndDesc.getInductionBinOp() &&
-      isa<FPMathOperator>(IndDesc.getInductionBinOp()))
-    State.Builder.setFastMathFlags(
-        IndDesc.getInductionBinOp()->getFastMathFlags());
-
-  /// Compute scalar induction steps. \p ScalarIV is the scalar induction
-  /// variable on which to base the steps, \p Step is the size of the step.
-
-  Value *BaseIV = State.get(getOperand(0), VPIteration(0, 0));
-  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-  IRBuilderBase &Builder = State.Builder;
-
-  // Ensure step has the same type as that of scalar IV.
-  Type *BaseIVTy = BaseIV->getType()->getScalarType();
-  if (BaseIVTy != Step->getType()) {
-    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
-    // avoid separate truncate here.
-    assert(Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    Step = State.Builder.CreateTrunc(Step, BaseIVTy);
-  }
-
-  // We build scalar steps for both integer and floating-point induction
-  // variables. Here, we determine the kind of arithmetic we will perform.
-  Instruction::BinaryOps AddOp;
-  Instruction::BinaryOps MulOp;
-  if (BaseIVTy->isIntegerTy()) {
-    AddOp = Instruction::Add;
-    MulOp = Instruction::Mul;
-  } else {
-    AddOp = IndDesc.getInductionOpcode();
-    MulOp = Instruction::FMul;
-  }
-
-  // Determine the number of scalars we need to generate for each unroll
-  // iteration.
-  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
-  // Compute the scalar steps and save the results in State.
-  Type *IntStepTy =
-      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
-  Type *VecIVTy = nullptr;
-  Value *UnitStepVec = nullptr, *SplatStep = nullptr, *SplatIV = nullptr;
-  if (!FirstLaneOnly && State.VF.isScalable()) {
-    VecIVTy = VectorType::get(BaseIVTy, State.VF);
-    UnitStepVec =
-        Builder.CreateStepVector(VectorType::get(IntStepTy, State.VF));
-    SplatStep = Builder.CreateVectorSplat(State.VF, Step);
-    SplatIV = Builder.CreateVectorSplat(State.VF, BaseIV);
-  }
-
-  unsigned StartPart = 0;
-  unsigned EndPart = State.UF;
-  unsigned StartLane = 0;
-  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  if (State.Instance) {
-    StartPart = State.Instance->Part;
-    EndPart = StartPart + 1;
-    StartLane = State.Instance->Lane.getKnownLane();
-    EndLane = StartLane + 1;
-  }
-  for (unsigned Part = StartPart; Part < EndPart; ++Part) {
-    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
-
-    if (!FirstLaneOnly && State.VF.isScalable()) {
-      auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
-      auto *InitVec = Builder.CreateAdd(SplatStartIdx, UnitStepVec);
-      if (BaseIVTy->isFloatingPointTy())
-        InitVec = Builder.CreateSIToFP(InitVec, VecIVTy);
-      auto *Mul = Builder.CreateBinOp(MulOp, InitVec, SplatStep);
-      auto *Add = Builder.CreateBinOp(AddOp, SplatIV, Mul);
-      State.set(this, Add, Part);
-      // It's useful to record the lane values too for the known minimum number
-      // of elements so we do those below. This improves the code quality when
-      // trying to extract the first element, for example.
-    }
-
-    if (BaseIVTy->isFloatingPointTy())
-      StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
-
-    for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
-      Value *StartIdx = Builder.CreateBinOp(
-          AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
-      // The step returned by `createStepForVF` is a runtime-evaluated value
-      // when VF is scalable. Otherwise, it should be folded into a Constant.
-      assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
-             "Expected StartIdx to be folded to a constant when VF is not "
-             "scalable");
-      auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-      auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
-      State.set(this, Add, VPIteration(Part, Lane));
-    }
-  }
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
