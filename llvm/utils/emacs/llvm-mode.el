@@ -95,12 +95,21 @@
    `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
+(defun llvm-current-defun-name ()
+  "The `add-log-current-defun' function in LLVM mode."
+  (save-excursion
+    (end-of-line)
+    (if (re-search-backward "^[ \t]*define[ \t]+.+[ \t]+@\\(.+\\)(.*)" nil t)
+	(match-string-no-properties 1))))
+
 ;;;###autoload
 (define-derived-mode llvm-mode prog-mode "LLVM"
   "Major mode for editing LLVM source files.
 \\{llvm-mode-map}
   Runs `llvm-mode-hook' on startup."
   (setq font-lock-defaults `(llvm-font-lock-keywords))
+  (setq-local defun-prompt-regexp "^[ \t]*define[ \t]+.+[ \t]+@.+(.*).+")
+  (setq-local add-log-current-defun-function #'llvm-current-defun-name)
   (setq-local comment-start ";"))
 
 ;; Associate .ll files with llvm-mode
