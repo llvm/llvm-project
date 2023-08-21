@@ -7,32 +7,32 @@ define <16 x float> @foo(<16 x i64> %a) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x10, x9, [sp, #48]
-; CHECK-NEXT:    ldp x12, x11, [sp, #32]
-; CHECK-NEXT:    ucvtf s1, x10
 ; CHECK-NEXT:    ucvtf s0, x9
-; CHECK-NEXT:    ldp x13, x9, [sp, #16]
-; CHECK-NEXT:    ucvtf s2, x11
-; CHECK-NEXT:    ucvtf s3, x12
-; CHECK-NEXT:    ldp x11, x10, [sp]
+; CHECK-NEXT:    ldp x11, x9, [sp, #32]
+; CHECK-NEXT:    ucvtf s1, x10
+; CHECK-NEXT:    ucvtf s2, x9
+; CHECK-NEXT:    ldp x10, x9, [sp, #16]
+; CHECK-NEXT:    ucvtf s3, x11
 ; CHECK-NEXT:    str s0, [x8, #60]
-; CHECK-NEXT:    ucvtf s0, x13
 ; CHECK-NEXT:    str s1, [x8, #56]
 ; CHECK-NEXT:    ucvtf s4, x9
+; CHECK-NEXT:    ucvtf s0, x10
+; CHECK-NEXT:    ldp x11, x9, [sp]
 ; CHECK-NEXT:    str s2, [x8, #52]
-; CHECK-NEXT:    ucvtf s2, x11
 ; CHECK-NEXT:    str s3, [x8, #48]
-; CHECK-NEXT:    ucvtf s1, x10
 ; CHECK-NEXT:    ucvtf s3, x7
-; CHECK-NEXT:    str s0, [x8, #40]
-; CHECK-NEXT:    ucvtf s0, x5
+; CHECK-NEXT:    ucvtf s1, x9
+; CHECK-NEXT:    ucvtf s2, x11
 ; CHECK-NEXT:    str s4, [x8, #44]
 ; CHECK-NEXT:    ucvtf s4, x6
-; CHECK-NEXT:    str s2, [x8, #32]
-; CHECK-NEXT:    ucvtf s2, x3
-; CHECK-NEXT:    str s1, [x8, #36]
-; CHECK-NEXT:    ucvtf s1, x4
+; CHECK-NEXT:    str s0, [x8, #40]
+; CHECK-NEXT:    ucvtf s0, x5
 ; CHECK-NEXT:    str s3, [x8, #28]
 ; CHECK-NEXT:    ucvtf s3, x2
+; CHECK-NEXT:    str s1, [x8, #36]
+; CHECK-NEXT:    ucvtf s1, x4
+; CHECK-NEXT:    str s2, [x8, #32]
+; CHECK-NEXT:    ucvtf s2, x3
 ; CHECK-NEXT:    str s4, [x8, #24]
 ; CHECK-NEXT:    ucvtf s4, x1
 ; CHECK-NEXT:    str s0, [x8, #20]

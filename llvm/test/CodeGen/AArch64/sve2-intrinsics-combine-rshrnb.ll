@@ -105,10 +105,10 @@ define void @wide_add_shift_add_rshrnb_b(ptr %dest, i64 %index, <vscale x 16 x i
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rshrnb z1.b, z1.h, #6
-; CHECK-NEXT:    ld1b { z2.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    rshrnb z0.b, z0.h, #6
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    add z0.b, z2.b, z0.b
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    add z0.b, z1.b, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %1 = add <vscale x 16 x i16> %arg1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 32, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
@@ -126,10 +126,10 @@ define void @wide_add_shift_add_rshrnb_h(ptr %dest, i64 %index, <vscale x 8 x i3
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    rshrnb z1.h, z1.s, #6
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    rshrnb z0.h, z0.s, #6
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    add z0.h, z2.h, z0.h
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %1 = add <vscale x 8 x i32> %arg1, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
@@ -184,10 +184,10 @@ define void @neg_add_has_two_uses(ptr %ptr, ptr %dst, ptr %dst2, i64 %index){
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.h, z0.h, #32 // =0x20
-; CHECK-NEXT:    lsr z1.h, z0.h, #6
-; CHECK-NEXT:    add z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x2, x3, lsl #1]
-; CHECK-NEXT:    st1b { z1.h }, p0, [x1, x3]
+; CHECK-NEXT:    add z1.h, z0.h, z0.h
+; CHECK-NEXT:    lsr z0.h, z0.h, #6
+; CHECK-NEXT:    st1h { z1.h }, p0, [x2, x3, lsl #1]
+; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x3]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
   %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)

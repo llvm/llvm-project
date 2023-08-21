@@ -49,7 +49,7 @@ define double @nonstreaming_caller_streaming_callee(double %x) nounwind noinline
 ; CHECK-GISEL-NEXT:    bl streaming_callee
 ; CHECK-GISEL-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
 ; CHECK-GISEL-NEXT:    smstop sm
-; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168
+; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-GISEL-NEXT:    fmov d0, x8
 ; CHECK-GISEL-NEXT:    ldr d1, [sp, #88] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    fadd d0, d1, d0
@@ -108,7 +108,7 @@ define double @streaming_caller_nonstreaming_callee(double %x) nounwind noinline
 ; CHECK-GISEL-NEXT:    bl normal_callee
 ; CHECK-GISEL-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
 ; CHECK-GISEL-NEXT:    smstart sm
-; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168
+; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-GISEL-NEXT:    fmov d0, x8
 ; CHECK-GISEL-NEXT:    ldr d1, [sp, #88] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    fadd d0, d1, d0
@@ -141,7 +141,7 @@ define double @locally_streaming_caller_normal_callee(double %x) nounwind noinli
 ; CHECK-COMMON-NEXT:    bl normal_callee
 ; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
-; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168
+; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d0, x8
 ; CHECK-COMMON-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    fadd d0, d1, d0
@@ -246,7 +246,7 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON-NEXT:  .LBB6_2: // %entry
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    bl za_shared_callee
-; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168
+; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
 ; CHECK-COMMON-NEXT:    fadd d0, d0, d1
 ; CHECK-COMMON-NEXT:    smstop za
@@ -285,7 +285,7 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    b .LBB7_2
 ; CHECK-COMMON-NEXT:  .LBB7_2: // %entry
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168
+; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
 ; CHECK-COMMON-NEXT:    fadd d0, d0, d1
 ; CHECK-COMMON-NEXT:    mov sp, x29
@@ -309,14 +309,14 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-COMMON-NEXT:    mul x8, x8, x8
 ; CHECK-COMMON-NEXT:    sub x9, x9, x8
 ; CHECK-COMMON-NEXT:    mov sp, x9
-; CHECK-COMMON-NEXT:    sub x10, x29, #16
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
+; CHECK-COMMON-NEXT:    sub x9, x29, #16
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    sub x0, x29, #16
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-COMMON-NEXT:    sub x0, x29, #16
 ; CHECK-COMMON-NEXT:    cbnz x8, .LBB8_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    bl __arm_tpidr2_restore
@@ -347,11 +347,11 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
 ; CHECK-COMMON-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    add sp, sp, #112
 ; CHECK-COMMON-NEXT:    ret
   %res = fadd fp128 %a, %b
