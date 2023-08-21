@@ -1768,6 +1768,48 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   return ArgValue;
 }
 
+static Value *EmitAbs(CodeGenFunction &CGF, Value *ArgValue, bool HasNSW) {
+  // X < 0 ? -X : X
+  // TODO: Use phi-node (for better SimplifyCFGPass)
+  Value *NegOp = CGF.Builder.CreateNeg(ArgValue, "neg", false, HasNSW);
+  Constant *Zero = llvm::Constant::getNullValue(ArgValue->getType());
+  Value *CmpResult = CGF.Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
+  return CGF.Builder.CreateSelect(CmpResult, NegOp, ArgValue, "abs");
+}
+
+static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
+                                     bool SanitizeOverflow) {
+  Value *ArgValue = CGF.EmitScalarExpr(E->getArg(0));
+
+  // Try to eliminate overflow check.
+  if (const auto *VCI = dyn_cast<llvm::ConstantInt>(ArgValue)) {
+    if (!VCI->isMinSignedValue())
+      return EmitAbs(CGF, ArgValue, true);
+  }
+
+  CodeGenFunction::SanitizerScope SanScope(&CGF);
+
+  Constant *Zero = Constant::getNullValue(ArgValue->getType());
+  Value *ResultAndOverflow = CGF.Builder.CreateBinaryIntrinsic(
+      Intrinsic::ssub_with_overflow, Zero, ArgValue);
+  Value *Result = CGF.Builder.CreateExtractValue(ResultAndOverflow, 0);
+  Value *NotOverflow = CGF.Builder.CreateNot(
+      CGF.Builder.CreateExtractValue(ResultAndOverflow, 1));
+
+  // TODO: support -ftrapv-handler.
+  if (SanitizeOverflow) {
+    CGF.EmitCheck({{NotOverflow, SanitizerKind::SignedIntegerOverflow}},
+                  SanitizerHandler::NegateOverflow,
+                  {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
+                   CGF.EmitCheckTypeDescriptor(E->getType())},
+                  {ArgValue});
+  } else
+    CGF.EmitTrapCheck(NotOverflow, SanitizerHandler::SubOverflow);
+
+  Value *CmpResult = CGF.Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
+  return CGF.Builder.CreateSelect(CmpResult, Result, ArgValue, "abs");
+}
+
 /// Get the argument type for arguments to os_log_helper.
 static CanQualType getOSLogArgType(ASTContext &C, int Size) {
   QualType UnsignedTy = C.getIntTypeForBitwidth(Size * 8, /*Signed=*/false);
@@ -2626,16 +2668,30 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy), {DstPtr, SrcPtr});
     return RValue::get(nullptr);
   }
+  case Builtin::BIabs:
+  case Builtin::BIlabs:
+  case Builtin::BIllabs:
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
   case Builtin::BI__builtin_llabs: {
-    // X < 0 ? -X : X
-    // The negation has 'nsw' because abs of INT_MIN is undefined.
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    Value *NegOp = Builder.CreateNSWNeg(ArgValue, "neg");
-    Constant *Zero = llvm::Constant::getNullValue(ArgValue->getType());
-    Value *CmpResult = Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
-    Value *Result = Builder.CreateSelect(CmpResult, NegOp, ArgValue, "abs");
+    bool SanitizeOverflow = SanOpts.has(SanitizerKind::SignedIntegerOverflow);
+
+    Value *Result;
+    switch (getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      Result = EmitAbs(*this, EmitScalarExpr(E->getArg(0)), false);
+      break;
+    case LangOptions::SOB_Undefined:
+      if (!SanitizeOverflow) {
+        Result = EmitAbs(*this, EmitScalarExpr(E->getArg(0)), true);
+        break;
+      }
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      // TODO: Somehow handle the corner case when the address of abs is taken.
+      Result = EmitOverflowCheckedAbs(*this, E, SanitizeOverflow);
+      break;
+    }
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_complex: {
