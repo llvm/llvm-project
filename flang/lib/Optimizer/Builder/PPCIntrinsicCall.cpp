@@ -589,6 +589,21 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecLdCallGrp<VecOp::Ldl>),
      {{{"arg1", asValue}, {"arg2", asAddr}}},
      /*isElemental=*/false},
+    {"__ppc_vec_lvsl",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecLvsGrp<VecOp::Lvsl>),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_lvsr",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecLvsGrp<VecOp::Lvsr>),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_lxv",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecLdNoCallGrp<VecOp::Lxv>),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
     {"__ppc_vec_lxvp",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecLdCallGrp<VecOp::Lxvp>),
@@ -713,9 +728,22 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecAddAndMulSubXor<VecOp::Sub>),
      {{{"arg1", asValue}, {"arg2", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_xl",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(&PI::genVecXlGrp),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_xl_be",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecLdNoCallGrp<VecOp::Xlbe>),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
     {"__ppc_vec_xld2_",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecLdCallGrp<VecOp::Xld2>),
+     {{{"arg1", asValue}, {"arg2", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_xlds",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(&PI::genVecXlds),
      {{{"arg1", asValue}, {"arg2", asAddr}}},
      /*isElemental=*/false},
     {"__ppc_vec_xlw4_",
@@ -1797,6 +1825,62 @@ static mlir::Value reverseVectorElements(fir::FirOpBuilder &builder,
   return builder.create<mlir::vector::ShuffleOp>(loc, v, undefVec, mask);
 }
 
+static mlir::NamedAttribute getAlignmentAttr(fir::FirOpBuilder &builder,
+                                             const int val) {
+  auto i64ty{mlir::IntegerType::get(builder.getContext(), 64)};
+  auto alignAttr{mlir::IntegerAttr::get(i64ty, val)};
+  return builder.getNamedAttr("alignment", alignAttr);
+}
+
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecXlGrp(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  VecTypeInfo vecTyInfo{getVecTypeFromFirType(resultType)};
+  switch (vecTyInfo.eleTy.getIntOrFloatBitWidth()) {
+  case 8:
+    // vec_xlb1
+    return genVecLdNoCallGrp<VecOp::Xl>(resultType, args);
+  case 16:
+    // vec_xlh8
+    return genVecLdNoCallGrp<VecOp::Xl>(resultType, args);
+  case 32:
+    // vec_xlw4
+    return genVecLdCallGrp<VecOp::Xlw4>(resultType, args);
+  case 64:
+    // vec_xld2
+    return genVecLdCallGrp<VecOp::Xld2>(resultType, args);
+  default:
+    llvm_unreachable("invalid kind");
+  }
+  llvm_unreachable("invalid vector operation for generator");
+}
+
+template <VecOp vop>
+fir::ExtendedValue PPCIntrinsicLibrary::genVecLdNoCallGrp(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto arg0{getBase(args[0])};
+  auto arg1{getBase(args[1])};
+
+  auto vecTyInfo{getVecTypeFromFirType(resultType)};
+  auto mlirTy{vecTyInfo.toMlirVectorType(builder.getContext())};
+  auto firTy{vecTyInfo.toFirVectorType()};
+
+  // Add the %val of arg0 to %addr of arg1
+  auto addr{addOffsetToAddress(builder, loc, arg1, arg0)};
+
+  const auto triple{fir::getTargetTriple(builder.getModule())};
+  // Need to get align 1.
+  auto result{builder.create<fir::LoadOp>(loc, mlirTy, addr,
+                                          getAlignmentAttr(builder, 1))};
+  if ((vop == VecOp::Xl && isBEVecElemOrderOnLE()) ||
+      (vop == VecOp::Xlbe && triple.isLittleEndian()))
+    return builder.createConvert(
+        loc, firTy, reverseVectorElements(builder, loc, result, vecTyInfo.len));
+
+  return builder.createConvert(loc, firTy, result);
+}
+
 // VEC_LD, VEC_LDE, VEC_LDL, VEC_LXVP, VEC_XLD2, VEC_XLW4
 template <VecOp vop>
 fir::ExtendedValue
@@ -1893,6 +1977,58 @@ PPCIntrinsicLibrary::genVecLdCallGrp(mlir::Type resultType,
     return builder.createConvert(
         loc, firTy,
         reverseVectorElements(builder, loc, result, vecResTyInfo.len));
+
+  return builder.createConvert(loc, firTy, result);
+}
+
+// VEC_LVSL, VEC_LVSR
+template <VecOp vop>
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecLvsGrp(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto context{builder.getContext()};
+  auto arg0{getBase(args[0])};
+  auto arg1{getBase(args[1])};
+
+  auto vecTyInfo{getVecTypeFromFirType(resultType)};
+  auto mlirTy{vecTyInfo.toMlirVectorType(context)};
+  auto firTy{vecTyInfo.toFirVectorType()};
+
+  // Convert arg0 to i64 type if needed
+  auto i64ty{mlir::IntegerType::get(context, 64)};
+  if (arg0.getType() != i64ty)
+    arg0 = builder.create<fir::ConvertOp>(loc, i64ty, arg0);
+
+  // offset is modulo 16, so shift left 56 bits and then right 56 bits to clear
+  //   upper 56 bit while preserving sign
+  auto shiftVal{builder.createIntegerConstant(loc, i64ty, 56)};
+  auto offset{builder.create<mlir::arith::ShLIOp>(loc, arg0, shiftVal)};
+  auto offset2{builder.create<mlir::arith::ShRSIOp>(loc, offset, shiftVal)};
+
+  // Add the offsetArg to %addr of arg1
+  auto addr{addOffsetToAddress(builder, loc, arg1, offset2)};
+  llvm::SmallVector<mlir::Value, 4> parsedArgs{addr};
+
+  llvm::StringRef fname{};
+  switch (vop) {
+  case VecOp::Lvsl:
+    fname = "llvm.ppc.altivec.lvsl";
+    break;
+  case VecOp::Lvsr:
+    fname = "llvm.ppc.altivec.lvsr";
+    break;
+  default:
+    llvm_unreachable("invalid vector operation for generator");
+  }
+  auto funcType{mlir::FunctionType::get(context, {addr.getType()}, {mlirTy})};
+  auto funcOp{builder.addNamedFunction(loc, fname, funcType)};
+  auto result{
+      builder.create<fir::CallOp>(loc, funcOp, parsedArgs).getResult(0)};
+
+  if (isNativeVecElemOrderOnLE())
+    return builder.createConvert(
+        loc, firTy, reverseVectorElements(builder, loc, result, vecTyInfo.len));
 
   return builder.createConvert(loc, firTy, result);
 }
@@ -2279,6 +2415,38 @@ PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
     llvm_unreachable("invalid vector operation for generator");
   }
   return builder.createConvert(loc, retTy, splatOp);
+}
+
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecXlds(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto arg0{getBase(args[0])};
+  auto arg1{getBase(args[1])};
+
+  // Prepare the return type in FIR.
+  auto vecTyInfo{getVecTypeFromFirType(resultType)};
+  auto mlirTy{vecTyInfo.toMlirVectorType(builder.getContext())};
+  auto firTy{vecTyInfo.toFirVectorType()};
+
+  // Add the %val of arg0 to %addr of arg1
+  auto addr{addOffsetToAddress(builder, loc, arg1, arg0)};
+
+  auto i64Ty{mlir::IntegerType::get(builder.getContext(), 64)};
+  auto i64VecTy{mlir::VectorType::get(2, i64Ty)};
+  auto i64RefTy{builder.getRefType(i64Ty)};
+  auto addrConv{builder.create<fir::ConvertOp>(loc, i64RefTy, addr)};
+
+  auto addrVal{builder.create<fir::LoadOp>(loc, addrConv)};
+  auto splatRes{builder.create<mlir::vector::SplatOp>(loc, addrVal, i64VecTy)};
+
+  mlir::Value result{nullptr};
+  if (mlirTy != splatRes.getType()) {
+    result = builder.create<mlir::vector::BitCastOp>(loc, mlirTy, splatRes);
+  } else
+    result = splatRes;
+
+  return builder.createConvert(loc, firTy, result);
 }
 
 const char *getMmaIrIntrName(MMAOp mmaOp) {
@@ -2753,13 +2921,6 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
   biArgs.push_back(addr);
 
   builder.create<fir::CallOp>(loc, funcOp, biArgs);
-}
-
-static mlir::NamedAttribute getAlignmentAttr(fir::FirOpBuilder &builder,
-                                             const int val) {
-  auto i64ty{mlir::IntegerType::get(builder.getContext(), 64)};
-  auto alignAttr{mlir::IntegerAttr::get(i64ty, val)};
-  return builder.getNamedAttr("alignment", alignAttr);
 }
 
 // VEC_XST, VEC_XST_BE, VEC_STXV, VEC_XSTD2, VEC_XSTW4

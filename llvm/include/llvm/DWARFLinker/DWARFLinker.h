@@ -338,7 +338,7 @@ public:
     Pub,       ///< .debug_pubnames, .debug_pubtypes
     DebugNames ///< .debug_names.
   };
-  typedef std::function<void(const DWARFFile &File)> inputVerificationHandler;
+  typedef std::function<void(const DWARFFile &File, llvm::StringRef Output)> inputVerificationHandler;
   typedef std::function<ErrorOr<DWARFFile &>(StringRef ContainerName,
                                              StringRef Path)>
       objFileLoader;

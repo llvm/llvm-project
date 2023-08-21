@@ -739,7 +739,7 @@ public:
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
     auto target = expr(
-        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr, 
+        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr,
                               toSupportedVariable())).bind(DeclRefExprTag)));
     return stmt(isInUnspecifiedPointerContext(target));
   }

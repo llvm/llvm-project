@@ -8443,6 +8443,12 @@ void X86InstrInfo::setExecutionDomain(MachineInstr &MI, unsigned Domain) const {
   MI.setDesc(get(table[Domain - 1]));
 }
 
+void X86InstrInfo::insertNoop(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  BuildMI(MBB, MI, DL, get(X86::NOOP));
+}
+
 /// Return the noop instruction to use for a noop.
 MCInst X86InstrInfo::getNop() const {
   MCInst Nop;

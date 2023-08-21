@@ -2065,14 +2065,15 @@ void kmpc_set_stacksize_s(size_t arg) {
 }
 
 void kmpc_set_blocktime(int arg) {
-  int gtid, tid;
+  int gtid, tid, bt = arg;
   kmp_info_t *thread;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
   thread = __kmp_thread_from_gtid(gtid);
 
-  __kmp_aux_set_blocktime(arg, thread, tid);
+  __kmp_aux_convert_blocktime(&bt);
+  __kmp_aux_set_blocktime(bt, thread, tid);
 }
 
 void kmpc_set_library(int arg) {

@@ -3232,12 +3232,13 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     bool Negate = false;
     int64_t SplatStepVal = StepNumerator;
     unsigned StepOpcode = ISD::MUL;
-    if (StepNumerator != 1) {
-      if (isPowerOf2_64(std::abs(StepNumerator))) {
-        Negate = StepNumerator < 0;
-        StepOpcode = ISD::SHL;
-        SplatStepVal = Log2_64(std::abs(StepNumerator));
-      }
+    // Exclude INT64_MIN to avoid passing it to std::abs. We won't optimize it
+    // anyway as the shift of 63 won't fit in uimm5.
+    if (StepNumerator != 1 && StepNumerator != INT64_MIN &&
+        isPowerOf2_64(std::abs(StepNumerator))) {
+      Negate = StepNumerator < 0;
+      StepOpcode = ISD::SHL;
+      SplatStepVal = Log2_64(std::abs(StepNumerator));
     }
 
     // Only emit VIDs with suitably-small steps/addends. We use imm5 is a
