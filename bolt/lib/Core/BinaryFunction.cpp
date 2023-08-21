@@ -2855,6 +2855,14 @@ bool BinaryFunction::requiresAddressTranslation() const {
   return opts::EnableBAT || hasSDTMarker() || hasPseudoProbe();
 }
 
+bool BinaryFunction::requiresAddressMap() const {
+  if (isInjected())
+    return false;
+
+  return opts::UpdateDebugSections || isMultiEntry() ||
+         requiresAddressTranslation();
+}
+
 uint64_t BinaryFunction::getInstructionCount() const {
   uint64_t Count = 0;
   for (const BinaryBasicBlock &BB : blocks())
@@ -4120,15 +4128,13 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           assert(FragmentBaseAddress == getOutputAddress());
       }
 
-      const uint64_t BBOffset = Layout.getSymbolOffset(*BB->getLabel());
-      const uint64_t BBAddress = FragmentBaseAddress + BBOffset;
+      const uint64_t BBAddress =
+          *BC.getIOAddressMap().lookup(BB->getInputOffset() + getAddress());
       BB->setOutputStartAddress(BBAddress);
 
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBAddress);
       PrevBB = BB;
-
-      BB->updateOutputValues(Layout);
     }
 
     PrevBB->setOutputEndAddress(PrevBB->isSplit()
@@ -4181,9 +4187,8 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  auto KV = InputOffsetToAddressMap.find(Address - getAddress());
-  if (KV != InputOffsetToAddressMap.end())
-    return KV->second;
+  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+    return *OutputAddress;
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.
