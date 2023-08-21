@@ -1952,6 +1952,8 @@ bool isShader(CallingConv::ID cc) {
     case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
     case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
     case CallingConv::AMDGPU_CS:
       return true;
     default:
@@ -1990,6 +1992,16 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
     return true;
   default:
     return isEntryFunctionCC(CC);
+  }
+}
+
+bool isChainCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return true;
+  default:
+    return false;
   }
 }
 

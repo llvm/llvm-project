@@ -46,6 +46,8 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
+  be split between a register and a stack slot.
 
 What's New in Clang |release|?
 ==============================
@@ -154,6 +156,9 @@ Bug Fixes in This Version
 - Fix a hang on valid C code passing a function type as an argument to
   ``typeof`` to form a function declaration.
   (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
+- Clang now reports missing-field-initializers warning for missing designated
+  initializers in C++.
+  (`#56628 <https://github.com/llvm/llvm-project/issues/56628>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -214,6 +214,10 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   }
 
   emitDataSections(OrgSecPrefix);
+
+  // TODO Enable for Mach-O once BinaryContext::getDataSection supports it.
+  if (BC.isELF())
+    AddressMap::emit(Streamer, BC);
 }
 
 void BinaryEmitter::emitFunctions() {
