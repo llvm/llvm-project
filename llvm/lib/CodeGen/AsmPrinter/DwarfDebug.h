@@ -108,6 +108,53 @@ struct DbgDefProxy {
   const MachineOperand &Referrer;
 };
 
+/// Helper class to model a DbgVariable whose location is derived from an
+/// EntryValue.
+/// TODO: split the current implementation of `DbgVariable` into a class per
+/// variant of location that it can represent, and make `DbgVariableEntryValue`
+/// a subclass.
+class DbgVariableEntryValue {
+  struct EntryValueInfo {
+    MCRegister Reg;
+    const DIExpression &Expr;
+
+    /// Operator enabling sorting based on fragment offset.
+    bool operator<(const EntryValueInfo &Other) const {
+      return getFragmentOffsetInBits() < Other.getFragmentOffsetInBits();
+    }
+
+  private:
+    uint64_t getFragmentOffsetInBits() const {
+      std::optional<DIExpression::FragmentInfo> Fragment =
+          Expr.getFragmentInfo();
+      return Fragment ? Fragment->OffsetInBits : 0;
+    }
+  };
+
+  std::set<EntryValueInfo> EntryValues;
+
+public:
+  DbgVariableEntryValue(MCRegister Reg, const DIExpression &Expr) {
+    addExpr(Reg, Expr);
+  };
+
+  // Add the pair Reg, Expr to the list of entry values describing the variable.
+  // If multiple expressions are added, it is the callers responsibility to
+  // ensure they are all non-overlapping fragments.
+  void addExpr(MCRegister Reg, const DIExpression &Expr) {
+    std::optional<const DIExpression *> NonVariadicExpr =
+        DIExpression::convertToNonVariadicExpression(&Expr);
+    assert(NonVariadicExpr && *NonVariadicExpr);
+
+    EntryValues.insert({Reg, **NonVariadicExpr});
+  }
+
+  /// Returns the set of EntryValueInfo.
+  const std::set<EntryValueInfo> &getEntryValuesInfo() const {
+    return EntryValues;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for DbgVariable.
 class DbgVariable : public DbgEntity {
@@ -160,6 +207,9 @@ public:
   virtual void initializeMMI(const DIExpression *E, int FI) = 0;
   virtual void initializeDbgValue(DbgValueLoc Value) = 0;
   virtual void initializeDbgValue(const MachineInstr *DbgValue) = 0;
+  virtual void initializeEntryValue(MCRegister Reg, const DIExpression &Expr) = 0;
+  virtual const std::optional<DbgVariableEntryValue> &getEntryValue() const = 0;
+  virtual std::optional<DbgVariableEntryValue> &getEntryValue() = 0;
   virtual const DIExpression *getSingleExpression() const = 0;
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
@@ -196,6 +246,10 @@ public:
 /// the MMI table.  Such variables can have multiple expressions and frame
 /// indices.
 ///
+/// Variables can be created from the entry value of registers, in which case
+/// they're generated from the MMI table. Such variables can have either a
+/// single expression or multiple *fragment* expressions.
+///
 /// Variables can be created from \c DBG_VALUE instructions.  Those whose
 /// location changes over time use \a DebugLocListIndex, while those with a
 /// single location use \a ValueLoc and (optionally) a single entry of \a Expr.
@@ -208,6 +262,8 @@ class OldDbgVariable : public DbgVariable {
   mutable SmallVector<FrameIndexExpr, 1>
       FrameIndexExprs; /// Frame index + expression.
 
+  std::optional<DbgVariableEntryValue> EntryValue;
+
 public:
   /// Construct an OldDbgVariable.
   ///
@@ -217,11 +273,11 @@ public:
       : DbgVariable(V, IA, OldDbgVariableKind) {}
 
   bool isInitialized() const {
-    return !FrameIndexExprs.empty() || ValueLoc;
+    return !FrameIndexExprs.empty() || ValueLoc || EntryValue;
   }
 
   /// Initialize from the MMI table.
-  void initializeMMI(const DIExpression *E, int FI) {
+  void initializeMMI(const DIExpression *E, int FI) override {
     assert(!isInitialized() && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
@@ -231,7 +287,7 @@ public:
   }
 
   // Initialize variable's location.
-  void initializeDbgValue(DbgValueLoc Value) {
+  void initializeDbgValue(DbgValueLoc Value) override {
     assert(!isInitialized() && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
@@ -239,6 +295,19 @@ public:
     if (auto *E = ValueLoc->getExpression())
       if (E->getNumElements())
         FrameIndexExprs.push_back({0, E});
+  }
+
+  void initializeEntryValue(MCRegister Reg, const DIExpression &Expr) override {
+    assert(!isInitialized() && "Already initialized?");
+    EntryValue = DbgVariableEntryValue(Reg, Expr);
+  }
+
+  const std::optional<DbgVariableEntryValue> &getEntryValue() const override {
+    return EntryValue;
+  }
+
+  std::optional<DbgVariableEntryValue> &getEntryValue() override {
+    return EntryValue;
   }
 
   /// Initialize from a DBG_VALUE instruction.
@@ -299,6 +368,15 @@ public:
   }
   void initializeDbgValue(const MachineInstr *DbgValue) override {
     llvm_unreachable("NewDbgVariable::initializeDbgValue is not supported");
+  }
+  void initializeEntryValue(MCRegister Reg, const DIExpression &Expr) override {
+    llvm_unreachable("NewDbgVariable::initializeEntryValue is not supported");
+  }
+  const std::optional<DbgVariableEntryValue> &getEntryValue() const override {
+    llvm_unreachable("NewDbgVariable::getEntryValue is not supported");
+  }
+  std::optional<DbgVariableEntryValue> &getEntryValue() override {
+    llvm_unreachable("NewDbgVariable::getEntryValue is not supported");
   }
   const DIExpression *getSingleExpression() const override {
     llvm_unreachable("NewDbgVariable::getSingleExpression is not supported");
