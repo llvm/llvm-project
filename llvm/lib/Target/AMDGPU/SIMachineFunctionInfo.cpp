@@ -85,7 +85,20 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
   MayNeedAGPRs = ST.hasMAIInsts();
 
-  if (!isEntryFunction()) {
+  if (AMDGPU::isChainCC(CC)) {
+    // Chain functions don't receive an SP from their caller, but are free to
+    // set one up. For now, we can use s32 to match what amdgpu_gfx functions
+    // would use if called, but this can be revisited.
+    // FIXME: Only reserve this if we actually need it.
+    StackPtrOffsetReg = AMDGPU::SGPR32;
+
+    ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
+
+    ArgInfo.PrivateSegmentBuffer =
+        ArgDescriptor::createRegister(ScratchRSrcReg);
+
+    ImplicitArgPtr = false;
+  } else if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 

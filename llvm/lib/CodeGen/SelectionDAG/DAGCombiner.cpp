@@ -20508,9 +20508,11 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
   SDValue Elt = Value.getOperand(1);
   SDValue Idx = Value.getOperand(2);
 
-  // If the element isn't byte sized then we can't compute an offset
+  // If the element isn't byte sized or is implicitly truncated then we can't
+  // compute an offset.
   EVT EltVT = Elt.getValueType();
-  if (!EltVT.isByteSized())
+  if (!EltVT.isByteSized() ||
+      EltVT != Value.getOperand(0).getValueType().getVectorElementType())
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Value.getOperand(0));
