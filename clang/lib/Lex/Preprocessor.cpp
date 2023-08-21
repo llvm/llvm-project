@@ -998,6 +998,17 @@ void Preprocessor::Lex(Token &Result) {
   }
 }
 
+void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
+  while (1) {
+    Token Tok;
+    Lex(Tok);
+    if (Tok.isOneOf(tok::unknown, tok::eof, tok::eod))
+      break;
+    if (Tokens != nullptr)
+      Tokens->push_back(Tok);
+  }
+}
+
 /// Lex a header-name token (including one formed from header-name-tokens if
 /// \p AllowConcatenation is \c true).
 ///
