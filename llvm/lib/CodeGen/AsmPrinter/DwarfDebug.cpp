@@ -1565,7 +1565,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     if (VI.inStackSlot())
       RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
     else {
-      MachineLocation MLoc(VI.getEntryValueRegister(), /*IsIndirect*/ true);
+      MachineLocation MLoc(VI.getEntryValueRegister(), /*IsIndirect*/ false);
       auto LocEntry = DbgValueLocEntry(MLoc);
       RegVar->initializeDbgValue(DbgValueLoc(VI.Expr, LocEntry));
     }
