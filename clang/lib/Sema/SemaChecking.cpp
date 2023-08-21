@@ -15906,9 +15906,9 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     Usage Uses[UK_Count];
 
     /// Have we issued a diagnostic for this object already?
-    bool Diagnosed;
+    bool Diagnosed = false;
 
-    UsageInfo() : Diagnosed(false) {}
+    UsageInfo() = default;
   };
   using UsageInfoMap = llvm::SmallDenseMap<Object, UsageInfo, 16>;
 
