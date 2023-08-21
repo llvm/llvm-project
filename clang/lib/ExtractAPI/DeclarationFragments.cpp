@@ -465,6 +465,11 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplate(const VarDecl *Var) {
           ? Var->getTypeSourceInfo()->getType()
           : Var->getASTContext().getUnqualifiedObjCPointerType(Var->getType());
 
+  // Might be a member, so might be static.
+  if (Var->isStaticDataMember())
+    Fragments.append("static", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+
   DeclarationFragments After;
   DeclarationFragments ArgumentFragment =
       getFragmentsForType(T, Var->getASTContext(), After);
