@@ -1246,6 +1246,15 @@ RValue CallArg::getRValue(CIRGenFunction &CGF, mlir::Location loc) const {
   return RValue::getAggregate(Copy.getAddress());
 }
 
+void CIRGenFunction::buildNonNullArgCheck(RValue RV, QualType ArgType,
+                                          SourceLocation ArgLoc,
+                                          AbstractCallee AC, unsigned ParmNum) {
+  if (!AC.getDecl() || !(SanOpts.has(SanitizerKind::NonnullAttribute) ||
+                         SanOpts.has(SanitizerKind::NullabilityArg)))
+    return;
+  llvm_unreachable("non-null arg check is NYI");
+}
+
 /* VarArg handling */
 
 // FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. We

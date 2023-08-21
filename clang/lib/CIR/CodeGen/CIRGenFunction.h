@@ -930,6 +930,11 @@ public:
   RValue buildCallExpr(const clang::CallExpr *E,
                        ReturnValueSlot ReturnValue = ReturnValueSlot());
 
+  /// Create a check for a function parameter that may potentially be
+  /// declared as non-null.
+  void buildNonNullArgCheck(RValue RV, QualType ArgType, SourceLocation ArgLoc,
+                           AbstractCallee AC, unsigned ParmNum);
+
   void buildCallArg(CallArgList &args, const clang::Expr *E,
                     clang::QualType ArgType);
 
