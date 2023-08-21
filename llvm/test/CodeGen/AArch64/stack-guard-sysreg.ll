@@ -1,3 +1,4 @@
+; RUN: split-file %s %t
 ; RUN: cat %t/main.ll %t/a.ll > %t/a2.ll
 ; RUN: cat %t/main.ll %t/b.ll > %t/b2.ll
 ; RUN: cat %t/main.ll %t/c.ll > %t/c2.ll
