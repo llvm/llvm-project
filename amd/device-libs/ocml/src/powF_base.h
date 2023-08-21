@@ -155,10 +155,6 @@ MATH_MANGLE(pown)(float x, int ny)
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
                                    inty == 1 ? x : 0.0f);
-
-    if (BUILTIN_ISNAN_F32(x))
-        ret = QNAN_F32;
-
     if (ny == 0)
         ret = 1.0f;
 

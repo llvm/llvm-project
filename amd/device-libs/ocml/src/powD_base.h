@@ -125,9 +125,6 @@ MATH_MANGLE(pown)(double x, int ny)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
                                    inty == 1 ? x : 0.0);
 
-    if (BUILTIN_ISNAN_F64(x))
-        ret = QNAN_F64;
-
     if (ny == 0)
         ret = 1.0;
 

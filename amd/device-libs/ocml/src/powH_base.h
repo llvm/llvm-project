@@ -124,9 +124,6 @@ MATH_MANGLE(pown)(half x, int ny)
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
                                    inty == 1 ? x : 0.0h);
 
-    if (BUILTIN_ISNAN_F16(x))
-        ret = QNAN_F16;
-
     if (ny == 0)
         ret = 1.0h;
 
