@@ -943,67 +943,68 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
-  case 'e': {
-    if (Name.startswith("experimental.vector.extract.")) {
-      rename(F);
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_extract, Tys);
-      return true;
-    }
-
-    if (Name.startswith("experimental.vector.insert.")) {
-      rename(F);
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-
-    SmallVector<StringRef, 2> Groups;
-    static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[a-z][0-9]+");
-    if (R.match(Name, &Groups)) {
-      Intrinsic::ID ID;
-      ID = StringSwitch<Intrinsic::ID>(Groups[1])
-               .Case("add", Intrinsic::vector_reduce_add)
-               .Case("mul", Intrinsic::vector_reduce_mul)
-               .Case("and", Intrinsic::vector_reduce_and)
-               .Case("or", Intrinsic::vector_reduce_or)
-               .Case("xor", Intrinsic::vector_reduce_xor)
-               .Case("smax", Intrinsic::vector_reduce_smax)
-               .Case("smin", Intrinsic::vector_reduce_smin)
-               .Case("umax", Intrinsic::vector_reduce_umax)
-               .Case("umin", Intrinsic::vector_reduce_umin)
-               .Case("fmax", Intrinsic::vector_reduce_fmax)
-               .Case("fmin", Intrinsic::vector_reduce_fmin)
-               .Default(Intrinsic::not_intrinsic);
+  case 'e':
+    if (Name.consume_front("experimental.vector.")) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("extract.", Intrinsic::vector_extract)
+                             .StartsWith("insert.", Intrinsic::vector_insert)
+                             .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
+        const auto *FT = F->getFunctionType();
+        SmallVector<Type *, 2> Tys;
+        if (ID == Intrinsic::vector_extract)
+          // Extracting overloads the return type.
+          Tys.push_back(FT->getReturnType());
+        Tys.push_back(FT->getParamType(0));
+        if (ID == Intrinsic::vector_insert)
+          // Inserting overloads the inserted type.
+          Tys.push_back(FT->getParamType(1));
         rename(F);
-        auto Args = F->getFunctionType()->params();
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, {Args[0]});
-        return true;
-      }
-    }
-    static const Regex R2(
-        "^experimental.vector.reduce.v2.([a-z]+)\\.[fi][0-9]+");
-    Groups.clear();
-    if (R2.match(Name, &Groups)) {
-      Intrinsic::ID ID = Intrinsic::not_intrinsic;
-      if (Groups[1] == "fadd")
-        ID = Intrinsic::vector_reduce_fadd;
-      if (Groups[1] == "fmul")
-        ID = Intrinsic::vector_reduce_fmul;
-      if (ID != Intrinsic::not_intrinsic) {
-        rename(F);
-        auto Args = F->getFunctionType()->params();
-        Type *Tys[] = {Args[1]};
         NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
         return true;
       }
+
+      if (Name.consume_front("reduce.")) {
+        SmallVector<StringRef, 2> Groups;
+        static const Regex R("^([a-z]+)\\.[a-z][0-9]+");
+        if (R.match(Name, &Groups))
+          ID = StringSwitch<Intrinsic::ID>(Groups[1])
+                   .Case("add", Intrinsic::vector_reduce_add)
+                   .Case("mul", Intrinsic::vector_reduce_mul)
+                   .Case("and", Intrinsic::vector_reduce_and)
+                   .Case("or", Intrinsic::vector_reduce_or)
+                   .Case("xor", Intrinsic::vector_reduce_xor)
+                   .Case("smax", Intrinsic::vector_reduce_smax)
+                   .Case("smin", Intrinsic::vector_reduce_smin)
+                   .Case("umax", Intrinsic::vector_reduce_umax)
+                   .Case("umin", Intrinsic::vector_reduce_umin)
+                   .Case("fmax", Intrinsic::vector_reduce_fmax)
+                   .Case("fmin", Intrinsic::vector_reduce_fmin)
+                   .Default(Intrinsic::not_intrinsic);
+
+        bool V2 = false;
+        if (ID == Intrinsic::not_intrinsic) {
+          static const Regex R2("^v2\\.([a-z]+)\\.[fi][0-9]+");
+          Groups.clear();
+          V2 = true;
+          if (R2.match(Name, &Groups))
+            ID = StringSwitch<Intrinsic::ID>(Groups[1])
+                     .Case("fadd", Intrinsic::vector_reduce_fadd)
+                     .Case("fmul", Intrinsic::vector_reduce_fmul)
+                     .Default(Intrinsic::not_intrinsic);
+        }
+        if (ID != Intrinsic::not_intrinsic) {
+          rename(F);
+          auto Args = F->getFunctionType()->params();
+          NewFn =
+              Intrinsic::getDeclaration(F->getParent(), ID, {Args[V2 ? 1 : 0]});
+          return true;
+        }
+        break; // No other 'expermental.vector.reduce.*'.
+      }
+      break; // No other 'experimental.vector.*'.
     }
-    break;
-  }
+    break; // No other 'e*'.
   case 'f':
     if (Name.startswith("flt.rounds")) {
       rename(F);
