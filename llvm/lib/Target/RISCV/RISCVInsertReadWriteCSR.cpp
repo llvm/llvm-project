@@ -64,12 +64,9 @@ INITIALIZE_PASS(RISCVInsertReadWriteCSR, DEBUG_TYPE,
 bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
   bool Changed = false;
   for (MachineInstr &MI : MBB) {
-    int RoundModeIdx = RISCVII::getRoundModeOpNum(MI.getDesc());
-    if (RoundModeIdx < 0)
-      continue;
-
-    if (RISCVII::usesVXRM(MI.getDesc().TSFlags)) {
-      unsigned VXRMImm = MI.getOperand(RoundModeIdx).getImm();
+    int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
+    if (VXRMIdx >= 0) {
+      unsigned VXRMImm = MI.getOperand(VXRMIdx).getImm();
 
       Changed = true;
 
@@ -77,29 +74,34 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
           .addImm(VXRMImm);
       MI.addOperand(MachineOperand::CreateReg(RISCV::VXRM, /*IsDef*/ false,
                                               /*IsImp*/ true));
-    } else { // FRM
-      unsigned FRMImm = MI.getOperand(RoundModeIdx).getImm();
-
-      // The value is a hint to this pass to not alter the frm value.
-      if (FRMImm == RISCVFPRndMode::DYN)
-        continue;
-
-      Changed = true;
-
-      // Save
-      MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
-      Register SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm),
-              SavedFRM)
-          .addImm(FRMImm);
-      MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*IsDef*/ false,
-                                              /*IsImp*/ true));
-      // Restore
-      MachineInstrBuilder MIB =
-          BuildMI(*MBB.getParent(), {}, TII->get(RISCV::WriteFRM))
-              .addReg(SavedFRM);
-      MBB.insertAfter(MI, MIB);
+      continue;
     }
+
+    int FRMIdx = RISCVII::getFRMOpNum(MI.getDesc());
+    if (FRMIdx < 0)
+      continue;
+
+    unsigned FRMImm = MI.getOperand(FRMIdx).getImm();
+
+    // The value is a hint to this pass to not alter the frm value.
+    if (FRMImm == RISCVFPRndMode::DYN)
+      continue;
+
+    Changed = true;
+
+    // Save
+    MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
+    Register SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm),
+            SavedFRM)
+        .addImm(FRMImm);
+    MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*IsDef*/ false,
+                                            /*IsImp*/ true));
+    // Restore
+    MachineInstrBuilder MIB =
+        BuildMI(*MBB.getParent(), {}, TII->get(RISCV::WriteFRM))
+            .addReg(SavedFRM);
+    MBB.insertAfter(MI, MIB);
   }
   return Changed;
 }

@@ -14925,22 +14925,14 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
-  // Add FRM dependency to vector floating-point instructions with dynamic
-  // rounding mode.
-  int RoundModeIdx = RISCVII::getRoundModeOpNum(MI.getDesc());
-  if (RoundModeIdx >=  0) {
-    unsigned FRMImm = MI.getOperand(RoundModeIdx).getImm();
-    if (FRMImm == RISCVFPRndMode::DYN && !MI.readsRegister(RISCV::FRM)) {
-      MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false,
-                                              /*isImp*/ true));
-    }
-  }
-
   // Add FRM dependency to any instructions with dynamic rounding mode.
-  unsigned Opc = MI.getOpcode();
-  auto Idx = RISCV::getNamedOperandIdx(Opc, RISCV::OpName::frm);
-  if (Idx < 0)
-    return;
+  int Idx = RISCV::getNamedOperandIdx(MI.getOpcode(), RISCV::OpName::frm);
+  if (Idx < 0) {
+    // Vector pseudos have FRM index indicated by TSFlags.
+    Idx = RISCVII::getFRMOpNum(MI.getDesc());
+    if (Idx < 0)
+      return;
+  }
   if (MI.getOperand(Idx).getImm() != RISCVFPRndMode::DYN)
     return;
   // If the instruction already reads FRM, don't add another read.
