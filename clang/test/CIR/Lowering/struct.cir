@@ -3,6 +3,7 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
 !ty_22struct2ES22 = !cir.struct<"struct.S", !u8i, !s32i>
 !ty_22struct2ES2A22 = !cir.struct<"struct.S2A", !s32i, #cir.recdecl.ast>
 !ty_22struct2ES122 = !cir.struct<"struct.S1", !s32i, f32, !cir.ptr<!s32i>, #cir.recdecl.ast>
@@ -78,4 +79,18 @@ module {
   // CHECK:   %12 = llvm.insertvalue %11, %8[2] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
   // CHECK:   llvm.return %12 : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK: }
+
+  cir.func @shouldLowerStructCopies() {
+  // CHECK: llvm.func @shouldLowerStructCopies()
+    %1 = cir.alloca !ty_22struct2ES22, cir.ptr <!ty_22struct2ES22>, ["a"] {alignment = 4 : i64}
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK: %[[#SA:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"struct.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
+    %2 = cir.alloca !ty_22struct2ES22, cir.ptr <!ty_22struct2ES22>, ["b", init] {alignment = 4 : i64}
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK: %[[#SB:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"struct.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
+    cir.copy %1 to %2 : !cir.ptr<!ty_22struct2ES22>
+    // CHECK: %[[#SIZE:]] = llvm.mlir.constant(8 : i32) : i32
+    // CHECK: "llvm.intr.memcpy"(%[[#SB]], %[[#SA]], %[[#SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+    cir.return
+  }
 }

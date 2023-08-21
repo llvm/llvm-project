@@ -204,6 +204,21 @@ mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
   };
 }
 
+class CIRCopyOpLowering : public mlir::OpConversionPattern<mlir::cir::CopyOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::CopyOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CopyOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const mlir::Value length = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), rewriter.getI32Type(), op.getLength());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+        op, adaptor.getDst(), adaptor.getSrc(), length, /*isVolatile=*/false);
+    return mlir::success();
+  }
+};
+
 class CIRPtrStrideOpLowering
     : public mlir::OpConversionPattern<mlir::cir::PtrStrideOp> {
 public:
@@ -1754,7 +1769,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
                CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
                CIRStructElementAddrOpLowering, CIRSwitchOpLowering,
-               CIRPtrDiffOpLowering>(converter, patterns.getContext());
+               CIRPtrDiffOpLowering, CIRCopyOpLowering>(converter,
+                                                        patterns.getContext());
 }
 
 namespace {
