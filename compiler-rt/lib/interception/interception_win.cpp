@@ -520,20 +520,14 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   switch (*(u16*)(address)) {
     case 0x018A:  // 8A 01 : mov al, byte ptr [ecx]
     case 0xFF8B:  // 8B FF : mov edi, edi
-    case 0xDC8B:  // 8B DC : mov ebx, esp
     case 0xEC8B:  // 8B EC : mov ebp, esp
     case 0xc889:  // 89 C8 : mov eax, ecx
     case 0xE589:  // 89 E5 : mov ebp, esp
     case 0xC18B:  // 8B C1 : mov eax, ecx
-    case 0xFF33:  // 33 FF : xor edi, edi
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
     case 0xD233:  // 33 D2 : xor edx, edx
       return 2;
-
-    case 0xEC83:  // 83 EC XX : sub esp, XX
-    case 0xE483:  // 83 E4 XX : and esp, XX
-      return 3;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
     case 0x25FF:  // FF 25 XX XX XX XX : jmp [XXXXXXXX]
@@ -595,9 +589,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd28548:    // 48 85 d2 : test rdx, rdx
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
-    case 0xc2b70f:    // 0f b7 c2 : movzx eax, dx
-    case 0x01b70f:    // 0f b7 01 : movzx eax, WORD PTR [rcx]
-    case 0x02b70f:    // 0f b7 02 : movzx eax, WORD PTR [rdx]
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
     case 0xc93345:    // 45 33 c9 : xor r9d, r9d
     case 0xdb3345:    // 45 33 DB : xor r11d, r11d
@@ -611,13 +602,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc00b4d:    // 3d 0b c0 : or r8, r8
     case 0xc08b41:    // 41 8b c0 : mov eax, r8d
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
-    case 0xc22b4c:    // 4c 2b c2 : sub r8, rdx
     case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
     case 0xE0E483:    // 83 E4 E0 : and esp, 0xFFFFFFE0
       return 3;
 
-    case 0x398366:    // 66 83 39 XX : cmp DWORD PTR [rcx], XX
     case 0xec8348:    // 48 83 ec XX : sub rsp, XX
     case 0xf88349:    // 49 83 f8 XX : cmp r8, XX
     case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
@@ -642,8 +631,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 
   switch (*(u32*)(address)) {
-    case 0x01b70f44:  // 44 0f b7 01 : movzx r8d, WORD PTR [rcx]
-      return 4;
     case 0x24448b48:  // 48 8b 44 24 XX : mov rax, QWORD ptr [rsp + XX]
     case 0x246c8948:  // 48 89 6C 24 XX : mov QWORD ptr [rsp + XX], rbp
     case 0x245c8948:  // 48 89 5c 24 XX : mov QWORD PTR [rsp + XX], rbx
@@ -653,7 +640,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24548948:  // 48 89 54 24 XX : mov QWORD PTR [rsp + XX], rdx
     case 0x244c894c:  // 4c 89 4c 24 XX : mov QWORD PTR [rsp + XX], r9
     case 0x2444894c:  // 4c 89 44 24 XX : mov QWORD PTR [rsp + XX], r8
-    case 0x24548966:  // 66 89 54 24 XX : mov WORD PTR  [rsp + XX], dx
       return 5;
     case 0x24648348:  // 48 83 64 24 XX : and QWORD PTR [rsp + XX], YY
       return 6;
