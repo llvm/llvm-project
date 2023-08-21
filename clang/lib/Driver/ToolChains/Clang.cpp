@@ -5872,15 +5872,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
-    if (A->getOption().matches(options::OPT_fsplit_machine_functions)) {
-      // This codegen pass is only available on elf targets.
-      if (Triple.isOSBinFormatELF())
+    // This codegen pass is only available on x86-elf targets.
+    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      if (A->getOption().matches(options::OPT_fsplit_machine_functions))
         A->render(Args, CmdArgs);
-      else
-        D.Diag(diag::warn_drv_for_elf_only) << A->getAsString(Args);
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
     }
-    // Do not issue warnings for -fno-split-machine-functions even it is not
-    // on ELF.
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,

@@ -86,7 +86,6 @@ enum DiagnosticKind {
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
-  DK_MachineFunctionSplit,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
 };
@@ -1115,20 +1114,6 @@ public:
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;
-  }
-};
-
-class DiagnosticInfoMachineFunctionSplit : public DiagnosticInfo {
-  StringRef TargetTriple;
-
-public:
-  DiagnosticInfoMachineFunctionSplit(StringRef TargetTriple,
-                                     DiagnosticSeverity DS)
-      : DiagnosticInfo(DK_MachineFunctionSplit, DS),
-        TargetTriple(TargetTriple) {}
-  void print(DiagnosticPrinter &DP) const override;
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_MachineFunctionSplit;
   }
 };
 
