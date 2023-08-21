@@ -1290,7 +1290,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         for (const ValueTypeByHwMode &VVT : RC.VTs)
           if (VVT.hasDefault() || VVT.hasMode(M))
             VTs.push_back(VVT.get(M).SimpleTy);
-        OS << ", VTLists+" << VTSeqs.get(VTs) << " },    // "
+        OS << ", /*VTLists+*/" << VTSeqs.get(VTs) << " },    // "
            << RC.getName() << '\n';
       }
     }
@@ -1652,7 +1652,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
      << "             ";
   printMask(OS, RegBank.CoveringLanes);
-  OS << ", RegClassInfos, HwMode) {\n"
+  OS << ", RegClassInfos, VTLists, HwMode) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
      << ", RA, PC,\n                     " << TargetName
      << "MCRegisterClasses, " << RegisterClasses.size() << ",\n"
