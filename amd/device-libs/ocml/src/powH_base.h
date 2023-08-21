@@ -100,6 +100,9 @@ MATH_MANGLE(powr)(half x, half y)
 CONSTATTR half
 MATH_MANGLE(pown)(half x, int ny)
 {
+    if (ny == 0)
+        x = 1.0h;
+
     half ax = BUILTIN_ABS_F16(x);
 
     float fy = (float)ny;
@@ -114,9 +117,6 @@ MATH_MANGLE(pown)(half x, int ny)
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
                                    is_odd_y ? x : 0.0h);
-
-    if (ny == 0)
-        ret = 1.0h;
 
     return ret;
 }

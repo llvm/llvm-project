@@ -138,8 +138,10 @@ MATH_MANGLE(powr)(float x, float y)
 CONSTATTR float
 MATH_MANGLE(pown)(float x, int ny)
 {
-    float ax = BUILTIN_ABS_F32(x);
+    if (ny == 0)
+        x = 1.0f;
 
+    float ax = BUILTIN_ABS_F32(x);
     float expylnx = compute_expylnx_int(ax, ny);
 
     bool is_odd_y = ny & 1;
@@ -150,9 +152,6 @@ MATH_MANGLE(pown)(float x, int ny)
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
                                    is_odd_y ? x : 0.0f);
-    if (ny == 0)
-        ret = 1.0f;
-
     return ret;
 }
 

@@ -106,6 +106,9 @@ MATH_MANGLE(powr)(double x, double y)
 CONSTATTR double
 MATH_MANGLE(pown)(double x, int ny)
 {
+    if (ny == 0)
+        x = 1.0;
+
     double y = (double) ny;
 
     double ax = BUILTIN_ABS_F64(x);
@@ -119,9 +122,6 @@ MATH_MANGLE(pown)(double x, int ny)
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
                                    is_odd_y ? x : 0.0);
-
-    if (ny == 0)
-        ret = 1.0;
 
     return ret;
 }
