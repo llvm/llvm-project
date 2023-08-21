@@ -2122,8 +2122,8 @@ static Instruction *foldSelectShuffleOfSelectShuffle(ShuffleVectorInst &Shuf) {
     NewMask[i] = Mask[i] < (signed)NumElts ? Mask[i] : Mask1[i];
 
   // A select mask with undef elements might look like an identity mask.
-  assert((ShuffleVectorInst::isSelectMask(NewMask) ||
-          ShuffleVectorInst::isIdentityMask(NewMask)) &&
+  assert((ShuffleVectorInst::isSelectMask(NewMask, NumElts) ||
+          ShuffleVectorInst::isIdentityMask(NewMask, NumElts)) &&
          "Unexpected shuffle mask");
   return new ShuffleVectorInst(X, Y, NewMask);
 }
