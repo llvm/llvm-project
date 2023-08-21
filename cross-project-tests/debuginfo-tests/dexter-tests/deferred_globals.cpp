@@ -4,9 +4,10 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %clang -O0 -g %s -o %t
+
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary  %t --debugger 'lldb' -v -- %s
+// RUN:     --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-g -O0" -v -- %s
 
 const int d = 100;
 

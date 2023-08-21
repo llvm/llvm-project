@@ -3384,10 +3384,10 @@ void ProcessGDBRemote::MonitorDebugserverProcess(
       stream.Format(DEBUGSERVER_BASENAME " died with an exit status of {0:x8}",
                     exit_status);
     else {
-      const char *signal_name =
-          process_sp->GetUnixSignals()->GetSignalAsCString(signo);
+      llvm::StringRef signal_name =
+          process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
       const char *format_str = DEBUGSERVER_BASENAME " died with signal {0}";
-      if (signal_name)
+      if (!signal_name.empty())
         stream.Format(format_str, signal_name);
       else
         stream.Format(format_str, signo);

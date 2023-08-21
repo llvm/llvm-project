@@ -74,6 +74,14 @@ func.func @conv_2d_nchw_fchw_CCCC(%arg0: tensor<?x?x?x?xf32, #CCCC>, %arg1: tens
   return %ret : tensor<?x?x?x?xf32>
 }
 
+func.func @conv_2d_nchw_fchw_CCCC_CCCC(%arg0: tensor<?x?x?x?xf32, #CCCC>, %arg1: tensor<?x?x?x?xf32, #CCCC>, %arg2: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %ret = linalg.conv_2d_nchw_fchw {dilations = dense<1> : tensor<2xi64>,
+                                     strides = dense<1> : tensor<2xi64>}
+     ins (%arg0, %arg1: tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32, #CCCC>)
+    outs (%arg2: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %ret : tensor<?x?x?x?xf32>
+}
+
 func.func @entry() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -96,9 +104,13 @@ func.func @entry() {
   %in2D_nhwc_CCCC = sparse_tensor.convert %in2D_nhwc
     : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CCCC>
 
+  %filter2D_nhwc_CCCC = sparse_tensor.convert %filter2D_nhwc
+    : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CCCC>
+
   %dense_ret = call @conv_2d_nchw_fchw(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
   %CCCC_ret = call @conv_2d_nchw_fchw_CDCD(%in2D_nhwc_CCCD, %filter2D_nhwc, %out2D_nhwc_CCCD) : (tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
   %CDCD_ret = call @conv_2d_nchw_fchw_CCCC(%in2D_nhwc_CCCC, %filter2D_nhwc, %out2D_nhwc_CCCC) : (tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
+  %dual_CCCC_ret = call @conv_2d_nchw_fchw_CCCC_CCCC(%in2D_nhwc_CCCC, %filter2D_nhwc_CCCC, %out2D_nhwc) : (tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
 
 
   // CHECK:     ( ( ( ( 108, 124, 124, 124, 108, 108 ),
@@ -167,6 +179,28 @@ func.func @entry() {
       : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
   vector.print %v2 : vector<3x1x6x6xf32>
 
+  // CHECK:     ( ( ( ( 108, 124, 124, 124, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ),
+  // CHECK-SAME:  ( ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ),
+  // CHECK-SAME:  ( ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:      ( 108, 108, 108, 108, 108, 108 ) ) ) )
+  %v3 = vector.transfer_read %dual_CCCC_ret[%c0, %c0, %c0, %c0], %zero
+      : tensor<?x?x?x?xf32>, vector<3x1x6x6xf32>
+  vector.print %v3 : vector<3x1x6x6xf32>
+
   // Free the resources
   bufferization.dealloc_tensor %in2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %filter2D_nhwc : tensor<?x?x?x?xf32>
@@ -176,5 +210,6 @@ func.func @entry() {
 
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %in2D_nhwc_CCCD : tensor<?x?x?x?xf32, #CDCD>
+  bufferization.dealloc_tensor %filter2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
   return
 }

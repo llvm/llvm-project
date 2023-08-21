@@ -4835,8 +4835,7 @@ bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
     return false;
 
   SDValue CmpRHS = N->getOperand(3);
-  if (!isa<ConstantSDNode>(CmpRHS) ||
-      cast<ConstantSDNode>(CmpRHS)->getSExtValue() != 0)
+  if (!isNullConstant(CmpRHS))
     return false;
 
   SDValue CmpLHS = N->getOperand(2);
@@ -6659,11 +6658,7 @@ bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
         Op2->getMachineOpcode() != PPC::LI8)
       return false;
 
-    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op2->getOperand(0));
-    if (!C)
-      return false;
-
-    if (!C->isZero())
+    if (!isNullConstant(Op2->getOperand(0)))
       return false;
   }
 

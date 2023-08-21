@@ -216,10 +216,13 @@ public:
   OldDbgVariable(const DILocalVariable *V, const DILocation *IA)
       : DbgVariable(V, IA, OldDbgVariableKind) {}
 
+  bool isInitialized() const {
+    return !FrameIndexExprs.empty() || ValueLoc;
+  }
+
   /// Initialize from the MMI table.
-  void initializeMMI(const DIExpression *E, int FI) override {
-    assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!ValueLoc.get() && "Already initialized?");
+  void initializeMMI(const DIExpression *E, int FI) {
+    assert(!isInitialized() && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
     assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
@@ -228,9 +231,8 @@ public:
   }
 
   // Initialize variable's location.
-  void initializeDbgValue(DbgValueLoc Value) override {
-    assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!ValueLoc && "Already initialized?");
+  void initializeDbgValue(DbgValueLoc Value) {
+    assert(!isInitialized() && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
     ValueLoc = std::make_unique<DbgValueLoc>(Value);

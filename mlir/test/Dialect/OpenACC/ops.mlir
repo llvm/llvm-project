@@ -1674,3 +1674,24 @@ func.func @acc_func() -> () {
 
 // CHECK-LABEL: func.func @acc_func
 // CHECK: "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>}
+
+// -----
+
+func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>, %d: memref<10xf32>) {
+  %lb = arith.constant 0 : index
+  %st = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %numGangs = arith.constant 10 : i64
+  %numWorkers = arith.constant 10 : i64
+
+  %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+  %pb = acc.present varPtr(%b : memref<10x10xf32>) -> memref<10x10xf32>
+  %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
+  %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
+  acc.declare dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @compute3
+// CHECK: acc.declare dataOperands(

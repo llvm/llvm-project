@@ -42,6 +42,9 @@ def Bno_symbolic: F<"Bno-symbolic">, HelpText<"Don't bind default visibility def
 
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols locally for -shared">;
 
+def Bsymbolic_non_weak: F<"Bsymbolic-non-weak">,
+  HelpText<"Bind default visibility defined STB_GLOBAL symbols locally for -shared">;
+
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
   HelpText<"Bind default visibility defined function symbols locally for -shared">;
 

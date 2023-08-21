@@ -1155,13 +1155,15 @@ static void readConfigs(opt::InputArgList &args) {
   config->androidMemtagMode = getMemtagMode(args);
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   config->armBe8 = args.hasArg(OPT_be8);
-  if (opt::Arg *arg =
-          args.getLastArg(OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
-                          OPT_Bsymbolic_functions, OPT_Bsymbolic)) {
+  if (opt::Arg *arg = args.getLastArg(
+          OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
+          OPT_Bsymbolic_functions, OPT_Bsymbolic_non_weak, OPT_Bsymbolic)) {
     if (arg->getOption().matches(OPT_Bsymbolic_non_weak_functions))
       config->bsymbolic = BsymbolicKind::NonWeakFunctions;
     else if (arg->getOption().matches(OPT_Bsymbolic_functions))
       config->bsymbolic = BsymbolicKind::Functions;
+    else if (arg->getOption().matches(OPT_Bsymbolic_non_weak))
+      config->bsymbolic = BsymbolicKind::NonWeak;
     else if (arg->getOption().matches(OPT_Bsymbolic))
       config->bsymbolic = BsymbolicKind::All;
   }

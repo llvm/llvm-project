@@ -131,12 +131,11 @@ void UnixSignals::RemoveSignal(int signo) {
   ++m_version;
 }
 
-const char *UnixSignals::GetSignalAsCString(int signo) const {
-  collection::const_iterator pos = m_signals.find(signo);
+llvm::StringRef UnixSignals::GetSignalAsStringRef(int32_t signo) const {
+  const auto pos = m_signals.find(signo);
   if (pos == m_signals.end())
-    return nullptr;
-  else
-    return pos->second.m_name.GetCString();
+    return {};
+  return pos->second.m_name.GetStringRef();
 }
 
 std::string

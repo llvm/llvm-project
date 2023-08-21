@@ -1,5 +1,24 @@
 ! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -target-cpu pwr10 -emit-llvm %s -o - | FileCheck --check-prefixes="CHECK" %s
 ! REQUIRES: target=powerpc{{.*}}
+
+!----------------------
+! mma_lxvp
+!----------------------
+
+      subroutine mma_lxvp_test_i2(v1, offset, vp)
+      use, intrinsic :: mma
+      integer(2) :: offset
+      vector(integer(2)) :: v1
+      __vector_pair :: vp
+      vp = mma_lxvp(offset, v1)
+      end subroutine mma_lxvp_test_i2
+
+!CHECK-LABEL: @mma_lxvp_test_i2_
+!CHECK:  %[[offset:.*]] = load i16, ptr %1, align 2
+!CHECK:  %[[addr:.*]] = getelementptr i8, ptr %0, i16 %[[offset]]
+!CHECK:  %[[call:.*]] = call <256 x i1> @llvm.ppc.vsx.lxvp(ptr %[[addr]])
+!CHECK:  store <256 x i1> %[[call]], ptr %2, align 32
+
       subroutine test_cvspbf16()
       implicit none
       vector(unsigned(1)) :: v1, v2
@@ -267,6 +286,24 @@
 !CHECK:  %[[addr:.*]] = getelementptr i8, ptr %0, i64 %[[offset]]
 !CHECK:  %[[call:.*]] = call <256 x i1> @llvm.ppc.vsx.lxvp(ptr %[[addr]])
 !CHECK:  store <256 x i1> %[[call]], ptr %2, align 32
+
+!----------------------
+! mma_stxvp
+!----------------------
+
+      subroutine test_mma_stxvp_i1(vp, offset, v1)
+      use, intrinsic :: mma
+      integer(1) :: offset
+      vector(integer(2)) :: v1
+      __vector_pair :: vp
+      call mma_stxvp(vp, offset, v1)
+      end subroutine test_mma_stxvp_i1
+
+!CHECK-LABEL: @test_mma_stxvp_i1_
+!CHECK:  %[[vp:.*]] = load <256 x i1>, ptr %0, align 32
+!CHECK:  %[[offset:.*]] = load i8, ptr %1, align 1
+!CHECK:  %[[addr:.*]] = getelementptr i8, ptr %2, i8 %[[offset]]
+!CHECK:  call void @llvm.ppc.vsx.stxvp(<256 x i1> %[[vp]], ptr %[[addr]])
 
 !----------------------
 ! vec_stxvp

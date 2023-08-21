@@ -5,8 +5,7 @@
 // UNSUPPORTED: system-darwin
 //
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: not %dexter_regression_test -- %s | FileCheck %s
 // CHECK: unreachable.cpp:
 
 int

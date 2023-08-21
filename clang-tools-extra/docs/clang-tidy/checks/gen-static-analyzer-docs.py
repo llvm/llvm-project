@@ -110,7 +110,7 @@ def generate_documentation(checker, has_documentation):
         f.write("\n\n")
         if has_documentation:
             f.write(
-                "The %s check is an alias, please see\n" % checker["FullPackageName"]
+                "The `%s` check is an alias, please see\n" % checker["FullPackageName"]
             )
             f.write(
                 "`Clang Static Analyzer Available Checkers\n<https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_\n"
@@ -136,10 +136,10 @@ def update_documentation_list(checkers):
         checks = [x for x in checks if "clang-analyzer-" not in x]
         for checker in checkers:
             if checker["Documentation"]:
-                checks.append("   `%s <clang-analyzer/%s.html>`_, `Clang Static Analyzer %s <https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_," % (checker["FullPackageName"],
+                checks.append("   :doc:`%s <clang-analyzer/%s>`, `Clang Static Analyzer %s <https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_," % (checker["FullPackageName"],
                                                         checker["ShortName"],  checker["ShortName"], checker["AnchorUrl"]))
             else:
-                checks.append("   `%s <clang-analyzer/%s.html>`_, Clang Static Analyzer %s," % (checker["FullPackageName"], checker["ShortName"],  checker["ShortName"]))
+                checks.append("   :doc:`%s <clang-analyzer/%s>`, Clang Static Analyzer %s," % (checker["FullPackageName"], checker["ShortName"],  checker["ShortName"]))
 
         checks.sort()
 

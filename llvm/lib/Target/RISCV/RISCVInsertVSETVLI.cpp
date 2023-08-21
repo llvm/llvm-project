@@ -1423,28 +1423,20 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLAny)
       return false;
 
-    // TODO: Requires more care in the mutation...
-    if (isVLPreservingConfig(PrevMI))
-      return false;
-
     // We don't bother to handle the equally zero case here as it's largely
     // uninteresting.
-    if (Used.VLZeroness &&
-        (!isNonZeroAVL(MI.getOperand(1)) ||
-         !isNonZeroAVL(PrevMI.getOperand(1))))
-      return false;
+    if (Used.VLZeroness) {
+      if (isVLPreservingConfig(PrevMI))
+        return false;
+      if (!isNonZeroAVL(MI.getOperand(1)) ||
+          !isNonZeroAVL(PrevMI.getOperand(1)))
+        return false;
+    }
 
     // TODO: Track whether the register is defined between
     // PrevMI and MI.
     if (MI.getOperand(1).isReg() &&
         RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
-
-    // TODO: We need to change the result register to allow this rewrite
-    // without the result forming a vl preserving vsetvli which is not
-    // a correct state merge.
-    if (PrevMI.getOperand(0).getReg() == RISCV::X0 &&
-        MI.getOperand(1).isReg())
       return false;
   }
 
@@ -1483,6 +1475,8 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         continue;
       } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
         if (!isVLPreservingConfig(*NextMI)) {
+          MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
+          MI.getOperand(0).setIsDead(false);
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
@@ -1490,11 +1484,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        // Don't delete a vsetvli if its result might be used.
-        Register NextVRefDef = NextMI->getOperand(0).getReg();
-        if (NextVRefDef == RISCV::X0 ||
-            (NextVRefDef.isVirtual() && MRI->use_nodbg_empty(NextVRefDef)))
-          ToDelete.push_back(NextMI);
+        ToDelete.push_back(NextMI);
         // fallthrough
       }
     }

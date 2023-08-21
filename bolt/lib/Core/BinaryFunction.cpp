@@ -4126,6 +4126,7 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           assert(FragmentBaseAddress == FF.getAddress());
         else
           assert(FragmentBaseAddress == getOutputAddress());
+        (void)FragmentBaseAddress;
       }
 
       const uint64_t BBAddress =

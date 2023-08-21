@@ -420,6 +420,18 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("class");
     Kind["displayName"] = "Class";
     break;
+  case APIRecord::RK_CXXMethodTemplate:
+    Kind["identifier"] = AddLangPrefix("method");
+    Kind["displayName"] = "Method Template";
+    break;
+  case APIRecord::RK_CXXMethodTemplateSpecialization:
+    Kind["identifier"] = AddLangPrefix("method");
+    Kind["displayName"] = "Method Template Specialization";
+    break;
+  case APIRecord::RK_CXXFieldTemplate:
+    Kind["identifier"] = AddLangPrefix("property");
+    Kind["displayName"] = "Template Property";
+    break;
   case APIRecord::RK_Concept:
     Kind["identifier"] = AddLangPrefix("concept");
     Kind["displayName"] = "Concept";
@@ -873,9 +885,6 @@ void SymbolGraphSerializer::visitCXXClassRecord(const CXXClassRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  serializeMembers(Record, Record.Fields);
-  serializeMembers(Record, Record.Methods);
-
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
 }
@@ -887,9 +896,6 @@ void SymbolGraphSerializer::visitClassTemplateRecord(
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  serializeMembers(Record, Record.Fields);
-  serializeMembers(Record, Record.Methods);
-
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
 }
@@ -901,8 +907,6 @@ void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  serializeMembers(Record, Record.Fields);
-  serializeMembers(Record, Record.Methods);
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
@@ -915,11 +919,81 @@ void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  serializeMembers(Record, Record.Fields);
-  serializeMembers(Record, Record.Methods);
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitCXXInstanceMethodRecord(
+    const CXXInstanceMethodRecord &Record) {
+  auto InstanceMethod = serializeAPIRecord(Record);
+  if (!InstanceMethod)
+    return;
+
+  Symbols.emplace_back(std::move(*InstanceMethod));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitCXXStaticMethodRecord(
+    const CXXStaticMethodRecord &Record) {
+  auto StaticMethod = serializeAPIRecord(Record);
+  if (!StaticMethod)
+    return;
+
+  Symbols.emplace_back(std::move(*StaticMethod));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitMethodTemplateRecord(
+    const CXXMethodTemplateRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto MethodTemplate = serializeAPIRecord(Record);
+  if (!MethodTemplate)
+    return;
+  Symbols.emplace_back(std::move(*MethodTemplate));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitMethodTemplateSpecializationRecord(
+    const CXXMethodTemplateSpecializationRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto MethodTemplateSpecialization = serializeAPIRecord(Record);
+  if (!MethodTemplateSpecialization)
+    return;
+  Symbols.emplace_back(std::move(*MethodTemplateSpecialization));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitCXXFieldRecord(const CXXFieldRecord &Record) {
+  if (!ShouldRecurse)
+    return;
+  auto CXXField = serializeAPIRecord(Record);
+  if (!CXXField)
+    return;
+  Symbols.emplace_back(std::move(*CXXField));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitCXXFieldTemplateRecord(
+    const CXXFieldTemplateRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto CXXFieldTemplate = serializeAPIRecord(Record);
+  if (!CXXFieldTemplate)
+    return;
+  Symbols.emplace_back(std::move(*CXXFieldTemplate));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitConceptRecord(const ConceptRecord &Record) {

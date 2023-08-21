@@ -123,6 +123,12 @@ New checks
   a complex condition and suggests moving them outside to avoid ambiguity in
   the variable's value.
 
+- New :doc:`bugprone-incorrect-enable-if
+  <clang-tidy/checks/bugprone/incorrect-enable-if>` check.
+
+  Detects incorrect usages of ``std::enable_if`` that don't name the nested
+  ``type`` type.
+
 - New :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check.
 
@@ -169,13 +175,13 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fixed bug in :doc:`bugprone-reserved-identifier
-  <clang-tidy/checks/bugprone/reserved-identifier>`, so that it does not warn
-  on macros starting with underscore and lowercase letter.
-
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
+
+- Improved :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
+  warn on macros starting with underscore and lowercase letter.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -186,8 +192,8 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   ignore delegate constructors.
 
-- Improved :doc `cppcoreguidelines-pro-bounds-array-to-pointer-decay
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check 
+- Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
   to ignore predefined expression (e.g., ``__func__``, ...).
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
@@ -218,9 +224,13 @@ Changes in existing checks
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
 
-- Improved :doc:`performanc-noexcept-swap
+- Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature, eliminating false-positives.
+
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to
+  detect comparison between string and empty string literals.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper

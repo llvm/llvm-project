@@ -175,20 +175,6 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
   return TSFlags & HasRoundModeOpMask;
 }
 
-/// \returns  the index to the rounding mode immediate value if any, otherwise
-/// returns -1.
-static inline int getRoundModeOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  if (!hasRoundModeOp(TSFlags))
-    return -1;
-  // The operand order
-  // -------------------------------------
-  // | n-1 (if any)   | n-2  | n-3 | n-4 |
-  // | policy         | sew  | vl  | rm  |
-  // -------------------------------------
-  return Desc.getNumOperands() - hasVecPolicyOp(TSFlags) - 3;
-}
-
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
@@ -215,6 +201,35 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
 static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
   assert(hasVecPolicyOp(Desc.TSFlags));
   return Desc.getNumOperands() - 1;
+}
+
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getFRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
+    return -1;
+
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4 |
+  // | policy         | sew  | vl  | frm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
+}
+
+/// \returns  the index to the rounding mode immediate value if any, otherwise
+/// returns -1.
+static inline int getVXRMOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (!hasRoundModeOp(TSFlags) || !usesVXRM(TSFlags))
+    return -1;
+  // The operand order
+  // --------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4  |
+  // | policy         | sew  | vl  | vxrm |
+  // --------------------------------------
+  return getVLOpNum(Desc) - 1;
 }
 
 // Is the first def operand tied to the first use operand. This is true for

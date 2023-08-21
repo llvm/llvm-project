@@ -2730,6 +2730,15 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       createEntryOperands, copyoutEntryOperands, deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  mlir::acc::DeclareOp declareOp;
+  auto parentOp = builder.getBlock()->getParentOp();
+  if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
+    declareOp = mlir::dyn_cast<mlir::acc::DeclareOp>(
+        *builder.getBlock()->getParentOp());
+    builder.setInsertionPoint(declareOp.getOperation());
+  }
+
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *copyClause =
             std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
@@ -2817,13 +2826,24 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       TODO(clauseLocation, "clause on declare directive");
     }
   }
-  builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
 
-  // Attach declare exit operation generation to function context.
-  fctCtx.attachCleanup([&builder, loc, dataClauseOperands, createEntryOperands,
+  if (declareOp) {
+    declareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
+    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+  } else {
+    declareOp = builder.create<mlir::acc::DeclareOp>(loc, dataClauseOperands);
+    builder.createBlock(&declareOp.getRegion(), declareOp.getRegion().end(), {},
+                        {});
+    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+  }
+  fctCtx.attachCleanup([&builder, declareOp, loc, createEntryOperands,
                         copyEntryOperands, copyoutEntryOperands,
                         deviceResidentEntryOperands]() {
-    builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
+    auto parentOp = builder.getBlock()->getParentOp();
+    if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
+      builder.create<mlir::acc::TerminatorOp>(loc);
+      builder.setInsertionPointAfter(declareOp);
+    }
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
         builder, createEntryOperands, /*structured=*/true,
         /*implicit=*/false);

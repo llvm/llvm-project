@@ -4,11 +4,10 @@
 //
 // UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: expect_step_order.cpp:
 
-int main() // DexLabel('main')
+int main()
 {
   volatile int a = 1; // DexExpectStepOrder(1)
   volatile int b = 1; // DexExpectStepOrder(2)
@@ -20,6 +19,6 @@ int main() // DexLabel('main')
   return 0;
 }
 
-// DexExpectStepOrder(4, on_line=ref('main')+6);
-// DexExpectStepOrder(5, on_line=ref('main')+7);
-// DexExpectStepOrder(6, on_line=ref('main')+8);
+// DexExpectStepOrder(4, on_line=16);
+// DexExpectStepOrder(5, on_line=17);
+// DexExpectStepOrder(6, on_line=18);

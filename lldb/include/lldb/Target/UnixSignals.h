@@ -30,7 +30,7 @@ public:
 
   virtual ~UnixSignals();
 
-  const char *GetSignalAsCString(int32_t signo) const;
+  llvm::StringRef GetSignalAsStringRef(int32_t signo) const;
 
   std::string
   GetSignalDescription(int32_t signo,
