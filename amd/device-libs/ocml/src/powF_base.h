@@ -147,14 +147,14 @@ MATH_MANGLE(pown)(float x, int ny)
 
     float expylnx = compute_expylnx_int(ax, ny);
 
-    int inty = 2 - (ny & 1);
+    bool is_odd_y = ny & 1;
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
-                                   inty == 1 ? x : 0.0f);
+                                   is_odd_y ? x : 0.0f);
     if (ny == 0)
         ret = 1.0f;
 
@@ -169,16 +169,16 @@ MATH_MANGLE(rootn)(float x, int ny)
     float ax = BUILTIN_ABS_F32(x);
     float expylnx = compute_exp_inverse_y_lnx_int(ax, ny);
 
-    int inty = 2 - (ny & 1);
+    bool is_odd_y = ny & 1;
 
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, ((inty == 1) & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_y & (x < 0.0f)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
-                                   inty == 1 ? x : 0.0f);
+                                   is_odd_y ? x : 0.0f);
 
-    if ((x < 0.0f && inty != 1) || ny == 0)
+    if ((x < 0.0f && !is_odd_y) || ny == 0)
         ret = QNAN_F32;
 
     return ret;

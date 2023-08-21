@@ -115,15 +115,14 @@ MATH_MANGLE(pown)(double x, int ny)
     double ax = BUILTIN_ABS_F64(x);
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
-    // y status: 0=not integer, 1=odd, 2=even
-    int inty = 2 - (ny & 1);
+    bool is_odd_y = ny & 1;
 
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -1.0 : 1.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_y & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
-                                   inty == 1 ? x : 0.0);
+                                   is_odd_y ? x : 0.0);
 
     if (ny == 0)
         ret = 1.0;
@@ -141,17 +140,16 @@ MATH_MANGLE(rootn)(double x, int ny)
     double ax = BUILTIN_ABS_F64(x);
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
-    // y status: 0=not integer, 1=odd, 2=even
-    int inty = 2 - (ny & 1);
+    bool is_odd_y = ny & 1;
 
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, ((inty == 1) & (x < 0.0)) ? -1.0 : 1.0);
+    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_y & (x < 0.0)) ? -1.0 : 1.0);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
-                                   inty == 1 ? x : 0.0);
+                                   is_odd_y ? x : 0.0);
 
-    if ((x < 0.0 && inty != 1) || ny == 0)
+    if ((x < 0.0 && !is_odd_y) || ny == 0)
         ret = QNAN_F64;
 
     return ret;

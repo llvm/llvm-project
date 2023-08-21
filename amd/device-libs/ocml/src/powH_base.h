@@ -110,19 +110,14 @@ MATH_MANGLE(pown)(half x, int ny)
 
     float p = BUILTIN_AMDGPU_EXP2_F32(fy * BUILTIN_AMDGPU_LOG2_F32((float)ax));
 
-    // Classify y:
-    //   inty = 0 means not an integer.
-    //   inty = 1 means odd integer.
-    //   inty = 2 means even integer.
+    bool is_odd_y = ny & 1;
 
-    int inty = 2 - (ny & 1);
-
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
-                                   inty == 1 ? x : 0.0h);
+                                   is_odd_y ? x : 0.0h);
 
     if (ny == 0)
         ret = 1.0h;
@@ -141,20 +136,16 @@ MATH_MANGLE(rootn)(half x, int ny)
 
     float p = BUILTIN_AMDGPU_EXP2_F32(fy * BUILTIN_AMDGPU_LOG2_F32((float)ax));
 
-    // Classify y:
-    //   inty = 0 means not an integer.
-    //   inty = 1 means odd integer.
-    //   inty = 2 means even integer.
-    int inty = 2 - (ny & 1);
+    bool is_odd_y = ny & 1;
 
-    half ret = BUILTIN_COPYSIGN_F16((half)p, ((inty == 1) & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
-                                   inty == 1 ? x : 0.0h);
+                                   is_odd_y ? x : 0.0h);
 
-    if ((x < 0.0h && inty != 1) || ny == 0)
+    if ((x < 0.0h && !is_odd_y) || ny == 0)
         ret = QNAN_F16;
 
     return ret;
