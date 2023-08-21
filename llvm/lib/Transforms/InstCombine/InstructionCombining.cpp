@@ -751,6 +751,14 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
 //    2) BinOp1 == BinOp2 (if BinOp ==  `add`, then also requires `shl`).
 //
 //    -> (BinOp (logic_shift (BinOp X, Y)), Mask)
+//
+// (Binop1 (Binop2 (arithmetic_shift X, Amt), Mask), (arithmetic_shift Y, Amt))
+//   IFF
+//   1) Binop1 is bitwise logical operator `and`, `or` or `xor`
+//   2) Binop2 is `not`
+//
+//   -> (arithmetic_shift Binop1((not X), Y), Amt)
+
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
@@ -770,11 +778,13 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
   // constraints.
   auto IsCompletelyDistributable = [](unsigned BinOpc1, unsigned BinOpc2,
                                       unsigned ShOpc) {
+    assert(ShOpc != Instruction::AShr);
     return (BinOpc1 != Instruction::Add && BinOpc2 != Instruction::Add) ||
            ShOpc == Instruction::Shl;
   };
 
   auto GetInvShift = [](unsigned ShOpc) {
+    assert(ShOpc != Instruction::AShr);
     return ShOpc == Instruction::LShr ? Instruction::Shl : Instruction::LShr;
   };
 
@@ -807,14 +817,13 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
     Constant *CMask, *CShift;
     Value *X, *Y, *ShiftedX, *Mask, *Shift;
     if (!match(I.getOperand(ShOpnum),
-               m_OneUse(m_LogicalShift(m_Value(Y), m_Value(Shift)))))
+               m_OneUse(m_Shift(m_Value(Y), m_Value(Shift)))))
       return nullptr;
     if (!match(I.getOperand(1 - ShOpnum),
                m_BinOp(m_Value(ShiftedX), m_Value(Mask))))
       return nullptr;
 
-    if (!match(ShiftedX,
-               m_OneUse(m_LogicalShift(m_Value(X), m_Specific(Shift)))))
+    if (!match(ShiftedX, m_OneUse(m_Shift(m_Value(X), m_Specific(Shift)))))
       return nullptr;
 
     // Make sure we are matching instruction shifts and not ConstantExpr
@@ -837,6 +846,18 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
     // Make sure we have valid binops.
     if (!IsValidBinOpc(I.getOpcode()) || !IsValidBinOpc(BinOpc))
       return nullptr;
+
+    if (ShOpc == Instruction::AShr) {
+      if (Instruction::isBitwiseLogicOp(I.getOpcode()) &&
+          BinOpc == Instruction::Xor && match(Mask, m_AllOnes())) {
+        Value *NotX = Builder.CreateNot(X);
+        Value *NewBinOp = Builder.CreateBinOp(I.getOpcode(), Y, NotX);
+        return BinaryOperator::Create(
+            static_cast<Instruction::BinaryOps>(ShOpc), NewBinOp, Shift);
+      }
+
+      return nullptr;
+    }
 
     // If BinOp1 == BinOp2 and it's bitwise or shl with add, then just
     // distribute to drop the shift irrelevant of constants.
