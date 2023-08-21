@@ -348,7 +348,6 @@ struct Client {
   LIBC_INLINE ~Client() = default;
 
   using Port = rpc::Port<false, Packet<gpu::LANE_SIZE>>;
-  template <uint16_t opcode> LIBC_INLINE cpp::optional<Port> try_open();
   template <uint16_t opcode> LIBC_INLINE Port open();
 
   LIBC_INLINE void reset(uint32_t port_count, void *buffer) {
@@ -517,15 +516,19 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   }
 }
 
-/// Attempts to open a port to use as the client. The client can only open a
-/// port if we find an index that is in a valid sending state. That is, there
-/// are send operations pending that haven't been serviced on this port. Each
-/// port instance uses an associated \p opcode to tell the server what to do.
-template <uint16_t opcode>
-[[clang::convergent]] LIBC_INLINE cpp::optional<Client::Port>
-Client::try_open() {
-  // Perform a naive linear scan for a port that can be opened to send data.
-  for (uint32_t index = 0; index < process.port_count; ++index) {
+/// Continually attempts to open a port to use as the client. The client can
+/// only open a port if we find an index that is in a valid sending state. That
+/// is, there are send operations pending that haven't been serviced on this
+/// port. Each port instance uses an associated \p opcode to tell the server
+/// what to do.
+template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
+  // Repeatedly perform a naive linear scan for a port that can be opened to
+  // send data.
+  for (uint32_t index = 0;; ++index) {
+    // Start from the beginning if we run out of ports to check.
+    if (index >= process.port_count)
+      index = 0;
+
     // Attempt to acquire the lock on this index.
     uint64_t lane_mask = gpu::get_lane_mask();
     if (!process.try_lock(lane_mask, index))
@@ -547,15 +550,6 @@ Client::try_open() {
     }
     gpu::sync_lane(lane_mask);
     return Port(process, lane_mask, index, out);
-  }
-  return cpp::nullopt;
-}
-
-template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
-  for (;;) {
-    if (cpp::optional<Client::Port> p = try_open<opcode>())
-      return cpp::move(p.value());
-    sleep_briefly();
   }
 }
 
