@@ -32,3 +32,8 @@ namespace Namespace1 {
 typedef int my_typedef;
 using my_using_decl = int;
 }
+
+inline namespace InlineNamespace1 {
+static int varInInlineNamespace = 3;
+void funcInInlineNamespace();
+}
