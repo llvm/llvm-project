@@ -296,16 +296,18 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     if (!def->isFunctionLike()) {
       bool isRenaming{false};
       if (def->isPredefined()) {
-        std::string name{def->replacement().TokenAt(0).ToString()};
         std::string repl;
-        if (name == "__FILE__") {
-          repl = "\""s +
-              allSources_.GetPath(prescanner.GetCurrentProvenance()) + '"';
-        } else if (name == "__LINE__") {
-          std::string buf;
-          llvm::raw_string_ostream ss{buf};
-          ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
-          repl = ss.str();
+        if (!def->replacement().empty()) {
+          std::string name{def->replacement().TokenAt(0).ToString()};
+          if (name == "__FILE__") {
+            repl = "\""s +
+                allSources_.GetPath(prescanner.GetCurrentProvenance()) + '"';
+          } else if (name == "__LINE__") {
+            std::string buf;
+            llvm::raw_string_ostream ss{buf};
+            ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
+            repl = ss.str();
+          }
         }
         if (!repl.empty()) {
           ProvenanceRange insert{allSources_.AddCompilerInsertion(repl)};
