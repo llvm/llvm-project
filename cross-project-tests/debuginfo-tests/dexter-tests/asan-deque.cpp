@@ -8,10 +8,9 @@
 // lldb-8, even outside of dexter, will sometimes trigger an asan fault in
 // the debugged process and generally freak out.
 
+// RUN: %clang -O1 -glldb -fsanitize=address -arch x86_64 %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-O1 -glldb -fsanitize=address -arch x86_64" \
-// RUN:     --ldflags="-fsanitize=address" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 #include <deque>
 
 struct A {
