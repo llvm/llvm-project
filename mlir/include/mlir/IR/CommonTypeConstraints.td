@@ -533,6 +533,19 @@ class ScalableVectorOfLengthAndType<list<int> allowedLengths,
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any scalable vector where the rank is from the given `allowedRanks` list and
+// the number of elements is from the given `allowedLengths` list and the type
+// is from the given `allowedTypes` list
+class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                           list<int> allowedLengths,
+                                           list<Type> allowedTypes> : AllOfType<
+  [ScalableVectorOfRank<allowedRanks>, ScalableVectorOf<allowedTypes>,
+   ScalableVectorOfLength<allowedLengths>],
+  ScalableVectorOfRank<allowedRanks>.summary #
+  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
 def AnyVector : VectorOf<[AnyType]>;
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
