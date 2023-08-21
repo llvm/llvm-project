@@ -83,19 +83,19 @@ void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
 void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
   assert(space.isCompatible(set.getSpace()) && "Spaces should match");
 
-  if (isPlainEqual(set))
+  if (isObviouslyEqual(set))
     return;
 
-  if (isPlainEmpty()) {
+  if (isObviouslyEmpty()) {
     disjuncts = set.disjuncts;
     return;
   }
-  if (set.isPlainEmpty())
+  if (set.isObviouslyEmpty())
     return;
 
-  if (isPlainUniverse())
+  if (isObviouslyUniverse())
     return;
-  if (set.isPlainUniverse()) {
+  if (set.isObviouslyUniverse()) {
     disjuncts = set.disjuncts;
     return;
   }
@@ -144,10 +144,10 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
 
   // If the set is empty or the other set is universe,
   // directly return the set
-  if (isPlainEmpty() || set.isPlainUniverse())
+  if (isObviouslyEmpty() || set.isObviouslyUniverse())
     return *this;
 
-  if (set.isPlainEmpty() || isPlainUniverse())
+  if (set.isObviouslyEmpty() || isObviouslyUniverse())
     return set;
 
   PresburgerRelation result(getSpace());
@@ -596,7 +596,7 @@ PresburgerRelation::subtract(const PresburgerRelation &set) const {
 
   // If we know that the two sets are clearly equal, we can simply return the
   // empty set.
-  if (isPlainEqual(set))
+  if (isObviouslyEqual(set))
     return result;
 
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
@@ -618,7 +618,7 @@ bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 
-bool PresburgerRelation::isPlainEqual(const PresburgerRelation &set) const {
+bool PresburgerRelation::isObviouslyEqual(const PresburgerRelation &set) const {
   if (!space.isCompatible(set.getSpace()))
     return false;
 
@@ -628,7 +628,7 @@ bool PresburgerRelation::isPlainEqual(const PresburgerRelation &set) const {
   // Compare each disjunct in this PresburgerRelation with the corresponding
   // disjunct in the other PresburgerRelation.
   for (unsigned int i = 0, n = getNumDisjuncts(); i < n; ++i) {
-    if (!getDisjunct(i).isPlainEqual(set.getDisjunct(i)))
+    if (!getDisjunct(i).isObviouslyEqual(set.getDisjunct(i)))
       return false;
   }
   return true;
@@ -638,10 +638,12 @@ bool PresburgerRelation::isPlainEqual(const PresburgerRelation &set) const {
 /// otherwise. It is a simple check that only check if the relation has at least
 /// one unconstrained disjunct, indicating the absence of constraints or
 /// conditions.
-bool PresburgerRelation::isPlainUniverse() const {
-  return llvm::any_of(getAllDisjuncts(), [](const IntegerRelation &disjunct) {
-    return disjunct.getNumConstraints() == 0;
-  });
+bool PresburgerRelation::isObviouslyUniverse() const {
+  for (auto &disjunct : getAllDisjuncts()) {
+    if (disjunct.getNumConstraints() == 0)
+      return true;
+  }
+  return false;
 }
 
 bool PresburgerRelation::isConvexNoLocals() const {
@@ -649,7 +651,9 @@ bool PresburgerRelation::isConvexNoLocals() const {
 }
 
 /// Return true if there is no disjunct, false otherwise.
-bool PresburgerRelation::isPlainEmpty() const { return getNumDisjuncts() == 0; }
+bool PresburgerRelation::isObviouslyEmpty() const {
+  return getNumDisjuncts() == 0;
+}
 
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
@@ -1023,7 +1027,7 @@ PresburgerRelation PresburgerRelation::simplify() const {
   PresburgerRelation result = PresburgerRelation(getSpace());
   for (IntegerRelation &disjunct : origin.disjuncts) {
     disjunct.simplify();
-    if (!disjunct.isPlainEmpty())
+    if (!disjunct.isObviouslyEmpty())
       result.unionInPlace(disjunct);
   }
   return result;

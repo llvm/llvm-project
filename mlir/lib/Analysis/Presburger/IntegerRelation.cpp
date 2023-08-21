@@ -80,7 +80,7 @@ bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
-bool IntegerRelation::isPlainEqual(const IntegerRelation &other) const {
+bool IntegerRelation::isObviouslyEqual(const IntegerRelation &other) const {
   if (!space.isEqual(other.getSpace()))
     return false;
   if (getNumEqualities() != other.getNumEqualities())
@@ -445,14 +445,6 @@ void IntegerRelation::clearConstraints() {
   inequalities.resizeVertically(0);
 }
 
-void IntegerRelation::markSetEmpty() {
-  clearConstraints();
-  unsigned col = getNumCols();
-  SmallVector<int64_t> eqeff(col, 0);
-  eqeff.back() = 1;
-  addEquality(eqeff);
-}
-
 /// Gather all lower and upper bounds of the variable at `pos`, and
 /// optionally any equalities on it. In addition, the bounds are to be
 /// independent of variables in position range [`offset`, `offset` + `num`).
@@ -709,7 +701,7 @@ bool IntegerRelation::isEmpty() const {
   return false;
 }
 
-bool IntegerRelation::isPlainEmpty() const {
+bool IntegerRelation::isObviouslyEmpty() const {
   if (isEmptyByGCDTest() || hasInvalidConstraint())
     return true;
   return false;
@@ -1136,7 +1128,7 @@ bool IntegerRelation::gaussianEliminate() {
     if (atEq(i, vars) == 0)
       continue;
 
-    markSetEmpty();
+    *this = getEmpty(getSpace());
     return true;
   }
   // Rows that are confirmed to be all zeros can be eliminated.
@@ -1341,7 +1333,7 @@ void IntegerRelation::simplify() {
     changed = false;
     normalizeConstraintsByGCD();
     changed |= gaussianEliminate();
-    if (isPlainEmpty())
+    if (isObviouslyEmpty())
       return;
     changed |= removeDuplicateConstraints();
   }
@@ -2353,7 +2345,7 @@ bool IntegerRelation::removeDuplicateConstraints() {
       removeInequality(k);
       removeInequality(l);
     } else
-      markSetEmpty();
+      *this = getEmpty(getSpace());
     break;
   }
 

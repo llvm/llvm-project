@@ -91,6 +91,15 @@ public:
     return IntegerRelation(space);
   }
 
+  /// Return an empty system containing an invalid equation 0=1.
+  static IntegerRelation getEmpty(const PresburgerSpace &space) {
+    IntegerRelation relult(0, 1, space.getNumVars() + 1, space);
+    SmallVector<int64_t> eqeff(space.getNumVars() + 1, 0);
+    eqeff.back() = 1;
+    relult.addEquality(eqeff);
+    return relult;
+  }
+
   /// Return the kind of this IntegerRelation.
   virtual Kind getKind() const { return Kind::IntegerRelation; }
 
@@ -138,7 +147,7 @@ public:
   /// returns false. The equality check is performed in a plain manner, by
   /// comparing if all the equalities and inequalities in `this` and `other`
   /// are the same.
-  bool isPlainEqual(const IntegerRelation &other) const;
+  bool isObviouslyEqual(const IntegerRelation &other) const;
 
   /// Return whether this is a subset of the given IntegerRelation. This is
   /// integer-exact and somewhat expensive, since it uses the integer emptiness
@@ -324,10 +333,6 @@ public:
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
-  /// Clear all constraints and add an invalid equation indicating that the set
-  /// is empty.
-  void markSetEmpty();
-
   /// Sets the `values.size()` variables starting at `po`s to the specified
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<MPInt> values);
@@ -356,7 +361,7 @@ public:
   bool isEmpty() const;
 
   /// Performs GCD checks and invalid constraint checks.
-  bool isPlainEmpty() const;
+  bool isObviouslyEmpty() const;
 
   /// Runs the GCD test on all equality constraints. Returns true if this test
   /// fails on any equality. Returns false otherwise.

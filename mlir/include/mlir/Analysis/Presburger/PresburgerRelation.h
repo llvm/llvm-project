@@ -169,17 +169,17 @@ public:
   bool isIntegerEmpty() const;
 
   /// Return true if there is no disjunct, false otherwise.
-  bool isPlainEmpty() const;
+  bool isObviouslyEmpty() const;
 
   /// Return true if the set is known to have one unconstrained disjunct, false
   /// otherwise.
-  bool isPlainUniverse() const;
+  bool isObviouslyUniverse() const;
 
   /// Perform a quick equality check on `this` and `other`. The relations are
   /// equal if the check return true, but may or may not be equal if the check
   /// returns false. This is doing by directly comparing whether each internal
   /// disjunct is the same.
-  bool isPlainEqual(const PresburgerRelation &set) const;
+  bool isObviouslyEqual(const PresburgerRelation &set) const;
 
   /// Return true if the set is consist of a single disjunct, without any local
   /// variables, false otherwise.
