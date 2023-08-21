@@ -1,8 +1,8 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: Entry or anchor intrinsic must not have a convergencectrl bundle.
+; CHECK: Entry or anchor intrinsic cannot have a convergencectrl token operand.
 ; CHECK-NEXT: %t04_tok2 = call token
-; CHECK: Loop intrinsic must have a convergencectrl bundle.
+; CHECK: Loop intrinsic must have a convergencectrl token operand.
 ; CHECK-NEXT: %t04_tok3 = call token
 define void @basic_syntax() {
   %t04_tok1 = call token @llvm.experimental.convergence.anchor()
@@ -20,7 +20,7 @@ define void @wrong_token() {
   ret void
 }
 
-; CHECK: Expected convergent attribute on a controlled convergent call.
+; CHECK: Convergence control token can only be used in a convergent call.
 ; CHECK-NEXT  call void @g(){{.*}}%t05_tok1
 define void @missing.attribute() {
   %t05_tok1 = call token @llvm.experimental.convergence.anchor()
@@ -109,7 +109,7 @@ B:
   br label %B
 }
 
-; CHECK: Entry intrinsic must occur at the start of the basic block.
+; CHECK: Entry intrinsic can occur only at the start of the basic block.
 ; CHECK:   %t60_tok1
 define void @entry_at_start(i32 %x, i32 %y) convergent {
   %z = add i32 %x, %y
@@ -124,7 +124,7 @@ define void @entry_in_convergent(i32 %x, i32 %y) {
   ret void
 }
 
-; CHECK: Loop intrinsic must occur at the start of the basic block.
+; CHECK: Loop intrinsic can occur only at the start of the basic block.
 ; CHECK:   %t60_tok3
 define void @loop_at_start(i32 %x, i32 %y) convergent {
 A:
@@ -136,7 +136,7 @@ B:
   ret void
 }
 
-; CHECK: Entry intrinsic must occur in the entry block.
+; CHECK: Entry intrinsic can occur only in the entry block.
 ; CHECK:   %t60_tok4
 define void @entry_at_entry(i32 %x, i32 %y) convergent {
 A:
