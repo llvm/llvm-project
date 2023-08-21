@@ -2253,7 +2253,7 @@ def : Pat<(int_aarch64_irg_sp i64:$Rm), (IRGstack SP, i64:$Rm)>;
 
 // Large STG to be expanded into a loop. $sz is the size, $Rn is start address.
 // $Rn_wback is one past the end of the range. $Rm is the loop counter.
-let isCodeGenOnly=1, mayStore=1 in {
+let isCodeGenOnly=1, mayStore=1, Defs=[NZCV] in {
 def STGloop_wback
     : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn_wback), (ins i64imm:$sz, GPR64sp:$Rn),
              [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,@earlyclobber $Rm" >,
