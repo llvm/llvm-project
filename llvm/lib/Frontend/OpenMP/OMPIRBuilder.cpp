@@ -33,7 +33,9 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -4159,7 +4161,38 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                             "1," + llvm::utostr(NumThreads));
     } else {
-      // TODO: Modify or create "maxntidx" module metadata.
+      // Update the "maxntidx" metadata for NVIDIA, or add it.
+      NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+      MDNode *ExistingOp = nullptr;
+      for (auto *Op : MD->operands()) {
+        if (Op->getNumOperands() != 3)
+          continue;
+        auto *Kernel = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
+        if (!Kernel || Kernel->getValue() != OutlinedFn)
+          continue;
+        auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
+        if (!Prop || Prop->getString() != "maxntidx")
+          continue;
+        ExistingOp = Op;
+        break;
+      }
+      if (ExistingOp) {
+        auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+        int32_t OldLimit =
+            cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+        ExistingOp->replaceOperandWith(
+            2, ConstantAsMetadata::get(
+                   ConstantInt::get(OldVal->getValue()->getType(),
+                                    std::min(OldLimit, NumThreads))));
+      } else {
+        LLVMContext &Ctx = M.getContext();
+        Metadata *MDVals[] = {ConstantAsMetadata::get(OutlinedFn),
+                              MDString::get(Ctx, "maxntidx"),
+                              ConstantAsMetadata::get(ConstantInt::get(
+                                  Type::getInt32Ty(Ctx), NumThreads))};
+        // Append metadata to nvvm.annotations
+        MD->addOperand(MDNode::get(Ctx, MDVals));
+      }
     }
     OutlinedFn->addFnAttr("omp_target_thread_limit",
                           std::to_string(NumThreads));
