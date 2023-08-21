@@ -1716,7 +1716,7 @@ std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) con
 //   `Init` a pointer to the initializer expression
 //   `Ctx` a reference to the ASTContext
 static FixItList
-populateInitializerFixItWithSpan(const Expr *Init, ASTContext &Ctx,
+FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
                                  const StringRef UserFillPlaceHolder) {
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
@@ -1827,59 +1827,67 @@ static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
 }
 
 // For a `VarDecl` of the form `T  * var (= Init)?`, this
-// function generates a fix-it for the declaration, which re-declares `var` to
-// be of `span<T>` type and transforms the initializer, if present, to a span
-// constructor---`span<T> var {Init, Extent}`, where `Extent` may need the user
-// to fill in.
+// function generates fix-its that
+//  1) replace `T * var` with `std::span<T> var`; and
+//  2) change `Init` accordingly to a span constructor, if it exists.
 //
 // FIXME: support Multi-level pointers
 //
 // Parameters:
 //   `D` a pointer the variable declaration node
 //   `Ctx` a reference to the ASTContext
+//   `UserFillPlaceHolder` the user-input placeholder text
 // Returns:
-//    the generated fix-it
-static FixItList fixVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
-                                    const StringRef UserFillPlaceHolder,
-                                    UnsafeBufferUsageHandler &Handler) {
-  (void)Handler; // Suppress unused variable warning in release builds.
-  const QualType &SpanEltT = D->getType()->getPointeeType();
-  assert(!SpanEltT.isNull() && "Trying to fix a non-pointer type variable!");
-
+//    the non-empty fix-it list, if fix-its are successfuly generated; empty
+//    list otherwise.
+static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
+                                         const StringRef UserFillPlaceHolder,
+                                         UnsafeBufferUsageHandler &Handler) {
   FixItList FixIts{};
-  std::optional<SourceLocation>
-      ReplacementLastLoc; // the inclusive end location of the replacement
-  const SourceManager &SM = Ctx.getSourceManager();
+  std::optional<std::string> SpanTyText = createSpanTypeForVarDecl(D, Ctx);
 
-  if (const Expr *Init = D->getInit()) {
-    FixItList InitFixIts =
-        populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
-
-    if (InitFixIts.empty()) {
-      DEBUG_NOTE_DECL_FAIL(D, " : empty initializer");
-      return {};
-    }
-
-    // The loc right before the initializer:
-    ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
-    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
-                  std::make_move_iterator(InitFixIts.end()));
-  } else
-    ReplacementLastLoc = getEndCharLoc(D, SM, Ctx.getLangOpts());
-
-  // Producing fix-it for variable declaration---make `D` to be of span type:
-  SmallString<32> Replacement;
-  raw_svector_ostream OS(Replacement);
-
-  OS << "std::span<" << SpanEltT.getAsString() << "> " << D->getName();
-
-  if (!ReplacementLastLoc) {
-    DEBUG_NOTE_DECL_FAIL(D, " : failed to get end char loc (macro)");
+  if (!SpanTyText) {
+    DEBUG_NOTE_DECL_FAIL(D, " : failed to generate 'std::span' type");
     return {};
   }
 
+  // Will hold the text for `std::span<T> Ident`:
+  std::stringstream SS;
+
+  SS << *SpanTyText;
+  // Append qualifiers to the type of `D`, if any:
+  if (D->getType().hasQualifiers())
+    SS << " " << D->getType().getQualifiers().getAsString();
+
+  // The end of the range of the original source that will be replaced
+  // by `std::span<T> ident`:
+  SourceLocation EndLocForReplacement = D->getEndLoc();
+  std::optional<StringRef> IdentText =
+      getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
+
+  if (!IdentText) {
+    DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the identifier");
+    return {};
+  }
+  // Fix the initializer if it exists:
+  if (const Expr *Init = D->getInit()) {
+    FixItList InitFixIts =
+        FixVarInitializerWithSpan(Init, Ctx, UserFillPlaceHolder);
+    if (InitFixIts.empty())
+      return {};
+    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
+                  std::make_move_iterator(InitFixIts.end()));
+    // If the declaration has the form `T *ident = init`, we want to replace
+    // `T *ident = ` with `std::span<T> ident`:
+    EndLocForReplacement = Init->getBeginLoc().getLocWithOffset(-1);
+  }
+  SS << " " << IdentText->str();
+  if (!EndLocForReplacement.isValid()) {
+    DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the end of the declaration");
+    return {};
+  }
   FixIts.push_back(FixItHint::CreateReplacement(
-      SourceRange{D->getBeginLoc(), *ReplacementLastLoc}, OS.str()));
+      SourceRange(D->getBeginLoc(), EndLocForReplacement), SS.str()));
   return FixIts;
 }
 
@@ -2139,8 +2147,7 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
   (void)DS;
 
   // FIXME: handle cases where DS has multiple declarations
-  return fixVarDeclWithSpan(VD, Ctx, getUserFillPlaceHolder(),
-                            Handler);
+  return fixLocalVarDeclWithSpan(VD, Ctx, getUserFillPlaceHolder(), Handler);
 }
 
 // TODO: we should be consistent to use `std::nullopt` to represent no-fix due
