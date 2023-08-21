@@ -64,13 +64,13 @@ protected:
     },
     {
       "kind": "memberOf",
-      "source": "c:@S@Foo@F@getFoo#S",
+      "source": "c:@S@Foo@F@getBar#1",
       "target": "c:@S@Foo",
       "targetFallback": "Foo"
     },
     {
       "kind": "memberOf",
-      "source": "c:@S@Foo@F@getBar#1",
+      "source": "c:@S@Foo@F@getFoo#S",
       "target": "c:@S@Foo",
       "targetFallback": "Foo"
     }
@@ -310,79 +310,6 @@ protected:
       ]
     },
     {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "static"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:d",
-          "spelling": "double"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getFoo"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:d",
-            "spelling": "double"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo@F@getFoo#S"
-      },
-      "kind": {
-        "displayName": "Static Method",
-        "identifier": "c++.type.method"
-      },
-      "location": {
-        "position": {
-          "character": 17,
-          "line": 7
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getFoo"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "getFoo"
-          }
-        ],
-        "title": "getFoo"
-      },
-      "pathComponents": [
-        "Foo",
-        "getFoo"
-      ]
-    },
-    {
       "accessLevel": "protected",
       "declarationFragments": [
         {
@@ -461,6 +388,79 @@ protected:
       "pathComponents": [
         "Foo",
         "getBar"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "static"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:d",
+          "spelling": "double"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "getFoo"
+        },
+        {
+          "kind": "text",
+          "spelling": "();"
+        }
+      ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:d",
+            "spelling": "double"
+          }
+        ]
+      },
+      "identifier": {
+        "interfaceLanguage": "c++",
+        "precise": "c:@S@Foo@F@getFoo#S"
+      },
+      "kind": {
+        "displayName": "Static Method",
+        "identifier": "c++.type.method"
+      },
+      "location": {
+        "position": {
+          "character": 17,
+          "line": 7
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "getFoo"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "getFoo"
+          }
+        ],
+        "title": "getFoo"
+      },
+      "pathComponents": [
+        "Foo",
+        "getFoo"
       ]
     }
   ]

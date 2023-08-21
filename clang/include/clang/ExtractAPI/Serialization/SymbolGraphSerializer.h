@@ -183,10 +183,16 @@ public:
   void visitClassTemplatePartialSpecializationRecord(
       const ClassTemplatePartialSpecializationRecord &Record);
 
+  void visitCXXInstanceMethodRecord(const CXXInstanceMethodRecord &Record);
+
+  void visitCXXStaticMethodRecord(const CXXStaticMethodRecord &Record);
+
   void visitMethodTemplateRecord(const CXXMethodTemplateRecord &Record);
 
   void visitMethodTemplateSpecializationRecord(
       const CXXMethodTemplateSpecializationRecord &Record);
+
+  void visitCXXFieldRecord(const CXXFieldRecord &Record);
 
   void visitCXXFieldTemplateRecord(const CXXFieldTemplateRecord &Record);
 
