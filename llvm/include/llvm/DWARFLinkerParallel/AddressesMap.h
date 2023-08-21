@@ -10,8 +10,10 @@
 #define LLVM_DWARFLINKERPARALLEL_ADDRESSESMAP_H
 
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include <cstdint>
 
 namespace llvm {
@@ -62,6 +64,108 @@ public:
 
   /// Erases all data.
   virtual void clear() = 0;
+
+  /// This function checks whether variable has DWARF expression containing
+  /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
+  /// \returns first is true if the expression has an operation referencing an
+  /// address.
+  ///          second is the relocation adjustment value if the live address is
+  ///          referenced.
+  std::pair<bool, std::optional<int64_t>>
+  getVariableRelocAdjustment(const DWARFDie &DIE) {
+    assert((DIE.getTag() == dwarf::DW_TAG_variable ||
+            DIE.getTag() == dwarf::DW_TAG_constant) &&
+           "Wrong type of input die");
+
+    const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+
+    // Check if DIE has DW_AT_location attribute.
+    DWARFUnit *U = DIE.getDwarfUnit();
+    std::optional<uint32_t> LocationIdx =
+        Abbrev->findAttributeIndex(dwarf::DW_AT_location);
+    if (!LocationIdx)
+      return std::make_pair(false, std::nullopt);
+
+    // Get offset to the DW_AT_location attribute.
+    uint64_t AttrOffset =
+        Abbrev->getAttributeOffsetFromIndex(*LocationIdx, DIE.getOffset(), *U);
+
+    // Get value of the DW_AT_location attribute.
+    std::optional<DWARFFormValue> LocationValue =
+        Abbrev->getAttributeValueFromOffset(*LocationIdx, AttrOffset, *U);
+    if (!LocationValue)
+      return std::make_pair(false, std::nullopt);
+
+    // Check that DW_AT_location attribute is of 'exprloc' class.
+    // Handling value of location expressions for attributes of 'loclist'
+    // class is not implemented yet.
+    std::optional<ArrayRef<uint8_t>> Expr = LocationValue->getAsBlock();
+    if (!Expr)
+      return std::make_pair(false, std::nullopt);
+
+    // Parse 'exprloc' expression.
+    DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
+                       U->getAddressByteSize());
+    DWARFExpression Expression(Data, U->getAddressByteSize(),
+                               U->getFormParams().Format);
+
+    bool HasLocationAddress = false;
+    uint64_t CurExprOffset = 0;
+    for (DWARFExpression::iterator It = Expression.begin();
+         It != Expression.end(); ++It) {
+      DWARFExpression::iterator NextIt = It;
+      ++NextIt;
+
+      const DWARFExpression::Operation &Op = *It;
+      switch (Op.getCode()) {
+      case dwarf::DW_OP_const2u:
+      case dwarf::DW_OP_const4u:
+      case dwarf::DW_OP_const8u:
+      case dwarf::DW_OP_const2s:
+      case dwarf::DW_OP_const4s:
+      case dwarf::DW_OP_const8s:
+        if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))
+          break;
+        [[fallthrough]];
+      case dwarf::DW_OP_addr: {
+        HasLocationAddress = true;
+        // Check relocation for the address.
+        if (std::optional<int64_t> RelocAdjustment =
+                getExprOpAddressRelocAdjustment(*U, Op,
+                                                AttrOffset + CurExprOffset,
+                                                AttrOffset + Op.getEndOffset()))
+          return std::make_pair(HasLocationAddress, *RelocAdjustment);
+      } break;
+      case dwarf::DW_OP_constx:
+      case dwarf::DW_OP_addrx: {
+        HasLocationAddress = true;
+        if (std::optional<uint64_t> AddressOffset =
+                DIE.getDwarfUnit()->getIndexedAddressOffset(
+                    Op.getRawOperand(0))) {
+          // Check relocation for the address.
+          if (std::optional<int64_t> RelocAdjustment =
+                  getExprOpAddressRelocAdjustment(
+                      *U, Op, *AddressOffset,
+                      *AddressOffset +
+                          DIE.getDwarfUnit()->getAddressByteSize()))
+            return std::make_pair(HasLocationAddress, *RelocAdjustment);
+        }
+      } break;
+      default: {
+        // Nothing to do.
+      } break;
+      }
+      CurExprOffset = Op.getEndOffset();
+    }
+
+    return std::make_pair(HasLocationAddress, std::nullopt);
+  }
+
+protected:
+  inline bool isTlsAddressCode(uint8_t DW_OP_Code) {
+    return DW_OP_Code == dwarf::DW_OP_form_tls_address ||
+           DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
+  }
 };
 
 } // end of namespace dwarflinker_parallel
