@@ -16,45 +16,72 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/clang-tidy-config.h)
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_clang_library(clangTidy
-  ClangTidy.cpp
-  ClangTidyCheck.cpp
-  ClangTidyModule.cpp
-  ClangTidyDiagnosticConsumer.cpp
-  ClangTidyOptions.cpp
-  ClangTidyProfiling.cpp
-  ExpandModularHeadersPPCallbacks.cpp
-  GlobList.cpp
-  NoLintDirectiveHandler.cpp
+if(CLANG_ENABLE_CIR)
+  add_clang_library(clangTidy
+    ClangTidy.cpp
+    ClangTidyCheck.cpp
+    ClangTidyModule.cpp
+    ClangTidyDiagnosticConsumer.cpp
+    ClangTidyOptions.cpp
+    ClangTidyProfiling.cpp
+    ExpandModularHeadersPPCallbacks.cpp
+    GlobList.cpp
+    NoLintDirectiveHandler.cpp
 
-  LINK_LIBS
-  clangCIR
-  ${dialect_libs}
-  MLIRCIR
-  MLIRCIRTransforms
-  MLIRAffineToStandard
-  MLIRAnalysis
-  MLIRIR
-  MLIRLLVMCommonConversion
-  MLIRLLVMDialect
-  MLIRLLVMToLLVMIRTranslation
-  MLIRMemRefDialect
-  MLIRMemRefToLLVM
-  MLIRParser
-  MLIRPass
-  MLIRSideEffectInterfaces
-  MLIRSCFToControlFlow
-  MLIRFuncToLLVM
-  MLIRSupport
-  MLIRMemRefDialect
-  MLIRTargetLLVMIRExport
-  MLIRTransforms
+    DEPENDS
+    MLIRBuiltinLocationAttributesIncGen
+    MLIRCIROpsIncGen
+    MLIRCIREnumsGen
+    MLIRSymbolInterfacesIncGen
+    ClangSACheckers
+    omp_gen
+    ClangDriverOptions
 
-  DEPENDS
-  ClangSACheckers
-  omp_gen
-  ClangDriverOptions
+    LINK_LIBS
+    clangCIR
+    ${dialect_libs}
+    MLIRCIR
+    MLIRCIRTransforms
+    MLIRAffineToStandard
+    MLIRAnalysis
+    MLIRIR
+    MLIRLLVMCommonConversion
+    MLIRLLVMDialect
+    MLIRLLVMToLLVMIRTranslation
+    MLIRMemRefDialect
+    MLIRMemRefToLLVM
+    MLIRParser
+    MLIRPass
+    MLIRSideEffectInterfaces
+    MLIRSCFToControlFlow
+    MLIRFuncToLLVM
+    MLIRSupport
+    MLIRMemRefDialect
+    MLIRTargetLLVMIRExport
+    MLIRTransforms
+
+    DEPENDS
+    ClangSACheckers
+    omp_gen
+    ClangDriverOptions
+    )
+else()
+  add_clang_library(clangTidy
+    ClangTidy.cpp
+    ClangTidyCheck.cpp
+    ClangTidyModule.cpp
+    ClangTidyDiagnosticConsumer.cpp
+    ClangTidyOptions.cpp
+    ClangTidyProfiling.cpp
+    ExpandModularHeadersPPCallbacks.cpp
+    GlobList.cpp
+    NoLintDirectiveHandler.cpp
+
+    DEPENDS
+    ClangSACheckers
+    omp_gen
   )
+endif()
 
 clang_target_link_libraries(clangTidy
   PRIVATE
