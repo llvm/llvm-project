@@ -1,12 +1,14 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir -o -  | FileCheck %s -check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
+!ty_22struct2ES22 = !cir.struct<"struct.S", !s32i, #cir.recdecl.ast>
+
 module {
   cir.func @foo() {
     %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a"] {alignment = 16 : i64}
     cir.return
   }
-}
 
 //      MLIR: module {
 // MLIR-NEXT: func @foo()
@@ -18,3 +20,16 @@ module {
 
 //      LLVM: %1 = alloca [10 x i32], i64 1, align 16
 // LLVM-NEXT: ret void
+
+  cir.global external @arr = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES22, #cir.zero : !ty_22struct2ES22]> : !cir.array<!ty_22struct2ES22 x 2>
+  // CHECK: llvm.mlir.global external @arr() {addr_space = 0 : i32} : !llvm.array<2 x struct<"struct.S", (i32)>> {
+  // CHECK:   %0 = llvm.mlir.undef : !llvm.array<2 x struct<"struct.S", (i32)>>
+  // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S", (i32)>
+  // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S", (i32)> 
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<2 x struct<"struct.S", (i32)>> 
+  // CHECK:   %5 = cir.llvmir.zeroinit : !llvm.struct<"struct.S", (i32)>
+  // CHECK:   %6 = llvm.insertvalue %5, %4[1] : !llvm.array<2 x struct<"struct.S", (i32)>> 
+  // CHECK:   llvm.return %6 : !llvm.array<2 x struct<"struct.S", (i32)>>
+  // CHECK: }
+}
