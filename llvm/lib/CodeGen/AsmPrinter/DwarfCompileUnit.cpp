@@ -882,6 +882,23 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     return VariableDie;
   }
 
+  if (const std::optional<DbgVariableEntryValue> &EntryValueVar =
+          DV.getEntryValue()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+    // Emit each expression as: EntryValue(Register) <other ops> <Fragment>.
+    for (auto [Register, Expr] : EntryValueVar->getEntryValuesInfo()) {
+      DwarfExpr.addFragmentOffset(&Expr);
+      DIExpressionCursor Cursor(Expr.getElements());
+      DwarfExpr.beginEntryValueExpression(Cursor);
+      DwarfExpr.addMachineRegExpression(
+          *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, Register);
+      DwarfExpr.addExpression(std::move(Cursor));
+    }
+    addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+    return VariableDie;
+  }
+
   // .. else use frame index.
   if (!DV.hasFrameIndexExprs())
     return VariableDie;

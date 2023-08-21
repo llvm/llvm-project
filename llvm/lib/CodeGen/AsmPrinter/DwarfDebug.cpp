@@ -1564,21 +1564,16 @@ void DwarfDebug::collectVariableInfoFromMFTable(
                     cast<DILocalVariable>(Var.first), Var.second);
     if (VI.inStackSlot())
       RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
-    else {
-      MachineLocation MLoc(VI.getEntryValueRegister(), /*IsIndirect*/ false);
-      auto LocEntry = DbgValueLocEntry(MLoc);
-      RegVar->initializeDbgValue(DbgValueLoc(VI.Expr, LocEntry));
-    }
+    else
+      RegVar->initializeEntryValue(VI.getEntryValueRegister(), *VI.Expr);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
 
     if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (DbgVar->getValueLoc())
-        LLVM_DEBUG(dbgs() << "Dropping repeated entry value debug info for "
-                             "variable "
-                          << VI.Var->getName() << "\n");
-      else
+      if (DbgVar->hasFrameIndexExprs())
         DbgVar->addMMIEntry(*RegVar);
+      else
+        DbgVar->getEntryValue()->addExpr(VI.getEntryValueRegister(), *VI.Expr);
     } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
       MFVars.insert({Var, RegVar.get()});
       ConcreteEntities.push_back(std::move(RegVar));
