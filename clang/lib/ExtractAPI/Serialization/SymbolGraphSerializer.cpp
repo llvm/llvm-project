@@ -420,6 +420,14 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("class");
     Kind["displayName"] = "Class";
     break;
+  case APIRecord::RK_CXXMethodTemplate:
+    Kind["identifier"] = AddLangPrefix("method");
+    Kind["displayName"] = "Method Template";
+    break;
+  case APIRecord::RK_CXXMethodTemplateSpecialization:
+    Kind["identifier"] = AddLangPrefix("method");
+    Kind["displayName"] = "Method Template Specialization";
+    break;
   case APIRecord::RK_Concept:
     Kind["identifier"] = AddLangPrefix("concept");
     Kind["displayName"] = "Concept";
@@ -920,6 +928,32 @@ void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+}
+
+void SymbolGraphSerializer::visitMethodTemplateRecord(
+    const CXXMethodTemplateRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto MethodTemplate = serializeAPIRecord(Record);
+  if (!MethodTemplate)
+    return;
+  Symbols.emplace_back(std::move(*MethodTemplate));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitMethodTemplateSpecializationRecord(
+    const CXXMethodTemplateSpecializationRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto MethodTemplateSpecialization = serializeAPIRecord(Record);
+  if (!MethodTemplateSpecialization)
+    return;
+  Symbols.emplace_back(std::move(*MethodTemplateSpecialization));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitConceptRecord(const ConceptRecord &Record) {
