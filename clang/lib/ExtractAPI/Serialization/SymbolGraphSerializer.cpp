@@ -428,6 +428,10 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("method");
     Kind["displayName"] = "Method Template Specialization";
     break;
+  case APIRecord::RK_CXXFieldTemplate:
+    Kind["identifier"] = AddLangPrefix("property");
+    Kind["displayName"] = "Template Property";
+    break;
   case APIRecord::RK_Concept:
     Kind["identifier"] = AddLangPrefix("concept");
     Kind["displayName"] = "Concept";
@@ -952,6 +956,19 @@ void SymbolGraphSerializer::visitMethodTemplateSpecializationRecord(
   if (!MethodTemplateSpecialization)
     return;
   Symbols.emplace_back(std::move(*MethodTemplateSpecialization));
+  serializeRelationship(RelationshipKind::MemberOf, Record,
+                        Record.ParentInformation.ParentRecord);
+}
+
+void SymbolGraphSerializer::visitCXXFieldTemplateRecord(
+    const CXXFieldTemplateRecord &Record) {
+  if (!ShouldRecurse)
+    // Ignore child symbols
+    return;
+  auto CXXFieldTemplate = serializeAPIRecord(Record);
+  if (!CXXFieldTemplate)
+    return;
+  Symbols.emplace_back(std::move(*CXXFieldTemplate));
   serializeRelationship(RelationshipKind::MemberOf, Record,
                         Record.ParentInformation.ParentRecord);
 }
