@@ -581,7 +581,7 @@ public:
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
           loc,
-          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
               ? hSymType
               : symType,
           mangleName(sym), toStringRef(sym.GetUltimate().name()),

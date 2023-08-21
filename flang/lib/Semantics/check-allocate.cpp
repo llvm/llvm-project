@@ -39,14 +39,14 @@ class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
-                                 alloc.t)},
+      : allocateInfo_{info},
+        allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
         name_{parser::GetLastName(allocateObject_)},
-        symbol_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
+        original_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
+        symbol_{original_ ? &ResolveAssociations(*original_) : nullptr},
         type_{symbol_ ? symbol_->GetType() : nullptr},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, rank_{symbol_
-                                                              ? symbol_->Rank()
-                                                              : 0},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)},
+        rank_{original_ ? original_->Rank() : 0},
         allocateCoarraySpecRank_{CoarraySpecRank(alloc)},
         corank_{symbol_ ? symbol_->Corank() : 0} {}
 
@@ -91,7 +91,8 @@ private:
   AllocateCheckerInfo &allocateInfo_;
   const parser::AllocateObject &allocateObject_;
   const parser::Name &name_;
-  const Symbol *symbol_{nullptr};
+  const Symbol *original_{nullptr}; // no USE or host association
+  const Symbol *symbol_{nullptr}; // no USE, host, or construct association
   const DeclTypeSpec *type_{nullptr};
   const int allocateShapeSpecRank_;
   const int rank_{0};
@@ -558,17 +559,17 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         }
       }
     } else {
-      // first part of C942
+      // explicit shape-spec-list
       if (allocateShapeSpecRank_ != rank_) {
         context
             .Say(name_.source,
                 "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)
-            .Attach(symbol_->name(), "Declared here with rank %d"_en_US, rank_);
+            .Attach(
+                original_->name(), "Declared here with rank %d"_en_US, rank_);
         return false;
       }
     }
-  } else {
-    // C940
+  } else { // allocating a scalar object
     if (hasAllocateShapeSpecList()) {
       context.Say(name_.source,
           "Shape specifications must not appear when allocatable object is scalar"_err_en_US);
