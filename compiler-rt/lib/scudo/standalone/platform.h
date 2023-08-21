@@ -66,7 +66,11 @@
 // Use smaller table sizes for fuzzing in order to reduce input size.
 // Trusty just has less available memory.
 #ifndef SCUDO_SMALL_STACK_DEPOT
-#define SCUDO_SMALL_STACK_DEPOT (SCUDO_FUZZ || SCUDO_TRUSTY)
+#if defined(SCUDO_FUZZ) || SCUDO_TRUSTY
+#define SCUDO_SMALL_STACK_DEPOT 1
+#else
+#define SCUDO_SMALL_STACK_DEPOT 0
+#endif
 #endif
 
 #ifndef SCUDO_MIN_ALIGNMENT_LOG
