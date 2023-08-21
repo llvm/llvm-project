@@ -2145,11 +2145,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       if (Splat && UndefElements.none()) {
         // Splat of <x, x, ..., x>, return <x, x, ..., x>, provided that the
         // number of elements match or the value splatted is a zero constant.
-        if (SameNumElts)
+        if (SameNumElts || isNullConstant(Splat))
           return N1;
-        if (auto *C = dyn_cast<ConstantSDNode>(Splat))
-          if (C->isZero())
-            return N1;
       }
 
       // If the shuffle itself creates a splat, build the vector directly.
@@ -8028,8 +8025,6 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME: pass in SDLoc
   CLI.setDebugLoc(dl).setChain(Chain);
 
-  ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src);
-  const bool SrcIsZero = ConstantSrc && ConstantSrc->isZero();
   const char *BzeroName = getTargetLoweringInfo().getLibcallName(RTLIB::BZERO);
 
   // Helper function to create an Entry from Node and Type.
@@ -8041,7 +8036,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   };
 
   // If zeroing out and bzero is present, use it.
-  if (SrcIsZero && BzeroName) {
+  if (isNullConstant(Src) && BzeroName) {
     TargetLowering::ArgListTy Args;
     Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
     Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
