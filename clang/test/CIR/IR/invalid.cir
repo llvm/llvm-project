@@ -460,3 +460,28 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s8i = !cir.int<s, 8>
+module {
+  // Should not memcpy with invalid length type.
+  cir.func @invalid_memcpy_len(%arg0 : !cir.ptr<!cir.void>, %arg1 : !s8i) {
+    // expected-error@+1 {{memcpy length must be an unsigned integer}}
+    cir.libc.memcpy %arg1 bytes from %arg0 to %arg0 : !s8i, !cir.ptr<!cir.void> -> !cir.ptr<!cir.void>
+    cir.return
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+module {
+  // Should not memcpy non-void pointers.
+  cir.func @invalid_memcpy_len(%arg0 : !cir.ptr<!s8i>, %arg1 : !u32i) {
+    // expected-error@+1 {{memcpy src and dst must be void pointers}}
+    cir.libc.memcpy %arg1 bytes from %arg0 to %arg0 : !u32i, !cir.ptr<!s8i> -> !cir.ptr<!s8i>
+    cir.return
+  }
+}

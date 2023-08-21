@@ -1859,6 +1859,50 @@ def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemCpyOp
+//===----------------------------------------------------------------------===//
+
+def MemCpyOp : CIR_Op<"libc.memcpy"> {
+  let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
+                       Arg<CIR_PointerType, "", [MemRead]>:$src,
+                       CIR_IntType:$len);
+  let summary = "Equivalent to libc's `memcpy`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    While `cir.copy` is meant to be used for implicit copies in the code where
+    the length of the copy is known, `cir.memcpy` copies only from and to void
+    pointers, requiring the copy length to be passed as an argument.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a struct:
+      %2 = cir.const(#cir.int<2> : !u32i) : !u32i
+      cir.libc.memcpy %2 bytes from %arr to %struct : !cir.ptr<!arr> -> !cir.ptr<!struct>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` type($len) `` `,` qualified(type($src)) `->` qualified(type($dst))
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the data source pointer type.
+    mlir::cir::PointerType getSrcTy() { return getSrc().getType(); }
+
+    /// Returns the data destination pointer type.
+    mlir::cir::PointerType getDstTy() { return getDst().getType(); }
+
+    /// Returns the byte length type.
+    mlir::cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
