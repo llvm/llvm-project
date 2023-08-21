@@ -191,9 +191,6 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     return false;
   }
 
-  // Honor color diagnostics.
-  flang->getDiagnosticOpts().ShowColors = flang->getFrontendOpts().showColors;
-
   updateDiagEngineForOptRemarks(flang->getDiagnostics(),
                                 flang->getDiagnosticOpts());
 
