@@ -283,6 +283,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/type_traits.h"],
     deps = [
         ":__support_macros_attributes",
+        ":__support_macros_config",
         ":libc_root",
     ],
 )
