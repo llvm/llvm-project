@@ -149,6 +149,9 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
   case llvm::acc::Directive::ACCD_data:
     // Restriction - line 1249-1250
     CheckRequireAtLeastOneOf();
+    // Restriction is not formally in the specification but all compilers emit
+    // an error and it is likely to be omitted from the spec.
+    CheckNoBranching(block, GetContext().directive, blockDir.source);
     break;
   case llvm::acc::Directive::ACCD_host_data:
     // Restriction - line 1746
