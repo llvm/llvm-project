@@ -647,3 +647,526 @@ def int_loongarch_lsx_vstelm_d
            [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 } // TargetPrefix = "loongarch"
+
+//===----------------------------------------------------------------------===//
+// LASX
+
+let TargetPrefix = "loongarch" in {
+foreach inst = ["xvadd_b", "xvsub_b",
+                "xvsadd_b", "xvsadd_bu", "xvssub_b", "xvssub_bu",
+                "xvavg_b", "xvavg_bu", "xvavgr_b", "xvavgr_bu",
+                "xvabsd_b", "xvabsd_bu", "xvadda_b",
+                "xvmax_b", "xvmax_bu", "xvmin_b", "xvmin_bu",
+                "xvmul_b", "xvmuh_b", "xvmuh_bu",
+                "xvdiv_b", "xvdiv_bu", "xvmod_b", "xvmod_bu", "xvsigncov_b",
+                "xvand_v", "xvor_v", "xvxor_v", "xvnor_v", "xvandn_v", "xvorn_v",
+                "xvsll_b", "xvsrl_b", "xvsra_b", "xvrotr_b", "xvsrlr_b", "xvsrar_b",
+                "xvbitclr_b", "xvbitset_b", "xvbitrev_b",
+                "xvseq_b", "xvsle_b", "xvsle_bu", "xvslt_b", "xvslt_bu",
+                "xvpackev_b", "xvpackod_b", "xvpickev_b", "xvpickod_b",
+                "xvilvl_b", "xvilvh_b"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v32i8_ty],
+                                        [llvm_v32i8_ty, llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvadd_h", "xvsub_h",
+                "xvsadd_h", "xvsadd_hu", "xvssub_h", "xvssub_hu",
+                "xvavg_h", "xvavg_hu", "xvavgr_h", "xvavgr_hu",
+                "xvabsd_h", "xvabsd_hu", "xvadda_h",
+                "xvmax_h", "xvmax_hu", "xvmin_h", "xvmin_hu",
+                "xvmul_h", "xvmuh_h", "xvmuh_hu",
+                "xvdiv_h", "xvdiv_hu", "xvmod_h", "xvmod_hu", "xvsigncov_h",
+                "xvsll_h", "xvsrl_h", "xvsra_h", "xvrotr_h", "xvsrlr_h", "xvsrar_h",
+                "xvbitclr_h", "xvbitset_h", "xvbitrev_h",
+                "xvseq_h", "xvsle_h", "xvsle_hu", "xvslt_h", "xvslt_hu",
+                "xvpackev_h", "xvpackod_h", "xvpickev_h", "xvpickod_h",
+                "xvilvl_h", "xvilvh_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v16i16_ty, llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvadd_w", "xvsub_w",
+                "xvsadd_w", "xvsadd_wu", "xvssub_w", "xvssub_wu",
+                "xvavg_w", "xvavg_wu", "xvavgr_w", "xvavgr_wu",
+                "xvabsd_w", "xvabsd_wu", "xvadda_w",
+                "xvmax_w", "xvmax_wu", "xvmin_w", "xvmin_wu",
+                "xvmul_w", "xvmuh_w", "xvmuh_wu",
+                "xvdiv_w", "xvdiv_wu", "xvmod_w", "xvmod_wu", "xvsigncov_w",
+                "xvsll_w", "xvsrl_w", "xvsra_w", "xvrotr_w", "xvsrlr_w", "xvsrar_w",
+                "xvbitclr_w", "xvbitset_w", "xvbitrev_w",
+                "xvseq_w", "xvsle_w", "xvsle_wu", "xvslt_w", "xvslt_wu",
+                "xvpackev_w", "xvpackod_w", "xvpickev_w", "xvpickod_w",
+                "xvilvl_w", "xvilvh_w", "xvperm_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v8i32_ty, llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvadd_d", "xvadd_q", "xvsub_d", "xvsub_q",
+                "xvsadd_d", "xvsadd_du", "xvssub_d", "xvssub_du",
+                "xvhaddw_q_d", "xvhaddw_qu_du", "xvhsubw_q_d", "xvhsubw_qu_du",
+                "xvaddwev_q_d", "xvaddwod_q_d", "xvsubwev_q_d", "xvsubwod_q_d",
+                "xvaddwev_q_du", "xvaddwod_q_du", "xvsubwev_q_du", "xvsubwod_q_du",
+                "xvaddwev_q_du_d", "xvaddwod_q_du_d",
+                "xvavg_d", "xvavg_du", "xvavgr_d", "xvavgr_du",
+                "xvabsd_d", "xvabsd_du", "xvadda_d",
+                "xvmax_d", "xvmax_du", "xvmin_d", "xvmin_du",
+                "xvmul_d", "xvmuh_d", "xvmuh_du",
+                "xvmulwev_q_d", "xvmulwod_q_d", "xvmulwev_q_du", "xvmulwod_q_du",
+                "xvmulwev_q_du_d", "xvmulwod_q_du_d",
+                "xvdiv_d", "xvdiv_du", "xvmod_d", "xvmod_du", "xvsigncov_d",
+                "xvsll_d", "xvsrl_d", "xvsra_d", "xvrotr_d", "xvsrlr_d", "xvsrar_d",
+                "xvbitclr_d", "xvbitset_d", "xvbitrev_d",
+                "xvseq_d", "xvsle_d", "xvsle_du", "xvslt_d", "xvslt_du",
+                "xvpackev_d", "xvpackod_d", "xvpickev_d", "xvpickod_d",
+                "xvilvl_d", "xvilvh_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty],
+                                        [llvm_v4i64_ty, llvm_v4i64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvaddi_bu", "xvsubi_bu",
+                "xvmaxi_b", "xvmaxi_bu", "xvmini_b", "xvmini_bu",
+                "xvsat_b", "xvsat_bu",
+                "xvandi_b", "xvori_b", "xvxori_b", "xvnori_b",
+                "xvslli_b", "xvsrli_b", "xvsrai_b", "xvrotri_b",
+                "xvsrlri_b", "xvsrari_b",
+                "xvbitclri_b", "xvbitseti_b", "xvbitrevi_b",
+                "xvseqi_b", "xvslei_b", "xvslei_bu", "xvslti_b", "xvslti_bu",
+                "xvrepl128vei_b", "xvbsll_v", "xvbsrl_v", "xvshuf4i_b"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v32i8_ty],
+                                        [llvm_v32i8_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvaddi_hu", "xvsubi_hu",
+                "xvmaxi_h", "xvmaxi_hu", "xvmini_h", "xvmini_hu",
+                "xvsat_h", "xvsat_hu",
+                "xvslli_h", "xvsrli_h", "xvsrai_h", "xvrotri_h",
+                "xvsrlri_h", "xvsrari_h",
+                "xvbitclri_h", "xvbitseti_h", "xvbitrevi_h",
+                "xvseqi_h", "xvslei_h", "xvslei_hu", "xvslti_h", "xvslti_hu",
+                "xvrepl128vei_h", "xvshuf4i_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v16i16_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvaddi_wu", "xvsubi_wu",
+                "xvmaxi_w", "xvmaxi_wu", "xvmini_w", "xvmini_wu",
+                "xvsat_w", "xvsat_wu",
+                "xvslli_w", "xvsrli_w", "xvsrai_w", "xvrotri_w",
+                "xvsrlri_w", "xvsrari_w",
+                "xvbitclri_w", "xvbitseti_w", "xvbitrevi_w",
+                "xvseqi_w", "xvslei_w", "xvslei_wu", "xvslti_w", "xvslti_wu",
+                "xvrepl128vei_w", "xvshuf4i_w", "xvpickve_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v8i32_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvaddi_du", "xvsubi_du",
+                "xvmaxi_d", "xvmaxi_du", "xvmini_d", "xvmini_du",
+                "xvsat_d", "xvsat_du",
+                "xvslli_d", "xvsrli_d", "xvsrai_d", "xvrotri_d",
+                "xvsrlri_d", "xvsrari_d",
+                "xvbitclri_d", "xvbitseti_d", "xvbitrevi_d",
+                "xvseqi_d", "xvslei_d", "xvslei_du", "xvslti_d", "xvslti_du",
+                "xvrepl128vei_d", "xvpermi_d", "xvpickve_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty],
+                                        [llvm_v4i64_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+foreach inst = ["xvhaddw_h_b", "xvhaddw_hu_bu", "xvhsubw_h_b", "xvhsubw_hu_bu",
+                "xvaddwev_h_b", "xvaddwod_h_b", "xvsubwev_h_b", "xvsubwod_h_b",
+                "xvaddwev_h_bu", "xvaddwod_h_bu", "xvsubwev_h_bu", "xvsubwod_h_bu",
+                "xvaddwev_h_bu_b", "xvaddwod_h_bu_b",
+                "xvmulwev_h_b", "xvmulwod_h_b", "xvmulwev_h_bu", "xvmulwod_h_bu",
+                "xvmulwev_h_bu_b", "xvmulwod_h_bu_b"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v32i8_ty, llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvhaddw_w_h", "xvhaddw_wu_hu", "xvhsubw_w_h", "xvhsubw_wu_hu",
+                "xvaddwev_w_h", "xvaddwod_w_h", "xvsubwev_w_h", "xvsubwod_w_h",
+                "xvaddwev_w_hu", "xvaddwod_w_hu", "xvsubwev_w_hu", "xvsubwod_w_hu",
+                "xvaddwev_w_hu_h", "xvaddwod_w_hu_h",
+                "xvmulwev_w_h", "xvmulwod_w_h", "xvmulwev_w_hu", "xvmulwod_w_hu",
+                "xvmulwev_w_hu_h", "xvmulwod_w_hu_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v16i16_ty, llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvhaddw_d_w", "xvhaddw_du_wu", "xvhsubw_d_w", "xvhsubw_du_wu",
+                "xvaddwev_d_w", "xvaddwod_d_w", "xvsubwev_d_w", "xvsubwod_d_w",
+                "xvaddwev_d_wu", "xvaddwod_d_wu", "xvsubwev_d_wu", "xvsubwod_d_wu",
+                "xvaddwev_d_wu_w", "xvaddwod_d_wu_w",
+                "xvmulwev_d_w", "xvmulwod_d_w", "xvmulwev_d_wu", "xvmulwod_d_wu",
+                "xvmulwev_d_wu_w", "xvmulwod_d_wu_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty],
+                                        [llvm_v8i32_ty, llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvsrln_b_h", "xvsran_b_h", "xvsrlrn_b_h", "xvsrarn_b_h",
+                "xvssrln_b_h", "xvssran_b_h", "xvssrln_bu_h", "xvssran_bu_h",
+                "xvssrlrn_b_h", "xvssrarn_b_h", "xvssrlrn_bu_h", "xvssrarn_bu_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v32i8_ty],
+                                        [llvm_v16i16_ty, llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvsrln_h_w", "xvsran_h_w", "xvsrlrn_h_w", "xvsrarn_h_w",
+                "xvssrln_h_w", "xvssran_h_w", "xvssrln_hu_w", "xvssran_hu_w",
+                "xvssrlrn_h_w", "xvssrarn_h_w", "xvssrlrn_hu_w", "xvssrarn_hu_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v8i32_ty, llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvsrln_w_d", "xvsran_w_d", "xvsrlrn_w_d", "xvsrarn_w_d",
+                "xvssrln_w_d", "xvssran_w_d", "xvssrln_wu_d", "xvssran_wu_d",
+                "xvssrlrn_w_d", "xvssrarn_w_d", "xvssrlrn_wu_d", "xvssrarn_wu_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v4i64_ty, llvm_v4i64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvmadd_b", "xvmsub_b", "xvfrstp_b", "xvbitsel_v", "xvshuf_b"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v32i8_ty],
+             [llvm_v32i8_ty, llvm_v32i8_ty, llvm_v32i8_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmadd_h", "xvmsub_h", "xvfrstp_h", "xvshuf_h"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v16i16_ty],
+             [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmadd_w", "xvmsub_w", "xvshuf_w"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v8i32_ty],
+             [llvm_v8i32_ty, llvm_v8i32_ty, llvm_v8i32_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmadd_d", "xvmsub_d", "xvshuf_d"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v4i64_ty],
+             [llvm_v4i64_ty, llvm_v4i64_ty, llvm_v4i64_ty],
+             [IntrNoMem]>;
+
+foreach inst = ["xvsrlni_b_h", "xvsrani_b_h", "xvsrlrni_b_h", "xvsrarni_b_h",
+                "xvssrlni_b_h", "xvssrani_b_h", "xvssrlni_bu_h", "xvssrani_bu_h",
+                "xvssrlrni_b_h", "xvssrarni_b_h", "xvssrlrni_bu_h", "xvssrarni_bu_h",
+                "xvfrstpi_b", "xvbitseli_b", "xvextrins_b", "xvpermi_q"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v32i8_ty],
+             [llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty],
+             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+foreach inst = ["xvsrlni_h_w", "xvsrani_h_w", "xvsrlrni_h_w", "xvsrarni_h_w",
+                "xvssrlni_h_w", "xvssrani_h_w", "xvssrlni_hu_w", "xvssrani_hu_w",
+                "xvssrlrni_h_w", "xvssrarni_h_w", "xvssrlrni_hu_w", "xvssrarni_hu_w",
+                "xvfrstpi_h", "xvextrins_h"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v16i16_ty],
+             [llvm_v16i16_ty, llvm_v16i16_ty, llvm_i32_ty],
+             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+foreach inst = ["xvsrlni_w_d", "xvsrani_w_d", "xvsrlrni_w_d", "xvsrarni_w_d",
+                "xvssrlni_w_d", "xvssrani_w_d", "xvssrlni_wu_d", "xvssrani_wu_d",
+                "xvssrlrni_w_d", "xvssrarni_w_d", "xvssrlrni_wu_d", "xvssrarni_wu_d",
+                "xvpermi_w", "xvextrins_w", "xvinsve0_w"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v8i32_ty],
+             [llvm_v8i32_ty, llvm_v8i32_ty, llvm_i32_ty],
+             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+foreach inst = ["xvsrlni_d_q", "xvsrani_d_q", "xvsrlrni_d_q", "xvsrarni_d_q",
+                "xvssrlni_d_q", "xvssrani_d_q", "xvssrlni_du_q", "xvssrani_du_q",
+                "xvssrlrni_d_q", "xvssrarni_d_q", "xvssrlrni_du_q", "xvssrarni_du_q",
+                "xvshuf4i_d", "xvextrins_d", "xvinsve0_d"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v4i64_ty],
+             [llvm_v4i64_ty, llvm_v4i64_ty, llvm_i32_ty],
+             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+foreach inst = ["xvmaddwev_h_b", "xvmaddwod_h_b", "xvmaddwev_h_bu",
+                "xvmaddwod_h_bu", "xvmaddwev_h_bu_b", "xvmaddwod_h_bu_b"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v16i16_ty],
+             [llvm_v16i16_ty, llvm_v32i8_ty, llvm_v32i8_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmaddwev_w_h", "xvmaddwod_w_h", "xvmaddwev_w_hu",
+                "xvmaddwod_w_hu", "xvmaddwev_w_hu_h", "xvmaddwod_w_hu_h"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v8i32_ty],
+             [llvm_v8i32_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmaddwev_d_w", "xvmaddwod_d_w", "xvmaddwev_d_wu",
+                "xvmaddwod_d_wu", "xvmaddwev_d_wu_w", "xvmaddwod_d_wu_w"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v4i64_ty],
+             [llvm_v4i64_ty, llvm_v8i32_ty, llvm_v8i32_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvmaddwev_q_d", "xvmaddwod_q_d", "xvmaddwev_q_du",
+                "xvmaddwod_q_du", "xvmaddwev_q_du_d", "xvmaddwod_q_du_d"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v4i64_ty],
+             [llvm_v4i64_ty, llvm_v4i64_ty, llvm_v4i64_ty],
+             [IntrNoMem]>;
+
+foreach inst = ["xvsllwil_h_b", "xvsllwil_hu_bu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v32i8_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvsllwil_w_h", "xvsllwil_wu_hu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v16i16_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvsllwil_d_w", "xvsllwil_du_wu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty],
+                                        [llvm_v8i32_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+foreach inst = ["xvneg_b", "xvmskltz_b", "xvmskgez_b", "xvmsknz_b",
+                "xvclo_b", "xvclz_b", "xvpcnt_b",
+                "xvreplve0_b", "xvreplve0_q"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v32i8_ty], [llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvneg_h", "xvmskltz_h", "xvclo_h", "xvclz_h", "xvpcnt_h",
+                "xvreplve0_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty], [llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvneg_w", "xvmskltz_w", "xvclo_w", "xvclz_w", "xvpcnt_w",
+                "xvreplve0_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty], [llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvneg_d", "xvexth_q_d", "xvexth_qu_du", "xvmskltz_d",
+                "xvextl_q_d", "xvextl_qu_du", "xvclo_d", "xvclz_d", "xvpcnt_d",
+                "xvreplve0_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvexth_h_b", "xvexth_hu_bu", "vext2xv_h_b", "vext2xv_hu_bu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty], [llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvexth_w_h", "xvexth_wu_hu", "vext2xv_w_h", "vext2xv_wu_hu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty], [llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvexth_d_w", "xvexth_du_wu", "vext2xv_d_w", "vext2xv_du_wu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["vext2xv_w_b", "vext2xv_wu_bu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty], [llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["vext2xv_d_h", "vext2xv_du_hu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["vext2xv_d_b", "vext2xv_du_bu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v32i8_ty],
+                                        [IntrNoMem]>;
+
+def int_loongarch_lasx_xvldi : VecInt<[llvm_v4i64_ty], [llvm_i32_ty],
+                                      [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+def int_loongarch_lasx_xvrepli_b : VecInt<[llvm_v32i8_ty], [llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+def int_loongarch_lasx_xvrepli_h : VecInt<[llvm_v16i16_ty], [llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+def int_loongarch_lasx_xvrepli_w : VecInt<[llvm_v8i32_ty], [llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+def int_loongarch_lasx_xvrepli_d : VecInt<[llvm_v4i64_ty], [llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+
+def int_loongarch_lasx_xvreplgr2vr_b : VecInt<[llvm_v32i8_ty], [llvm_i32_ty],
+                                             [IntrNoMem]>;
+def int_loongarch_lasx_xvreplgr2vr_h : VecInt<[llvm_v16i16_ty], [llvm_i32_ty],
+                                             [IntrNoMem]>;
+def int_loongarch_lasx_xvreplgr2vr_w : VecInt<[llvm_v8i32_ty], [llvm_i32_ty],
+                                             [IntrNoMem]>;
+def int_loongarch_lasx_xvreplgr2vr_d : VecInt<[llvm_v4i64_ty], [llvm_i64_ty],
+                                             [IntrNoMem]>;
+
+def int_loongarch_lasx_xvinsgr2vr_w
+  : VecInt<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_i32_ty, llvm_i32_ty],
+           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+def int_loongarch_lasx_xvinsgr2vr_d
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_i64_ty, llvm_i32_ty],
+           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_loongarch_lasx_xvreplve_b
+  : VecInt<[llvm_v32i8_ty], [llvm_v32i8_ty, llvm_i32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_xvreplve_h
+  : VecInt<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_i32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_xvreplve_w
+  : VecInt<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_i32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_xvreplve_d
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_i32_ty], [IntrNoMem]>;
+
+foreach inst = ["xvpickve2gr_w", "xvpickve2gr_wu" ] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_i32_ty],
+                                        [llvm_v8i32_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+foreach inst = ["xvpickve2gr_d", "xvpickve2gr_du" ] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_i64_ty],
+                                        [llvm_v4i64_ty, llvm_i32_ty],
+                                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+def int_loongarch_lasx_xbz_b : VecInt<[llvm_i32_ty], [llvm_v32i8_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_lasx_xbz_h : VecInt<[llvm_i32_ty], [llvm_v16i16_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_lasx_xbz_w : VecInt<[llvm_i32_ty], [llvm_v8i32_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_lasx_xbz_d : VecInt<[llvm_i32_ty], [llvm_v4i64_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_lasx_xbz_v : VecInt<[llvm_i32_ty], [llvm_v32i8_ty],
+                                      [IntrNoMem]>;
+
+def int_loongarch_lasx_xbnz_v : VecInt<[llvm_i32_ty], [llvm_v32i8_ty],
+                                       [IntrNoMem]>;
+def int_loongarch_lasx_xbnz_b : VecInt<[llvm_i32_ty], [llvm_v32i8_ty],
+                                       [IntrNoMem]>;
+def int_loongarch_lasx_xbnz_h : VecInt<[llvm_i32_ty], [llvm_v16i16_ty],
+                                       [IntrNoMem]>;
+def int_loongarch_lasx_xbnz_w : VecInt<[llvm_i32_ty], [llvm_v8i32_ty],
+                                       [IntrNoMem]>;
+def int_loongarch_lasx_xbnz_d : VecInt<[llvm_i32_ty], [llvm_v4i64_ty],
+                                       [IntrNoMem]>;
+
+// LASX Float
+
+foreach inst = ["xvfadd_s", "xvfsub_s", "xvfmul_s", "xvfdiv_s",
+                "xvfmax_s", "xvfmin_s", "xvfmaxa_s", "xvfmina_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty],
+                                        [llvm_v8f32_ty, llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvfadd_d", "xvfsub_d", "xvfmul_d", "xvfdiv_d",
+                "xvfmax_d", "xvfmin_d", "xvfmaxa_d", "xvfmina_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty],
+                                        [llvm_v4f64_ty, llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvfmadd_s", "xvfmsub_s", "xvfnmadd_s", "xvfnmsub_s"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v8f32_ty],
+             [llvm_v8f32_ty, llvm_v8f32_ty, llvm_v8f32_ty],
+             [IntrNoMem]>;
+foreach inst = ["xvfmadd_d", "xvfmsub_d", "xvfnmadd_d", "xvfnmsub_d"] in
+  def int_loongarch_lasx_#inst
+    : VecInt<[llvm_v4f64_ty],
+             [llvm_v4f64_ty, llvm_v4f64_ty, llvm_v4f64_ty],
+             [IntrNoMem]>;
+
+foreach inst = ["xvflogb_s", "xvfsqrt_s", "xvfrecip_s", "xvfrsqrt_s", "xvfrint_s",
+                "xvfrintrne_s", "xvfrintrz_s", "xvfrintrp_s", "xvfrintrm_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvflogb_d", "xvfsqrt_d", "xvfrecip_d", "xvfrsqrt_d", "xvfrint_d",
+                "xvfrintrne_d", "xvfrintrz_d", "xvfrintrp_d", "xvfrintrm_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvfcvtl_s_h", "xvfcvth_s_h"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty], [llvm_v16i16_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvfcvtl_d_s", "xvfcvth_d_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvftintrne_w_s", "xvftintrz_w_s", "xvftintrp_w_s", "xvftintrm_w_s",
+                "xvftint_w_s", "xvftintrz_wu_s", "xvftint_wu_s", "xvfclass_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty], [llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvftintrne_l_d", "xvftintrz_l_d", "xvftintrp_l_d", "xvftintrm_l_d",
+                "xvftint_l_d", "xvftintrz_lu_d", "xvftint_lu_d", "xvfclass_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvftintrnel_l_s", "xvftintrneh_l_s", "xvftintrzl_l_s",
+                "xvftintrzh_l_s", "xvftintrpl_l_s", "xvftintrph_l_s",
+                "xvftintrml_l_s", "xvftintrmh_l_s", "xvftintl_l_s",
+                "xvftinth_l_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty], [llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvffint_s_w", "xvffint_s_wu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty], [llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvffint_d_l", "xvffint_d_lu"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v4i64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvffintl_d_w", "xvffinth_d_w"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v8i32_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvffint_s_l"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty],
+                                        [llvm_v4i64_ty, llvm_v4i64_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvftintrne_w_d", "xvftintrz_w_d", "xvftintrp_w_d", "xvftintrm_w_d",
+                "xvftint_w_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v4f64_ty, llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvfcvt_h_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v16i16_ty],
+                                        [llvm_v8f32_ty, llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvfcvt_s_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty],
+                                        [llvm_v4f64_ty, llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+foreach inst = ["xvfcmp_caf_s", "xvfcmp_cun_s", "xvfcmp_ceq_s", "xvfcmp_cueq_s",
+                "xvfcmp_clt_s", "xvfcmp_cult_s", "xvfcmp_cle_s", "xvfcmp_cule_s",
+                "xvfcmp_cne_s", "xvfcmp_cor_s", "xvfcmp_cune_s",
+                "xvfcmp_saf_s", "xvfcmp_sun_s", "xvfcmp_seq_s", "xvfcmp_sueq_s",
+                "xvfcmp_slt_s", "xvfcmp_sult_s", "xvfcmp_sle_s", "xvfcmp_sule_s",
+                "xvfcmp_sne_s", "xvfcmp_sor_s", "xvfcmp_sune_s"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v8i32_ty],
+                                        [llvm_v8f32_ty, llvm_v8f32_ty],
+                                        [IntrNoMem]>;
+foreach inst = ["xvfcmp_caf_d", "xvfcmp_cun_d", "xvfcmp_ceq_d", "xvfcmp_cueq_d",
+                "xvfcmp_clt_d", "xvfcmp_cult_d", "xvfcmp_cle_d", "xvfcmp_cule_d",
+                "xvfcmp_cne_d", "xvfcmp_cor_d", "xvfcmp_cune_d",
+                "xvfcmp_saf_d", "xvfcmp_sun_d", "xvfcmp_seq_d", "xvfcmp_sueq_d",
+                "xvfcmp_slt_d", "xvfcmp_sult_d", "xvfcmp_sle_d", "xvfcmp_sule_d",
+                "xvfcmp_sne_d", "xvfcmp_sor_d", "xvfcmp_sune_d"] in
+  def int_loongarch_lasx_#inst : VecInt<[llvm_v4i64_ty],
+                                        [llvm_v4f64_ty, llvm_v4f64_ty],
+                                        [IntrNoMem]>;
+
+def int_loongarch_lasx_xvpickve_w_f
+  : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_i32_ty],
+           [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_loongarch_lasx_xvpickve_d_f
+  : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_i32_ty],
+           [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+// LASX load/store
+def int_loongarch_lasx_xvld
+  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+           [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+def int_loongarch_lasx_xvldx
+  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i64_ty],
+           [IntrReadMem, IntrArgMemOnly]>;
+def int_loongarch_lasx_xvldrepl_b
+  : VecInt<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+           [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+def int_loongarch_lasx_xvldrepl_h
+  : VecInt<[llvm_v16i16_ty], [llvm_ptr_ty, llvm_i32_ty],
+           [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+def int_loongarch_lasx_xvldrepl_w
+  : VecInt<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+           [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+def int_loongarch_lasx_xvldrepl_d
+  : VecInt<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_i32_ty],
+           [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+
+def int_loongarch_lasx_xvst
+  : VecInt<[], [llvm_v32i8_ty, llvm_ptr_ty, llvm_i32_ty],
+           [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+def int_loongarch_lasx_xvstx
+  : VecInt<[], [llvm_v32i8_ty, llvm_ptr_ty, llvm_i64_ty],
+           [IntrWriteMem, IntrArgMemOnly]>;
+def int_loongarch_lasx_xvstelm_b
+  : VecInt<[], [llvm_v32i8_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+           [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+def int_loongarch_lasx_xvstelm_h
+  : VecInt<[], [llvm_v16i16_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+           [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+def int_loongarch_lasx_xvstelm_w
+  : VecInt<[], [llvm_v8i32_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+           [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+def int_loongarch_lasx_xvstelm_d
+  : VecInt<[], [llvm_v4i64_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+           [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+} // TargetPrefix = "loongarch"
