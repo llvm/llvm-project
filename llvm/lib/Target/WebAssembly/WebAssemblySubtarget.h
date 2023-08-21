@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYSUBTARGET_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYSUBTARGET_H
 
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyFrameLowering.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyInstrInfo.h"
@@ -22,7 +23,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
-#define GET_SUBTARGETINFO_ENUM
 #define GET_SUBTARGETINFO_HEADER
 #include "WebAssemblyGenSubtargetInfo.inc"
 

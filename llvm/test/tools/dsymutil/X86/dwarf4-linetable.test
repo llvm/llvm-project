@@ -1,5 +1,7 @@
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+
 # Source:
 #   int main() {
 #     return 0;

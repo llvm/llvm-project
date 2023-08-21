@@ -62,7 +62,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32],
   def CV_BCLRR : CVBitManipRR<0b0011100, "cv.bclrr">;
   def CV_BSETR : CVBitManipRR<0b0011101, "cv.bsetr">;
 
-  def CVROR : CVBitManipRR<0b0100000, "cv.ror">;
+  def CV_ROR : CVBitManipRR<0b0100000, "cv.ror">;
   def CV_FF1 : CVBitManipR<0b0100001, "cv.ff1">;
   def CV_FL1 : CVBitManipR<0b0100010, "cv.fl1">;
   def CV_CLB : CVBitManipR<0b0100011, "cv.clb">;

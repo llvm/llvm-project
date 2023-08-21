@@ -396,6 +396,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     VFS = Preamble->StatCache->getConsumingFS(std::move(VFS));
 
   assert(CI);
+
+  if (CI->getFrontendOpts().Inputs.size() > 0) {
+    auto Lang = CI->getFrontendOpts().Inputs[0].getKind().getLanguage();
+    if (Lang == Language::Asm || Lang == Language::LLVM_IR) {
+      elog("Clangd does not support assembly or IR source files");
+      return std::nullopt;
+    }
+  }
+
   // Command-line parsing sets DisableFree to true by default, but we don't want
   // to leak memory in clangd.
   CI->getFrontendOpts().DisableFree = false;

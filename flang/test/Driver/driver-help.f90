@@ -120,6 +120,7 @@
 ! HELP-NEXT: -U <macro>              Undefine macro <macro>
 ! HELP-NEXT: --version               Print version information
 ! HELP-NEXT: -v                      Show commands to run and use verbose output
+! HELP-NEXT: -Wl,<arg>               Pass the comma separated arguments in <arg> to the linker
 ! HELP-NEXT: -W<warning>             Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>           Pass <arg> to the flang compiler
 ! HELP-NEXT: -x <language>           Treat subsequent input files as having type <language>

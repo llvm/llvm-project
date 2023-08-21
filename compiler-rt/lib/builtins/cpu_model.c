@@ -456,6 +456,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Meteorlake:
     case 0xaa:
     case 0xac:
+    // Gracemont:
+    case 0xbe:
       CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;

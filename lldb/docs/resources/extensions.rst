@@ -1,5 +1,5 @@
-DWARF Extensions supported by LLDB
-==================================
+DWARF Extensions
+================
 
 LLDB supports some DWARF extensions produced by Clang.
 
@@ -66,9 +66,9 @@ M.pcm
          DW_AT_name "A"
          DW_TAG_member
            DW_AT_name "x"
-   
+
 A.c
-   
+
 ::
 
    A a;
@@ -90,7 +90,7 @@ A.o
    DW_TAG_compile_unit
      DW_AT_GNU_dwo_id  (0xabcdef)
      DW_AT_GNU_dwo_name    ("M.pcm")
-   
+
 The debug info inside a ``.pcm`` file may recursively reference
 further external types that are defined in other ``.pcm`` files. Clang
 generates external references (and debug info inside the modules) for

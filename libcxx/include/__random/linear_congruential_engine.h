@@ -246,10 +246,9 @@ public:
       seed(__s);
     }
 #endif
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit linear_congruential_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, linear_congruential_engine>::value>::type* = 0)
+        explicit linear_congruential_engine(_Sseq& __q)
         {seed(__q);}
     _LIBCPP_INLINE_VISIBILITY
     void seed(result_type __s = default_seed)

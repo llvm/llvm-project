@@ -83,6 +83,7 @@ public:
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E);
+  bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
@@ -93,7 +94,6 @@ public:
   bool VisitExprWithCleanups(const ExprWithCleanups *E);
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E);
-  bool VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitTypeTraitExpr(const TypeTraitExpr *E);
   bool VisitLambdaExpr(const LambdaExpr *E);
@@ -101,6 +101,7 @@ public:
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
+  bool VisitCXXConstructExpr(const CXXConstructExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -136,17 +137,21 @@ protected:
     }
     llvm_unreachable("not a primitive type");
   }
-
+  /// Evaluates an expression and places the result on the stack. If the
+  /// expression is of composite type, a local variable will be created
+  /// and a pointer to said variable will be placed on the stack.
+  bool visit(const Expr *E);
+  /// Compiles an initializer. This is like visit() but it will never
+  /// create a variable and instead rely on a variable already having
+  /// been created. visitInitializer() then relies on a pointer to this
+  /// variable being on top of the stack.
+  bool visitInitializer(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
-  /// Evaluates an expression and places result on stack.
-  bool visit(const Expr *E);
-  /// Compiles an initializer.
-  bool visitInitializer(const Expr *E);
-  /// Compiles an array initializer.
-  bool visitArrayInitializer(const Expr *Initializer);
-  /// Compiles a record initializer.
-  bool visitRecordInitializer(const Expr *Initializer);
+  /// Just pass evaluation on to \p E. This leaves all the parsing flags
+  /// intact.
+  bool delegate(const Expr *E);
+
   /// Creates and initializes a variable from the given decl.
   bool visitVarDecl(const VarDecl *VD);
 
@@ -189,9 +194,6 @@ protected:
 
     return this->emitPopPtr(I);
   }
-
-  bool visitConditional(const AbstractConditionalOperator *E,
-                        llvm::function_ref<bool(const Expr *)> V);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -281,6 +283,10 @@ protected:
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
+
+  /// Flag inidicating if we're initializing an already created
+  /// variable. This is set in visitInitializer().
+  bool Initializing = false;
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;

@@ -151,6 +151,11 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  FormatToken *getFirstNonComment() const {
+    assert(First);
+    return First->is(tok::comment) ? First->getNextNonComment() : First;
+  }
+
   FormatToken *First;
   FormatToken *Last;
 

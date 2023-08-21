@@ -154,10 +154,6 @@ Bug Fixes in This Version
 - Fix a hang on valid C code passing a function type as an argument to
   ``typeof`` to form a function declaration.
   (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
-- Clang now respects ``-fwrapv`` and ``-ftrapv`` for ``__builtin_abs`` and
-  ``abs`` builtins.
-  (`#45129 <https://github.com/llvm/llvm-project/issues/45129>`_,
-  `#45794 <https://github.com/llvm/llvm-project/issues/45794>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -177,7 +173,7 @@ Bug Fixes to C++ Support
   a Unicode character whose name contains a ``-``.
   (Fixes `#64161 <https://github.com/llvm/llvm-project/issues/64161>`_)
 
-- Fix cases where we ignore ambiguous name lookup when looking up memebers.
+- Fix cases where we ignore ambiguous name lookup when looking up members.
   (`#22413 <https://github.com/llvm/llvm-project/issues/22413>`_),
   (`#29942 <https://github.com/llvm/llvm-project/issues/29942>`_),
   (`#35574 <https://github.com/llvm/llvm-project/issues/35574>`_) and
@@ -293,9 +289,6 @@ Static Analyzer
 
 Sanitizers
 ----------
-- ``-fsanitize=signed-integer-overflow`` now instruments ``__builtin_abs`` and
-  ``abs`` builtins.
-
 
 Python Binding Changes
 ----------------------

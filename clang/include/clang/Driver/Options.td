@@ -912,7 +912,8 @@ def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
-def Wl_COMMA : CommaJoined<["-"], "Wl,">, Flags<[LinkerInput, RenderAsInput]>,
+def Wl_COMMA : CommaJoined<["-"], "Wl,">, Visibility<[ClangOption, FlangOption]>,
+  Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass the comma separated arguments in <arg> to the linker">,
   MetaVarName<"<arg>">, Group<Link_Group>;
 // FIXME: This is broken; these should not be Joined arguments.
@@ -1870,9 +1871,11 @@ defm safe_buffer_usage_suggestions : BoolFOption<"safe-buffer-usage-suggestions"
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Display suggestions to update code associated with -Wunsafe-buffer-usage warnings">,
   NegFlag<SetFalse>>;
-def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
+def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">,
+  Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
-def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
+def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">,
+  Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Do not discard value names in LLVM IR">, Flags<[NoXarchOption]>;
 defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
   LangOpts<"DollarIdents">, Default<!strconcat("!", asm_preprocessor.KeyPath)>,

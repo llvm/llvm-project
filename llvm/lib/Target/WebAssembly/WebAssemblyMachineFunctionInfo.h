@@ -21,6 +21,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
+class WebAssemblyTargetLowering;
 
 struct WasmEHFuncInfo;
 
@@ -118,8 +119,6 @@ public:
   }
   void setBasePointerVreg(unsigned Reg) { BasePtrVreg = Reg; }
 
-  static const unsigned UnusedReg = -1u;
-
   void stackifyVReg(MachineRegisterInfo &MRI, unsigned VReg) {
     assert(MRI.getUniqueVRegDef(VReg));
     auto I = Register::virtReg2Index(VReg);
@@ -141,7 +140,7 @@ public:
 
   void initWARegs(MachineRegisterInfo &MRI);
   void setWAReg(unsigned VReg, unsigned WAReg) {
-    assert(WAReg != UnusedReg);
+    assert(WAReg != WebAssembly::UnusedReg);
     auto I = Register::virtReg2Index(VReg);
     assert(I < WARegs.size());
     WARegs[I] = WAReg;
@@ -150,12 +149,6 @@ public:
     auto I = Register::virtReg2Index(VReg);
     assert(I < WARegs.size());
     return WARegs[I];
-  }
-
-  // For a given stackified WAReg, return the id number to print with push/pop.
-  static unsigned getWARegStackId(unsigned Reg) {
-    assert(Reg & INT32_MIN);
-    return Reg & INT32_MAX;
   }
 
   bool isCFGStackified() const { return CFGStackified; }

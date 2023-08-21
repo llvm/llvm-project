@@ -25,6 +25,11 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/keep_func/
 RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
 RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/keep_func/main.out -o %t.omit.dSYM
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/keep_func/main.out -o %t.keep.dSYM -keep-function-for-static
+RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
+RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
+
 KEEP:     DW_AT_name	("MyDummyVar")
 KEEP:     DW_AT_name	("FOO_VAR_TYPE")
 KEEP:     DW_AT_name	("x1")

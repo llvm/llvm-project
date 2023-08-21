@@ -6109,6 +6109,48 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   static const char ID;
 };
 
+/// An abstract interface for indirect call information interference.
+struct AAIndirectCallInfo
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAIndirectCallInfo(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// The point is to derive callees, after all.
+  static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() != IRPosition::IRP_CALL_SITE)
+      return false;
+    auto *CB = cast<CallBase>(IRP.getCtxI());
+    return CB->getOpcode() == Instruction::Call && CB->isIndirectCall() &&
+           !CB->isMustTailCall();
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAIndirectCallInfo &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
+
+  /// Call \CB on each potential callee value and return true if all were known
+  /// and \p CB returned true on all of them. Otherwise, return false.
+  virtual bool foreachCallee(function_ref<bool(Function *)> CB) const = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAIndirectCallInfo"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAIndirectCallInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
 
 /// Run options, used by the pass manager.

@@ -24,32 +24,42 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT XLenLLT = LLT::scalar(XLen);
   const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
+  const LLT s1 = LLT::scalar(1);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
 
   using namespace TargetOpcode;
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({XLenLLT})
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder({G_ADD, G_SUB})
+      .legalFor({s32, XLenLLT})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, XLenLLT);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
-      .legalFor({{XLenLLT, XLenLLT}})
-      .clampScalar(0, XLenLLT, XLenLLT)
-      .clampScalar(1, XLenLLT, XLenLLT)
-      .widenScalarToNextPow2(0);
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO})
+      .lowerFor({{XLenLLT, s1}});
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .legalFor({{XLenLLT, XLenLLT}})
+      .legalFor({{s32, s32}, {s32, XLenLLT}, {XLenLLT, XLenLLT}})
       .widenScalarToNextPow2(0)
-      .clampScalar(1, XLenLLT, XLenLLT)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .clampScalar(1, s32, XLenLLT)
+      .clampScalar(0, s32, XLenLLT);
 
-  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-      .maxScalar(0, XLenLLT);
+  if (ST.is64Bit())
+    getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+        .legalFor({{XLenLLT, s32}})
+        .maxScalar(0, XLenLLT);
+  else
+    getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+        .maxScalar(0, XLenLLT);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
-      .legalFor({XLenLLT})
       .maxScalar(0, XLenLLT)
       .lower();
 
@@ -65,9 +75,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
-      .legalFor({XLenLLT, p0})
+      .legalFor({s32, XLenLLT, p0})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .clampScalar(0, s32, XLenLLT);
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{XLenLLT, XLenLLT}, {XLenLLT, p0}})
@@ -80,6 +90,30 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT)
       .clampScalar(1, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder({G_LOAD, G_STORE})
+      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                 {s32, p0, s16, 16},
+                                 {s32, p0, s32, 32},
+                                 {XLenLLT, p0, s8, 8},
+                                 {XLenLLT, p0, s16, 16},
+                                 {XLenLLT, p0, s32, 32},
+                                 {XLenLLT, p0, XLenLLT, XLen},
+                                 {p0, p0, XLenLLT, XLen}})
+      .clampScalar(0, s32, XLenLLT)
+      .lower();
+
+  auto &ZExtLoadActions = getActionDefinitionsBuilder(G_ZEXTLOAD)
+      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                 {s32, p0, s16, 16},
+                                 {XLenLLT, p0, s8, 8},
+                                 {XLenLLT, p0, s16, 16}});
+  if (XLen == 64)
+    ZExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
+  ZExtLoadActions.lower();
+
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalFor({{p0, XLenLLT}});
 
   getActionDefinitionsBuilder(G_BRCOND)
       .legalFor({XLenLLT})
@@ -95,9 +129,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
-        .legalFor({XLenLLT})
+        .legalFor({s32, XLenLLT})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, XLenLLT, XLenLLT);
+        .clampScalar(0, s32, XLenLLT);
 
     // clang-format off
     getActionDefinitionsBuilder({G_SMULH, G_UMULH})
@@ -115,9 +149,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   if (ST.hasStdExtM()) {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
-        .legalFor({XLenLLT})
+        .legalFor({s32, XLenLLT})
         .libcallFor({DoubleXLenLLT})
-        .clampScalar(0, XLenLLT, DoubleXLenLLT)
+        .clampScalar(0, s32, DoubleXLenLLT)
         .widenScalarToNextPow2(0);
   } else {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})

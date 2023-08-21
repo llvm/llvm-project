@@ -234,28 +234,20 @@ public:
         _LIBCPP_HIDE_FROM_ABI duration() {}
 #endif
 
-    template <class _Rep2>
+    template <class _Rep2, __enable_if_t<is_convertible<const _Rep2&, rep>::value &&
+                                         (treat_as_floating_point<rep>::value ||
+                                          !treat_as_floating_point<_Rep2>::value), int> = 0>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-        explicit duration(const _Rep2& __r,
-            typename enable_if
-            <
-               is_convertible<const _Rep2&, rep>::value &&
-               (treat_as_floating_point<rep>::value ||
-               !treat_as_floating_point<_Rep2>::value)
-            >::type* = nullptr)
+        explicit duration(const _Rep2& __r)
                 : __rep_(__r) {}
 
     // conversions
-    template <class _Rep2, class _Period2>
+    template <class _Rep2, class _Period2, __enable_if_t<__no_overflow<_Period2, period>::value && (
+                                                            treat_as_floating_point<rep>::value ||
+                                                            (__no_overflow<_Period2, period>::type::den == 1 &&
+                                                             !treat_as_floating_point<_Rep2>::value)), int> = 0>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-        duration(const duration<_Rep2, _Period2>& __d,
-            typename enable_if
-            <
-                __no_overflow<_Period2, period>::value && (
-                treat_as_floating_point<rep>::value ||
-                (__no_overflow<_Period2, period>::type::den == 1 &&
-                 !treat_as_floating_point<_Rep2>::value))
-            >::type* = nullptr)
+        duration(const duration<_Rep2, _Period2>& __d)
                 : __rep_(chrono::duration_cast<duration>(__d).count()) {}
 
     // observer
