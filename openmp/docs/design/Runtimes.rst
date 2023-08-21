@@ -1130,7 +1130,7 @@ LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
 This environment variable defines a lower bound for the number of threads if a
 combined kernel, e.g., `target teams distribute parallel for`, has insufficient
 parallelism. Especially if the trip count of the loops is lower than the number
-of threads possible times the number of teams (aka. blocks) the device preferes
+of threads possible times the number of teams (aka. blocks) the device prefers
 (see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU`), we will reduce the thread
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
