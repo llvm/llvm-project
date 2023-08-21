@@ -1058,13 +1058,13 @@ foreach vtiTowti = AllWidenableIntVectors in {
   let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                GetVTypePredicates<wti>.Predicates) in {
   def : Pat<
-    (vti.Vector 
+    (vti.Vector
       (riscv_trunc_vector_vl
         (srem (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs1))),
               (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs2)))),
         (vti.Mask true_mask), (XLenVT srcvalue))),
       (!cast<Instruction>("PseudoVREM_VV_"#vti.LMul.MX#"_E"#!shl(1, vti.Log2SEW))
-        (vti.Vector (IMPLICIT_DEF)), 
+        (vti.Vector (IMPLICIT_DEF)),
         vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }

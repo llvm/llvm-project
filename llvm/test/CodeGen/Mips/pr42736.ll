@@ -20,7 +20,8 @@ entry:
 ; STATIC-NEXT: sd      $[[R0]]
 
   %val = alloca i64, align 8
-  store i64 and (i64 ptrtoint (ptr @foo to i64), i64 268435455), ptr %val, align 8
+  %and = and i64 ptrtoint (ptr @foo to i64), 268435455
+  store i64 %and, ptr %val, align 8
   %0 = load i64, ptr %val, align 8
   ret void
 }

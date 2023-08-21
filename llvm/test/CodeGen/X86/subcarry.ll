@@ -21,7 +21,7 @@ define i256 @sub256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: sub256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    subq %r9, %rsi
+; CHECK-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
