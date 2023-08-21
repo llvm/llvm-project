@@ -2212,16 +2212,30 @@ static bool overlapWithMacro(const FixItList &FixIts) {
   });
 }
 
-static bool impossibleToFixForVar(const FixableGadgetSets &FixablesForAllVars,
-                                  const Strategy &S,
-                                  const VarDecl * Var) {
-  for (const auto &F : FixablesForAllVars.byVar.find(Var)->second) {
-    std::optional<FixItList> Fixits = F->getFixits(S);
-    if (!Fixits) {
-      return true;
+// Erases variables in `FixItsForVariable`, if such a variable has an unfixable
+// group mate.  A variable `v` is unfixable iff `FixItsForVariable` does not
+// contain `v`.
+static void eraseVarsForUnfixableGroupMates(
+    std::map<const VarDecl *, FixItList> &FixItsForVariable,
+    const VariableGroupsManager &VarGrpMgr) {
+  // Variables will be removed from `FixItsForVariable`:
+  SmallVector<const VarDecl *, 8> ToErase;
+
+  for (auto [VD, Ignore] : FixItsForVariable) {
+    VarGrpRef Grp = VarGrpMgr.getGroupOfVar(VD);
+    if (llvm::any_of(Grp,
+                     [&FixItsForVariable](const VarDecl *GrpMember) -> bool {
+                       return FixItsForVariable.find(GrpMember) ==
+                              FixItsForVariable.end();
+                     })) {
+      // At least one group member cannot be fixed, so we have to erase the
+      // whole group:
+      for (const VarDecl *Member : Grp)
+        ToErase.push_back(Member);
     }
   }
-  return false;
+  for (auto *VarToErase : ToErase)
+    FixItsForVariable.erase(VarToErase);
 }
 
 static std::map<const VarDecl *, FixItList>
@@ -2230,7 +2244,14 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
           /* The function decl under analysis */ const Decl *D,
           const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
           const VariableGroupsManager &VarGrpMgr) {
+  // `FixItsForVariable` will map each variable to a set of fix-its directly
+  // associated to the variable itself.  Fix-its of distinct variables in
+  // `FixItsForVariable` are disjoint.
   std::map<const VarDecl *, FixItList> FixItsForVariable;
+
+  // Populate `FixItsForVariable` with fix-its directly associated with each
+  // variable.  Fix-its directly associated to a variable 'v' are the ones
+  // produced by the `FixableGadget`s whose claimed variable is 'v'.
   for (const auto &[VD, Fixables] : FixablesForAllVars.byVar) {
     FixItsForVariable[VD] =
         fixVariable(VD, S.lookup(VD), D, Tracker, Ctx, Handler);
@@ -2240,63 +2261,35 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
       FixItsForVariable.erase(VD);
       continue;
     }
-    bool ImpossibleToFix = false;
-    llvm::SmallVector<FixItHint, 16> FixItsForVD;
     for (const auto &F : Fixables) {
       std::optional<FixItList> Fixits = F->getFixits(S);
-      if (!Fixits) {
-#ifndef NDEBUG
-        Handler.addDebugNoteForVar(
-            VD, F->getBaseStmt()->getBeginLoc(),
-            ("gadget '" + F->getDebugName() + "' refused to produce a fix")
-                .str());
-#endif
-        ImpossibleToFix = true;
-        break;
-      } else {
-        const FixItList CorrectFixes = Fixits.value();
-        FixItsForVD.insert(FixItsForVD.end(), CorrectFixes.begin(),
-                           CorrectFixes.end());
-      }
-    }
 
-    if (ImpossibleToFix) {
-      FixItsForVariable.erase(VD);
-      continue;
-    }
-
-    
-   {
-      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(VD);
-      for (const VarDecl * V : VarGroupForVD) {
-        if (V == VD) {
-          continue;
-        }
-        if (impossibleToFixForVar(FixablesForAllVars, S, V)) {
-          ImpossibleToFix = true;
-          break;
-        }
-      }
-
-      if (ImpossibleToFix) {
-        FixItsForVariable.erase(VD);
-        for (const VarDecl * V : VarGroupForVD) {
-          FixItsForVariable.erase(V);
-        }
+      if (Fixits) {
+        FixItsForVariable[VD].insert(FixItsForVariable[VD].end(),
+                                     Fixits->begin(), Fixits->end());
         continue;
       }
-    }
-    FixItsForVariable[VD].insert(FixItsForVariable[VD].end(),
-                                 FixItsForVD.begin(), FixItsForVD.end());
-
-    // Fix-it shall not overlap with macros or/and templates:
-    if (overlapWithMacro(FixItsForVariable[VD]) ||
-        clang::internal::anyConflict(FixItsForVariable[VD],
-                                     Ctx.getSourceManager())) {
+#ifndef NDEBUG
+      Handler.addDebugNoteForVar(
+          VD, F->getBaseStmt()->getBeginLoc(),
+          ("gadget '" + F->getDebugName() + "' refused to produce a fix")
+              .str());
+#endif      
       FixItsForVariable.erase(VD);
-      continue;
+      break;
     }
   }
+
+  // `FixItsForVariable` now contains only variables that can be
+  // fixed. A variable can be fixed if its' declaration and all Fixables
+  // associated to it can all be fixed.
+
+  // To further remove from `FixItsForVariable` variables whose group mates
+  // cannot be fixed...
+  eraseVarsForUnfixableGroupMates(FixItsForVariable, VarGrpMgr);
+  // Now `FixItsForVariable` gets further reduced: a variable is in
+  // `FixItsForVariable` iff it can be fixed and all its group mates can be
+  // fixed.
 
   // The map that maps each variable `v` to fix-its for the whole group where
   // `v` is in:
@@ -2315,9 +2308,19 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
                                            FixItsForVariable[GrpMate].end());
     }
   }
+  // Fix-its that will be applied in one step shall NOT:
+  // 1. overlap with macros or/and templates; or
+  // 2. conflict with each other.
+  // Otherwise, the fix-its will be dropped.
+  for (auto Iter = FinalFixItsForVariable.begin();
+       Iter != FinalFixItsForVariable.end();)
+    if (overlapWithMacro(Iter->second) ||
+        clang::internal::anyConflict(Iter->second, Ctx.getSourceManager())) {
+      Iter = FinalFixItsForVariable.erase(Iter);
+    } else
+      Iter++;
   return FinalFixItsForVariable;
 }
-
 
 static Strategy
 getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
@@ -2356,6 +2359,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   assert(D && D->getBody());
   // We do not want to visit a Lambda expression defined inside a method independently.
   // Instead, it should be visited along with the outer method.
+  // FIXME: do we want to do the same thing for `BlockDecl`s?
   if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
     if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
       return;
