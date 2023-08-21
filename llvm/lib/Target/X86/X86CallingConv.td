@@ -572,6 +572,14 @@ def CC_X86_64_C : CallingConv<[
 
   // The first 6 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
+
+  // i128 can be either passed in two i64 registers, or on the stack, but
+  // not split across register and stack. As such, do not allow using R9
+  // for a split i64.
+  CCIfType<[i64],
+           CCIfSplit<CCAssignToReg<[RDI, RSI, RDX, RCX, R8]>>>,
+  CCIfType<[i64], CCIfSplit<CCAssignToStackWithShadow<8, 16, [R9]>>>,
+
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
 
   // The first 8 MMX vector arguments are passed in XMM registers on Darwin.
