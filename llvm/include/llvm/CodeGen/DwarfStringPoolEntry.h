@@ -27,34 +27,29 @@ struct DwarfStringPoolEntry {
   bool isIndexed() const { return Index != NotIndexed; }
 };
 
-/// DwarfStringPoolEntry with string keeping externally.
-struct DwarfStringPoolEntryWithExtString : public DwarfStringPoolEntry {
-  StringRef String;
-};
-
 /// DwarfStringPoolEntryRef: Dwarf string pool entry reference.
 ///
 /// Dwarf string pool entry keeps string value and its data.
 /// There are two variants how data are represented:
 ///
-///   1. String data in pool  - StringMapEntry<DwarfStringPoolEntry>.
-///   2. External string data - DwarfStringPoolEntryWithExtString.
+///   1. By value - StringMapEntry<DwarfStringPoolEntry>.
+///   2. By pointer - StringMapEntry<DwarfStringPoolEntry *>.
 ///
-/// The external data variant allows reducing memory usage for the case
-/// when string pool entry does not have data: string entry does not
-/// keep any data and so no need to waste space for the full
-/// DwarfStringPoolEntry. It is recommended to use external variant if not all
-/// entries of dwarf string pool have corresponding DwarfStringPoolEntry.
+/// The "By pointer" variant allows for reducing memory usage for the case
+/// when string pool entry does not have data: it keeps the null pointer
+/// and so no need to waste space for the full DwarfStringPoolEntry.
+/// It is recommended to use "By pointer" variant if not all entries
+/// of dwarf string pool have corresponding DwarfStringPoolEntry.
 
 class DwarfStringPoolEntryRef {
   /// Pointer type for "By value" string entry.
   using ByValStringEntryPtr = const StringMapEntry<DwarfStringPoolEntry> *;
 
-  /// Pointer type for external string entry.
-  using ExtStringEntryPtr = const DwarfStringPoolEntryWithExtString *;
+  /// Pointer type for "By pointer" string entry.
+  using ByPtrStringEntryPtr = const StringMapEntry<DwarfStringPoolEntry *> *;
 
   /// Pointer to the dwarf string pool Entry.
-  PointerUnion<ByValStringEntryPtr, ExtStringEntryPtr> MapEntry = nullptr;
+  PointerUnion<ByValStringEntryPtr, ByPtrStringEntryPtr> MapEntry = nullptr;
 
 public:
   DwarfStringPoolEntryRef() = default;
@@ -66,8 +61,10 @@ public:
 
   /// ASSUMPTION: DwarfStringPoolEntryRef keeps pointer to \p Entry,
   /// thus specified entry mustn`t be reallocated.
-  DwarfStringPoolEntryRef(const DwarfStringPoolEntryWithExtString &Entry)
-      : MapEntry(&Entry) {}
+  DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry *> &Entry)
+      : MapEntry(&Entry) {
+    assert(cast<ByPtrStringEntryPtr>(MapEntry)->second != nullptr);
+  }
 
   explicit operator bool() const { return !MapEntry.isNull(); }
 
@@ -91,7 +88,7 @@ public:
     if (isa<ByValStringEntryPtr>(MapEntry))
       return cast<ByValStringEntryPtr>(MapEntry)->first();
 
-    return cast<ExtStringEntryPtr>(MapEntry)->String;
+    return cast<ByPtrStringEntryPtr>(MapEntry)->first();
   }
 
   /// \returns the entire string pool entry for convenience.
@@ -99,7 +96,7 @@ public:
     if (isa<ByValStringEntryPtr>(MapEntry))
       return cast<ByValStringEntryPtr>(MapEntry)->second;
 
-    return *cast<ExtStringEntryPtr>(MapEntry);
+    return *cast<ByPtrStringEntryPtr>(MapEntry)->second;
   }
 
   bool operator==(const DwarfStringPoolEntryRef &X) const {
