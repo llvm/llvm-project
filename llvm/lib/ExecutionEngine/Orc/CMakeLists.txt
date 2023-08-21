@@ -50,6 +50,8 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  RedirectionManager.cpp
+  JITLinkRedirectableSymbolManager.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 
