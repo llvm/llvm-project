@@ -1357,6 +1357,8 @@ static bool processIfEntryValueDbgDeclare(FunctionLoweringInfo &FuncInfo,
   // Find the corresponding livein physical register to this argument.
   for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
     if (VirtReg == ArgVReg) {
+      // Append an op deref to account for the fact that this is a dbg_declare.
+      Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
       FuncInfo.MF->setVariableDbgInfo(Var, Expr, PhysReg, DbgLoc);
       LLVM_DEBUG(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
                         << ", Expr=" << *Expr << ",  MCRegister=" << PhysReg
