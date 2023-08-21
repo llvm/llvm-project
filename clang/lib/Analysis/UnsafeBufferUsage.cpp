@@ -1416,6 +1416,27 @@ getVarDeclIdentifierText(const VarDecl *VD, const SourceManager &SM,
   return getRangeText({ParmIdentBeginLoc, ParmIdentEndLoc}, SM, LangOpts);
 }
 
+// We cannot fix a variable declaration if it has some other specifiers than the
+// type specifier.  Because the source ranges of those specifiers could overlap
+// with the source range that is being replaced using fix-its.  Especially when
+// we often cannot obtain accurate source ranges of cv-qualified type
+// specifiers.
+// FIXME: also deal with type attributes
+static bool hasUnsupportedSpecifiers(const VarDecl *VD,
+                                     const SourceManager &SM) {
+  // AttrRangeOverlapping: true if at least one attribute of `VD` overlaps the
+  // source range of `VD`:
+  bool AttrRangeOverlapping = llvm::any_of(VD->attrs(), [&](Attr *At) -> bool {
+    return !(SM.isBeforeInTranslationUnit(At->getRange().getEnd(),
+                                          VD->getBeginLoc())) &&
+           !(SM.isBeforeInTranslationUnit(VD->getEndLoc(),
+                                          At->getRange().getBegin()));
+  });
+  return VD->isInlineSpecified() || VD->isConstexpr() ||
+         VD->hasConstantInitialization() || !VD->hasLocalStorage() ||
+         AttrRangeOverlapping;
+}
+
 // Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
 // type. The text is obtained through from `TypeLoc`s.  Since `TypeLoc` does not
 // have source ranges of qualifiers ( The `QualifiedTypeLoc` looks hacky too me
@@ -1841,8 +1862,11 @@ static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
 //    the non-empty fix-it list, if fix-its are successfuly generated; empty
 //    list otherwise.
 static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
-                                         const StringRef UserFillPlaceHolder,
-                                         UnsafeBufferUsageHandler &Handler) {
+					 const StringRef UserFillPlaceHolder,
+					 UnsafeBufferUsageHandler &Handler) {
+  if (hasUnsupportedSpecifiers(D, Ctx.getSourceManager()))
+    return {};
+
   FixItList FixIts{};
   std::optional<std::string> SpanTyText = createSpanTypeForVarDecl(D, Ctx);
 
@@ -2076,6 +2100,10 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
 // `createOverloadsForFixedParams`).
 static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
                                   UnsafeBufferUsageHandler &Handler) {
+  if (hasUnsupportedSpecifiers(PVD, Ctx.getSourceManager())) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : has unsupport specifier(s)");
+    return {};
+  }
   if (PVD->hasDefaultArg()) {
     // FIXME: generate fix-its for default values:
     DEBUG_NOTE_DECL_FAIL(PVD, " : has default arg");
