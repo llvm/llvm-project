@@ -126,7 +126,7 @@ New checks
 - New :doc:`bugprone-incorrect-enable-if
   <clang-tidy/checks/bugprone/incorrect-enable-if>` check.
 
-  Detects incorrect usages of ``std::enable_if`` that don't name the nested 
+  Detects incorrect usages of ``std::enable_if`` that don't name the nested
   ``type`` type.
 
 - New :doc:`bugprone-multi-level-implicit-pointer-conversion
@@ -227,6 +227,10 @@ Changes in existing checks
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature, eliminating false-positives.
+
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to
+  detect comparison between string and empty string literals.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper
