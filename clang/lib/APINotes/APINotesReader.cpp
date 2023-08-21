@@ -1836,8 +1836,8 @@ auto APINotesReader::lookupObjCClassID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  // TODO: Can ObjC classes be declared in C++ namespaces? If so, we should pass
-  // the parent context and use it instead of -1.
+  // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
+  // context.
   auto knownID = Impl.ObjCContextIDTable->find(
       {-1, (uint8_t)ContextKind::ObjCClass, *classID});
   if (knownID == Impl.ObjCContextIDTable->end())
@@ -1871,8 +1871,8 @@ auto APINotesReader::lookupObjCProtocolID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  // TODO: Can ObjC classes be declared in C++ namespaces? If so, we should pass
-  // the parent context and use it instead of -1.
+  // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
+  // context.
   auto knownID = Impl.ObjCContextIDTable->find(
       {-1, (uint8_t)ContextKind::ObjCProtocol, *classID});
   if (knownID == Impl.ObjCContextIDTable->end())
