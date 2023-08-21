@@ -1744,9 +1744,9 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
   return NumElim;
 }
 
-Value *SCEVExpander::getRelatedExistingExpansion(const SCEV *S,
-                                                 const Instruction *At,
-                                                 Loop *L) {
+bool SCEVExpander::hasRelatedExistingExpansion(const SCEV *S,
+                                               const Instruction *At,
+                                               Loop *L) {
   using namespace llvm::PatternMatch;
 
   SmallVector<BasicBlock *, 4> ExitingBlocks;
@@ -1763,17 +1763,17 @@ Value *SCEVExpander::getRelatedExistingExpansion(const SCEV *S,
       continue;
 
     if (SE.getSCEV(LHS) == S && SE.DT.dominates(LHS, At))
-      return LHS;
+      return true;
 
     if (SE.getSCEV(RHS) == S && SE.DT.dominates(RHS, At))
-      return RHS;
+      return true;
   }
 
   // Use expand's logic which is used for reusing a previous Value in
   // ExprValueMap.  Note that we don't currently model the cost of
   // needing to drop poison generating flags on the instruction if we
   // want to reuse it.  We effectively assume that has zero cost.
-  return FindValueInExprValueMap(S, At);
+  return FindValueInExprValueMap(S, At) != nullptr;
 }
 
 template<typename T> static InstructionCost costAndCollectOperands(
@@ -1951,7 +1951,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
-  if (getRelatedExistingExpansion(S, &At, L))
+  if (hasRelatedExistingExpansion(S, &At, L))
     return false; // Consider the expression to be free.
 
   TargetTransformInfo::TargetCostKind CostKind =
@@ -1993,7 +1993,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // At the beginning of this function we already tried to find existing
     // value for plain 'S'. Now try to lookup 'S + 1' since it is common
     // pattern involving division. This is just a simple search heuristic.
-    if (getRelatedExistingExpansion(
+    if (hasRelatedExistingExpansion(
             SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), &At, L))
       return false; // Consider it to be free.
 
