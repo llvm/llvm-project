@@ -143,7 +143,8 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
   return result;
 }
 
-PresburgerRelation PresburgerRelation::intersectRange(PresburgerSet &set) {
+PresburgerRelation
+PresburgerRelation::intersectRange(const PresburgerSet &set) const {
   assert(space.getRangeSpace().isCompatible(set.getSpace()) &&
          "Range of `this` must be compatible with range of `set`");
 
@@ -153,7 +154,7 @@ PresburgerRelation PresburgerRelation::intersectRange(PresburgerSet &set) {
 }
 
 PresburgerRelation
-PresburgerRelation::intersectDomain(const PresburgerSet &set) {
+PresburgerRelation::intersectDomain(const PresburgerSet &set) const {
   assert(space.getDomainSpace().isCompatible(set.getSpace()) &&
          "Domain of `this` must be compatible with range of `set`");
 
