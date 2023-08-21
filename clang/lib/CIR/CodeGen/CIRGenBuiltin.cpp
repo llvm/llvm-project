@@ -425,6 +425,25 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memcpy:
+  case Builtin::BImempcpy:
+  case Builtin::BI__builtin_mempcpy:
+    Address Dest = buildPointerWithAlignment(E->getArg(0));
+    Address Src = buildPointerWithAlignment(E->getArg(1));
+    mlir::Value SizeVal = buildScalarExpr(E->getArg(2));
+    buildNonNullArgCheck(RValue::get(Dest.getPointer()),
+                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(),
+                         FD, 0);
+    buildNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(1)->getType(),
+                         E->getArg(1)->getExprLoc(), FD, 1);
+    builder.createMemCpy(getLoc(E->getSourceRange()), Dest.getPointer(),
+                         Src.getPointer(), SizeVal);
+    if (BuiltinID == Builtin::BImempcpy ||
+        BuiltinID == Builtin::BI__builtin_mempcpy)
+      llvm_unreachable("mempcpy is NYI");
+    else
+      return RValue::get(Dest.getPointer());
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

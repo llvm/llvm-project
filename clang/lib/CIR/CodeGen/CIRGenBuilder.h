@@ -24,6 +24,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -474,6 +475,11 @@ public:
   /// Create a copy with inferred length.
   mlir::cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
     return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src);
+  }
+
+  mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
+                                   mlir::Value src, mlir::Value len) {
+    return create<mlir::cir::MemCpyOp>(loc, dst, src, len);
   }
 
   mlir::Value createNeg(mlir::Value value) {
