@@ -181,6 +181,8 @@ public:
   void visitMethodTemplateSpecializationRecord(
       const CXXMethodTemplateSpecializationRecord &Record);
 
+  void visitCXXFieldTemplateRecord(const CXXFieldTemplateRecord &Record);
+
   void visitConceptRecord(const ConceptRecord &Record);
 
   void

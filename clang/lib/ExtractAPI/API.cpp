@@ -185,6 +185,21 @@ APISet::addCXXField(CXXClassRecord *CXXClass, StringRef Name, StringRef USR,
   return CXXClass->Fields.emplace_back(std::move(Record)).get();
 }
 
+CXXFieldTemplateRecord *APISet::addCXXFieldTemplate(
+    APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    AccessControl Access, Template Template, bool IsFromSystemHeader) {
+  auto *Record =
+      addTopLevelRecord(USRBasedLookupTable, CXXFieldTemplates, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Access, Template, IsFromSystemHeader);
+  Record->ParentInformation = APIRecord::HierarchyInformation(
+      Parent->USR, Parent->Name, Parent->getKind(), Parent);
+
+  return Record;
+}
+
 CXXClassRecord *
 APISet::addCXXClass(StringRef Name, StringRef USR, PresumedLoc Loc,
                     AvailabilitySet Availabilities, const DocComment &Comment,
