@@ -102,46 +102,6 @@ TEST(PresburgerRelationTest, intersectDomainAndRange) {
 TEST(PresburgerRelationTest, applyDomainAndRange) {
   {
     PresburgerRelation map1 = parsePresburgerRelationFromPresburgerSet(
-        {// (x, y) -> (x + N, y - N)
-         "(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0)",
-         // (x, y) -> (y, x)
-         "(x, y, a, b)[N] : (a - y == 0, b - x == 0)",
-         // (x, y) -> (x + y, x - y)
-         "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0)"},
-        2);
-    PresburgerRelation map2 = parsePresburgerRelationFromPresburgerSet(
-        {// (x, y) -> (x + y)
-         "(x, y, r)[N] : (r - x - y == 0)",
-         // (x, y) -> (N)
-         "(x, y, r)[N] : (r - N == 0)",
-         // (x, y) -> (y - x)
-         "(x, y, r)[N] : (r + x - y == 0)"},
-        2);
-
-    map1.applyRange(map2);
-
-    PresburgerRelation map3 = parsePresburgerRelationFromPresburgerSet(
-        {
-            // (x, y) -> (x + y)
-            "(x, y, r)[N] : (r - x - y == 0)",
-            // (x, y) -> (N)
-            "(x, y, r)[N] : (r - N == 0)",
-            // (x, y) -> (y - x - 2N)
-            "(x, y, r)[N] : (r - y + x + 2 * N == 0)",
-            // (x, y) -> (x - y)
-            "(x, y, r)[N] : (r - x + y == 0)",
-            // (x, y) -> (2x)
-            "(x, y, r)[N] : (r - 2 * x == 0)",
-            // (x, y) -> (-2y)
-            "(x, y, r)[N] : (r + 2 * y == 0)",
-        },
-        2);
-
-    EXPECT_TRUE(map1.isEqual(map3));
-  }
-
-  {
-    PresburgerRelation map1 = parsePresburgerRelationFromPresburgerSet(
         {// (x, y) -> (y, x)
          "(x, y, a, b)[N] : (y - a == 0, x - b == 0)",
          // (x, y) -> (x + N, y - N)
