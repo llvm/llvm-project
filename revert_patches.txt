@@ -1,8 +1,4 @@
 Johannes: breakage
-Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
-  asserts in  snap and MI-Teams
-
-Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
 
