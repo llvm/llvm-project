@@ -250,14 +250,35 @@ struct StoredObjCSelector {
   llvm::SmallVector<IdentifierID, 2> Identifiers;
 };
 
-inline std::tuple<uint32_t, uint8_t, uint32_t>
-getTableKey(std::optional<Context> context, IdentifierID nameID) {
-  std::tuple<uint32_t, uint8_t, uint32_t> key;
-  if (context)
-    key = {context->id.Value, (uint8_t)context->kind, nameID};
-  else
-    key = {(uint32_t)-1, (uint8_t)-1, nameID};
-  return key;
+/// A stored Objective-C or C++ context, represented by the ID of its parent
+/// context, the kind of this context (Objective-C class / C++ namespace / etc),
+/// and the ID of this context.
+struct ContextTableKey {
+  uint32_t parentContextID;
+  uint8_t contextKind;
+  uint32_t contextID;
+
+  ContextTableKey() : parentContextID(-1), contextKind(-1), contextID(-1) {}
+
+  ContextTableKey(uint32_t parentContextID, uint8_t contextKind,
+                  uint32_t contextID)
+      : parentContextID(parentContextID), contextKind(contextKind),
+        contextID(contextID) {}
+
+  ContextTableKey(std::optional<Context> context, IdentifierID nameID)
+      : parentContextID(context ? context->id.Value : (uint32_t)-1),
+        contextKind(context ? (uint8_t)context->kind : (uint8_t)-1),
+        contextID(nameID) {}
+
+  llvm::hash_code hashValue() const {
+    return llvm::hash_value(
+        std::tuple{parentContextID, contextKind, contextID});
+  }
+};
+
+inline bool operator==(const ContextTableKey &lhs, const ContextTableKey &rhs) {
+  return lhs.parentContextID == rhs.parentContextID &&
+         lhs.contextKind == rhs.contextKind && lhs.contextID == rhs.contextID;
 }
 
 } // namespace api_notes
@@ -295,6 +316,28 @@ namespace llvm {
              lhs.Identifiers == rhs.Identifiers;
     }
   };
-}
+
+template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
+  static inline clang::api_notes::ContextTableKey getEmptyKey() {
+    return clang::api_notes::ContextTableKey();
+  }
+
+  static inline clang::api_notes::ContextTableKey getTombstoneKey() {
+    return clang::api_notes::ContextTableKey{
+        DenseMapInfo<uint32_t>::getTombstoneKey(),
+        DenseMapInfo<uint8_t>::getTombstoneKey(),
+        DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const clang::api_notes::ContextTableKey &value) {
+    return value.hashValue();
+  }
+
+  static bool isEqual(const clang::api_notes::ContextTableKey &lhs,
+                      const clang::api_notes::ContextTableKey &rhs) {
+    return lhs == rhs;
+  }
+};
+} // namespace llvm
 
 #endif

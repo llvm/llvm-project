@@ -62,7 +62,7 @@ public:
   /// Indexed by the parent context ID, context kind and the identifier ID of
   /// this context and provides both the context ID and information describing
   /// the context within that module.
-  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
+  llvm::DenseMap<ContextTableKey,
                  std::pair<unsigned, VersionedSmallVector<ObjCContextInfo>>>
     ObjCContexts;
 
@@ -94,17 +94,17 @@ public:
   /// Information about global variables.
   ///
   /// Indexed by the context ID, contextKind, identifier ID.
-  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
-                 llvm::SmallVector<std::pair<VersionTuple, GlobalVariableInfo>,
-                                   1>>
+  llvm::DenseMap<
+      ContextTableKey,
+      llvm::SmallVector<std::pair<VersionTuple, GlobalVariableInfo>, 1>>
     GlobalVariables;
 
   /// Information about global functions.
   ///
   /// Indexed by the context ID, contextKind, identifier ID.
-  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
-                 llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>,
-                                   1>>
+  llvm::DenseMap<
+      ContextTableKey,
+      llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>, 1>>
     GlobalFunctions;
 
   /// Information about enumerators.
@@ -118,14 +118,14 @@ public:
   /// Information about tags.
   ///
   /// Indexed by the context ID, contextKind, identifier ID.
-  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
+  llvm::DenseMap<ContextTableKey,
                  llvm::SmallVector<std::pair<VersionTuple, TagInfo>, 1>>
     Tags;
 
   /// Information about typedefs.
   ///
   /// Indexed by the context ID, contextKind, identifier ID.
-  llvm::DenseMap<std::tuple<uint32_t, uint8_t, uint32_t>,
+  llvm::DenseMap<ContextTableKey,
                  llvm::SmallVector<std::pair<VersionTuple, TypedefInfo>, 1>>
     Typedefs;
 
@@ -384,7 +384,7 @@ namespace {
   /// Used to serialize the on-disk Objective-C context table.
   class ObjCContextIDTableInfo {
   public:
-    using key_type = std::tuple<uint32_t, uint8_t, uint32_t>; // parent context ID, context kind, identifier ID
+    using key_type = ContextTableKey;
     using key_type_ref = key_type;
     using data_type = unsigned;
     using data_type_ref = const data_type &;
@@ -392,7 +392,7 @@ namespace {
     using offset_type = unsigned;
 
     hash_value_type ComputeHash(key_type_ref key) {
-      return static_cast<size_t>(llvm::hash_value(key));
+      return static_cast<size_t>(key.hashValue());
     }
 
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
@@ -409,9 +409,9 @@ namespace {
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(std::get<0>(key));
-      writer.write<uint8_t>(std::get<1>(key));
-      writer.write<uint32_t>(std::get<2>(key));
+      writer.write<uint32_t>(key.parentContextID);
+      writer.write<uint8_t>(key.contextKind);
+      writer.write<uint32_t>(key.contextID);
     }
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
@@ -545,10 +545,6 @@ namespace {
     using hash_value_type = size_t;
     using offset_type = unsigned;
 
-    hash_value_type ComputeHash(key_type_ref key) {
-      return llvm::hash_value(key);
-    }
-
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
                                                     key_type_ref key,
                                                     data_type_ref data) {
@@ -587,6 +583,10 @@ namespace {
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
       writer.write<uint32_t>(key);
+    }
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(llvm::hash_value(key));
     }
 
     unsigned getUnversionedInfoSize(const ObjCContextInfo &info) {
@@ -628,6 +628,10 @@ namespace {
       writer.write<uint32_t>(std::get<0>(key));
       writer.write<uint32_t>(std::get<1>(key));
       writer.write<uint8_t>(std::get<2>(key));
+    }
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(llvm::hash_value(key));
     }
 
     unsigned getUnversionedInfoSize(const ObjCPropertyInfo &info) {
@@ -794,6 +798,10 @@ namespace {
       writer.write<uint8_t>(std::get<2>(key));
     }
 
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     unsigned getUnversionedInfoSize(const ObjCMethodInfo &info) {
       return 1 + getFunctionInfoSize(info);
     }
@@ -905,8 +913,7 @@ void APINotesWriter::Implementation::writeObjCSelectorBlock(
 namespace {
   /// Used to serialize the on-disk global variable table.
   class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo,
-                                std::tuple<uint32_t, uint8_t, uint32_t>,
+    : public VersionedTableInfo<GlobalVariableTableInfo, ContextTableKey,
                                 GlobalVariableInfo> {
   public:
     unsigned getKeyLength(key_type_ref key) {
@@ -915,9 +922,13 @@ namespace {
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(std::get<0>(key));
-      writer.write<uint8_t>(std::get<1>(key));
-      writer.write<uint32_t>(std::get<2>(key));
+      writer.write<uint32_t>(key.parentContextID);
+      writer.write<uint8_t>(key.contextKind);
+      writer.write<uint32_t>(key.contextID);
+    }
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(key.hashValue());
     }
 
     unsigned getUnversionedInfoSize(const GlobalVariableInfo &info) {
@@ -958,8 +969,7 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
 namespace {
   /// Used to serialize the on-disk global function table.
   class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo,
-                                std::tuple<uint32_t, uint8_t, uint32_t>,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, ContextTableKey,
                                 GlobalFunctionInfo> {
   public:
     unsigned getKeyLength(key_type_ref) {
@@ -968,9 +978,13 @@ namespace {
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(std::get<0>(key));
-      writer.write<uint8_t>(std::get<1>(key));
-      writer.write<uint32_t>(std::get<2>(key));
+      writer.write<uint32_t>(key.parentContextID);
+      writer.write<uint8_t>(key.contextKind);
+      writer.write<uint32_t>(key.contextID);
+    }
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(key.hashValue());
     }
 
     unsigned getUnversionedInfoSize(const GlobalFunctionInfo &info) {
@@ -1025,6 +1039,10 @@ namespace {
       writer.write<uint32_t>(key);
     }
 
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     unsigned getUnversionedInfoSize(const EnumConstantInfo &info) {
       return getCommonEntityInfoSize(info);
     }
@@ -1062,20 +1080,23 @@ void APINotesWriter::Implementation::writeEnumConstantBlock(
 namespace {
   template<typename Derived, typename UnversionedDataType>
   class CommonTypeTableInfo
-    : public VersionedTableInfo<Derived,
-                                std::tuple<uint32_t, uint8_t, uint32_t>,
-                                UnversionedDataType> {
+    : public VersionedTableInfo<Derived, ContextTableKey, UnversionedDataType> {
   public:
     using key_type_ref = typename CommonTypeTableInfo::key_type_ref;
+    using hash_value_type = typename CommonTypeTableInfo::hash_value_type;
 
     unsigned getKeyLength(key_type_ref) {
       return sizeof(uint32_t) + sizeof(uint8_t) + sizeof(IdentifierID);
     }
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
       endian::Writer writer(out, little);
-      writer.write<uint32_t>(std::get<0>(key));
-      writer.write<uint8_t>(std::get<1>(key));
-      writer.write<IdentifierID>(std::get<2>(key));
+      writer.write<uint32_t>(key.parentContextID);
+      writer.write<uint8_t>(key.contextKind);
+      writer.write<IdentifierID>(key.contextID);
+    }
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(key.hashValue());
     }
 
     unsigned getUnversionedInfoSize(const UnversionedDataType &info) {
@@ -1246,8 +1267,7 @@ APINotesWriter::addObjCContext(std::optional<ContextID> parentContextID,
   IdentifierID nameID = Impl.getIdentifier(name);
 
   uint32_t rawParentContextID = parentContextID ? parentContextID->Value : -1;
-  std::tuple<uint32_t, uint8_t, uint32_t> key = {rawParentContextID,
-                                                 (uint8_t)contextKind, nameID};
+  ContextTableKey key(rawParentContextID, (uint8_t)contextKind, nameID);
   auto known = Impl.ObjCContexts.find(key);
   if (known == Impl.ObjCContexts.end()) {
     unsigned nextID = Impl.ObjCContexts.size() + 1;
@@ -1302,9 +1322,8 @@ void APINotesWriter::addObjCMethod(ContextID contextID,
   if (info.DesignatedInit) {
     assert(Impl.ParentContexts.contains(contextID.Value));
     uint32_t parentContextID = Impl.ParentContexts[contextID.Value];
-    std::tuple<uint32_t, uint8_t, uint32_t> ctxKey = {
-        parentContextID, (char)ContextKind::ObjCClass,
-        Impl.ObjCContextNames[contextID.Value]};
+    ContextTableKey ctxKey(parentContextID, (uint8_t)ContextKind::ObjCClass,
+                           Impl.ObjCContextNames[contextID.Value]);
     assert(Impl.ObjCContexts.contains(ctxKey));
     auto &versionedVec = Impl.ObjCContexts[ctxKey].second;
     bool found = false;
@@ -1328,8 +1347,7 @@ void APINotesWriter::addGlobalVariable(std::optional<Context> context,
                                        const GlobalVariableInfo &info,
                                        VersionTuple swiftVersion) {
   IdentifierID variableID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key =
-      getTableKey(context, variableID);
+  ContextTableKey key(context, variableID);
   Impl.GlobalVariables[key].push_back({swiftVersion, info});
 }
 
@@ -1338,7 +1356,7 @@ void APINotesWriter::addGlobalFunction(std::optional<Context> context,
                                        const GlobalFunctionInfo &info,
                                        VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, nameID);
+  ContextTableKey key(context, nameID);
   Impl.GlobalFunctions[key].push_back({swiftVersion, info});
 }
 
@@ -1353,7 +1371,7 @@ void APINotesWriter::addTag(std::optional<Context> context,
                             llvm::StringRef name, const TagInfo &info,
                             VersionTuple swiftVersion) {
   IdentifierID tagID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, tagID);
+  ContextTableKey key(context, tagID);
   Impl.Tags[key].push_back({swiftVersion, info});
 }
 
@@ -1361,7 +1379,7 @@ void APINotesWriter::addTypedef(std::optional<Context> context,
                                 llvm::StringRef name, const TypedefInfo &info,
                                 VersionTuple swiftVersion) {
   IdentifierID typedefID = Impl.getIdentifier(name);
-  std::tuple<uint32_t, uint8_t, uint32_t> key = getTableKey(context, typedefID);
+  ContextTableKey key(context, typedefID);
   Impl.Typedefs[key].push_back({swiftVersion, info});
 }
 
