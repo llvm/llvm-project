@@ -485,6 +485,56 @@ QualType maybeDesugar(ASTContext &AST, QualType QT) {
   return QT;
 }
 
+// Given a callee expression `Fn`, if the call is through a function pointer,
+// try to find the declaration of the corresponding function pointer type,
+// so that we can recover argument names from it.
+// FIXME: This function is mostly duplicated in SemaCodeComplete.cpp; unify.
+static FunctionProtoTypeLoc getPrototypeLoc(Expr *Fn) {
+  TypeLoc Target;
+  Expr *NakedFn = Fn->IgnoreParenCasts();
+  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
+    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
+  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
+    const auto *D = DR->getDecl();
+    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
+      Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  }
+
+  if (!Target)
+    return {};
+
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
+  }
+
+  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
+    return F;
+  }
+
+  return {};
+}
+
+struct Callee {
+  // Only one of Decl or Loc is set.
+  // Loc is for calls through function pointers.
+  const FunctionDecl *Decl = nullptr;
+  FunctionProtoTypeLoc Loc;
+};
+
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
@@ -524,7 +574,11 @@ public:
       return true;
     }
 
-    processCall(E->getConstructor(), {E->getArgs(), E->getNumArgs()});
+    Callee Callee;
+    Callee.Decl = E->getConstructor();
+    if (!Callee.Decl)
+      return true;
+    processCall(Callee, {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -542,12 +596,15 @@ public:
     auto CalleeDecls = Resolver->resolveCalleeOfCallExpr(E);
     if (CalleeDecls.size() != 1)
       return true;
-    const FunctionDecl *Callee = nullptr;
+
+    Callee Callee;
     if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecls[0]))
-      Callee = FD;
+      Callee.Decl = FD;
     else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CalleeDecls[0]))
-      Callee = FTD->getTemplatedDecl();
-    if (!Callee)
+      Callee.Decl = FTD->getTemplatedDecl();
+    else if (FunctionProtoTypeLoc Loc = getPrototypeLoc(E->getCallee()))
+      Callee.Loc = Loc;
+    else
       return true;
 
     processCall(Callee, {E->getArgs(), E->getNumArgs()});
@@ -762,25 +819,35 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  void processCall(const FunctionDecl *Callee,
-                   llvm::ArrayRef<const Expr *> Args) {
-    if (!Cfg.InlayHints.Parameters || Args.size() == 0 || !Callee)
+  void processCall(Callee Callee, llvm::ArrayRef<const Expr *> Args) {
+    assert(Callee.Decl || Callee.Loc);
+
+    if (!Cfg.InlayHints.Parameters || Args.size() == 0)
       return;
 
     // The parameter name of a move or copy constructor is not very interesting.
-    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee))
-      if (Ctor->isCopyOrMoveConstructor())
-        return;
+    if (Callee.Decl)
+      if (auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee.Decl))
+        if (Ctor->isCopyOrMoveConstructor())
+          return;
+
+    auto Params =
+        Callee.Decl ? Callee.Decl->parameters() : Callee.Loc.getParams();
 
     // Resolve parameter packs to their forwarded parameter
-    auto ForwardedParams = resolveForwardingParameters(Callee);
+    SmallVector<const ParmVarDecl *> ForwardedParams;
+    if (Callee.Decl)
+      ForwardedParams = resolveForwardingParameters(Callee.Decl);
+    else
+      ForwardedParams = {Params.begin(), Params.end()};
 
     NameVec ParameterNames = chooseParameterNames(ForwardedParams);
 
     // Exclude setters (i.e. functions with one argument whose name begins with
     // "set"), and builtins like std::move/forward/... as their parameter name
     // is also not likely to be interesting.
-    if (isSetter(Callee, ParameterNames) || isSimpleBuiltin(Callee))
+    if (Callee.Decl &&
+        (isSetter(Callee.Decl, ParameterNames) || isSimpleBuiltin(Callee.Decl)))
       return;
 
     for (size_t I = 0; I < ParameterNames.size() && I < Args.size(); ++I) {
@@ -793,8 +860,7 @@ private:
 
       StringRef Name = ParameterNames[I];
       bool NameHint = shouldHintName(Args[I], Name);
-      bool ReferenceHint =
-          shouldHintReference(Callee->getParamDecl(I), ForwardedParams[I]);
+      bool ReferenceHint = shouldHintReference(Params[I], ForwardedParams[I]);
 
       if (NameHint || ReferenceHint) {
         addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
