@@ -282,10 +282,9 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
 
   // TODO(cir): emit a #cir.zero if all elements are null values.
   auto &builder = CGM.getBuilder();
-  return builder.getAnonConstStruct(
-      mlir::ArrayAttr::get(builder.getContext(),
-                           Packed ? PackedElems : UnpackedElems),
-      Packed, DesiredTy);
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(),
+                                      Packed ? PackedElems : UnpackedElems);
+  return builder.getConstStructOrZeroAttr(arrAttr, Packed, DesiredTy);
 }
 
 void ConstantAggregateBuilder::condense(CharUnits Offset,
@@ -1468,14 +1467,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     const ArrayType *ArrayTy = CGM.getASTContext().getAsArrayType(DestType);
     unsigned NumElements = Value.getArraySize();
     unsigned NumInitElts = Value.getArrayInitializedElts();
-    auto isNullValue = [&](mlir::Attribute f) {
-      // TODO(cir): introduce char type in CIR and check for that instead.
-      auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>();
-      assert(intVal && "not implemented");
-      if (intVal.getValue() == 0)
-        return true;
-      return false;
-    };
 
     // Emit array filler, if there is one.
     mlir::Attribute Filler;
@@ -1488,7 +1479,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
 
     // Emit initializer elements.
     SmallVector<mlir::TypedAttr, 16> Elts;
-    if (Filler && isNullValue(Filler))
+    if (Filler && builder.isNullValue(Filler))
       Elts.reserve(NumInitElts + 1);
     else
       Elts.reserve(NumElements);

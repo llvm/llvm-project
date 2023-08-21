@@ -144,6 +144,35 @@ public:
     return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
   }
 
+  mlir::Attribute getConstStructOrZeroAttr(mlir::ArrayAttr arrayAttr,
+                                           bool packed = false,
+                                           mlir::Type type = {}) {
+    llvm::SmallVector<mlir::Type, 8> members;
+    auto structTy = type.dyn_cast<mlir::cir::StructType>();
+    assert(structTy && "expected cir.struct");
+    assert(!packed && "unpacked struct is NYI");
+
+    // Collect members and check if they are all zero.
+    bool isZero = true;
+    for (auto &attr : arrayAttr) {
+      const auto typedAttr = attr.dyn_cast<mlir::TypedAttr>();
+      members.push_back(typedAttr.getType());
+      isZero &= isNullValue(typedAttr);
+    }
+
+    // Struct type not specified: create type from members.
+    if (!structTy)
+      structTy = getType<mlir::cir::StructType>(
+          members, mlir::StringAttr::get(getContext()),
+          /*body=*/true, packed,
+          /*ast=*/std::nullopt);
+
+    // Return zero or anonymous constant struct.
+    if (isZero)
+      return mlir::cir::ZeroAttr::get(getContext(), structTy);
+    return mlir::cir::ConstStructAttr::get(structTy, arrayAttr);
+  }
+
   mlir::cir::ConstStructAttr getAnonConstStruct(mlir::ArrayAttr arrayAttr,
                                                 bool packed = false,
                                                 mlir::Type ty = {}) {
@@ -186,7 +215,7 @@ public:
   // TODO(cir): Once we have CIR float types, replace this by something like a
   // NullableValueInterface to allow for type-independent queries.
   bool isNullValue(mlir::Attribute attr) const {
-    if (attr.isa<mlir::cir::ZeroAttr>())
+    if (attr.isa<mlir::cir::ZeroAttr, mlir::cir::NullAttr>())
       return true;
 
     // TODO(cir): introduce char type in CIR and check for that instead.

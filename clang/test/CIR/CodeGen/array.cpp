@@ -65,3 +65,9 @@ int multidim(int i, int j) {
 // Should globally zero-initialize null arrays.
 int globalNullArr[] = {0, 0};
 // CHECK: cir.global external @globalNullArr = #cir.zero : !cir.array<!s32i x 2>
+
+// Should implicitly zero-initialize global array elements.
+struct S {
+  int i;
+} arr[3] = {{1}};
+// CHECK: cir.global external @arr = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES22, #cir.zero : !ty_22struct2ES22, #cir.zero : !ty_22struct2ES22]> : !cir.array<!ty_22struct2ES22 x 3>
