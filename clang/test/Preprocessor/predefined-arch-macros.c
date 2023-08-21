@@ -2003,6 +2003,9 @@
 // RUN: %clang -march=meteorlake -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ADL_M32
+// RUN: %clang -march=gracemont -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ADL_M32
 // CHECK_ADL_M32: #define __ADX__ 1
 // CHECK_ADL_M32: #define __AES__ 1
 // CHECK_ADL_M32: #define __AVX2__ 1
@@ -2069,6 +2072,9 @@
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ADL_M64
 // RUN: %clang -march=meteorlake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ADL_M64
+// RUN: %clang -march=gracemont -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ADL_M64
 // CHECK_ADL_M64: #define __ADX__ 1
