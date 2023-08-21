@@ -165,7 +165,6 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
                           ///< program vtable opt).
-CODEGENOPT(FatLTO, 1, 0) ///< Set when -ffat-lto-objects is enabled.
 CODEGENOPT(EnableSplitLTOUnit, 1, 0) ///< Enable LTO unit splitting to support
 				     /// CFI and traditional whole program
 				     /// devirtualization that require whole
