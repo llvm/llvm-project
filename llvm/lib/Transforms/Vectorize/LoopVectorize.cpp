@@ -9088,7 +9088,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         VecOp = FMulRecipe;
       } else {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
-          if (auto *Cmp = dyn_cast<VPWidenRecipe>(CurrentLink)) {
+          if (isa<VPWidenRecipe>(CurrentLink)) {
             assert(isa<CmpInst>(CurrentLinkI) &&
                    "need to have the compare of the select");
             continue;
