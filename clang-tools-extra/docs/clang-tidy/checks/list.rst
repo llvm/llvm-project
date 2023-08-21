@@ -94,6 +94,7 @@ Clang-Tidy Checks
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
+   :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
    :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,
    :doc:`bugprone-integer-division <bugprone/integer-division>`,
