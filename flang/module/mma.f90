@@ -18,7 +18,111 @@ module mma
     __vector_quad, intent(inout) :: acc
   end subroutine
 
+!! ========== 2 argument subroutine interface ================================!!
+!! __vector_pair function f(i, vector(i))
+#define FUNC_VPI0VI(VKIND) \
+  pure __vector_pair function func_vpi0vi##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(integer(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, vector(u))
+#define FUNC_VPI0VU(VKIND) \
+  pure __vector_pair function func_vpi0vu##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(unsigned(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, vector(r))
+#define FUNC_VPI0VR(VKIND) \
+  pure __vector_pair function func_vpi0vr##VKIND(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    vector(real(VKIND)), intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+! __vector_pair function f(i, __vector_pair)
+#define FUNC_VPI0VP \
+  pure __vector_pair function func_vpi0vp(arg1, arg2); \
+    integer(8), intent(in) :: arg1; \
+    !dir$ ignore_tkr(k) arg1; \
+    __vector_pair, intent(in) :: arg2; \
+    !dir$ ignore_tkr(r) arg2; \
+  end function;
+
+  FUNC_VPI0VI(1) FUNC_VPI0VI(2) FUNC_VPI0VI(4) FUNC_VPI0VI(8)
+  FUNC_VPI0VU(1) FUNC_VPI0VU(2) FUNC_VPI0VU(4) FUNC_VPI0VU(8)
+  FUNC_VPI0VR(4) FUNC_VPI0VR(8)
+  FUNC_VPI0VP
+
+#undef FUNC_VPI0VP
+#undef FUNC_VPI0VR
+#undef FUNC_VPI0VU 
+#undef FUNC_VPI0VI 
+
 !! ========== 3 arguments subroutine interface ===============================!!
+!! __vector_pair subroutine s(vp, integer, vector(i))
+#define SUB_VPI0VI(VKIND) \
+  pure subroutine sub_vpi0vi##VKIND(arg1, arg2, arg3); \
+    __vector_pair, intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(integer(VKIND)), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine;
+
+! subroutine(__vector_pair, i, vector(u))
+#define SUB_VPI0VU(VKIND) \
+  pure subroutine sub_vpi0vu##VKIND(arg1, arg2, arg3); \
+    __vector_pair, intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(unsigned(VKIND)), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine;
+
+! subroutine(__vector_pair, i, vector(r))
+#define SUB_VPI0VR(VKIND) \
+  pure subroutine sub_vpi0vr##VKIND(arg1, arg2, arg3); \
+    __vector_pair, intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(real(VKIND)), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine;
+
+! subroutine(__vector_pair, i, i)
+  pure subroutine sub_vpi0i0(arg1, arg2, arg3)
+    __vector_pair, intent(in) :: arg1
+    integer(8), intent(in) :: arg2
+    !dir$ ignore_tkr(k) arg2
+    integer(8), intent(out) :: arg3
+    !dir$ ignore_tkr(kr) arg3
+  end subroutine
+
+! subroutine(__vector_pair, i, r)
+  pure subroutine sub_vpi0r0(arg1, arg2, arg3)
+    __vector_pair, intent(in) :: arg1
+    integer(8), intent(in) :: arg2
+    !dir$ ignore_tkr(k) arg2
+    real(8), intent(out) :: arg3
+    !dir$ ignore_tkr(kr) arg3
+  end subroutine
+
+! subroutine(__vector_pair, i, __vector_pair)
+  pure subroutine sub_vpi0vp(arg1, arg2, arg3)
+    __vector_pair, intent(in) :: arg1
+    integer(8), intent(in) :: arg2
+    !dir$ ignore_tkr(k) arg2
+    __vector_pair, intent(out) :: arg3
+    !dir$ ignore_tkr(r) arg3
+  end subroutine
+
 !! subroutine s(__vector_pair, vector(i), vector(i))
 #define ELEM_SUB_VPVIVI(VKIND) \
   elemental subroutine sub_vpvi##VKIND##vi##VKIND(pair, arg1, arg2); \
@@ -45,10 +149,16 @@ module mma
   ELEM_SUB_VPVUVU(1) ELEM_SUB_VPVUVU(2)
   ELEM_SUB_VPVUVU(4) ELEM_SUB_VPVUVU(8)
   ELEM_SUB_VPVRVR(4) ELEM_SUB_VPVRVR(8)
+  SUB_VPI0VI(1) SUB_VPI0VI(2) SUB_VPI0VI(4) SUB_VPI0VI(8)
+  SUB_VPI0VU(1) SUB_VPI0VU(2) SUB_VPI0VU(4) SUB_VPI0VU(8)
+  SUB_VPI0VR(4) SUB_VPI0VR(8)
 
 #undef ELEM_SUB_VPVIVI
 #undef ELEM_SUB_VPVUVU
 #undef ELEM_SUB_VPVRVR
+#undef SUB_VPI0VR
+#undef SUB_VPI0VU
+#undef SUB_VPI0VI
 
 !! subroutine s(__vector_quad, vector(i), vector(i))
 #define ELEM_SUB_VQVIVI(INTENT, VKIND) \
@@ -246,6 +356,81 @@ module mma
 
   end interface
 
+!-------------------------------------------------------
+! __vector_pair function(integer, vector/__vector_pair)
+!-------------------------------------------------------
+#define VP_I0_VI(NAME, VKIND) __ppc_##NAME##_vpi0##vi##VKIND
+#define VP_I0_VU(NAME, VKIND) __ppc_##NAME##_vpi0##vu##VKIND
+#define VP_I0_VR(NAME, VKIND) __ppc_##NAME##_vpi0##vr##VKIND
+#define VP_I0_VP(NAME) __ppc_##NAME##_vpi0vp0
+
+#define VEC_VP_I0_VI(NAME, VKIND) \
+  procedure(func_vpi0vi##VKIND) :: VP_I0_VI(NAME, VKIND);
+#define VEC_VP_I0_VU(NAME, VKIND) \
+  procedure(func_vpi0vu##VKIND) :: VP_I0_VU(NAME, VKIND);
+#define VEC_VP_I0_VR(NAME, VKIND) \
+  procedure(func_vpi0vr##VKIND) :: VP_I0_VR(NAME, VKIND);
+#define VEC_VP_I0_VP(NAME) procedure(func_vpi0vp) :: VP_I0_VP(NAME);
+
+! mma_lxvp (using vec_lxvp)
+  VEC_VP_I0_VI(vec_lxvp,1) VEC_VP_I0_VI(vec_lxvp,2) VEC_VP_I0_VI(vec_lxvp,4) VEC_VP_I0_VI(vec_lxvp,8)
+  VEC_VP_I0_VU(vec_lxvp,1) VEC_VP_I0_VU(vec_lxvp,2) VEC_VP_I0_VU(vec_lxvp,4) VEC_VP_I0_VU(vec_lxvp,8)
+  VEC_VP_I0_VR(vec_lxvp,4) VEC_VP_I0_VR(vec_lxvp,8)
+  VEC_VP_I0_VP(vec_lxvp)
+  interface mma_lxvp
+     procedure :: VP_I0_VI(vec_lxvp,1), VP_I0_VI(vec_lxvp,2), VP_I0_VI(vec_lxvp,4), VP_I0_VI(vec_lxvp,8)
+     procedure :: VP_I0_VU(vec_lxvp,1), VP_I0_VU(vec_lxvp,2), VP_I0_VU(vec_lxvp,4), VP_I0_VU(vec_lxvp,8)
+     procedure :: VP_I0_VR(vec_lxvp,4), VP_I0_VR(vec_lxvp,8)
+     procedure :: VP_I0_VP(vec_lxvp)
+  end interface mma_lxvp
+  public :: mma_lxvp
+
+#undef VEC_VP_I0_VP
+#undef VEC_VP_I0_VR
+#undef VEC_VP_I0_VU
+#undef VEC_VP_I0_VI
+#undef VP_I0_VP
+#undef VP_I0_VR
+#undef VP_I0_VU
+#undef VP_I0_VI
+
+!-----------------------------------------------------------------------
+! subroutine(__vector_pair, integer, __vector_pair/vector/integer/real)
+!-----------------------------------------------------------------------
+#define VP_I0_VI(NAME, VKIND) __ppc_##NAME##_vpi0vi##VKIND
+#define VP_I0_VU(NAME, VKIND) __ppc_##NAME##_vpi0vu##VKIND
+#define VP_I0_VR(NAME, VKIND) __ppc_##NAME##_vpi0vr##VKIND
+
+#define VEC_VP_I0_VI(NAME, VKIND) \
+  procedure(sub_vpi0vi##VKIND) :: VP_I0_VI(NAME, VKIND);
+#define VEC_VP_I0_VU(NAME, VKIND) \
+  procedure(sub_vpi0vu##VKIND) :: VP_I0_VU(NAME, VKIND);
+#define VEC_VP_I0_VR(NAME, VKIND) \
+  procedure(sub_vpi0vr##VKIND) :: VP_I0_VR(NAME, VKIND);
+
+! mma_stxvp (using vec_stxvp)
+  procedure(sub_vpi0vp) :: __ppc_vec_stxvp_vpi0vp0
+  procedure(sub_vpi0i0) :: __ppc_vec_stxvp_vpi0i0
+  procedure(sub_vpi0r0) :: __ppc_vec_stxvp_vpi0r0
+  VEC_VP_I0_VI(vec_stxvp, 1) VEC_VP_I0_VI(vec_stxvp, 2) VEC_VP_I0_VI(vec_stxvp, 4) VEC_VP_I0_VI(vec_stxvp, 8)
+  VEC_VP_I0_VU(vec_stxvp, 1) VEC_VP_I0_VU(vec_stxvp, 2) VEC_VP_I0_VU(vec_stxvp, 4) VEC_VP_I0_VU(vec_stxvp, 8)
+  VEC_VP_I0_VR(vec_stxvp, 4) VEC_VP_I0_VR(vec_stxvp, 8)
+  interface mma_stxvp
+     procedure :: __ppc_vec_stxvp_vpi0vp0
+     procedure :: __ppc_vec_stxvp_vpi0i0
+     procedure :: __ppc_vec_stxvp_vpi0r0
+     procedure :: VP_I0_VI(vec_stxvp, 1), VP_I0_VI(vec_stxvp, 2), VP_I0_VI(vec_stxvp, 4), VP_I0_VI(vec_stxvp, 8)
+     procedure :: VP_I0_VU(vec_stxvp, 1), VP_I0_VU(vec_stxvp, 2), VP_I0_VU(vec_stxvp, 4), VP_I0_VU(vec_stxvp, 8)
+     procedure :: VP_I0_VR(vec_stxvp, 4), VP_I0_VR(vec_stxvp, 8)
+  end interface mma_stxvp
+  public :: mma_stxvp
+
+#undef VEC_VP_I0_VR
+#undef VEC_VP_I0_VU
+#undef VEC_VP_I0_VI
+#undef VP_I0_VR
+#undef VP_I0_VU
+#undef VP_I0_VI
 
 #define SUB_VQ_VI_VI_VI_VI(NAME, VKIND) __ppc_##NAME##_vi##VKIND##vi##VKIND##vi##VKIND##vi##VKIND
 #define SUB_VQ_VU_VU_VU_VU(NAME, VKIND) __ppc_##NAME##_vu##VKIND##vu##VKIND##vu##VKIND##vu##VKIND
