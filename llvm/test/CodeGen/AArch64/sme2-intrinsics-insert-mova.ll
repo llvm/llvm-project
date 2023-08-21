@@ -10,8 +10,8 @@
 define void @za_write_vg2_horiz_b(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.b[w12, 0:1], { z0.b, z1.b }
 ; CHECK-NEXT:    mov za0h.b[w12, 14:15], { z0.b, z1.b }
@@ -25,8 +25,8 @@ define void @za_write_vg2_horiz_b(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x
 define void @za_write_vg2_horiz_h(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1h.h[w12, 6:7], { z0.h, z1.h }
@@ -40,8 +40,8 @@ define void @za_write_vg2_horiz_h(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x
 define void @za_write_vg2_horiz_f16(i32 %slice, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1h.h[w12, 6:7], { z0.h, z1.h }
@@ -55,8 +55,8 @@ define void @za_write_vg2_horiz_f16(i32 %slice, <vscale x 8 x half> %zn1, <vscal
 define void @za_write_vg2_horiz_bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1h.h[w12, 6:7], { z0.h, z1.h }
@@ -70,8 +70,8 @@ define void @za_write_vg2_horiz_bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vs
 define void @za_write_vg2_horiz_s(i32 %slice, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.s[w12, 0:1], { z0.s, z1.s }
 ; CHECK-NEXT:    mov za3h.s[w12, 2:3], { z0.s, z1.s }
@@ -85,8 +85,8 @@ define void @za_write_vg2_horiz_s(i32 %slice, <vscale x 4 x i32> %zn1, <vscale x
 define void @za_write_vg2_horiz_f32(i32 %slice, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.s[w12, 0:1], { z0.s, z1.s }
 ; CHECK-NEXT:    mov za3h.s[w12, 2:3], { z0.s, z1.s }
@@ -100,8 +100,8 @@ define void @za_write_vg2_horiz_f32(i32 %slice, <vscale x 4 x float> %zn1, <vsca
 define void @za_write_vg2_horiz_d(i32 %slice, <vscale x 2 x i64> %zn1, <vscale x 2 x i64> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.d[w12, 0:1], { z0.d, z1.d }
 ; CHECK-NEXT:    ret
@@ -112,8 +112,8 @@ define void @za_write_vg2_horiz_d(i32 %slice, <vscale x 2 x i64> %zn1, <vscale x
 define void @za_write_vg2_horiz_f64(i32 %slice, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2) {
 ; CHECK-LABEL: za_write_vg2_horiz_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0h.d[w12, 0:1], { z0.d, z1.d }
 ; CHECK-NEXT:    ret
@@ -126,8 +126,8 @@ define void @za_write_vg2_horiz_f64(i32 %slice, <vscale x 2 x double> %zn1, <vsc
 define void @za_write_vg2_vert_b(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.b[w12, 0:1], { z0.b, z1.b }
 ; CHECK-NEXT:    mov za0v.b[w12, 14:15], { z0.b, z1.b }
@@ -141,8 +141,8 @@ define void @za_write_vg2_vert_b(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 
 define void @za_write_vg2_vert_h(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1v.h[w12, 6:7], { z0.h, z1.h }
@@ -156,8 +156,8 @@ define void @za_write_vg2_vert_h(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 
 define void @za_write_vg2_vert_f16(i32 %slice, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1v.h[w12, 6:7], { z0.h, z1.h }
@@ -171,8 +171,8 @@ define void @za_write_vg2_vert_f16(i32 %slice, <vscale x 8 x half> %zn1, <vscale
 define void @za_write_vg2_vert_bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.h[w12, 0:1], { z0.h, z1.h }
 ; CHECK-NEXT:    mov za1v.h[w12, 6:7], { z0.h, z1.h }
@@ -186,8 +186,8 @@ define void @za_write_vg2_vert_bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vsc
 define void @za_write_vg2_vert_s(i32 %slice, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.s[w12, 0:1], { z0.s, z1.s }
 ; CHECK-NEXT:    mov za3v.s[w12, 2:3], { z0.s, z1.s }
@@ -201,8 +201,8 @@ define void @za_write_vg2_vert_s(i32 %slice, <vscale x 4 x i32> %zn1, <vscale x 
 define void @za_write_vg2_vert_f32(i32 %slice, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.s[w12, 0:1], { z0.s, z1.s }
 ; CHECK-NEXT:    mov za3v.s[w12, 2:3], { z0.s, z1.s }
@@ -216,8 +216,8 @@ define void @za_write_vg2_vert_f32(i32 %slice, <vscale x 4 x float> %zn1, <vscal
 define void @za_write_vg2_vert_d(i32 %slice, <vscale x 2 x i64> %zn1, <vscale x 2 x i64> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.d[w12, 0:1], { z0.d, z1.d }
 ; CHECK-NEXT:    ret
@@ -228,8 +228,8 @@ define void @za_write_vg2_vert_d(i32 %slice, <vscale x 2 x i64> %zn1, <vscale x 
 define void @za_write_vg2_vert_f64(i32 %slice, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2) {
 ; CHECK-LABEL: za_write_vg2_vert_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za0v.d[w12, 0:1], { z0.d, z1.d }
 ; CHECK-NEXT:    ret
@@ -500,8 +500,8 @@ define void @za_write_vg4_vert_f64(i32 %slice, <vscale x 2 x double> %zn1, <vsca
 define void @za_write_vg1x2_d(i32 %slice, <vscale x 2 x i64> %za1, <vscale x 2 x i64> %za2) {
 ; CHECK-LABEL: za_write_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z0.d, z1.d }
 ; CHECK-NEXT:    mov za.d[w8, 7, vgx2], { z0.d, z1.d }
@@ -515,8 +515,8 @@ define void @za_write_vg1x2_d(i32 %slice, <vscale x 2 x i64> %za1, <vscale x 2 x
 define void @za_write_vg1x2_f64(i32 %slice, <vscale x 2 x double> %za1, <vscale x 2 x double> %za2) {
 ; CHECK-LABEL: za_write_vg1x2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z0.d, z1.d }
 ; CHECK-NEXT:    mov za.d[w8, 7, vgx2], { z0.d, z1.d }

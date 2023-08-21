@@ -68,8 +68,8 @@ define <vscale x 8 x i16> @masked_sload_nxv8i8(<vscale x 8 x i8> *%a, <vscale x 
 define <vscale x 2 x i64> @masked_sload_passthru(<vscale x 2 x i32> *%a, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthru) {
 ; CHECK-LABEL: masked_sload_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    sxtw z0.d, p1/m, z0.d
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret

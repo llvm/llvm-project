@@ -39,30 +39,26 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; GISEL-LABEL: va_func:
 ; GISEL:       .seh_proc va_func
 ; GISEL-NEXT:  // %bb.0:
-; GISEL-NEXT:    sub sp, sp, #80
-; GISEL-NEXT:    .seh_stackalloc 80
-; GISEL-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
-; GISEL-NEXT:    .seh_save_reg x19, 16
-; GISEL-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
-; GISEL-NEXT:    .seh_save_reg x30, 24
+; GISEL-NEXT:    str x19, [sp, #-64]! // 8-byte Folded Spill
+; GISEL-NEXT:    .seh_save_reg_x x19, 64
+; GISEL-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; GISEL-NEXT:    .seh_save_reg x30, 8
 ; GISEL-NEXT:    .seh_endprologue
-; GISEL-NEXT:    stp x3, x4, [sp, #40]
+; GISEL-NEXT:    stp x3, x4, [sp, #24]
 ; GISEL-NEXT:    mov w19, w0
-; GISEL-NEXT:    stp x5, x6, [sp, #56]
-; GISEL-NEXT:    str w0, [sp, #12]
-; GISEL-NEXT:    str x7, [sp, #72]
-; GISEL-NEXT:    strb w1, [sp, #11]
-; GISEL-NEXT:    strb w2, [sp, #10]
+; GISEL-NEXT:    stp x5, x6, [sp, #40]
+; GISEL-NEXT:    str x7, [sp, #56]
+; GISEL-NEXT:    str w0, [sp, #4]
+; GISEL-NEXT:    strb w1, [sp, #3]
+; GISEL-NEXT:    strb w2, [sp, #2]
 ; GISEL-NEXT:    bl other
 ; GISEL-NEXT:    cmp w19, w0
 ; GISEL-NEXT:    cset w0, ls
 ; GISEL-NEXT:    .seh_startepilogue
-; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
-; GISEL-NEXT:    .seh_save_reg x30, 24
-; GISEL-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
-; GISEL-NEXT:    .seh_save_reg x19, 16
-; GISEL-NEXT:    add sp, sp, #80
-; GISEL-NEXT:    .seh_stackalloc 80
+; GISEL-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; GISEL-NEXT:    .seh_save_reg x30, 8
+; GISEL-NEXT:    ldr x19, [sp], #64 // 8-byte Folded Reload
+; GISEL-NEXT:    .seh_save_reg_x x19, 64
 ; GISEL-NEXT:    .seh_endepilogue
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:    .seh_endfunclet
