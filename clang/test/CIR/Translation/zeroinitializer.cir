@@ -9,4 +9,13 @@ module {
   // Should lower #cir.null on pointers to a null initializer.
   llvm.mlir.global external @ptr() {addr_space = 0 : i32, cir.initial_value = #cir.zero : !llvm.ptr} : !llvm.ptr
   // CHECK: @ptr = global ptr null
+
+  // Should lower aggregates types with elements initialized with cir.llvmir.zeroinit.
+  llvm.mlir.global external @arr() {addr_space = 0 : i32} : !llvm.array<1 x !llvm.struct<"struct.S", (i8, i32)>> {
+    %0 = llvm.mlir.undef : !llvm.array<1 x !llvm.struct<"struct.S", (i8, i32)>>
+    %1 = cir.llvmir.zeroinit : !llvm.struct<"struct.S", (i8, i32)>
+    %2 = llvm.insertvalue %1, %0[0] : !llvm.array<1 x !llvm.struct<"struct.S", (i8, i32)>> 
+    llvm.return %2 : !llvm.array<1 x !llvm.struct<"struct.S", (i8, i32)>>
+  }
+  // CHECK: @arr = global [1 x %struct.S] zeroinitializer
 }

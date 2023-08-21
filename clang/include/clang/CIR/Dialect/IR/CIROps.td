@@ -1852,4 +1852,22 @@ def VAArgOp : CIR_Op<"va.arg">,
   let hasVerifier = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// Operations Lowered Directly to LLVM IR
+//
+// These operations are hacks to get around missing features in LLVM's dialect.
+// Use it sparingly and remove it once the features are added.
+//===----------------------------------------------------------------------===//
+
+def ZeroInitConstOp : CIR_Op<"llvmir.zeroinit", [Pure]>,
+                      Results<(outs AnyType:$result)> {
+  let summary = "Zero initializes a constant value of a given type";
+  let description = [{
+    This operation circumvents the lack of a zeroinitializer operation in LLVM
+    Dialect. It can zeroinitialize any LLVM type.
+  }];
+  let assemblyFormat = "attr-dict `:` type($result)";
+  let hasVerifier = 0;
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

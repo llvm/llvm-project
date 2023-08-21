@@ -76,6 +76,20 @@ public:
     op->removeAttr(attribute.getName());
     return mlir::success();
   }
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  mlir::LogicalResult convertOperation(
+      mlir::Operation *op, llvm::IRBuilderBase &builder,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const final {
+
+    if (auto cirOp = llvm::dyn_cast<mlir::cir::ZeroInitConstOp>(op))
+      moduleTranslation.mapValue(cirOp.getResult()) =
+          llvm::Constant::getNullValue(
+              moduleTranslation.convertType(cirOp.getType()));
+
+    return mlir::success();
+  }
 };
 
 void registerCIRDialectTranslation(mlir::DialectRegistry &registry) {
