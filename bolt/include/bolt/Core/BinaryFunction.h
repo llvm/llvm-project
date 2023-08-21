@@ -577,9 +577,6 @@ private:
   /// Count the number of functions created.
   static uint64_t Count;
 
-  /// Map offsets of special instructions to addresses in the output.
-  InputOffsetToAddressMapTy InputOffsetToAddressMap;
-
   /// Register alternative function name.
   void addAlternativeName(std::string NewName) {
     Aliases.push_back(std::move(NewName));
@@ -1225,13 +1222,6 @@ public:
 
   /// Update output values of the function based on the final \p Layout.
   void updateOutputValues(const MCAsmLayout &Layout);
-
-  /// Return mapping of input to output addresses. Most users should call
-  /// translateInputToOutputAddress() for address translation.
-  InputOffsetToAddressMapTy &getInputOffsetToAddressMap() {
-    assert(isEmitted() && "cannot use address mapping before code emission");
-    return InputOffsetToAddressMap;
-  }
 
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
@@ -2179,6 +2169,11 @@ public:
   /// Return true if this function needs an address-transaltion table after
   /// its code emission.
   bool requiresAddressTranslation() const;
+
+  /// Return true if the linker needs to generate an address map for this
+  /// function. Used for keeping track of the mapping from input to out
+  /// addresses of basic blocks.
+  bool requiresAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
