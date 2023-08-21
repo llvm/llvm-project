@@ -37,6 +37,33 @@ void GNUstepObjCRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+static bool CanModuleBeGNUstepObjCLibrary(const ModuleSP &module_sp,
+                                          const llvm::Triple &TT) {
+  if (!module_sp)
+    return false;
+  const FileSpec &module_file_spec = module_sp->GetFileSpec();
+  if (!module_file_spec)
+    return false;
+  llvm::StringRef filename = module_file_spec.GetFilename().GetStringRef();
+  if (TT.isOSBinFormatELF())
+    return filename.starts_with("libobjc.so");
+  if (TT.isOSWindows())
+    return filename == "objc.dll";
+  return false;
+}
+
+static bool ScanForGNUstepObjCLibraryCandidate(const ModuleList &modules,
+                                               const llvm::Triple &TT) {
+  std::lock_guard<std::recursive_mutex> guard(modules.GetMutex());
+  size_t num_modules = modules.GetSize();
+  for (size_t i = 0; i < num_modules; i++) {
+    auto mod = modules.GetModuleAtIndex(i);
+    if (CanModuleBeGNUstepObjCLibrary(mod, TT))
+      return true;
+  }
+  return false;
+}
+
 LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
                                                     LanguageType language) {
   if (language != eLanguageTypeObjC)
@@ -50,6 +77,9 @@ LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
     return nullptr;
 
   const ModuleList &images = target.GetImages();
+  if (!ScanForGNUstepObjCLibraryCandidate(images, TT))
+    return nullptr;
+
   if (TT.isOSBinFormatELF()) {
     SymbolContextList eh_pers;
     RegularExpression regex("__gnustep_objc[x]*_personality_v[0-9]+");
@@ -176,18 +206,8 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
 }
 
 bool GNUstepObjCRuntime::IsModuleObjCLibrary(const ModuleSP &module_sp) {
-  if (!module_sp)
-    return false;
-  const FileSpec &module_file_spec = module_sp->GetFileSpec();
-  if (!module_file_spec)
-    return false;
-  llvm::StringRef filename = module_file_spec.GetFilename().GetStringRef();
   const llvm::Triple &TT = GetTargetRef().GetArchitecture().GetTriple();
-  if (TT.isOSBinFormatELF())
-    return filename.starts_with("libobjc.so");
-  if (TT.isOSWindows())
-    return filename == "objc.dll";
-  return false;
+  return CanModuleBeGNUstepObjCLibrary(module_sp, TT);
 }
 
 bool GNUstepObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
