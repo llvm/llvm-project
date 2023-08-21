@@ -271,7 +271,8 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   } else {
     S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
@@ -478,7 +479,8 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
@@ -531,7 +533,8 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
