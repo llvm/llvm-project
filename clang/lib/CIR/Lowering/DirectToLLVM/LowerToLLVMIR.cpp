@@ -39,17 +39,6 @@ public:
       mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
-    // Translate CIR's zero attribute to LLVM's zero initializer.
-    if (isa<mlir::cir::ZeroAttr>(attribute.getValue())) {
-      if (llvm::isa<mlir::LLVM::GlobalOp>(op)) {
-        auto *globalVal = llvm::cast<llvm::GlobalVariable>(
-            moduleTranslation.lookupGlobal(op));
-        globalVal->setInitializer(
-            llvm::Constant::getNullValue(globalVal->getValueType()));
-      } else
-        return op->emitError("#cir.zero not supported");
-    }
-
     // Translate CIR's extra function attributes to LLVM's function attributes.
     auto func = dyn_cast<mlir::LLVM::LLVMFuncOp>(op);
     if (!func)
