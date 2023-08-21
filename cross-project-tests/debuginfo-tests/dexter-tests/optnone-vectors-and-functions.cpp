@@ -1,7 +1,7 @@
-// RUN: %clang -O2 -g %s -o %t
+// RUN: %clang++ -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -v -- %s
-// RUN: %clang -O0 -g %s -o %t
+// RUN: %clang++ -O0 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
 

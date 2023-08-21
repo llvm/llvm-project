@@ -123,7 +123,7 @@ def configure_dexter_substitutions():
     if platform.system() == "Windows":
         # The Windows builder script uses lld.
         dependencies = ["clang", "lld-link"]
-        dexter_regression_test_builder = "clang-cl"
+        dexter_regression_test_builder = "clang_cl"
         dexter_regression_test_debugger = "dbgeng"
         dexter_regression_test_flags = "/Zi /Od"
     else:
