@@ -311,6 +311,39 @@ CXXMethodRecord *APISet::addCXXSpecialMethod(
   return CXXClassRecord->Methods.emplace_back(std::move(Record)).get();
 }
 
+CXXMethodTemplateRecord *APISet::addCXXMethodTemplate(
+    APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    FunctionSignature Signature, AccessControl Access, Template Template,
+    bool IsFromSystemHeader) {
+  auto *Record = addTopLevelRecord(USRBasedLookupTable, CXXMethodTemplates, USR,
+                                   Name, Loc, std::move(Availability), Comment,
+                                   Declaration, SubHeading, Signature, Access,
+                                   Template, IsFromSystemHeader);
+  Record->ParentInformation = APIRecord::HierarchyInformation(
+      Parent->USR, Parent->Name, Parent->getKind(), Parent);
+
+  return Record;
+}
+
+CXXMethodTemplateSpecializationRecord *APISet::addCXXMethodTemplateSpec(
+    APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilitySet Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    FunctionSignature Signature, AccessControl Access,
+    bool IsFromSystemHeader) {
+
+  auto *Record = addTopLevelRecord(
+      USRBasedLookupTable, CXXMethodTemplateSpecializations, USR, Name, Loc,
+      std::move(Availability), Comment, Declaration, SubHeading, Signature,
+      Access, IsFromSystemHeader);
+  Record->ParentInformation = APIRecord::HierarchyInformation(
+      Parent->USR, Parent->Name, Parent->getKind(), Parent);
+
+  return Record;
+}
+
 ObjCCategoryRecord *APISet::addObjCCategory(
     StringRef Name, StringRef USR, PresumedLoc Loc,
     AvailabilitySet Availabilities, const DocComment &Comment,

@@ -176,6 +176,11 @@ public:
   void visitClassTemplatePartialSpecializationRecord(
       const ClassTemplatePartialSpecializationRecord &Record);
 
+  void visitMethodTemplateRecord(const CXXMethodTemplateRecord &Record);
+
+  void visitMethodTemplateSpecializationRecord(
+      const CXXMethodTemplateSpecializationRecord &Record);
+
   void visitConceptRecord(const ConceptRecord &Record);
 
   void

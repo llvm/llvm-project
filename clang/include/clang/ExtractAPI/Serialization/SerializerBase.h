@@ -39,6 +39,10 @@ public:
 
     getDerived()->traverseClassTemplatePartialSpecializationRecords();
 
+    getDerived()->traverseCXXMethodTemplates();
+
+    getDerived()->traverseCXXMethodTemplateSpecializations();
+
     getDerived()->traverseConcepts();
 
     getDerived()->traverseGlobalVariableTemplateRecords();
@@ -90,6 +94,18 @@ public:
   void traverseCXXClassRecords() {
     for (const auto &Class : API.getCXXClasses())
       getDerived()->visitCXXClassRecord(*Class.second);
+  }
+
+  void traverseCXXMethodTemplates() {
+    for (const auto &MethodTemplate : API.getCXXMethodTemplates())
+      getDerived()->visitMethodTemplateRecord(*MethodTemplate.second);
+  }
+
+  void traverseCXXMethodTemplateSpecializations() {
+    for (const auto &MethodTemplateSpecialization :
+         API.getCXXMethodTemplateSpecializations())
+      getDerived()->visitMethodTemplateSpecializationRecord(
+          *MethodTemplateSpecialization.second);
   }
 
   void traverseClassTemplateRecords() {
@@ -192,6 +208,11 @@ public:
 
   void visitClassTemplatePartialSpecializationRecord(
       const ClassTemplatePartialSpecializationRecord &Record){};
+
+  void visitMethodTemplateRecord(const CXXMethodTemplateRecord &Record){};
+
+  void visitMethodTemplateSpecializationRecord(
+      const CXXMethodTemplateSpecializationRecord &Record){};
 
   void visitGlobalVariableTemplateRecord(
       const GlobalVariableTemplateRecord &Record) {}
