@@ -705,6 +705,22 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
       // directive or it was one that can't occur in the preamble at this
       // point. Roll back the current token to the location of the '#'.
       TheTok = HashTok;
+    } else if (TheTok.isAtStartOfLine() &&
+               TheTok.getKind() == tok::raw_identifier &&
+               TheTok.getRawIdentifier() == "module" &&
+               LangOpts.CPlusPlusModules) {
+      // The initial global module fragment introducer "module;" is part of
+      // the preamble, which runs up to the module declaration "module foo;".
+      Token ModuleTok = TheTok;
+      do {
+        TheLexer.LexFromRawLexer(TheTok);
+      } while (TheTok.getKind() == tok::comment);
+      if (TheTok.getKind() != tok::semi) {
+        // Not global module fragment, roll back.
+        TheTok = ModuleTok;
+        break;
+      }
+      continue;
     }
 
     // We hit a token that we don't recognize as being in the
