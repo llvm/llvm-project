@@ -43,6 +43,7 @@ add_llvm_unittest(OrcJITTests
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
   WrapperFunctionUtilsTest.cpp
+  JITLinkRedirectionManagerTest.cpp
 
   EXPORT_SYMBOLS
   )
