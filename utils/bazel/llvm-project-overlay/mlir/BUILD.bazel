@@ -10786,6 +10786,8 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithOpsInterfacesTdFiles",
+        ":ArithOpsTdFiles",
         ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -10883,6 +10885,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
