@@ -1123,6 +1123,9 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
 
+LLVM_READNONE
+bool isChainCC(CallingConv::ID CC);
+
 bool isKernelCC(const Function *Func);
 
 // FIXME: Remove this when calling conventions cleaned up
