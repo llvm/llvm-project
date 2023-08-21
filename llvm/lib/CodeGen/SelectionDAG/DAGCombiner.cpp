@@ -24119,7 +24119,7 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
 
   // Profitability check: only deal with extractions from the first subvector
   // unless the mask becomes an identity mask.
-  if (!ShuffleVectorInst::isIdentityMask(NewMask) ||
+  if (!ShuffleVectorInst::isIdentityMask(NewMask, NewMask.size()) ||
       any_of(NewMask, [](int M) { return M < 0; }))
     for (auto &DemandedSubvector : DemandedSubvectors)
       if (DemandedSubvector.second != 0)
