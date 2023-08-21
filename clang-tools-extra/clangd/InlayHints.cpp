@@ -733,7 +733,8 @@ public:
         // For structured bindings, print canonical types. This is important
         // because for bindings that use the tuple_element protocol, the
         // non-canonical types would be "tuple_element<I, A>::type".
-        if (auto Type = Binding->getType(); !Type.isNull())
+        if (auto Type = Binding->getType();
+            !Type.isNull() && !Type->isDependentType())
           addTypeHint(Binding->getLocation(), Type.getCanonicalType(),
                       /*Prefix=*/": ");
       }
