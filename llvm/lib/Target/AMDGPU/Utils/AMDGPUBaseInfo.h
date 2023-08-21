@@ -1503,13 +1503,19 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegal64BitDPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
   if (isGFX12(ST))
     return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
   if (isGFX90A(ST))
     return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
   return false;
 }
+
+/// \returns true if an instruction may have a 64-bit VGPR operand.
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+
+/// \returns true if an instruction is a DP ALU DPP.
+bool isDPALU_DPP(const MCInstrDesc &OpDesc);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

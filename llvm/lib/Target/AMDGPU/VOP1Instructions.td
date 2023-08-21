@@ -213,6 +213,11 @@ def VOP_I16_F16_SPECIAL_OMOD_t16 : VOPProfile_True16<VOP_I16_F16> {
   let HasOMod = 1;
 }
 
+def VOP_F64_F64_NO_DPP : VOPProfile <[f64, f64, untyped, untyped]> {
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
 //===----------------------------------------------------------------------===//
@@ -342,9 +347,9 @@ defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 let TRANS = 1, SchedRW = [WriteTrans64] in {
-defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
-defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
-defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, int_amdgcn_sqrt>;
+defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64_NO_DPP, AMDGPUrcp>;
+defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64_NO_DPP, AMDGPUrsq>;
+defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64_NO_DPP, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans64]
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
