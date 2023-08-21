@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t.
 
@@ -219,8 +220,9 @@ constexpr bool
                          declval<F>()))>> = true;
 
 namespace details {
-#if __has_builtin(__is_lvalue_reference) &&                                    \
-    __has_builtin(__is_rvalue_reference) && __has_builtin(__is_reference)
+#if LIBC_HAS_BUILTIN(__is_lvalue_reference) &&                                 \
+    LIBC_HAS_BUILTIN(__is_rvalue_reference) &&                                 \
+    LIBC_HAS_BUILTIN(__is_reference)
 
 template <typename T>
 struct is_lvalue_reference : bool_constant<__is_lvalue_reference(T)> {};
@@ -228,7 +230,7 @@ template <typename T>
 struct is_rvalue_reference : bool_constant<__is_rvalue_reference(T)> {};
 template <typename T> struct is_reference : bool_constant<__is_reference(T)> {};
 
-#else // __has_builtin(__is_lvalue_reference) && etc...
+#else // LIBC_HAS_BUILTIN(__is_lvalue_reference) && etc...
 
 template <typename T> struct is_lvalue_reference : public false_type {};
 template <typename T> struct is_lvalue_reference<T &> : public true_type {};
@@ -240,9 +242,9 @@ template <typename T> struct is_reference : public false_type {};
 template <typename T> struct is_reference<T &> : public true_type {};
 template <typename T> struct is_reference<T &&> : public true_type {};
 
-#endif // __has_builtin(__is_lvalue_reference) && etc...
+#endif // LIBC_HAS_BUILTIN(__is_lvalue_reference) && etc...
 
-#if __has_builtin(__remove_all_extents)
+#if LIBC_HAS_BUILTIN(__remove_all_extents)
 template <typename T> using __remove_all_extents_t = __remove_all_extents(T);
 #else
 template <typename T> struct remove_all_extents {
@@ -257,9 +259,9 @@ template <typename T, size_t _Np> struct remove_all_extents<T[_Np]> {
 
 template <typename T>
 using __remove_all_extents_t = typename remove_all_extents<T>::type;
-#endif // __has_builtin(__remove_all_extents)
+#endif // LIBC_HAS_BUILTIN(__remove_all_extents)
 
-#if __has_builtin(__is_function)
+#if LIBC_HAS_BUILTIN(__is_function)
 
 template <typename T>
 struct is_function : integral_constant<bool, __is_function(T)> {};
@@ -271,14 +273,14 @@ struct is_function
     : public integral_constant<bool, !(is_reference<T>::value ||
                                        is_const<const T>::value)> {};
 
-#endif // __has_builtin(__is_function)
+#endif // LIBC_HAS_BUILTIN(__is_function)
 
-#if __has_builtin(__is_destructible)
+#if LIBC_HAS_BUILTIN(__is_destructible)
 
 template <typename T>
 struct is_destructible : bool_constant<__is_destructible(T)> {};
 
-#else // __has_builtin(__is_destructible)
+#else // LIBC_HAS_BUILTIN(__is_destructible)
 
 //  if it's a reference, return true
 //  if it's a function, return false
@@ -324,24 +326,22 @@ struct is_destructible : public __destructible_false<T, is_function<T>::value> {
 template <typename T> struct is_destructible<T[]> : public false_type {};
 template <> struct is_destructible<void> : public false_type {};
 
-#endif // __has_builtin(__is_destructible)
+#endif // LIBC_HAS_BUILTIN(__is_destructible)
 } // namespace details
 
-#if __has_builtin(__is_trivially_destructible)
+#if LIBC_HAS_BUILTIN(__is_trivially_destructible)
 
 template <typename T>
 struct is_trivially_destructible
     : public integral_constant<bool, __is_trivially_destructible(T)> {};
 
-#elif __has_builtin(__has_trivial_destructor)
-
+#else
 template <typename T>
 struct is_trivially_destructible
     : public integral_constant<
           bool, __llvm_libc::cpp::details::is_destructible<T>::value
                     &&__has_trivial_destructor(T)> {};
-
-#endif // __has_builtin(__is_trivially_destructible)
+#endif // LIBC_HAS_BUILTIN(__is_trivially_destructible)
 
 } // namespace cpp
 } // namespace __llvm_libc
