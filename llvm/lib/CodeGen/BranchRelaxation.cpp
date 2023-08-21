@@ -79,6 +79,10 @@ class BranchRelaxation : public MachineFunctionPass {
   };
 
   SmallVector<BasicBlockInfo, 16> BlockInfo;
+
+  // The basic block after which trampolines are inserted. This is the last
+  // basic block that isn't in the cold section.
+  MachineBasicBlock *TrampolineInsertionPoint = nullptr;
   std::unique_ptr<RegScavenger> RS;
   LivePhysRegs LiveRegs;
 
@@ -166,16 +170,27 @@ LLVM_DUMP_METHOD void BranchRelaxation::dumpBBs() {
 void BranchRelaxation::scanFunction() {
   BlockInfo.clear();
   BlockInfo.resize(MF->getNumBlockIDs());
+  TrampolineInsertionPoint = nullptr;
 
   // First thing, compute the size of all basic blocks, and see if the function
   // has any inline assembly in it. If so, we have to be conservative about
   // alignment assumptions, as we don't know for sure the size of any
-  // instructions in the inline assembly.
-  for (MachineBasicBlock &MBB : *MF)
+  // instructions in the inline assembly. At the same time, place the
+  // trampoline insertion point at the end of the hot portion of the function.
+  for (MachineBasicBlock &MBB : *MF) {
     BlockInfo[MBB.getNumber()].Size = computeBlockSize(MBB);
+
+    if (MBB.getSectionID() != MBBSectionID::ColdSectionID)
+      TrampolineInsertionPoint = &MBB;
+  }
 
   // Compute block offsets and known bits.
   adjustBlockOffsets(*MF->begin());
+
+  if (TrampolineInsertionPoint == nullptr) {
+    LLVM_DEBUG(dbgs() << "  No suitable trampoline insertion point found in "
+                      << MF->getName() << ".\n");
+  }
 }
 
 /// computeBlockSize - Compute the size for MBB.
@@ -375,6 +390,50 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
   bool Fail = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
   assert(!Fail && "branches to be relaxed must be analyzable");
   (void)Fail;
+
+  // Since cross-section conditional branches to the cold section are rarely
+  // taken, try to avoid inverting the condition. Instead, add a "trampoline
+  // branch", which unconditionally branches to the branch destination. Place
+  // the trampoline branch at the end of the function and retarget the
+  // conditional branch to the trampoline.
+  // tbz L1
+  // =>
+  // tbz L1Trampoline
+  // ...
+  // L1Trampoline: b  L1
+  if (MBB->getSectionID() != TBB->getSectionID() &&
+      TBB->getSectionID() == MBBSectionID::ColdSectionID &&
+      TrampolineInsertionPoint != nullptr) {
+    // If the insertion point is out of range, we can't put a trampoline there.
+    NewBB =
+        createNewBlockAfter(*TrampolineInsertionPoint, MBB->getBasicBlock());
+
+    if (isBlockInRange(MI, *NewBB)) {
+      LLVM_DEBUG(dbgs() << "  Retarget destination to trampoline at "
+                        << NewBB->back());
+
+      insertUncondBranch(NewBB, TBB);
+
+      // Update the successor lists to include the trampoline.
+      MBB->replaceSuccessor(TBB, NewBB);
+      NewBB->addSuccessor(TBB);
+
+      // Replace branch in the current (MBB) block.
+      removeBranch(MBB);
+      insertBranch(MBB, NewBB, FBB, Cond);
+
+      TrampolineInsertionPoint = NewBB;
+      finalizeBlockChanges(MBB, NewBB);
+      return true;
+    }
+
+    LLVM_DEBUG(
+        dbgs() << "  Trampoline insertion point out of range for Bcc from "
+               << printMBBReference(*MBB) << " to " << printMBBReference(*TBB)
+               << ".\n");
+    TrampolineInsertionPoint->setIsEndSection(NewBB->isEndSection());
+    MF->erase(NewBB);
+  }
 
   // Add an unconditional branch to the destination and invert the branch
   // condition to jump over it:
