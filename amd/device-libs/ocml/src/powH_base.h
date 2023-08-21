@@ -67,11 +67,7 @@ MATH_MANGLE(pow)(half x, half y)
 CONSTATTR half
 MATH_MANGLE(powr)(half x, half y)
 {
-    half ax = BUILTIN_ABS_F16(x);
-    float p = compute_expylnx_f16(ax, y);
-
-    half ay = BUILTIN_ABS_F16(y);
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_integer(ay) & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = (half)compute_expylnx_f16(x, y);
 
     // Now all the edge cases
     half iz = y < 0.0h ? PINF_F16 : 0.0h;
@@ -84,7 +80,7 @@ MATH_MANGLE(powr)(half x, half y)
         ret = zi;
 
     if (BUILTIN_ISINF_F16(y))
-        ret = ax < 1.0h ? iz : zi;
+        ret = x < 1.0h ? iz : zi;
 
     if (y == 0.0h)
         ret = x == 0.0h || BUILTIN_ISINF_F16(x) ? QNAN_F16 : 1.0h;

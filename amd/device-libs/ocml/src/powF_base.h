@@ -106,12 +106,7 @@ MATH_MANGLE(pow)(float x, float y)
 CONSTATTR float
 MATH_MANGLE(powr)(float x, float y)
 {
-    float ax = BUILTIN_ABS_F32(x);
-
-    float expylnx = compute_expylnx_float(ax, y);
-
-    float ay = BUILTIN_ABS_F32(y);
-    float ret = BUILTIN_COPYSIGN_F32(expylnx, (is_odd_integer(ay) & (x < 0.0f)) ? -1.0f : 1.0f);
+    float ret = compute_expylnx_float(x, y);
 
     // Now all the edge cases
     float iz = y < 0.0f ? PINF_F32 : 0.0f;
@@ -124,7 +119,7 @@ MATH_MANGLE(powr)(float x, float y)
         ret = zi;
 
     if (BUILTIN_ISINF_F32(y))
-        ret = ax < 1.0f ? iz : zi;
+        ret = x < 1.0f ? iz : zi;
 
     if (y == 0.0f)
         ret = x == 0.0f || BUILTIN_ISINF_F32(x) ? QNAN_F32 : 1.0f;

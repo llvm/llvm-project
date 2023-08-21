@@ -74,11 +74,7 @@ MATH_MANGLE(pow)(double x, double y)
 CONSTATTR double
 MATH_MANGLE(powr)(double x, double y)
 {
-    double ax = BUILTIN_ABS_F64(x);
-    double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
-
-    double ay = BUILTIN_ABS_F64(y);
-    double ret = BUILTIN_COPYSIGN_F64(expylnx, (is_odd_integer(ay) & (x < 0.0)) ? -1.0 : 1.0);
+    double ret = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(x)));
 
     // Now all the edge cases
     double iz = y < 0.0 ? PINF_F64 : 0.0;
@@ -91,7 +87,7 @@ MATH_MANGLE(powr)(double x, double y)
         ret = zi;
 
     if (BUILTIN_ISINF_F64(y))
-        ret = ax < 1.0 ? iz : zi;
+        ret = x < 1.0 ? iz : zi;
 
     if (y == 0.0)
         ret = x == 0.0 || BUILTIN_ISINF_F64(x) ? QNAN_F64 : 1.0;
