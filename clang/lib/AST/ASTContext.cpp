@@ -9612,9 +9612,8 @@ bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
       const LangOptions::LaxVectorConversionKind LVCKind =
           getLangOpts().getLaxVectorConversions();
 
-      // If __riscv_v_fixed_vlen != N do not allow GNU vector lax conversion.
-      if (VecTy->getVectorKind() == VectorType::GenericVector &&
-          getTypeSize(SecondType) != getRVVTypeSize(*this, BT))
+      // If __riscv_v_fixed_vlen != N do not allow vector lax conversion.
+      if (getTypeSize(SecondType) != getRVVTypeSize(*this, BT))
         return false;
 
       // If -flax-vector-conversions=all is specified, the types are
