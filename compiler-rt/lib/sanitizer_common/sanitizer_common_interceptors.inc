@@ -449,9 +449,6 @@ INTERCEPTOR(char*, textdomain, const char *domainname) {
 static inline int CharCmpX(unsigned char c1, unsigned char c2) {
   return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
 }
-static inline int WCharCmpX(wchar_t c1, wchar_t c2) {
-  return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
-}
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strcmp, uptr called_pc,
                               const char *s1, const char *s2, int result)
@@ -7053,103 +7050,6 @@ INTERCEPTOR(wchar_t *, wcsdup, wchar_t *s) {
 #define INIT_WCSDUP
 #endif
 
-#if SANITIZER_INTERCEPT_WCSCPY
-INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dst, const wchar_t *src) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, wcscpy, dst, src);
-  SIZE_T src_len = internal_wcslen(src);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, sizeof(wchar_t) * (src_len + 1));
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(wchar_t) * (src_len + 1));
-  wchar_t *result = REAL(wcscpy)(dst, src);
-  return result;
-}
-INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dst, const wchar_t *src, SIZE_T size) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, wcsncpy, dst, src, size);
-  SIZE_T src_len = internal_wcsnlen(src, size);
-  if (src_len != size)
-    ++src_len;  // account for the nul terminator
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, src, sizeof(wchar_t) * src_len);
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(wchar_t) * src_len);
-  wchar_t *result = REAL(wcsncpy)(dst, src, size);
-  return result;
-}
-
-#  define INIT_WCSCPY                  \
-    COMMON_INTERCEPT_FUNCTION(wcscpy); \
-    COMMON_INTERCEPT_FUNCTION(wcsncpy);
-#else
-#  define INIT_WCSCPY
-#endif
-
-#if SANITIZER_INTERCEPT_WCSCMP
-INTERCEPTOR(int, wcscmp, const wchar_t *s1, const wchar_t *s2) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, wcscmp, s1, s2);
-  wchar_t c1, c2;
-  uptr i;
-  for (i = 0;; i++) {
-    c1 = s1[i];
-    c2 = s2[i];
-    if (c1 != c2 || c1 == '\0')
-      break;
-  }
-  if (common_flags()->intercept_strcmp) {
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, s1, sizeof(wchar_t) * (i + 1));
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, sizeof(wchar_t) * (i + 1));
-  }
-  int result = WCharCmpX(c1, c2);
-  return result;
-}
-INTERCEPTOR(int, wcsncmp, wchar_t *s1, const wchar_t *s2, SIZE_T size) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, wcsncmp, s1, s2, size);
-  wchar_t c1, c2;
-  uptr i;
-  for (i = 0; i < size; i++) {
-    c1 = s1[i];
-    c2 = s2[i];
-    if (c1 != c2 || c1 == '\0')
-      break;
-  }
-  uptr i1 = i;
-  uptr i2 = i;
-  if (common_flags()->strict_string_checks) {
-    for (; i1 < size && s1[i1]; i1++) {
-    }
-    for (; i2 < size && s2[i2]; i2++) {
-    }
-  }
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s1, sizeof(wchar_t) * Min(i1 + 1, size));
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, sizeof(wchar_t) * Min(i2 + 1, size));
-  int result = WCharCmpX(c1, c2);
-  return result;
-}
-
-#  define INIT_WCSCMP                  \
-    COMMON_INTERCEPT_FUNCTION(wcscmp); \
-    COMMON_INTERCEPT_FUNCTION(wcsncmp);
-#else
-#  define INIT_WCSCMP
-#endif
-
-#if SANITIZER_INTERCEPT_WCSCHR
-INTERCEPTOR(wchar_t *, wcschr, const wchar_t *s, wchar_t c) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, wcschr, s, c);
-  wchar_t *result = REAL(wcschr)(s, c);
-  if (common_flags()->intercept_strchr) {
-    SIZE_T read_size = (result ? result - s : internal_wcslen(s)) + 1;
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, sizeof(*s) * read_size);
-  }
-  return result;
-}
-
-#  define INIT_WCSCHR COMMON_INTERCEPT_FUNCTION(wcschr)
-#else
-#  define INIT_WCSCHR
-#endif
-
 #if SANITIZER_INTERCEPT_STRXFRM
 static SIZE_T RealStrLen(const char *str) { return internal_strlen(str); }
 
@@ -10533,9 +10433,6 @@ static void InitializeCommonInterceptors() {
   INIT_WCSLEN;
   INIT_WCSCAT;
   INIT_WCSDUP;
-  INIT_WCSCHR;
-  INIT_WCSCMP;
-  INIT_WCSCPY;
   INIT_WCSXFRM;
   INIT___WCSXFRM_L;
   INIT_ACCT;
