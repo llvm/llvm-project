@@ -2,12 +2,18 @@
 // RUN: FileCheck --input-file=%t.ll %s
 
 module {
-  // Should lower #cir.zero on structs to a zeroinitializer.
-  llvm.mlir.global external @bar() {addr_space = 0 : i32, cir.initial_value = #cir.zero : !llvm.struct<"struct.S", (i8, i32)>} : !llvm.struct<"struct.S", (i8, i32)>
+  // Should zero-initialize global structs initialized with cir.llvmir.zeroinit.
+  llvm.mlir.global external @bar() {addr_space = 0 : i32} : !llvm.struct<"struct.S", (i8, i32)> {
+    %0 = cir.llvmir.zeroinit : !llvm.struct<"struct.S", (i8, i32)>
+    llvm.return %0 : !llvm.struct<"struct.S", (i8, i32)>
+  }
   // CHECK: @bar = global %struct.S zeroinitializer
 
-  // Should lower #cir.null on pointers to a null initializer.
-  llvm.mlir.global external @ptr() {addr_space = 0 : i32, cir.initial_value = #cir.zero : !llvm.ptr} : !llvm.ptr
+  // Should null-initialize global pointer initialized with cir.llvmir.zeroinit.
+  llvm.mlir.global external @ptr() {addr_space = 0 : i32} : !llvm.ptr {
+    %0 = cir.llvmir.zeroinit : !llvm.ptr
+    llvm.return %0 : !llvm.ptr
+  }
   // CHECK: @ptr = global ptr null
 
   // Should lower aggregates types with elements initialized with cir.llvmir.zeroinit.

@@ -11,6 +11,7 @@
 !u64i = !cir.int<u, 64>
 !u8i = !cir.int<u, 8>
 !ty_22struct2EA22 = !cir.struct<"struct.A", !s32i, !cir.array<!cir.array<!s32i x 2> x 2>, #cir.recdecl.ast>
+!ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i, #cir.recdecl.ast>
 
 module {
   cir.global external @a = #cir.int<3> : !s32i
@@ -134,4 +135,14 @@ module {
   // MLIR: llvm.mlir.global external @zeroInitFlt(dense<0.000000e+00> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
   cir.global "private" internal @staticVar = #cir.int<0> : !s32i
   // MLIR: llvm.mlir.global internal @staticVar(0 : i32) {addr_space = 0 : i32} : i32
+  cir.global external @nullPtr = #cir.null : !cir.ptr<!s32i>
+  // MLIR: llvm.mlir.global external @nullPtr()
+  // MLIR:   %0 = llvm.mlir.zero : !llvm.ptr
+  // MLIR:   llvm.return %0 : !llvm.ptr
+  // MLIR: }
+  cir.global external @zeroStruct = #cir.zero : !ty_22struct2EBar22
+  // MLIR: llvm.mlir.global external @zeroStruct()
+  // MLIR:   %0 = cir.llvmir.zeroinit : !llvm.struct<"struct.Bar", (i32, i8)>
+  // MLIR:   llvm.return %0 : !llvm.struct<"struct.Bar", (i32, i8)>
+  // MLIR: }
 }
