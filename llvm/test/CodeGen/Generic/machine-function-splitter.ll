@@ -11,15 +11,6 @@
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll
 ; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s --check-prefix=FSAFDO-MFS
 ; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s --check-prefix=FSAFDO-MFS2
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -debug-pass=Structure -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -enable-fs-discriminator=true -improved-fs-discriminator=true -split-machine-functions 2>&1 | FileCheck %s --check-prefix=MFS_ON
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-pass=Structure -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -enable-fs-discriminator=true -improved-fs-discriminator=true -split-machine-functions 2>&1 | FileCheck %s --check-prefix=MFS_OFF
-
-;; Check that MFS is on for X86 targets.
-; MFS_ON: Machine Function Splitter Transformation
-; MFS_ON_NO: warning: -fsplit-machine-functions is not valid for
-;; Check that MFS is not on for non-X86 targets.
-; MFS_OFF: warning: -fsplit-machine-functions is not valid for
-; MFS_OFF_NO: Machine Function Splitter Transformation
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ;; Check that cold block is moved to .text.split.
