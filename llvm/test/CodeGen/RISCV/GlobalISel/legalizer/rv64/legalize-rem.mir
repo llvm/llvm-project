@@ -145,14 +145,10 @@ body:             |
     ; CHECK-I-LABEL: name: srem_i32
     ; CHECK-I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK-I-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-I-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK-I-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C1]](s64)
-    ; CHECK-I-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SHL1]], [[C1]](s64)
-    ; CHECK-I-NEXT: $x10 = COPY [[ASHR]](s64)
-    ; CHECK-I-NEXT: $x11 = COPY [[ASHR1]](s64)
+    ; CHECK-I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-I-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-I-NEXT: $x11 = COPY [[SEXT_INREG1]](s64)
     ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__moddi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-I-NEXT: $x10 = COPY [[COPY2]](s64)
