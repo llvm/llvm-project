@@ -1,6 +1,6 @@
 // REQUIRES: system-windows
 //
-// RUN: %clang-cl /Z7 /Zi %s -o %t
+// RUN: %clang_cl /Z7 /Zi %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
 
 #include <stdio.h>

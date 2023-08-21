@@ -1,9 +1,9 @@
 // REQUIRES: system-windows
 //
-// RUN: %clang-cl /Od /Z7 /Zi %s -o %t
+// RUN: %clang_cl /Od /Z7 /Zi %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
 //
-// RUN: %clang-cl /O2 /Z7 /Zi %s -o %t
+// RUN: %clang_cl /O2 /Z7 /Zi %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w --binary %t \
 // RUN:      --debugger 'dbgeng' -- %s
 
