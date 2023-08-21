@@ -21,8 +21,10 @@ namespace llvm {
 class Function;
 class Module;
 
-uint64_t StructuralHash(const Function &F);
-uint64_t StructuralHash(const Module &M);
+using IRHash = uint64_t;
+
+IRHash StructuralHash(const Function &F);
+IRHash StructuralHash(const Module &M);
 
 } // end namespace llvm
 
