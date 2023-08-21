@@ -114,6 +114,21 @@ constexpr C c2 = C().get();
 static_assert(c2.a == 100, "");
 static_assert(c2.b == 200, "");
 
+
+/// A global, composite temporary variable.
+constexpr const C &c3 = C().get();
+
+/// Same, but with a bitfield.
+class D {
+public:
+  unsigned a : 4;
+  constexpr D() : a(15) {}
+  constexpr D get() const {
+    return *this;
+  }
+};
+constexpr const D &d4 = D().get();
+
 constexpr int getB() {
   C c;
   int &j = c.b;
