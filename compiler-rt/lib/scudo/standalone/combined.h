@@ -754,6 +754,13 @@ public:
     Str.output();
   }
 
+  void printFragmentationInfo() {
+    ScopedString Str;
+    Primary.getFragmentationInfo(&Str);
+    // Secondary allocator dumps the fragmentation data in getStats().
+    Str.output();
+  }
+
   void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
     if (ReleaseType == ReleaseToOS::ForceAll)
