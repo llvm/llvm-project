@@ -1049,10 +1049,9 @@ define i64 @vwreduce_add_v2i64(ptr %x) {
 ; RV32-NEXT:    vmv.s.x v9, zero
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vwredsum.vs v8, v8, v9
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
@@ -1081,10 +1080,9 @@ define i64 @vwreduce_uadd_v2i64(ptr %x) {
 ; RV32-NEXT:    vmv.s.x v9, zero
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vwredsumu.vs v8, v8, v9
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
