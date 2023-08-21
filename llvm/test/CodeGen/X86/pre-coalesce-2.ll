@@ -182,7 +182,10 @@ cleanup:                                          ; preds = %while.body
   br i1 %62, label %63, label %66
 
 ; <label>:63:                                     ; preds = %cleanup
-  %64 = icmp sge i8 trunc (i64 add (i64 and (i64 ptrtoint (ptr @b to i64), i64 7), i64 3) to i8), %61
+  %and = and i64 ptrtoint (ptr @b to i64), 7
+  %add = add i64 %and, 3
+  %trunc = trunc i64 %add to i8
+  %64 = icmp sge i8 %trunc, %61
   br i1 %64, label %65, label %66
 
 ; <label>:65:                                     ; preds = %63
