@@ -2740,6 +2740,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                          : getGfx9BufferFormatInfo(Format);
 }
 
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+  for (auto OpName : { OpName::vdst, OpName::src0, OpName::src1,
+                       OpName::src2 }) {
+    int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
+    if (Idx == -1)
+      continue;
+
+    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
+        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+  return hasAny64BitVGPROperands(OpDesc);
+}
+
 } // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
