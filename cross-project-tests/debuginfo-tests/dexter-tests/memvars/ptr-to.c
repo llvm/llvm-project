@@ -4,8 +4,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %clang -O2 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
+// RUN:     --builder clang-c --cflags "-O2 -glldb" -- %s
 //
 //// Check that a pointer to a variable living on the stack dereferences to the
 //// variable value.

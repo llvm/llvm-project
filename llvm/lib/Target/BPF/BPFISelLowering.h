@@ -144,6 +144,7 @@ private:
   // For 32bit ALU result zext to 64bit is free.
   bool isZExtFree(Type *Ty1, Type *Ty2) const override;
   bool isZExtFree(EVT VT1, EVT VT2) const override;
+  bool isZExtFree(SDValue Val, EVT VT2) const override;
 
   unsigned EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB, unsigned Reg,
                          bool isSigned) const;

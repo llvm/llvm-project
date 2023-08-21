@@ -1,9 +1,9 @@
-// RUN: %clang -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
-// RUN: %clang -O0 -g %s -o %t
+// RUN:     --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-O2 -g" -- %s
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-O0 -g" -- %s
 
 // REQUIRES: lldb, D136396
 // UNSUPPORTED: system-windows

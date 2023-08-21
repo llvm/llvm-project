@@ -1603,13 +1603,28 @@ def CreateSymbolicateCrashLogOptions(
         help="pause for NSEC seconds for debugger",
         default=0,
     )
+    # NOTE: Requires python 3.9
+    # arg_parser.add_argument(
+    #     "--crashed-only",
+    #     "-c",
+    #     action=argparse.BooleanOptionalAction,
+    #     dest="crashed_only",
+    #     help="only symbolicate the crashed thread",
+    #     default=True,
+    # )
     arg_parser.add_argument(
         "--crashed-only",
         "-c",
-        action=argparse.BooleanOptionalAction,
+        action="store_true",
         dest="crashed_only",
         help="only symbolicate the crashed thread",
         default=True,
+    )
+    arg_parser.add_argument(
+        "--no-crashed-only",
+        action="store_false",
+        dest="crashed_only",
+        help="do not symbolicate the crashed thread",
     )
     arg_parser.add_argument(
         "--disasm-depth",

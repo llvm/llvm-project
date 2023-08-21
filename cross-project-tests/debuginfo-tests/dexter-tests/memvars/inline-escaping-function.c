@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %clang -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
+// RUN:     --builder 'clang-c'  --cflags "-O3 -glldb" -- %s
 
 // 1. param is escaped by inlineme(&param) so it is not promoted by
 //    SROA/mem2reg.

@@ -1125,11 +1125,9 @@ bool Process::SetProcessExitStatus(
     if (target_sp) {
       ProcessSP process_sp(target_sp->GetProcessSP());
       if (process_sp) {
-        const char *signal_cstr = nullptr;
-        if (signo)
-          signal_cstr = process_sp->GetUnixSignals()->GetSignalAsCString(signo);
-
-        process_sp->SetExitStatus(exit_status, signal_cstr);
+        llvm::StringRef signal_str =
+            process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
+        process_sp->SetExitStatus(exit_status, signal_str);
       }
     }
     return true;

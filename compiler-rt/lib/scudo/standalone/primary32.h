@@ -311,6 +311,12 @@ public:
     }
   }
 
+  void getFragmentationInfo(ScopedString *Str) {
+    // TODO(chiahungduan): Organize the steps in releaseToOSMaybe() into
+    // functions which make the collection of fragmentation data easier.
+    Str->append("Fragmentation Stats: SizeClassAllocator32: Unsupported yet\n");
+  }
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
       const s32 Interval = Max(Min(static_cast<s32>(Value),

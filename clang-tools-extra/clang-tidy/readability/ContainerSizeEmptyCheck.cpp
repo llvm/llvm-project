@@ -94,6 +94,14 @@ AST_MATCHER(QualType, isIntegralType) {
   return Node->isIntegralType(Finder->getASTContext());
 }
 
+AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
+              clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (const Expr *CookedLiteral = Node.getCookedLiteral()) {
+    return InnerMatcher.matches(*CookedLiteral, Finder, Builder);
+  }
+  return false;
+}
+
 } // namespace ast_matchers
 namespace tidy::readability {
 
@@ -166,9 +174,11 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   // Comparison to empty string or empty constructor.
-  const auto WrongComparend = anyOf(
-      stringLiteral(hasSize(0)), cxxConstructExpr(isDefaultConstruction()),
-      cxxUnresolvedConstructExpr(argumentCountIs(0)));
+  const auto WrongComparend =
+      anyOf(stringLiteral(hasSize(0)),
+            userDefinedLiteral(hasLiteral(stringLiteral(hasSize(0)))),
+            cxxConstructExpr(isDefaultConstruction()),
+            cxxUnresolvedConstructExpr(argumentCountIs(0)));
   // Match the object being compared.
   const auto STLArg =
       anyOf(unaryOperator(
