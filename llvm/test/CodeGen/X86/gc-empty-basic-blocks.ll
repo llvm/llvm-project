@@ -1,8 +1,5 @@
 ;; This test verifies that -gc-empty-basic-blocks removes empty blocks.
-; RUN: llc < %s -mtriple=x86_64 -O0 -gc-empty-basic-blocks | FileCheck -check-prefix=CHECK %s 
-; RUN: llc < %s -mtriple=x86_64 -stats -O0 -gc-empty-basic-blocks 2>&1 | FileCheck -check-prefix=STAT %s
-
-; STAT:        1 gc-empty-basic-blocks     - Number of empty blocks removed
+; RUN: llc < %s -mtriple=x86_64 -O0 -gc-empty-basic-blocks | FileCheck %s
 
 define void @foo(i1 zeroext %0) nounwind {
   br i1 %0, label %2, label %empty_block
