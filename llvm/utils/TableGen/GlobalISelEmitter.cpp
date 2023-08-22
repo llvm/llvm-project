@@ -2520,9 +2520,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
-  if (SubtargetFeatures.count(Predicate) == 0)
-    SubtargetFeatures.emplace(
-        Predicate, SubtargetFeatureInfo(Predicate, SubtargetFeatures.size()));
+  SubtargetFeatures.try_emplace(Predicate, Predicate, SubtargetFeatures.size());
 }
 
 } // end anonymous namespace
