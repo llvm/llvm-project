@@ -110,7 +110,8 @@ private:
 /// specification.
 /// Returns the number of bytes written to OS.
 uint64_t reconstructAbbrevSection(raw_ostream &OS,
-                                  ArrayRef<StringRef> AbbrevEntries);
+                                  ArrayRef<StringRef> AbbrevEntries,
+                                  uint64_t &MaxDIEAbbrevCount);
 } // namespace v1
 } // namespace mccasformats
 } // namespace llvm

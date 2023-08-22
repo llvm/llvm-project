@@ -118,10 +118,13 @@ Error MCCASPrinter::printMCObject(MCObjectProxy MCObj, CASDWARFObject &Obj,
     if (Error Err = Obj.dump(OS, Indent, *DWARFCtx, MCObj, Options.Verbose))
       return Err;
   }
+  if (DIETopLevelRef::Cast(MCObj) && Options.DIERefs)
+    return Error::success();
   return printSimpleNested(MCObj, Obj, DWARFCtx);
 }
 
-Error printDIE(DIETopLevelRef TopRef, raw_ostream &OS, int Indent) {
+Error printDIE(DIETopLevelRef TopRef, raw_ostream &OS, int Indent,
+               SmallVector<StringRef, 0> &TotAbbrevEntries) {
   auto HeaderCallback = [&](StringRef HeaderData) {
     OS.indent(Indent) << "Header = " << '[';
     llvm::interleave(
@@ -147,8 +150,9 @@ Error printDIE(DIETopLevelRef TopRef, raw_ostream &OS, int Indent) {
   auto NewBlockCallback = [&](StringRef BlockId) {
     OS.indent(Indent) << "CAS Block: " << BlockId << "\n";
   };
-  return visitDebugInfo(TopRef, HeaderCallback, StartTagCallback, AttrCallback,
-                        EndTagCallback, NewBlockCallback);
+  return visitDebugInfo(TotAbbrevEntries, TopRef, HeaderCallback,
+                        StartTagCallback, AttrCallback, EndTagCallback,
+                        NewBlockCallback);
 }
 
 Error MCCASPrinter::printSimpleNested(MCObjectProxy Ref, CASDWARFObject &Obj,
@@ -169,8 +173,21 @@ Error MCCASPrinter::printSimpleNested(MCObjectProxy Ref, CASDWARFObject &Obj,
     return Error::success();
   }
 
-  if (auto TopRef = DIETopLevelRef::Cast(Ref); TopRef && Options.DIERefs)
-    return printDIE(*TopRef, OS, Indent);
+  if (DebugInfoSectionRef::Cast(Ref) && Options.DIERefs) {
+    SmallVector<StringRef, 0> TotAbbrevEntries;
+    if (auto E = Ref.forEachReference([&](cas::ObjectRef ID) -> Error {
+          Expected<MCObjectProxy> MCObj = MCSchema.get(ID);
+          if (!MCObj)
+            return MCObj.takeError();
+          if (Error E = printMCObject(*MCObj, Obj, DWARFCtx))
+            return E;
+          if (auto TopRef = DIETopLevelRef::Cast(*MCObj))
+            return printDIE(*TopRef, OS, Indent, TotAbbrevEntries);
+          return Error::success();
+        }))
+      return E;
+    return Error::success();
+  }
 
   return Ref.forEachReference(
       [&](ObjectRef CASObj) { return printMCObject(CASObj, Obj, DWARFCtx); });
