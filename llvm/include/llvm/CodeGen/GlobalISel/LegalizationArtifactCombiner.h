@@ -900,17 +900,21 @@ public:
     // same sequence. Search for elements using findValueFromDefImpl.
     bool isSequenceFromUnmerge(GMergeLikeInstr &MI, unsigned MergeStartIdx,
                                GUnmerge *Unmerge, unsigned UnmergeIdxStart,
-                               unsigned NumElts, unsigned EltSize) {
+                               unsigned NumElts, unsigned EltSize,
+                               bool AllowUndef) {
       assert(MergeStartIdx + NumElts <= MI.getNumSources());
       for (unsigned i = MergeStartIdx; i < MergeStartIdx + NumElts; ++i) {
         unsigned EltUnmergeIdx;
         GUnmerge *EltUnmerge = findUnmergeThatDefinesReg(
             MI.getSourceReg(i), EltSize, EltUnmergeIdx);
         // Check if source i comes from the same Unmerge.
-        if (!EltUnmerge || EltUnmerge != Unmerge)
-          return false;
-        // Check that source i's def has same index in sequence in Unmerge.
-        if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+        if (EltUnmerge == Unmerge) {
+          // Check that source i's def has same index in sequence in Unmerge.
+          if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+            return false;
+        } else if (!AllowUndef ||
+                   MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
+                       TargetOpcode::G_IMPLICIT_DEF)
           return false;
       }
       return true;
@@ -944,8 +948,10 @@ public:
       //
       // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
       if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
-        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize))
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
+                                   /*AllowUndef=*/DstTy.isVector()))
           return false;
+
         replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs, Observer);
         DeadInsts.push_back(&MI);
         return true;
@@ -965,7 +971,7 @@ public:
           (Elt0UnmergeIdx % NumMIElts == 0) &&
           getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
-                                   EltSize))
+                                   EltSize, false))
           return false;
         MIB.setInstrAndDebugLoc(MI);
         auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
@@ -998,7 +1004,8 @@ public:
           if ((!UnmergeI) || (UnmergeI->getNumDefs() != NumElts) ||
               (EltUnmergeIdx != 0))
             return false;
-          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize))
+          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize,
+                                     false))
             return false;
           ConcatSources.push_back(UnmergeI->getSourceReg());
         }
