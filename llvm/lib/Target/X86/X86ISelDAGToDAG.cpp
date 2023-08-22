@@ -2244,6 +2244,32 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     }
   }
 
+  // index: sext(add_nsw(x,c)) -> index: sext(x), disp + sext(c)
+  // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
+  if (N.getOpcode() == ISD::SIGN_EXTEND) {
+    SDValue Src = N.getOperand(0);
+    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap()) {
+      if (CurDAG->isBaseWithConstantOffset(Src)) {
+        SDValue AddSrc = Src.getOperand(0);
+        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
+        uint64_t Offset = (uint64_t)AddVal->getSExtValue() * AM.Scale;
+        if (!foldOffsetIntoAddress(Offset, AM)) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          SDValue ExtSrc = CurDAG->getNode(ISD::SIGN_EXTEND, DL, VT, AddSrc);
+          SDValue ExtVal = CurDAG->getConstant(AddVal->getSExtValue(), DL, VT);
+          SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtSrc);
+          insertDAGNode(*CurDAG, N, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtAdd);
+          CurDAG->ReplaceAllUsesWith(N, ExtAdd);
+          CurDAG->RemoveDeadNode(N.getNode());
+          return ExtSrc;
+        }
+      }
+    }
+  }
+
   // TODO: Handle extensions, shifted masks etc.
   return N;
 }
