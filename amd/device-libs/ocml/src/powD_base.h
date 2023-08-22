@@ -13,14 +13,6 @@ extern CONSTATTR double MATH_PRIVATE(expep)(double2);
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-static bool
-samesign(double x, double y)
-{
-    uint xh = AS_UINT2(x).hi;
-    uint yh = AS_UINT2(y).hi;
-    return ((xh ^ yh) & 0x80000000U) == 0;
-}
-
 static bool is_integer(double ay)
 {
     return BUILTIN_TRUNC_F64(ay) == ay;
@@ -52,9 +44,11 @@ MATH_MANGLE(pow)(double x, double y)
     if (x < 0.0 && !is_integer(ay))
         ret = QNAN_F64;
 
-    bool signs_equal = samesign(y, ax - 1.0);
     if (BUILTIN_ISINF_F64(ay)) {
-        ret = ax == 1.0 ? ax : (signs_equal ? ay : 0.0);
+        // FIXME: Missing backend optimization to save on
+        // materialization cost of mixed sign constant infinities.
+        bool y_is_neg_inf = y != ay;
+        ret = ax == 1.0 ? ax : ((ax < 1.0) ^ y_is_neg_inf ? 0.0 : ay);
     }
 
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)

@@ -13,12 +13,6 @@
 extern CONSTATTR float2 MATH_PRIVATE(epln)(float);
 extern CONSTATTR float MATH_PRIVATE(expep)(float2);
 
-static bool
-samesign(float x, float y)
-{
-    return ((AS_UINT(x) ^ AS_UINT(y)) & 0x80000000) == 0;
-}
-
 static float fast_expylnx(float ax, float y)
 {
     return BUILTIN_EXP2_F32(y * BUILTIN_LOG2_F32(ax));
@@ -86,9 +80,11 @@ MATH_MANGLE(pow)(float x, float y)
     if (x < 0.0f && !is_integer(ay))
         ret = QNAN_F32;
 
-    bool signs_equal = samesign(y, ax - 1.0f);
     if (BUILTIN_ISINF_F32(ay)) {
-        ret = ax == 1.0f ? ax : (signs_equal ? ay : 0.0f);
+        // FIXME: Missing backend optimization to save on
+        // materialization cost of mixed sign constant infinities.
+        bool y_is_neg_inf = y != ay;
+        ret = ax == 1.0f ? ax : ((ax < 1.0f) ^ y_is_neg_inf ? 0.0f : ay);
     }
 
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)

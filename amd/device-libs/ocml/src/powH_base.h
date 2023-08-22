@@ -5,12 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-static bool
-samesign(half x, half y)
-{
-    return ((AS_USHORT(x) ^ AS_USHORT(y)) & (ushort)0x8000) == (ushort)0;
-}
-
 static float compute_expylnx_f16(half ax, half y)
 {
     return BUILTIN_AMDGPU_EXP2_F32((float)y * BUILTIN_AMDGPU_LOG2_F32((float)ax));
@@ -46,9 +40,11 @@ MATH_MANGLE(pow)(half x, half y)
     if (x < 0.0h && !is_integer(ay))
         ret = QNAN_F16;
 
-    bool signs_equal = samesign(y, ax - 1.0h);
     if (BUILTIN_ISINF_F16(ay)) {
-        ret = ax == 1.0h ? ax : (signs_equal ? ay : 0.0h);
+        // FIXME: Missing backend optimization to save on
+        // materialization cost of mixed sign constant infinities.
+        bool y_is_neg_inf = y != ay;
+        ret = ax == 1.0h ? ax : ((ax < 1.0h) ^ y_is_neg_inf ? 0.0h : ay);
     }
 
     if (BUILTIN_ISINF_F16(ax) || x == 0.0h) {
