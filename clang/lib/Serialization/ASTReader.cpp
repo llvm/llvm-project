@@ -4734,12 +4734,6 @@ ASTReader::ReadASTCore(StringRef FileName,
       ShouldFinalizePCM = true;
       return Success;
 
-    case UNHASHED_CONTROL_BLOCK_ID:
-      // This block is handled using look-ahead during ReadControlBlock.  We
-      // shouldn't get here!
-      Error("malformed block record in AST file");
-      return Failure;
-
     default:
       if (llvm::Error Err = Stream.SkipBlock()) {
         Error(std::move(Err));
@@ -4859,13 +4853,18 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     }
     switch ((UnhashedControlBlockRecordTypes)MaybeRecordType.get()) {
     case SIGNATURE:
-      if (F)
-        F->Signature = ASTFileSignature::create(Record.begin(), Record.end());
+      if (F) {
+        F->Signature = ASTFileSignature::create(Blob.begin(), Blob.end());
+        assert(F->Signature != ASTFileSignature::createDummy() &&
+               "Dummy AST file signature not backpatched in ASTWriter.");
+      }
       break;
     case AST_BLOCK_HASH:
-      if (F)
-        F->ASTBlockHash =
-            ASTFileSignature::create(Record.begin(), Record.end());
+      if (F) {
+        F->ASTBlockHash = ASTFileSignature::create(Blob.begin(), Blob.end());
+        assert(F->ASTBlockHash != ASTFileSignature::createDummy() &&
+               "Dummy AST block hash not backpatched in ASTWriter.");
+      }
       break;
     case DIAGNOSTIC_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
@@ -5167,9 +5166,12 @@ static ASTFileSignature readASTFileSignature(StringRef PCH) {
       consumeError(MaybeRecord.takeError());
       return ASTFileSignature();
     }
-    if (SIGNATURE == MaybeRecord.get())
-      return ASTFileSignature::create(Record.begin(),
-                                      Record.begin() + ASTFileSignature::size);
+    if (SIGNATURE == MaybeRecord.get()) {
+      auto Signature = ASTFileSignature::create(Blob.begin(), Blob.end());
+      assert(Signature != ASTFileSignature::createDummy() &&
+             "Dummy AST file signature not backpatched in ASTWriter.");
+      return Signature;
+    }
   }
 }
 
