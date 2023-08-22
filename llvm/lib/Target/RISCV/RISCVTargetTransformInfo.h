@@ -125,6 +125,7 @@ public:
 
   InstructionCost getVRGatherVVCost(MVT VT);
   InstructionCost getVRGatherVICost(MVT VT);
+  InstructionCost getVSlideCost(MVT VT);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
