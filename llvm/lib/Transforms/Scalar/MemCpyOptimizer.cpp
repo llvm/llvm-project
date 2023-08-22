@@ -1120,7 +1120,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // If the dependence is volatile, we can't short-circuit it. FIXME: Perhaps
   // we can. Iff our src is non-volatile, its dst is non-volatile and the copies
   // are the same size. Then we can replace it.
-  if (MDep->isVolatile())
+  if (MDep->isAnyVolatile())
     return false;
 
   // If dep instruction is reading from our current input, then it is a noop
@@ -1644,7 +1644,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 /// altogether.
 bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // We can only optimize non-volatile memcpy's.
-  if (M->isVolatile()) return false;
+  // FIXME: Perhaps we can optimize some cases when exactly one of src and dst
+  // is volatile?
+  if (M->isAnyVolatile()) return false;
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
@@ -1808,7 +1810,9 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // If the byval argument isn't fed by a memcpy, ignore it.  If it is fed by
   // a memcpy, see if we can byval from the source of the memcpy instead of the
   // result.
-  if (!MDep || MDep->isVolatile() ||
+  // FIXME: If the only the memcpy src is volatile, and the same size as the
+  // byval, can we load the byval from the src?
+  if (!MDep || MDep->isAnyVolatile() ||
       ByValArg->stripPointerCasts() != MDep->getDest())
     return false;
 
@@ -1904,7 +1908,8 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
 
   // If the immut argument isn't fed by a memcpy, ignore it.  If it is fed by
   // a memcpy, check that the arg equals the memcpy dest.
-  if (!MDep || MDep->isVolatile() || AI != MDep->getDest())
+  // FIXME: As with byval, can we short circuit a memcpy from volatile?
+  if (!MDep || MDep->isAnyVolatile() || AI != MDep->getDest())
     return false;
 
   // The address space of the memcpy source must match the immut argument

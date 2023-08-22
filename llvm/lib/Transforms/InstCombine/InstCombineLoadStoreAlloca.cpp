@@ -132,7 +132,7 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         return false;
 
       // If the transfer is volatile, reject it.
-      if (MI->isVolatile())
+      if (MI->isAnyVolatile())
         return false;
 
       // If the transfer is using the alloca as a source of the transfer, then
