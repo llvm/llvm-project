@@ -46,12 +46,15 @@ MATH_MANGLE(pow)(half x, half y)
     if (x < 0.0h && !is_integer(ay))
         ret = QNAN_F16;
 
-    if (BUILTIN_ISINF_F16(ay))
-        ret = ax == 1.0h ? ax : (samesign(y, ax - 1.0h) ? ay : 0.0h);
+    bool signs_equal = samesign(y, ax - 1.0h);
+    if (BUILTIN_ISINF_F16(ay)) {
+        ret = ax == 1.0h ? ax : (signs_equal ? ay : 0.0h);
+    }
 
-    if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
+    if (BUILTIN_ISINF_F16(ax) || x == 0.0h) {
         ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (y < 0.0h) ? 0.0h : PINF_F16,
                                    is_odd_y ? x : 0.0h);
+    }
 
     if (BUILTIN_ISUNORDERED_F16(x, y))
         ret = QNAN_F16;

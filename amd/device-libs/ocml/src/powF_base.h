@@ -86,8 +86,10 @@ MATH_MANGLE(pow)(float x, float y)
     if (x < 0.0f && !is_integer(ay))
         ret = QNAN_F32;
 
-    if (BUILTIN_ISINF_F32(ay))
-        ret = ax == 1.0f ? ax : (samesign(y, ax - 1.0f) ? ay : 0.0f);
+    bool signs_equal = samesign(y, ax - 1.0f);
+    if (BUILTIN_ISINF_F32(ay)) {
+        ret = ax == 1.0f ? ax : (signs_equal ? ay : 0.0f);
+    }
 
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,

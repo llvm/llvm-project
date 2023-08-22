@@ -52,8 +52,10 @@ MATH_MANGLE(pow)(double x, double y)
     if (x < 0.0 && !is_integer(ay))
         ret = QNAN_F64;
 
-    if (BUILTIN_ISINF_F64(ay))
-        ret = ax == 1.0 ? ax : (samesign(y, ax - 1.0) ? ay : 0.0);
+    bool signs_equal = samesign(y, ax - 1.0);
+    if (BUILTIN_ISINF_F64(ay)) {
+        ret = ax == 1.0 ? ax : (signs_equal ? ay : 0.0);
+    }
 
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : PINF_F64,
