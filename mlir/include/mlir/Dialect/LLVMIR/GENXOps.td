@@ -110,37 +110,37 @@ class GENX_DeviceFunctionOp<string mnemonic, string device_function,
 // Thread index and Block index
 
 def GENX_ThreadIdXOp : GENX_DeviceFunctionOp<"workitem.id.x",
-                        "get_local_id", 0>;
+                        "_Z12get_local_idj", 0>;
 def GENX_ThreadIdYOp : GENX_DeviceFunctionOp<"workitem.id.y",
-                        "get_local_id", 1>;
+                        "_Z12get_local_idj", 1>;
 def GENX_ThreadIdZOp : GENX_DeviceFunctionOp<"workitem.id.z",
-                        "get_local_id", 2>;
+                        "_Z12get_local_idj", 2>;
 def GENX_BlockIdXOp : GENX_DeviceFunctionOp<"workgroup.id.x",
-                        "get_group_id", 0>;
+                        "_Z12get_group_idj", 0>;
 def GENX_BlockIdYOp : GENX_DeviceFunctionOp<"workgroup.id.y",
-                        "get_group_id", 1>;
+                        "_Z12get_group_idj", 1>;
 def GENX_BlockIdZOp : GENX_DeviceFunctionOp<"workgroup.id.z",
-                        "get_group_id", 2>;
+                        "_Z12get_group_idj", 2>;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
 
 def GENX_BlockDimXOp : GENX_DeviceFunctionOp<"workgroup.dim.x",
-                        "get_local_size", 0>;
+                        "_Z12get_local_sizej", 0>;
 
 def GENX_BlockDimYOp : GENX_DeviceFunctionOp<"workgroup.dim.y",
-                        "get_local_size", 1>;
+                        "_Z12get_local_sizej", 1>;
 
 def GENX_BlockDimZOp : GENX_DeviceFunctionOp<"workgroup.dim.z",
-                        "get_local_size", 2>;
+                        "_Z12get_local_sizej", 2>;
 
 def GENX_GridDimXOp : GENX_DeviceFunctionOp<"grid.dim.x",
-                        "get_global_size", 0>;
+                        "_Z12get_global_sizej", 0>;
 
 def GENX_GridDimYOp : GENX_DeviceFunctionOp<"grid.dim.y",
-                        "get_global_size", 1>;
+                        "_Z12get_global_sizej", 1>;
 
 def GENX_GridDimZOp : GENX_DeviceFunctionOp<"grid.dim.z",
-                        "get_global_size", 2>;
+                        "_Z12get_global_sizej", 2>;
 
 #endif // GENXIR_OPS
