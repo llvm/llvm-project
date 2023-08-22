@@ -1239,13 +1239,12 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
-void init_cpu_features_resolver(unsigned long hwcap, const __ifunc_arg_t *arg) {
+static void __init_cpu_features_constructor(unsigned long hwcap,
+                                            const __ifunc_arg_t *arg) {
 #define setCPUFeature(F) __aarch64_cpu_features.features |= 1ULL << F
 #define getCPUFeature(id, ftr) __asm__("mrs %0, " #id : "=r"(ftr))
 #define extractBits(val, start, number)                                        \
   (val & ((1ULL << number) - 1ULL) << start) >> start
-  if (__aarch64_cpu_features.features)
-    return;
   unsigned long hwcap2 = 0;
   if (hwcap & _IFUNC_ARG_HWCAP)
     hwcap2 = arg->_hwcap2;
@@ -1427,7 +1426,24 @@ void init_cpu_features_resolver(unsigned long hwcap, const __ifunc_arg_t *arg) {
   setCPUFeature(FEAT_MAX);
 }
 
-void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
+void __init_cpu_features_resolver(unsigned long hwcap,
+                                  const __ifunc_arg_t *arg) {
+  if (__aarch64_cpu_features.features)
+    return;
+#if defined(__ANDROID__)
+  // ifunc resolvers don't have hwcaps in arguments on Android API lower
+  // than 30. If so, set feature detection done and keep all CPU features
+  // unsupported (zeros). To detect this case in runtime we check existence
+  // of memfd_create function from Standard C library which was introduced in
+  // Android API 30.
+  int memfd_create(const char *, unsigned int) __attribute__((weak));
+  if (!memfd_create)
+    return;
+#endif // defined(__ANDROID__)
+  __init_cpu_features_constructor(hwcap, arg);
+}
+
+void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   unsigned long hwcap;
   unsigned long hwcap2;
   // CPU features already initialized.
@@ -1452,7 +1468,7 @@ void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
   arg._size = sizeof(__ifunc_arg_t);
   arg._hwcap = hwcap;
   arg._hwcap2 = hwcap2;
-  init_cpu_features_resolver(hwcap | _IFUNC_ARG_HWCAP, &arg);
+  __init_cpu_features_constructor(hwcap | _IFUNC_ARG_HWCAP, &arg);
 #undef extractBits
 #undef getCPUFeature
 #undef setCPUFeature
