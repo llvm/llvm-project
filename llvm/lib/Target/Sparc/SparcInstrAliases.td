@@ -443,6 +443,13 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
 
+// setx value, tmp, rd
+// (turns into a sequence of sethi+or+shift, depending on the value)
+def SETX : AsmPseudoInst<(outs I64Regs:$rd),
+                         (ins i64imm:$val, I64Regs:$tmp),
+                         "setx $val, $tmp, $rd">,
+                         Requires<[Is64Bit, HasV9]>;
+
 // not rd -> xnor rd, %g0, rd
 def : InstAlias<"not $rd", (XNORrr IntRegs:$rd, IntRegs:$rd, G0), 0>;
 
