@@ -26,5 +26,6 @@ clang_target_link_libraries(LexTests
 
 target_link_libraries(LexTests
   PRIVATE
+  LLVMTestingAnnotations
   LLVMTestingSupport
   )
