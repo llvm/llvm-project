@@ -159,6 +159,8 @@ protected:
   llvm::StringSet<> visitedCategories;
 
 public:
+  void visitNamespaceRecord(const NamespaceRecord &Record);
+
   /// Visit a global function record.
   void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record);
 

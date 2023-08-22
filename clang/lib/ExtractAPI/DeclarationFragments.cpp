@@ -423,6 +423,16 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   return QualsFragments.appendSpace().append(std::move(TypeFragments));
 }
 
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForNamespace(
+    const NamespaceDecl *Decl) {
+  DeclarationFragments Fragments;
+  Fragments.append("namespace", DeclarationFragments::FragmentKind::Keyword);
+  if (!Decl->isAnonymousNamespace())
+    Fragments.appendSpace().append(
+        Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
+}
+
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   DeclarationFragments Fragments;
