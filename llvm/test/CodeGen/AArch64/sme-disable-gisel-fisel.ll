@@ -357,3 +357,66 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
   %res = fadd fp128 %a, %b
   ret fp128 %res
 }
+
+; FIXME: As above this should use Selection DAG to make sure the libcall call is lowered correctly.
+define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nounwind {
+; CHECK-FISEL-LABEL: frem_call_za:
+; CHECK-FISEL:       // %bb.0:
+; CHECK-FISEL-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-FISEL-NEXT:    mov x29, sp
+; CHECK-FISEL-NEXT:    sub sp, sp, #16
+; CHECK-FISEL-NEXT:    rdsvl x8, #1
+; CHECK-FISEL-NEXT:    mov x9, sp
+; CHECK-FISEL-NEXT:    mul x8, x8, x8
+; CHECK-FISEL-NEXT:    sub x9, x9, x8
+; CHECK-FISEL-NEXT:    mov sp, x9
+; CHECK-FISEL-NEXT:    stur x9, [x29, #-16]
+; CHECK-FISEL-NEXT:    sub x9, x29, #16
+; CHECK-FISEL-NEXT:    sturh w8, [x29, #-8]
+; CHECK-FISEL-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-FISEL-NEXT:    bl fmod
+; CHECK-FISEL-NEXT:    smstart za
+; CHECK-FISEL-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-FISEL-NEXT:    sub x0, x29, #16
+; CHECK-FISEL-NEXT:    cbnz x8, .LBB10_2
+; CHECK-FISEL-NEXT:  // %bb.1:
+; CHECK-FISEL-NEXT:    bl __arm_tpidr2_restore
+; CHECK-FISEL-NEXT:  .LBB10_2:
+; CHECK-FISEL-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-FISEL-NEXT:    mov sp, x29
+; CHECK-FISEL-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-FISEL-NEXT:    ret
+;
+; CHECK-GISEL-LABEL: frem_call_za:
+; CHECK-GISEL:       // %bb.0:
+; CHECK-GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GISEL-NEXT:    bl fmod
+; CHECK-GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GISEL-NEXT:    ret
+  %res = frem double %a, %b
+  ret double %res
+}
+
+; FIXME: As above this should use Selection DAG to make sure the libcall is lowered correctly.
+define float @frem_call_sm(float %a, float %b) "aarch64_pstate_sm_enabled" nounwind {
+; CHECK-COMMON-LABEL: frem_call_sm:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    bl fmodf
+; CHECK-COMMON-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
+  %res = frem float %a, %b
+  ret float %res
+}
+
+; FIXME: As above this should use Selection DAG to make sure the libcall is lowered correctly.
+define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compatible" nounwind {
+; CHECK-COMMON-LABEL: frem_call_sm_compat:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    bl fmodf
+; CHECK-COMMON-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
+  %res = frem float %a, %b
+  ret float %res
+}
