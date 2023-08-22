@@ -2674,6 +2674,23 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       if (U.get() == PN)
         return true;
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
+      // Check if the branch on the phi excludes zero.
+      ICmpInst::Predicate Pred;
+      Value *X;
+      BasicBlock *TrueSucc, *FalseSucc;
+      if (match(RecQ.CxtI,
+                m_Br(m_c_ICmp(Pred, m_Specific(U.get()), m_Value(X)),
+                     m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
+        // Check for cases of duplicate successors.
+        if ((TrueSucc == PN->getParent()) != (FalseSucc == PN->getParent())) {
+          // If we're using the false successor, invert the predicate.
+          if (FalseSucc == PN->getParent())
+            Pred = CmpInst::getInversePredicate(Pred);
+          if (cmpExcludesZero(Pred, X))
+            return true;
+        }
+      }
+      // Finally recurse on the edge and check it directly.
       return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
   }

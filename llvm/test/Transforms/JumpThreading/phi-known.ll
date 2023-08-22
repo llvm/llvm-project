@@ -66,9 +66,7 @@ define void @test_mixed(ptr %p) {
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq ptr [[P]], null
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[EXIT:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P1:%.*]] = phi ptr [ [[P]], [[ENTRY:%.*]] ], [ [[P1]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne ptr [[P1]], null
-; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT]], label [[LOOP]]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
