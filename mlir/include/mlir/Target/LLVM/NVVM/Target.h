@@ -16,13 +16,15 @@
 namespace mlir {
 class DialectRegistry;
 class MLIRContext;
+namespace NVVM {
 /// Registers the `TargetAttrInterface` for the `#nvvm.target` attribute in the
 /// given registry.
-void registerNVVMTarget(DialectRegistry &registry);
+void registerNVVMTargetInterfaceExternalModels(DialectRegistry &registry);
 
 /// Registers the `TargetAttrInterface` for the `#nvvm.target` attribute in the
 /// registry associated with the given context.
-void registerNVVMTarget(MLIRContext &context);
+void registerNVVMTargetInterfaceExternalModels(MLIRContext &context);
+} // namespace NVVM
 } // namespace mlir
 
 #endif // MLIR_TARGET_LLVM_NVVM_TARGET_H
