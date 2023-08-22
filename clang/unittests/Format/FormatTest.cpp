@@ -7936,7 +7936,6 @@ TEST_F(FormatTest, BreakBeforeInlineASMColon) {
 TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
-
   verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}");
   verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}",
                getStyleWithColumns(Style, 45));
@@ -7950,6 +7949,11 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   verifyFormat("template <typename T>\n"
                "Constructor() : Initializer(FitsOnTheLine) {}",
                getStyleWithColumns(Style, 50));
+  verifyFormat(
+      "Class::Class(int some, int arguments, int loooooooooooooonoooooog,\n"
+      "             int mooooooooooooore) noexcept :\n"
+      "    Super{some, arguments}, Member{5} {}",
+      Style);
   Style.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
   verifyFormat(
       "SomeClass::Constructor() :\n"
@@ -7987,8 +7991,8 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "    aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
       Style);
   verifyFormat("Constructor(aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "            aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) :\n"
-               "    aaaaaaaaaa(aaaaaa) {}",
+               "            aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) : "
+               "aaaaaaaaaa(aaaaaa) {}",
                Style);
 
   verifyFormat("Constructor() :\n"
