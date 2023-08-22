@@ -1476,21 +1476,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
               // If we're using the false successor, invert the predicate.
               if (FalseSucc == P->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
-
-              switch (Pred) {
-              case CmpInst::Predicate::ICMP_EQ:
-                Known2 = KnownBits::makeConstant(*RHSC);
-                break;
-              case CmpInst::Predicate::ICMP_ULE:
-                Known2.Zero.setHighBits(RHSC->countl_zero());
-                break;
-              case CmpInst::Predicate::ICMP_ULT:
-                Known2.Zero.setHighBits((*RHSC - 1).countl_zero());
-                break;
-              default:
-                // TODO - add additional integer predicate handling.
-                break;
-              }
+              // Get the knownbits implied by the incoming phi condition.
+              auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
+              Known2 = CR.toKnownBits();
             }
           }
         }
