@@ -1459,11 +1459,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         // Recurse, but cap the recursion to one level, because we don't
         // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
         computeKnownBits(IncValue, Known2, MaxAnalysisRecursionDepth - 1, RecQ);
 
-        // If this failed, see if we can use a conditional branch into the phi
+        // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
-        if (Known2.isUnknown()) {
+        if (!Known2.isConstant()) {
           ICmpInst::Predicate Pred;
           const APInt *RHSC;
           BasicBlock *TrueSucc, *FalseSucc;
@@ -1478,7 +1480,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
               auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
-              Known2 = CR.toKnownBits();
+              Known2 = Known2.unionWith(CR.toKnownBits());
             }
           }
         }
