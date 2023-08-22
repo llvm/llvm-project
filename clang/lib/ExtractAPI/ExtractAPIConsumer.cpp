@@ -187,9 +187,7 @@ struct LocationFileChecker {
     if (ExternalFileEntries.count(File))
       return false;
 
-    StringRef FileName = File->tryGetRealPathName().empty()
-                             ? File->getName()
-                             : File->tryGetRealPathName();
+    StringRef FileName = SM.getFileManager().getCanonicalName(File);
 
     // Try to reduce the include name the same way we tried to include it.
     bool IsQuoted = false;
