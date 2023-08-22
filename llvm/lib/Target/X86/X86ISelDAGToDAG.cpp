@@ -2216,11 +2216,30 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return N;
 
+  // index: add(x,c) -> index: x, disp + c
   if (CurDAG->isBaseWithConstantOffset(N)) {
     auto *AddVal = cast<ConstantSDNode>(N.getOperand(1));
     uint64_t Offset = (uint64_t)AddVal->getSExtValue() * AM.Scale;
     if (!foldOffsetIntoAddress(Offset, AM))
       return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+  }
+
+  // index: add(x,x) -> index: x, scale * 2
+  if (N.getOpcode() == ISD::ADD && N.getOperand(0) == N.getOperand(1)) {
+    if (AM.Scale <= 4) {
+      AM.Scale *= 2;
+      return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+    }
+  }
+
+  // index: shl(x,i) -> index: x, scale * (1 << i)
+  if (N.getOpcode() == X86ISD::VSHLI) {
+    uint64_t ShiftAmt = N.getConstantOperandVal(1);
+    uint64_t ScaleAmt = 1ULL << ShiftAmt;
+    if ((AM.Scale * ScaleAmt) <= 8) {
+      AM.Scale *= ScaleAmt;
+      return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+    }
   }
 
   // TODO: Handle extensions, shifted masks etc.
@@ -2672,8 +2691,14 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
                                        SDValue &Index, SDValue &Disp,
                                        SDValue &Segment) {
   X86ISelAddressMode AM;
-  AM.IndexReg = IndexOp;
   AM.Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+
+  // Attempt to match index patterns, as long as we're not relying on implicit
+  // sign-extension, which is performed BEFORE scale.
+  if (IndexOp.getScalarValueSizeInBits() == BasePtr.getScalarValueSizeInBits())
+    AM.IndexReg = matchIndexRecursively(IndexOp, AM, 0);
+  else
+    AM.IndexReg = IndexOp;
 
   unsigned AddrSpace = Parent->getPointerInfo().getAddrSpace();
   if (AddrSpace == X86AS::GS)
