@@ -125,11 +125,13 @@ class AArch64ZAThreadedTestCase(TestBase):
                 self.runCmd("thread select %d" % (idx + 1))
                 self.check_za_register(4, 2)
                 self.runCmd("register write vg 2")
+                self.check_disabled_za_register(2)
 
             elif stopped_at_line_number == thY_break_line1:
                 self.runCmd("thread select %d" % (idx + 1))
                 self.check_za_register(2, 3)
                 self.runCmd("register write vg 4")
+                self.check_disabled_za_register(4)
 
         self.runCmd("thread continue 2")
         self.runCmd("thread continue 3")
