@@ -323,9 +323,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
-  if (!isPositionIndependent() || TM.getCodeModel() == CodeModel::Large)
-    // With the large code model, None forces all memory accesses to be indirect
-    // rather than RIP-relative.
+  if (!isPositionIndependent())
     setPICStyle(PICStyles::Style::None);
   else if (is64Bit())
     setPICStyle(PICStyles::Style::RIPRel);
