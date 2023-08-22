@@ -7198,6 +7198,34 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
+  // Reduce the LMUL of our slidedown and vmv.x.s to the smallest LMUL which
+  // contains our index.
+  std::optional<uint64_t> MaxIdx;
+  if (VecVT.isFixedLengthVector())
+    MaxIdx = VecVT.getVectorNumElements() - 1;
+  if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx))
+    MaxIdx = IdxC->getZExtValue();
+  if (MaxIdx) {
+    const unsigned EltSize = ContainerVT.getScalarSizeInBits();
+    const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+    const unsigned MinVLMAX = VectorBitsMin/EltSize;
+    MVT SmallerVT;
+    if (*MaxIdx < MinVLMAX)
+      SmallerVT = getLMUL1VT(ContainerVT);
+    else if (*MaxIdx < MinVLMAX * 2)
+      SmallerVT = getLMUL1VT(ContainerVT)
+        .getDoubleNumVectorElementsVT();
+    else if (*MaxIdx < MinVLMAX * 4)
+      SmallerVT = getLMUL1VT(ContainerVT)
+        .getDoubleNumVectorElementsVT()
+        .getDoubleNumVectorElementsVT();
+    if (SmallerVT.isValid() && ContainerVT.bitsGT(SmallerVT)) {
+      ContainerVT = SmallerVT;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                        DAG.getConstant(0, DL, XLenVT));
+    }
+  }
+
   // If the index is 0, the vector is already in the right position.
   if (!isNullConstant(Idx)) {
     // Use a VL of 1 to avoid processing more elements than we need.

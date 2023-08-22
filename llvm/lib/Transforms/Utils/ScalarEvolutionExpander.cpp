@@ -1458,8 +1458,64 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty) {
   return V;
 }
 
-Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
-                                             const Instruction *InsertPt) {
+static bool
+canReuseInstruction(ScalarEvolution &SE, const SCEV *S, Instruction *I,
+                    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
+  // If the instruction cannot be poison, it's always safe to reuse.
+  if (programUndefinedIfPoison(I))
+    return true;
+
+  // Otherwise, it is possible that I is more poisonous that S. Collect the
+  // poison-contributors of S, and then check whether I has any additional
+  // poison-contributors. Poison that is contributed through poison-generating
+  // flags is handled by dropping those flags instead.
+  SmallPtrSet<const Value *, 8> PoisonVals;
+  SE.getPoisonGeneratingValues(PoisonVals, S);
+
+  SmallVector<Value *> Worklist;
+  SmallPtrSet<Value *, 8> Visited;
+  Worklist.push_back(I);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    // Avoid walking large instruction graphs.
+    if (Visited.size() > 16)
+      return false;
+
+    // Either the value can't be poison, or the S would also be poison if it
+    // is.
+    if (PoisonVals.contains(V) || isGuaranteedNotToBePoison(V))
+      continue;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+
+    // FIXME: Ignore vscale, even though it technically could be poison. Do this
+    // because SCEV currently assumes it can't be poison. Remove this special
+    // case once we proper model when vscale can be poison.
+    if (auto *II = dyn_cast<IntrinsicInst>(I);
+        II && II->getIntrinsicID() == Intrinsic::vscale)
+      continue;
+
+    if (canCreatePoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false))
+      return false;
+
+    // If the instruction can't create poison, we can recurse to its operands.
+    if (I->hasPoisonGeneratingFlagsOrMetadata())
+      DropPoisonGeneratingInsts.push_back(I);
+
+    for (Value *Op : I->operands())
+      Worklist.push_back(Op);
+  }
+  return true;
+}
+
+Value *SCEVExpander::FindValueInExprValueMap(
+    const SCEV *S, const Instruction *InsertPt,
+    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
   if (!CanonicalMode && SE.containsAddRecurrence(S))
@@ -1483,7 +1539,10 @@ Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
           SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
       continue;
 
-    return V;
+    // Make sure reusing the instruction is poison-safe.
+    if (canReuseInstruction(SE, S, EntInst, DropPoisonGeneratingInsts))
+      return V;
+    DropPoisonGeneratingInsts.clear();
   }
   return nullptr;
 }
@@ -1554,18 +1613,14 @@ Value *SCEVExpander::expand(const SCEV *S) {
   Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
-  Value *V = FindValueInExprValueMap(S, InsertPt);
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  Value *V = FindValueInExprValueMap(S, InsertPt, DropPoisonGeneratingInsts);
   if (!V) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
   } else {
-    // If we're reusing an existing instruction, we are effectively CSEing two
-    // copies of the instruction (with potentially different flags).  As such,
-    // we need to drop any poison generating flags unless we can prove that
-    // said flags must be valid for all new users.
-    if (auto *I = dyn_cast<Instruction>(V))
-      if (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I))
-        I->dropPoisonGeneratingFlags();
+    for (Instruction *I : DropPoisonGeneratingInsts)
+      I->dropPoisonGeneratingFlagsAndMetadata();
   }
   // Remember the expanded value for this SCEV at this location.
   //
@@ -1773,7 +1828,8 @@ bool SCEVExpander::hasRelatedExistingExpansion(const SCEV *S,
   // ExprValueMap.  Note that we don't currently model the cost of
   // needing to drop poison generating flags on the instruction if we
   // want to reuse it.  We effectively assume that has zero cost.
-  return FindValueInExprValueMap(S, At) != nullptr;
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  return FindValueInExprValueMap(S, At, DropPoisonGeneratingInsts) != nullptr;
 }
 
 template<typename T> static InstructionCost costAndCollectOperands(

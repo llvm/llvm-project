@@ -6582,7 +6582,7 @@ define i64 @vreduce_mul_v32i64(ptr %x) {
 ; RV32-NEXT:    vmul.vv v8, v8, v16
 ; RV32-NEXT:    vrgather.vi v16, v8, 1
 ; RV32-NEXT:    vmul.vv v8, v8, v16
-; RV32-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -6634,7 +6634,7 @@ define i64 @vreduce_mul_v64i64(ptr %x) nounwind {
 ; RV32-NEXT:    vmul.vv v8, v8, v16
 ; RV32-NEXT:    vrgather.vi v16, v8, 1
 ; RV32-NEXT:    vmul.vv v8, v8, v16
-; RV32-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vmv.x.s a1, v8
