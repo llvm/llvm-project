@@ -270,6 +270,13 @@ InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) {
   return getLMULCost(VT) * getLMULCost(VT);
 }
 
+/// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
+/// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) {
+  return getLMULCost(VT);
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -436,9 +443,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
     // Example sequence:
     //   vrgather.vi     v9, v8, 0
-    // TODO: vrgather could be slower than vmv.v.x. It is
-    // implementation-dependent.
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVRGatherVICost(LT.second);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
