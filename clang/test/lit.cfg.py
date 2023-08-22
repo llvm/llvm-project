@@ -377,8 +377,8 @@ if "aix" in config.target_triple:
     ):
         exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
-if os.path.exists(os.path.join(config.clang_src_dir, 'TeSt')):
-    config.available_features.add('case_insensitive_src_dir')
+if os.path.exists(os.path.join(config.clang_obj_root, 'TeSt')):
+    config.available_features.add('case_insensitive_build_dir')
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The
