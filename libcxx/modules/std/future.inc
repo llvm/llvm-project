@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#ifndef _LIBCPP_HAS_NO_THREADS
   using std::future_errc;
   using std::future_status;
   using std::launch;
@@ -50,4 +51,5 @@ export namespace std {
 
   // [futures.async], function template async
   using std::async;
+#endif // _LIBCPP_HAS_NO_THREADS
 } // namespace std

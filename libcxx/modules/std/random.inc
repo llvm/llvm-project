@@ -42,8 +42,10 @@ export namespace std {
 
   using std::default_random_engine;
 
+#ifndef _LIBCPP_HAS_NO_RANDOM_DEVICE
   // [rand.device], class random_device
   using std::random_device;
+#endif
 
   // [rand.util.seedseq], class seed_seq
   using std::seed_seq;

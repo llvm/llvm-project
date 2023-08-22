@@ -125,7 +125,7 @@ protected:
   bool HasSDWAOutModsVOPC = false;
   bool HasDPP = false;
   bool HasDPP8 = false;
-  bool Has64BitDPP = false;
+  bool HasDPALU_DPP = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -908,8 +908,8 @@ public:
     return HasDPP8;
   }
 
-  bool has64BitDPP() const {
-    return Has64BitDPP;
+  bool hasDPALU_DPP() const {
+    return HasDPALU_DPP;
   }
 
   bool hasPackedFP32Ops() const {

@@ -388,7 +388,9 @@ elif platform.system() == "AIX":
 # "OBJECT_MODE" to "any" by default on AIX OS.
 
 if "system-aix" in config.available_features:
-   config.environment["OBJECT_MODE"] = "any"
+   config.substitutions.append(("llvm-nm", "env OBJECT_MODE=any llvm-nm"))
+   config.substitutions.append(("llvm-ar", "env OBJECT_MODE=any llvm-ar"))
+   config.substitutions.append(("llvm-ranlib", "env OBJECT_MODE=any llvm-ranlib"))
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

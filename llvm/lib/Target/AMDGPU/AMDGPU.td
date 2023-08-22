@@ -454,10 +454,10 @@ def FeatureDPP8 : SubtargetFeature<"dpp8",
   "Support DPP8 (Data Parallel Primitives) extension"
 >;
 
-def Feature64BitDPP : SubtargetFeature<"dpp-64bit",
-  "Has64BitDPP",
+def FeatureDPALU_DPP : SubtargetFeature<"dpp-64bit",
+  "HasDPALU_DPP",
   "true",
-  "Support DPP (Data Parallel Primitives) extension"
+  "Support DPP (Data Parallel Primitives) extension in DP ALU"
 >;
 
 def FeaturePackedFP32Ops : SubtargetFeature<"packed-fp32-ops",
@@ -1179,7 +1179,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
      FeatureFmacF64Inst,
-     Feature64BitDPP,
+     FeatureDPALU_DPP,
      FeaturePackedFP32Ops,
      FeatureAtomicFaddRtnInsts,
      FeatureAtomicBufferGlobalPkAddF16Insts,
@@ -1213,7 +1213,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureDot10Insts,
    FeatureAtomicDsPkAdd16Insts,
    FeatureAtomicFlatPkAdd16Insts,
-   Feature64BitDPP,
+   FeatureDPALU_DPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
    FeatureFP8Insts,
@@ -1699,8 +1699,8 @@ def HasDPP : Predicate<"Subtarget->hasDPP()">,
 def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureGFX10Insts, FeatureDPP8)>;
 
-def Has64BitDPP : Predicate<"Subtarget->has64BitDPP()">,
-  AssemblerPredicate<(all_of Feature64BitDPP)>;
+def HasDPALU_DPP : Predicate<"Subtarget->hasDPALU_DPP()">,
+  AssemblerPredicate<(all_of FeatureDPALU_DPP)>;
 
 def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP32Ops)>;

@@ -4892,6 +4892,12 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return false;
 }
 
+void AArch64InstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  BuildMI(MBB, MI, DL, get(AArch64::HINT)).addImm(0);
+}
+
 MCInst AArch64InstrInfo::getNop() const {
   return MCInstBuilder(AArch64::HINT).addImm(0);
 }

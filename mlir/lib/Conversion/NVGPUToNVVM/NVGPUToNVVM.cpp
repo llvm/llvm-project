@@ -417,6 +417,10 @@ struct ConvertNVGPUToNVVMPass
     converter.addConversion([&](nvgpu::MBarrierTokenType type) -> Type {
       return converter.convertType(IntegerType::get(type.getContext(), 64));
     });
+    converter.addConversion(
+        [&](nvgpu::WarpgroupMatrixDescriptorType type) -> Type {
+          return converter.convertType(IntegerType::get(type.getContext(), 64));
+        });
     converter.addConversion([&](nvgpu::MBarrierType type) -> Type {
       return converter.convertType(
           nvgpu::getMBarrierMemrefType(rewriter.getContext(), type));

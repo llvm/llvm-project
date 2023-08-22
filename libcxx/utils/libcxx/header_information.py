@@ -141,6 +141,26 @@ mandatory_inclusions = {
     "vector": ["compare", "initializer_list"],
 }
 
+
+# These headers are not yet implemented in libc++
+#
+# These headers are required by the latest (draft) Standard but have not been
+# implemented yet. They are used in the generated module input. The C++23 standard
+# modules will fail to build if a header is added but this list is not updated.
+headers_not_available = [
+    "flat_map",
+    "flat_set",
+    "generator",
+    "hazard_pointer",
+    "rcu",
+    "spanstream",
+    "stacktrace",
+    "stdfloat",
+    "syncstream",
+    "text_encoding",
+]
+
+
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
     return (
@@ -159,6 +179,19 @@ toplevel_headers = sorted(
     p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
 )
 experimental_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.glob("experimental/[a-z]*") if is_header(p)
+    p.relative_to(include).as_posix()
+    for p in include.glob("experimental/[a-z]*")
+    if is_header(p)
 )
 public_headers = toplevel_headers + experimental_headers
+
+# The headers used in the std and std.compat modules.
+#
+# This is the set of all C++23-and-later headers, excluding C compatibility headers.
+module_headers = [
+    header
+    for header in toplevel_headers
+    if not header.endswith(".h")
+    # These headers have been removed in C++20 so are never part of a module.
+    and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+]

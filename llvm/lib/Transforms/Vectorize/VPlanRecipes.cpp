@@ -114,6 +114,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
+  case VPInstructionSC:
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case VPInstruction::Not:
+    case VPInstruction::ICmpULE:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrement:
+    case VPInstruction::CanonicalIVIncrementForPart:
+      return false;
+    default:
+      return true;
+    }
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();

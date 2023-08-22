@@ -4671,6 +4671,11 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   }
 #endif /* KMP_ADJUST_BLOCKTIME */
 
+#if KMP_AFFINITY_SUPPORTED
+  // Set the affinity and topology information for new thread
+  __kmp_affinity_set_init_mask(new_gtid, /*isa_root=*/FALSE);
+#endif
+
   /* actually fork it and create the new worker thread */
   KF_TRACE(
       10, ("__kmp_allocate_thread: before __kmp_create_worker: %p\n", new_thr));
@@ -4764,6 +4769,19 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
 }
 
 #if KMP_AFFINITY_SUPPORTED
+static inline void __kmp_set_thread_place(kmp_team_t *team, kmp_info_t *th,
+                                          int first, int last, int newp) {
+  th->th.th_first_place = first;
+  th->th.th_last_place = last;
+  th->th.th_new_place = newp;
+  if (newp != th->th.th_current_place) {
+    if (__kmp_display_affinity && team->t.t_display_affinity != 1)
+      team->t.t_display_affinity = 1;
+    // Copy topology information associated with the new place
+    th->th.th_topology_ids = __kmp_affinity.ids[th->th.th_new_place];
+    th->th.th_topology_attrs = __kmp_affinity.attrs[th->th.th_new_place];
+  }
+}
 
 // __kmp_partition_places() is the heart of the OpenMP 4.0 affinity mechanism.
 // It calculates the worker + primary thread's partition based upon the parent
@@ -4803,13 +4821,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     for (f = 1; f < n_th; f++) {
       kmp_info_t *th = team->t.t_threads[f];
       KMP_DEBUG_ASSERT(th != NULL);
-      th->th.th_first_place = first_place;
-      th->th.th_last_place = last_place;
-      th->th.th_new_place = masters_place;
-      if (__kmp_display_affinity && masters_place != th->th.th_current_place &&
-          team->t.t_display_affinity != 1) {
-        team->t.t_display_affinity = 1;
-      }
+      __kmp_set_thread_place(team, th, first_place, last_place, masters_place);
 
       KA_TRACE(100, ("__kmp_partition_places: primary: T#%d(%d:%d) place %d "
                      "partition = [%d,%d]\n",
@@ -4840,13 +4852,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else {
           place++;
         }
-        th->th.th_first_place = first_place;
-        th->th.th_last_place = last_place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, first_place, last_place, place);
 
         KA_TRACE(100, ("__kmp_partition_places: close: T#%d(%d:%d) place %d "
                        "partition = [%d,%d]\n",
@@ -4865,13 +4871,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         kmp_info_t *th = team->t.t_threads[f];
         KMP_DEBUG_ASSERT(th != NULL);
 
-        th->th.th_first_place = first_place;
-        th->th.th_last_place = last_place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, first_place, last_place, place);
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {
@@ -4938,12 +4938,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           kmp_info_t *th = team->t.t_threads[f];
           KMP_DEBUG_ASSERT(th != NULL);
 
-          th->th.th_first_place = place;
-          th->th.th_new_place = place;
-          if (__kmp_display_affinity && place != th->th.th_current_place &&
-              team->t.t_display_affinity != 1) {
-            team->t.t_display_affinity = 1;
-          }
+          int fplace = place, nplace = place;
           s_count = 1;
           while (s_count < S) {
             if (place == last_place) {
@@ -4966,7 +4961,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             rem--;
             gap_ct = 0;
           }
-          th->th.th_last_place = place;
+          __kmp_set_thread_place(team, th, fplace, place, nplace);
           gap_ct++;
 
           if (place == last_place) {
@@ -5032,13 +5027,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             KMP_DEBUG_ASSERT(last_place >= first_place);
             th = team->t.t_threads[f];
             KMP_DEBUG_ASSERT(th);
-            th->th.th_first_place = first;
-            th->th.th_new_place = place;
-            th->th.th_last_place = last;
-            if (__kmp_display_affinity && place != th->th.th_current_place &&
-                team->t.t_display_affinity != 1) {
-              team->t.t_display_affinity = 1;
-            }
+            __kmp_set_thread_place(team, th, first, last, place);
             KA_TRACE(100,
                      ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
                       "partition = [%d,%d], spacing = %.4f\n",
@@ -5064,13 +5053,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         kmp_info_t *th = team->t.t_threads[f];
         KMP_DEBUG_ASSERT(th != NULL);
 
-        th->th.th_first_place = place;
-        th->th.th_last_place = place;
-        th->th.th_new_place = place;
-        if (__kmp_display_affinity && place != th->th.th_current_place &&
-            team->t.t_display_affinity != 1) {
-          team->t.t_display_affinity = 1;
-        }
+        __kmp_set_thread_place(team, th, place, place, place);
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {

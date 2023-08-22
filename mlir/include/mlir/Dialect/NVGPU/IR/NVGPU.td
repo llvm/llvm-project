@@ -169,6 +169,30 @@ def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.des
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "wgmma.descriptor", []> {
+  let summary = "Warpgroup matrix descriptor type";
+  let description = [{
+  The descriptor specifies the properties of the matrix in shared memory that 
+  is a multiplicand in the matrix multiply and accumulate operation. 
+  
+  The descriptor is a 64-bit value contained in a register with the following:
+  ```
+  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
+  |   0-13  |14-15|   16-29   |30-31|   32-45   |46-48|49-51|   52-61   |62-63|
+  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
+  |  14bits |2bits|   14bits  |2bits|   14bits  |2bits|3bits|   10bits  |2bits|
+  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
+  | BaseAddr|  0  | LeadingDim|  0  |   Stride  |  0  |Offst|     0     |Swzle|
+  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
+  ```
+   
+  [See for more details in PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor) 
+  
+  }];  
+  let parameters = (ins "MemRefType":$tensor);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // NVGPU Op Definitions
 //===----------------------------------------------------------------------===//
@@ -628,32 +652,18 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
 def NVGPU_GenerateGmmaDescriptorOp : NVGPU_Op<"wgmma.generate.descriptor", []> {
   let summary = "Generate a wgmma matrix descriptor";
   let description = [{
-  This Op builds a wgmma descriptor that is used by wgmma matrix multiply 
-  and accumulate.
+  This Op builds a `nvgpu.wgmma.descriptor` that is used by warpgroup-level 
+  matrix multiply and accumulate.
 
   The descriptor specifies the properties of the matrix in shared memory that 
   is a multiplicand in the matrix multiply and accumulate operation. 
-  
-  The descriptor is a 64-bit value contained in a register with the following
-  ```
-  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
-  |   0-13  |14-15|   16-29   |30-31|   32-45   |46-48|49-51|   52-61   |62-63|
-  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
-  |  14bits |2bits|   14bits  |2bits|   14bits  |2bits|3bits|   10bits  |2bits|
-  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
-  | BaseAddr|  0  | LeadingDim|  0  |   Stride  |  0  |Offst|     0     |Swzle|
-  +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
-  ```
-   
-  See for more details:
-    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor
-
   }];  
-  let results = (outs I64:$descriptor);
+  let results = (outs NVGPU_WarpgroupMatrixDescriptor:$descriptor);
   let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$tensor, 
                        NVGPU_TensorMapDescriptor:$tensorMap);
-  let assemblyFormat = [{$tensor `,` $tensorMap attr-dict `:` type($tensor) `,` type($tensorMap)}];
+  let assemblyFormat = [{$tensor `,` $tensorMap attr-dict `:` type($tensor) `,` type($tensorMap) `->` type($descriptor)}];
   let hasVerifier = 1;
 }
+
 
 #endif // NVGPU
