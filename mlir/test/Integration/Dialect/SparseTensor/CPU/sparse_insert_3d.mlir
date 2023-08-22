@@ -36,11 +36,11 @@
 }>
 
 #CCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed", "compressed_nu", "singleton" ]
 }>
 
 #DCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed-nu", "singleton" ]
+  lvlTypes = [ "dense", "compressed_nu", "singleton" ]
 }>
 
 
