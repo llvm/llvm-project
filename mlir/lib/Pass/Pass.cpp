@@ -18,6 +18,7 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
@@ -424,6 +425,23 @@ LogicalResult OpPassManager::initialize(MLIRContext *context,
   return success();
 }
 
+llvm::hash_code OpPassManager::hash() {
+  llvm::hash_code hashCode;
+  for (Pass &pass : getPasses()) {
+    // If this pass isn't an adaptor, directly hash it.
+    auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
+    if (!adaptor) {
+      hashCode = llvm::hash_combine(hashCode, &pass);
+      continue;
+    }
+    // Otherwise, hash recursively each of the adaptors pass managers.
+    for (OpPassManager &adaptorPM : adaptor->getPassManagers())
+      llvm::hash_combine(hashCode, adaptorPM.hash());
+  }
+  return hashCode;
+}
+
+
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//
@@ -825,10 +843,12 @@ LogicalResult PassManager::run(Operation *op) {
 
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
-  if (newInitKey != initializationKey) {
+  llvm::hash_code pipelineKey = hash();
+  if (newInitKey != initializationKey || pipelineKey != pipelineInitializationKey) {
     if (failed(initialize(context, impl->initializationGeneration + 1)))
       return failure();
     initializationKey = newInitKey;
+    pipelineKey = pipelineInitializationKey;
   }
 
   // Construct a top level analysis manager for the pipeline.
