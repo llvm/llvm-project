@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
   DialectRegistry registry;
   registerAllDialects(registry);
   registerAllExtensions(registry);
-  registerAllToLLVMIRTranslations(registry);
+  registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS
   ::test::registerTestDialect(registry);
