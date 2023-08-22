@@ -32,6 +32,8 @@ endif()
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 
+option(LLVM_ENABLE_FATLTO "Build LLVM with -ffat-lto-objects." OFF)
+
 # Ninja Job Pool support
 # The following only works with the Ninja generator in CMake >= 3.0.
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
@@ -1278,6 +1280,10 @@ elseif(LLVM_ENABLE_LTO)
   if(NOT LINKER_IS_LLD_LINK)
     append("-flto" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
+endif()
+
+if(LLVM_ENABLE_FATLTO AND (FUCHSIA OR UNIX))
+    append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 # Set an AIX default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS based on whether we are
