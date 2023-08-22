@@ -699,8 +699,6 @@ Bug Fixes in This Version
   (`#64005 <https://github.com/llvm/llvm-project/issues/64005>_`)
 - Fix crash on nested templated class with template function call.
   (`#61159 <https://github.com/llvm/llvm-project/issues/61159>_`)
-- Fix crash on use of a variadic overloaded operator.
-  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
 - Fix a hang on valid C code passing a function type as an argument to
   ``typeof`` to form a function declaration.
   (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
