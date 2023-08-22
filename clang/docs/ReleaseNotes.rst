@@ -477,8 +477,6 @@ Bug Fixes in This Version
   instantiated in one module and whose definition is instantiated in another
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
-<<<<<<< HEAD
-
 - Added a new diagnostic warning group
   ``-Wdeprecated-redundant-constexpr-static-def``, under the existing
   ``-Wdeprecated`` group. This controls warnings about out-of-line definitions
