@@ -659,6 +659,13 @@ def TuningFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
                        "Indicates if gather is reasonably fast (this is true for Skylake client and all AVX-512 CPUs)">;
 
+def TuningPreferNoGather
+    : SubtargetFeature<"prefer-no-gather", "PreferGather", "false",
+                       "Prefer no gather instructions">;
+def TuningPreferNoScatter
+    : SubtargetFeature<"prefer-no-scatter", "PreferScatter", "false",
+                       "Prefer no scatter instructions">;
+
 def TuningPrefer128Bit
     : SubtargetFeature<"prefer-128-bit", "Prefer128Bit", "true",
                        "Prefer 128-bit AVX instructions">;
