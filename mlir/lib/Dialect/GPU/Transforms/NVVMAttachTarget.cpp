@@ -38,7 +38,7 @@ struct NVVMAttachTarget
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registerNVVMTarget(registry);
+    registry.insert<NVVM::NVVMDialect>();
   }
 };
 } // namespace

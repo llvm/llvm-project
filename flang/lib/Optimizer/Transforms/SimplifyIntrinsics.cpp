@@ -617,8 +617,18 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Type elementType, mlir::Value elem1,
                       mlir::Value elem2) -> mlir::Value {
-    if (elementType.isa<mlir::FloatType>())
-      return builder.create<mlir::arith::MaxFOp>(loc, elem1, elem2);
+    if (elementType.isa<mlir::FloatType>()) {
+      // arith.maxf later converted to llvm.intr.maxnum does not work
+      // correctly for NaNs and -0.0 (see maxnum/minnum pattern matching
+      // in LLVM's InstCombine pass). Moreover, llvm.intr.maxnum
+      // for F128 operands is lowered into fmaxl call by LLVM.
+      // This libm function may not work properly for F128 arguments
+      // on targets where long double is not F128. It is an LLVM issue,
+      // but we just use normal select here to resolve all the cases.
+      auto compare = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::OGT, elem1, elem2);
+      return builder.create<mlir::arith::SelectOp>(loc, compare, elem1, elem2);
+    }
     if (elementType.isa<mlir::IntegerType>())
       return builder.create<mlir::arith::MaxSIOp>(loc, elem1, elem2);
 

@@ -2247,6 +2247,22 @@ res_vull = vec_promote(ull, 0);
 // CHECK: insertelement <2 x i64>
 // CHECK-LE: store <2 x i64> zeroinitializer
 // CHECK-LE: insertelement <2 x i64>
+
+res_vsc = vec_promote(asc[0], 8);
+// CHECK: store <16 x i8> zeroinitializer
+// CHECK: [[IDX:%.*]] = and i32 {{.*}}, 7
+// CHECK: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
+// CHECK-LE: store <16 x i8> zeroinitializer
+// CHECK-LE: [[IDX:%.*]] = and i32 {{.*}}, 7
+// CHECK-LE: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
+
+res_vuc = vec_promote(auc[0], 8);
+// CHECK: store <16 x i8> zeroinitializer
+// CHECK: [[IDX:%.*]] = and i32 {{.*}}, 7
+// CHECK: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
+// CHECK-LE: store <16 x i8> zeroinitializer
+// CHECK-LE: [[IDX:%.*]] = and i32 {{.*}}, 7
+// CHECK-LE: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
 }
 
 // The return type of the call expression may be different from the return type of the shufflevector.

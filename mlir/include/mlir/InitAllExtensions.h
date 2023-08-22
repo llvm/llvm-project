@@ -23,9 +23,23 @@
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
+#include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
+#include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
-#include "mlir/Target/LLVM/NVVM/Target.h"
-#include "mlir/Target/LLVM/ROCDL/Target.h"
+#include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
+#include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
+#include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
+#include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
+#include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
+#include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+#include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
+#include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
+#include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
+#include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 
 #include <cstdlib>
 
@@ -37,6 +51,7 @@ namespace mlir {
 /// individually register the specific extensions that are useful for the
 /// pipelines and transformations you are using.
 inline void registerAllExtensions(DialectRegistry &registry) {
+  // Register all conversions to LLVM extensions.
   arith::registerConvertArithToLLVMInterface(registry);
   registerConvertComplexToLLVMInterface(registry);
   cf::registerConvertControlFlowToLLVMInterface(registry);
@@ -47,8 +62,23 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   registerConvertMemRefToLLVMInterface(registry);
   registerConvertNVVMToLLVMInterface(registry);
   ub::registerConvertUBToLLVMInterface(registry);
-  registerNVVMTarget(registry);
-  registerROCDLTarget(registry);
+
+  // Register all transform dialect extensions.
+  affine::registerTransformDialectExtension(registry);
+  bufferization::registerTransformDialectExtension(registry);
+  func::registerTransformDialectExtension(registry);
+  gpu::registerTransformDialectExtension(registry);
+  linalg::registerTransformDialectExtension(registry);
+  memref::registerTransformDialectExtension(registry);
+  nvgpu::registerTransformDialectExtension(registry);
+  scf::registerTransformDialectExtension(registry);
+  sparse_tensor::registerTransformDialectExtension(registry);
+  tensor::registerTransformDialectExtension(registry);
+  transform::registerPDLExtension(registry);
+  vector::registerTransformDialectExtension(registry);
+
+  // Translation extensions need to be registered by calling
+  // `registerAllToLLVMIRTranslations` (see All.h).
 }
 
 } // namespace mlir
