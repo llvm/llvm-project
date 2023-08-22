@@ -87,8 +87,6 @@ public:
   void runOnOperation() final;
 
 protected:
-  void getDependentDialects(DialectRegistry &registry) const override;
-
   /// Hook allowing the application of optimizations before codegen
   /// By default, does nothing
   virtual LogicalResult optimizeLlvm(llvm::Module &llvmModule,
