@@ -566,6 +566,8 @@ void sparse_tensor::foreachInSparseConstant(
                   continue;
                 return lhsCoords[l].getInt() < rhsCoords[l].getInt();
               }
+              if (std::addressof(lhs) == std::addressof(rhs))
+                return false;
               llvm_unreachable("no equal coordinate in sparse element attr");
             });
 
