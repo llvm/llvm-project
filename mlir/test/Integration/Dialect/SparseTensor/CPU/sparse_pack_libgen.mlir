@@ -27,11 +27,11 @@
 // after sparse_tensor.unpack is supported on libgen path.
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #SortedCOOI32 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   posWidth = 32,
   crdWidth = 32
 }>
@@ -42,9 +42,9 @@
   crdWidth = 32
 }>
 
-// TODO: "compressed-hi" is not supported by libgen path.
+// TODO: "compressed_hi" is not supported by libgen path.
 // #BCOO = #sparse_tensor.encoding<{
-//   lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ]
+//   lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ]
 //}>
 
 module {

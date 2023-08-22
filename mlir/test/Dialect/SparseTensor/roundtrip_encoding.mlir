@@ -55,31 +55,31 @@ func.func private @sparse_dcsc(tensor<?x?xf32, #DCSC>)
 // -----
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu-no", "singleton-no" ]
+  lvlTypes = [ "compressed_nu_no", "singleton_no" ]
 }>
 
 // CHECK-LABEL: func private @sparse_coo(
-// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu-no", "singleton-no" ] }>>)
+// CHECK-SAME: tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu_no", "singleton_no" ] }>>)
 func.func private @sparse_coo(tensor<?x?xf32, #COO>)
 
 // -----
 
 #BCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ]
+  lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ]
 }>
 
 // CHECK-LABEL: func private @sparse_bcoo(
-// CHECK-SAME: tensor<?x?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ] }>>)
+// CHECK-SAME: tensor<?x?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ] }>>)
 func.func private @sparse_bcoo(tensor<?x?x?xf32, #BCOO>)
 
 // -----
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 // CHECK-LABEL: func private @sparse_sorted_coo(
-// CHECK-SAME: tensor<10x10xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ] }>>)
+// CHECK-SAME: tensor<10x10xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ] }>>)
 func.func private @sparse_sorted_coo(tensor<10x10xf64, #SortedCOO>)
 
 // -----
