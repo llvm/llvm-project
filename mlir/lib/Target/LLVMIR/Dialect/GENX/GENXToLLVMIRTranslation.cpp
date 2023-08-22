@@ -37,6 +37,7 @@ static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
       false);                                       // no variadic arguments.
   llvm::Function *fn = dyn_cast<llvm::Function>(
       module->getOrInsertFunction(fnName, functionType).getCallee());
+  fn->setCallingConv(llvm::CallingConv::SPIR_FUNC);
   llvm::Value *fnOp0 = llvm::ConstantInt::get(
       llvm::Type::getInt32Ty(module->getContext()), parameter);
   return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
