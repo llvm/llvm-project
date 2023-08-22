@@ -70,6 +70,9 @@ MATH_MANGLE(pow)(double x, double y)
 CONSTATTR double
 MATH_MANGLE(powr)(double x, double y)
 {
+    if (x < 0.0)
+      x = QNAN_F64;
+
     double ret = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(x)));
 
     // Now all the edge cases
@@ -88,7 +91,7 @@ MATH_MANGLE(powr)(double x, double y)
     if (y == 0.0)
         ret = x == 0.0 || BUILTIN_ISINF_F64(x) ? QNAN_F64 : 1.0;
 
-    if (x < 0.0 || BUILTIN_ISUNORDERED_F64(x, y))
+    if (BUILTIN_ISUNORDERED_F64(x, y))
         ret = QNAN_F64;
 
     return ret;

@@ -104,6 +104,9 @@ MATH_MANGLE(pow)(float x, float y)
 CONSTATTR float
 MATH_MANGLE(powr)(float x, float y)
 {
+    if (x < 0.0f)
+        x = QNAN_F32;
+
     float ret = compute_expylnx_float(x, y);
 
     // Now all the edge cases
@@ -119,7 +122,7 @@ MATH_MANGLE(powr)(float x, float y)
     if (BUILTIN_ISINF_F32(y) && x != 1.0f)
         ret = x < 1.0f ? iz : zi;
 
-    if (x < 0.0f || BUILTIN_ISUNORDERED_F32(x, y))
+    if (BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
 
     return ret;

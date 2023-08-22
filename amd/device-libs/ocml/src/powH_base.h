@@ -66,6 +66,9 @@ MATH_MANGLE(pow)(half x, half y)
 CONSTATTR half
 MATH_MANGLE(powr)(half x, half y)
 {
+    if (x < 0.0h)
+        x = QNAN_F16;
+
     half ret = (half)compute_expylnx_f16(x, y);
 
     // Now all the edge cases
@@ -81,7 +84,7 @@ MATH_MANGLE(powr)(half x, half y)
     if (BUILTIN_ISINF_F16(y) && x != 1.0h)
         ret = x < 1.0h ? iz : zi;
 
-    if (x < 0.0h || BUILTIN_ISUNORDERED_F16(x, y))
+    if (BUILTIN_ISUNORDERED_F16(x, y))
         ret = QNAN_F16;
 
     return ret;
