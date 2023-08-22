@@ -1288,7 +1288,8 @@ class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
-  let OtherPredicates = ps.OtherPredicates;
+  let OtherPredicates = !listconcat(ps.OtherPredicates,
+                                    !if(p.HasExt64BitDPP, [HasDPALU_DPP], []));
 }
 
 class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps, int subtarget,
@@ -1542,9 +1543,10 @@ multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
   def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
 }
 
-multiclass VOP2_Real_NO_DPP_with_alias<GFXGen Gen, bits<6> op, string alias> {
+multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> {
   defm NAME : VOP2_Real_e32<Gen, op>,
-              VOP2_Real_e64<Gen, op>;
+              VOP2_Real_e64<Gen, op>,
+              VOP2_Real_dpp<Gen, op>;
   def Gen.Suffix#"_alias" : MnemonicAlias<alias, NAME>, Requires<[Gen.AssemblerPredicate]>;
 }
 
@@ -1569,18 +1571,14 @@ multiclass VOP2_Real_FULL_t16_with_name_gfx12<bits<6> op, string opName,
   def _gfx12_2nd_alias : MnemonicAlias<alias, asmName>, Requires<[isGFX12Only]>;
 }
 
-multiclass VOP2_Real_NO_DPP_with_name_gfx12<bits<6> op, string opName,
-                                            string asmName> :
-  VOP2_Real_NO_DPP_with_name<GFX12Gen, op, opName, asmName>;
+multiclass VOP2_Real_with_DPP16_with_alias_gfx12<bits<6> op, string alias> :
+  VOP2_Real_with_DPP16_with_alias<GFX12Gen, op, alias>;
 
-multiclass VOP2_Real_NO_DPP_with_alias_gfx12<bits<6> op, string alias> :
-  VOP2_Real_NO_DPP_with_alias<GFX12Gen, op, alias>;
-
-defm V_ADD_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
-defm V_MUL_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
-defm V_LSHLREV_B64 : VOP2_Real_NO_DPP_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
-defm V_MIN_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00d, "v_min_f64">;
-defm V_MAX_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00e, "v_max_f64">;
+defm V_ADD_F64     : VOP2_Real_FULL_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
+defm V_MUL_F64     : VOP2_Real_FULL_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
+defm V_LSHLREV_B64 : VOP2_Real_FULL_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
+defm V_MIN_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12<0x00d, "v_min_f64">;
+defm V_MAX_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12<0x00e, "v_max_f64">;
 
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 defm V_ADD_CO_CI_U32 :
@@ -1607,7 +1605,7 @@ let SubtargetPredicate = isGFX12Plus in {
 } // End SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = HasFmacF64Inst in
-defm V_FMAC_F64 : VOP2_Real_NO_DPP<GFX12Gen, 0x17>;
+defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
 
 let SubtargetPredicate = isGFX12_10Plus in {
 defm V_ADD_U64 : VOP2_Real_FULL<GFX12Gen, 0x28>;
