@@ -16,6 +16,7 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/FileSystem.h"
@@ -42,7 +43,8 @@ protected:
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
-    registerROCDLTarget(registry);
+    registerROCDLDialectTranslation(registry);
+    ROCDL::registerROCDLTargetInterfaceExternalModels(registry);
   }
 
   // Checks if a ROCm installation is available.

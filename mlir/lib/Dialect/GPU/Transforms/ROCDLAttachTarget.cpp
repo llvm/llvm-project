@@ -38,7 +38,7 @@ struct ROCDLAttachTarget
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registerROCDLTarget(registry);
+    registry.insert<ROCDL::ROCDLDialect>();
   }
 };
 } // namespace
