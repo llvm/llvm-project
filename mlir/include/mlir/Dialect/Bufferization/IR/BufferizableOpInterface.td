@@ -93,10 +93,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the operation bufferizes to IR that performs only
-          element-wise accesses on all tensor operands. (All operands must have
-          the same shape.) The `bufferize` method must be implemented in such a
-          way that it is free of loop-carried dependences. I.e., all loads at a
-          position appear before all stores at the same position.
+          element-wise accesses on the specified tensor operands. (The operands
+          must have the same shape.) The `bufferize` method must be implemented
+          in such a way that it is free of loop-carried dependences. I.e., all
+          loads at a position appear before all stores at the same position.
 
           Example: Consider a hypothetical op element-wise op, where the "ins"
           bufferize to a memory read and the "outs" bufferize to a memory write.
@@ -130,10 +130,15 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           equivalent tensors. (It is not possible, if %0 and %1 are merely
           aliasing. It is not necessary if %0 and %1 are not aliasing at all,
           because there would be no conflict anyway.)
+
+          Note: Tensor operands that are not included in `opOperands` can be
+          ignored. A conservative implementation of this interface method may
+          always return "false".
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToElementwiseAccess",
-        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
+        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state,
+                      "ArrayRef<OpOperand *>":$opOperands),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // It is always safe to assume that the op is not element-wise.
