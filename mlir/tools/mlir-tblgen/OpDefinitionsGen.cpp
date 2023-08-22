@@ -158,24 +158,24 @@ static const char *const valueRangeReturnCode = R"(
 /// Read operand/result segment_size from bytecode.
 static const char *const readBytecodeSegmentSize = R"(
 if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
-  DenseI32ArrayAttr attr;
-  if (::mlir::failed($_reader.readAttribute(attr))) return failure();
+  ::mlir::DenseI32ArrayAttr attr;
+  if (::mlir::failed($_reader.readAttribute(attr))) return ::mlir::failure();
   if (attr.size() > static_cast<int64_t>(sizeof($_storage) / sizeof(int32_t))) {
     $_reader.emitError("size mismatch for operand/result_segment_size");
-    return failure();
+    return ::mlir::failure();
   }
-  llvm::copy(ArrayRef<int32_t>(attr), $_storage.begin());
+  llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
 } else {
-  return $_reader.readSparseArray(MutableArrayRef($_storage));
+  return $_reader.readSparseArray(::llvm::MutableArrayRef($_storage));
 }
 )";
 
 /// Write operand/result segment_size to bytecode.
 static const char *const writeBytecodeSegmentSize = R"(
 if ($_writer.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6)
-  $_writer.writeAttribute(DenseI32ArrayAttr::get(getContext(), $_storage));
+  $_writer.writeAttribute(::mlir::DenseI32ArrayAttr::get(getContext(), $_storage));
 else
-  $_writer.writeSparseArray(ArrayRef($_storage));
+  $_writer.writeSparseArray(::llvm::ArrayRef($_storage));
 )";
 
 /// A header for indicating code sections.
@@ -430,15 +430,15 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
         /*interfaceType=*/"::llvm::ArrayRef<int32_t>",
         /*convertFromStorageCall=*/"$_storage",
         /*assignToStorageCall=*/
-        "llvm::copy($_value, $_storage.begin())",
+        "::llvm::copy($_value, $_storage.begin())",
         /*convertToAttributeCall=*/
-        "DenseI32ArrayAttr::get($_ctxt, $_storage)",
+        "::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage)",
         /*convertFromAttributeCall=*/
         "return convertFromAttribute($_storage, $_attr, $_diag);",
         /*readFromMlirBytecodeCall=*/readBytecodeSegmentSize,
         /*writeToMlirBytecodeCall=*/writeBytecodeSegmentSize,
         /*hashPropertyCall=*/
-        "llvm::hash_combine_range(std::begin($_storage), "
+        "::llvm::hash_combine_range(std::begin($_storage), "
         "std::end($_storage));",
         /*StringRef defaultValue=*/"");
   };
@@ -1449,7 +1449,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   const char *setInherentAttrMethodFmt = R"decl(
     if (name == "{0}") {{
-       prop.{0} = dyn_cast_or_null<std::remove_reference_t<decltype(prop.{0})>>(value);
+       prop.{0} = ::llvm::dyn_cast_or_null<std::remove_reference_t<decltype(prop.{0})>>(value);
        return;
     }
 )decl";
@@ -1502,7 +1502,7 @@ void OpEmitter::genPropertiesSupport() {
                      resultSegmentAttrName);
     }
     setInherentAttrMethod << formatv(R"decl(
-       auto arrAttr = dyn_cast_or_null<DenseI32ArrayAttr>(value);
+       auto arrAttr = ::llvm::dyn_cast_or_null<::mlir::DenseI32ArrayAttr>(value);
        if (!arrAttr) return;
        if (arrAttr.size() != sizeof(prop.{0}) / sizeof(int32_t))
          return;
@@ -2060,7 +2060,7 @@ void OpEmitter::genNamedOperandSetters() {
       if (emitHelper.hasProperties())
         body << formatv(", ::mlir::MutableOperandRange::OperandSegment({0}u, "
                         "{{getOperandSegmentSizesAttrName(), "
-                        "DenseI32ArrayAttr::get(getContext(), "
+                        "::mlir::DenseI32ArrayAttr::get(getContext(), "
                         "getProperties().operandSegmentSizes)})",
                         i);
       else
@@ -2299,7 +2299,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // the length of the type ranges.
       if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
         if (op.getDialect().usePropertiesForAttributes()) {
-          body << "  llvm::copy(ArrayRef<int32_t>({";
+          body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
         } else {
           std::string getterName = op.getGetterName(resultSegmentAttrName);
           body << " " << builderOpState << ".addAttribute(" << getterName
@@ -2947,7 +2947,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     std::string sizes = op.getGetterName(operandSegmentAttrName);
     if (op.getDialect().usePropertiesForAttributes()) {
-      body << "  llvm::copy(ArrayRef<int32_t>({";
+      body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
       emitSegment();
       body << "}), " << builderOpState
            << ".getOrAddProperties<Properties>()."
