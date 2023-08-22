@@ -186,6 +186,10 @@ Changes to LLDB
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
 
+* LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
+  Linux for both running processes and core files. For details refer to the
+  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+
 Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
