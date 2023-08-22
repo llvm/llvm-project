@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -1159,6 +1161,52 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
                           ELF::R_AARCH64_ADD_ABS_LO12_NC);
     return Insts;
+  }
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override {
+    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+
+    assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
+    const uint64_t RelOffset = Fixup.getOffset();
+
+    uint64_t RelType;
+    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
+      RelType = ELF::R_AARCH64_CALL26;
+    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+      switch (FKI.TargetSize) {
+      default:
+        return std::nullopt;
+      case 16:
+        RelType = ELF::R_AARCH64_PREL16;
+        break;
+      case 32:
+        RelType = ELF::R_AARCH64_PREL32;
+        break;
+      case 64:
+        RelType = ELF::R_AARCH64_PREL64;
+        break;
+      }
+    } else {
+      switch (FKI.TargetSize) {
+      default:
+        return std::nullopt;
+      case 16:
+        RelType = ELF::R_AARCH64_ABS16;
+        break;
+      case 32:
+        RelType = ELF::R_AARCH64_ABS32;
+        break;
+      case 64:
+        RelType = ELF::R_AARCH64_ABS64;
+        break;
+      }
+    }
+
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
+
+    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
 };
 
