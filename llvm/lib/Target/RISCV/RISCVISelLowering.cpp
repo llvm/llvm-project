@@ -12894,10 +12894,9 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   SDValue BasePtr = BaseLd->getBasePtr();
 
   // Go through the loads and check that they're strided
-  SDValue CurPtr = BasePtr;
-  SDValue Stride;
+  SmallVector<SDValue> Ptrs;
+  Ptrs.push_back(BasePtr);
   Align Align = BaseLd->getAlign();
-
   for (SDValue Op : N->ops().drop_front()) {
     auto *Ld = dyn_cast<LoadSDNode>(Op);
     if (!Ld || !Ld->isSimple() || !Op.hasOneUse() ||
@@ -12905,27 +12904,66 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
         Ld->getValueType(0) != BaseLdVT)
       return SDValue();
 
-    SDValue Ptr = Ld->getBasePtr();
-    // Check that each load's pointer is (add CurPtr, Stride)
-    if (Ptr.getOpcode() != ISD::ADD || Ptr.getOperand(0) != CurPtr)
-      return SDValue();
-    SDValue Offset = Ptr.getOperand(1);
-    if (!Stride)
-      Stride = Offset;
-    else if (Offset != Stride)
-      return SDValue();
+    Ptrs.push_back(Ld->getBasePtr());
 
     // The common alignment is the most restrictive (smallest) of all the loads
     Align = std::min(Align, Ld->getAlign());
+  }
 
-    CurPtr = Ptr;
+  auto matchForwardStrided = [](ArrayRef<SDValue> Ptrs) {
+    SDValue Stride;
+    for (auto Idx : enumerate(Ptrs)) {
+      if (Idx.index() == 0)
+        continue;
+      SDValue Ptr = Idx.value();
+      // Check that each load's pointer is (add LastPtr, Stride)
+      if (Ptr.getOpcode() != ISD::ADD ||
+          Ptr.getOperand(0) != Ptrs[Idx.index()-1])
+        return SDValue();
+      SDValue Offset = Ptr.getOperand(1);
+      if (!Stride)
+        Stride = Offset;
+      else if (Offset != Stride)
+        return SDValue();
+    }
+    return Stride;
+  };
+  auto matchReverseStrided = [](ArrayRef<SDValue> Ptrs) {
+    SDValue Stride;
+    for (auto Idx : enumerate(Ptrs)) {
+      if (Idx.index() == Ptrs.size() - 1)
+        continue;
+      SDValue Ptr = Idx.value();
+      // Check that each load's pointer is (add NextPtr, Stride)
+      if (Ptr.getOpcode() != ISD::ADD ||
+          Ptr.getOperand(0) != Ptrs[Idx.index()+1])
+        return SDValue();
+      SDValue Offset = Ptr.getOperand(1);
+      if (!Stride)
+        Stride = Offset;
+      else if (Offset != Stride)
+        return SDValue();
+    }
+    return Stride;
+  };
+
+  bool Reversed = false;
+  SDValue Stride = matchForwardStrided(Ptrs);
+  if (!Stride) {
+    Stride = matchReverseStrided(Ptrs);
+    Reversed = true;
+    // TODO: At this point, we've successfully matched a generalized gather
+    // load.  Maybe we should emit that, and then move the specialized
+    // matchers above and below into a DAG combine?
+    if (!Stride)
+      return SDValue();
   }
 
   // A special case is if the stride is exactly the width of one of the loads,
   // in which case it's contiguous and can be combined into a regular vle
   // without changing the element size
   if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
-      ConstStride &&
+      ConstStride && !Reversed &&
       ConstStride->getZExtValue() == BaseLdVT.getFixedSizeInBits() / 8) {
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(),
@@ -12962,6 +13000,8 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue IntID =
       DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, Subtarget.getXLenVT());
+  if (Reversed)
+    Stride = DAG.getNegative(Stride, DL, Stride->getValueType(0));
   SDValue Ops[] = {BaseLd->getChain(),
                    IntID,
                    DAG.getUNDEF(ContainerVT),
@@ -12970,7 +13010,8 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
                    VL};
 
   uint64_t MemSize;
-  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride))
+  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
+      ConstStride && !Reversed && ConstStride->getSExtValue() >= 0)
     // total size = (elsize * n) + (stride - elsize) * (n-1)
     //            = elsize + stride * (n-1)
     MemSize = WideScalarVT.getSizeInBits() +
