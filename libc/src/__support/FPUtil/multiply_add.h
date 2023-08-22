@@ -20,7 +20,8 @@ namespace fputil {
 //   multiply_add(x, y, z) = x*y + z
 // which uses FMA instructions to speed up if available.
 
-template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
+template <typename T>
+LIBC_INLINE T multiply_add(const T &x, const T &y, const T &z) {
   return x * y + z;
 }
 
@@ -35,12 +36,11 @@ template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
 namespace __llvm_libc {
 namespace fputil {
 
-template <> LIBC_INLINE float multiply_add<float>(float x, float y, float z) {
+LIBC_INLINE float multiply_add(float x, float y, float z) {
   return fma(x, y, z);
 }
 
-template <>
-LIBC_INLINE double multiply_add<double>(double x, double y, double z) {
+LIBC_INLINE double multiply_add(double x, double y, double z) {
   return fma(x, y, z);
 }
 

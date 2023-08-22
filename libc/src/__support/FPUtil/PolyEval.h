@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
 
 #include "multiply_add.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
 // Evaluate polynomial using Horner's Scheme:
@@ -22,10 +23,12 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> LIBC_INLINE T polyeval(T, T a0) { return a0; }
+template <typename T> LIBC_INLINE T polyeval(const T &, const T &a0) {
+  return a0;
+}
 
 template <typename T, typename... Ts>
-LIBC_INLINE T polyeval(T x, T a0, Ts... a) {
+LIBC_INLINE T polyeval(const T &x, const T &a0, const Ts &...a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }
 
