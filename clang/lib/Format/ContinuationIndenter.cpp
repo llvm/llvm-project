@@ -1492,6 +1492,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     CurrentState.NestedBlockIndent = CurrentState.Indent;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack)
       CurrentState.AvoidBinPacking = true;
+    else
+      CurrentState.BreakBeforeParameter = false;
   }
   if (Current.is(TT_InheritanceColon)) {
     CurrentState.Indent =
