@@ -44,6 +44,7 @@
 
 using namespace llvm;
 using namespace llvm::rc;
+using namespace llvm::opt;
 
 namespace {
 

@@ -334,7 +334,7 @@ define void @test_inaccessiblememonly_readonly() {
 ; FNATTRS: Function Attrs: nofree memory(inaccessiblemem: read)
 ; FNATTRS-LABEL: define void @test_inaccessiblememonly_readonly
 ; FNATTRS-SAME: () #[[ATTR13:[0-9]+]] {
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR18:[0-9]+]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(inaccessiblemem: read)
@@ -352,7 +352,7 @@ define void @test_inaccessibleorargmemonly_readonly(ptr %arg) {
 ; FNATTRS-LABEL: define void @test_inaccessibleorargmemonly_readonly
 ; FNATTRS-SAME: (ptr nocapture readonly [[ARG:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG]], align 4
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR18]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(argmem: read, inaccessiblemem: read)
@@ -372,7 +372,7 @@ define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
 ; FNATTRS-LABEL: define void @test_inaccessibleorargmemonly_readwrite
 ; FNATTRS-SAME: (ptr nocapture writeonly [[ARG:%.*]]) #[[ATTR15:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr [[ARG]], align 4
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR18]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(argmem: readwrite, inaccessiblemem: readwrite)
@@ -388,7 +388,7 @@ define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
 }
 
 define void @test_recursive_argmem_read(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(argmem: read)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_recursive_argmem_read
 ; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR16:[0-9]+]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -408,7 +408,7 @@ define void @test_recursive_argmem_read(ptr %p) {
 }
 
 define void @test_recursive_argmem_readwrite(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_recursive_argmem_readwrite
 ; FNATTRS-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR17:[0-9]+]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -433,7 +433,7 @@ define void @test_recursive_argmem_readwrite(ptr %p) {
 define void @test_recursive_argmem_read_alloca(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(argmem: read)
 ; FNATTRS-LABEL: define void @test_recursive_argmem_read_alloca
-; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR16]] {
+; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR18:[0-9]+]] {
 ; FNATTRS-NEXT:    [[A:%.*]] = alloca ptr, align 8
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    call void @test_recursive_argmem_read_alloca(ptr [[A]])
@@ -454,7 +454,7 @@ define void @test_recursive_argmem_read_alloca(ptr %p) {
 }
 
 define void @test_scc_argmem_read_1(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(argmem: read)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_scc_argmem_read_1
 ; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -474,7 +474,7 @@ define void @test_scc_argmem_read_1(ptr %p) {
 }
 
 define void @test_scc_argmem_read_2(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(argmem: read)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_scc_argmem_read_2
 ; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    call void @test_scc_argmem_read_1(ptr [[P]])

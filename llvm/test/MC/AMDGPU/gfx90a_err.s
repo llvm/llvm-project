@@ -171,12 +171,6 @@ ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
 ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
-ds_write2_b64 v1, a[4:5], v[2:3] offset1:255 gds
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
-ds_write2_b64 v1, v[4:5], a[2:3] offset1:255 gds
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
 ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
@@ -293,3 +287,6 @@ global_load_lds_dword v[2:3], off
 
 scratch_load_lds_dword v2, off
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_read_b32 v0, v1 gds
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU

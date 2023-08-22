@@ -39,6 +39,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::opt;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 
@@ -111,9 +112,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -453,6 +458,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   config->sharedMemory = args.hasArg(OPT_shared_memory);
+  config->soName = args.getLastArgValue(OPT_soname);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
@@ -898,52 +904,61 @@ static void processStubLibrariesPreLTO() {
 
 static void processStubLibraries() {
   log("-- processStubLibraries");
-  for (auto &stub_file : symtab->stubFiles) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
-      if (!sym || !sym->isUndefined()) {
-        LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: " << name << "\n");
-        continue;
-      }
-      // The first stub library to define a given symbol sets this and
-      // definitions in later stub libraries are ignored.
-      if (sym->forceImport)
-        continue;  // Already handled
-      sym->forceImport = true;
-      if (sym->traced)
-        message(toString(stub_file) + ": importing " + name);
-      else
-        LLVM_DEBUG(llvm::dbgs()
-                   << toString(stub_file) << ": importing " << name << "\n");
-      for (const auto dep : deps) {
-        auto* needed = symtab->find(dep);
-        if (!needed) {
-          error(toString(stub_file) + ": undefined symbol: " + dep +
-                ". Required by " + toString(*sym));
-        } else if (needed->isUndefined()) {
-          error(toString(stub_file) +
-                ": undefined symbol: " + toString(*needed) +
-                ". Required by " + toString(*sym));
-        } else {
-          if (needed->traced)
-            message(toString(stub_file) + ": exported " + toString(*needed) +
-                    " due to import of " + name);
+  bool depsAdded = false;
+  do {
+    depsAdded = false;
+    for (auto &stub_file : symtab->stubFiles) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "processing stub file: " << stub_file->getName() << "\n");
+      for (auto [name, deps]: stub_file->symbolDependencies) {
+        auto* sym = symtab->find(name);
+        if (!sym || !sym->isUndefined()) {
+          if (sym && sym->traced)
+            message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs()
-                       << "force export: " << toString(*needed) << "\n");
-          needed->forceExport = true;
-          if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
-            lazy->fetch();
-            if (!config->whyExtract.empty())
-              config->whyExtractRecords.emplace_back(stub_file->getName(),
-                                                     sym->getFile(), *sym);
+            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
+          continue;
+        }
+        // The first stub library to define a given symbol sets this and
+        // definitions in later stub libraries are ignored.
+        if (sym->forceImport)
+          continue;  // Already handled
+        sym->forceImport = true;
+        if (sym->traced)
+          message(toString(stub_file) + ": importing " + name);
+        else
+          LLVM_DEBUG(llvm::dbgs()
+                     << toString(stub_file) << ": importing " << name << "\n");
+        for (const auto dep : deps) {
+          auto* needed = symtab->find(dep);
+          if (!needed) {
+            error(toString(stub_file) + ": undefined symbol: " + dep +
+                  ". Required by " + toString(*sym));
+          } else if (needed->isUndefined()) {
+            error(toString(stub_file) +
+                  ": undefined symbol: " + toString(*needed) +
+                  ". Required by " + toString(*sym));
+          } else {
+            if (needed->traced)
+              message(toString(stub_file) + ": exported " + toString(*needed) +
+                      " due to import of " + name);
+            else
+              LLVM_DEBUG(llvm::dbgs()
+                         << "force export: " << toString(*needed) << "\n");
+            needed->forceExport = true;
+            if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
+              depsAdded = true;
+              lazy->fetch();
+              if (!config->whyExtract.empty())
+                config->whyExtractRecords.emplace_back(stub_file->getName(),
+                                                       sym->getFile(), *sym);
+            }
           }
         }
       }
     }
-  }
+  } while (depsAdded);
+
   log("-- done processStubLibraries");
 }
 

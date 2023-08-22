@@ -62,6 +62,7 @@ bool Parser::isCXXDeclarationStatement(
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
     return true;
+  case tok::coloncolon:
   case tok::identifier: {
     if (DisambiguatingWithExpression) {
       RevertingTentativeParsingAction TPA(*this);

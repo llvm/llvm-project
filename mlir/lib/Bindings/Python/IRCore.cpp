@@ -2277,6 +2277,9 @@ public:
     c.def_property_readonly("types", [](PyOpResultList &self) {
       return getValueTypes(self, self.operation->getContext());
     });
+    c.def_property_readonly("owner", [](PyOpResultList &self) {
+      return self.operation->createOpView();
+    });
   }
 
 private:

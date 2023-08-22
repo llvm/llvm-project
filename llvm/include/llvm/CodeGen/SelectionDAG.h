@@ -947,11 +947,42 @@ public:
   SDValue getZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
 
   /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by either any/sign/zero-extending (depending on IsAny /
+  /// IsSigned) or truncating it.
+  SDValue getExtOrTrunc(SDValue Op, const SDLoc &DL,
+                        EVT VT, unsigned Opcode) {
+    switch(Opcode) {
+      case ISD::ANY_EXTEND:
+        return getAnyExtOrTrunc(Op, DL, VT);
+      case ISD::ZERO_EXTEND:
+        return getZExtOrTrunc(Op, DL, VT);
+      case ISD::SIGN_EXTEND:
+        return getSExtOrTrunc(Op, DL, VT);
+    }
+    llvm_unreachable("Unsupported opcode");
+  }
+
+  /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either sign/zero-extending (depending on IsSigned) or
   /// truncating it.
   SDValue getExtOrTrunc(bool IsSigned, SDValue Op, const SDLoc &DL, EVT VT) {
     return IsSigned ? getSExtOrTrunc(Op, DL, VT) : getZExtOrTrunc(Op, DL, VT);
   }
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either any-extending or truncating it.
+  SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either sign-extending or truncating it.
+  SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either zero-extending or truncating it.
+  SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
 
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.

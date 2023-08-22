@@ -107,11 +107,16 @@ public:
   // The number of integer instructions inside the function.
   int64_t IntegerInstructionCount = 0;
 
-  // The number of integer constant operands inside the function.
-  int64_t IntegerConstantCount = 0;
-
-  // The number of floating point constant operands inside the function.
-  int64_t FloatingPointConstantCount = 0;
+  // Operand type couns
+  int64_t ConstantIntOperandCount = 0;
+  int64_t ConstantFPOperandCount = 0;
+  int64_t ConstantOperandCount = 0;
+  int64_t InstructionOperandCount = 0;
+  int64_t BasicBlockOperandCount = 0;
+  int64_t GlobalValueOperandCount = 0;
+  int64_t InlineAsmOperandCount = 0;
+  int64_t ArgumentOperandCount = 0;
+  int64_t UnknownOperandCount = 0;
 };
 
 // Analysis pass

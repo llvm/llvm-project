@@ -313,6 +313,13 @@ extern "C" {
       auto *coo = tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl);           \
       return new SparseTensorIterator<V>(coo);                                 \
     }                                                                          \
+    case Action::kPack: {                                                      \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      intptr_t *buffers = static_cast<intptr_t *>(ptr);                        \
+      return SparseTensorStorage<P, C, V>::packFromLvlBuffers(                 \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim, dimRank,    \
+          dim2lvl, buffers);                                                   \
+    }                                                                          \
     }                                                                          \
     MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
                             static_cast<uint32_t>(action));                    \

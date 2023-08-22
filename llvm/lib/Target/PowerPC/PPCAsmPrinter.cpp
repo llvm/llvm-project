@@ -632,7 +632,6 @@ void PPCAsmPrinter::EmitAIXTlsCallHelper(const MachineInstr *MI) {
   const MCExpr *TlsRef =
       MCSymbolRefExpr::create(TlsCall, MCSymbolRefExpr::VK_None, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
-  return;
 }
 
 /// EmitTlsCall -- Given a GETtls[ld]ADDR[32] instruction, print a

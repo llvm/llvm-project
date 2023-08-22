@@ -5,7 +5,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // TODO(yln): introduce 'ptrauth' lit feature
-// REQUIRES: stable-runtime, cxxabi, arch=arm64e
+// REQUIRES: stable-runtime, cxxabi, target={{arm64e.*}}
 
 #include <typeinfo>
 #include <ptrauth.h>

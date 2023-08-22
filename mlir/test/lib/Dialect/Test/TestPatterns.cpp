@@ -668,7 +668,8 @@ struct TestUndoBlockErase : public ConversionPattern {
 
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
-  TestDropOpSignatureConversion(MLIRContext *ctx, TypeConverter &converter)
+  TestDropOpSignatureConversion(MLIRContext *ctx,
+                                const TypeConverter &converter)
       : ConversionPattern(converter, "test.drop_region_op", 1, ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -677,7 +678,7 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
     Block *entry = &region.front();
 
     // Convert the original entry arguments.
-    TypeConverter &converter = *getTypeConverter();
+    const TypeConverter &converter = *getTypeConverter();
     TypeConverter::SignatureConversion result(entry->getNumArguments());
     if (failed(converter.convertSignatureArgs(entry->getArgumentTypes(),
                                               result)) ||
@@ -1307,7 +1308,7 @@ struct TestSignatureConversionUndo
 /// materializations.
 struct TestTestSignatureConversionNoConverter
     : public OpConversionPattern<TestSignatureConversionNoConverterOp> {
-  TestTestSignatureConversionNoConverter(TypeConverter &converter,
+  TestTestSignatureConversionNoConverter(const TypeConverter &converter,
                                          MLIRContext *context)
       : OpConversionPattern<TestSignatureConversionNoConverterOp>(context),
         converter(converter) {}
@@ -1328,7 +1329,7 @@ struct TestTestSignatureConversionNoConverter
     return success();
   }
 
-  TypeConverter &converter;
+  const TypeConverter &converter;
 };
 
 /// Just forward the operands to the root op. This is essentially a no-op

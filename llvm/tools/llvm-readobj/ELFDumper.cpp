@@ -3777,7 +3777,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
     if (!Fields[4].Str.empty()) {
       if (RelAddend < 0) {
         Addend = " - ";
-        RelAddend = std::abs(RelAddend);
+        RelAddend = -static_cast<uint64_t>(RelAddend);
       } else {
         Addend = " + ";
       }
@@ -7473,7 +7473,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         W.printBoolean("HasTailCall", BBE.hasTailCall());
         W.printBoolean("IsEHPad", BBE.isEHPad());
         W.printBoolean("CanFallThrough", BBE.canFallThrough());
-        W.printBoolean("HasIndirectBranch", BBE.MD.HasIndirectBranch);
+        W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
       }
     }
   }

@@ -1301,13 +1301,41 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
   // 12-bit and there exists a callee-saved register needing to be pushed.
   if (!isInt<12>(StackSize) && (CSI.size() > 0)) {
-    // FirstSPAdjustAmount is chosen as (2048 - StackAlign) because 2048 will
-    // cause sp = sp + 2048 in the epilogue to be split into multiple
+    // FirstSPAdjustAmount is chosen at most as (2048 - StackAlign) because
+    // 2048 will cause sp = sp + 2048 in the epilogue to be split into multiple
     // instructions. Offsets smaller than 2048 can fit in a single load/store
     // instruction, and we have to stick with the stack alignment. 2048 has
     // 16-byte alignment. The stack alignment for RV32 and RV64 is 16 and for
     // RV32E it is 4. So (2048 - StackAlign) will satisfy the stack alignment.
-    return 2048 - getStackAlign().value();
+    const uint64_t StackAlign = getStackAlign().value();
+
+    // Amount of (2048 - StackAlign) will prevent callee saved and restored
+    // instructions be compressed, so try to adjust the amount to the largest
+    // offset that stack compression instructions accept when target supports
+    // compression instructions.
+    if (STI.hasStdExtCOrZca()) {
+      // riscv32: c.lwsp rd, offset[7:2] => 2^(6 + 2)
+      //          c.swsp rs2, offset[7:2] => 2^(6 + 2)
+      //          c.flwsp rd, offset[7:2] => 2^(6 + 2)
+      //          c.fswsp rs2, offset[7:2] => 2^(6 + 2)
+      // riscv64: c.ldsp rd, offset[8:3] => 2^(6 + 3)
+      //          c.sdsp rs2, offset[8:3] => 2^(6 + 3)
+      //          c.fldsp rd, offset[8:3] => 2^(6 + 3)
+      //          c.fsdsp rs2, offset[8:3] => 2^(6 + 3)
+      const uint64_t RVCompressLen = STI.getXLen() * 8;
+      // Compared with amount (2048 - StackAlign), StackSize needs to
+      // satisfy the following conditions to avoid using more instructions
+      // to adjust the sp after adjusting the amount, such as
+      // StackSize meets the condition (StackSize <= 2048 + RVCompressLen),
+      // case1: Amount is 2048 - StackAlign: use addi + addi to adjust sp.
+      // case2: Amount is RVCompressLen: use addi + addi to adjust sp.
+      if (StackSize <= 2047 + RVCompressLen ||
+          (StackSize > 2048 * 2 - StackAlign &&
+           StackSize <= 2047 * 2 + RVCompressLen) ||
+          StackSize > 2048 * 3 - StackAlign)
+        return RVCompressLen;
+    }
+    return 2048 - StackAlign;
   }
   return 0;
 }

@@ -119,10 +119,10 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
   Composite = [this, &Composite](QualType Ty, const Pointer &Ptr, APValue &R) {
-    if (auto *AT = Ty->getAs<AtomicType>())
+    if (const auto *AT = Ty->getAs<AtomicType>())
       Ty = AT->getValueType();
 
-    if (auto *RT = Ty->getAs<RecordType>()) {
+    if (const auto *RT = Ty->getAs<RecordType>()) {
       const auto *Record = Ptr.getRecord();
       assert(Record && "Missing record descriptor");
 
@@ -130,7 +130,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       if (RT->getDecl()->isUnion()) {
         const FieldDecl *ActiveField = nullptr;
         APValue Value;
-        for (auto &F : Record->fields()) {
+        for (const auto &F : Record->fields()) {
           const Pointer &FP = Ptr.atField(F.Offset);
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
@@ -179,7 +179,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       }
       return Ok;
     }
-    if (auto *AT = Ty->getAsArrayTypeUnsafe()) {
+    if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
       const size_t NumElems = Ptr.getNumElems();
       QualType ElemTy = AT->getElementType();
       R = APValue(APValue::UninitArray{}, NumElems, NumElems);

@@ -1056,12 +1056,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
-    } else {
-      std::string Msg = ("Missing debug info for function " + Fn->getName() +
-                         "; required for profile correlation.")
-                            .str();
-      Ctx.diagnose(
-          DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
     }
   }
 

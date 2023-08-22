@@ -13,6 +13,8 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -42,7 +44,7 @@ namespace {
 /// Define lowering patterns for raw buffer ops
 template <typename GpuOp, typename Intrinsic>
 struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
-  RawBufferOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  RawBufferOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<GpuOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -88,8 +90,15 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
     // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
     // 32) x i32 and bitcast. Also, the CAS intrinsic requires integer operands,
-    // so bitcast any floats to integers.
+    // so bitcast any floats to integers. On top of all this, cast bfloat
+    // (vectors) to i16 since the backend doesn't currently support bfloat on
+    // these operations.
     Type llvmBufferValType = llvmWantedDataType;
+    if (wantedDataType.isBF16())
+      llvmBufferValType = rewriter.getI16Type();
+    if (auto wantedVecType = dyn_cast<VectorType>(wantedDataType))
+      if (wantedVecType.getElementType().isBF16())
+        llvmBufferValType = wantedVecType.clone(rewriter.getI16Type());
     if (atomicCmpData) {
       if (isa<VectorType>(wantedDataType))
         return gpuOp.emitOpError("vector compare-and-swap does not exist");
@@ -315,10 +324,17 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 /// around a wart in the AMDGPU intrinsics where operations that logically take
 /// vectors of bytes instead integers. Since we do not want to expose this
 /// implementation detail to MLIR, we correct for it here.
+///
+/// In addition, convert vectors of LLVM bfloats to vectors of i16, since AMDGPU
+/// MFMA intrinsics pre-date the bfloat type.
 static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
                                 Location loc, Value input) {
   Type inputType = input.getType();
   if (auto vectorType = dyn_cast<VectorType>(inputType)) {
+    if (vectorType.getElementType().isBF16())
+      return rewriter.create<LLVM::BitcastOp>(
+          loc, vectorType.clone(rewriter.getI16Type()), input);
+
     if (!vectorType.getElementType().isInteger(8))
       return input;
     int64_t numBytes = vectorType.getNumElements();
@@ -343,15 +359,20 @@ static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
 /// Push an input operand. If it is a float type, nothing to do. If it is
 /// an integer type, then we need to also push its signdness (1 for signed, 0
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
-/// vector.
+/// vector. We also need to convert bfloat inputs to i16 to account for the lack
+/// of bfloat support in the WMMA intrinsics themselves.
 static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
-                                 Location loc, TypeConverter *typeConverter,
+                                 Location loc,
+                                 const TypeConverter *typeConverter,
                                  bool isUnsigned, Value llvmInput,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
   auto vectorType = inputType.dyn_cast<VectorType>();
   Type elemType = vectorType.getElementType();
 
+  if (elemType.isBF16())
+    llvmInput = rewriter.create<LLVM::BitcastOp>(
+        loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
   if (!elemType.isInteger(8)) {
     operands.push_back(llvmInput);
     return;
@@ -384,14 +405,18 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
 /// result in the lower 16 bits, set subwordOffset to 1, otherwise result will
 /// be stored it in the upper part
 static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
-                                  Location loc, TypeConverter *typeConverter,
+                                  Location loc,
+                                  const TypeConverter *typeConverter,
                                   Value output, int32_t subwordOffset,
                                   bool clamp, SmallVector<Value, 4> &operands) {
   Type inputType = output.getType();
   auto vectorType = inputType.dyn_cast<VectorType>();
   Type elemType = vectorType.getElementType();
+  if (elemType.isBF16())
+    output = rewriter.create<LLVM::BitcastOp>(
+        loc, vectorType.clone(rewriter.getI16Type()), output);
   operands.push_back(output);
-  if (elemType.isF16() || elemType.isBF16()) {
+  if (elemType.isF16() || elemType.isBF16() || elemType.isInteger(16)) {
     operands.push_back(createI1Constant(rewriter, loc, subwordOffset));
   } else if (elemType.isInteger(32)) {
     operands.push_back(createI1Constant(rewriter, loc, clamp));
@@ -562,7 +587,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
 
 namespace {
 struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
-  MFMAOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  MFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<MFMAOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -572,6 +597,10 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Type outType = typeConverter->convertType(op.getDestD().getType());
+    Type intrinsicOutType = outType;
+    if (auto outVecType = dyn_cast<VectorType>(outType))
+      if (outVecType.getElementType().isBF16())
+        intrinsicOutType = outVecType.clone(rewriter.getI16Type());
 
     if (chipset.majorVersion != 9 || chipset.minorVersion < 0x08)
       return op->emitOpError("MFMA only supported on gfx908+");
@@ -586,21 +615,23 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     if (!maybeIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching MFMA size on given chipset");
     OperationState loweredOp(loc, *maybeIntrinsic);
-    loweredOp.addTypes(outType);
+    loweredOp.addTypes(intrinsicOutType);
     loweredOp.addOperands(
         {mfmaConcatIfNeeded(rewriter, loc, adaptor.getSourceA()),
          mfmaConcatIfNeeded(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC(), createI32Constant(rewriter, loc, op.getCbsz()),
          createI32Constant(rewriter, loc, op.getAbid()),
          createI32Constant(rewriter, loc, getBlgpField)});
-    Operation *lowered = rewriter.create(loweredOp);
-    rewriter.replaceOp(op, lowered->getResults());
+    Value lowered = rewriter.create(loweredOp)->getResult(0);
+    if (outType != intrinsicOutType)
+      lowered = rewriter.create<LLVM::BitcastOp>(loc, outType, lowered);
+    rewriter.replaceOp(op, lowered);
     return success();
   }
 };
 
 struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
-  WMMAOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  WMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<WMMAOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -667,6 +698,15 @@ struct ConvertAMDGPUToROCDLPass
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
+  converter.addConversion([](BFloat16Type t) -> Type {
+    return IntegerType::get(t.getContext(), 16);
+  });
+  converter.addConversion([&converter](VectorType t) -> std::optional<Type> {
+    if (!t.getElementType().isBF16())
+      return std::nullopt;
+    return converter.convertType(t.clone(IntegerType::get(t.getContext(), 16)));
+  });
+
   patterns.add<LDSBarrierOpLowering>(converter);
   patterns.add<
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,

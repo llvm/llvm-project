@@ -302,21 +302,34 @@ def simm13_lsb0 : Operand<OtherVT> {
 class UImm20Operand : Operand<XLenVT> {
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<20>";
+  let OperandType = "OPERAND_UIMM20";
+  let OperandNamespace = "RISCVOp";
+}
+
+class UImm20OperandMaybeSym : UImm20Operand {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isUInt<20>(Imm);
     return MCOp.isBareSymbolRef();
   }];
-  let OperandType = "OPERAND_UIMM20";
-  let OperandNamespace = "RISCVOp";
 }
 
-def uimm20_lui : UImm20Operand {
+def uimm20_lui : UImm20OperandMaybeSym {
   let ParserMatchClass = UImmAsmOperand<20, "LUI">;
 }
-def uimm20_auipc : UImm20Operand {
+def uimm20_auipc : UImm20OperandMaybeSym {
   let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
+}
+
+def uimm20 : UImm20Operand {
+  let ParserMatchClass = UImmAsmOperand<20>;
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isUInt<20>(Imm);
+  }];
 }
 
 def Simm21Lsb0JALAsmOperand : SImmAsmOperand<21, "Lsb0JAL"> {
@@ -1104,6 +1117,10 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 // to allow assembly we print to be compatible with versions of GNU assembler
 // that don't support this alias.
 def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
+
+let Predicates = [HasStdExtZicfilp] in {
+def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
+}
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
@@ -1904,7 +1921,7 @@ def : Pat<(debugtrap), (EBREAK)>;
 
 let Predicates = [IsRV64], Uses = [X5],
     Defs = [X1, X6, X7, X28, X29, X30, X31] in
-def HWASAN_CHECK_MEMACCESS_SHORTGRANULES 
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
            [(int_hwasan_check_memaccess_shortgranules (i64 X5), GPRJALR:$ptr,
                                                       (i32 timm:$accessinfo))]>;

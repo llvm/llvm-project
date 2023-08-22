@@ -480,6 +480,29 @@ gpu.module @test_module {
 
 // -----
 
+// Test that the bf16 type is lowered away on this target.
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @bf16_id
+  func.func @bf16_id(%arg0 : bf16) -> bf16 {
+    // CHECK-SAME: (%[[ARG0:.+]]: i16)
+    // CHECK-SAME: -> i16
+    // CHECK: return %[[ARG0]] : i16
+    func.return %arg0 : bf16
+  }
+
+  // CHECK-LABEL: func @bf16x4_id
+  func.func @bf16x4_id(%arg0 : vector<4xbf16>) -> vector<4xbf16> {
+    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xi16>)
+    // CHECK-SAME: -> vector<4xi16>
+    // CHECK: return %[[ARG0]] : vector<4xi16>
+    func.return %arg0 : vector<4xbf16>
+  }
+
+}
+
+// -----
+
 gpu.module @test_module {
   // CHECK-LABEL: @kernel_func
   // CHECK: attributes

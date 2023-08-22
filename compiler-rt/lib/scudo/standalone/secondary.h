@@ -169,8 +169,7 @@ public:
                 atomic_load_relaxed(&MaxEntrySize));
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%u.%02u%%)\n",
-                SuccessfulRetrieves, CallsToRetrieve,
-                Integral, Fractional);
+                SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
     for (CachedBlock Entry : Entries) {
       if (!Entry.isValid())
         continue;
@@ -544,6 +543,7 @@ private:
   DoublyLinkedList<LargeBlock::Header> InUseBlocks GUARDED_BY(Mutex);
   uptr AllocatedBytes GUARDED_BY(Mutex) = 0;
   uptr FreedBytes GUARDED_BY(Mutex) = 0;
+  uptr FragmentedBytes GUARDED_BY(Mutex) = 0;
   uptr LargestSize GUARDED_BY(Mutex) = 0;
   u32 NumberOfAllocs GUARDED_BY(Mutex) = 0;
   u32 NumberOfFrees GUARDED_BY(Mutex) = 0;
@@ -594,6 +594,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
         ScopedLock L(Mutex);
         InUseBlocks.push_back(H);
         AllocatedBytes += H->CommitSize;
+        FragmentedBytes += reinterpret_cast<uptr>(H) - H->CommitBase;
         NumberOfAllocs++;
         Stats.add(StatAllocated, H->CommitSize);
         Stats.add(StatMapped, H->MemMap.getCapacity());
@@ -667,6 +668,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     ScopedLock L(Mutex);
     InUseBlocks.push_back(H);
     AllocatedBytes += CommitSize;
+    FragmentedBytes += reinterpret_cast<uptr>(H) - H->CommitBase;
     if (LargestSize < CommitSize)
       LargestSize = CommitSize;
     NumberOfAllocs++;
@@ -685,6 +687,7 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     ScopedLock L(Mutex);
     InUseBlocks.remove(H);
     FreedBytes += CommitSize;
+    FragmentedBytes -= reinterpret_cast<uptr>(H) - H->CommitBase;
     NumberOfFrees++;
     Stats.sub(StatAllocated, CommitSize);
     Stats.sub(StatMapped, H->MemMap.getCapacity());
@@ -696,10 +699,11 @@ template <typename Config>
 void MapAllocator<Config>::getStats(ScopedString *Str) EXCLUDES(Mutex) {
   ScopedLock L(Mutex);
   Str->append("Stats: MapAllocator: allocated %u times (%zuK), freed %u times "
-              "(%zuK), remains %u (%zuK) max %zuM\n",
+              "(%zuK), remains %u (%zuK) max %zuM, Fragmented %zuK\n",
               NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees,
               FreedBytes >> 10, NumberOfAllocs - NumberOfFrees,
-              (AllocatedBytes - FreedBytes) >> 10, LargestSize >> 20);
+              (AllocatedBytes - FreedBytes) >> 10, LargestSize >> 20,
+              FragmentedBytes >> 10);
   Cache.getStats(Str);
 }
 

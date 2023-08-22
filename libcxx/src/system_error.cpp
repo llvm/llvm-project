@@ -59,8 +59,8 @@ error_category::equivalent(const error_code& code, int condition) const noexcept
     return *this == code.category() && code.value() == condition;
 }
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
 namespace {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 
 //  GLIBC also uses 1024 as the maximum buffer size internally.
 constexpr size_t strerror_buff_size = 1024;
@@ -128,8 +128,26 @@ string do_strerror_r(int ev) {
     return string(error_message);
 }
 #endif
+
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+
+string make_error_str(const error_code& ec, string what_arg) {
+    if (ec) {
+        if (!what_arg.empty()) {
+            what_arg += ": ";
+        }
+        what_arg += ec.message();
+    }
+    return what_arg;
+}
+
+string make_error_str(const error_code& ec) {
+    if (ec) {
+        return ec.message();
+    }
+    return string();
+}
 } // end namespace
-#endif
 
 string
 __do_message::message(int ev) const
@@ -232,50 +250,38 @@ error_code::message() const
 
 // system_error
 
-string
-system_error::__init(const error_code& ec, string what_arg)
-{
-    if (ec)
-    {
-        if (!what_arg.empty())
-            what_arg += ": ";
-        what_arg += ec.message();
-    }
-    return what_arg;
-}
-
 system_error::system_error(error_code ec, const string& what_arg)
-    : runtime_error(__init(ec, what_arg)),
+    : runtime_error(make_error_str(ec, what_arg)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(error_code ec, const char* what_arg)
-    : runtime_error(__init(ec, what_arg)),
+    : runtime_error(make_error_str(ec, what_arg)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(error_code ec)
-    : runtime_error(__init(ec, "")),
+    : runtime_error(make_error_str(ec)),
       __ec_(ec)
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat, const string& what_arg)
-    : runtime_error(__init(error_code(ev, ecat), what_arg)),
+    : runtime_error(make_error_str(error_code(ev, ecat), what_arg)),
       __ec_(error_code(ev, ecat))
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat, const char* what_arg)
-    : runtime_error(__init(error_code(ev, ecat), what_arg)),
+    : runtime_error(make_error_str(error_code(ev, ecat), what_arg)),
       __ec_(error_code(ev, ecat))
 {
 }
 
 system_error::system_error(int ev, const error_category& ecat)
-    : runtime_error(__init(error_code(ev, ecat), "")),
+    : runtime_error(make_error_str(error_code(ev, ecat))),
       __ec_(error_code(ev, ecat))
 {
 }

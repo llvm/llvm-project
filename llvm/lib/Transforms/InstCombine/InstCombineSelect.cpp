@@ -713,10 +713,9 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
   Value *CmpLHS = IC->getOperand(0);
   Value *CmpRHS = IC->getOperand(1);
 
-  Value *V;
   unsigned C1Log;
-  bool IsEqualZero;
   bool NeedAnd = false;
+  CmpInst::Predicate Pred = IC->getPredicate();
   if (IC->isEquality()) {
     if (!match(CmpRHS, m_Zero()))
       return nullptr;
@@ -725,48 +724,40 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
     if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
       return nullptr;
 
-    V = CmpLHS;
     C1Log = C1->logBase2();
-    IsEqualZero = IC->getPredicate() == ICmpInst::ICMP_EQ;
-  } else if (IC->getPredicate() == ICmpInst::ICMP_SLT ||
-             IC->getPredicate() == ICmpInst::ICMP_SGT) {
-    // We also need to recognize (icmp slt (trunc (X)), 0) and
-    // (icmp sgt (trunc (X)), -1).
-    IsEqualZero = IC->getPredicate() == ICmpInst::ICMP_SGT;
-    if ((IsEqualZero && !match(CmpRHS, m_AllOnes())) ||
-        (!IsEqualZero && !match(CmpRHS, m_Zero())))
+  } else {
+    APInt C1;
+    if (!decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, CmpLHS, C1) ||
+        !C1.isPowerOf2())
       return nullptr;
 
-    if (!match(CmpLHS, m_OneUse(m_Trunc(m_Value(V)))))
-      return nullptr;
-
-    C1Log = CmpLHS->getType()->getScalarSizeInBits() - 1;
+    C1Log = C1.logBase2();
     NeedAnd = true;
+  }
+
+  Value *Or, *Y, *V = CmpLHS;
+  const APInt *C2;
+  bool NeedXor;
+  if (match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)))) {
+    Y = TrueVal;
+    Or = FalseVal;
+    NeedXor = Pred == ICmpInst::ICMP_NE;
+  } else if (match(TrueVal, m_Or(m_Specific(FalseVal), m_Power2(C2)))) {
+    Y = FalseVal;
+    Or = TrueVal;
+    NeedXor = Pred == ICmpInst::ICMP_EQ;
   } else {
     return nullptr;
   }
 
-  const APInt *C2;
-  bool OrOnTrueVal = false;
-  bool OrOnFalseVal = match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)));
-  if (!OrOnFalseVal)
-    OrOnTrueVal = match(TrueVal, m_Or(m_Specific(FalseVal), m_Power2(C2)));
-
-  if (!OrOnFalseVal && !OrOnTrueVal)
-    return nullptr;
-
-  Value *Y = OrOnFalseVal ? TrueVal : FalseVal;
-
   unsigned C2Log = C2->logBase2();
 
-  bool NeedXor = (!IsEqualZero && OrOnFalseVal) || (IsEqualZero && OrOnTrueVal);
   bool NeedShift = C1Log != C2Log;
   bool NeedZExtTrunc = Y->getType()->getScalarSizeInBits() !=
                        V->getType()->getScalarSizeInBits();
 
   // Make sure we don't create more instructions than we save.
-  Value *Or = OrOnFalseVal ? FalseVal : TrueVal;
-  if ((NeedShift + NeedXor + NeedZExtTrunc) >
+  if ((NeedShift + NeedXor + NeedZExtTrunc + NeedAnd) >
       (IC->hasOneUse() + Or->hasOneUse()))
     return nullptr;
 

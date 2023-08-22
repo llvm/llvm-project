@@ -1897,7 +1897,7 @@ struct DSEState {
     auto *LastDef =
       cast<MemoryDef>(Updater.getMemorySSA()->getMemoryAccess(Malloc));
     auto *NewAccess =
-      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), LastDef,
+      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
                                       LastDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);

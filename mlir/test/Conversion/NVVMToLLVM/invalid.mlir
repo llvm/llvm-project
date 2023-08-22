@@ -62,7 +62,7 @@ func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {
 
 func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {  
   %result = llvm.mlir.undef : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
-  // expected-error @+1 {{op shape 'k'  must be 16 for input type f16}}
+  // expected-error @+1 {{op shape 'k' must be 16 for input type f16}}
   %res = nvvm.wgmma.mma_async %descA, %descB, 
       #nvvm.shape<m = 64, n = 16, k = 3>, 
       D [%result, <zero>], 
@@ -114,6 +114,21 @@ func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {
       A [<f16>, #nvvm.wgmma_scale_in<neg>, <col>], 
       B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
       : !llvm.struct<(i32, i32, i32, i32)> 
+      -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
+  return 
+}
+
+// -----
+
+func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {  
+  %result = llvm.mlir.undef : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // expected-error @+1 {{op 'f32' += bf16 * f16, it is not supported}}
+  %res = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 16>, 
+      D [%result, <zero>], 
+      A [<bf16>, #nvvm.wgmma_scale_in<neg>, <col>], 
+      B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
+      : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
       -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
   return 
 }

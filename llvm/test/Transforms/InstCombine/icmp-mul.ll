@@ -797,12 +797,13 @@ define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
 
 define i1 @oss_fuzz_39934(i32 %arg) {
 ; CHECK-LABEL: @oss_fuzz_39934(
-; CHECK-NEXT:    [[B13:%.*]] = mul nsw i32 [[ARG:%.*]], -65536
-; CHECK-NEXT:    [[C10:%.*]] = icmp ne i32 [[B13]], mul (i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537), i32 -65536)
+; CHECK-NEXT:    [[C10:%.*]] = icmp ne i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C10]]
 ;
   %B13 = mul nsw i32 %arg, -65536
-  %C10 = icmp ne i32 mul (i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537), i32 -65536), %B13
+  %or = or i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), 65537
+  %mul = mul i32 %or, -65536
+  %C10 = icmp ne i32 %mul, %B13
   ret i1 %C10
 }
 

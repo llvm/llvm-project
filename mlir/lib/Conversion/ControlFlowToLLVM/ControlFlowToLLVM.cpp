@@ -46,7 +46,8 @@ static std::string generateGlobalMsgSymbolName(ModuleOp moduleOp) {
 
 /// Generate IR that prints the given string to stderr.
 static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
-                           StringRef msg, LLVMTypeConverter &typeConverter) {
+                           StringRef msg,
+                           const LLVMTypeConverter &typeConverter) {
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(moduleOp.getBody());
   MLIRContext *ctx = builder.getContext();

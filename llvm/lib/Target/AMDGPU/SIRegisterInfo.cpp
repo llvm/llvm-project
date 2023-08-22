@@ -1065,6 +1065,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_AV32_RESTORE:
   case AMDGPU::SI_SPILL_WWM_V32_SAVE:
   case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
+  case AMDGPU::SI_SPILL_WWM_AV32_SAVE:
+  case AMDGPU::SI_SPILL_WWM_AV32_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -2144,7 +2146,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV96_SAVE:
     case AMDGPU::SI_SPILL_AV64_SAVE:
     case AMDGPU::SI_SPILL_AV32_SAVE:
-    case AMDGPU::SI_SPILL_WWM_V32_SAVE: {
+    case AMDGPU::SI_SPILL_WWM_V32_SAVE:
+    case AMDGPU::SI_SPILL_WWM_AV32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -2211,7 +2214,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV384_RESTORE:
     case AMDGPU::SI_SPILL_AV512_RESTORE:
     case AMDGPU::SI_SPILL_AV1024_RESTORE:
-    case AMDGPU::SI_SPILL_WWM_V32_RESTORE: {
+    case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
+    case AMDGPU::SI_SPILL_WWM_AV32_RESTORE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==

@@ -75,7 +75,27 @@ static uint16_t getRVVMCOpcode(uint16_t RVVPseudoOpcode) {
   return RVV->BaseInstr;
 }
 
-static bool isScalarMoveInstr(const MachineInstr &MI) {
+static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
+  switch (getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VFMV_S_F:
+  case RISCV::VFMV_V_F:
+    return true;
+  }
+}
+
+static bool isScalarExtractInstr(const MachineInstr &MI) {
+  switch (getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VMV_X_S:
+  case RISCV::VFMV_F_S:
+    return true;
+  }
+}
+
+static bool isScalarInsertInstr(const MachineInstr &MI) {
   switch (getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
@@ -160,9 +180,13 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
     // lanes are undefined.
     return true;
 
-  // If the tied operand is an IMPLICIT_DEF (or a REG_SEQUENCE whose operands
-  // are solely IMPLICIT_DEFS), the pass through lanes are undefined.  
+  // If the tied operand is NoReg, an IMPLICIT_DEF, or a REG_SEQEUENCE whose
+  // operands are solely IMPLICIT_DEFS, then the pass through lanes are
+  // undefined.
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+  if (UseMO.getReg() == RISCV::NoRegister)
+    return true;
+
   if (MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg())) {
     if (UseMI->isImplicitDef())
       return true;
@@ -307,6 +331,8 @@ DemandedFields getDemanded(const MachineInstr &MI,
   // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
   // that it can't use the value of a SEW, VL, or Policy operand as they might
   // be stale after lowering.
+  bool HasVInstructionsF64 =
+      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
 
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
@@ -354,7 +380,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
   }
 
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
-  if (isScalarMoveInstr(MI)) {
+  if (isScalarInsertInstr(MI)) {
     Res.LMUL = false;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
@@ -365,9 +391,19 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedMergeOp(MI, *MRI)) {
-      Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
+      if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+        Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
       Res.TailPolicy = false;
     }
+  }
+
+  // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
+  if (isScalarExtractInstr(MI)) {
+    assert(!RISCVII::hasVLOp(TSFlags));
+    Res.LMUL = false;
+    Res.SEWLMULRatio = false;
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
   }
 
   return Res;
@@ -544,12 +580,6 @@ public:
     // If only our VLMAX ratio is valid, then this isn't compatible.
     if (SEWLMULRatioOnly)
       return false;
-
-    // If the instruction doesn't need an AVLReg and the SEW matches, consider
-    // it compatible.
-    if (Require.hasAVLReg() && Require.AVLReg == RISCV::NoRegister)
-      if (SEW == Require.SEW)
-        return true;
 
     if (Used.VLAny && !hasSameAVL(Require))
       return false;
@@ -779,6 +809,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       InstrInfo.setAVLReg(VLOp.getReg());
     }
   } else {
+    assert(isScalarExtractInstr(MI));
     InstrInfo.setAVLReg(RISCV::NoRegister);
   }
 #ifndef NDEBUG
@@ -875,10 +906,10 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
           .addReg(RISCV::VL, RegState::Implicit);
       return;
     }
-    // Otherwise use an AVL of 0 to avoid depending on previous vl.
+    // Otherwise use an AVL of 1 to avoid depending on previous vl.
     BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-        .addImm(0)
+        .addImm(1)
         .addImm(Info.encodeVTYPE());
     return;
   }
@@ -917,6 +948,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     return true;
 
   DemandedFields Used = getDemanded(MI, MRI);
+  bool HasVInstructionsF64 =
+      MI.getMF()->getSubtarget<RISCVSubtarget>().hasVInstructionsF64();
 
   // A slidedown/slideup with an *undefined* merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
@@ -944,7 +977,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
-    Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
+    if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+      Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
     Used.TailPolicy = false;
   }
 
@@ -995,7 +1029,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &M
   // the 'vsetvli x0, x0, vtype" variant, so we avoid the transform to
   // prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
-  if (isScalarMoveInstr(MI) && PrevInfo.isValid() &&
+  if (isScalarInsertInstr(MI) && PrevInfo.isValid() &&
       PrevInfo.hasEquallyZeroAVL(Info, *MRI) &&
       Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
@@ -1389,28 +1423,20 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLAny)
       return false;
 
-    // TODO: Requires more care in the mutation...
-    if (isVLPreservingConfig(PrevMI))
-      return false;
-
     // We don't bother to handle the equally zero case here as it's largely
     // uninteresting.
-    if (Used.VLZeroness &&
-        (!isNonZeroAVL(MI.getOperand(1)) ||
-         !isNonZeroAVL(PrevMI.getOperand(1))))
-      return false;
+    if (Used.VLZeroness) {
+      if (isVLPreservingConfig(PrevMI))
+        return false;
+      if (!isNonZeroAVL(MI.getOperand(1)) ||
+          !isNonZeroAVL(PrevMI.getOperand(1)))
+        return false;
+    }
 
     // TODO: Track whether the register is defined between
     // PrevMI and MI.
     if (MI.getOperand(1).isReg() &&
         RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
-
-    // TODO: We need to change the result register to allow this rewrite
-    // without the result forming a vl preserving vsetvli which is not
-    // a correct state merge.
-    if (PrevMI.getOperand(0).getReg() == RISCV::X0 &&
-        MI.getOperand(1).isReg())
       return false;
   }
 
@@ -1449,6 +1475,8 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         continue;
       } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
         if (!isVLPreservingConfig(*NextMI)) {
+          MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
+          MI.getOperand(0).setIsDead(false);
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
@@ -1456,11 +1484,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        // Don't delete a vsetvli if its result might be used.
-        Register NextVRefDef = NextMI->getOperand(0).getReg();
-        if (NextVRefDef == RISCV::X0 ||
-            (NextVRefDef.isVirtual() && MRI->use_nodbg_empty(NextVRefDef)))
-          ToDelete.push_back(NextMI);
+        ToDelete.push_back(NextMI);
         // fallthrough
       }
     }

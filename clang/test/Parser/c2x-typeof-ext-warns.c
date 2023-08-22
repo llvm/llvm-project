@@ -9,7 +9,7 @@
 // Exercise the various circumstances under which we will diagnose use of
 // typeof and typeof_unqual as either an extension or as a compatability
 // warning. Note that GCC exposes 'typeof' as a non-conforming extension in
-// standards before C2x, and Clang has followed suit. Neither compiler exposes
+// standards before C23, and Clang has followed suit. Neither compiler exposes
 // 'typeof_unqual' as a non-conforming extension.
 
 // Show what happens with the underscored version of the keyword, which is a
@@ -19,11 +19,11 @@ __typeof__(int) i = 12;
 // Show what happens with a regular 'typeof' use.
 typeof(i) j = 12; // c11-error {{expected function body after function declarator}} \
                      pedantic-warning {{extension used}} \
-                     compat-warning {{'typeof' is incompatible with C standards before C2x}}
+                     compat-warning {{'typeof' is incompatible with C standards before C23}}
 
 // Same for 'typeof_unqual'.
 typeof_unqual(j) k = 12; // c11-error {{expected function body after function declarator}} \
                             gnu11-error {{expected function body after function declarator}} \
                             pedantic-error {{expected function body after function declarator}} \
-                            compat-warning {{'typeof_unqual' is incompatible with C standards before C2x}}
+                            compat-warning {{'typeof_unqual' is incompatible with C standards before C23}}
 

@@ -274,6 +274,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
         $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+        $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
         $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         $<TARGET_OBJECTS:RTUbsan.${arch}>
         $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>)
@@ -300,6 +301,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
       $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>

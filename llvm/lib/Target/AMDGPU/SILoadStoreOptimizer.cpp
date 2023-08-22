@@ -871,6 +871,9 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   unsigned MaxMask = std::max(CI.DMask, Paired.DMask);
   unsigned MinMask = std::min(CI.DMask, Paired.DMask);
 
+  if (!MaxMask)
+    return false;
+
   unsigned AllowedBitsForMin = llvm::countr_zero(MaxMask);
   if ((1u << AllowedBitsForMin) <= MinMask)
     return false;

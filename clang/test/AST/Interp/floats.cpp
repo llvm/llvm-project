@@ -144,6 +144,22 @@ namespace ZeroInit {
 
 namespace LongDouble {
   constexpr long double ld = 3.1425926539;
+
+  constexpr long double f() {
+    const long double L = __LDBL_MAX__;
+
+    return L;
+  };
+  static_assert(f() == __LDBL_MAX__);
+
+#ifdef __FLOAT128__
+  constexpr __float128 f128() {
+    const __float128 L = __LDBL_MAX__;
+
+    return L;
+  };
+  static_assert(f128() == __LDBL_MAX__);
+#endif
 }
 
 namespace Compare {

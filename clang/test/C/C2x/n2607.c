@@ -14,7 +14,7 @@ void matrix_fun(int N, const float x[N][N]);
 void test1(void) {
   int N = 100;
   float x[N][N];
-  // FIXME: This is OK in C2x but should be diagnosed as passing incompatible
+  // FIXME: This is OK in C23 but should be diagnosed as passing incompatible
   // pointer types in C17 and earlier.
   matrix_fun(N, x);
 }

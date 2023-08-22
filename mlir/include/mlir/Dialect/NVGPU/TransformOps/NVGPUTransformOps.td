@@ -16,7 +16,7 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// ApplyNVGPUToNVVMConversionPatternsOp
+// Apply...ConversionPatternsOp
 //===----------------------------------------------------------------------===//
 
 def ApplyNVGPUToNVVMConversionPatternsOp : Op<Transform_Dialect,

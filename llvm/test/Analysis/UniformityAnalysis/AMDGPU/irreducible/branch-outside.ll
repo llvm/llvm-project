@@ -78,4 +78,42 @@ exit:
   ret void
 }
 
+; Just make sure that this does not asert. It is important that Q is recognized
+; as the header of the outermost cycle. The incorrect assert was exercised by
+; this hierarchy:
+;
+; CycleInfo for function: irreducible_outer_cycle
+;    depth=1: entries(Q R) C B D
+;        depth=2: entries(R) C B D
+;            depth=3: entries(B) D
+;
+; CHECK-LABEL: UniformityInfo for function 'irreducible_outer_cycle':
+; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK:  depth=1: entries(Q R) C B D
+define void @irreducible_outer_cycle(i1 %c1, i1 %c2, i1 %c3) {
+entry:
+  br i1 %c1, label %P, label %Q
+
+P:
+  br i1 false, label %Q, label %R
+
+Q:
+  br label %R
+
+R:
+  br i1 false, label %Q, label %B
+
+B:
+  br i1 false, label %C, label %D
+
+D:
+  br label %B
+
+C:
+  br i1 false, label %R, label %exit
+
+exit:
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0

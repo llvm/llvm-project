@@ -18,38 +18,16 @@ function(add_stdio_entrypoint_object name)
   endif()
 endfunction(add_stdio_entrypoint_object)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
+endif()
+
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
-
-add_entrypoint_object(
-  fopen
-  SRCS
-    fopen.cpp
-  HDRS
-    fopen.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fclose
-  SRCS
-    fclose.cpp
-  HDRS
-    fclose.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.errno.errno
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
 
 add_entrypoint_object(
   clearerr
@@ -252,32 +230,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fread_unlocked
-  SRCS
-    fread_unlocked.cpp
-  HDRS
-    fread_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fread
-  SRCS
-    fread.cpp
-  HDRS
-    fread.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   fwrite_unlocked
   SRCS
     fwrite_unlocked.cpp
@@ -470,6 +422,7 @@ if(LLVM_LIBC_FULL_BUILD)
  list(APPEND printf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
+      libc.src.__support.File.platform_stdout
   )
 else()
  set(printf_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")
@@ -568,6 +521,10 @@ add_entrypoint_object(
 )
 
 # These entrypoints have multiple potential implementations.
+add_stdio_entrypoint_object(fopen)
+add_stdio_entrypoint_object(fclose)
+add_stdio_entrypoint_object(fread_unlocked)
+add_stdio_entrypoint_object(fread)
 add_stdio_entrypoint_object(puts)
 add_stdio_entrypoint_object(fputs)
 add_stdio_entrypoint_object(stdin)

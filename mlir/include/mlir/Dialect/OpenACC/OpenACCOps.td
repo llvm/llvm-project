@@ -135,6 +135,16 @@ def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+// Attribute to attach functions that perform the pre/post allocation actions or
+// pre/post deallocation actions as described in section 2.13.
+def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
+  let parameters = (ins OptionalParameter<"SymbolRefAttr">:$preAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$postAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$preDealloc,
+                        OptionalParameter<"SymbolRefAttr">:$postDealloc);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
@@ -1320,6 +1330,36 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
   }];
 
   let hasVerifier = 0;
+}
+
+def OpenACC_DeclareOp : OpenACC_Op<"declare", [RecursiveMemoryEffects]> {
+  let summary = "declare implicit region";
+
+  let description = [{
+    The "acc.declare" operation represents an implicit declare region in
+    function (and subroutine in Fortran).
+
+    Example:
+
+    ```mlir
+    %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+    acc.declare dataOperands(%pa: memref<10x10xf32>) {
+      // implicit region
+    }
+    ```
+  }];
+
+  let arguments = (ins
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+      `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

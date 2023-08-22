@@ -23,7 +23,7 @@ namespace detail {
 LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
                               ArrayRef<NamedAttribute> targetAttrs,
-                              LLVMTypeConverter &typeConverter,
+                              const LLVMTypeConverter &typeConverter,
                               ConversionPatternRewriter &rewriter);
 
 } // namespace detail
@@ -37,14 +37,14 @@ LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
-                       LLVMTypeConverter &typeConverter,
+                       const LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
 
 protected:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
-  LLVMTypeConverter *getTypeConverter() const;
+  const LLVMTypeConverter *getTypeConverter() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
@@ -140,7 +140,7 @@ class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
 
-  explicit ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
+  explicit ConvertOpToLLVMPattern(const LLVMTypeConverter &typeConverter,
                                   PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(SourceOp::getOperationName(),
                              &typeConverter.getContext(), typeConverter,

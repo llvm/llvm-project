@@ -678,3 +678,35 @@ func.func @multi_entry_loop(%cond: i1) {
 // CHECK:        scf.yield
 // CHECK:      call @foo(%[[WHILE]]#1)
 // CHECK-NEXT: return
+
+// -----
+
+func.func @nested_region() {
+  scf.execute_region {
+    %cond = "test.test1"() : () -> i1
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    "test.test2"() : () -> ()
+    cf.br ^bb3
+  ^bb2:
+    "test.test3"() : () -> ()
+    cf.br ^bb3
+  ^bb3:
+    "test.test4"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_region
+// CHECK:      scf.execute_region {
+// CHECK:      %[[COND:.*]] = "test.test1"()
+// CHECK-NEXT: scf.if %[[COND]]
+// CHECK-NEXT:   "test.test2"()
+// CHECK-NEXT: else
+// CHECK-NEXT:   "test.test3"()
+// CHECK-NEXT: }
+// CHECK-NEXT: "test.test4"()
+// CHECK-NEXT: scf.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: return

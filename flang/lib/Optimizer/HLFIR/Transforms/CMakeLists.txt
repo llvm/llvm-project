@@ -8,6 +8,7 @@ add_flang_library(HLFIRTransforms
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
   SimplifyHLFIRIntrinsics.cpp
+  OptimizedBufferization.cpp
 
   DEPENDS
   FIRDialect

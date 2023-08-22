@@ -2,4 +2,4 @@
 .asciz "Wrong Section"
 
 .section __LLVM,__bitcode
-.incbin "bcsection.bc"
+.incbin "llvm.lto.section.bc"

@@ -14,8 +14,8 @@ define dso_local ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-exa
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp, #16]
+; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl baz // 8-byte Folded Reload
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    ldp x19, x0, [sp, #8] // 8-byte Folded Reload

@@ -575,9 +575,9 @@ body: |
     ; GFX9PLUS: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
     ; GFX9PLUS-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; GFX9PLUS-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_1]], [[DEF]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_1]], [[DEF]], implicit-def dead $scc
     ; GFX9PLUS-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; GFX9PLUS-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_2]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_2]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_AND_B32_]], [[S_AND_B32_1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s16) = G_IMPLICIT_DEF

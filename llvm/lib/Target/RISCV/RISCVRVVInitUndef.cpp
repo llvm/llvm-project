@@ -9,7 +9,8 @@
 // This file implements a function pass that initializes undef vector value to
 // temporary pseudo instruction and remove it in expandpseudo pass to prevent
 // register allocation resulting in a constraint violated result for vector
-// instruction.
+// instruction.  It also rewrites the NoReg tied operand back to an
+// IMPLICIT_DEF.
 //
 // RISC-V vector instruction has register overlapping constraint for certain
 // instructions, and will cause illegal instruction trap if violated, we use
@@ -30,10 +31,17 @@
 //
 // See also: https://github.com/llvm/llvm-project/issues/50157
 //
+// Additionally, this pass rewrites tied operands of vector instructions
+// from NoReg to IMPLICIT_DEF.  (Not that this is a non-overlapping set of
+// operands to the above.)  We use NoReg to side step a MachineCSE
+// optimization quality problem but need to convert back before
+// TwoAddressInstruction.  See pr64282 for context.
+//
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;
@@ -243,6 +251,26 @@ bool RISCVInitUndef::processBasicBlock(MachineFunction &MF,
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
+
+    // If we used NoReg to represent the passthru, switch this back to being
+    // an IMPLICIT_DEF before TwoAddressInstructions.
+    unsigned UseOpIdx;
+    if (MI.getNumDefs() != 0 && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+      MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+      if (UseMO.getReg() == RISCV::NoRegister) {
+        const TargetRegisterClass *RC =
+          TII->getRegClass(MI.getDesc(), UseOpIdx, TRI, MF);
+        Register NewDest = MRI->createVirtualRegister(RC);
+        // We don't have a way to update dead lanes, so keep track of the
+        // new register so that we avoid querying it later.
+        NewRegs.insert(NewDest);
+        BuildMI(MBB, I, I->getDebugLoc(),
+                TII->get(TargetOpcode::IMPLICIT_DEF), NewDest);
+        UseMO.setReg(NewDest);
+        Changed = true;
+      }
+    }
+
     if (ST->enableSubRegLiveness() && isEarlyClobberMI(MI))
       Changed |= handleSubReg(MF, MI, DLD);
     if (MI.isImplicitDef()) {

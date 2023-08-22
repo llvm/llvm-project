@@ -331,6 +331,19 @@ func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_3d(%ar
 
 // -----
 
+// CHECK-LABEL: fold_dynamic_subview_with_memref_load_store_expand_shape
+func.func @fold_dynamic_subview_with_memref_load_store_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  return %0 : f32
+}
+// CHECK: %[[EXPAND_SHAPE:.+]] = memref.expand_shape {{.+}} : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+// CHECK: %[[LOAD:.+]] = memref.load %[[EXPAND_SHAPE]]
+// CHECK: return %[[LOAD]]
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0 * 1024 + d1)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
 // CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape

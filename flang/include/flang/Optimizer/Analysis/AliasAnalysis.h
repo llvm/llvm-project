@@ -55,6 +55,9 @@ class AliasAnalysis {
     mlir::Type valueType;
     /// Attributes of the memory source object, e.g. Target.
     Attributes attributes;
+    /// Have we lost precision following the source such that
+    /// even an exact match cannot be MustAlias?
+    bool approximateSource;
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;

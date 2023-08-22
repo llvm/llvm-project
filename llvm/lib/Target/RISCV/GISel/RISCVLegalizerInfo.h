@@ -23,6 +23,8 @@ class RISCVSubtarget;
 class RISCVLegalizerInfo : public LegalizerInfo {
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
+
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 };
 } // end namespace llvm
 #endif

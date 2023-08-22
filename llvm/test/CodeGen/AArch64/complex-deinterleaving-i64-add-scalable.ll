@@ -27,8 +27,8 @@ entry:
 define <vscale x 4 x i64> @complex_add_v4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b) {
 ; CHECK-LABEL: complex_add_v4i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cadd z2.d, z2.d, z0.d, #90
 ; CHECK-NEXT:    cadd z3.d, z3.d, z1.d, #90
+; CHECK-NEXT:    cadd z2.d, z2.d, z0.d, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    mov z1.d, z3.d
 ; CHECK-NEXT:    ret

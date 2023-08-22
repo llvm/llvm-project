@@ -16,9 +16,9 @@ NOTFOUND-NEXT: ??:0:0
 # Use llvm-objcopy to write the debuginfo of the addr.exe binary to an
 # appropriately-named file in the llvm debuginfod cache. The filename is
 # determined by the debuginfod client's caching scheme, so it is manually
-# specified here as llvmcache-98...19
+# specified here as llvmcache-\d+
 RUN: llvm-objcopy --keep-section=.debug_info %p/Inputs/addr.exe \
-RUN:   %t/llvmcache-9800707741016212219
+RUN:   %t/llvmcache-1165050469834211050
 
 # The symbolizer should call the debuginfod client library, which finds the
 # debuginfo placed in the cache, enabling symbolization of the address.

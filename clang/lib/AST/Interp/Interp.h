@@ -174,7 +174,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *Call);
 
 enum class ArithOp { Add, Sub };
 
@@ -270,7 +271,8 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   } else {
     S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
@@ -477,7 +479,8 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
@@ -530,7 +533,8 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
@@ -989,6 +993,19 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   *Cached = APV;
 
   S.P.getGlobal(I)->deref<T>() = S.Stk.pop<T>();
+  return true;
+}
+
+/// 1) Converts the value on top of the stack to an APValue
+/// 2) Sets that APValue on \Temp
+/// 3) Initialized global with index \I with that
+inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
+                               const LifetimeExtendedTemporaryDecl *Temp) {
+  assert(Temp);
+  const Pointer &P = S.Stk.peek<Pointer>();
+  APValue *Cached = Temp->getOrCreateValue(true);
+
+  *Cached = P.toRValue(S.getCtx());
   return true;
 }
 
@@ -1741,13 +1758,14 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
   return Call(S, OpPC, Func);
 }
 
-inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+                   const CallExpr *CE) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func)) {
+  if (InterpretBuiltin(S, PC, Func, CE)) {
     NewFrame.release();
     return true;
   }
@@ -1802,6 +1820,12 @@ template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
   } else {
     return OpPC.read<T>();
   }
+}
+
+template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {
+  Floating F = Floating::deserialize(*OpPC);
+  OpPC += align(F.bytesToSerialize());
+  return F;
 }
 
 } // namespace interp

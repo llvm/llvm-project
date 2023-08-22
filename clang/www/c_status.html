@@ -57,13 +57,13 @@
  <td class="unknown" align="center">Maybe?</td>
 </tr>
 <tr>
- <td><a href="#c2x">C2x</a></td>
- <td><tt>-std=c2x</tt></td>
+ <td><a href="#c2x">C23</a></td>
+ <td><tt>-std=c23</tt></td>
  <td class="partial" align="center">Partial</td>
 </tr>
 </table>
 
-<p>The implementation status for C99, C11, and C17 are currently under
+<p>The implementation status for C99, C11, C17, and C23 are currently under
 investigation. Any proposal whose status in Clang is currently unknown
 will be marked in <span class="unknown">magenta</span>.</p>
 
@@ -73,7 +73,7 @@ compliance between releases by submitting and tracking
 they become available.</p>
 
 <p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
-the "c", "c99", "c11", "c17", and "c2x" labels to track known bugs with Clang's language
+the "c", "c99", "c11", "c17", and "c23" labels to track known bugs with Clang's language
 conformance.</p>
 
 <h2 id="c89">C89 implementation status</h2>
@@ -617,11 +617,12 @@ conformance.</p>
 <p>There are no major changes in this edition, only technical corrections and clarifications that are tracked by Defect Report.</p>
 <p>You can use Clang in C17 mode with the <code>-std=c17</code> or <code>-std=c18</code> options (available in Clang 6 and later).</p>
 
-<h2 id="c2x">C2x implementation status</h2>
+<h2 id="c2x">C23 implementation status</h2>
 
-<p>Clang has support for some of the features of the C standard following C17, informally referred to as C2x.</p>
+<p>Clang has support for some of the features of the C standard following C17, informally referred to as C23.</p>
 
-<p>You can use Clang in C2x mode with the <code>-std=c2x</code> option (available in Clang 9 and later).</p>
+<p>You can use Clang in C23 mode with the <code>-std=c23</code> option (available in Clang 18 and later) or with the
+   <code>-std=c2x</code> option (available in Clang 9 and later).</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -629,7 +630,7 @@ conformance.</p>
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-    <th>C2x Proposal</th>
+    <th>C23 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <!-- Pre-Oct 2019 Papers -->

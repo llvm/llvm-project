@@ -23,37 +23,37 @@ void whatever(void) {
 void again() {} // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
 // On by default warnings
-void func();                 // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}} \
+void func();                 // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}} \
                                 strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
-void func(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void func(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
 
-void one_more(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void one_more(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
 
 void sheesh(int a);
-void sheesh(a) int a; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void sheesh(a) int a; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
 
 void another(); // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
 int main(void) {
-  another(1, 2);  // both-warning {{passing arguments to 'another' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  another(1, 2);  // both-warning {{passing arguments to 'another' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
-void order1();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent declaration}} \
+void order1();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent declaration}} \
                          strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 void order1(int i);   // both-note {{conflicting prototype is here}}
 
 void order2(int i);   // both-note {{conflicting prototype is here}}
-void order2();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a previous declaration}} \
+void order2();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a previous declaration}} \
                          strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
-void order3();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}} \
+void order3();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}} \
                          strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 void order3(int i) {} // both-note {{conflicting prototype is here}}
 
 // Just because the prototype is variadic doesn't mean we shouldn't warn on the
-// K&R C function definition; this still changes behavior in C2x.
+// K&R C function definition; this still changes behavior in C23.
 void test(char*,...);
-void test(fmt)        // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void test(fmt)        // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
         char*fmt;
 {
 }
@@ -80,7 +80,7 @@ void calls(void) {
   // Ensure that we diagnose calls to functions without a prototype, but only
   // if they pass arguments.
   never_defined(); // OK
-  never_defined(1); // both-warning {{passing arguments to 'never_defined' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  never_defined(1); // both-warning {{passing arguments to 'never_defined' without a prototype is deprecated in all versions of C and is not supported in C23}}
 
   // Ensure that calls to builtins without a traditional prototype are not
   // diagnosed.
@@ -93,7 +93,7 @@ void calls(void) {
   // Ensure that a call through a function pointer is still diagnosed properly.
   fp f;
   f(); // OK
-  f(1, 2); // both-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  f(1, 2); // both-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23}}
 
   // Ensure that we don't diagnose when the diagnostic group is disabled.
   depr_non_prot(1); // OK
@@ -110,7 +110,7 @@ void calls(void) {
 // prototype twice when the function was declared static in the following
 // example.
 static int GH58181(int x, int y);
-static int GH58181(x, y) // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+static int GH58181(x, y) // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
     int x;
     int y;
 {

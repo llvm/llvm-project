@@ -98,10 +98,10 @@ private:
 
     /// When the entry contains a single declaration, this is
     /// the index associated with that entry.
-    unsigned SingleDeclIndex;
+    unsigned SingleDeclIndex = 0;
 
   public:
-    ShadowMapEntry() : SingleDeclIndex(0) {}
+    ShadowMapEntry() = default;
     ShadowMapEntry(const ShadowMapEntry &) = delete;
     ShadowMapEntry(ShadowMapEntry &&Move) { *this = std::move(Move); }
     ShadowMapEntry &operator=(const ShadowMapEntry &) = delete;
@@ -2673,7 +2673,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (SemaRef.getLangOpts().C2x) {
+    if (SemaRef.getLangOpts().C23) {
       // nullptr
       Builder.AddResultTypeChunk("nullptr_t");
       Builder.AddTypedTextChunk("nullptr");
@@ -4533,7 +4533,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
   }
   bool SyntaxSupportsGuards = Syntax == AttributeCommonInfo::AS_GNU ||
                               Syntax == AttributeCommonInfo::AS_CXX11 ||
-                              Syntax == AttributeCommonInfo::AS_C2x;
+                              Syntax == AttributeCommonInfo::AS_C23;
 
   llvm::DenseSet<llvm::StringRef> FoundScopes;
   auto AddCompletions = [&](const ParsedAttrInfo &A) {
@@ -4547,7 +4547,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
       llvm::StringRef Name = S.NormalizedFullName;
       llvm::StringRef Scope;
       if ((Syntax == AttributeCommonInfo::AS_CXX11 ||
-           Syntax == AttributeCommonInfo::AS_C2x)) {
+           Syntax == AttributeCommonInfo::AS_C23)) {
         std::tie(Scope, Name) = Name.split("::");
         if (Name.empty()) // oops, unscoped
           std::swap(Name, Scope);
@@ -6066,12 +6066,21 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   if (!Target)
     return {};
 
-  if (auto P = Target.getAs<PointerTypeLoc>()) {
-    Target = P.getPointeeLoc();
-  }
-
-  if (auto P = Target.getAs<ParenTypeLoc>()) {
-    Target = P.getInnerLoc();
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
   }
 
   if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {

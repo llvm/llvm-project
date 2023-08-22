@@ -87,6 +87,7 @@ enum CPUKind {
   CK_Goldmont,
   CK_GoldmontPlus,
   CK_Tremont,
+  CK_Gracemont,
   CK_Nehalem,
   CK_Westmere,
   CK_SandyBridge,

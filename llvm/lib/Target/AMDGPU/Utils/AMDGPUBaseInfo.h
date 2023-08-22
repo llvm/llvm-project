@@ -547,6 +547,9 @@ bool isMAC(unsigned Opc);
 LLVM_READNONE
 bool isPermlane16(unsigned Opc);
 
+LLVM_READNONE
+bool isGenericAtomic(unsigned Opc);
+
 namespace VOPD {
 
 enum Component : unsigned {
@@ -1119,6 +1122,9 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 // the current module. Module entry functions are allowed to allocate LDS.
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
+
+LLVM_READNONE
+bool isChainCC(CallingConv::ID CC);
 
 bool isKernelCC(const Function *Func);
 

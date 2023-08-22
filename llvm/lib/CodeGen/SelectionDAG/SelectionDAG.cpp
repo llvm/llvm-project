@@ -1453,6 +1453,51 @@ SDValue SelectionDAG::getZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
     getNode(ISD::TRUNCATE, DL, VT, Op);
 }
 
+SDValue SelectionDAG::getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL,
+                                                 EVT VT) {
+  assert(!VT.isVector());
+  auto Type = Op.getValueType();
+  SDValue DestOp;
+  if (Type == VT)
+    return Op;
+  auto Size = Op.getValueSizeInBits();
+  DestOp = getBitcast(MVT::getIntegerVT(Size), Op);
+  if (DestOp.getValueType() == VT)
+    return DestOp;
+
+  return getAnyExtOrTrunc(DestOp, DL, VT);
+}
+
+SDValue SelectionDAG::getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL,
+                                               EVT VT) {
+  assert(!VT.isVector());
+  auto Type = Op.getValueType();
+  SDValue DestOp;
+  if (Type == VT)
+    return Op;
+  auto Size = Op.getValueSizeInBits();
+  DestOp = getBitcast(MVT::getIntegerVT(Size), Op);
+  if (DestOp.getValueType() == VT)
+    return DestOp;
+
+  return getSExtOrTrunc(DestOp, DL, VT);
+}
+
+SDValue SelectionDAG::getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL,
+                                               EVT VT) {
+  assert(!VT.isVector());
+  auto Type = Op.getValueType();
+  SDValue DestOp;
+  if (Type == VT)
+    return Op;
+  auto Size = Op.getValueSizeInBits();
+  DestOp = getBitcast(MVT::getIntegerVT(Size), Op);
+  if (DestOp.getValueType() == VT)
+    return DestOp;
+
+  return getZExtOrTrunc(DestOp, DL, VT);
+}
+
 SDValue SelectionDAG::getBoolExtOrTrunc(SDValue Op, const SDLoc &SL, EVT VT,
                                         EVT OpVT) {
   if (VT.bitsLE(Op.getValueType()))
@@ -1927,6 +1972,9 @@ SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
   assert(MulImm.getBitWidth() == VT.getSizeInBits() &&
          "APInt size does not match type size!");
 
+  if (MulImm == 0)
+    return getConstant(0, DL, VT);
+
   if (ConstantFold) {
     const MachineFunction &MF = getMachineFunction();
     const Function &F = MF.getFunction();
@@ -2097,11 +2145,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       if (Splat && UndefElements.none()) {
         // Splat of <x, x, ..., x>, return <x, x, ..., x>, provided that the
         // number of elements match or the value splatted is a zero constant.
-        if (SameNumElts)
+        if (SameNumElts || isNullConstant(Splat))
           return N1;
-        if (auto *C = dyn_cast<ConstantSDNode>(Splat))
-          if (C->isZero())
-            return N1;
       }
 
       // If the shuffle itself creates a splat, build the vector directly.
@@ -4045,8 +4090,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   unsigned BitWidth = OpVT.getScalarSizeInBits();
 
   // Is the constant a known power of 2?
-  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Val))
-    return Const->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+  if (ISD::matchUnaryPredicate(Val, [BitWidth](ConstantSDNode *C) {
+        return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+      }))
+    return true;
 
   // A left-shift of a constant one will have exactly one bit set because
   // shifting the bit off the end is undefined.
@@ -4054,6 +4101,8 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue() == 1)
       return true;
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+           isKnownNeverZero(Val, Depth);
   }
 
   // Similarly, a logical right-shift of a constant sign-bit will have exactly
@@ -4062,7 +4111,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue().isSignMask())
       return true;
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+           isKnownNeverZero(Val, Depth);
   }
+
+  if (Val.getOpcode() == ISD::ROTL || Val.getOpcode() == ISD::ROTR)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
 
   // Are all operands of a build vector constant powers of two?
   if (Val.getOpcode() == ISD::BUILD_VECTOR)
@@ -4084,6 +4138,34 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
       getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
       isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1))
     return true;
+
+  if (Val.getOpcode() == ISD::SMIN || Val.getOpcode() == ISD::SMAX ||
+      Val.getOpcode() == ISD::UMIN || Val.getOpcode() == ISD::UMAX)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+
+  if (Val.getOpcode() == ISD::SELECT || Val.getOpcode() == ISD::VSELECT)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(2), Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1);
+
+  if (Val.getOpcode() == ISD::AND) {
+    // Looking for `x & -x` pattern:
+    // If x == 0:
+    //    x & -x -> 0
+    // If x != 0:
+    //    x & -x -> non-zero pow2
+    // so if we find the pattern return whether we know `x` is non-zero.
+    for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) {
+      SDValue NegOp = Val.getOperand(OpIdx);
+      if (NegOp.getOpcode() == ISD::SUB &&
+          NegOp.getOperand(1) == Val.getOperand(1 - OpIdx) &&
+          isNullOrNullSplat(NegOp.getOperand(0)))
+        return isKnownNeverZero(Val.getOperand(1 - OpIdx), Depth);
+    }
+  }
+
+  if (Val.getOpcode() == ISD::ZERO_EXTEND)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
@@ -5088,21 +5170,29 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(2), Depth + 1);
 
-  case ISD::SHL:
+  case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
       return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-
-    // 1 << X is never zero. TODO: This can be expanded if we can bound X.
-    // The expression is really !Known.One[BitWidth-MaxLog2(Known):0].isZero()
-    if (computeKnownBits(Op.getOperand(0), Depth + 1).One[0])
+    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+    // 1 << X is never zero.
+    if (ValKnown.One[0])
+      return true;
+    // If max shift cnt of known ones is non-zero, result is non-zero.
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
+        !ValKnown.One.shl(MaxCnt).isZero())
       return true;
     break;
-
+  }
   case ISD::UADDSAT:
   case ISD::UMAX:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
+    // TODO for smin/smax: If either operand is known negative/positive
+    // respectively we don't need the other to be known at all.
+  case ISD::SMAX:
+  case ISD::SMIN:
   case ISD::UMIN:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
@@ -5116,16 +5206,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SRA:
-  case ISD::SRL:
+  case ISD::SRL: {
     if (Op->getFlags().hasExact())
       return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    // Signed >> X is never zero. TODO: This can be expanded if we can bound X.
-    // The expression is really
-    // !Known.One[SignBit:SignBit-(BitWidth-MaxLog2(Known))].isZero()
-    if (computeKnownBits(Op.getOperand(0), Depth + 1).isNegative())
+    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (ValKnown.isNegative())
+      return true;
+    // If max shift cnt of known ones is non-zero, result is non-zero.
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
+        !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
     break;
-
+  }
   case ISD::UDIV:
   case ISD::SDIV:
     // div exact can only produce a zero if the dividend is zero.
@@ -7932,8 +8025,6 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // FIXME: pass in SDLoc
   CLI.setDebugLoc(dl).setChain(Chain);
 
-  ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src);
-  const bool SrcIsZero = ConstantSrc && ConstantSrc->isZero();
   const char *BzeroName = getTargetLoweringInfo().getLibcallName(RTLIB::BZERO);
 
   // Helper function to create an Entry from Node and Type.
@@ -7945,7 +8036,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   };
 
   // If zeroing out and bzero is present, use it.
-  if (SrcIsZero && BzeroName) {
+  if (isNullConstant(Src) && BzeroName) {
     TargetLowering::ArgListTy Args;
     Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
     Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));

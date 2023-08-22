@@ -1704,10 +1704,9 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
   for (auto U : UsedOpsInCopy) {
     Register SrcReg = MI->getOperand(U).getReg();
     LaneBitmask Mask;
-    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S) {
+    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S)
       Mask |= (*S).second;
-    }
-    SuccBB->addLiveIn(SrcReg, Mask.any() ? Mask : LaneBitmask::getAll());
+    SuccBB->addLiveIn(SrcReg, Mask);
   }
   SuccBB->sortUniqueLiveIns();
 }

@@ -363,8 +363,11 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     // Special case for 8-bit floats, which are represented by integers due to
-    // the lack of native fp8 types in LLVM at the moment.
-    if (APFloat::getSizeInBits(sem) == 8 && llvmType->isIntegerTy(8))
+    // the lack of native fp8 types in LLVM at the moment. Additionally, handle
+    // targets (like AMDGPU) that don't implement bfloat and convert all bfloats
+    // to i16.
+    unsigned floatWidth = APFloat::getSizeInBits(sem);
+    if (llvmType->isIntegerTy(floatWidth))
       return llvm::ConstantInt::get(llvmType,
                                     floatAttr.getValue().bitcastToAPInt());
     if (llvmType !=

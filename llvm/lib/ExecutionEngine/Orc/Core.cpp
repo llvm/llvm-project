@@ -349,7 +349,7 @@ void ReExportsMaterializationUnit::materialize(
     }
   }
 
-  // The OnResolveInfo struct will hold the aliases and responsibilty for each
+  // The OnResolveInfo struct will hold the aliases and responsibility for each
   // query in the list.
   struct OnResolveInfo {
     OnResolveInfo(std::unique_ptr<MaterializationResponsibility> R,
@@ -2762,7 +2762,7 @@ void ExecutionSession::OL_completeLookup(
 
             // Otherwise this is a match.
 
-            // If this symbol is already in the requried state then notify the
+            // If this symbol is already in the required state then notify the
             // query, remove the symbol and continue.
             if (SymI->second.getState() >= Q->getRequiredState()) {
               LLVM_DEBUG(dbgs()

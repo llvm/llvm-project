@@ -521,7 +521,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK1-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -1142,7 +1142,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-IRBUILDER-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK1-IRBUILDER-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
+// CHECK1-IRBUILDER-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-IRBUILDER-NEXT:  entry:
 // CHECK1-IRBUILDER-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-IRBUILDER-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -1746,7 +1746,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK3-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -2367,7 +2367,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-IRBUILDER-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK3-IRBUILDER-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
+// CHECK3-IRBUILDER-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-IRBUILDER-NEXT:  entry:
 // CHECK3-IRBUILDER-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-IRBUILDER-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4

@@ -39,7 +39,6 @@
   { include: [ "@<__memory_resource/.*>", "private", "<memory_resource>", "public" ] },
   { include: [ "@<__mutex/.*>", "private", "<mutex>", "public" ] },
   { include: [ "@<__numeric/.*>", "private", "<numeric>", "public" ] },
-  { include: [ "@<__pstl/.*>", "private", "<pstl>", "public" ] },
   { include: [ "@<__random/.*>", "private", "<random>", "public" ] },
   { include: [ "@<__ranges/.*>", "private", "<ranges>", "public" ] },
   { include: [ "@<__stop_token/.*>", "private", "<stop_token>", "public" ] },

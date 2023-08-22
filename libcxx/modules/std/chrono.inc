@@ -51,7 +51,7 @@ export namespace std {
     using std::chrono::round;
 
     // [time.duration.io], duration I/O
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
     using std::chrono::operator<<;
 #endif
     // using std::chrono::from_stream;

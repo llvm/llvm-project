@@ -32,6 +32,20 @@ void populateDialectTransformSubmodule(const pybind11::module &m) {
       py::arg("context") = py::none());
 
   //===-------------------------------------------------------------------===//
+  // AnyValueType
+  //===-------------------------------------------------------------------===//
+
+  auto anyValueType =
+      mlir_type_subclass(m, "AnyValueType", mlirTypeIsATransformAnyValueType);
+  anyValueType.def_classmethod(
+      "get",
+      [](py::object cls, MlirContext ctx) {
+        return cls(mlirTransformAnyValueTypeGet(ctx));
+      },
+      "Get an instance of AnyValueType in the given context.", py::arg("cls"),
+      py::arg("context") = py::none());
+
+  //===-------------------------------------------------------------------===//
   // OperationType
   //===-------------------------------------------------------------------===//
 

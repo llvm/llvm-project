@@ -846,7 +846,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
 
 bool AccAttributeVisitor::Pre(const parser::AccBindClause &x) {
   if (const auto *name{std::get_if<parser::Name>(&x.u)}) {
-    if (!ResolveName(*name)) {
+    if (!ResolveName(*name, true)) {
       context_.Say(name->source,
           "No function or subroutine declared for '%s'"_err_en_US,
           name->source);

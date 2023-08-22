@@ -22,6 +22,10 @@ def testTypes():
     any_op = transform.AnyOpType.get()
     print(any_op)
 
+    # CHECK: !transform.any_value
+    any_value = transform.AnyValueType.get()
+    print(any_value)
+
     # CHECK: !transform.op<"foo.bar">
     # CHECK: foo.bar
     concrete_op = transform.OperationType.get("foo.bar")

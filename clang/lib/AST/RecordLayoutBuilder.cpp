@@ -58,13 +58,13 @@ struct BaseSubobjectInfo {
 /// as DWARF, lacks all the information that was available at compile time, such
 /// as alignment attributes on fields and pragmas in effect.
 struct ExternalLayout {
-  ExternalLayout() : Size(0), Align(0) {}
+  ExternalLayout() = default;
 
   /// Overall record size in bits.
-  uint64_t Size;
+  uint64_t Size = 0;
 
   /// Overall record alignment in bits.
-  uint64_t Align;
+  uint64_t Align = 0;
 
   /// Record field offsets in bits.
   llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsets;

@@ -1693,7 +1693,7 @@ public:
   /// Return a ObjCObjectPointerType type for the given ObjCObjectType.
   QualType getObjCObjectPointerType(QualType OIT) const;
 
-  /// C2x feature and GCC extension.
+  /// C23 feature and GCC extension.
   QualType getTypeOfExprType(Expr *E, TypeOfKind Kind) const;
   QualType getTypeOfType(QualType QT, TypeOfKind Kind) const;
 

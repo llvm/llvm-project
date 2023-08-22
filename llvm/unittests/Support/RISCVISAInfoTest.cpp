@@ -604,3 +604,25 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IDZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("zcmt"), 1U);
 }
+
+TEST(isSupportedExtensionWithVersion, AcceptsSingleExtensionWithVersion) {
+  EXPECT_TRUE(RISCVISAInfo::isSupportedExtensionWithVersion("zbb1p0"));
+  EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion("zbb"));
+  EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion("zfoo1p0"));
+  EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion("zfoo"));
+  EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion(""));
+  EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion("c2p0zbb1p0"));
+}
+
+TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zbb"), "zbb");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zicond1p0"),
+            "experimental-zicond");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zicond"),
+            "experimental-zicond");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zihintntl1234p4321"),
+            "");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zfoo"), "");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension(""), "");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zbbzihintntl"), "");
+}

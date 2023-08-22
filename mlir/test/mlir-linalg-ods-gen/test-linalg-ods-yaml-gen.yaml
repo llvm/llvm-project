@@ -62,10 +62,8 @@ structured_op: !LinalgStructuredOpConfig
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
-#       ODS:  let summary = [{ Title. }];
-#  ODS-NEXT:  let description = [{
-#  ODS-NEXT:    Detailed description.
-#  ODS-NEXT:  }];
+#       ODS:  let summary = [{Title.}];
+#  ODS-NEXT:  let description = [{Detailed description.}];
 
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,

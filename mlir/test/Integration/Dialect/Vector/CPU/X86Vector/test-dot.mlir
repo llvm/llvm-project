@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm="enable-x86vector" -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm="enable-x86vector" -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate --mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="avx" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s

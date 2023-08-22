@@ -749,7 +749,6 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);
   MI->eraseFromParent();
-  return;
 }
 
 bool TargetInstrInfo::hasReassociableOperands(
