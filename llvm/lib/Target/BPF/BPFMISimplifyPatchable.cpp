@@ -207,8 +207,32 @@ void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
   decltype(End) NextI;
   for (auto I = Begin; I != End; I = NextI) {
     NextI = std::next(I);
-    if (doSrcRegProp)
+    if (doSrcRegProp) {
+      // In situations like below it is not known if usage is a kill
+      // after setReg():
+      //
+      // .-> %2:gpr = LD_imm64 @"llvm.t:0:0$0:0"
+      // |
+      // |`----------------.
+      // |   %3:gpr = LDD %2:gpr, 0
+      // |   %4:gpr = ADD_rr %0:gpr(tied-def 0), killed %3:gpr <--- (1)
+      // |   %5:gpr = LDD killed %4:gpr, 0       ^^^^^^^^^^^^^
+      // |   STD killed %5:gpr, %1:gpr, 0         this is I
+      //  `----------------.
+      //     %6:gpr = LDD %2:gpr, 0
+      //     %7:gpr = ADD_rr %0:gpr(tied-def 0), killed %6:gpr <--- (2)
+      //     %8:gpr = LDD killed %7:gpr, 0       ^^^^^^^^^^^^^
+      //     STD killed %8:gpr, %1:gpr, 0         this is I
+      //
+      // Instructions (1) and (2) would be updated by setReg() to:
+      //
+      //     ADD_rr %0:gpr(tied-def 0), %2:gpr
+      //
+      // %2:gpr is not killed at (1), so it is necessary to remove kill flag
+      // from I.
       I->setReg(SrcReg);
+      I->setIsKill(false);
+    }
 
     // The candidate needs to have a unique definition.
     if (IsAma && MRI->getUniqueVRegDef(I->getReg()))
