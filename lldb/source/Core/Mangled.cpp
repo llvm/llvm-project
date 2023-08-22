@@ -84,11 +84,24 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.startswith("___Z"))
     return Mangled::eManglingSchemeItanium;
 
-#ifdef LLDB_ENABLE_SWIFT
-  if (SwiftLanguageRuntime::IsSwiftMangledName(name))
+  // Swift's older style of mangling used "_T" as a mangling prefix. This can
+  // lead to false positives with other symbols that just so happen to start
+  // with "_T". To minimize the chance of that happening, we only return true
+  // for select old-style swift mangled names. The known cases are ObjC classes
+  // and protocols. Classes are either prefixed with "_TtC" or "_TtGC".
+  // Protocols are prefixed with "_TtP".
+  if (name.startswith("_TtC") || name.startswith("_TtGC") ||
+      name.startswith("_TtP"))
     return Mangled::eManglingSchemeSwift;
-#endif // LLDB_ENABLE_SWIFT
-  
+
+  // Swift 4.2 used "$S" and "_$S".
+  // Swift 5 and onward uses "$s" and "_$s".
+  // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
+  if (name.startswith("$S") || name.startswith("_$S") ||
+      name.startswith("$s") || name.startswith("_$s") ||
+      name.startswith("@__swiftmacro_"))
+    return Mangled::eManglingSchemeSwift;
+
   return Mangled::eManglingSchemeNone;
 }
 
@@ -259,9 +272,7 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 
   case eManglingSchemeRustV0:
   case eManglingSchemeD:
-#ifdef LLDB_ENABLE_SWIFT
   case eManglingSchemeSwift:
-#endif
     // Rich demangling scheme is not supported
     return false;
   }
@@ -302,8 +313,11 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
       case eManglingSchemeD:
         demangled_name = GetDLangDemangledStr(m_mangled);
         break;
+      case eManglingSchemeSwift:
+        // Demangling a swift name requires the swift compiler. This is
+        // explicitly unsupported on llvm.org.
 #ifdef LLDB_ENABLE_SWIFT
-      case eManglingSchemeSwift: {
+      {
         Log *log = GetLog(LLDBLog::Demangle);
         LLDB_LOGF(log, "demangle swift: %s", mangled_name);
         std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
@@ -325,6 +339,7 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
         return m_demangled;
       }
 #endif // LLDB_ENABLE_SWIFT
+      break;
       case eManglingSchemeNone:
         llvm_unreachable("eManglingSchemeNone was handled already");
       }

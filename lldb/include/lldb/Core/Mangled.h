@@ -44,9 +44,7 @@ public:
     eManglingSchemeItanium,
     eManglingSchemeRustV0,
     eManglingSchemeD,
-#ifdef LLDB_ENABLE_SWIFT
-    eManglingSchemeSwift
-#endif // LLDB_ENABLE_SWIFT
+    eManglingSchemeSwift,
   };
 
   /// Default constructor.
