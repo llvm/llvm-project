@@ -1092,7 +1092,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::TemplateTypeParm: {
     const auto *Parm1 = cast<TemplateTypeParmType>(T1);
     const auto *Parm2 = cast<TemplateTypeParmType>(T2);
-    if (Parm1->getDepth() != Parm2->getDepth())
+    if (!Context.IgnoreTemplateParmDepth &&
+        Parm1->getDepth() != Parm2->getDepth())
       return false;
     if (Parm1->getIndex() != Parm2->getIndex())
       return false;
