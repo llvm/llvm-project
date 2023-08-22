@@ -29,7 +29,7 @@ bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
     // disk. Setting the bit in the mask ensures it isn't accidentally cleared
     // by ptrauth stripping.
     mask_pattern |= LLDB_FILE_ADDRESS_BIT;
-    memcpy(outBuffer, &mask_pattern, sizeof(uint64_t));
+    memcpy(outBuffer, &mask_pattern, m_process.GetAddressByteSize());
     return true;
   }
   case DLQ_GetObjCReservedLowBits: {

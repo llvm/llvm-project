@@ -519,12 +519,13 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
       objc_interop ? "with Objective-C interopability" : "Swift only";
 
   auto &triple = exe_module->GetArchitecture().GetTriple();
-  if (triple.isArch64Bit()) {
+  auto byte_size = m_process.GetAddressByteSize();
+  if (byte_size == 8) {
     LLDB_LOGF(log, "Initializing a 64-bit reflection context (%s) for \"%s\"",
               triple.str().c_str(), objc_interop_msg);
     m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
         this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else if (triple.isArch32Bit()) {
+  } else if (byte_size == 4) {
     LLDB_LOGF(log,
               "Initializing a 32-bit reflection context (%s) for \"%s\"",
               triple.str().c_str(), objc_interop_msg);
