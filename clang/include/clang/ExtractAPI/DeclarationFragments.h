@@ -170,6 +170,11 @@ public:
     return *this;
   }
 
+  DeclarationFragments &replace(std::string NewSpelling, unsigned Position) {
+    Fragments.at(Position).Spelling = NewSpelling;
+    return *this;
+  }
+
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
