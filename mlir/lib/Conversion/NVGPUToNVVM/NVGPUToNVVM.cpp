@@ -934,6 +934,76 @@ struct NVGPUTmaAsyncLoadOpLowering
     return success();
   }
 };
+struct NVGPUGenerateGmmaDescriptorLowering
+    : public ConvertOpToLLVMPattern<nvgpu::GenerateGmmaDescriptorOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::GenerateGmmaDescriptorOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::GenerateGmmaDescriptorOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op->getLoc();
+
+    nvgpu::TensorMapSwizzleKind swizzleKind =
+        op.getTensorMap().getType().getSwizzle();
+
+    unsigned layout =
+        (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_128B)  ? 128
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_64B) ? 64
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_32B) ? 32
+                                                                    : 1;
+    unsigned swizzle =
+        (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_128B)  ? 1
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_64B) ? 2
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_32B) ? 3
+                                                                    : 0;
+
+    auto ti64 = rewriter.getIntegerType(64);
+    auto makeConst = [&](uint64_t index) -> Value {
+      return rewriter.create<LLVM::ConstantOp>(
+          loc, ti64, rewriter.getI64IntegerAttr(index));
+    };
+    auto shiftLeft = [&](Value value, unsigned shift) -> Value {
+      return rewriter.create<LLVM::ShlOp>(loc, ti64, value, makeConst(shift));
+    };
+    auto shiftRight = [&](Value value, unsigned shift) -> Value {
+      return rewriter.create<LLVM::LShrOp>(loc, ti64, value, makeConst(shift));
+    };
+    auto insertBit = [&](Value desc, Value val, int startBit) {
+      return rewriter.create<LLVM::OrOp>(loc, ti64, desc,
+                                         shiftLeft(val, startBit));
+    };
+
+    int ex4LSB = 4;
+    Value strideDim = makeConst((layout << 3) >> ex4LSB);
+    int64_t sizeN = op.getTensorMap().getType().getTensor().getDimSize(0);
+    Value leadDim = makeConst((sizeN * layout) >> ex4LSB);
+    Value baseAddr = getStridedElementPtr(
+        op->getLoc(), cast<MemRefType>(op.getTensor().getType()),
+        adaptor.getTensor(), {}, rewriter);
+    Value basePtr = rewriter.create<LLVM::PtrToIntOp>(loc, ti64, baseAddr);
+    // Just use 14 bits for base address
+    Value basePtr14bit = shiftRight(shiftLeft(basePtr, 46), 50);
+
+    int startSwizzleBit = 62, startOffsetBit = 49, startStrideBit = 32,
+        startLeadBit = 16, startBaseAddrBit = 0;
+    Value dsc = makeConst(0);
+    // // [62,64)  swizzle type
+    dsc = insertBit(dsc, makeConst(swizzle), startSwizzleBit);
+    // // [49,52)  base_offset
+    dsc = insertBit(dsc, makeConst(0), startOffsetBit);
+    // // [32,46)  stride
+    dsc = insertBit(dsc, strideDim, startStrideBit);
+    // // [16,30)  leading dimension
+    dsc = insertBit(dsc, leadDim, startLeadBit);
+    // // [0,14)   start_address
+    dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
+
+    rewriter.replaceOp(op, dsc);
+    return success();
+  }
+};
 
 static Value makeI64Const(RewriterBase &rewriter, Operation *op,
                           int32_t index) {
@@ -1064,6 +1134,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
+      NVGPUGenerateGmmaDescriptorLowering,   // nvgpu.wgmma.generate.descriptor
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);
