@@ -4,6 +4,7 @@ include "mlir/IR/OpBase.td"
 
 def TestDialect : Dialect {
   let name = "test";
+  let usePropertiesForAttributes = 0;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {

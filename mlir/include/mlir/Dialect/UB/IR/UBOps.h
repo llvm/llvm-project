@@ -12,6 +12,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsInterfaces.h.inc"
 

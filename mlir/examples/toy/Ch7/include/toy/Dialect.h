@@ -18,6 +18,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
