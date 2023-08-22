@@ -494,25 +494,15 @@ define void @strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
   ret void
 }
 
-; TODO: This is a strided load with a negative stride
+; This is a strided load with a negative stride
 define void @reverse_strided_constant_pos_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_constant_pos_4xv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, a0, 64
-; CHECK-NEXT:    addi a3, a0, 128
-; CHECK-NEXT:    addi a4, a0, 192
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a4)
-; CHECK-NEXT:    vle32.v v10, (a3)
-; CHECK-NEXT:    vle32.v v12, (a2)
-; CHECK-NEXT:    vle32.v v14, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v14, 6
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    addi a0, a0, 192
+; CHECK-NEXT:    li a2, -64
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vlse64.v v8, (a0), a2
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %x.1 = getelementptr i8, ptr %x, i64 64
   %x.2 = getelementptr i8, ptr %x.1, i64 64
@@ -531,21 +521,11 @@ define void @reverse_strided_constant_pos_4xv2f32(ptr %x, ptr %z, i64 %s) {
 define void @reverse_strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_constant_neg_4xv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, a0, -64
-; CHECK-NEXT:    addi a3, a0, -128
-; CHECK-NEXT:    addi a4, a0, -192
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a4)
-; CHECK-NEXT:    vle32.v v10, (a3)
-; CHECK-NEXT:    vle32.v v12, (a2)
-; CHECK-NEXT:    vle32.v v14, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v14, 6
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    addi a0, a0, -192
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vlse64.v v8, (a0), a2
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %x.1 = getelementptr i8, ptr %x, i64 -64
   %x.2 = getelementptr i8, ptr %x.1, i64 -64
@@ -561,25 +541,17 @@ define void @reverse_strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
   ret void
 }
 
-; TODO: This is a strided load with a negative stride
+; This is a strided load with a negative stride
 define void @reverse_strided_runtime_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_runtime_4xv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    add a3, a0, a2
-; CHECK-NEXT:    add a4, a3, a2
-; CHECK-NEXT:    add a2, a4, a2
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a2)
-; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    vle32.v v12, (a3)
-; CHECK-NEXT:    vle32.v v14, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v14, 6
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a3, a2, a2
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vlse64.v v8, (a0), a2
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %x.1 = getelementptr i8, ptr %x, i64 %s
   %x.2 = getelementptr i8, ptr %x.1, i64 %s
