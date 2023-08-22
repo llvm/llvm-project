@@ -52,7 +52,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
-  SrcDataEnd = SrcDataStart + Header->DataSize;
+  SrcDataEnd = SrcDataStart + Header->NumData;
 
   if (ProfileSize < sizeof(__llvm_profile_header))
     return 1;
@@ -60,10 +60,10 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   /* Check the header first.  */
   if (Header->Magic != __llvm_profile_get_magic() ||
       Header->Version != __llvm_profile_get_version() ||
-      Header->DataSize !=
+      Header->NumData !=
           __llvm_profile_get_num_data(__llvm_profile_begin_data(),
                                       __llvm_profile_end_data()) ||
-      Header->CountersSize !=
+      Header->NumCounters !=
           __llvm_profile_get_num_counters(__llvm_profile_begin_counters(),
                                           __llvm_profile_end_counters()) ||
       Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -
@@ -73,8 +73,8 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
 
   if (ProfileSize <
       sizeof(__llvm_profile_header) + Header->BinaryIdsSize +
-          Header->DataSize * sizeof(__llvm_profile_data) + Header->NamesSize +
-          Header->CountersSize * __llvm_profile_counter_entry_size())
+          Header->NumData * sizeof(__llvm_profile_data) + Header->NamesSize +
+          Header->NumCounters * __llvm_profile_counter_entry_size())
     return 1;
 
   for (SrcData = SrcDataStart,
@@ -119,10 +119,10 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
-  SrcDataEnd = SrcDataStart + Header->DataSize;
+  SrcDataEnd = SrcDataStart + Header->NumData;
   SrcCountersStart = (char *)SrcDataEnd;
   SrcCountersEnd = SrcCountersStart +
-                 Header->CountersSize * __llvm_profile_counter_entry_size(); 
+                   Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcNameStart = SrcCountersEnd;
   SrcValueProfDataStart =
       SrcNameStart + Header->NamesSize +
@@ -132,7 +132,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
   // Merge counters when there is no data section and debug info correlation is
   // enabled.
-  if (Header->DataSize == 0) {
+  if (Header->NumData == 0) {
     if (!(__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE)) {
       PROF_ERR("%s\n", "Missing profile data section.");
       return 1;
