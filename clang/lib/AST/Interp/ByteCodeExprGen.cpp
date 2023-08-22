@@ -634,8 +634,14 @@ bool ByteCodeExprGen<Emitter>::VisitSubstNonTypeTemplateParmExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
-  // TODO: Check if the ConstantExpr already has a value set and if so,
-  //   use that instead of evaluating it again.
+  // Try to emit the APValue directly, without visiting the subexpr.
+  // This will only fail if we can't emit the APValue, so won't emit any
+  // diagnostics or any double values.
+  std::optional<PrimType> T = classify(E->getType());
+  if (T && E->hasAPValueResult() &&
+      this->visitAPValue(E->getAPValueResult(), *T, E))
+    return true;
+
   return this->delegate(E->getSubExpr());
 }
 
