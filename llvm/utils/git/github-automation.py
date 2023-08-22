@@ -9,6 +9,7 @@
 # ==-------------------------------------------------------------------------==#
 
 import argparse
+import fnmatch
 from git import Repo  # type: ignore
 import github
 import os
@@ -63,6 +64,43 @@ class IssueSubscriber:
             self.issue.create_comment(comment)
             return True
         return False
+
+
+class PRSubscriber:
+
+    class PRTeam:
+        def __init__(self, slug: str, description: str):
+            self.slug = slug
+            self.globs = [x.strip() for x in description.split(",")]
+
+    def __init__(self, token: str, repo: str, pr_number: int):
+        self.repo = github.Github(token).get_repo(repo)
+        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self.teams = []
+        for team in self.org.get_teams():
+            if not team.name.startswith("pr-subscribers-"):
+                continue
+            self.teams.append(PRSubscriber.PRTeam(team.slug, team.description))
+
+    def run(self) -> bool:
+        mentions = []
+        for c in self.pr.get_commits():
+            for f in c.files:
+                print(f.filename)
+            for t in self.teams:
+                for g in t.globs:
+                    if len(fnmatch.filter([f.filename for f in c.files], g)):
+                        print('Matches {} for {}'.format(g, t.slug))
+                        mentions.append(t.slug)
+                        break
+
+        if not len(mentions):
+            return False
+
+        comment = "\n".join(['@llvm/{}'.format(m) for m in mentions])
+        self.pr.as_issue().create_comment(comment)
+        return True
 
 
 def setup_llvmbot_git(git_dir="."):
@@ -506,6 +544,9 @@ issue_subscriber_parser = subparsers.add_parser("issue-subscriber")
 issue_subscriber_parser.add_argument("--label-name", type=str, required=True)
 issue_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
+pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -551,6 +592,11 @@ if args.command == "issue-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     issue_subscriber.run()
+elif args.command == "pr-subscriber":
+    pr_subscriber = PRSubscriber(
+        args.token, args.repo, args.issue_number
+    )
+    pr_subscriber.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
