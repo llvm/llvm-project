@@ -49,7 +49,7 @@ def GENX_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("genx.reqd_work_group_size");
     }
-    /// get the name for the attribute used to annotate the exact sub group 
+    /// Get the name for the attribute used to annotate the exact sub group 
     /// size required for kernel functions.
     static constexpr ::llvm::StringLiteral getReqdSubGroupSizeAttrName() {
       return ::llvm::StringLiteral("genx.intel_reqd_sub_group_size");
