@@ -4390,7 +4390,6 @@ define amdgpu_ps i48 @s_fshr_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs, <
 ; GFX8-NEXT:    s_lshr_b32 s4, s6, s4
 ; GFX8-NEXT:    s_or_b32 s2, s2, s4
 ; GFX8-NEXT:    s_and_b32 s4, 0xffff, s3
-; GFX8-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 1
 ; GFX8-NEXT:    s_lshr_b32 s4, s4, 15
 ; GFX8-NEXT:    s_or_b32 s1, s1, s4
@@ -4640,8 +4639,7 @@ define <3 x half> @v_fshr_v3i16(<3 x i16> %lhs, <3 x i16> %rhs, <3 x i16> %amt) 
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v1, 1, v1
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v4, 15, v3
 ; GFX8-NEXT:    v_or_b32_e32 v1, v1, v4
-; GFX8-NEXT:    v_mov_b32_e32 v4, -1
-; GFX8-NEXT:    v_xor_b32_sdwa v4, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_xor_b32_e32 v4, -1, v5
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v3, 1, v3
 ; GFX8-NEXT:    v_and_b32_e32 v5, 15, v4
 ; GFX8-NEXT:    v_xor_b32_e32 v4, -1, v4
