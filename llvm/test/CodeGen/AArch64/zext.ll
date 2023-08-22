@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:      warning: Instruction selection used fallback path for zext_v16i10_v16i16
+; CHECK-GI:       warning: Instruction selection used fallback path for zext_v16i10_v16i16
 
 define i16 @zext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: zext_i8_to_i16:
@@ -292,12 +292,6 @@ define <3 x i16> @zext_v3i8_v3i16(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v3.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i8> %a to <3 x i16>
@@ -327,11 +321,6 @@ define <3 x i32> @zext_v3i8_v3i32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v0.s[3], w8
 ; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i8> %a to <3 x i32>
@@ -487,12 +476,6 @@ define <3 x i16> @zext_v3i10_v3i16(<3 x i10> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v3.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i10> %a to <3 x i16>
@@ -522,11 +505,6 @@ define <3 x i32> @zext_v3i10_v3i32(<3 x i10> %a) {
 ; CHECK-GI-NEXT:    mov v0.s[3], w8
 ; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i10> %a to <3 x i32>

@@ -386,12 +386,6 @@ public:
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
 
-  /// Transform fabs(fabs(x)) to fabs(x).
-  void applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
-
-  /// Transform fabs(fneg(x)) to fabs(x).
-  bool matchCombineFAbsOfFNeg(MachineInstr &MI, BuildFnTy &MatchInfo);
-
   /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
   bool matchCombineTruncOfExt(MachineInstr &MI,
                               std::pair<Register, unsigned> &MatchInfo);

@@ -312,7 +312,7 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v12, v8, 1
 ; RV32-NEXT:    vfmv.f.s fa3, v12
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
@@ -335,9 +335,9 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v8, a2
 ; RV32-NEXT:    vslide1down.vx v12, v12, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 2
-; RV32-NEXT:    vfmv.f.s fa3, v16
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v14, v8, 2
+; RV32-NEXT:    vfmv.f.s fa3, v14
 ; RV32-NEXT:    feq.d a0, fa3, fa3
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    fmax.d fa3, fa3, fa5
@@ -346,9 +346,9 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v12, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 3
-; RV32-NEXT:    vfmv.f.s fa3, v16
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v14, v8, 3
+; RV32-NEXT:    vfmv.f.s fa3, v14
 ; RV32-NEXT:    feq.d a0, fa3, fa3
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    fmax.d fa3, fa3, fa5
@@ -408,7 +408,7 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v12, v8, 1
 ; RV64-NEXT:    vfmv.f.s fa3, v12
 ; RV64-NEXT:    lui a0, %hi(.LCPI12_0)
@@ -431,9 +431,9 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v12, v8, a2
 ; RV64-NEXT:    vslide1down.vx v12, v12, a0
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 2
-; RV64-NEXT:    vfmv.f.s fa3, v16
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v14, v8, 2
+; RV64-NEXT:    vfmv.f.s fa3, v14
 ; RV64-NEXT:    feq.d a0, fa3, fa3
 ; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    fmax.d fa3, fa3, fa5
@@ -442,9 +442,9 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v12, v12, a0
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 3
-; RV64-NEXT:    vfmv.f.s fa3, v16
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v14, v8, 3
+; RV64-NEXT:    vfmv.f.s fa3, v14
 ; RV64-NEXT:    feq.d a0, fa3, fa3
 ; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    fmax.d fa3, fa3, fa5
@@ -521,25 +521,25 @@ define void @fp2ui_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV32-NEXT:    fcvt.wu.d a0, fa4, rtz
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v8, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 1
-; RV32-NEXT:    vfmv.f.s fa4, v16
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v13, v8, 1
+; RV32-NEXT:    vfmv.f.s fa4, v13
 ; RV32-NEXT:    fmax.d fa4, fa4, fa3
 ; RV32-NEXT:    fmin.d fa4, fa4, fa5
 ; RV32-NEXT:    fcvt.wu.d a0, fa4, rtz
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v12, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 2
-; RV32-NEXT:    vfmv.f.s fa4, v16
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v14, v8, 2
+; RV32-NEXT:    vfmv.f.s fa4, v14
 ; RV32-NEXT:    fmax.d fa4, fa4, fa3
 ; RV32-NEXT:    fmin.d fa4, fa4, fa5
 ; RV32-NEXT:    fcvt.wu.d a0, fa4, rtz
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v12, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 3
-; RV32-NEXT:    vfmv.f.s fa4, v16
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v14, v8, 3
+; RV32-NEXT:    vfmv.f.s fa4, v14
 ; RV32-NEXT:    fmax.d fa4, fa4, fa3
 ; RV32-NEXT:    fmin.d fa4, fa4, fa5
 ; RV32-NEXT:    fcvt.wu.d a0, fa4, rtz
@@ -593,25 +593,25 @@ define void @fp2ui_v8f64_v8i8(ptr %x, ptr %y) {
 ; RV64-NEXT:    fcvt.lu.d a0, fa4, rtz
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v12, v8, a0
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 1
-; RV64-NEXT:    vfmv.f.s fa4, v16
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v13, v8, 1
+; RV64-NEXT:    vfmv.f.s fa4, v13
 ; RV64-NEXT:    fmax.d fa4, fa4, fa3
 ; RV64-NEXT:    fmin.d fa4, fa4, fa5
 ; RV64-NEXT:    fcvt.lu.d a0, fa4, rtz
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v12, v12, a0
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 2
-; RV64-NEXT:    vfmv.f.s fa4, v16
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v14, v8, 2
+; RV64-NEXT:    vfmv.f.s fa4, v14
 ; RV64-NEXT:    fmax.d fa4, fa4, fa3
 ; RV64-NEXT:    fmin.d fa4, fa4, fa5
 ; RV64-NEXT:    fcvt.lu.d a0, fa4, rtz
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v12, v12, a0
-; RV64-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 3
-; RV64-NEXT:    vfmv.f.s fa4, v16
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v14, v8, 3
+; RV64-NEXT:    vfmv.f.s fa4, v14
 ; RV64-NEXT:    fmax.d fa4, fa4, fa3
 ; RV64-NEXT:    fmin.d fa4, fa4, fa5
 ; RV64-NEXT:    fcvt.lu.d a0, fa4, rtz

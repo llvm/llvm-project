@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
@@ -549,15 +550,23 @@ public:
                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                           &useDeviceSymbols) const;
 
+  // Call this method for these clauses that should be supported but are not
+  // implemented yet. It triggers a compilation error if any of the given
+  // clauses is found.
+  template <typename... Ts>
+  void processTODO(mlir::Location currentLocation,
+                   llvm::omp::Directive directive) const;
+
 private:
   using ClauseIterator = std::list<ClauseTy>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
   static ClauseIterator findClause(ClauseIterator begin, ClauseIterator end) {
-    for (ClauseIterator it = begin; it != end; ++it)
+    for (ClauseIterator it = begin; it != end; ++it) {
       if (std::get_if<T>(&it->u))
         return it;
+    }
 
     return end;
   }
@@ -1773,6 +1782,24 @@ bool ClauseProcessor::processUseDevicePtr(
       });
 }
 
+template <typename... Ts>
+void ClauseProcessor::processTODO(mlir::Location currentLocation,
+                                  llvm::omp::Directive directive) const {
+  auto checkUnhandledClause = [&](const auto *x) {
+    if (!x)
+      return;
+    TODO(currentLocation,
+         "Unhandled clause " +
+             llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(*x))
+                 .upper() +
+             " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
+             " construct");
+  };
+
+  for (ClauseIterator it = clauses.v.begin(); it != clauses.v.end(); ++it)
+    (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
@@ -2213,8 +2240,11 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
   mlir::UnitAttr nowaitAttr;
 
-  ClauseProcessor(converter, beginClauseList)
-      .processAllocate(allocatorOperands, allocateOperands);
+  ClauseProcessor cp(converter, beginClauseList);
+  cp.processAllocate(allocatorOperands, allocateOperands);
+  cp.processTODO<Fortran::parser::OmpClause::Copyprivate>(
+      currentLocation, llvm::omp::Directive::OMPD_single);
+
   ClauseProcessor(converter, endClauseList).processNowait(nowaitAttr);
 
   return genOpWithBody<mlir::omp::SingleOp>(
@@ -2244,6 +2274,10 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
   cp.processMergeable(mergeableAttr);
   cp.processPriority(stmtCtx, priorityClauseOperand);
   cp.processDepend(dependTypeOperands, dependOperands);
+  cp.processTODO<Fortran::parser::OmpClause::InReduction,
+                 Fortran::parser::OmpClause::Detach,
+                 Fortran::parser::OmpClause::Affinity>(
+      currentLocation, llvm::omp::Directive::OMPD_task);
 
   return genOpWithBody<mlir::omp::TaskOp>(
       converter, eval, currentLocation, /*outerCombined=*/false, &clauseList,
@@ -2263,9 +2297,10 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
                mlir::Location currentLocation,
                const Fortran::parser::OmpClauseList &clauseList) {
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
-  // TODO: Add task_reduction support
-  ClauseProcessor(converter, clauseList)
-      .processAllocate(allocatorOperands, allocateOperands);
+  ClauseProcessor cp(converter, clauseList);
+  cp.processAllocate(allocatorOperands, allocateOperands);
+  cp.processTODO<Fortran::parser::OmpClause::TaskReduction>(
+      currentLocation, llvm::omp::Directive::OMPD_taskgroup);
   return genOpWithBody<mlir::omp::TaskGroupOp>(
       converter, eval, currentLocation, /*outerCombined=*/false, &clauseList,
       /*task_reduction_vars=*/mlir::ValueRange(),
@@ -2323,12 +2358,15 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::IntegerAttr> mapTypes;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
+  llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
     directiveName =
         Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetEnterData;
+    directive = llvm::omp::Directive::OMPD_target_enter_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::ExitDataOp>) {
     directiveName =
         Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetExitData;
+    directive = llvm::omp::Directive::OMPD_target_exit_data;
   } else {
     return nullptr;
   }
@@ -2338,6 +2376,8 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(mapOperands, mapTypes);
+  cp.processTODO<Fortran::parser::OmpClause::Depend>(currentLocation,
+                                                     directive);
 
   llvm::SmallVector<mlir::Attribute> mapTypesAttr(mapTypes.begin(),
                                                   mapTypes.end());
@@ -2370,6 +2410,17 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(mapOperands, mapTypes);
+  cp.processTODO<Fortran::parser::OmpClause::Private,
+                 Fortran::parser::OmpClause::Depend,
+                 Fortran::parser::OmpClause::Firstprivate,
+                 Fortran::parser::OmpClause::IsDevicePtr,
+                 Fortran::parser::OmpClause::HasDeviceAddr,
+                 Fortran::parser::OmpClause::Reduction,
+                 Fortran::parser::OmpClause::InReduction,
+                 Fortran::parser::OmpClause::Allocate,
+                 Fortran::parser::OmpClause::UsesAllocators,
+                 Fortran::parser::OmpClause::Defaultmap>(
+      currentLocation, llvm::omp::Directive::OMPD_target);
 
   llvm::SmallVector<mlir::Attribute> mapTypesAttr(mapTypes.begin(),
                                                   mapTypes.end());
@@ -2402,8 +2453,8 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   cp.processDefault();
   cp.processNumTeams(stmtCtx, numTeamsClauseOperand);
   cp.processThreadLimit(stmtCtx, threadLimitClauseOperand);
-  if (cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols))
-    TODO(currentLocation, "Reduction of TEAMS directive");
+  cp.processTODO<Fortran::parser::OmpClause::Reduction>(
+      currentLocation, llvm::omp::Directive::OMPD_teams);
 
   return genOpWithBody<mlir::omp::TeamsOp>(
       converter, eval, currentLocation, outerCombined, &clauseList,
@@ -2420,10 +2471,11 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
 // genOMP() Code generation helper functions
 //===----------------------------------------------------------------------===//
 
-static void genOMP(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::pft::Evaluation &eval,
-                   const Fortran::parser::OpenMPSimpleStandaloneConstruct
-                       &simpleStandaloneConstruct) {
+static void
+genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
+                       Fortran::lower::pft::Evaluation &eval,
+                       const Fortran::parser::OpenMPSimpleStandaloneConstruct
+                           &simpleStandaloneConstruct) {
   const auto &directive =
       std::get<Fortran::parser::OmpSimpleStandaloneDirective>(
           simpleStandaloneConstruct.t);
@@ -2439,6 +2491,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::BarrierOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
+    ClauseProcessor(converter, opClauseList)
+        .processTODO<Fortran::parser::OmpClause::Depend,
+                     Fortran::parser::OmpClause::Nowait>(
+            currentLocation, llvm::omp::Directive::OMPD_taskwait);
     firOpBuilder.create<mlir::omp::TaskwaitOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskyield:
@@ -2463,6 +2519,24 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 }
 
 static void
+genOmpFlush(Fortran::lower::AbstractConverter &converter,
+            Fortran::lower::pft::Evaluation &eval,
+            const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
+  llvm::SmallVector<mlir::Value, 4> operandRange;
+  if (const auto &ompObjectList =
+          std::get<std::optional<Fortran::parser::OmpObjectList>>(
+              flushConstruct.t))
+    genObjectList(*ompObjectList, converter, operandRange);
+  const auto &memOrderClause =
+      std::get<std::optional<std::list<Fortran::parser::OmpMemoryOrderClause>>>(
+          flushConstruct.t);
+  if (memOrderClause && memOrderClause->size() > 0)
+    TODO(converter.getCurrentLocation(), "Handle OmpMemoryOrderClause");
+  converter.getFirOpBuilder().create<mlir::omp::FlushOp>(
+      converter.getCurrentLocation(), operandRange);
+}
+
+static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
@@ -2470,22 +2544,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPSimpleStandaloneConstruct
                   &simpleStandaloneConstruct) {
-            genOMP(converter, eval, simpleStandaloneConstruct);
+            genOmpSimpleStandalone(converter, eval, simpleStandaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
-            llvm::SmallVector<mlir::Value, 4> operandRange;
-            if (const auto &ompObjectList =
-                    std::get<std::optional<Fortran::parser::OmpObjectList>>(
-                        flushConstruct.t))
-              genObjectList(*ompObjectList, converter, operandRange);
-            const auto &memOrderClause = std::get<std::optional<
-                std::list<Fortran::parser::OmpMemoryOrderClause>>>(
-                flushConstruct.t);
-            if (memOrderClause && memOrderClause->size() > 0)
-              TODO(converter.getCurrentLocation(),
-                   "Handle OmpMemoryOrderClause");
-            converter.getFirOpBuilder().create<mlir::omp::FlushOp>(
-                converter.getCurrentLocation(), operandRange);
+            genOmpFlush(converter, eval, flushConstruct);
           },
           [&](const Fortran::parser::OpenMPCancelConstruct &cancelConstruct) {
             TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
@@ -2503,14 +2565,13 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
-      linearStepVars, reductionVars, alignedVars, nontemporalVars;
-  mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
+      linearStepVars, reductionVars;
+  mlir::Value scheduleChunkClauseOperand;
   mlir::IntegerAttr orderedClauseOperand;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
   mlir::omp::ClauseScheduleKindAttr scheduleValClauseOperand;
   mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
   mlir::UnitAttr nowaitClauseOperand, scheduleSimdClauseOperand;
-  mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   Fortran::lower::StatementContext stmtCtx;
   std::size_t loopVarTypeSize;
@@ -2570,12 +2631,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   cp.processCollapse(currentLocation, eval, lowerBound, upperBound, step, iv,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
-               ifClauseOperand);
   cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
-  cp.processSimdlen(simdlenClauseOperand);
-  cp.processSafelen(safelenClauseOperand);
+  cp.processTODO<Fortran::parser::OmpClause::Linear,
+                 Fortran::parser::OmpClause::Order>(currentLocation,
+                                                    ompDirective);
 
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
@@ -2590,8 +2649,20 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   // 2.9.3.1 SIMD construct
-  // TODO: Support all the clauses
   if (llvm::omp::allSimdSet.test(ompDirective)) {
+    llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
+    mlir::Value ifClauseOperand;
+    mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
+    cp.processIf(stmtCtx,
+                 Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+                 ifClauseOperand);
+    cp.processSimdlen(simdlenClauseOperand);
+    cp.processSafelen(safelenClauseOperand);
+    cp.processTODO<Fortran::parser::OmpClause::Aligned,
+                   Fortran::parser::OmpClause::Allocate,
+                   Fortran::parser::OmpClause::Nontemporal>(currentLocation,
+                                                            ompDirective);
+
     mlir::TypeRange resultType;
     auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
         currentLocation, resultType, lowerBound, upperBound, step, alignedVars,
@@ -2604,9 +2675,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
-  // FIXME: Add support for following clauses:
-  // 1. linear
-  // 2. order
   auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
       currentLocation, lowerBound, upperBound, step, linearVars, linearStepVars,
       reductionVars,
@@ -3340,6 +3408,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     cp.processTo(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processDeviceType(deviceType);
+    cp.processTODO<Fortran::parser::OmpClause::Indirect>(
+        converter.getCurrentLocation(),
+        llvm::omp::Directive::OMPD_declare_target);
   }
 
   for (const DeclareTargetCapturePair &symClause : symbolAndClause) {
