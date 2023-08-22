@@ -930,22 +930,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   }
 
   // Update users of the allocation to use the new global instead.
-  BitCastInst *TheBC = nullptr;
-  while (!CI->use_empty()) {
-    Instruction *User = cast<Instruction>(CI->user_back());
-    if (BitCastInst *BCI = dyn_cast<BitCastInst>(User)) {
-      if (BCI->getType() == NewGV->getType()) {
-        BCI->replaceAllUsesWith(NewGV);
-        BCI->eraseFromParent();
-      } else {
-        BCI->setOperand(0, NewGV);
-      }
-    } else {
-      if (!TheBC)
-        TheBC = new BitCastInst(NewGV, CI->getType(), "newgv", CI);
-      User->replaceUsesOfWith(CI, TheBC);
-    }
-  }
+  CI->replaceAllUsesWith(NewGV);
 
   SmallSetVector<Constant *, 1> RepValues;
   RepValues.insert(NewGV);
