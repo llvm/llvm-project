@@ -2970,6 +2970,7 @@ protected:
   std::string m_exit_string; ///< A textual description of why a process exited.
   std::mutex m_exit_status_mutex; ///< Mutex so m_exit_status m_exit_string can
                                   ///be safely accessed from multiple threads
+  std::recursive_mutex m_thread_mutex;
   ThreadList m_thread_list_real; ///< The threads for this process as are known
                                  ///to the protocol we are debugging with
   ThreadList m_thread_list; ///< The threads for this process as the user will
