@@ -1,5 +1,6 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
+/// rdar://113406310
+// UNSUPPORTED: system-aix || true
 //
 // We disable RTTI to avoid problems on Windows for non-RTTI builds of LLVM
 // where the JIT cannot find ??_7type_info@@6B@.
