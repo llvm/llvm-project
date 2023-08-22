@@ -663,7 +663,8 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   // them.
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
-       !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end)))
+       !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
+       !Tok.is(tok::annot_repl_input_end)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -817,6 +818,9 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // Skip comments. Normally the preprocessor does not generate
       // tok::comment nodes at all when not keeping comments, but under
       // -traditional-cpp the lexer keeps /all/ whitespace, including comments.
+      PP.Lex(Tok);
+      continue;
+    } else if (Tok.is(tok::annot_repl_input_end)) {
       PP.Lex(Tok);
       continue;
     } else if (Tok.is(tok::eod)) {

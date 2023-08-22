@@ -18,6 +18,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
@@ -692,7 +693,8 @@ private:
   bool isEofOrEom() {
     tok::TokenKind Kind = Tok.getKind();
     return Kind == tok::eof || Kind == tok::annot_module_begin ||
-           Kind == tok::annot_module_end || Kind == tok::annot_module_include;
+           Kind == tok::annot_module_end || Kind == tok::annot_module_include ||
+           Kind == tok::annot_repl_input_end;
   }
 
   /// Checks if the \p Level is valid for use in a fold expression.

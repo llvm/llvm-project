@@ -4340,6 +4340,7 @@ class TopLevelStmtDecl : public Decl {
   friend class ASTDeclWriter;
 
   Stmt *Statement = nullptr;
+  bool IsSemiMissing = false;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
       : Decl(TopLevelStmt, DC, L), Statement(S) {}
@@ -4353,6 +4354,12 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
   Stmt *getStmt() { return Statement; }
   const Stmt *getStmt() const { return Statement; }
+  void setStmt(Stmt *S) {
+    assert(IsSemiMissing && "Operation supported for printing values only!");
+    Statement = S;
+  }
+  bool isSemiMissing() const { return IsSemiMissing; }
+  void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
