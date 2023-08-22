@@ -3856,6 +3856,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "fdiv constexprs are no longer supported");
   case lltok::kw_frem:
     return error(ID.Loc, "frem constexprs are no longer supported");
+  case lltok::kw_and:
+    return error(ID.Loc, "and constexprs are no longer supported");
+  case lltok::kw_or:
+    return error(ID.Loc, "or constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
@@ -3964,8 +3968,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
 
   // Logical Operations
-  case lltok::kw_and:
-  case lltok::kw_or:
   case lltok::kw_xor: {
     unsigned Opc = Lex.getUIntVal();
     Constant *Val0, *Val1;

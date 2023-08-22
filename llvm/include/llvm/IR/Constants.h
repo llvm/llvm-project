@@ -1035,8 +1035,6 @@ public:
                           bool HasNSW = false);
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getAnd(Constant *C1, Constant *C2);
-  static Constant *getOr(Constant *C1, Constant *C2);
   static Constant *getXor(Constant *C1, Constant *C2);
   static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
