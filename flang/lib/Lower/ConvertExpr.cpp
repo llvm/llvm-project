@@ -849,7 +849,7 @@ public:
   ExtValue genval(Fortran::semantics::SymbolRef sym) {
     mlir::Location loc = getLoc();
     ExtValue var = gen(sym);
-    if (const fir::UnboxedValue *s = var.getUnboxed())
+    if (const fir::UnboxedValue *s = var.getUnboxed()) {
       if (fir::isa_ref_type(s->getType())) {
         // A function with multiple entry points returning different types
         // tags all result variables with one of the largest types to allow
@@ -861,9 +861,23 @@ public:
           if (addr.getType() != resultType)
             addr = builder.createConvert(loc, builder.getRefType(resultType),
                                          addr);
+        } else if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+          // get the corresponding Cray pointer
+          auto ptrSym = Fortran::lower::getPointer(sym);
+          ExtValue ptr = gen(ptrSym);
+          mlir::Value ptrVal = fir::getBase(ptr);
+          mlir::Type ptrTy = converter.genType(*ptrSym);
+
+          ExtValue pte = gen(sym);
+          mlir::Value pteVal = fir::getBase(pte);
+
+          mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+              loc, builder, ptrVal, ptrTy, pteVal.getType());
+          addr = builder.create<fir::LoadOp>(loc, cnvrt);
         }
         return genLoad(addr);
       }
+    }
     return var;
   }
 
@@ -1553,6 +1567,21 @@ public:
       args.push_back(builder.create<mlir::arith::SubIOp>(loc, ty, val, lb));
     }
     mlir::Value base = fir::getBase(array);
+
+    auto baseSym = getFirstSym(aref);
+    if (baseSym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+      // get the corresponding Cray pointer
+      auto ptrSym = Fortran::lower::getPointer(baseSym);
+
+      fir::ExtendedValue ptr = gen(ptrSym);
+      mlir::Value ptrVal = fir::getBase(ptr);
+      mlir::Type ptrTy = ptrVal.getType();
+
+      mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+          loc, builder, ptrVal, ptrTy, base.getType());
+      base = builder.create<fir::LoadOp>(loc, cnvrt);
+    }
+
     mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(base.getType());
     if (auto classTy = eleTy.dyn_cast<fir::ClassType>())
       eleTy = classTy.getEleTy();
@@ -5632,7 +5661,8 @@ private:
   }
 
   /// Base case of generating an array reference,
-  CC genarr(const ExtValue &extMemref, ComponentPath &components) {
+  CC genarr(const ExtValue &extMemref, ComponentPath &components,
+            mlir::Value CrayPtr = nullptr) {
     mlir::Location loc = getLoc();
     mlir::Value memref = fir::getBase(extMemref);
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(memref.getType());
@@ -5777,6 +5807,16 @@ private:
     }
     auto arrLoad = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, fir::getTypeParams(extMemref));
+
+    if (CrayPtr) {
+      mlir::Type ptrTy = CrayPtr.getType();
+      mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+          loc, builder, CrayPtr, ptrTy, memref.getType());
+      auto addr = builder.create<fir::LoadOp>(loc, cnvrt);
+      arrLoad = builder.create<fir::ArrayLoadOp>(loc, arrTy, addr, shape, slice,
+                                                 fir::getTypeParams(extMemref));
+    }
+
     mlir::Value arrLd = arrLoad.getResult();
     if (isProjectedCopyInCopyOut()) {
       // Semantics are projected copy-in copy-out.
@@ -6930,6 +6970,21 @@ private:
     return genImplicitArrayAccess(x.GetComponent(), components);
   }
 
+  CC genImplicitArrayAccess(const Fortran::semantics::Symbol &x,
+                            ComponentPath &components) {
+    mlir::Value ptrVal = nullptr;
+    if (x.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+      auto ptrSym = Fortran::lower::getPointer(x);
+      ExtValue ptr = converter.getSymbolExtendedValue(ptrSym);
+      ptrVal = fir::getBase(ptr);
+    }
+    components.reversePath.push_back(ImplicitSubscripts{});
+    ExtValue exv = asScalarRef(x);
+    lowerPath(exv, components);
+    auto lambda = genarr(exv, components, ptrVal);
+    return [=](IterSpace iters) { return lambda(components.pc(iters)); };
+  }
+
   template <typename A>
   CC genAsScalar(const A &x) {
     mlir::Location loc = getLoc();
@@ -7572,4 +7627,38 @@ void Fortran::lower::createArrayMergeStores(
   esp.outerLoop = std::nullopt;
   esp.resetBindings();
   esp.incrementCounter();
+}
+
+Fortran::semantics::SymbolRef
+Fortran::lower::getPointer(Fortran::semantics::SymbolRef sym) {
+  assert(!sym->owner().crayPointers().empty() &&
+         "empty Cray pointer/pointee map");
+  for (const auto &[pointee, pointer] : sym->owner().crayPointers()) {
+    if (pointee == sym->name()) {
+      Fortran::semantics::SymbolRef v{pointer.get()};
+      return v;
+    }
+  }
+  llvm_unreachable("corresponding Cray pointer cannot be found");
+}
+
+mlir::Value Fortran::lower::addCrayPointerInst(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::Value ptrVal,
+                                               mlir::Type ptrTy,
+                                               mlir::Type pteTy) {
+
+  mlir::Value empty;
+  mlir::ValueRange emptyRange;
+  auto boxTy = fir::BoxType::get(ptrTy);
+  auto box = builder.create<fir::EmboxOp>(loc, boxTy, ptrVal, empty, empty,
+                                          emptyRange);
+  mlir::Value addrof =
+      (ptrTy.isa<fir::ReferenceType>())
+          ? builder.create<fir::BoxAddrOp>(loc, ptrTy, box)
+          : builder.create<fir::BoxAddrOp>(loc, builder.getRefType(ptrTy), box);
+
+  auto refPtrTy =
+      builder.getRefType(fir::PointerType::get(fir::dyn_cast_ptrEleTy(pteTy)));
+  return builder.createConvert(loc, refPtrTy, addrof);
 }

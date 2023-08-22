@@ -3578,6 +3578,26 @@ private:
                 // to a result variable of one of the other types requires
                 // conversion to the actual type.
                 mlir::Type toTy = genType(assign.lhs);
+
+                // If Cray pointee, need to handle the address
+                // Array is handled in genCoordinateOp.
+                if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee) &&
+                    sym->Rank() == 0) {
+                  // get the corresponding Cray pointer
+
+                  auto ptrSym = Fortran::lower::getPointer(*sym);
+                  fir::ExtendedValue ptr =
+                      getSymbolExtendedValue(ptrSym, nullptr);
+                  mlir::Value ptrVal = fir::getBase(ptr);
+                  mlir::Type ptrTy = genType(*ptrSym);
+
+                  fir::ExtendedValue pte =
+                      getSymbolExtendedValue(*sym, nullptr);
+                  mlir::Value pteVal = fir::getBase(pte);
+                  mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+                      loc, *builder, ptrVal, ptrTy, pteVal.getType());
+                  addr = builder->create<fir::LoadOp>(loc, cnvrt);
+                }
                 mlir::Value cast =
                     isVector ? val
                              : builder->convertWithSemantics(loc, toTy, val);
