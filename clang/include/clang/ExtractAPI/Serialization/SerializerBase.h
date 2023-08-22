@@ -23,6 +23,8 @@ namespace extractapi {
 template <typename Derived> class APISetVisitor {
 public:
   void traverseAPISet() {
+    getDerived()->traverseNamespaces();
+
     getDerived()->traverseGlobalVariableRecords();
 
     getDerived()->traverseGlobalFunctionRecords();
@@ -74,6 +76,11 @@ public:
     getDerived()->traverseMacroDefinitionRecords();
 
     getDerived()->traverseTypedefRecords();
+  }
+
+  void traverseNamespaces() {
+    for (const auto &Namespace : API.getNamespaces())
+      getDerived()->visitNamespaceRecord(*Namespace.second);
   }
 
   void traverseGlobalFunctionRecords() {
@@ -219,6 +226,8 @@ public:
     for (const auto &Typedef : API.getTypedefs())
       getDerived()->visitTypedefRecord(*Typedef.second);
   }
+
+  void visitNamespaceRecord(const NamespaceRecord &Record){};
 
   /// Visit a global function record.
   void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record){};
