@@ -102,3 +102,4 @@ delegation optimization in cases of virtual inheritance where:
     - they were passed indirectly.
 
 //===---------------------------------------------------------------------===//
+
