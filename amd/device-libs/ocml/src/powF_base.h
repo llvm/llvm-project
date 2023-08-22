@@ -111,16 +111,13 @@ MATH_MANGLE(powr)(float x, float y)
     float zi = y < 0.0f ? 0.0f : PINF_F32;
 
     if (x == 0.0f)
-        ret = iz;
+        ret = y == 0.0f ? QNAN_F32 : iz;
 
-    if (BUILTIN_ISINF_F32(x))
-        ret = zi;
+    if (x == PINF_F32)
+        ret = y == 0.0f ? QNAN_F32 : zi;
 
     if (BUILTIN_ISINF_F32(y))
         ret = x == 1.0f ? QNAN_F32 : (x < 1.0f ? iz : zi);
-
-    if (y == 0.0f)
-        ret = x == 0.0f || BUILTIN_ISINF_F32(x) ? QNAN_F32 : 1.0f;
 
     if (x < 0.0f || BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;

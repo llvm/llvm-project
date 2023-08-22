@@ -73,16 +73,13 @@ MATH_MANGLE(powr)(half x, half y)
     half zi = y < 0.0h ? 0.0h : PINF_F16;
 
     if (x == 0.0h)
-        ret = iz;
+        ret = y == 0.0h ? QNAN_F16 : iz;
 
-    if (BUILTIN_ISINF_F16(x))
-        ret = zi;
+    if (x == PINF_F16)
+        ret = y == 0.0h ? QNAN_F16 : zi;
 
     if (BUILTIN_ISINF_F16(y))
         ret = x == 1.0h ? QNAN_F16 : (x < 1.0h ? iz : zi);
-
-    if (y == 0.0h)
-        ret = x == 0.0h || BUILTIN_ISINF_F16(x) ? QNAN_F16 : 1.0h;
 
     if (x < 0.0h || BUILTIN_ISUNORDERED_F16(x, y))
         ret = QNAN_F16;

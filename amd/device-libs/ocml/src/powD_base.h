@@ -77,10 +77,10 @@ MATH_MANGLE(powr)(double x, double y)
     double zi = y < 0.0 ? 0.0 : PINF_F64;
 
     if (x == 0.0)
-        ret = iz;
+        ret = y == 0.0 ? QNAN_F64 : iz;
 
-    if (BUILTIN_ISINF_F64(x))
-        ret = zi;
+    if (x == PINF_F64)
+        ret = y == 0.0 ? QNAN_F64 : zi;
 
     if (BUILTIN_ISINF_F64(y))
         ret = x == 1.0 ? QNAN_F64 : (x < 1.0 ? iz : zi);
