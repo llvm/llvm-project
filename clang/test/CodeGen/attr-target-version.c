@@ -153,7 +153,7 @@ int hoo(void) {
 // CHECK-NEXT:    ret i32 [[ADD3]]
 // CHECK-LABEL: @fmv.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 11
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 11
@@ -255,7 +255,7 @@ int hoo(void) {
 // CHECK-NEXT:    ret i32 [[CALL3]]
 // CHECK-LABEL: @fmv_inline.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4398048608256
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4398048608256
@@ -358,7 +358,7 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv_e._Mls64
 // CHECK-LABEL: @fmv_d.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 70368744177664
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 70368744177664
@@ -370,7 +370,7 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv_d
 // CHECK-LABEL: @fmv_c.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 281474976710656
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 281474976710656
