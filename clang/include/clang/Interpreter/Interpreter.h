@@ -14,14 +14,15 @@
 #ifndef LLVM_CLANG_INTERPRETER_INTERPRETER_H
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
-#include "clang/Interpreter/PartialTranslationUnit.h"
-
+#include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Interpreter/PartialTranslationUnit.h"
+#include "clang/Interpreter/Value.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
-
 #include <memory>
 #include <vector>
 
@@ -54,24 +55,26 @@ class Interpreter {
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
   llvm::Error CreateExecutor();
+  unsigned InitPTUSize = 0;
+
+  // This member holds the last result of the value printing. It's a class
+  // member because we might want to access it after more inputs. If no value
+  // printing happens, it's in an invalid state.
+  Value LastValue;
 
 public:
   ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
+  const ASTContext &getASTContext() const;
+  ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
   llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
-  llvm::Error ParseAndExecute(llvm::StringRef Code) {
-    auto PTU = Parse(Code);
-    if (!PTU)
-      return PTU.takeError();
-    if (PTU->TheModule)
-      return Execute(*PTU);
-    return llvm::Error::success();
-  }
+  llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
+  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
@@ -92,6 +95,23 @@ public:
   /// file.
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
+
+  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray };
+
+  const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
+    return ValuePrintingInfo;
+  }
+
+  Expr *SynthesizeExpr(Expr *E);
+
+private:
+  size_t getEffectivePTUSize() const;
+
+  bool FindRuntimeInterface();
+
+  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+
+  llvm::SmallVector<Expr *, 3> ValuePrintingInfo;
 };
 } // namespace clang
 

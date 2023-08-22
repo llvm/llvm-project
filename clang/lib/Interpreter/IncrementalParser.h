@@ -16,7 +16,6 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
 #include "clang/AST/GlobalDecl.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -31,8 +30,8 @@ namespace clang {
 class ASTConsumer;
 class CompilerInstance;
 class IncrementalAction;
+class Interpreter;
 class Parser;
-
 /// Provides support for incremental compilation. Keeps track of the state
 /// changes between the subsequent incremental input.
 ///
@@ -57,7 +56,8 @@ class IncrementalParser {
   std::list<PartialTranslationUnit> PTUs;
 
 public:
-  IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
+  IncrementalParser(Interpreter &Interp,
+                    std::unique_ptr<CompilerInstance> Instance,
                     llvm::LLVMContext &LLVMCtx, llvm::Error &Err);
   ~IncrementalParser();
 
@@ -75,6 +75,8 @@ public:
   void CleanUpPTU(PartialTranslationUnit &PTU);
 
   std::list<PartialTranslationUnit> &getPTUs() { return PTUs; }
+
+  std::unique_ptr<llvm::Module> GenModule();
 
 private:
   llvm::Expected<PartialTranslationUnit &> ParseOrWrapTopLevelDecl();

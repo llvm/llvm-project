@@ -14,6 +14,8 @@ add_clang_library(clangInterpreter
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
+  InterpreterUtils.cpp
+  Value.cpp
 
   DEPENDS
   intrinsics_gen

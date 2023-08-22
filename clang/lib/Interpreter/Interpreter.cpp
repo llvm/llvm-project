@@ -16,7 +16,11 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 
+#include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
@@ -27,13 +31,16 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
-
+#include "clang/Sema/Lookup.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-
 using namespace clang;
 
 // FIXME: Figure out how to unify with namespace init_convenience from
@@ -177,7 +184,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
   llvm::ErrorAsOutParameter EAO(&Err);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
-  IncrParser = std::make_unique<IncrementalParser>(std::move(CI),
+  IncrParser = std::make_unique<IncrementalParser>(*this, std::move(CI),
                                                    *TSCtx->getContext(), Err);
 }
 
@@ -190,6 +197,29 @@ Interpreter::~Interpreter() {
   }
 }
 
+// These better to put in a runtime header but we can't. This is because we
+// can't find the precise resource directory in unittests so we have to hard
+// code them.
+const char *const Runtimes = R"(
+    void* operator new(__SIZE_TYPE__, void* __p) noexcept;
+    void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
+    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*);
+    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, void*);
+    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, float);
+    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, double);
+    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, long double);
+    void __clang_Interpreter_SetValueNoAlloc(void*,void*,void*,unsigned long long);
+    template <class T, class = T (*)() /*disable for arrays*/>
+    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
+      for (auto Idx = 0; Idx < Size; ++Idx)
+        new ((void*)(((T*)Placement) + Idx)) T(Src[Idx]);
+    }
+    template <class T, unsigned long N>
+    void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
+      __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
+    }
+)";
+
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
   llvm::Error Err = llvm::Error::success();
@@ -197,6 +227,15 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
       std::unique_ptr<Interpreter>(new Interpreter(std::move(CI), Err));
   if (Err)
     return std::move(Err);
+  auto PTU = Interp->Parse(Runtimes);
+  if (!PTU)
+    return PTU.takeError();
+
+  Interp->ValuePrintingInfo.resize(3);
+  // FIXME: This is a ugly hack. Undo command checks its availability by looking
+  // at the size of the PTU list. However we have parsed something in the
+  // beginning of the REPL so we have to mark them as 'Irrevocable'.
+  Interp->InitPTUSize = Interp->IncrParser->getPTUs().size();
   return std::move(Interp);
 }
 
@@ -213,8 +252,26 @@ llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   return IncrExecutor->GetExecutionEngine();
 }
 
+ASTContext &Interpreter::getASTContext() {
+  return getCompilerInstance()->getASTContext();
+}
+
+const ASTContext &Interpreter::getASTContext() const {
+  return getCompilerInstance()->getASTContext();
+}
+
+size_t Interpreter::getEffectivePTUSize() const {
+  std::list<PartialTranslationUnit> &PTUs = IncrParser->getPTUs();
+  assert(PTUs.size() >= InitPTUSize && "empty PTU list?");
+  return PTUs.size() - InitPTUSize;
+}
+
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
+  // Tell the interpreter sliently ignore unused expressions since value
+  // printing could cause it.
+  getCompilerInstance()->getDiagnostics().setSeverity(
+      clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
   return IncrParser->Parse(Code);
 }
 
@@ -243,6 +300,25 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   if (auto Err = IncrExecutor->runCtors())
     return Err;
 
+  return llvm::Error::success();
+}
+
+llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
+
+  auto PTU = Parse(Code);
+  if (!PTU)
+    return PTU.takeError();
+  if (PTU->TheModule)
+    if (llvm::Error Err = Execute(*PTU))
+      return Err;
+
+  if (LastValue.isValid()) {
+    if (!V) {
+      LastValue.dump();
+      LastValue.clear();
+    } else
+      *V = std::move(LastValue);
+  }
   return llvm::Error::success();
 }
 
@@ -279,7 +355,7 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
 llvm::Error Interpreter::Undo(unsigned N) {
 
   std::list<PartialTranslationUnit> &PTUs = IncrParser->getPTUs();
-  if (N > PTUs.size())
+  if (N > getEffectivePTUSize())
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Too many undos",
                                                std::error_code());
@@ -309,4 +385,344 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
     return DLSG.takeError();
 
   return llvm::Error::success();
+}
+
+llvm::Expected<llvm::orc::ExecutorAddr>
+Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
+  assert(CXXRD && "Cannot compile a destructor for a nullptr");
+  if (auto Dtor = Dtors.find(CXXRD); Dtor != Dtors.end())
+    return Dtor->getSecond();
+
+  if (CXXRD->hasIrrelevantDestructor())
+    return llvm::orc::ExecutorAddr{};
+
+  CXXDestructorDecl *DtorRD =
+      getCompilerInstance()->getSema().LookupDestructor(CXXRD);
+
+  llvm::StringRef Name =
+      IncrParser->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+  auto AddrOrErr = getSymbolAddress(Name);
+  if (!AddrOrErr)
+    return AddrOrErr.takeError();
+
+  Dtors[CXXRD] = *AddrOrErr;
+  return AddrOrErr;
+}
+
+static constexpr llvm::StringRef MagicRuntimeInterface[] = {
+    "__clang_Interpreter_SetValueNoAlloc",
+    "__clang_Interpreter_SetValueWithAlloc",
+    "__clang_Interpreter_SetValueCopyArr"};
+
+bool Interpreter::FindRuntimeInterface() {
+  if (llvm::all_of(ValuePrintingInfo, [](Expr *E) { return E != nullptr; }))
+    return true;
+
+  Sema &S = getCompilerInstance()->getSema();
+  ASTContext &Ctx = S.getASTContext();
+
+  auto LookupInterface = [&](Expr *&Interface, llvm::StringRef Name) {
+    LookupResult R(S, &Ctx.Idents.get(Name), SourceLocation(),
+                   Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+    S.LookupQualifiedName(R, Ctx.getTranslationUnitDecl());
+    if (R.empty())
+      return false;
+
+    CXXScopeSpec CSS;
+    Interface = S.BuildDeclarationNameExpr(CSS, R, /*ADL=*/false).get();
+    return true;
+  };
+
+  if (!LookupInterface(ValuePrintingInfo[NoAlloc],
+                       MagicRuntimeInterface[NoAlloc]))
+    return false;
+  if (!LookupInterface(ValuePrintingInfo[WithAlloc],
+                       MagicRuntimeInterface[WithAlloc]))
+    return false;
+  if (!LookupInterface(ValuePrintingInfo[CopyArray],
+                       MagicRuntimeInterface[CopyArray]))
+    return false;
+  return true;
+}
+
+namespace {
+
+class RuntimeInterfaceBuilder
+    : public TypeVisitor<RuntimeInterfaceBuilder, Interpreter::InterfaceKind> {
+  clang::Interpreter &Interp;
+  ASTContext &Ctx;
+  Sema &S;
+  Expr *E;
+  llvm::SmallVector<Expr *, 3> Args;
+
+public:
+  RuntimeInterfaceBuilder(clang::Interpreter &In, ASTContext &C, Sema &SemaRef,
+                          Expr *VE, ArrayRef<Expr *> FixedArgs)
+      : Interp(In), Ctx(C), S(SemaRef), E(VE) {
+    // The Interpreter* parameter and the out parameter `OutVal`.
+    for (Expr *E : FixedArgs)
+      Args.push_back(E);
+
+    // Get rid of ExprWithCleanups.
+    if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
+      E = EWC->getSubExpr();
+  }
+
+  ExprResult getCall() {
+    QualType Ty = E->getType();
+    QualType DesugaredTy = Ty.getDesugaredType(Ctx);
+
+    // For lvalue struct, we treat it as a reference.
+    if (DesugaredTy->isRecordType() && E->isLValue()) {
+      DesugaredTy = Ctx.getLValueReferenceType(DesugaredTy);
+      Ty = Ctx.getLValueReferenceType(Ty);
+    }
+
+    Expr *TypeArg =
+        CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)Ty.getAsOpaquePtr());
+    // The QualType parameter `OpaqueType`, represented as `void*`.
+    Args.push_back(TypeArg);
+
+    // We push the last parameter based on the type of the Expr. Note we need
+    // special care for rvalue struct.
+    Interpreter::InterfaceKind Kind = Visit(&*DesugaredTy);
+    switch (Kind) {
+    case Interpreter::InterfaceKind::WithAlloc:
+    case Interpreter::InterfaceKind::CopyArray: {
+      // __clang_Interpreter_SetValueWithAlloc.
+      ExprResult AllocCall = S.ActOnCallExpr(
+          /*Scope=*/nullptr,
+          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::WithAlloc],
+          E->getBeginLoc(), Args, E->getEndLoc());
+      assert(!AllocCall.isInvalid() && "Can't create runtime interface call!");
+
+      TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
+
+      // Force CodeGen to emit destructor.
+      if (auto *RD = Ty->getAsCXXRecordDecl()) {
+        auto *Dtor = S.LookupDestructor(RD);
+        Dtor->addAttr(UsedAttr::CreateImplicit(Ctx));
+        Interp.getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
+            DeclGroupRef(Dtor));
+      }
+
+      // __clang_Interpreter_SetValueCopyArr.
+      if (Kind == Interpreter::InterfaceKind::CopyArray) {
+        const auto *ConstantArrTy =
+            cast<ConstantArrayType>(DesugaredTy.getTypePtr());
+        size_t ArrSize = Ctx.getConstantArrayElementCount(ConstantArrTy);
+        Expr *ArrSizeExpr = IntegerLiteralExpr(Ctx, ArrSize);
+        Expr *Args[] = {E, AllocCall.get(), ArrSizeExpr};
+        return S.ActOnCallExpr(
+            /*Scope *=*/nullptr,
+            Interp
+                .getValuePrintingInfo()[Interpreter::InterfaceKind::CopyArray],
+            SourceLocation(), Args, SourceLocation());
+      }
+      Expr *Args[] = {AllocCall.get()};
+      ExprResult CXXNewCall = S.BuildCXXNew(
+          E->getSourceRange(),
+          /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
+          /*PlacementRParen=*/SourceLocation(),
+          /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
+          E->getSourceRange(), E);
+
+      assert(!CXXNewCall.isInvalid() &&
+             "Can't create runtime placement new call!");
+
+      return S.ActOnFinishFullExpr(CXXNewCall.get(),
+                                   /*DiscardedValue=*/false);
+    }
+      // __clang_Interpreter_SetValueNoAlloc.
+    case Interpreter::InterfaceKind::NoAlloc: {
+      return S.ActOnCallExpr(
+          /*Scope=*/nullptr,
+          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NoAlloc],
+          E->getBeginLoc(), Args, E->getEndLoc());
+    }
+    }
+    llvm_unreachable("Unhandled Interpreter::InterfaceKind");
+  }
+
+  Interpreter::InterfaceKind VisitRecordType(const RecordType *Ty) {
+    return Interpreter::InterfaceKind::WithAlloc;
+  }
+
+  Interpreter::InterfaceKind
+  VisitMemberPointerType(const MemberPointerType *Ty) {
+    return Interpreter::InterfaceKind::WithAlloc;
+  }
+
+  Interpreter::InterfaceKind
+  VisitConstantArrayType(const ConstantArrayType *Ty) {
+    return Interpreter::InterfaceKind::CopyArray;
+  }
+
+  Interpreter::InterfaceKind
+  VisitFunctionProtoType(const FunctionProtoType *Ty) {
+    HandlePtrType(Ty);
+    return Interpreter::InterfaceKind::NoAlloc;
+  }
+
+  Interpreter::InterfaceKind VisitPointerType(const PointerType *Ty) {
+    HandlePtrType(Ty);
+    return Interpreter::InterfaceKind::NoAlloc;
+  }
+
+  Interpreter::InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    assert(!AddrOfE.isInvalid() && "Can not create unary expression");
+    Args.push_back(AddrOfE.get());
+    return Interpreter::InterfaceKind::NoAlloc;
+  }
+
+  Interpreter::InterfaceKind VisitBuiltinType(const BuiltinType *Ty) {
+    if (Ty->isNullPtrType())
+      Args.push_back(E);
+    else if (Ty->isFloatingType())
+      Args.push_back(E);
+    else if (Ty->isIntegralOrEnumerationType())
+      HandleIntegralOrEnumType(Ty);
+    else if (Ty->isVoidType()) {
+      // Do we need to still run `E`?
+    }
+
+    return Interpreter::InterfaceKind::NoAlloc;
+  }
+
+  Interpreter::InterfaceKind VisitEnumType(const EnumType *Ty) {
+    HandleIntegralOrEnumType(Ty);
+    return Interpreter::InterfaceKind::NoAlloc;
+  }
+
+private:
+  // Force cast these types to uint64 to reduce the number of overloads of
+  // `__clang_Interpreter_SetValueNoAlloc`.
+  void HandleIntegralOrEnumType(const Type *Ty) {
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.UnsignedLongLongTy);
+    ExprResult CastedExpr =
+        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
+    assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");
+    Args.push_back(CastedExpr.get());
+  }
+
+  void HandlePtrType(const Type *Ty) {
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.VoidPtrTy);
+    ExprResult CastedExpr =
+        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
+    assert(!CastedExpr.isInvalid() && "Can not create cstyle cast expression");
+    Args.push_back(CastedExpr.get());
+  }
+};
+} // namespace
+
+// This synthesizes a call expression to a speciall
+// function that is responsible for generating the Value.
+// In general, we transform:
+//   clang-repl> x
+// To:
+//   // 1. If x is a built-in type like int, float.
+//   __clang_Interpreter_SetValueNoAlloc(ThisInterp, OpaqueValue, xQualType, x);
+//   // 2. If x is a struct, and a lvalue.
+//   __clang_Interpreter_SetValueNoAlloc(ThisInterp, OpaqueValue, xQualType,
+//   &x);
+//   // 3. If x is a struct, but a rvalue.
+//   new (__clang_Interpreter_SetValueWithAlloc(ThisInterp, OpaqueValue,
+//   xQualType)) (x);
+
+Expr *Interpreter::SynthesizeExpr(Expr *E) {
+  Sema &S = getCompilerInstance()->getSema();
+  ASTContext &Ctx = S.getASTContext();
+
+  if (!FindRuntimeInterface())
+    llvm_unreachable("We can't find the runtime iterface for pretty print!");
+
+  // Create parameter `ThisInterp`.
+  auto *ThisInterp = CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)this);
+
+  // Create parameter `OutVal`.
+  auto *OutValue = CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)&LastValue);
+
+  // Build `__clang_Interpreter_SetValue*` call.
+  RuntimeInterfaceBuilder Builder(*this, Ctx, S, E, {ThisInterp, OutValue});
+
+  ExprResult Result = Builder.getCall();
+  // It could fail, like printing an array type in C. (not supported)
+  if (Result.isInvalid())
+    return E;
+  return Result.get();
+}
+
+// Temporary rvalue struct that need special care.
+REPL_EXTERNAL_VISIBILITY void *
+__clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
+                                      void *OpaqueType) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  return VRef.getPtr();
+}
+
+// Pointers, lvalue struct that can take as a reference.
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    void *Val) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  VRef.setPtr(Val);
+}
+
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal,
+                                    void *OpaqueType) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+}
+
+static void SetValueDataBasedOnQualType(Value &V, unsigned long long Data) {
+  QualType QT = V.getType();
+  if (const auto *ET = QT->getAs<EnumType>())
+    QT = ET->getDecl()->getIntegerType();
+
+  switch (QT->getAs<BuiltinType>()->getKind()) {
+  default:
+    llvm_unreachable("unknown type kind!");
+#define X(type, name)                                                          \
+  case BuiltinType::name:                                                      \
+    V.set##name(Data);                                                         \
+    break;
+    REPL_BUILTIN_TYPES
+#undef X
+  }
+}
+
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    unsigned long long Val) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  SetValueDataBasedOnQualType(VRef, Val);
+}
+
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    float Val) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  VRef.setFloat(Val);
+}
+
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    double Val) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  VRef.setDouble(Val);
+}
+
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    long double Val) {
+  Value &VRef = *(Value *)OutVal;
+  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+  VRef.setLongDouble(Val);
 }
