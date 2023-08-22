@@ -241,6 +241,10 @@ Changes in existing checks
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options.
 
+- Improved :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check to ignore
+  false-positives in initializer list of record.
+
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
