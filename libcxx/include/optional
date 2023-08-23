@@ -731,7 +731,8 @@ private:
     template <class _Up>
     using _CheckOptionalArgsCtor = _If<
         _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value &&
-        _IsNotSame<__remove_cvref_t<_Up>, optional>::value,
+        _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
+        (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
         _CheckOptionalArgsConstructor,
         __check_tuple_constructor_fail
     >;
@@ -758,12 +759,12 @@ private:
       template <class _Up, class _QUp = _QualUp>
       _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
           return is_convertible<_QUp, _Tp>::value &&
-              !__check_constructible_from_opt<_Up>::value;
+                 (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
       }
       template <class _Up, class _QUp = _QualUp>
       _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
           return !is_convertible<_QUp, _Tp>::value &&
-              !__check_constructible_from_opt<_Up>::value;
+                 (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
       }
       template <class _Up, class _QUp = _QualUp>
       _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {

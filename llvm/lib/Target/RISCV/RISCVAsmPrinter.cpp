@@ -232,16 +232,23 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   const MachineOperand &AddrReg = MI->getOperand(OpNo);
   assert(MI->getNumOperands() > OpNo + 1 && "Expected additional operand");
-  const MachineOperand &DispImm = MI->getOperand(OpNo + 1);
+  const MachineOperand &Offset = MI->getOperand(OpNo + 1);
   // All memory operands should have a register and an immediate operand (see
   // RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand).
   if (!AddrReg.isReg())
     return true;
-  if (!DispImm.isImm())
+  if (!Offset.isImm() && !Offset.isGlobal())
     return true;
 
-  OS << DispImm.getImm() << "("
-     << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  MCOperand MCO;
+  if (!lowerOperand(Offset, MCO))
+    return true;
+
+  if (Offset.isImm())
+    OS << MCO.getImm();
+  else if (Offset.isGlobal())
+    OS << *MCO.getExpr();
+  OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
 
@@ -772,12 +779,13 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   uint64_t TSFlags = MCID.TSFlags;
   unsigned NumOps = MI->getNumExplicitOperands();
 
-  // Skip policy, VL and SEW operands which are the last operands if present.
+  // Skip policy, SEW, VL, VXRM/FRM operands which are the last operands if
+  // present.
   if (RISCVII::hasVecPolicyOp(TSFlags))
     --NumOps;
-  if (RISCVII::hasVLOp(TSFlags))
-    --NumOps;
   if (RISCVII::hasSEWOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasVLOp(TSFlags))
     --NumOps;
   if (RISCVII::hasRoundModeOp(TSFlags))
     --NumOps;

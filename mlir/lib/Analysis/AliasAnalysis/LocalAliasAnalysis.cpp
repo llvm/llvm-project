@@ -83,7 +83,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   if (std::optional<unsigned> operandIndex =
           getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
     collectUnderlyingAddressValues(
-        branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
+        branch.getEntrySuccessorOperands(regionIndex)[*operandIndex], maxDepth,
         visited, output);
   }
   // Check branches from each child region.

@@ -1334,6 +1334,30 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
           return DAG.getNode(Opc, DL, VT, SDValue(NE, 0), N00);
       }
     }
+
+    // Reassociate the operands from (OR/AND (OR/AND(N00, N001)), N1) to (OR/AND
+    // (OR/AND(N00, N1)), N01) when N00 and N1 are comparisons with the same
+    // predicate or to (OR/AND (OR/AND(N1, N01)), N00) when N01 and N1 are
+    // comparisons with the same predicate. This enables optimizations as the
+    // following one:
+    // CMP(A,C)||CMP(B,C) => CMP(MIN/MAX(A,B), C)
+    // CMP(A,C)&&CMP(B,C) => CMP(MIN/MAX(A,B), C)
+    if (Opc == ISD::AND || Opc == ISD::OR) {
+      if (N1->getOpcode() == ISD::SETCC && N00->getOpcode() == ISD::SETCC &&
+          N01->getOpcode() == ISD::SETCC) {
+        ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+        ISD::CondCode CC00 = cast<CondCodeSDNode>(N00.getOperand(2))->get();
+        ISD::CondCode CC01 = cast<CondCodeSDNode>(N01.getOperand(2))->get();
+        if (CC1 == CC00 && CC1 != CC01) {
+          SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1, Flags);
+          return DAG.getNode(Opc, DL, VT, OpNode, N01, Flags);
+        }
+        if (CC1 == CC01 && CC1 != CC00) {
+          SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N01, N1, Flags);
+          return DAG.getNode(Opc, DL, VT, OpNode, N00, Flags);
+        }
+      }
+    }
   }
 
   return SDValue();
@@ -10110,25 +10134,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  // fold (sra (shl x, c1), c1) -> sext_inreg for some c1 and target supports
-  // sext_inreg.
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
-  if (N1C && N0.getOpcode() == ISD::SHL && N1 == N0.getOperand(1)) {
-    unsigned LowBits = OpSizeInBits - (unsigned)N1C->getZExtValue();
-    EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), LowBits);
-    if (VT.isVector())
-      ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtVT,
-                               VT.getVectorElementCount());
-    if (!LegalOperations ||
-        TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
-        TargetLowering::Legal)
-      return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT,
-                         N0.getOperand(0), DAG.getValueType(ExtVT));
-    // Even if we can't convert to sext_inreg, we might be able to remove
-    // this shift pair if the input is already sign extended.
-    if (DAG.ComputeNumSignBits(N0.getOperand(0)) > N1C->getZExtValue())
-      return N0.getOperand(0);
-  }
 
   // fold (sra (sra x, c1), c2) -> (sra x, (add c1, c2))
   // clamp (add c1, c2) to max shift.
@@ -14316,9 +14322,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   EVT SrcVT = N0.getValueType();
   bool isLE = DAG.getDataLayout().isLittleEndian();
 
-  // noop truncate
-  if (SrcVT == VT)
-    return N0;
+  // trunc(undef) = undef
+  if (N0.isUndef())
+    return DAG.getUNDEF(VT);
 
   // fold (truncate (truncate x)) -> (truncate x)
   if (N0.getOpcode() == ISD::TRUNCATE)
@@ -14350,7 +14356,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     SDValue X = N0.getOperand(0);
     SDValue ExtVal = N0.getOperand(1);
     EVT ExtVT = cast<VTSDNode>(ExtVal)->getVT();
-    if (ExtVT.bitsLT(VT)) {
+    if (ExtVT.bitsLT(VT) && TLI.preferSextInRegOfTruncate(VT, SrcVT, ExtVT)) {
       SDValue TrX = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, X);
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, TrX, ExtVal);
     }
@@ -19384,23 +19390,24 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
       for (unsigned I = 0; I != NumStores; ++I) {
         StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
         SDValue Val = St->getValue();
-        // If constant is of the wrong type, convert it now.
+        // If constant is of the wrong type, convert it now.  This comes up
+        // when one of our stores was truncating.
         if (MemVT != Val.getValueType()) {
           Val = peekThroughBitcasts(Val);
           // Deal with constants of wrong size.
           if (ElementSizeBits != Val.getValueSizeInBits()) {
+            auto *C = dyn_cast<ConstantSDNode>(Val);
+            if (!C)
+              // Not clear how to truncate FP values.
+              // TODO: Handle truncation of build_vector constants
+              return false;
+
             EVT IntMemVT =
                 EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
-            if (isa<ConstantFPSDNode>(Val)) {
-              // Not clear how to truncate FP values.
-              return false;
-            }
-
-            if (auto *C = dyn_cast<ConstantSDNode>(Val))
-              Val = DAG.getConstant(C->getAPIntValue()
-                                        .zextOrTrunc(Val.getValueSizeInBits())
-                                        .zextOrTrunc(ElementSizeBits),
-                                    SDLoc(C), IntMemVT);
+            Val = DAG.getConstant(C->getAPIntValue()
+                                      .zextOrTrunc(Val.getValueSizeInBits())
+                                      .zextOrTrunc(ElementSizeBits),
+                                  SDLoc(C), IntMemVT);
           }
           // Make sure correctly size type is the correct type.
           Val = DAG.getBitcast(MemVT, Val);
@@ -20501,9 +20508,11 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
   SDValue Elt = Value.getOperand(1);
   SDValue Idx = Value.getOperand(2);
 
-  // If the element isn't byte sized then we can't compute an offset
+  // If the element isn't byte sized or is implicitly truncated then we can't
+  // compute an offset.
   EVT EltVT = Elt.getValueType();
-  if (!EltVT.isByteSized())
+  if (!EltVT.isByteSized() ||
+      EltVT != Value.getOperand(0).getValueType().getVectorElementType())
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Value.getOperand(0));
@@ -20709,7 +20718,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
               TypeSize::isKnownLE(ST1->getMemoryVT().getStoreSize(),
                                   ST->getMemoryVT().getStoreSize())) {
             CombineTo(ST1, ST1->getChain());
-            return SDValue();
+            return SDValue(N, 0);
           }
         } else {
           const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
@@ -20722,7 +20731,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
                               ChainBase,
                               ST1->getMemoryVT().getFixedSizeInBits())) {
             CombineTo(ST1, ST1->getChain());
-            return SDValue();
+            return SDValue(N, 0);
           }
         }
       }
@@ -22117,12 +22126,18 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
 SDValue DAGCombiner::reduceBuildVecTruncToBitCast(SDNode *N) {
   assert(N->getOpcode() == ISD::BUILD_VECTOR && "Expected build vector");
 
+  EVT VT = N->getValueType(0);
+
+  // Don't run this before LegalizeTypes if VT is legal.
+  // Targets may have other preferences.
+  if (Level < AfterLegalizeTypes && TLI.isTypeLegal(VT))
+    return SDValue();
+
   // Only for little endian
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
   SDLoc DL(N);
-  EVT VT = N->getValueType(0);
   EVT OutScalarTy = VT.getScalarType();
   uint64_t ScalarTypeBitsize = OutScalarTy.getSizeInBits();
 
@@ -25590,15 +25605,31 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     return N0;
 
   // If this is an insert of an extracted vector into an undef vector, we can
-  // just use the input to the extract.
+  // just use the input to the extract if the types match, and can simplify
+  // in some cases even if they don't.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      N1.getOperand(1) == N2 && N1.getOperand(0).getValueType() == VT)
-    return N1.getOperand(0);
+      N1.getOperand(1) == N2) {
+    EVT SrcVT = N1.getOperand(0).getValueType();
+    if (SrcVT == VT)
+      return N1.getOperand(0);
+    // TODO: To remove the zero check, need to adjust the offset to
+    // a multiple of the new src type.
+    if (isNullConstant(N2) &&
+        VT.isScalableVector() == SrcVT.isScalableVector()) {
+      if (VT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements())
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
+                           VT, N0, N1.getOperand(0), N2);
+      else
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N),
+                           VT, N1.getOperand(0), N2);
+    }
+  }
 
   // Simplify scalar inserts into an undef vector:
   // insert_subvector undef, (splat X), N2 -> splat X
   if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
-    return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
+    if (DAG.isConstantValueOfAnyType(N1.getOperand(0)) || N1.hasOneUse())
+      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
 
   // If we are inserting a bitcast value into an undef, with the same
   // number of elements, just use the bitcast input of the extract.

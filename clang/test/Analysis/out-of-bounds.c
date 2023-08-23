@@ -151,9 +151,21 @@ void test_assume_after_access(unsigned long x) {
 // Don't warn when indexing below the start of a symbolic region's whose
 // base extent we don't know.
 int *get_symbolic(void);
-void test_index_below_symboloc(void) {
+void test_underflow_symbolic(void) {
   int *buf = get_symbolic();
   buf[-1] = 0; // no-warning;
+}
+
+// But warn if we understand the internal memory layout of a symbolic region.
+typedef struct {
+  int id;
+  char name[256];
+} user_t;
+
+user_t *get_symbolic_user(void);
+char test_underflow_symbolic_2() {
+  user_t *user = get_symbolic_user();
+  return user->name[-1]; // expected-warning{{Out of bound memory access}}
 }
 
 void test_incomplete_struct(void) {

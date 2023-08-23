@@ -1469,7 +1469,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(BaseTp);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask);
+  Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
@@ -5958,9 +5958,7 @@ bool X86TTIImpl::forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
          (ST->hasAVX512() && (NumElts == 2 || (NumElts == 4 && !ST->hasVLX())));
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
-  if (!supportsGather())
-    return false;
+bool X86TTIImpl::isLegalMaskedGatherScatter(Type *DataTy, Align Alignment) {
   Type *ScalarTy = DataTy->getScalarType();
   if (ScalarTy->isPointerTy())
     return true;
@@ -5973,6 +5971,12 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
 
   unsigned IntWidth = ScalarTy->getIntegerBitWidth();
   return IntWidth == 32 || IntWidth == 64;
+}
+
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+  if (!supportsGather() || !ST->preferGather())
+    return false;
+  return isLegalMaskedGatherScatter(DataTy, Alignment);
 }
 
 bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
@@ -6010,9 +6014,9 @@ bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType, Align Alignment) {
   // AVX2 doesn't support scatter
-  if (!ST->hasAVX512())
+  if (!ST->hasAVX512() || !ST->preferScatter())
     return false;
-  return isLegalMaskedGather(DataType, Alignment);
+  return isLegalMaskedGatherScatter(DataType, Alignment);
 }
 
 bool X86TTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {

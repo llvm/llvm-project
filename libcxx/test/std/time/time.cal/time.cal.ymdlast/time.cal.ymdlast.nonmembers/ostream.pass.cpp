@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -166,15 +164,15 @@ static void test() {
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::year_month_day_last{
                  std::chrono::year{0}, std::chrono::month_day_last{std::chrono::month{3}}}),
              SV("0000/mars/last"));
-#  if defined(_WIN32) || defined(_AIX)
+#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::year_month_day_last{
                  std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::month{4}}}),
              SV("1970/avr./last"));
-#  else  // defined(_WIN32) || defined(_AIX)
+#  else  // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::year_month_day_last{
                  std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::month{4}}}),
              SV("1970/avril/last"));
-#  endif // defined(_WIN32) || defined(_AIX)
+#  endif // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::year_month_day_last{
                  std::chrono::year{32'767}, std::chrono::month_day_last{std::chrono::month{5}}}),
              SV("32767/mai/last"));

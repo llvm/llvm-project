@@ -753,12 +753,14 @@ void fir::factory::genInlinedAllocation(
                 fir::MustBeHeapAttr::get(builder.getContext(), mustBeHeap));
 }
 
-void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        const fir::MutableBoxValue &box) {
+mlir::Value
+fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
   genFinalizeAndFree(builder, loc, addr);
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
+  return addr;
 }
 
 fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(

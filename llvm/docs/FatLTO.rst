@@ -67,7 +67,7 @@ extending support to other linkers isn't planned for now.
 .. NOTE
    For standard linking the fat object files should be usable by any
    linker capable of using ELF objects, since the ``.llvm.lto`` section is
-   marked ``SHF_EXLUDE``.
+   marked ``SHF_EXCLUDE``.
 
 Supported File Formats
 ----------------------

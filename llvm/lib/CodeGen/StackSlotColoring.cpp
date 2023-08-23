@@ -523,8 +523,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
 
   // If there are calls to setjmp or sigsetjmp, don't perform stack slot
   // coloring. The stack could be modified before the longjmp is executed,
-  // resulting in the wrong value being used afterwards. (See
-  // <rdar://problem/8007500>.)
+  // resulting in the wrong value being used afterwards.
   if (MF.exposesReturnsTwice())
     return false;
 

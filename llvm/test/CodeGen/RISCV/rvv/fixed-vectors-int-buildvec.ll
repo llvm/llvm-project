@@ -101,9 +101,6 @@ define %x4v4i8 @buildvec_vid_step2_add1_v4i8() {
   ret %x4v4i8 %4
 }
 
-; FIXME: This could generate vrsub.vi but the (ISD::MUL X, -1) we generate
-; while lowering ISD::BUILD_VECTOR is custom-lowered to RISCVISD::MUL_VL before
-; being combined.
 define %x4v4i8 @buildvec_vid_stepn1_add0_v4i8() {
 ; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8:
 ; CHECK:       # %bb.0:

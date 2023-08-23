@@ -5,5 +5,5 @@
 cert-pos47-c
 ============
 
-The cert-pos47-c check is an alias, please see
-`concurrency-thread-canceltype-asynchronous <../concurrency/thread-canceltype-asynchronous.html>`_ for more information.
+The `cert-pos47-c` check is an alias, please see
+:doc:`concurrency-thread-canceltype-asynchronous <../concurrency/thread-canceltype-asynchronous>` for more information.

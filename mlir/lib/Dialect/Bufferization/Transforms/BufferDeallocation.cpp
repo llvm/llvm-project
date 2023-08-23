@@ -384,7 +384,7 @@ private:
     // Determine the actual operand to introduce a clone for and rewire the
     // operand to point to the clone instead.
     auto operands =
-        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber());
+        regionInterface.getEntrySuccessorOperands(argRegion->getRegionNumber());
     size_t operandIndex =
         llvm::find(it->getSuccessorInputs(), blockArg).getIndex() +
         operands.getBeginOperandIndex();
@@ -445,6 +445,10 @@ private:
           llvm::find(regionSuccessor->getSuccessorInputs(), argValue)
               .getIndex();
 
+      std::optional<unsigned> successorRegionNumber;
+      if (Region *successorRegion = regionSuccessor->getSuccessor())
+        successorRegionNumber = successorRegion->getRegionNumber();
+
       // Iterate over all immediate terminator operations to introduce
       // new buffer allocations. Thereby, the appropriate terminator operand
       // will be adjusted to point to the newly allocated buffer instead.
@@ -453,7 +457,7 @@ private:
                 // Get the actual mutable operands for this terminator op.
                 auto terminatorOperands =
                     terminator.getMutableSuccessorOperands(
-                        region.getRegionNumber());
+                        successorRegionNumber);
                 // Extract the source value from the current terminator.
                 // This conversion needs to exist on a separate line due to a
                 // bug in GCC conversion analysis.

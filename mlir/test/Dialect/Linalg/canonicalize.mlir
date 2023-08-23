@@ -897,3 +897,14 @@ func.func @cast_producer_mixed(%arg0 : tensor<5xf32>, %arg1: memref<?xf32>) {
 //  CHECK-SAME:    iterator_types = ["parallel"]
 //  CHECK-SAME:  } ins(%[[ARG1]] : tensor<5xf32>)
 //  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {
+
+// -----
+
+// CHECK-LABEL: dead_softmax
+func.func @dead_softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
+  %0 = tensor.empty() : tensor<16x64x256xf32>
+  // CHECK-NOT: linalg.softmax
+  %1 = linalg.softmax dimension(1)
+    ins(%arg0 : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
+  return %arg0 : tensor<16x64x256xf32>
+}

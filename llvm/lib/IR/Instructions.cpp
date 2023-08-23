@@ -145,6 +145,39 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   return Removed;
 }
 
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                                    bool DeletePHIIfEmpty) {
+  SmallDenseSet<unsigned> RemoveIndices;
+  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
+    if (Predicate(Idx))
+      RemoveIndices.insert(Idx);
+
+  if (RemoveIndices.empty())
+    return;
+
+  // Remove operands.
+  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
+    return RemoveIndices.contains(U.getOperandNo());
+  });
+  for (Use &U : make_range(NewOpEnd, op_end()))
+    U.set(nullptr);
+
+  // Remove incoming blocks.
+  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
+                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
+                   return RemoveIndices.contains(&BB - block_begin());
+                 });
+
+  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+
+  // If the PHI node is dead, because it has zero entries, nuke it now.
+  if (getNumOperands() == 0 && DeletePHIIfEmpty) {
+    // If anyone is using this PHI, make them use a dummy value instead...
+    replaceAllUsesWith(PoisonValue::get(getType()));
+    eraseFromParent();
+  }
+}
+
 /// growOperands - grow operands - This grows the operand list in response
 /// to a push_back style of operation.  This grows the number of ops by 1.5
 /// times.
@@ -830,7 +863,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
   // Create the call to Malloc.
   BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
   Module *M = BB->getParent()->getParent();
-  Type *BPTy = Type::getInt8PtrTy(BB->getContext());
+  Type *BPTy = PointerType::getUnqual(BB->getContext());
   FunctionCallee MallocFunc = MallocF;
   if (!MallocFunc)
     // prototype malloc as "void *malloc(size_t)"
@@ -926,20 +959,14 @@ static Instruction *createFree(Value *Source,
   Module *M = BB->getParent()->getParent();
 
   Type *VoidTy = Type::getVoidTy(M->getContext());
-  Type *IntPtrTy = Type::getInt8PtrTy(M->getContext());
+  Type *VoidPtrTy = PointerType::getUnqual(M->getContext());
   // prototype free as "void free(void*)"
-  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy);
+  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, VoidPtrTy);
   CallInst *Result = nullptr;
-  Value *PtrCast = Source;
-  if (InsertBefore) {
-    if (Source->getType() != IntPtrTy)
-      PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertBefore);
-    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "", InsertBefore);
-  } else {
-    if (Source->getType() != IntPtrTy)
-      PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertAtEnd);
-    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "");
-  }
+  if (InsertBefore)
+    Result = CallInst::Create(FreeFunc, Source, Bundles, "", InsertBefore);
+  else
+    Result = CallInst::Create(FreeFunc, Source, Bundles, "");
   Result->setTailCall();
   if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
     Result->setCallingConv(F->getCallingConv());

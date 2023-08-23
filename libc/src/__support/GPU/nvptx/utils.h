@@ -115,8 +115,8 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
   // NOTE: This is not sufficient in all cases on Volta hardware or later. The
   // lane mask returned here is not always the true lane mask used by the
   // intrinsics in cases of incedental or enforced divergence by the user.
-  uint64_t lane_mask = get_lane_mask();
-  uint64_t id = __builtin_ffsl(lane_mask) - 1;
+  uint32_t lane_mask = static_cast<uint32_t>(get_lane_mask());
+  uint32_t id = __builtin_ffs(lane_mask) - 1;
 #if __CUDA_ARCH__ >= 600
   return __nvvm_shfl_sync_idx_i32(lane_mask, x, id, get_lane_size() - 1);
 #else
@@ -127,9 +127,9 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 /// Returns a bitmask of threads in the current lane for which \p x is true.
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
 #if __CUDA_ARCH__ >= 600
-  return __nvvm_vote_ballot_sync(lane_mask, x);
+  return __nvvm_vote_ballot_sync(static_cast<uint32_t>(lane_mask), x);
 #else
-  return lane_mask & __nvvm_vote_ballot(x);
+  return static_cast<uint32_t>(lane_mask) & __nvvm_vote_ballot(x);
 #endif
 }
 /// Waits for all the threads in the block to converge and issues a fence.
@@ -137,7 +137,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Waits for all threads in the warp to reconverge for independent scheduling.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t mask) {
-  __nvvm_bar_warp_sync(mask);
+  __nvvm_bar_warp_sync(static_cast<uint32_t>(mask));
 }
 
 /// Returns the current value of the GPU's processor clock.

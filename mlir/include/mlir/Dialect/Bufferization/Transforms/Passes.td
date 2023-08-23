@@ -88,6 +88,26 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
+def BufferDeallocationSimplification :
+    Pass<"buffer-deallocation-simplification", "func::FuncOp"> {
+  let summary = "Optimizes `bufferization.dealloc` operation for more "
+                "efficient codegen";
+  let description = [{
+    This pass uses static alias analysis to reduce the number of alias checks
+    required at runtime. Such checks are sometimes necessary to make sure that
+    memrefs aren't deallocated before their last usage (use after free) or that
+    some memref isn't deallocated twice (double free).
+  }];
+
+  let constructor =
+    "mlir::bufferization::createBufferDeallocationSimplificationPass()";
+
+  let dependentDialects = [
+    "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
+    "mlir::memref::MemRefDialect"
+  ];
+}
+
 def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";

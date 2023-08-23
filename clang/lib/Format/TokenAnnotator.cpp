@@ -4763,16 +4763,6 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
          !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
 }
 
-// Returns the first token on the line that is not a comment.
-static const FormatToken *getFirstNonComment(const AnnotatedLine &Line) {
-  const FormatToken *Next = Line.First;
-  if (!Next)
-    return Next;
-  if (Next->is(tok::comment))
-    Next = Next->getNextNonComment();
-  return Next;
-}
-
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
@@ -5044,7 +5034,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return Right.HasUnescapedNewline;
 
   if (isAllmanBrace(Left) || isAllmanBrace(Right)) {
-    auto FirstNonComment = getFirstNonComment(Line);
+    auto *FirstNonComment = Line.getFirstNonComment();
     bool AccessSpecifier =
         FirstNonComment &&
         FirstNonComment->isOneOf(Keywords.kw_internal, tok::kw_public,

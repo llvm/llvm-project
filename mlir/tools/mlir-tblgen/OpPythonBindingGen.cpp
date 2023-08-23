@@ -170,7 +170,7 @@ constexpr const char *opVariadicSegmentTemplate = R"Py(
   def {0}(self):
     {1}_range = _ods_segmented_accessor(
          self.operation.{1}s,
-         self.operation.attributes["{1}_segment_sizes"], {2})
+         self.operation.attributes["{1}SegmentSizes"], {2})
     return {1}_range{3}
 )Py";
 

@@ -2544,6 +2544,19 @@ TEST(Hover, All) {
             HI.Definition = "Test &&test = {}";
           }},
       {
+          R"cpp(// Shouldn't crash when evaluating the initializer.
+            struct Bar {}; // error-ok
+            struct Foo { void foo(Bar x = y); }
+            void Foo::foo(Bar [[^x]]) {})cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "x";
+            HI.Kind = index::SymbolKind::Parameter;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Foo::foo::";
+            HI.Type = "Bar";
+            HI.Definition = "Bar x = <recovery - expr>()";
+          }},
+      {
           R"cpp(// auto on alias
           typedef int int_type;
           ^[[auto]] x = int_type();

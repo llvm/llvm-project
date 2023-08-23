@@ -14,6 +14,13 @@ Libc++ uses various "visibility" macros in order to provide a stable ABI in
 both the library and the headers. These macros work by changing the
 visibility and inlining characteristics of the symbols they are applied to.
 
+The std namespace also has visibility attributes applied to avoid having to
+add visibility macros in as many places. Namespace std has default
+type_visibility to export RTTI and other type-specific information. Note that
+type_visibility is only supported by Clang, so this doesn't replace
+type-specific attributes. The only exception are enums, which GCC always gives
+default visibility, thus removing the need for any annotations.
+
 Visibility Macros
 =================
 
@@ -71,19 +78,6 @@ Visibility Macros
 
   **Windows Behavior**: DLLs do not support dllimport/export on class templates.
   The macro has an empty definition on this platform.
-
-
-**_LIBCPP_ENUM_VIS**
-  Mark the typeinfo of an enum as having default visibility. This attribute
-  should be applied to all enum declarations.
-
-  **Windows Behavior**: DLLs do not support importing or exporting enumeration
-  typeinfo. The macro has an empty definition on this platform.
-
-  **GCC Behavior**: GCC un-hides the typeinfo for enumerations by default, even
-  if `-fvisibility=hidden` is specified. Additionally applying a visibility
-  attribute to an enum class results in a warning. The macro has an empty
-  definition with GCC.
 
 **_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
   Mark the member functions, typeinfo, and vtable of the type named in

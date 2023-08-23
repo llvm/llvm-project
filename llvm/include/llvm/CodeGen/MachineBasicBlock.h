@@ -635,12 +635,6 @@ public:
 
   std::optional<unsigned> getBBID() const { return BBID; }
 
-  /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
-  /// returns `MachineBasicBlock::Number`.
-  /// TODO: Remove this function when version 1 is deprecated and replace its
-  /// uses with `getBBID()`.
-  unsigned getBBIDOrNumber() const;
-
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
 

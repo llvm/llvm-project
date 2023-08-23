@@ -35,7 +35,7 @@ class Async_Op<string mnemonic, list<Trait> traits = []> :
 def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                                 ["getSuccessorEntryOperands",
+                                                 ["getEntrySuccessorOperands",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
                        AutomaticAllocationScope]> {
@@ -312,8 +312,7 @@ def Async_ReturnOp : Async_Op<"return",
 
 def Async_YieldOp :
     Async_Op<"yield", [
-      HasParent<"ExecuteOp">, Pure, Terminator,
-      DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
+      HasParent<"ExecuteOp">, Pure, Terminator, ReturnLike]> {
   let summary = "terminator for Async execute operation";
   let description = [{
     The `async.yield` is a special terminator operation for the block inside
@@ -322,7 +321,6 @@ def Async_YieldOp :
 
   let arguments = (ins Variadic<AnyType>:$operands);
   let assemblyFormat = "($operands^ `:` type($operands))? attr-dict";
-  let hasVerifier = 1;
 }
 
 def Async_AwaitOp : Async_Op<"await"> {

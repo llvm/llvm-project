@@ -2863,6 +2863,9 @@ as follows:
     address space 0, this property only affects the default value to be used
     when creating globals without additional contextual information (e.g. in
     LLVM passes).
+
+.. _alloca_addrspace:
+
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
@@ -4090,9 +4093,17 @@ Simple Constants
     The two strings '``true``' and '``false``' are both valid constants
     of the ``i1`` type.
 **Integer constants**
-    Standard integers (such as '4') are constants of the
-    :ref:`integer <t_integer>` type. Negative numbers may be used with
-    integer types.
+    Standard integers (such as '4') are constants of the :ref:`integer
+    <t_integer>` type. They can be either decimal or
+    hexadecimal. Decimal integers can be prefixed with - to represent
+    negative integers, e.g. '``-1234``'. Hexadecimal integers must be
+    prefixed with either u or s to indicate whether they are unsigned
+    or signed respectively. e.g '``u0x8000``' gives 32768, whilst
+    '``s0x8000``' gives -32768.
+
+    Note that hexadecimal integers are sign extended from the number
+    of active bits, i.e. the bit width minus the number of leading
+    zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g. 1.23421e+2), or a more precise
@@ -4994,7 +5005,8 @@ AArch64:
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
 - ``x``: Like w, but restricted to registers 0 to 15 inclusive.
 - ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
-- ``Upl``: One of the low eight SVE predicate registers (P0 to P7)
+- ``Uph``: One of the upper eight SVE predicate registers (P8 to P15)
+- ``Upl``: One of the lower eight SVE predicate registers (P0 to P7)
 - ``Upa``: Any of the SVE predicate registers (P0 to P15)
 
 AMDGPU:
@@ -5587,7 +5599,10 @@ DIFile
 
 Files are sometimes used in ``scope:`` fields, and are the only valid target
 for ``file:`` fields.
-Valid values for ``checksumkind:`` field are: {CSK_None, CSK_MD5, CSK_SHA1, CSK_SHA256}
+
+The ``checksum:`` and ``checksumkind:`` fields are optional. If one of these
+fields is present, then the other is required to be present as well. Valid
+values for ``checksumkind:`` field are: {CSK_MD5, CSK_SHA1, CSK_SHA256}
 
 .. _DIBasicType:
 
@@ -13415,7 +13430,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.stacksave()
+      declare ptr @llvm.stacksave.p0()
+      declare ptr addrspace(5) @llvm.stacksave.p5()
 
 Overview:
 """""""""
@@ -13434,8 +13450,10 @@ This intrinsic returns an opaque pointer value that can be passed to
 ``llvm.stackrestore`` intrinsic is executed with a value saved from
 ``llvm.stacksave``, it effectively restores the state of the stack to
 the state it was in when the ``llvm.stacksave`` intrinsic executed. In
-practice, this pops any :ref:`alloca <i_alloca>` blocks from the stack that
-were allocated after the ``llvm.stacksave`` was executed.
+practice, this pops any :ref:`alloca <i_alloca>` blocks from the stack
+that were allocated after the ``llvm.stacksave`` was executed. The
+address space should typically be the
+:ref:`alloca address space <alloca_addrspace>`.
 
 .. _int_stackrestore:
 
@@ -13447,7 +13465,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.stackrestore(ptr %ptr)
+      declare void @llvm.stackrestore.p0(ptr %ptr)
+      declare void @llvm.stackrestore.p5(ptr addrspace(5) %ptr)
 
 Overview:
 """""""""
@@ -13455,8 +13474,9 @@ Overview:
 The '``llvm.stackrestore``' intrinsic is used to restore the state of
 the function stack to the state it was in when the corresponding
 :ref:`llvm.stacksave <int_stacksave>` intrinsic executed. This is
-useful for implementing language features like scoped automatic variable
-sized arrays in C99.
+useful for implementing language features like scoped automatic
+variable sized arrays in C99. The address space should typically be
+the :ref:`alloca address space <alloca_addrspace>`.
 
 Semantics:
 """"""""""

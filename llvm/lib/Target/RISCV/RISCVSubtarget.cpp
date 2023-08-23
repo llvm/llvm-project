@@ -48,6 +48,9 @@ static cl::opt<unsigned> RISCVMaxBuildIntsCost(
     cl::desc("The maximum cost used for building integers."), cl::init(0),
     cl::Hidden);
 
+static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -175,3 +178,7 @@ void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(createRISCVMacroFusionDAGMutation());
 }
+
+  /// Enable use of alias analysis during code generation (during MI
+  /// scheduling, DAGCombine, etc.).
+bool RISCVSubtarget::useAA() const { return UseAA; }

@@ -2054,7 +2054,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   // includes the load that feeds the stores.  Check for an alias by generating
   // the base address and checking everything.
   Value *StoreBasePtr = Expander.expandCodeFor(StoreEv->getStart(),
-      Builder.getInt8PtrTy(SI->getPointerAddressSpace()), ExpPt);
+      Builder.getPtrTy(SI->getPointerAddressSpace()), ExpPt);
   Value *LoadBasePtr = nullptr;
 
   bool Overlap = false;
@@ -2125,7 +2125,7 @@ CleanupAndExit:
   // For a memcpy, we have to make sure that the input array is not being
   // mutated by the loop.
   LoadBasePtr = Expander.expandCodeFor(LoadEv->getStart(),
-      Builder.getInt8PtrTy(LI->getPointerAddressSpace()), ExpPt);
+      Builder.getPtrTy(LI->getPointerAddressSpace()), ExpPt);
 
   SmallPtrSet<Instruction*, 2> Ignore2;
   Ignore2.insert(SI);

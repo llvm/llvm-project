@@ -761,11 +761,9 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
   if (Adj->Offset) {
     if (Adj->Ty) {
       // Constant being rebased is a ConstantExpr.
-      PointerType *Int8PtrTy = Type::getInt8PtrTy(
-          *Ctx, cast<PointerType>(Adj->Ty)->getAddressSpace());
-      Base = new BitCastInst(Base, Int8PtrTy, "base_bitcast", Adj->MatInsertPt);
       Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base, Adj->Offset,
                                       "mat_gep", Adj->MatInsertPt);
+      // Hide it behind a bitcast.
       Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast", Adj->MatInsertPt);
     } else
       // Constant being rebased is a ConstantInt.

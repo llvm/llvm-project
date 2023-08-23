@@ -668,7 +668,9 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
     // Calculate TruePercent and False Percent.
     double TruePercent = 0.0;
     double FalsePercent = 0.0;
-    unsigned Total = R.ExecutionCount + R.FalseExecutionCount;
+    // FIXME: It may overflow when the data is too large, but I have not
+    // encountered it in actual use, and not sure whether to use __uint128_t.
+    uint64_t Total = R.ExecutionCount + R.FalseExecutionCount;
 
     if (!getOptions().ShowBranchCounts && Total != 0) {
       TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;

@@ -42,10 +42,6 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
     Mangler::getNameWithPrefix(Name, MO.getSymbolName(), DL);
   } else {
     const GlobalValue *GV = MO.getGlobal();
-    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
-      if (GVar->hasAttribute("toc-data"))
-        return TM.getSymbol(GV);
-
     TM.getNameWithPrefix(Name, GV, Mang);
   }
 

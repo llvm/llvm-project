@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GPUOpsLowering.h"
+
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -462,7 +464,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
 /// Unrolls op if it's operating on vectors.
 LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
-                                      LLVMTypeConverter &converter) {
+                                      const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
   if (llvm::none_of(operandTypes,
                     [](Type type) { return isa<VectorType>(type); })) {

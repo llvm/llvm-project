@@ -180,6 +180,7 @@ class kmp_stats_list;
 
 #define KMP_NSEC_PER_SEC 1000000000L
 #define KMP_USEC_PER_SEC 1000000L
+#define KMP_NSEC_PER_USEC 1000L
 
 /*!
 @ingroup BASIC_TYPES
@@ -1190,13 +1191,13 @@ extern void __kmp_init_target_task();
 #define KMP_MAX_STKPADDING (2 * 1024 * 1024)
 
 #define KMP_BLOCKTIME_MULTIPLIER                                               \
-  (1000) /* number of blocktime units per second */
+  (1000000) /* number of blocktime units per second */
 #define KMP_MIN_BLOCKTIME (0)
 #define KMP_MAX_BLOCKTIME                                                      \
   (INT_MAX) /* Must be this for "infinite" setting the work */
 
-/* __kmp_blocktime is in milliseconds */
-#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200))
+/* __kmp_blocktime is in microseconds */
+#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200000))
 
 #if KMP_USE_MONITOR
 #define KMP_DEFAULT_MONITOR_STKSIZE ((size_t)(64 * 1024))
@@ -1223,22 +1224,21 @@ extern void __kmp_init_target_task();
 #if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
 // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
 extern kmp_uint64 __kmp_ticks_per_msec;
+extern kmp_uint64 __kmp_ticks_per_usec;
 #if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_NOW() ((kmp_uint64)_rdtsc())
 #else
 #define KMP_NOW() __kmp_hardware_timestamp()
 #endif
-#define KMP_NOW_MSEC() (KMP_NOW() / __kmp_ticks_per_msec)
 #define KMP_BLOCKTIME_INTERVAL(team, tid)                                      \
-  (KMP_BLOCKTIME(team, tid) * __kmp_ticks_per_msec)
+  ((kmp_uint64)KMP_BLOCKTIME(team, tid) * __kmp_ticks_per_usec)
 #define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
 #else
 // System time is retrieved sporadically while blocking.
 extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NOW() __kmp_now_nsec()
-#define KMP_NOW_MSEC() (KMP_NOW() / KMP_USEC_PER_SEC)
 #define KMP_BLOCKTIME_INTERVAL(team, tid)                                      \
-  (KMP_BLOCKTIME(team, tid) * KMP_USEC_PER_SEC)
+  ((kmp_uint64)KMP_BLOCKTIME(team, tid) * (kmp_uint64)KMP_NSEC_PER_USEC)
 #define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
 #endif
 #endif // KMP_USE_MONITOR
@@ -3351,9 +3351,22 @@ extern int __kmp_tp_capacity; /* capacity of __kmp_threads if threadprivate is
                                  used (fixed) */
 extern int __kmp_tp_cached; /* whether threadprivate cache has been created
                                (__kmpc_threadprivate_cached()) */
-extern int __kmp_dflt_blocktime; /* number of milliseconds to wait before
+extern int __kmp_dflt_blocktime; /* number of microseconds to wait before
                                     blocking (env setting) */
+extern char __kmp_blocktime_units; /* 'm' or 'u' to note units specified */
 extern bool __kmp_wpolicy_passive; /* explicitly set passive wait policy */
+
+// Convert raw blocktime from ms to us if needed.
+static inline void __kmp_aux_convert_blocktime(int *bt) {
+  if (__kmp_blocktime_units == 'm') {
+    if (*bt > INT_MAX / 1000) {
+      *bt = INT_MAX / 1000;
+      KMP_INFORM(MaxValueUsing, "kmp_set_blocktime(ms)", bt);
+    }
+    *bt = *bt * 1000;
+  }
+}
+
 #if KMP_USE_MONITOR
 extern int
     __kmp_monitor_wakeups; /* number of times monitor wakes up per second */

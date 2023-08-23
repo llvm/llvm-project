@@ -55,7 +55,7 @@ createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
   unsigned missingArgIndex, missingArgCount;
   llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
       argv.slice(1), missingArgIndex, missingArgCount,
-      /*FlagsToInclude=*/clang::driver::options::FlangOption);
+      llvm::opt::Visibility(clang::driver::options::FlangOption));
 
   (void)Fortran::frontend::parseDiagnosticArgs(*diagOpts, args);
 

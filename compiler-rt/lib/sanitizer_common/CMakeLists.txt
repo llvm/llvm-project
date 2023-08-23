@@ -355,3 +355,10 @@ endif()
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
 endif()
+
+
+foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  # Library implementing InternalSymbolizer. Empty by default.
+  add_library(RTSanitizerCommonSymbolizerInternal.${arch}
+              OBJECT IMPORTED GLOBAL)
+endforeach()

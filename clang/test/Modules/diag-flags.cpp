@@ -30,7 +30,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20 -DERROR -fmodule-file=%t/werror.pcm -Wno-error
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20 -DERROR -fmodule-file=%t/werror.pcm -Wno-padded
 
-import diag_flags;
+#include "diag_flags.h"
 
 // Diagnostic flags from the module user make no difference to diagnostics
 // emitted within the module when using an explicitly-loaded module.

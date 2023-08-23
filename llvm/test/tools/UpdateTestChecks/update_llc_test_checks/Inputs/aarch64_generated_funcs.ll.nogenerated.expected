@@ -86,19 +86,19 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    adrp x9, x
-; CHECK-NEXT:    mov w10, #2 // =0x2
-; CHECK-NEXT:    mov w11, #3 // =0x3
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    str w8, [x9, :lo12:x]
-; CHECK-NEXT:    mov w9, #4 // =0x4
+; CHECK-NEXT:    adrp x11, x
+; CHECK-NEXT:    mov w9, #2 // =0x2
+; CHECK-NEXT:    mov w10, #3 // =0x3
+; CHECK-NEXT:    str w8, [x11, :lo12:x]
+; CHECK-NEXT:    mov w11, #4 // =0x4
 ; CHECK-NEXT:    stp w8, wzr, [x29, #-8]
-; CHECK-NEXT:    stur w10, [x29, #-12]
-; CHECK-NEXT:    stp w9, w11, [sp, #12]
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    stur w9, [x29, #-12]
+; CHECK-NEXT:    stp w11, w10, [sp, #12]
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    stp w10, w8, [x29, #-12]
-; CHECK-NEXT:    stp w9, w11, [sp, #12]
+; CHECK-NEXT:    stp w9, w8, [x29, #-12]
+; CHECK-NEXT:    stp w11, w10, [sp, #12]
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48

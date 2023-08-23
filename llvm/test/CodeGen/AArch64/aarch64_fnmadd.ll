@@ -4,10 +4,10 @@
 define void @fnmaddd(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fnmaddd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    fnmadd d0, d0, d1, d2
+; CHECK-NEXT:    fnmadd d0, d1, d0, d2
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -47,10 +47,10 @@ entry:
 define void @fnmadds(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fnmadds:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x1]
-; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    ldr s2, [x2]
-; CHECK-NEXT:    fnmadd s0, s0, s1, s2
+; CHECK-NEXT:    fnmadd s0, s1, s0, s2
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -67,10 +67,10 @@ entry:
 define void @fnmadds_nsz_contract(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fnmadds_nsz_contract:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x1]
-; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    ldr s2, [x2]
-; CHECK-NEXT:    fnmadd s0, s0, s1, s2
+; CHECK-NEXT:    fnmadd s0, s1, s0, s2
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -88,10 +88,10 @@ entry:
 define void @fnmadds_contract(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fnmadds_contract:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x1]
-; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    ldr s2, [x2]
-; CHECK-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-NEXT:    fmadd s0, s1, s0, s2
 ; CHECK-NEXT:    fneg s0, s0
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret

@@ -23,7 +23,7 @@
 // RUN:  %{compile} enable-runtime-library=false gpu-data-transfer-strategy=pinned-dma" | %{run}
 //  Tracker #64316
 // RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy" | %{run}
-// 
+//
 
 !Filename = !llvm.ptr<i8>
 

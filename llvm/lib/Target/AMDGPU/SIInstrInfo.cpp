@@ -910,7 +910,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
-    if (ST.hasPackedFP32Ops()) {
+    if (ST.hasPkMovB32()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
         .addReg(SrcReg)
@@ -957,7 +957,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (ST.hasMovB64()) {
       Opcode = AMDGPU::V_MOV_B64_e32;
       EltSize = 8;
-    } else if (ST.hasPackedFP32Ops()) {
+    } else if (ST.hasPkMovB32()) {
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
     }
@@ -1560,10 +1560,14 @@ static unsigned getAVSpillSaveOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillSaveOpcode(unsigned Size) {
+static unsigned getWWMRegSpillSaveOpcode(unsigned Size,
+                                         bool IsVectorSuperClass) {
   // Currently, there is only 32-bit WWM register spills needed.
   if (Size != 4)
     llvm_unreachable("unknown wwm register spill size");
+
+  if (IsVectorSuperClass)
+    return AMDGPU::SI_SPILL_WWM_AV32_SAVE;
 
   return AMDGPU::SI_SPILL_WWM_V32_SAVE;
 }
@@ -1573,11 +1577,13 @@ static unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                             unsigned Size,
                                             const SIRegisterInfo &TRI,
                                             const SIMachineFunctionInfo &MFI) {
+  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+
   // Choose the right opcode if spilling a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillSaveOpcode(Size);
+    return getWWMRegSpillSaveOpcode(Size, IsVectorSuperClass);
 
-  if (TRI.isVectorSuperClass(RC))
+  if (IsVectorSuperClass)
     return getAVSpillSaveOpcode(Size);
 
   return TRI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(Size)
@@ -1780,10 +1786,14 @@ static unsigned getAVSpillRestoreOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillRestoreOpcode(unsigned Size) {
+static unsigned getWWMRegSpillRestoreOpcode(unsigned Size,
+                                            bool IsVectorSuperClass) {
   // Currently, there is only 32-bit WWM register spills needed.
   if (Size != 4)
     llvm_unreachable("unknown wwm register spill size");
+
+  if (IsVectorSuperClass)
+    return AMDGPU::SI_SPILL_WWM_AV32_RESTORE;
 
   return AMDGPU::SI_SPILL_WWM_V32_RESTORE;
 }
@@ -1792,11 +1802,13 @@ static unsigned
 getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                unsigned Size, const SIRegisterInfo &TRI,
                                const SIMachineFunctionInfo &MFI) {
+  bool IsVectorSuperClass = TRI.isVectorSuperClass(RC);
+
   // Choose the right opcode if restoring a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillRestoreOpcode(Size);
+    return getWWMRegSpillRestoreOpcode(Size, IsVectorSuperClass);
 
-  if (TRI.isVectorSuperClass(RC))
+  if (IsVectorSuperClass)
     return getAVSpillRestoreOpcode(Size);
 
   return TRI.isAGPRClass(RC) ? getAGPRSpillRestoreOpcode(Size)
@@ -1997,7 +2009,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPackedFP32Ops() && Lo == Hi && isInlineConstant(Lo)) {
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
           .addImm(SISrcMods::OP_SEL_1)
           .addImm(Lo.getSExtValue())
@@ -2018,7 +2030,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       }
     } else {
       assert(SrcOp.isReg());
-      if (ST.hasPackedFP32Ops() &&
+      if (ST.hasPkMovB32() &&
           !RI.isAGPR(MBB.getParent()->getRegInfo(), SrcOp.getReg())) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
           .addImm(SISrcMods::OP_SEL_1) // src0_mod
@@ -3803,9 +3815,7 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
                                    uint8_t OperandType) const {
   assert(!MO.isReg() && "isInlineConstant called on register operand!");
-  if (!MO.isImm() ||
-      OperandType < AMDGPU::OPERAND_SRC_FIRST ||
-      OperandType > AMDGPU::OPERAND_SRC_LAST)
+  if (!MO.isImm())
     return false;
 
   // MachineOperand provides no way to tell the true operand size, since it only
@@ -3881,8 +3891,23 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
     return false;
+  case AMDGPU::OPERAND_INPUT_MODS:
+  case MCOI::OPERAND_IMMEDIATE:
+    // Always embedded in the instruction for free.
+    return true;
+  case MCOI::OPERAND_UNKNOWN:
+  case MCOI::OPERAND_REGISTER:
+  case MCOI::OPERAND_PCREL:
+  case MCOI::OPERAND_GENERIC_0:
+  case MCOI::OPERAND_GENERIC_1:
+  case MCOI::OPERAND_GENERIC_2:
+  case MCOI::OPERAND_GENERIC_3:
+  case MCOI::OPERAND_GENERIC_4:
+  case MCOI::OPERAND_GENERIC_5:
+    // Just ignore anything else.
+    return true;
   default:
-    llvm_unreachable("invalid bitwidth");
+    llvm_unreachable("invalid operand type");
   }
 }
 
@@ -5313,9 +5338,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
             return false;
           SGPRsUsed.insert(SGPR);
         }
-      } else if (InstDesc.operands()[i].OperandType == AMDGPU::OPERAND_KIMM32 ||
-                 (AMDGPU::isSISrcOperand(InstDesc, i) &&
-                  !isInlineConstant(Op, InstDesc.operands()[i]))) {
+      } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
+                 !isInlineConstant(Op, InstDesc.operands()[i])) {
         if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)
@@ -9061,7 +9085,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
   if (SIInstrInfo::isGenericAtomicRMWOpcode(opcode) ||
       opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
+      AMDGPU::isGenericAtomic(opcode)) {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;

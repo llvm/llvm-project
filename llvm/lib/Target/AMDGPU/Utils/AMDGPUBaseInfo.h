@@ -553,6 +553,9 @@ LLVM_READNONE
 bool isPermlane16(unsigned Opc);
 
 LLVM_READNONE
+bool isGenericAtomic(unsigned Opc);
+
+LLVM_READNONE
 bool isVOP1Cvt_F32_Fp8_Bf8_e64(unsigned Opc);
 
 namespace VOPD {
@@ -1220,6 +1223,9 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 // the current module. Module entry functions are allowed to allocate LDS.
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
+
+LLVM_READNONE
+bool isChainCC(CallingConv::ID CC);
 
 bool isKernelCC(const Function *Func);
 

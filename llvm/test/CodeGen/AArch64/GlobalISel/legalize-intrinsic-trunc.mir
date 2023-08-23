@@ -46,21 +46,10 @@ body:             |
     ; NO-FP16: liveins: $d0
     ; NO-FP16-NEXT: {{  $}}
     ; NO-FP16-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; NO-FP16-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; NO-FP16-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; NO-FP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; NO-FP16-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT1]]
-    ; NO-FP16-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](s32)
-    ; NO-FP16-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT2]]
-    ; NO-FP16-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC2]](s32)
-    ; NO-FP16-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC3:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT3]]
-    ; NO-FP16-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC3]](s32)
-    ; NO-FP16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; NO-FP16-NEXT: $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; NO-FP16-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; NO-FP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[INTRINSIC_TRUNC]](<4 x s32>)
+    ; NO-FP16-NEXT: $d0 = COPY [[FPTRUNC]](<4 x s16>)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $d0
     ;
     ; FP16-LABEL: name: test_v4f16.intrinsic_trunc
@@ -89,33 +78,15 @@ body:             |
     ; NO-FP16: liveins: $q0
     ; NO-FP16-NEXT: {{  $}}
     ; NO-FP16-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; NO-FP16-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; NO-FP16-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; NO-FP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; NO-FP16-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT1]]
-    ; NO-FP16-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](s32)
-    ; NO-FP16-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT2]]
-    ; NO-FP16-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC2]](s32)
-    ; NO-FP16-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC3:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT3]]
-    ; NO-FP16-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC3]](s32)
-    ; NO-FP16-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = G_FPEXT [[UV4]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC4:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT4]]
-    ; NO-FP16-NEXT: [[FPTRUNC4:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC4]](s32)
-    ; NO-FP16-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[UV5]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC5:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT5]]
-    ; NO-FP16-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC5]](s32)
-    ; NO-FP16-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[UV6]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC6:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT6]]
-    ; NO-FP16-NEXT: [[FPTRUNC6:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC6]](s32)
-    ; NO-FP16-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[UV7]](s16)
-    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC7:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT7]]
-    ; NO-FP16-NEXT: [[FPTRUNC7:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC7]](s32)
-    ; NO-FP16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16), [[FPTRUNC4]](s16), [[FPTRUNC5]](s16), [[FPTRUNC6]](s16), [[FPTRUNC7]](s16)
-    ; NO-FP16-NEXT: $q0 = COPY [[BUILD_VECTOR]](<8 x s16>)
+    ; NO-FP16-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+    ; NO-FP16-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
+    ; NO-FP16-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
+    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; NO-FP16-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC_TRUNC [[FPEXT1]]
+    ; NO-FP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[INTRINSIC_TRUNC]](<4 x s32>)
+    ; NO-FP16-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[INTRINSIC_TRUNC1]](<4 x s32>)
+    ; NO-FP16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[FPTRUNC]](<4 x s16>), [[FPTRUNC1]](<4 x s16>)
+    ; NO-FP16-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<8 x s16>)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $q0
     ;
     ; FP16-LABEL: name: test_v8f16.intrinsic_trunc

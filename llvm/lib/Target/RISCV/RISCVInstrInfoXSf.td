@@ -111,15 +111,6 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let RVVConstraint = NoConstraint;
 }
 
-class GetFTypeInfo<int sew> {
-  ValueType Scalar = !cond(!eq(sew, 16): f16,
-                           !eq(sew, 32): f32,
-                           !eq(sew, 64): f64);
-  RegisterClass ScalarRegClass = !cond(!eq(sew, 16): FPR16,
-                                       !eq(sew, 32): FPR32,
-                                       !eq(sew, 64): FPR64);
-}
-
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
                DAGOperand TyRs2, DAGOperand TyRs1, bit HaveOutputDst> {
   string OpcodeStr = !if(HaveOutputDst, "sf.vc.v." # suffix,
@@ -482,14 +473,13 @@ let Predicates = [HasVendorXSfvcp] in {
     defm : VPatVC_XVV<"xvv", "XVV", vti, vti, vti.Scalar, vti.ScalarRegClass>;
     defm : VPatVC_XVV<"ivv", "IVV", vti, vti, XLenVT, tsimm5>;
     defm : VPatVC_XVV<"vvv", "VVV", vti, vti, vti.Vector, vti.RegClass>;
-    if !ge(vti.SEW, 16) then {
-      defm : VPatVC_XV<"fv", "F" # vti.SEW # "V", vti,
-                       GetFTypeInfo<vti.SEW>.Scalar,
-                       GetFTypeInfo<vti.SEW>.ScalarRegClass, payload1>;
-      defm : VPatVC_XVV<"fvv", "F" # vti.SEW # "VV", vti, vti,
-                        GetFTypeInfo<vti.SEW>.Scalar,
-                        GetFTypeInfo<vti.SEW>.ScalarRegClass, payload1>;
-    }
+  }
+  foreach fvti = AllFloatVectors in {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    defm : VPatVC_XV<"fv", fvti.ScalarSuffix # "V", ivti, fvti.Scalar,
+                     fvti.ScalarRegClass, payload1>;
+    defm : VPatVC_XVV<"fvv", fvti.ScalarSuffix # "VV", ivti, ivti, fvti.Scalar,
+                      fvti.ScalarRegClass, payload1>;
   }
   foreach VtiToWti = AllWidenableIntVectors in {
     defvar vti = VtiToWti.Vti;
@@ -497,11 +487,13 @@ let Predicates = [HasVendorXSfvcp] in {
     defm : VPatVC_XVV<"xvw", "XVW", wti, vti, vti.Scalar, vti.ScalarRegClass>;
     defm : VPatVC_XVV<"ivw", "IVW", wti, vti, XLenVT, tsimm5>;
     defm : VPatVC_XVV<"vvw", "VVW", wti, vti, vti.Vector, vti.RegClass>;
-    if !ge(vti.SEW, 16) then {
-      defm : VPatVC_XVV<"fvw", "F" # vti.SEW # "VW", wti, vti,
-                        GetFTypeInfo<vti.SEW>.Scalar,
-                        GetFTypeInfo<vti.SEW>.ScalarRegClass, payload1>;
-    }
+  }
+  foreach VtiToWti = AllWidenableFloatVectors in {
+    defvar fvti = VtiToWti.Vti;
+    defvar iwti = GetIntVTypeInfo<VtiToWti.Wti>.Vti;
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    defm : VPatVC_XVV<"fvw", fvti.ScalarSuffix # "VW", iwti, ivti, fvti.Scalar,
+                      fvti.ScalarRegClass, payload1>;
   }
 }
 

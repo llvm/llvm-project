@@ -40,16 +40,16 @@ void g(int count) {
 // rdar://8403108
 // CHECK-LABEL: define{{.*}} void @f_8403108
 void f_8403108(unsigned x) {
-  // CHECK: call ptr @llvm.stacksave()
+  // CHECK: call ptr @llvm.stacksave.p0()
   char s1[x];
   while (1) {
-    // CHECK: call ptr @llvm.stacksave()
+    // CHECK: call ptr @llvm.stacksave.p0()
     char s2[x];
     if (1)
       break;
-  // CHECK: call void @llvm.stackrestore(ptr
+  // CHECK: call void @llvm.stackrestore.p0(ptr
   }
-  // CHECK: call void @llvm.stackrestore(ptr
+  // CHECK: call void @llvm.stackrestore.p0(ptr
 }
 
 // pr7827

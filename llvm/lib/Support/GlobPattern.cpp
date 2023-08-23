@@ -62,7 +62,6 @@ Expected<GlobPattern> GlobPattern::create(StringRef S) {
   Pat.Prefix = S.substr(0, PrefixSize);
   if (PrefixSize == std::string::npos)
     return Pat;
-  StringRef Original = S;
   S = S.substr(PrefixSize);
 
   // Parse brackets.
@@ -74,7 +73,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S) {
       ++I;
       size_t J = S.find(']', I + 1);
       if (J == StringRef::npos)
-        return make_error<StringError>("invalid glob pattern: " + Original,
+        return make_error<StringError>("invalid glob pattern, unmatched '['",
                                        errc::invalid_argument);
       StringRef Chars = S.substr(I, J - I);
       bool Invert = S[I] == '^' || S[I] == '!';

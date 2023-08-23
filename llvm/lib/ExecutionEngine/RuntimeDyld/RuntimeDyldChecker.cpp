@@ -422,7 +422,7 @@ private:
     return std::make_pair(EvalResult(StubAddr), RemainingExpr);
   }
 
-  // Evaluate an identiefer expr, which may be a symbol, or a call to
+  // Evaluate an identifier expr, which may be a symbol, or a call to
   // one of the builtin functions: get_insn_opcode or get_insn_length.
   // Return the result, plus the expression remaining to be parsed.
   std::pair<EvalResult, StringRef> evalIdentifierExpr(StringRef Expr,
@@ -662,7 +662,7 @@ private:
     if (LHSResult.hasError() || RemainingExpr == "")
       return std::make_pair(LHSResult, RemainingExpr);
 
-    // Otherwise check if this is a binary expressioan.
+    // Otherwise check if this is a binary expression.
     BinOpToken BinOp;
     std::tie(BinOp, RemainingExpr) = parseBinOpToken(RemainingExpr);
 

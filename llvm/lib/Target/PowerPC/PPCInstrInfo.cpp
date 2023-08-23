@@ -1174,8 +1174,8 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   // If machine instrs are no longer in two-address forms, update
   // destination register as well.
   if (Reg0 == Reg1) {
-    // Must be two address instruction!
-    assert(MI.getDesc().getOperandConstraint(0, MCOI::TIED_TO) &&
+    // Must be two address instruction (i.e. op1 is tied to op0).
+    assert(MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) == 0 &&
            "Expecting a two-address instruction!");
     assert(MI.getOperand(0).getSubReg() == SubReg1 && "Tied subreg mismatch");
     Reg2IsKill = false;

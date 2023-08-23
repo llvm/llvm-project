@@ -100,7 +100,7 @@ int foo(int n) {
   // TCHECK:  [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR]],
   // TCHECK:  [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR2]],
   // TCHECK:  [[VLA_ADDR_REF4:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR4]],
-  // TCHECK:  [[RET_STACK:%.+]] = call ptr @llvm.stacksave()
+  // TCHECK:  [[RET_STACK:%.+]] = call ptr @llvm.stacksave.p0()
   // TCHECK:  store ptr [[RET_STACK]], ptr [[SSTACK]],
   // TCHECK:  [[VLA5:%.+]] = alloca float, i{{[0-9]+}} [[VLA_ADDR_REF]],
   // TCHECK:  [[VLA6_SIZE:%.+]] = mul{{.+}} i{{[0-9]+}} [[VLA_ADDR_REF2]], [[VLA_ADDR_REF4]]
@@ -138,7 +138,7 @@ int foo(int n) {
 
   // finish
   // [[RELOAD_SSTACK:%.+]] = load ptr, ptr [[SSTACK]],
-  // call ovid @llvm.stackrestore(ptr [[RELOAD_SSTACK]])
+  // call ovid @llvm.stackrestore.p0(ptr [[RELOAD_SSTACK]])
   // ret void
 
   return a;
@@ -219,7 +219,7 @@ struct S1 {
   // TCHECK: [[TH_ADDR_REF:%.+]] = load ptr, ptr [[TH_ADDR]],
   // TCHECK: [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR]],
   // TCHECK: [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr [[VLA_ADDR2]],
-  // TCHECK: [[RET_STACK:%.+]] = call ptr @llvm.stacksave()
+  // TCHECK: [[RET_STACK:%.+]] = call ptr @llvm.stacksave.p0()
   // TCHECK: store ptr [[RET_STACK:%.+]], ptr [[SSTACK]],
 
   // this->a = (double)b + 1.5;
@@ -244,7 +244,7 @@ struct S1 {
 
   // finish
   // TCHECK: [[RELOAD_SSTACK:%.+]] = load ptr, ptr [[SSTACK]],
-  // TCHECK: call void @llvm.stackrestore(ptr [[RELOAD_SSTACK]])
+  // TCHECK: call void @llvm.stackrestore.p0(ptr [[RELOAD_SSTACK]])
   // TCHECK: ret void
 };
 

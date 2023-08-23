@@ -24,6 +24,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
     : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(F.getCallingConv())),
+      IsChainFunction(AMDGPU::isChainCC(F.getCallingConv())),
       NoSignedZerosFPMath(false) {
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,

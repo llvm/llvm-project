@@ -1536,19 +1536,19 @@ define <vscale x 1 x i64> @cttz_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32F-LABEL: cttz_nxv1i64:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV32F-NEXT:    vmseq.vx v0, v8, zero
 ; RV32F-NEXT:    vrsub.vi v9, v8, 0
-; RV32F-NEXT:    vand.vv v9, v8, v9
+; RV32F-NEXT:    vand.vv v8, v8, v9
 ; RV32F-NEXT:    fsrmi a0, 1
 ; RV32F-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32F-NEXT:    vfncvt.f.xu.w v10, v9
-; RV32F-NEXT:    vsrl.vi v9, v10, 23
+; RV32F-NEXT:    vfncvt.f.xu.w v9, v8
+; RV32F-NEXT:    vsrl.vi v8, v9, 23
 ; RV32F-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32F-NEXT:    vzext.vf2 v10, v9
+; RV32F-NEXT:    vzext.vf2 v9, v8
 ; RV32F-NEXT:    li a1, 127
-; RV32F-NEXT:    vsub.vx v9, v10, a1
-; RV32F-NEXT:    vmseq.vx v0, v8, zero
+; RV32F-NEXT:    vsub.vx v8, v9, a1
 ; RV32F-NEXT:    li a1, 64
-; RV32F-NEXT:    vmerge.vxm v8, v9, a1, v0
+; RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32F-NEXT:    fsrm a0
 ; RV32F-NEXT:    ret
 ;
@@ -1574,17 +1574,17 @@ define <vscale x 1 x i64> @cttz_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32D-LABEL: cttz_nxv1i64:
 ; RV32D:       # %bb.0:
 ; RV32D-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; RV32D-NEXT:    vrsub.vi v9, v8, 0
-; RV32D-NEXT:    vand.vv v9, v8, v9
-; RV32D-NEXT:    fsrmi a0, 1
-; RV32D-NEXT:    vfcvt.f.xu.v v9, v9
-; RV32D-NEXT:    li a1, 52
-; RV32D-NEXT:    vsrl.vx v9, v9, a1
-; RV32D-NEXT:    li a1, 1023
-; RV32D-NEXT:    vsub.vx v9, v9, a1
 ; RV32D-NEXT:    vmseq.vx v0, v8, zero
+; RV32D-NEXT:    vrsub.vi v9, v8, 0
+; RV32D-NEXT:    vand.vv v8, v8, v9
+; RV32D-NEXT:    fsrmi a0, 1
+; RV32D-NEXT:    vfcvt.f.xu.v v8, v8
+; RV32D-NEXT:    li a1, 52
+; RV32D-NEXT:    vsrl.vx v8, v8, a1
+; RV32D-NEXT:    li a1, 1023
+; RV32D-NEXT:    vsub.vx v8, v8, a1
 ; RV32D-NEXT:    li a1, 64
-; RV32D-NEXT:    vmerge.vxm v8, v9, a1, v0
+; RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32D-NEXT:    fsrm a0
 ; RV32D-NEXT:    ret
 ;
@@ -1706,19 +1706,19 @@ define <vscale x 2 x i64> @cttz_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32F-LABEL: cttz_nxv2i64:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV32F-NEXT:    vmseq.vx v0, v8, zero
 ; RV32F-NEXT:    vrsub.vi v10, v8, 0
-; RV32F-NEXT:    vand.vv v10, v8, v10
+; RV32F-NEXT:    vand.vv v8, v8, v10
 ; RV32F-NEXT:    fsrmi a0, 1
 ; RV32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32F-NEXT:    vfncvt.f.xu.w v12, v10
-; RV32F-NEXT:    vsrl.vi v10, v12, 23
+; RV32F-NEXT:    vfncvt.f.xu.w v10, v8
+; RV32F-NEXT:    vsrl.vi v8, v10, 23
 ; RV32F-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32F-NEXT:    vzext.vf2 v12, v10
+; RV32F-NEXT:    vzext.vf2 v10, v8
 ; RV32F-NEXT:    li a1, 127
-; RV32F-NEXT:    vsub.vx v10, v12, a1
-; RV32F-NEXT:    vmseq.vx v0, v8, zero
+; RV32F-NEXT:    vsub.vx v8, v10, a1
 ; RV32F-NEXT:    li a1, 64
-; RV32F-NEXT:    vmerge.vxm v8, v10, a1, v0
+; RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32F-NEXT:    fsrm a0
 ; RV32F-NEXT:    ret
 ;
@@ -1744,17 +1744,17 @@ define <vscale x 2 x i64> @cttz_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32D-LABEL: cttz_nxv2i64:
 ; RV32D:       # %bb.0:
 ; RV32D-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; RV32D-NEXT:    vrsub.vi v10, v8, 0
-; RV32D-NEXT:    vand.vv v10, v8, v10
-; RV32D-NEXT:    fsrmi a0, 1
-; RV32D-NEXT:    vfcvt.f.xu.v v10, v10
-; RV32D-NEXT:    li a1, 52
-; RV32D-NEXT:    vsrl.vx v10, v10, a1
-; RV32D-NEXT:    li a1, 1023
-; RV32D-NEXT:    vsub.vx v10, v10, a1
 ; RV32D-NEXT:    vmseq.vx v0, v8, zero
+; RV32D-NEXT:    vrsub.vi v10, v8, 0
+; RV32D-NEXT:    vand.vv v8, v8, v10
+; RV32D-NEXT:    fsrmi a0, 1
+; RV32D-NEXT:    vfcvt.f.xu.v v8, v8
+; RV32D-NEXT:    li a1, 52
+; RV32D-NEXT:    vsrl.vx v8, v8, a1
+; RV32D-NEXT:    li a1, 1023
+; RV32D-NEXT:    vsub.vx v8, v8, a1
 ; RV32D-NEXT:    li a1, 64
-; RV32D-NEXT:    vmerge.vxm v8, v10, a1, v0
+; RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32D-NEXT:    fsrm a0
 ; RV32D-NEXT:    ret
 ;
@@ -1876,19 +1876,19 @@ define <vscale x 4 x i64> @cttz_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32F-LABEL: cttz_nxv4i64:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV32F-NEXT:    vmseq.vx v0, v8, zero
 ; RV32F-NEXT:    vrsub.vi v12, v8, 0
-; RV32F-NEXT:    vand.vv v12, v8, v12
+; RV32F-NEXT:    vand.vv v8, v8, v12
 ; RV32F-NEXT:    fsrmi a0, 1
 ; RV32F-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32F-NEXT:    vfncvt.f.xu.w v16, v12
-; RV32F-NEXT:    vsrl.vi v12, v16, 23
+; RV32F-NEXT:    vfncvt.f.xu.w v12, v8
+; RV32F-NEXT:    vsrl.vi v8, v12, 23
 ; RV32F-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV32F-NEXT:    vzext.vf2 v16, v12
+; RV32F-NEXT:    vzext.vf2 v12, v8
 ; RV32F-NEXT:    li a1, 127
-; RV32F-NEXT:    vsub.vx v12, v16, a1
-; RV32F-NEXT:    vmseq.vx v0, v8, zero
+; RV32F-NEXT:    vsub.vx v8, v12, a1
 ; RV32F-NEXT:    li a1, 64
-; RV32F-NEXT:    vmerge.vxm v8, v12, a1, v0
+; RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32F-NEXT:    fsrm a0
 ; RV32F-NEXT:    ret
 ;
@@ -1914,17 +1914,17 @@ define <vscale x 4 x i64> @cttz_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32D-LABEL: cttz_nxv4i64:
 ; RV32D:       # %bb.0:
 ; RV32D-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; RV32D-NEXT:    vrsub.vi v12, v8, 0
-; RV32D-NEXT:    vand.vv v12, v8, v12
-; RV32D-NEXT:    fsrmi a0, 1
-; RV32D-NEXT:    vfcvt.f.xu.v v12, v12
-; RV32D-NEXT:    li a1, 52
-; RV32D-NEXT:    vsrl.vx v12, v12, a1
-; RV32D-NEXT:    li a1, 1023
-; RV32D-NEXT:    vsub.vx v12, v12, a1
 ; RV32D-NEXT:    vmseq.vx v0, v8, zero
+; RV32D-NEXT:    vrsub.vi v12, v8, 0
+; RV32D-NEXT:    vand.vv v8, v8, v12
+; RV32D-NEXT:    fsrmi a0, 1
+; RV32D-NEXT:    vfcvt.f.xu.v v8, v8
+; RV32D-NEXT:    li a1, 52
+; RV32D-NEXT:    vsrl.vx v8, v8, a1
+; RV32D-NEXT:    li a1, 1023
+; RV32D-NEXT:    vsub.vx v8, v8, a1
 ; RV32D-NEXT:    li a1, 64
-; RV32D-NEXT:    vmerge.vxm v8, v12, a1, v0
+; RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32D-NEXT:    fsrm a0
 ; RV32D-NEXT:    ret
 ;
@@ -2046,19 +2046,19 @@ define <vscale x 8 x i64> @cttz_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32F-LABEL: cttz_nxv8i64:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32F-NEXT:    vmseq.vx v0, v8, zero
 ; RV32F-NEXT:    vrsub.vi v16, v8, 0
-; RV32F-NEXT:    vand.vv v16, v8, v16
+; RV32F-NEXT:    vand.vv v8, v8, v16
 ; RV32F-NEXT:    fsrmi a0, 1
 ; RV32F-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32F-NEXT:    vfncvt.f.xu.w v24, v16
-; RV32F-NEXT:    vsrl.vi v16, v24, 23
+; RV32F-NEXT:    vfncvt.f.xu.w v16, v8
+; RV32F-NEXT:    vsrl.vi v8, v16, 23
 ; RV32F-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV32F-NEXT:    vzext.vf2 v24, v16
+; RV32F-NEXT:    vzext.vf2 v16, v8
 ; RV32F-NEXT:    li a1, 127
-; RV32F-NEXT:    vsub.vx v16, v24, a1
-; RV32F-NEXT:    vmseq.vx v0, v8, zero
+; RV32F-NEXT:    vsub.vx v8, v16, a1
 ; RV32F-NEXT:    li a1, 64
-; RV32F-NEXT:    vmerge.vxm v8, v16, a1, v0
+; RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32F-NEXT:    fsrm a0
 ; RV32F-NEXT:    ret
 ;
@@ -2084,17 +2084,17 @@ define <vscale x 8 x i64> @cttz_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32D-LABEL: cttz_nxv8i64:
 ; RV32D:       # %bb.0:
 ; RV32D-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV32D-NEXT:    vrsub.vi v16, v8, 0
-; RV32D-NEXT:    vand.vv v16, v8, v16
-; RV32D-NEXT:    fsrmi a0, 1
-; RV32D-NEXT:    vfcvt.f.xu.v v16, v16
-; RV32D-NEXT:    li a1, 52
-; RV32D-NEXT:    vsrl.vx v16, v16, a1
-; RV32D-NEXT:    li a1, 1023
-; RV32D-NEXT:    vsub.vx v16, v16, a1
 ; RV32D-NEXT:    vmseq.vx v0, v8, zero
+; RV32D-NEXT:    vrsub.vi v16, v8, 0
+; RV32D-NEXT:    vand.vv v8, v8, v16
+; RV32D-NEXT:    fsrmi a0, 1
+; RV32D-NEXT:    vfcvt.f.xu.v v8, v8
+; RV32D-NEXT:    li a1, 52
+; RV32D-NEXT:    vsrl.vx v8, v8, a1
+; RV32D-NEXT:    li a1, 1023
+; RV32D-NEXT:    vsub.vx v8, v8, a1
 ; RV32D-NEXT:    li a1, 64
-; RV32D-NEXT:    vmerge.vxm v8, v16, a1, v0
+; RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32D-NEXT:    fsrm a0
 ; RV32D-NEXT:    ret
 ;

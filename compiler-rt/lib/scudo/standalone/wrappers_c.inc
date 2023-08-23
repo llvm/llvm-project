@@ -198,6 +198,7 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
     return 1;
   } else if (param == M_LOG_STATS) {
     SCUDO_ALLOCATOR.printStats();
+    SCUDO_ALLOCATOR.printFragmentationInfo();
     return 1;
   } else {
     scudo::Option option;

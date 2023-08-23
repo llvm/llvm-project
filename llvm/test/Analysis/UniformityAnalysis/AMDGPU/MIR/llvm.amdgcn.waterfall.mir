@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+# CHECK-LABEL: MachineUniformityInfo for function: test_waterfall_readlane
+# CHECK-NOT: DIVERGENT: %0: %0:_(s32) = COPY $sgpr0
+# CHECK-NOT: DIVERGENT: %1: %1:_(s32) = COPY $sgpr1
+# CHECK-NOT: DIVERGENT: %2: %2:_(p1) = G_MERGE_VALUES %0:_(s32), %1:_(s32)
+# CHECK-NOT: DIVERGENT: %3: %3:_(s32) = COPY $sgpr2
+# CHECK-NOT: DIVERGENT: %4: %4:_(s32) = COPY $sgpr3
+# CHECK-NOT: DIVERGENT: %5: %5:_(p1) = G_MERGE_VALUES %3:_(s32), %4:_(s32)
+# CHECK:     DIVERGENT: %6: %6:_(s32) = COPY $vgpr0
+# CHECK:     DIVERGENT: %7: %7:_(s64) = G_SEXT %6:_(s32)
+# CHECK-NOT: DIVERGENT: %8: %8:_(s32) = G_CONSTANT i32 3
+# CHECK:     DIVERGENT: %9: %9:_(s64) = G_SHL %7:_, %8:_(s32)
+# CHECK:     DIVERGENT: %10: %10:_(p1) = G_PTR_ADD %5:_, %9:_(s64)
+# CHECK:     DIVERGENT: %11: %11:_(<2 x s32>) = G_LOAD %10:_(p1) :: (load (<2 x s32>), addrspace 1)
+# CHECK-NOT: DIVERGENT: %12: %12:_(s32) = G_CONSTANT i32 0
+# CHECK:     DIVERGENT: %13: %13:_(s32), %14:_(s32) = G_UNMERGE_VALUES %11:_(<2 x s32>)
+# CHECK:     DIVERGENT: %14: %13:_(s32), %14:_(s32) = G_UNMERGE_VALUES %11:_(<2 x s32>)
+# CHECK-NOT: DIVERGENT:  %15: %15:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.begin), %12:_(s32), %14:_(s32)
+# CHECK-NOT: DIVERGENT:  %16: %16:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.readfirstlane), %15:_(s32), %14:_(s32)
+# CHECK-NOT: DIVERGENT:  %17: %17:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readlane), %13:_(s32), %16:_(s32)
+# CHECK:     DIVERGENT:  %18: %18:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.end), %15:_(s32), %17:_(s32)
+
+---
+name:            test_waterfall_readlane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+
+    %3:_(s32) = COPY $sgpr0
+    %4:_(s32) = COPY $sgpr1
+    %0:_(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %5:_(s32) = COPY $sgpr2
+    %6:_(s32) = COPY $sgpr3
+    %1:_(p1) = G_MERGE_VALUES %5(s32), %6(s32)
+    %2:_(s32) = COPY $vgpr0
+    %8:_(s64) = G_SEXT %2(s32)
+    %25:_(s32) = G_CONSTANT i32 3
+    %10:_(s64) = G_SHL %8, %25(s32)
+    %11:_(p1) = G_PTR_ADD %1, %10(s64)
+    %13:_(<2 x s32>) = G_LOAD %11(p1) :: (load (<2 x s32>), addrspace 1)
+    %15:_(s32) = G_CONSTANT i32 0
+    %23:_(s32), %24:_(s32) = G_UNMERGE_VALUES %13(<2 x s32>)
+    %18:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.begin), %15(s32), %24(s32)
+    %19:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.readfirstlane), %18(s32), %24(s32)
+    %20:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readlane), %23(s32), %19(s32)
+    %21:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.end), %18(s32), %20(s32)
+    G_STORE %21(s32), %0(p1) :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...

@@ -25,31 +25,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
-using namespace mlir;
-using namespace mlir::sparse_tensor;
-
-/// Return configuration options for One-Shot Bufferize.
-static bufferization::OneShotBufferizationOptions
-getBufferizationOptions(bool analysisOnly) {
-  using namespace bufferization;
-  OneShotBufferizationOptions options;
-  options.bufferizeFunctionBoundaries = true;
-  // TODO(springerm): To spot memory leaks more easily, returning dense allocs
-  // should be disallowed.
-  options.allowReturnAllocs = true;
-  options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
-                                      const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
-  };
-  if (analysisOnly) {
-    options.testAnalysisOnly = true;
-    options.printConflicts = true;
-  }
-  return options;
-}
-
 //===----------------------------------------------------------------------===//
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
@@ -58,7 +33,8 @@ void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createSparsificationAndBufferizationPass(
-      getBufferizationOptions(options.testBufferizationAnalysisOnly),
+      getBufferizationOptionsForSparsification(
+          options.testBufferizationAnalysisOnly),
       options.sparsificationOptions(), options.sparseTensorConversionOptions(),
       options.createSparseDeallocs, options.enableRuntimeLibrary,
       options.enableBufferInitialization, options.vectorLength,

@@ -394,6 +394,27 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   ret i64 %o
 }
 
+
+; =============================
+;     Tests for PPA1 Fields
+; =============================
+; CHECK-LABEL: named_func
+; CHECK: .byte	129  * PPA1 Flags 4
+; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
+define i64 @named_func(i64 %arg) {
+  %sum = add i64 1, %arg
+  ret i64 %sum
+}
+
+; CHECK-LABEL: __unnamed_1
+; CHECK: .byte	128  * PPA1 Flags 4
+; CHECK-NOT: *   Bit 7: 1 = Name Length and Name
+define void @""(ptr %p) {
+  call i64 (ptr) @fun1(ptr %p)
+  ret void
+}
+
+
 declare i64 @fun(i64 %arg0)
 declare i64 @fun1(ptr %ptr)
 declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)

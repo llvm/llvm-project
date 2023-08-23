@@ -5,7 +5,7 @@ __attribute__((__swift_bridge__))
 @interface I
 @end
 
-// expected-error@+1 {{'__swift_bridge__' attribute requires a string}}
+// expected-error@+1 {{expected string literal as argument of '__swift_bridge__' attribute}}
 __attribute__((__swift_bridge__(1)))
 @interface J
 @end

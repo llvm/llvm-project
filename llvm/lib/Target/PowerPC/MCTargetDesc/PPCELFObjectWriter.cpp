@@ -456,7 +456,13 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       }
       break;
     case FK_Data_4:
-      Type = ELF::R_PPC_ADDR32;
+      switch (Modifier) {
+      case MCSymbolRefExpr::VK_DTPREL:
+        Type = ELF::R_PPC_DTPREL32;
+        break;
+      default:
+        Type = ELF::R_PPC_ADDR32;
+      }
       break;
     case FK_Data_2:
       Type = ELF::R_PPC_ADDR16;

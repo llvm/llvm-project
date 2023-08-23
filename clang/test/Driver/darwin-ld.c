@@ -358,11 +358,31 @@
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -moutline -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=MOUTLINE %s < %t.log
-// MOUTLINE: {{ld(.exe)?"}}
-// MOUTLINE-SAME: "-mllvm" "-enable-machine-outliner" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: FileCheck -check-prefix=ARM64-MOUTLINE %s < %t.log
+// ARM64-MOUTLINE: {{ld(.exe)?"}}
+// ARM64-MOUTLINE-SAME: "-mllvm" "-enable-machine-outliner" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target arm64e-apple-darwin -moutline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARM64E-MOUTLINE %s < %t.log
+// ARM64E-MOUTLINE: {{ld(.exe)?"}}
+// ARM64E-MOUTLINE-SAME: "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target armv7em-apple-darwin -moutline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARMV7EM-MOUTLINE %s < %t.log
+// ARMV7EM-MOUTLINE: {{ld(.exe)?"}}
+// ARMV7EM-MOUTLINE-SAME: "-mllvm" "-enable-linkonceodr-outlining"
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -mno-outline -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=MNO_OUTLINE %s < %t.log
-// MNO_OUTLINE: {{ld(.exe)?"}}
-// MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never"
+// RUN: FileCheck -check-prefix=ARM64-MNO_OUTLINE %s < %t.log
+// ARM64-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARM64-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target arm64e-apple-darwin -mno-outline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARM64E-MNO_OUTLINE %s < %t.log
+// ARM64E-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARM64E-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
+// RUN:   %clang -target armv7em-apple-darwin -mno-outline -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=ARMV7EM-MNO_OUTLINE %s < %t.log
+// ARMV7EM-MNO_OUTLINE: {{ld(.exe)?"}}
+// ARMV7EM-MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never" "-mllvm" "-enable-linkonceodr-outlining"

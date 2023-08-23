@@ -715,11 +715,20 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
 
       os << formatv("auto {0} = (*v{1}.begin()).getDefiningOp();\n", argName,
                     i);
+
+      // Indent emitMatchCheck and emitMatch because they declare local
+      // variables.
+      os << "{\n";
+      os.indent();
+
       emitMatchCheck(
           opName, /*matchStr=*/argName,
           formatv("\"There's no operation that defines operand {0} of {1}\"",
                   operandIndex++, opName));
       emitMatch(argTree, argName, depth + 1);
+
+      os.unindent() << "}\n";
+
       // `tblgen_ops` is used to collect the matched operations. In either, we
       // need to queue the operation only if the matching success. Thus we emit
       // the code at the end.
@@ -1094,6 +1103,17 @@ void PatternEmitter::emitRewriteLogic() {
           "\n");
     }
     os << "\nrewriter.replaceOp(op0, tblgen_repl_values);\n";
+  }
+
+  // Process supplemtal patterns.
+  int numSupplementalPatterns = pattern.getNumSupplementalPatterns();
+  for (int i = 0, offset = -numSupplementalPatterns;
+       i < numSupplementalPatterns; ++i) {
+    DagNode resultTree = pattern.getSupplementalPattern(i);
+    auto val = handleResultPattern(resultTree, offset++, 0);
+    if (resultTree.isNativeCodeCall() &&
+        resultTree.getNumReturnsOfNativeCode() == 0)
+      os << val << ";\n";
   }
 
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting rewrite logic ---\n");

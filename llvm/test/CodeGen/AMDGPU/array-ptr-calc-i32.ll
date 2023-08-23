@@ -30,14 +30,14 @@ define amdgpu_kernel void @test_private_array_ptr_calc(ptr addrspace(1) noalias 
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)
   %a_ptr = getelementptr inbounds i32, ptr addrspace(1) %inA, i32 %tid
   %b_ptr = getelementptr inbounds i32, ptr addrspace(1) %inB, i32 %tid
-  %a = load i32, ptr addrspace(1) %a_ptr, !range !0
-  %b = load i32, ptr addrspace(1) %b_ptr, !range !0
+  %a = load i32, ptr addrspace(1) %a_ptr, !range !0, !noundef !{}
+  %b = load i32, ptr addrspace(1) %b_ptr, !range !0, !noundef !{}
   %result = add i32 %a, %b
   %alloca_ptr = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 1, i32 %b
   store i32 %result, ptr addrspace(5) %alloca_ptr, align 4
   ; Dummy call
   call void @llvm.amdgcn.s.barrier()
-  %reload = load i32, ptr addrspace(5) %alloca_ptr, align 4, !range !0
+  %reload = load i32, ptr addrspace(5) %alloca_ptr, align 4, !range !0, !noundef !{}
   %out_ptr = getelementptr inbounds i32, ptr addrspace(1) %out, i32 %tid
   store i32 %reload, ptr addrspace(1) %out_ptr, align 4
   ret void

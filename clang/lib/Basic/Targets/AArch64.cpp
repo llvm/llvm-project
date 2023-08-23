@@ -1288,8 +1288,9 @@ bool AArch64TargetInfo::validateAsmConstraint(
     Info.setAllowsRegister();
     return true;
   case 'U':
-    if (Name[1] == 'p' && (Name[2] == 'l' || Name[2] == 'a')) {
-      // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7)
+    if (Name[1] == 'p' &&
+        (Name[2] == 'l' || Name[2] == 'a' || Name[2] == 'h')) {
+      // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7, "Uph"=P8-P15)
       Info.setAllowsRegister();
       Name += 2;
       return true;

@@ -526,6 +526,8 @@ public:
                            std::make_unique<Kind>(std::forward<Args>(args)...));
   }
 
+  void setPermanentGISelFlags(GISelFlags V) { Flags = V; }
+
   // Update the active GISelFlags based on the GISelFlags Record R.
   // A SaveAndRestore object is returned so the old GISelFlags are restored
   // at the end of the scope.
@@ -647,6 +649,10 @@ public:
     return Predicates.size();
   }
   bool predicates_empty() const { return Predicates.empty(); }
+
+  template <typename Ty> bool contains() const {
+    return any_of(Predicates, [&](auto &P) { return isa<Ty>(P.get()); });
+  }
 
   std::unique_ptr<PredicateTy> predicates_pop_front() {
     std::unique_ptr<PredicateTy> Front = std::move(Predicates.front());
@@ -1930,23 +1936,41 @@ public:
 };
 
 /// Adds a specific immediate to the instruction being built.
+/// If a LLT is passed, a ConstantInt immediate is created instead.
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
   int64_t Imm;
+  std::optional<LLTCodeGen> CImmLLT;
 
 public:
   ImmRenderer(unsigned InsnID, int64_t Imm)
       : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
+
+  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGen &CImmLLT)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT) {
+    KnownTypes.insert(CImmLLT);
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Imm;
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
-          << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
+    if (CImmLLT) {
+      assert(Table.isCombiner() &&
+             "ConstantInt immediate are only for combiners!");
+      Table << MatchTable::Opcode("GIR_AddCImm")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::Comment("Type")
+            << MatchTable::NamedValue(CImmLLT->getCxxEnumValue())
+            << MatchTable::Comment("Imm") << MatchTable::IntValue(Imm)
+            << MatchTable::LineBreak;
+    } else {
+      Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
+            << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
+            << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
+    }
   }
 };
 
@@ -2051,11 +2075,27 @@ public:
 /// * Adding an operand to an instruction.
 class MatchAction {
 public:
+  enum ActionKind {
+    AK_DebugComment,
+    AK_CustomCXX,
+    AK_BuildMI,
+    AK_ConstraintOpsToDef,
+    AK_ConstraintOpsToRC,
+    AK_MakeTempReg,
+  };
+
+  MatchAction(ActionKind K) : Kind(K) {}
+
+  ActionKind getKind() const { return Kind; }
+
   virtual ~MatchAction() {}
 
   /// Emit the MatchTable opcodes to implement the action.
   virtual void emitActionOpcodes(MatchTable &Table,
                                  RuleMatcher &Rule) const = 0;
+
+private:
+  ActionKind Kind;
 };
 
 /// Generates a comment describing the matched rule being acted upon.
@@ -2064,7 +2104,12 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S) : S(std::string(S)) {}
+  DebugCommentAction(StringRef S)
+      : MatchAction(AK_DebugComment), S(std::string(S)) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_DebugComment;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
@@ -2075,7 +2120,12 @@ class CustomCXXAction : public MatchAction {
   std::string FnEnumName;
 
 public:
-  CustomCXXAction(StringRef FnEnumName) : FnEnumName(FnEnumName.str()) {}
+  CustomCXXAction(StringRef FnEnumName)
+      : MatchAction(AK_CustomCXX), FnEnumName(FnEnumName.str()) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_CustomCXX;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -2088,18 +2138,25 @@ private:
   const CodeGenInstruction *I;
   InstructionMatcher *Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
+  SmallPtrSet<Record *, 4> DeadImplicitDefs;
 
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule, const InstructionMatcher *Insn) const;
 
 public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
-      : InsnID(InsnID), I(I), Matched(nullptr) {}
+      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I), Matched(nullptr) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildMI;
+  }
 
   unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
 
   void chooseInsnToMutate(RuleMatcher &Rule);
+
+  void setDeadImplicitDef(Record *R) { DeadImplicitDefs.insert(R); }
 
   template <class Kind, class... Args> Kind &addRenderer(Args &&...args) {
     OperandRenderers.emplace_back(
@@ -2116,7 +2173,12 @@ class ConstrainOperandsToDefinitionAction : public MatchAction {
   unsigned InsnID;
 
 public:
-  ConstrainOperandsToDefinitionAction(unsigned InsnID) : InsnID(InsnID) {}
+  ConstrainOperandsToDefinitionAction(unsigned InsnID)
+      : MatchAction(AK_ConstraintOpsToDef), InsnID(InsnID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ConstraintOpsToDef;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
@@ -2135,7 +2197,12 @@ class ConstrainOperandToRegClassAction : public MatchAction {
 public:
   ConstrainOperandToRegClassAction(unsigned InsnID, unsigned OpIdx,
                                    const CodeGenRegisterClass &RC)
-      : InsnID(InsnID), OpIdx(OpIdx), RC(RC) {}
+      : MatchAction(AK_ConstraintOpsToRC), InsnID(InsnID), OpIdx(OpIdx),
+        RC(RC) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ConstraintOpsToRC;
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -2149,8 +2216,12 @@ private:
 
 public:
   MakeTempRegisterAction(const LLTCodeGen &Ty, unsigned TempRegID)
-      : Ty(Ty), TempRegID(TempRegID) {
+      : MatchAction(AK_MakeTempReg), Ty(Ty), TempRegID(TempRegID) {
     KnownTypes.insert(Ty);
+  }
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_MakeTempReg;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;

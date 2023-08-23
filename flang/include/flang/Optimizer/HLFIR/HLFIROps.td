@@ -28,8 +28,14 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
   : Op<hlfir_Dialect, mnemonic, traits>;
 
 
-
+// DeclareOp can be lowered to EmboxOp, EmboxCharOp, ReboxOp, etc and so could
+// generate code. All of the operations it can generate are modelled with
+// NoMemoryEffect. However, if hlfir.declare is given NoMemoryEffect, it can be
+// removed by dead code elimination if the value result is unused. Information
+// from the delclare operation can be used to generate debug information so we
+// don't want to remove it as dead code
 def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 

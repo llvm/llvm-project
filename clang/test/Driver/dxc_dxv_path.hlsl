@@ -12,7 +12,7 @@
 
 // RUN: %clang_dxc -Tlib_6_3 -ccc-print-bindings --dxv-path=%T -Fo %t.dxo  %s 2>&1 | FileCheck %s --check-prefix=BINDINGS
 // BINDINGS: "dxil-unknown-shadermodel6.3-library" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[DXC:.+]].dxo"
-// BINDINGS-NEXT: "dxil-unknown-shadermodel6.3-library" - "hlsl::Validator", inputs: ["[[DXC]].dxo"], output: "[[DXC]].dxo"
+// BINDINGS-NEXT: "dxil-unknown-shadermodel6.3-library" - "hlsl::Validator", inputs: ["[[DXC]].dxo"]
 
 // RUN: %clang_dxc -Tlib_6_3 -ccc-print-phases --dxv-path=%T -Fo %t.dxc  %s 2>&1 | FileCheck %s --check-prefix=PHASES
 
@@ -20,4 +20,5 @@
 // PHASES-NEXT: 1: preprocessor, {0}, c++-cpp-output
 // PHASES-NEXT: 2: compiler, {1}, ir
 // PHASES-NEXT: 3: backend, {2}, assembler
-// PHASES-NEXT: 4: binary-analyzer, {3}, dx-container
+// PHASES-NEXT: 4: assembler, {3}, object
+// PHASES-NEXT: 5: binary-analyzer, {4}, dx-container

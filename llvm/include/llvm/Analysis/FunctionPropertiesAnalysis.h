@@ -81,6 +81,42 @@ public:
 
   // All non-debug instructions
   int64_t TotalInstructionCount = 0;
+
+  // Basic blocks grouped by number of successors.
+  int64_t BasicBlocksWithSingleSuccessor = 0;
+  int64_t BasicBlocksWithTwoSuccessors = 0;
+  int64_t BasicBlocksWithMoreThanTwoSuccessors = 0;
+
+  // Basic blocks grouped by number of predecessors.
+  int64_t BasicBlocksWithSinglePredecessor = 0;
+  int64_t BasicBlocksWithTwoPredecessors = 0;
+  int64_t BasicBlocksWithMoreThanTwoPredecessors = 0;
+
+  // Basic blocks grouped by size as determined by the number of non-debug
+  // instructions that they contain.
+  int64_t BigBasicBlocks = 0;
+  int64_t MediumBasicBlocks = 0;
+  int64_t SmallBasicBlocks = 0;
+
+  // The number of cast instructions inside the function.
+  int64_t CastInstructionCount = 0;
+
+  // The number of floating point instructions inside the function.
+  int64_t FloatingPointInstructionCount = 0;
+
+  // The number of integer instructions inside the function.
+  int64_t IntegerInstructionCount = 0;
+
+  // Operand type couns
+  int64_t ConstantIntOperandCount = 0;
+  int64_t ConstantFPOperandCount = 0;
+  int64_t ConstantOperandCount = 0;
+  int64_t InstructionOperandCount = 0;
+  int64_t BasicBlockOperandCount = 0;
+  int64_t GlobalValueOperandCount = 0;
+  int64_t InlineAsmOperandCount = 0;
+  int64_t ArgumentOperandCount = 0;
+  int64_t UnknownOperandCount = 0;
 };
 
 // Analysis pass

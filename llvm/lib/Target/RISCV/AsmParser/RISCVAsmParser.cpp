@@ -660,6 +660,7 @@ public:
   bool isUImm6() const { return IsUImm<6>(); }
   bool isUImm7() const { return IsUImm<7>(); }
   bool isUImm8() const { return IsUImm<8>(); }
+  bool isUImm20() const { return IsUImm<20>(); }
 
   bool isUImm8GE32() const {
     int64_t Imm;
@@ -1478,6 +1479,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       "operand must be a symbol with "
                                       "%hi/%tprel_hi modifier or an integer in "
                                       "the range");
+  case Match_InvalidUImm20:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1);
   case Match_InvalidUImm20AUIPC:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,

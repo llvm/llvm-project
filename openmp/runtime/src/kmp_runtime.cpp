@@ -8729,9 +8729,8 @@ void __kmp_aux_display_affinity(int gtid, const char *format) {
 }
 
 /* ------------------------------------------------------------------------ */
-
 void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
-  int blocktime = arg; /* argument is in milliseconds */
+  int blocktime = arg; /* argument is in microseconds */
 #if KMP_USE_MONITOR
   int bt_intervals;
 #endif

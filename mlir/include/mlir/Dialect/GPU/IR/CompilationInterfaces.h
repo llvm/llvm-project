@@ -15,8 +15,26 @@
 
 #include "mlir/IR/Attributes.h"
 
+namespace llvm {
+class IRBuilderBase;
+}
+
 namespace mlir {
+namespace LLVM {
+class ModuleTranslation;
+}
 namespace gpu {
+/// This class indicates that the attribute associated with this trait is a GPU
+/// offloading translation attribute. These kinds of attributes must implement
+/// an interface for handling the translation of GPU offloading operations like
+/// `gpu.binary` & `gpu.launch_func`.
+template <typename ConcreteType>
+class OffloadingTranslationAttrTrait
+    : public AttributeTrait::TraitBase<ConcreteType,
+                                       OffloadingTranslationAttrTrait> {
+  // TODO: Verify the attribute promises or implements the interface.
+};
+
 /// This class serves as an opaque interface for passing options to the
 /// `TargetAttrInterface` methods. Users of this class must implement the
 /// `classof` method as well as using the macros `MLIR_*_EXPLICIT_TYPE_ID` to

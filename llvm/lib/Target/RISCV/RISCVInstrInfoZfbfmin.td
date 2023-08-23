@@ -16,12 +16,12 @@
 //===----------------------------------------------------------------------===//
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
- 
+
 def SDT_RISCVFP_ROUND_BF16
     : SDTypeProfile<1, 1, [SDTCisVT<0, bf16>, SDTCisVT<1, f32>]>;
 def SDT_RISCVFP_EXTEND_BF16
     : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, bf16>]>;
- 
+
 def riscv_fpround_bf16
     : SDNode<"RISCVISD::FP_ROUND_BF16", SDT_RISCVFP_ROUND_BF16>;
 def riscv_fpextend_bf16
@@ -41,7 +41,7 @@ def FCVT_S_BF16 : FPUnaryOp_r_frm<0b0100000, 0b00110, FPR32, FPR16, "fcvt.s.bf16
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
- 
+
 let Predicates = [HasStdExtZfbfmin] in {
 /// Loads
 def : LdPat<load, FLH, bf16>;
@@ -51,9 +51,9 @@ def : StPat<store, FSH, FPR16, bf16>;
 
 /// Float conversion operations
 // f32 -> bf16, bf16 -> f32
-def : Pat<(bf16 (riscv_fpround_bf16 FPR32:$rs1)), 
+def : Pat<(bf16 (riscv_fpround_bf16 FPR32:$rs1)),
           (FCVT_BF16_S FPR32:$rs1, FRM_DYN)>;
-def : Pat<(riscv_fpextend_bf16 (bf16 FPR16:$rs1)), 
+def : Pat<(riscv_fpextend_bf16 (bf16 FPR16:$rs1)),
           (FCVT_S_BF16 FPR16:$rs1, FRM_DYN)>;
 
 // Moves (no conversion)

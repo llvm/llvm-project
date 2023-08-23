@@ -18,8 +18,8 @@ int x;
 #elifdef A // #1
 #endif
 // For C
-// pre-c2x-pedantic-warning@#1 {{use of a '#elifdef' directive is a C2x extension}}
-// pre-c2x-compat-warning@#1 {{use of a '#elifdef' directive is incompatible with C standards before C2x}}
+// pre-c2x-pedantic-warning@#1 {{use of a '#elifdef' directive is a C23 extension}}
+// pre-c2x-compat-warning@#1 {{use of a '#elifdef' directive is incompatible with C standards before C23}}
 
 // For C++
 // pre-cpp23-pedantic-warning@#1 {{use of a '#elifdef' directive is a C++23 extension}}
@@ -29,8 +29,8 @@ int x;
 #elifndef B // #2
 #endif
 // For C
-// pre-c2x-pedantic-warning@#2 {{use of a '#elifndef' directive is a C2x extension}}
-// pre-c2x-compat-warning@#2 {{use of a '#elifndef' directive is incompatible with C standards before C2x}}
+// pre-c2x-pedantic-warning@#2 {{use of a '#elifndef' directive is a C23 extension}}
+// pre-c2x-compat-warning@#2 {{use of a '#elifndef' directive is incompatible with C standards before C23}}
 
 // For C++
 // pre-cpp23-pedantic-warning@#2 {{use of a '#elifndef' directive is a C++23 extension}}
@@ -40,8 +40,8 @@ int x;
 #elifdef C
 #endif
 // For C
-// pre-c2x-pedantic-warning@-3 {{use of a '#elifdef' directive is a C2x extension}}
-// pre-c2x-compat-warning@-4 {{use of a '#elifdef' directive is incompatible with C standards before C2x}}
+// pre-c2x-pedantic-warning@-3 {{use of a '#elifdef' directive is a C23 extension}}
+// pre-c2x-compat-warning@-4 {{use of a '#elifdef' directive is incompatible with C standards before C23}}
 
 // For C++
 // pre-cpp23-pedantic-warning@-7 {{use of a '#elifdef' directive is a C++23 extension}}
@@ -51,8 +51,8 @@ int x;
 #elifndef D
 #endif
 // For C
-// pre-c2x-pedantic-warning@-3 {{use of a '#elifndef' directive is a C2x extension}}
-// pre-c2x-compat-warning@-4 {{use of a '#elifndef' directive is incompatible with C standards before C2x}}
+// pre-c2x-pedantic-warning@-3 {{use of a '#elifndef' directive is a C23 extension}}
+// pre-c2x-compat-warning@-4 {{use of a '#elifndef' directive is incompatible with C standards before C23}}
 
 // For C++
 // pre-cpp23-pedantic-warning@-7 {{use of a '#elifndef' directive is a C++23 extension}}
@@ -60,9 +60,9 @@ int x;
 
 #warning foo
 // For C
-// pre-c2x-pedantic-warning@-2 {{#warning is a C2x extension}}
+// pre-c2x-pedantic-warning@-2 {{#warning is a C23 extension}}
 // pre-c2x-pedantic-warning@-3 {{foo}}
-// pre-c2x-compat-warning@-4 {{#warning is incompatible with C standards before C2x}}
+// pre-c2x-compat-warning@-4 {{#warning is incompatible with C standards before C23}}
 // pre-c2x-compat-warning@-5 {{foo}}
 
 // For C++

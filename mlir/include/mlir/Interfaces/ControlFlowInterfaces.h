@@ -82,6 +82,11 @@ public:
   /// Get the range of operands that are simply forwarded to the successor.
   OperandRange getForwardedOperands() const { return forwardedOperands; }
 
+  /// Get the range of operands that are simply forwarded to the successor.
+  MutableOperandRange getMutableForwardedOperands() const {
+    return forwardedOperands;
+  }
+
   /// Get a slice of the operands forwarded to the successor. The given range
   /// must not contain any operands produced by the operation.
   MutableOperandRange slice(unsigned subStart, unsigned subLen) const {

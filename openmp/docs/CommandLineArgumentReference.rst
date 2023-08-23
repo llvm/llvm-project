@@ -66,7 +66,7 @@ Offloading Specific Command-Line Arguments
 | It is also possible to specify :ref:`fopenmp-targets` without specifying 
   ``--offload-arch``. In that case, the executables ``amdgpu-arch`` or
   ``nvptx-arch`` will be executed as part of the compiler driver to 
-  detect the device arhitecture automatically.
+  detect the device architecture automatically.
 | Finally, the device architecture will also be automatically inferred with 
   ``--offload-arch=native``.
 

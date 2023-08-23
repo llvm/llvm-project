@@ -304,9 +304,9 @@ define <4 x i32> @base_pointer(i32 %a) {
 ; CHECK-NEXT:    movs r1, #2
 ; CHECK-NEXT:    movs r2, #3
 ; CHECK-NEXT:    movs r3, #4
-; CHECK-NEXT:    subs r4, r7, #7
-; CHECK-NEXT:    subs r4, #9
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    subs r6, r7, #7
+; CHECK-NEXT:    subs r6, #9
+; CHECK-NEXT:    mov sp, r6
 ; CHECK-NEXT:    pop {r4, r6}
 ; CHECK-NEXT:    mov r8, r4
 ; CHECK-NEXT:    mov r9, r6

@@ -1,3 +1,5 @@
+// REQUIRES: arm-registered-target
+
 // RUN: %clang -### -target x86_64 -fprofile-use=default.profdata -fsplit-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-OPT %s
 // RUN: %clang -### -target x86_64 -fsplit-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-OPT %s
 // RUN: %clang -### -target x86_64 -fprofile-use=default.profdata -fsplit-machine-functions -fno-split-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-NOOPT %s

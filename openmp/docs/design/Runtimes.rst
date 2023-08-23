@@ -409,17 +409,17 @@ threads in the team was reduced, but the program will continue execution.
 KMP_BLOCKTIME
 """""""""""""
 
-Sets the time, in milliseconds, that a thread should wait, after completing
-the execution of a parallel region, before sleeping.
+Sets the time that a thread should wait, after completing the
+execution of a parallel region, before sleeping.
 
-Use the optional character suffixes: ``s`` (seconds), ``m`` (minutes),
-``h`` (hours), or ``d`` (days) to specify the units.
+Use the optional suffixes: ``ms`` (milliseconds), or ``us`` (microseconds) to
+specify/change the units. Defaults units is milliseconds.
 
-Specify infinite for an unlimited wait time.
+Specify ``infinite`` for an unlimited wait time.
 
 | **Default:** 200 milliseconds
 | **Related Environment Variable:** ``KMP_LIBRARY``
-| **Example:** ``KMP_BLOCKTIME=1s``
+| **Example:** ``KMP_BLOCKTIME=1ms``
 
 KMP_CPUINFO_FILE
 """"""""""""""""
@@ -1130,7 +1130,7 @@ LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
 This environment variable defines a lower bound for the number of threads if a
 combined kernel, e.g., `target teams distribute parallel for`, has insufficient
 parallelism. Especially if the trip count of the loops is lower than the number
-of threads possible times the number of teams (aka. blocks) the device preferes
+of threads possible times the number of teams (aka. blocks) the device prefers
 (see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU`), we will reduce the thread
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
@@ -1341,22 +1341,22 @@ This is the maximum amount of time the client will wait for a response from the 
 LLVM/OpenMP support for C library routines
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Support for calling standard C library routines on GPU targets is provided by 
-the `LLVM C Library <https://libc.llvm.org/gpu/>`_. This project provides two 
-static libraries, ``libcgpu.a`` and ``libllvmlibc_rpc_server.a``, which are used 
-by the OpenMP runtime to provide ``libc`` support. The ``libcgpu.a`` library 
-contains the GPU device code, while ``libllvmlibc_rpc_server.a`` provides the 
-interface to the RPC interface. More information on the RPC construction can be 
+Support for calling standard C library routines on GPU targets is provided by
+the `LLVM C Library <https://libc.llvm.org/gpu/>`_. This project provides two
+static libraries, ``libcgpu.a`` and ``libllvmlibc_rpc_server.a``, which are used
+by the OpenMP runtime to provide ``libc`` support. The ``libcgpu.a`` library
+contains the GPU device code, while ``libllvmlibc_rpc_server.a`` provides the
+interface to the RPC interface. More information on the RPC construction can be
 found in the `associated documentation <https://libc.llvm.org/gpu/rpc.html>`_.
 
-To provide host services, we run an RPC server inside of the runtime. This 
-allows the host to respond to requests made from the GPU asynchronously. For 
-``libc`` calls that require an RPC server, such as printing, an external handle 
-to the RPC client running on the GPU will be present in the GPU executable. If 
-we find this symbol, we will initialize a client and server and run it in the 
+To provide host services, we run an RPC server inside of the runtime. This
+allows the host to respond to requests made from the GPU asynchronously. For
+``libc`` calls that require an RPC server, such as printing, an external handle
+to the RPC client running on the GPU will be present in the GPU executable. If
+we find this symbol, we will initialize a client and server and run it in the
 background while the kernel is executing.
 
-For example, consider the following simple OpenMP offloading code. Here we will 
+For example, consider the following simple OpenMP offloading code. Here we will
 simply print a string to the user from the GPU.
 
 .. code-block:: c++
@@ -1368,11 +1368,11 @@ simply print a string to the user from the GPU.
       { fputs("Hello World!\n", stderr); }
    }
 
-We can compile this using the ``libcgpu.a`` library to resolve the symbols. 
-Because this function requires RPC support, this will also pull in an externally 
-visible symbol called ``__llvm_libc_rpc_client`` into the device image. When 
-loading the device image, the runtime will check for this symbol and initialize 
-an RPC interface if it is found. The following example shows the RPC server 
+We can compile this using the ``libcgpu.a`` library to resolve the symbols.
+Because this function requires RPC support, this will also pull in an externally
+visible symbol called ``__llvm_libc_rpc_client`` into the device image. When
+loading the device image, the runtime will check for this symbol and initialize
+an RPC interface if it is found. The following example shows the RPC server
 being used.
 
 .. code-block:: console

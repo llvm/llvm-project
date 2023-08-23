@@ -215,6 +215,9 @@ enum NodeType : unsigned {
   SRSHR_I,
   URSHR_I,
 
+  // Vector narrowing shift by immediate (bottom)
+  RSHRNB_I,
+
   // Vector shift by constant and insert
   VSLI,
   VSRI,
@@ -502,8 +505,8 @@ enum Rounding {
 const unsigned RoundingBitsPos = 22;
 
 // Registers used to pass function arguments.
-const ArrayRef<MCPhysReg> getGPRArgRegs();
-const ArrayRef<MCPhysReg> getFPRArgRegs();
+ArrayRef<MCPhysReg> getGPRArgRegs();
+ArrayRef<MCPhysReg> getFPRArgRegs();
 
 } // namespace AArch64
 

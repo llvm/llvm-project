@@ -381,24 +381,23 @@ declare <32 x double> @llvm.vp.load.v32f64.p0(ptr, <32 x i1>, i32)
 define <32 x double> @vpload_v32f64(ptr %ptr, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v8, v0
+; CHECK-NEXT:    li a3, 16
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    bltu a1, a3, .LBB31_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:  .LBB31_2:
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a2, a1, -16
-; CHECK-NEXT:    sltu a3, a1, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    sltu a1, a1, a2
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    addi a3, a0, 128
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v16, (a3), v0.t
-; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    bltu a1, a2, .LBB31_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:  .LBB31_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-NEXT:    vle64.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <32 x double> @llvm.vp.load.v32f64.p0(ptr %ptr, <32 x i1> %m, i32 %evl)
   ret <32 x double> %load
@@ -422,9 +421,9 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    sltu a5, a3, a4
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a4, a5, a4
+; CHECK-NEXT:    addi a5, a1, 128
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-NEXT:    addi a5, a1, 128
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a5), v0.t
 ; CHECK-NEXT:    addi a4, a2, -32
@@ -436,9 +435,9 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a4, 16
 ; CHECK-NEXT:  .LBB32_4:
+; CHECK-NEXT:    addi a5, a1, 256
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 4
-; CHECK-NEXT:    addi a5, a1, 256
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a5), v0.t
 ; CHECK-NEXT:    bltu a3, a2, .LBB32_6

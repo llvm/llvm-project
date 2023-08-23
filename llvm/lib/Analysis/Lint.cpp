@@ -235,6 +235,10 @@ void Lint::visitCallBase(CallBase &I) {
             // If both arguments are readonly, they have no dependence.
             if (Formal->onlyReadsMemory() && I.onlyReadsMemory(ArgNo))
               continue;
+            // Skip readnone arguments since those are guaranteed not to be
+            // dereferenced anyway.
+            if (I.doesNotAccessMemory(ArgNo))
+              continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&

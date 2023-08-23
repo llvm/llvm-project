@@ -21,6 +21,7 @@ define amdgpu_ps float @struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_vo
   ; CHECK-NEXT:   [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
@@ -61,6 +62,7 @@ define amdgpu_ps <2 x float> @struct_tbuffer_load_v2f32__sgpr_rsrc__vgpr_vindex_
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY7]]
   ; CHECK-NEXT:   $vgpr1 = COPY [[COPY8]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_v2f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
@@ -106,6 +108,7 @@ define amdgpu_ps <3 x float> @struct_tbuffer_load_v3f32__sgpr_rsrc__vgpr_vindex_
   ; CHECK-NEXT:   $vgpr1 = COPY [[COPY8]]
   ; CHECK-NEXT:   $vgpr2 = COPY [[COPY9]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_v3f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
@@ -155,6 +158,7 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__sgpr_rsrc__vgpr_vindex_
   ; CHECK-NEXT:   $vgpr2 = COPY [[COPY9]]
   ; CHECK-NEXT:   $vgpr3 = COPY [[COPY10]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_v4f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
@@ -200,6 +204,7 @@ define amdgpu_ps float @struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_vo
   ; CHECK-NEXT:   [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY5]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset_vindex0
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
@@ -253,10 +258,10 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex_
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -282,6 +287,7 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex_
   ; CHECK-NEXT:   $vgpr2 = COPY [[COPY15]]
   ; CHECK-NEXT:   $vgpr3 = COPY [[COPY16]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex__sgpr_voffset__vgpr_soffset
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   successors: %bb.2(0x80000000)
@@ -313,10 +319,10 @@ define amdgpu_ps <4 x float> @struct_tbuffer_load_v4f32__vgpr_rsrc__sgpr_vindex_
   ; CHECK-GFX12-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
   ; CHECK-GFX12-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
   ; CHECK-GFX12-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; CHECK-GFX12-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
+  ; CHECK-GFX12-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; CHECK-GFX12-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK-GFX12-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; CHECK-GFX12-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
+  ; CHECK-GFX12-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-GFX12-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-GFX12-NEXT: {{  $}}
   ; CHECK-GFX12-NEXT: bb.3:
@@ -363,6 +369,7 @@ define amdgpu_ps float @struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_vo
   ; CHECK-NEXT:   [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 78, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
   ; CHECK-GFX12-LABEL: name: struct_tbuffer_load_f32__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset_voffset_add4095
   ; CHECK-GFX12: bb.1 (%ir-block.0):
   ; CHECK-GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1

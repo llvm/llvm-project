@@ -392,6 +392,8 @@ private:
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
 
+  Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
@@ -539,6 +541,8 @@ public:
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
+
+  Instruction *foldSquareSumInts(BinaryOperator &I);
 
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.

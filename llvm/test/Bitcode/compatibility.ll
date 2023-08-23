@@ -1709,9 +1709,9 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call ptr @llvm.stacksave()
-  ; CHECK: %stack = call ptr @llvm.stacksave()
+  ; CHECK: %stack = call ptr @llvm.stacksave.p0()
   call void @llvm.stackrestore(ptr %stack)
-  ; CHECK: call void @llvm.stackrestore(ptr %stack)
+  ; CHECK: call void @llvm.stackrestore.p0(ptr %stack)
 
   call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
   ; CHECK: call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)

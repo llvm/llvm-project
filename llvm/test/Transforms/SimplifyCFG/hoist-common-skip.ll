@@ -390,26 +390,26 @@ if.end:
 ;; Don't hoist stacksaves across inalloca allocas
 define void @f10(i1 %cond) {
 ; CHECK-LABEL: @f10(
-; CHECK-NEXT:    [[SS:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[SS:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[I1:%.*]] = alloca inalloca i32, align 4
-; CHECK-NEXT:    [[SS2:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[SS2:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[I2:%.*]] = alloca inalloca i64, align 8
 ; CHECK-NEXT:    call void @inalloca_i64(ptr inalloca(i64) [[I2]])
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS2]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SS2]])
 ; CHECK-NEXT:    call void @inalloca_i32(ptr inalloca(i32) [[I1]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I3:%.*]] = alloca inalloca i64, align 8
-; CHECK-NEXT:    [[SS3:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[SS3:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[I4:%.*]] = alloca inalloca i64, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @inalloca_i64(ptr inalloca(i64) [[I4]])
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS3]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SS3]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @inalloca_i64(ptr inalloca(i64) [[I3]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SS]])
 ; CHECK-NEXT:    ret void
 ;
   %ss = call ptr @llvm.stacksave()

@@ -9,8 +9,6 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
-#if defined(__cplusplus)
-
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -130,7 +128,5 @@ typedef lldb::CommandObjectSP (*ThreadTraceExportCommandCreator)(
     CommandInterpreter &interpreter);
 /// \}
 } // namespace lldb_private
-
-#endif // #if defined(__cplusplus)
 
 #endif // LLDB_LLDB_PRIVATE_INTERFACES_H

@@ -29,13 +29,23 @@ template <class CharT>
 static void test() {
   {
     std::basic_string<CharT> s(STR("testing"));
-    const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> buf(std::move(s));
+    const std::basic_stringbuf<CharT> buf(std::move(s));
     assert(buf.view() == SV("testing"));
   }
   {
     std::basic_string<CharT> s(STR("testing"));
+    const std::basic_stringbuf<CharT> buf(std::move(s), std::ios_base::out);
+    assert(buf.view() == SV("testing"));
+  }
+  {
+    std::basic_string<CharT, std::char_traits<CharT>, test_allocator<CharT>> s(STR("testing"));
+    const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> buf(std::move(s));
+    assert(buf.view() == SV("testing"));
+  }
+  {
+    std::basic_string<CharT, std::char_traits<CharT>, test_allocator<CharT>> s(STR("testing"));
     const std::basic_stringbuf<CharT, std::char_traits<CharT>, test_allocator<CharT>> buf(
-        std::move(s), std::ios_base::out);
+        std::move(s), std::ios_base::in);
     assert(buf.view() == SV("testing"));
   }
 }

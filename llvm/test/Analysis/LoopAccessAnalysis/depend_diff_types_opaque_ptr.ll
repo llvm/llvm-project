@@ -8,7 +8,7 @@
 
 ; CHECK-LABEL: function 'backdep_type_size_equivalence':
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum dependence distance of 800 bytes
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 3200 bits
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %ld.f32 = load float, ptr %gep.iv, align 8 ->

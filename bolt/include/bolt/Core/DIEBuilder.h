@@ -21,12 +21,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <list>
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -113,6 +113,7 @@ private:
     std::vector<LocWithReference> LocWithReferencesToProcess;
     BumpPtrAllocator DIEAlloc;
     ProcessingType Type;
+    std::unordered_set<uint64_t> DWARFDieAddressesParsed;
   };
 
   std::unique_ptr<State> BuilderState;

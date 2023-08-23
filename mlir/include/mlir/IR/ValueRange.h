@@ -167,6 +167,14 @@ public:
     return operator OperandRange()[index];
   }
 
+  OperandRange::iterator begin() const {
+    return static_cast<OperandRange>(*this).begin();
+  }
+
+  OperandRange::iterator end() const {
+    return static_cast<OperandRange>(*this).end();
+  }
+
 private:
   /// Update the length of this range to the one provided.
   void updateLength(unsigned newLength);

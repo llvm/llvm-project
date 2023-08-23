@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
+  an overloaded pointer type to support non-0 address spaces.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -70,6 +73,8 @@ Changes to the AMDGPU Backend
 
 * `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
   for raw instruction access.
+
+* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
 
 Changes to the ARM Backend
 --------------------------
@@ -94,6 +99,8 @@ Changes to the PowerPC Backend
 
 Changes to the RISC-V Backend
 -----------------------------
+
+* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -144,8 +151,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* AArch64 Linux targets now provide access to the Thread Local Storage
-  register ``tpidr``.
+* Methods in SBHostOS related to threads have had their implementations
+  removed. These methods will return a value indicating failure.
 
 Changes to Sanitizers
 ---------------------
@@ -153,6 +160,14 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+
+* The ``Flags`` field of ``llvm::opt::Option`` has been split into ``Flags``
+  and ``Visibility`` to simplify option sharing between various drivers (such
+  as ``clang``, ``clang-cl``, or ``flang``) that rely on Clang's Options.td.
+  Overloads of ``llvm::opt::OptTable`` that use ``FlagsToInclude`` have been
+  deprecated. There is a script and instructions on how to resolve conflicts -
+  see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
+  details.
 
 External Open Source Projects Using LLVM 15
 ===========================================

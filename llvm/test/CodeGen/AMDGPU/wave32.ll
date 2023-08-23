@@ -1476,9 +1476,9 @@ define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %a
 ; GFX1032-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX1032-NEXT:    s_load_dword s3, s[0:1], 0x24
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_cmp_ngt_f32_e64 s0, s2, 0
-; GFX1032-NEXT:    v_cmp_nlt_f32_e64 s1, s2, 1.0
-; GFX1032-NEXT:    v_cmp_nlt_f32_e64 s2, s3, 1.0
+; GFX1032-NEXT:    v_cmp_nlt_f32_e64 s0, s2, 1.0
+; GFX1032-NEXT:    v_cmp_nlt_f32_e64 s1, s3, 1.0
+; GFX1032-NEXT:    v_cmp_ngt_f32_e64 s2, s2, 0
 ; GFX1032-NEXT:    s_or_b32 s0, s0, s1
 ; GFX1032-NEXT:    s_or_b32 s0, s0, s2
 ; GFX1032-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
@@ -1493,12 +1493,12 @@ define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %a
 ; GFX1064-LABEL: test_preserve_condition_undef_flag:
 ; GFX1064:       ; %bb.0: ; %bb0
 ; GFX1064-NEXT:    s_clause 0x1
-; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GFX1064-NEXT:    s_load_dword s4, s[0:1], 0x24
+; GFX1064-NEXT:    s_load_dword s4, s[0:1], 0x2c
+; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s2, 0
+; GFX1064-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s4, 1.0
 ; GFX1064-NEXT:    v_cmp_nlt_f32_e64 s[2:3], s2, 1.0
-; GFX1064-NEXT:    v_cmp_nlt_f32_e64 s[4:5], s4, 1.0
+; GFX1064-NEXT:    v_cmp_ngt_f32_e64 s[4:5], s4, 0
 ; GFX1064-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1064-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
 ; GFX1064-NEXT:    s_and_b64 vcc, exec, s[0:1]

@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
 
 // radar 7528255
 void f0(void) {
-  ^(int, double d, char) {}(1, 1.34, 'a'); // expected-warning {{omitting the parameter name in a function definition is a C2x extension}} \
-                                           // expected-warning {{omitting the parameter name in a function definition is a C2x extension}}
+  ^(int, double d, char) {}(1, 1.34, 'a'); // expected-warning {{omitting the parameter name in a function definition is a C23 extension}} \
+                                           // expected-warning {{omitting the parameter name in a function definition is a C23 extension}}
 }
 
 // rdar://problem/8962770

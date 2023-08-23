@@ -67,18 +67,18 @@ define <vscale x 16 x i32> @complex_mul_v16i32(<vscale x 16 x i32> %a, <vscale x
 ; CHECK-NEXT:    mov z25.d, z24.d
 ; CHECK-NEXT:    mov z26.d, z24.d
 ; CHECK-NEXT:    mov z27.d, z24.d
+; CHECK-NEXT:    cmla z24.s, z7.s, z3.s, #0
 ; CHECK-NEXT:    cmla z25.s, z4.s, z0.s, #0
 ; CHECK-NEXT:    cmla z26.s, z5.s, z1.s, #0
 ; CHECK-NEXT:    cmla z27.s, z6.s, z2.s, #0
-; CHECK-NEXT:    cmla z24.s, z7.s, z3.s, #0
+; CHECK-NEXT:    cmla z24.s, z7.s, z3.s, #90
 ; CHECK-NEXT:    cmla z25.s, z4.s, z0.s, #90
 ; CHECK-NEXT:    cmla z26.s, z5.s, z1.s, #90
 ; CHECK-NEXT:    cmla z27.s, z6.s, z2.s, #90
-; CHECK-NEXT:    cmla z24.s, z7.s, z3.s, #90
+; CHECK-NEXT:    mov z3.d, z24.d
 ; CHECK-NEXT:    mov z0.d, z25.d
 ; CHECK-NEXT:    mov z1.d, z26.d
 ; CHECK-NEXT:    mov z2.d, z27.d
-; CHECK-NEXT:    mov z3.d, z24.d
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.experimental.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> %a)

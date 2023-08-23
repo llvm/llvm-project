@@ -279,42 +279,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     AddPath(P, System, false);
     break;
   }
-
-  case llvm::Triple::Haiku:
-    AddPath("/boot/system/non-packaged/develop/headers", System, false);
-    AddPath("/boot/system/develop/headers/os", System, false);
-    AddPath("/boot/system/develop/headers/os/app", System, false);
-    AddPath("/boot/system/develop/headers/os/arch", System, false);
-    AddPath("/boot/system/develop/headers/os/device", System, false);
-    AddPath("/boot/system/develop/headers/os/drivers", System, false);
-    AddPath("/boot/system/develop/headers/os/game", System, false);
-    AddPath("/boot/system/develop/headers/os/interface", System, false);
-    AddPath("/boot/system/develop/headers/os/kernel", System, false);
-    AddPath("/boot/system/develop/headers/os/locale", System, false);
-    AddPath("/boot/system/develop/headers/os/mail", System, false);
-    AddPath("/boot/system/develop/headers/os/media", System, false);
-    AddPath("/boot/system/develop/headers/os/midi", System, false);
-    AddPath("/boot/system/develop/headers/os/midi2", System, false);
-    AddPath("/boot/system/develop/headers/os/net", System, false);
-    AddPath("/boot/system/develop/headers/os/opengl", System, false);
-    AddPath("/boot/system/develop/headers/os/storage", System, false);
-    AddPath("/boot/system/develop/headers/os/support", System, false);
-    AddPath("/boot/system/develop/headers/os/translation", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/graphics", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/input_server", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/mail_daemon", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/registrar", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/screen_saver", System, false);
-    AddPath("/boot/system/develop/headers/os/add-ons/tracker", System, false);
-    AddPath("/boot/system/develop/headers/os/be_apps/Deskbar", System, false);
-    AddPath("/boot/system/develop/headers/os/be_apps/NetPositive", System, false);
-    AddPath("/boot/system/develop/headers/os/be_apps/Tracker", System, false);
-    AddPath("/boot/system/develop/headers/3rdparty", System, false);
-    AddPath("/boot/system/develop/headers/bsd", System, false);
-    AddPath("/boot/system/develop/headers/glibc", System, false);
-    AddPath("/boot/system/develop/headers/posix", System, false);
-    AddPath("/boot/system/develop/headers",  System, false);
-    break;
   case llvm::Triple::RTEMS:
     break;
   case llvm::Triple::Win32:
@@ -388,6 +352,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::PS4:
   case llvm::Triple::PS5:
   case llvm::Triple::Fuchsia:
+  case llvm::Triple::Haiku:
   case llvm::Triple::Hurd:
   case llvm::Triple::Linux:
   case llvm::Triple::Solaris:

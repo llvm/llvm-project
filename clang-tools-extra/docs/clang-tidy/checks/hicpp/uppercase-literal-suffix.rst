@@ -6,4 +6,4 @@ hicpp-uppercase-literal-suffix
 ==============================
 
 The hicpp-uppercase-literal-suffix check is an alias, please see
-`readability-uppercase-literal-suffix <../readability/uppercase-literal-suffix.html>`_ for more information.
+:doc:`readability-uppercase-literal-suffix <../readability/uppercase-literal-suffix>` for more information.

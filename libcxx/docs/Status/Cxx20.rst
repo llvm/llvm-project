@@ -42,8 +42,7 @@ Paper Status
 
    .. [#note-P0591] P0591: The changes in [mem.poly.allocator.mem] are missing.
    .. [#note-P0645] P0645: The paper is implemented but still marked as an incomplete feature
-      (the feature-test macro is not set and the libary is only available when built with ``-fexperimental-library``).
-      Not yet implemented LWG-issues will cause API and ABI breakage.
+      (the feature-test macro is not set).
    .. [#note-P0966] P0966: It was previously erroneously marked as complete in version 8.0. See `bug 45368 <https://llvm.org/PR45368>`__.
    .. [#note-P0619] P0619: Only sections D.8, D.9, D.10 and D.13 are implemented. Sections D.4, D.7, D.11, D.12, and D.14 remain undone.
    .. [#note-P0883.1] P0883: shared_ptr and floating-point changes weren't applied as they themselves aren't implemented yet.

@@ -281,8 +281,14 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto IsUserProvidedNonDelegatingConstructor =
-      allOf(isUserProvided(),
-            unless(anyOf(isInstantiated(), isDelegatingConstructor())));
+      allOf(isUserProvided(), unless(isInstantiated()),
+            unless(isDelegatingConstructor()),
+            ofClass(cxxRecordDecl().bind("parent")),
+            unless(hasAnyConstructorInitializer(cxxCtorInitializer(
+                isWritten(), unless(isMemberInitializer()),
+                hasTypeLoc(loc(
+                    qualType(hasDeclaration(equalsBoundNode("parent")))))))));
+
   auto IsNonTrivialDefaultConstructor = allOf(
       isDefaultConstructor(), unless(isUserProvided()),
       hasParent(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))));

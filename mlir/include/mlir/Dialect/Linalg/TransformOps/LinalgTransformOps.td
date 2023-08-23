@@ -930,6 +930,14 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     provides as operation attributes. The operation returns a handle to the
     padded operation and to the padding operation ("tensor.pad").
 
+    To preserve tensor SSA use-def chains, the unpadded result is copied back to
+    the original destination tensor of the targeted op. The op that copies back
+    the result can be customized with `copy_back_op`:
+
+    * "bufferization.copy_tensor" (default)
+    * "linalg.copy"
+    * "none" (no copy back)
+
     #### Return modes
 
     This operation ignores non-Linalg ops and drops them in the return.
@@ -951,7 +959,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings,
-         DefaultValuedAttr<BoolAttr, "true">:$copy_back);
+         DefaultValuedAttr<StrAttr, "::mlir::bufferization::CopyTensorOp::getOperationName()">:$copy_back_op);
   let results = (outs TransformHandleTypeInterface:$padded,
                       TransformHandleTypeInterface:$pad);
 
@@ -970,10 +978,13 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
                    CArg<"ArrayRef<int64_t>", "{}">:$padToMultipleOf,
                    CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
-                   CArg<"bool", "false">:$copyBack)>
+                   CArg<"StringRef", "::mlir::bufferization::CopyTensorOp::getOperationName()">:$copyBackOp)>
   ];
 
   let extraClassDeclaration = [{
+    /// copy_back_op attribute value indicating that no copy back is desired.
+    static constexpr StringRef kCopyOpNone = "none";
+
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::linalg::LinalgOp target,

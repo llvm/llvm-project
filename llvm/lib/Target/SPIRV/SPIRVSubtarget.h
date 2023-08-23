@@ -17,6 +17,7 @@
 #include "SPIRVFrameLowering.h"
 #include "SPIRVISelLowering.h"
 #include "SPIRVInstrInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"

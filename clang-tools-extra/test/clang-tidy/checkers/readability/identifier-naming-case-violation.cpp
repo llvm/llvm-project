@@ -5,7 +5,7 @@
 // RUN:   readability-identifier-naming.ClassCase: UUPER_CASE, \
 // RUN:   readability-identifier-naming.StructCase: CAMEL, \
 // RUN:   readability-identifier-naming.EnumCase: AnY_cASe, \
-// RUN:   }}" 2>&1 | FileCheck %s --implicit-check-not="{{warning|error}}:"
+// RUN:   }}" -- 2>&1 | FileCheck %s --implicit-check-not="{{warning|error}}:"
 
 // CHECK-DAG: warning: invalid configuration value 'camelback' for option 'readability-identifier-naming.FunctionCase'; did you mean 'camelBack'? [clang-tidy-config]
 // CHECK-DAG: warning: invalid configuration value 'UUPER_CASE' for option 'readability-identifier-naming.ClassCase'; did you mean 'UPPER_CASE'? [clang-tidy-config]

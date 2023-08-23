@@ -416,7 +416,7 @@ define i16 @reduceshuffle_twoin_notlowelt_v16i16(<16 x i16> %a, <16 x i16> %b) {
 
 define i16 @reduceshuffle_twoin_uneven_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_uneven_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 1, i32 3, i32 5, i32 7, i32 17, i32 19, i32 21, i32 8>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
