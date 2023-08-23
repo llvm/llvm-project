@@ -161,6 +161,12 @@ void mlir::populateGpuToGENXConversionPatterns(LLVMTypeConverter &converter,
            GPUIndexIntrinsicOpLowering<gpu::GridDimOp, GENX::GridDimXOp,
                                        GENX::GridDimYOp, GENX::GridDimZOp>>(
           converter);
+  patterns.add<GPUFuncOpLowering>(
+      converter,
+      /*allocaAddrSpace=*/GENX::GENXDialect::kPrivateMemoryAddressSpace,
+      /*workgroupAddrSpace=*/GENX::GENXDialect::kSharedMemoryAddressSpace,
+      StringAttr::get(&converter.getContext(),
+                      GENX::GENXDialect::getKernelFuncAttrName()));
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
