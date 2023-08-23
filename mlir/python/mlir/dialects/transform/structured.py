@@ -3,3 +3,4 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from .._structured_transform_ops_gen import *
+from .._structured_transform_enum_gen import *

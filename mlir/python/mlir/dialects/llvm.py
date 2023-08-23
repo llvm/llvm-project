@@ -2,5 +2,5 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from .._gpu_ops_gen import *
-from .._gpu_enum_gen import *
+from ._llvm_ops_gen import *
+from ._llvm_enum_gen import *

@@ -272,6 +272,11 @@ endfunction()
 #   SOURCES: Same as declare_mlir_python_sources().
 #   SOURCES_GLOB: Same as declare_mlir_python_sources().
 #   DEPENDS: Additional dependency targets.
+#   GEN_ENUM_BINDINGS: Generate enum bindings.
+#   GEN_ENUM_BINDINGS_TD_FILE: Optional Tablegen file to generate enums for (relative to ROOT_DIR).
+#     This file is where the *EnumAttrs are defined, not where the *Enums are defined.
+#     **WARNING**: This arg will shortly be removed when the just-below TODO is satisfied. Use at your
+#     risk.
 #
 # TODO: Right now `TD_FILE` can't be the actual dialect tablegen file, since we
 #       use its path to determine where to place the generated python file. If
@@ -279,9 +284,9 @@ endfunction()
 #       need for the separate "wrapper" .td files
 function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
-    ""
+    "GEN_ENUM_BINDINGS"
     "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME"
-    "SOURCES;SOURCES_GLOB;DEPENDS"
+    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
     ${ARGN})
   # Sources.
   set(_dialect_target "${ARG_ADD_TO_PARENT}.${ARG_DIALECT_NAME}")
@@ -306,11 +311,22 @@ function(declare_mlir_dialect_python_bindings)
     )
     add_public_tablegen_target(${tblgen_target})
 
+    set(_sources ${dialect_filename})
+    if(ARG_GEN_ENUM_BINDINGS OR ARG_GEN_ENUM_BINDINGS_TD_FILE)
+      if(ARG_GEN_ENUM_BINDINGS_TD_FILE)
+        set(td_file "${ARG_ROOT_DIR}/${ARG_GEN_ENUM_BINDINGS_TD_FILE}")
+        set(LLVM_TARGET_DEFINITIONS ${td_file})
+      endif()
+      set(enum_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_enum_gen.py")
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      list(APPEND _sources ${enum_filename})
+    endif()
+
     # Generated.
     declare_mlir_python_sources("${_dialect_target}.ops_gen"
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_dialect_target}"
-      SOURCES "${dialect_filename}"
+      SOURCES ${_sources}
     )
   endif()
 endfunction()
@@ -331,11 +347,16 @@ endfunction()
 #   SOURCES: Same as declare_mlir_python_sources().
 #   SOURCES_GLOB: Same as declare_mlir_python_sources().
 #   DEPENDS: Additional dependency targets.
+#   GEN_ENUM_BINDINGS: Generate enum bindings.
+#   GEN_ENUM_BINDINGS_TD_FILE: Optional Tablegen file to generate enums for (relative to ROOT_DIR).
+#     This file is where the *Attrs are defined, not where the *Enums are defined.
+#     **WARNING**: This arg will shortly be removed when the TODO for
+#     declare_mlir_dialect_python_bindings is satisfied. Use at your risk.
 function(declare_mlir_dialect_extension_python_bindings)
   cmake_parse_arguments(ARG
-    ""
+    "GEN_ENUM_BINDINGS"
     "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME"
-    "SOURCES;SOURCES_GLOB;DEPENDS"
+    "SOURCES;SOURCES_GLOB;DEPENDS;GEN_ENUM_BINDINGS_TD_FILE"
     ${ARGN})
   # Source files.
   set(_extension_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}")
@@ -362,10 +383,21 @@ function(declare_mlir_dialect_extension_python_bindings)
       add_dependencies(${tblgen_target} ${ARG_DEPENDS})
     endif()
 
+    set(_sources ${output_filename})
+    if(ARG_GEN_ENUM_BINDINGS OR ARG_GEN_ENUM_BINDINGS_TD_FILE)
+      if(ARG_GEN_ENUM_BINDINGS_TD_FILE)
+        set(td_file "${ARG_ROOT_DIR}/${ARG_GEN_ENUM_BINDINGS_TD_FILE}")
+        set(LLVM_TARGET_DEFINITIONS ${td_file})
+      endif()
+      set(enum_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_enum_gen.py")
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      list(APPEND _sources ${enum_filename})
+    endif()
+
     declare_mlir_python_sources("${_extension_target}.ops_gen"
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_extension_target}"
-      SOURCES "${output_filename}"
+      SOURCES ${_sources}
     )
   endif()
 endfunction()
