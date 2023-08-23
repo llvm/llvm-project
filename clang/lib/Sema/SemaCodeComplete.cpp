@@ -225,7 +225,6 @@ public:
     case CodeCompletionContext::CCC_ObjCMessageReceiver:
     case CodeCompletionContext::CCC_ParenthesizedExpression:
     case CodeCompletionContext::CCC_Statement:
-    case CodeCompletionContext::CCC_TopLevelOrExpression:
     case CodeCompletionContext::CCC_Recovery:
       if (ObjCMethodDecl *Method = SemaRef.getCurMethodDecl())
         if (Method->isInstanceMethod())
@@ -1851,7 +1850,6 @@ static void AddFunctionSpecifiers(Sema::ParserCompletionContext CCC,
   case Sema::PCC_ObjCInstanceVariableList:
   case Sema::PCC_Expression:
   case Sema::PCC_Statement:
-  case Sema::PCC_TopLevelOrExpression:
   case Sema::PCC_ForInit:
   case Sema::PCC_Condition:
   case Sema::PCC_RecoveryInFunction:
@@ -1909,7 +1907,6 @@ static bool WantTypesInContext(Sema::ParserCompletionContext CCC,
   case Sema::PCC_Type:
   case Sema::PCC_ParenthesizedExpression:
   case Sema::PCC_LocalDeclarationSpecifiers:
-  case Sema::PCC_TopLevelOrExpression:
     return true;
 
   case Sema::PCC_Expression:
@@ -2222,7 +2219,6 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
     break;
 
   case Sema::PCC_RecoveryInFunction:
-  case Sema::PCC_TopLevelOrExpression:
   case Sema::PCC_Statement: {
     if (SemaRef.getLangOpts().CPlusPlus11)
       AddUsingAliasResult(Builder, Results);
@@ -4212,8 +4208,6 @@ mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
 
   case Sema::PCC_LocalDeclarationSpecifiers:
     return CodeCompletionContext::CCC_Type;
-  case Sema::PCC_TopLevelOrExpression:
-    return CodeCompletionContext::CCC_TopLevelOrExpression;
   }
 
   llvm_unreachable("Invalid ParserCompletionContext!");
@@ -4354,7 +4348,6 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
     break;
 
   case PCC_Statement:
-  case PCC_TopLevelOrExpression:
   case PCC_ParenthesizedExpression:
   case PCC_Expression:
   case PCC_ForInit:
@@ -4392,7 +4385,6 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   case PCC_ParenthesizedExpression:
   case PCC_Expression:
   case PCC_Statement:
-  case PCC_TopLevelOrExpression:
   case PCC_RecoveryInFunction:
     if (S->getFnParent())
       AddPrettyFunctionResults(getLangOpts(), Results);
