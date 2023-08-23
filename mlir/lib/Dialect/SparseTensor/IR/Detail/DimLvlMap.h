@@ -122,6 +122,7 @@ public:
   /// with respect to the given ranks.
   [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
+  std::string str() const;
   void print(llvm::raw_ostream &os) const;
   void print(AsmPrinter &printer) const;
   void dump() const;
@@ -251,6 +252,7 @@ public:
   bool isFunctionOf(VarSet const &vars) const;
   void getFreeVars(VarSet &vars) const;
 
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
@@ -306,6 +308,7 @@ public:
   bool isFunctionOf(VarSet const &vars) const;
   void getFreeVars(VarSet &vars) const;
 
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
@@ -339,6 +342,7 @@ public:
   AffineMap getDimToLvlMap(MLIRContext *context) const;
   AffineMap getLvlToDimMap(MLIRContext *context) const;
 
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
