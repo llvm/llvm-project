@@ -20,6 +20,7 @@
 #include "flang/Semantics/expression.h"
 #include <list>
 #include <map>
+#include <sstream>
 
 namespace Fortran::semantics {
 
@@ -273,6 +274,8 @@ private:
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void EnsureAllocatableOrPointer(
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
+  void AddRoutineInfoToSymbol(
+      Symbol &, const parser::OpenACCRoutineConstruct &);
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -832,14 +835,88 @@ Symbol *AccAttributeVisitor::ResolveName(
   return prev;
 }
 
+template <typename T>
+common::IfNoLvalue<T, T> FoldExpr(
+    evaluate::FoldingContext &foldingContext, T &&expr) {
+  return evaluate::Fold(foldingContext, std::move(expr));
+}
+
+template <typename T>
+MaybeExpr EvaluateExpr(
+    Fortran::semantics::SemanticsContext &semanticsContext, const T &expr) {
+  return FoldExpr(
+      semanticsContext.foldingContext(), AnalyzeExpr(semanticsContext, expr));
+}
+
+void AccAttributeVisitor::AddRoutineInfoToSymbol(
+    Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
+  if (symbol.has<SubprogramDetails>()) {
+    Fortran::semantics::OpenACCRoutineInfo info;
+    const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
+    for (const Fortran::parser::AccClause &clause : clauses.v) {
+      if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+        info.set_isSeq();
+      } else if (const auto *gangClause =
+                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
+        info.set_isGang();
+        if (gangClause->v) {
+          const Fortran::parser::AccGangArgList &x = *gangClause->v;
+          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+            if (const auto *dim =
+                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
+              if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                info.set_gangDim(*v);
+              }
+            }
+          }
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+        info.set_isVector();
+      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+        info.set_isWorker();
+      } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
+        info.set_isNohost();
+      } else if (const auto *bindClause =
+                     std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
+        if (const auto *name =
+                std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
+          if (Symbol *sym = ResolveName(*name, true)) {
+            info.set_bindName(sym->name().ToString());
+          } else {
+            context_.Say((*name).source,
+                "No function or subroutine declared for '%s'"_err_en_US,
+                (*name).source);
+          }
+        } else if (const auto charExpr =
+                       std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
+                           &bindClause->v.u)) {
+          auto *charConst =
+              Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
+                  *charExpr);
+          std::string str{std::get<std::string>(charConst->t)};
+          std::stringstream bindName;
+          bindName << "\"" << str << "\"";
+          info.set_bindName(std::move(bindName.str()));
+        }
+      }
+    }
+    symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
+  }
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
   if (optName) {
-    if (!ResolveName(*optName, true)) {
+    if (Symbol *sym = ResolveName(*optName, true)) {
+      Symbol &ultimate{sym->GetUltimate()};
+      AddRoutineInfoToSymbol(ultimate, x);
+    } else {
       context_.Say((*optName).source,
           "No function or subroutine declared for '%s'"_err_en_US,
           (*optName).source);
     }
+  } else {
+    AddRoutineInfoToSymbol(*currScope().symbol(), x);
   }
   return true;
 }
