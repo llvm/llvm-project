@@ -101,6 +101,18 @@ createFrontendAction(CompilerInstance &ci) {
   llvm_unreachable("Invalid program action!");
 }
 
+static void emitUnknownDiagWarning(clang::DiagnosticsEngine &diags,
+                                   clang::diag::Flavor flavor,
+                                   llvm::StringRef prefix,
+                                   llvm::StringRef opt) {
+  llvm::StringRef suggestion =
+      clang::DiagnosticIDs::getNearestOption(flavor, opt);
+  diags.Report(clang::diag::warn_unknown_diag_option)
+      << (flavor == clang::diag::Flavor::WarningOrError ? 0 : 1)
+      << (prefix.str() += std::string(opt)) << !suggestion.empty()
+      << (prefix.str() += std::string(suggestion));
+}
+
 // Remarks are ignored by default in Diagnostic.td, hence, we have to
 // enable them here before execution. Clang follows same idea using
 // ProcessWarningOptions in Warnings.cpp
@@ -122,6 +134,13 @@ updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
     bool isPositive = !remarkOpt.startswith("no-");
     if (!isPositive)
       remarkOpt = remarkOpt.substr(3);
+
+    // Verify that this is a valid optimization remarks option
+    if (diagIDs->getDiagnosticsInGroup(flavor, remarkOpt, diags)) {
+      emitUnknownDiagWarning(diagsEng, flavor, isPositive ? "-R" : "-Rno-",
+                             remarkOpt);
+      return;
+    }
 
     diagsEng.setSeverityForGroup(flavor, remarkOpt,
                                  isPositive ? clang::diag::Severity::Remark
