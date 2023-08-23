@@ -69,14 +69,15 @@ std::unique_ptr<MCObjectWriter> MCAsmBackend::createCASObjectWriter(
         cas::ObjectStore &, raw_ostream *)>
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-        SerializeObjectFile) const {
+        SerializeObjectFile,
+    raw_pwrite_stream *CasIDOS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::MachO:
     return createMachOCASWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
                                 TT, CAS, Mode, OS, Endian == support::little,
                                 CreateFromMcAssembler, SerializeObjectFile,
-                                MCOpts.ResultCallBack);
+                                MCOpts.ResultCallBack, CasIDOS);
   default:
     llvm_unreachable("unexpected object format");
   }

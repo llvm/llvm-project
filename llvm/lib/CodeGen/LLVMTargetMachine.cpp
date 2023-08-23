@@ -124,13 +124,11 @@ addPassesToGenerateCode(LLVMTargetMachine &TM, PassManagerBase &PM,
   return PassConfig;
 }
 
-bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
-                                      raw_pwrite_stream &Out,
-                                      raw_pwrite_stream *DwoOut,
-                                      CodeGenFileType FileType,
-                                      MCContext &Context) {
+bool LLVMTargetMachine::addAsmPrinter(
+    PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, MCContext &Context, raw_pwrite_stream *CasIDOS) {
   Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
-      createMCStreamer(Out, DwoOut, FileType, Context);
+      createMCStreamer(Out, DwoOut, FileType, Context, CasIDOS);
   if (auto Err = MCStreamerOrErr.takeError())
     return true;
 
@@ -146,7 +144,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
 
 Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-    MCContext &Context) {
+    MCContext &Context, raw_pwrite_stream *CasIDOS) {
   if (Options.MCOptions.MCSaveTempLabels)
     Context.setAllowTemporaryLabels(false);
 
@@ -228,7 +226,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
       CASBackendWriter = MAB->createCASObjectWriter(
           Out, getTargetTriple(), *Options.MCOptions.CAS, Options.MCOptions,
           Options.MCOptions.CASObjMode, CreateFromMcAssembler,
-          SerializeObjectFile);
+          SerializeObjectFile, CasIDOS);
     }
     // END MCCAS
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
@@ -254,7 +252,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
 bool LLVMTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
-    MachineModuleInfoWrapperPass *MMIWP) {
+    MachineModuleInfoWrapperPass *MMIWP, raw_pwrite_stream *CasIDOS) {
   // Add common CodeGen passes.
   if (!MMIWP)
     MMIWP = new MachineModuleInfoWrapperPass(this);
@@ -264,7 +262,8 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     return true;
 
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
+    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext(),
+                      CasIDOS))
       return true;
   } else {
     // MIR printing is redundant with -filetype=null.
