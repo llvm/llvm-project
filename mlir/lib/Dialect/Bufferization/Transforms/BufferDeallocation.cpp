@@ -644,6 +644,23 @@ struct DefaultAllocationInterface
     return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
         .getResult();
   }
+  static ::mlir::HoistingKind getHoistingKind() {
+    return static_cast<HoistingKind>(static_cast<uint8_t>(HoistingKind::Loop) |
+                                     static_cast<uint8_t>(HoistingKind::Block));
+  }
+  static ::std::optional<::mlir::Operation *>
+  buildPromotedAlloc(OpBuilder &builder, Value alloc) {
+    Operation *definingOp = alloc.getDefiningOp();
+    return builder.create<memref::AllocaOp>(
+        definingOp->getLoc(), cast<MemRefType>(definingOp->getResultTypes()[0]),
+        definingOp->getOperands(), definingOp->getAttrs());
+  }
+};
+
+struct DefaultAutomaticAllocationHoistingInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAutomaticAllocationHoistingInterface, memref::AllocaOp> {
+  static ::mlir::HoistingKind getHoistingKind() { return HoistingKind::Loop; }
 };
 
 struct DefaultReallocationInterface
@@ -720,6 +737,8 @@ void bufferization::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+    memref::AllocaOp::attachInterface<
+        DefaultAutomaticAllocationHoistingInterface>(*ctx);
     memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
   });
 }
