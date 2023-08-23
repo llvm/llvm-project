@@ -571,8 +571,10 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 
   // Primitive values.
   if (std::optional<PrimType> T = classify(E->getType())) {
-    assert(E->getNumInits() == 1);
     assert(!DiscardResult);
+    if (E->getNumInits() == 0)
+      return this->visitZeroInitializer(E->getType(), E);
+    assert(E->getNumInits() == 1);
     return this->delegate(E->inits()[0]);
   }
 
