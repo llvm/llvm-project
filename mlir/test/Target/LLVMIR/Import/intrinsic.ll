@@ -466,18 +466,18 @@ define void @trap_intrinsics() {
 ; CHECK-LABEL:  llvm.func @memcpy_test
 define void @memcpy_test(i32 %0, ptr %1, ptr %2) {
   ; CHECK: %[[CST:.+]] = llvm.mlir.constant(10 : i64) : i64
-  ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   call void @llvm.memcpy.p0.p0.i32(ptr %1, ptr %2, i32 %0, i1 false)
-  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
+  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = 0 : i8, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %1, ptr %2, i64 10, i1 false)
-  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = 0 : i8, len = 10 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   call void @llvm.memcpy.inline.p0.p0.i32(ptr %1, ptr %2, i32 10, i1 false)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @memmove_test
 define void @memmove_test(i32 %0, ptr %1, ptr %2) {
-  ; CHECK: "llvm.intr.memmove"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  ; CHECK: "llvm.intr.memmove"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   call void @llvm.memmove.p0.p0.i32(ptr %1, ptr %2, i32 %0, i1 false)
   ret void
 }

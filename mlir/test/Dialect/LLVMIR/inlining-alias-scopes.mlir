@@ -355,9 +355,9 @@ llvm.func @supported_operations(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.pt
   %0 = llvm.mlir.constant(5 : i64) : i32
   llvm.store %0, %arg1 : i32, !llvm.ptr
   %1 = llvm.load %arg1 : !llvm.ptr -> i32
-  "llvm.intr.memcpy"(%arg0, %arg1, %1) <{ isVolatile = false }> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  "llvm.intr.memmove"(%arg0, %arg1, %1) <{ isVolatile = false }> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  "llvm.intr.memcpy.inline"(%arg0, %arg1) <{ isVolatile = false, len = 4 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  "llvm.intr.memcpy"(%arg0, %arg1, %1) <{ isVolatile = 0 : i8 }> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memmove"(%arg0, %arg1, %1) <{ isVolatile = 0 : i8 }> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy.inline"(%arg0, %arg1) <{ isVolatile = 0 : i8, len = 4 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   %2 = llvm.trunc %0 : i32 to i8
   "llvm.intr.memset"(%arg0, %2, %1) <{ isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %3 = llvm.cmpxchg %arg0, %0, %1 seq_cst seq_cst : !llvm.ptr, i32
