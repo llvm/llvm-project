@@ -5588,6 +5588,59 @@ TEST(TransferTest, BuiltinFunctionModeled) {
       });
 }
 
+// Check that a callee of a member operator call is modeled as a `PointerValue`.
+// Member operator calls are unusual in that their callee is a pointer that
+// stems from a `FunctionToPointerDecay`. In calls to non-operator non-static
+// member functions, the callee is a `MemberExpr` (which does not have pointer
+// type).
+// We want to make sure that we produce a pointer value for the callee in this
+// specific scenario and that its storage location is durable (for convergence).
+TEST(TransferTest, MemberOperatorCallModelsPointerForCallee) {
+  std::string Code = R"(
+    struct S {
+      bool operator!=(S s);
+    };
+    void target() {
+      S s;
+      (void)(s != s);
+      (void)(s != s);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        using ast_matchers::selectFirst;
+        using ast_matchers::match;
+        using ast_matchers::traverse;
+        using ast_matchers::cxxOperatorCallExpr;
+
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto Matches = match(
+            traverse(TK_AsIs, cxxOperatorCallExpr().bind("call")), ASTCtx);
+
+        ASSERT_EQ(Matches.size(), 2);
+
+        auto *Call1 = Matches[0].getNodeAs<CXXOperatorCallExpr>("call");
+        auto *Call2 = Matches[1].getNodeAs<CXXOperatorCallExpr>("call");
+
+        ASSERT_THAT(Call1, NotNull());
+        ASSERT_THAT(Call2, NotNull());
+
+        EXPECT_EQ(cast<ImplicitCastExpr>(Call1->getCallee())->getCastKind(),
+                  CK_FunctionToPointerDecay);
+        EXPECT_EQ(cast<ImplicitCastExpr>(Call2->getCallee())->getCastKind(),
+                  CK_FunctionToPointerDecay);
+
+        auto *Ptr1 = cast<PointerValue>(Env.getValue(*Call1->getCallee()));
+        auto *Ptr2 = cast<PointerValue>(Env.getValue(*Call2->getCallee()));
+
+        ASSERT_EQ(&Ptr1->getPointeeLoc(), &Ptr2->getPointeeLoc());
+      });
+}
+
 // Check that fields of anonymous records are modeled.
 TEST(TransferTest, AnonymousStruct) {
   std::string Code = R"(

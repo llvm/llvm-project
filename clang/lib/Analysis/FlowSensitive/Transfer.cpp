@@ -175,12 +175,16 @@ public:
     const ValueDecl *VD = S->getDecl();
     assert(VD != nullptr);
 
-    // `DeclRefExpr`s to fields and non-static methods aren't glvalues, and
-    // there's also no sensible `Value` we can assign to them, so skip them.
-    if (isa<FieldDecl>(VD))
-      return;
-    if (auto *Method = dyn_cast<CXXMethodDecl>(VD);
-        Method && !Method->isStatic())
+    // Some `DeclRefExpr`s aren't glvalues, so we can't associate them with a
+    // `StorageLocation`, and there's also no sensible `Value` that we can
+    // assign to them. Examples:
+    // - Non-static member variables
+    // - Non static member functions
+    //   Note: Member operators are an exception to this, but apparently only
+    //   if the `DeclRefExpr` is used within the callee of a
+    //   `CXXOperatorCallExpr`. In other cases, for example when applying the
+    //   address-of operator, the `DeclRefExpr` is a prvalue.
+    if (!S->isGLValue())
       return;
 
     auto *DeclLoc = Env.getStorageLocation(*VD);
