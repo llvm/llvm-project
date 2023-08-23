@@ -105,10 +105,14 @@ public:
   // TODO(wrengr): Most if not all of these don't actually need to be
   // methods, they could be free-functions instead.
   //
+  Var castAnyVar() const;
+  std::optional<Var> dyn_castAnyVar() const;
   SymVar castSymVar() const;
+  std::optional<SymVar> dyn_castSymVar() const;
   Var castDimLvlVar() const;
+  std::optional<Var> dyn_castDimLvlVar() const;
   int64_t castConstantValue() const;
-  std::optional<int64_t> tryGetConstantValue() const;
+  std::optional<int64_t> dyn_castConstantValue() const;
   bool hasConstantValue(int64_t val) const;
   DimLvlExpr getLHS() const;
   DimLvlExpr getRHS() const;
@@ -155,6 +159,12 @@ public:
     return expr->getExprKind() == Kind;
   }
   constexpr explicit DimExpr(AffineExpr expr) : DimLvlExpr(Kind, expr) {}
+
+  LvlVar castLvlVar() const { return castDimLvlVar().cast<LvlVar>(); }
+  std::optional<LvlVar> dyn_castLvlVar() const {
+    const auto var = dyn_castDimLvlVar();
+    return var ? std::make_optional(var->cast<LvlVar>()) : std::nullopt;
+  }
 };
 static_assert(IsZeroCostAbstraction<DimExpr>);
 
@@ -169,6 +179,12 @@ public:
     return expr->getExprKind() == Kind;
   }
   constexpr explicit LvlExpr(AffineExpr expr) : DimLvlExpr(Kind, expr) {}
+
+  DimVar castDimVar() const { return castDimLvlVar().cast<DimVar>(); }
+  std::optional<DimVar> dyn_castDimVar() const {
+    const auto var = dyn_castDimLvlVar();
+    return var ? std::make_optional(var->cast<DimVar>()) : std::nullopt;
+  }
 };
 static_assert(IsZeroCostAbstraction<LvlExpr>);
 
