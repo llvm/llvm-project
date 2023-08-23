@@ -670,7 +670,7 @@ public:
       return false;
 
     // Skip if there is already a member with the same index.
-    if (Members.find(Key) != Members.end())
+    if (Members.contains(Key))
       return false;
 
     if (Key > LargestKey) {
