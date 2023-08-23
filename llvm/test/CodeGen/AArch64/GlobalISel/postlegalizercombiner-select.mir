@@ -27,7 +27,7 @@ body:             |
     ; CHECK-LABEL: name: test_combine_select_undef_res0_res1
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1

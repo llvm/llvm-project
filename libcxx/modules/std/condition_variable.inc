@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-
+#ifndef _LIBCPP_HAS_NO_THREADS
   // [thread.condition.condvar], class condition_variable
   using std::condition_variable;
   // [thread.condition.condvarany], class condition_variable_any
@@ -18,5 +18,5 @@ export namespace std {
   using std::notify_all_at_thread_exit;
 
   using std::cv_status;
-
+#endif // _LIBCPP_HAS_NO_THREADS
 } // namespace std

@@ -2929,22 +2929,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   llvm_unreachable("unsupported declarative directive");
 }
 
-template <typename R, typename T>
-std::optional<R>
-GetConstExpr(Fortran::semantics::SemanticsContext &semanticsContext,
-             const T &x) {
-  using DefaultCharConstantType = Fortran::evaluate::Ascii;
-  if (const auto *expr{Fortran::semantics::GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{Fortran::evaluate::Fold(
-        semanticsContext.foldingContext(), Fortran::common::Clone(*expr))};
-    if constexpr (std::is_same_v<R, std::string>) {
-      return Fortran::evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-          foldExpr);
-    }
-  }
-  return std::nullopt;
-}
-
 static void attachRoutineInfo(mlir::func::FuncOp func,
                               mlir::SymbolRefAttr routineAttr) {
   llvm::SmallVector<mlir::SymbolRefAttr> routines;
@@ -3030,7 +3014,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
                      std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
                          &bindClause->v.u)) {
         const std::optional<std::string> bindName =
-            GetConstExpr<std::string>(semanticsContext, *charExpr);
+            Fortran::semantics::GetConstExpr<std::string>(semanticsContext,
+                                                          *charExpr);
         if (!bindName)
           routineOp.emitError("Could not retrieve the bind name");
         routineOp.setBindName(builder.getStringAttr(*bindName));

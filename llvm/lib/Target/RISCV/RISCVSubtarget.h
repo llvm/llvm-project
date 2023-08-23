@@ -166,6 +166,9 @@ public:
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
+  bool hasVInstructionsF16Minimal() const {
+    return HasStdExtZvfhmin || HasStdExtZvfh;
+  }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
   bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }

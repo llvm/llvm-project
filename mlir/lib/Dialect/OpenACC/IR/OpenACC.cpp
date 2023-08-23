@@ -1125,6 +1125,21 @@ LogicalResult acc::ShutdownOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SetOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::SetOp::verify() {
+  Operation *currOp = *this;
+  while ((currOp = currOp->getParentOp()))
+    if (isComputeOperation(currOp))
+      return emitOpError("cannot be nested in a compute operation");
+  if (!getDeviceType() && !getDefaultAsync() && !getDeviceNum())
+    return emitOpError("at least one default_async, device_num, or device_type "
+                       "operand must appear");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // UpdateOp
 //===----------------------------------------------------------------------===//
 

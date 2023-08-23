@@ -397,6 +397,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   DeclarationFragments QualsFragments = getFragmentsForQualifiers(SQT.Quals),
                        TypeFragments =
                            getFragmentsForType(SQT.Ty, Context, After);
+  if (QT.getAsString() == "_Bool")
+    TypeFragments.replace("bool", 0);
+
   if (QualsFragments.getFragments().empty())
     return TypeFragments;
 
@@ -421,6 +424,16 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     return TypeFragments.appendSpace().append(std::move(QualsFragments));
 
   return QualsFragments.appendSpace().append(std::move(TypeFragments));
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForNamespace(
+    const NamespaceDecl *Decl) {
+  DeclarationFragments Fragments;
+  Fragments.append("namespace", DeclarationFragments::FragmentKind::Keyword);
+  if (!Decl->isAnonymousNamespace())
+    Fragments.appendSpace().append(
+        Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments

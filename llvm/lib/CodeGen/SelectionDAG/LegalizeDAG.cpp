@@ -5459,6 +5459,23 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(NewAtomic.getValue(1));
     break;
   }
+  case ISD::SPLAT_VECTOR: {
+    SDValue Scalar = Node->getOperand(0);
+    MVT ScalarType = Scalar.getSimpleValueType();
+    MVT NewScalarType = NVT.getVectorElementType();
+    if (ScalarType.isInteger()) {
+      Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NewScalarType, Scalar);
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
+      break;
+    }
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NewScalarType, Scalar);
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+    Results.push_back(
+        DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
+    break;
+  }
   }
 
   // Replace the original node with the legalized result.

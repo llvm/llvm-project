@@ -2315,6 +2315,8 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::FMul:
   case Instruction::FDiv:
   case Instruction::FRem:
+  case Instruction::And:
+  case Instruction::Or:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
@@ -2322,8 +2324,6 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
   case Instruction::Xor:
     return true;
   default:
@@ -2582,14 +2582,6 @@ Constant *ConstantExpr::getMul(Constant *C1, Constant *C2,
   unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
                    (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
   return get(Instruction::Mul, C1, C2, Flags);
-}
-
-Constant *ConstantExpr::getAnd(Constant *C1, Constant *C2) {
-  return get(Instruction::And, C1, C2);
-}
-
-Constant *ConstantExpr::getOr(Constant *C1, Constant *C2) {
-  return get(Instruction::Or, C1, C2);
 }
 
 Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {

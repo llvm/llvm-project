@@ -634,7 +634,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     if (ch == '(') {
       if (parenthesisNesting_++ == 0) {
         isPossibleMacroCall_ = tokens.SizeInTokens() > 0 &&
-            preprocessor_.IsNameDefined(
+            preprocessor_.IsFunctionLikeDefinition(
                 tokens.TokenAt(tokens.SizeInTokens() - 1));
       }
     } else if (ch == ')' && parenthesisNesting_ > 0) {
@@ -1148,8 +1148,7 @@ bool Prescanner::FreeFormContinuation() {
 // arguments to span multiple lines.
 bool Prescanner::IsImplicitContinuation() const {
   return !inPreprocessorDirective_ && !inCharLiteral_ && isPossibleMacroCall_ &&
-      parenthesisNesting_ > 0 &&
-      !preprocessor_.anyMacroWithUnbalancedParentheses() && !IsAtEnd() &&
+      parenthesisNesting_ > 0 && !IsAtEnd() &&
       ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 

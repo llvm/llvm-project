@@ -29,7 +29,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Tensor1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ]
 }>
 
 #Tensor2 = #sparse_tensor.encoding<{

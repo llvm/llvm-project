@@ -438,7 +438,11 @@ private:
   Value *expandAddToGEP(const SCEV *Op, Type *Ty, Value *V);
 
   /// Find a previous Value in ExprValueMap for expand.
-  Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+  /// DropPoisonGeneratingInsts is populated with instructions for which
+  /// poison-generating flags must be dropped if the value is reused.
+  Value *FindValueInExprValueMap(
+      const SCEV *S, const Instruction *InsertPt,
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   Value *expand(const SCEV *S);
 

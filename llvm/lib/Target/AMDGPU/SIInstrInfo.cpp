@@ -2369,7 +2369,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   assert (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
   if (ST.hasMovB64() &&
-      AMDGPU::isLegal64BitDPPControl(
+      AMDGPU::isLegalDPALU_DPPControl(
         getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
     MI.setDesc(get(AMDGPU::V_MOV_B64_dpp));
     return std::pair(&MI, nullptr);
@@ -4809,20 +4809,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
 
-    int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
-
     if (Opcode != AMDGPU::V_MOV_B64_DPP_PSEUDO &&
-        ((DstIdx >= 0 &&
-          (Desc.operands()[DstIdx].RegClass == AMDGPU::VReg_64RegClassID ||
-           Desc.operands()[DstIdx].RegClass ==
-               AMDGPU::VReg_64_Align2RegClassID)) ||
-         ((Src0Idx >= 0 &&
-           (Desc.operands()[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID ||
-            Desc.operands()[Src0Idx].RegClass ==
-                AMDGPU::VReg_64_Align2RegClassID)))) &&
-        !AMDGPU::isLegal64BitDPPControl(DC)) {
+        !AMDGPU::isLegalDPALU_DPPControl(DC) && AMDGPU::isDPALU_DPP(Desc)) {
       ErrInfo = "Invalid dpp_ctrl value: "
-                "64 bit dpp only support row_newbcast";
+                "DP ALU dpp only support row_newbcast";
       return false;
     }
   }

@@ -192,6 +192,9 @@ bool BracesAroundStatementsCheck::checkStmt(
   while (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
 
+  const SourceManager &SM = *Result.SourceManager;
+  const ASTContext *Context = Result.Context;
+
   // 1) If there's a corresponding "else" or "while", the check inserts "} "
   // right before that token.
   // 2) If there's a multi-line block comment starting on the same line after
@@ -204,10 +207,15 @@ bool BracesAroundStatementsCheck::checkStmt(
     return false;
   }
 
+  // When TreeTransform, Stmt in constexpr IfStmt will be transform to NullStmt.
+  // This NullStmt can be detected according to beginning token.
+  const SourceLocation StmtBeginLoc = S->getBeginLoc();
+  if (isa<NullStmt>(S) && StmtBeginLoc.isValid() &&
+      getTokenKind(StmtBeginLoc, SM, Context) == tok::l_brace)
+    return false;
+
   if (!InitialLoc.isValid())
     return false;
-  const SourceManager &SM = *Result.SourceManager;
-  const ASTContext *Context = Result.Context;
 
   // Convert InitialLoc to file location, if it's on the same macro expansion
   // level as the start of the statement. We also need file locations for

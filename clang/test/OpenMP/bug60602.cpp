@@ -347,7 +347,7 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18kernel_within_loopPiS_ii_l13
-// CHECK-SAME: (i64 noundef [[N:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: (i64 noundef [[N:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
@@ -571,7 +571,7 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
 //
 //
 // CHECK-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-NEXT:    ret void

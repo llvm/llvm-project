@@ -704,12 +704,17 @@ private:
   /// in the argument differ from those in the current cursor.
   uint64_t lexDiff(const uint64_t *lvlCoords) const {
     const uint64_t lvlRank = getLvlRank();
-    for (uint64_t l = 0; l < lvlRank; ++l)
-      if (lvlCoords[l] > lvlCursor[l])
+    for (uint64_t l = 0; l < lvlRank; ++l) {
+      const auto crd = lvlCoords[l];
+      const auto cur = lvlCursor[l];
+      if (crd > cur || (crd == cur && !isUniqueLvl(l)))
         return l;
-      else
-        assert(lvlCoords[l] == lvlCursor[l] && "non-lexicographic insertion");
-    assert(0 && "duplicate insertion");
+      if (crd < cur) {
+        assert(false && "non-lexicographic insertion");
+        return -1u;
+      }
+    }
+    assert(false && "duplicate insertion");
     return -1u;
   }
 
@@ -1200,7 +1205,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
     if (!isUniqueLvl(l) && isCompressedLvl(l)) {
-      // A `compressed-nu` level marks the start of trailing COO start level.
+      // A `compressed_nu` level marks the start of trailing COO start level.
       // Since the coordinate buffer used for trailing COO are passed in as AoS
       // scheme, and SparseTensorStorage uses a SoA scheme, we can not simply
       // copy the value from the provided buffers.
@@ -1208,7 +1213,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       break;
     }
     assert(!isSingletonLvl(l) &&
-           "Singleton level not following a compressed-nu level");
+           "Singleton level not following a compressed_nu level");
     if (isCompressedLvl(l)) {
       P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
       C *crdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);

@@ -334,6 +334,7 @@ public:
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
     bool InSuspendBlock = false;
+    bool MayCoroHandleEscape = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -345,6 +346,10 @@ public:
 
   bool inSuspendBlock() const {
     return isCoroutine() && CurCoro.InSuspendBlock;
+  }
+
+  bool mayCoroHandleEscape() const {
+    return isCoroutine() && CurCoro.MayCoroHandleEscape;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
@@ -4287,16 +4292,16 @@ public:
                                   unsigned IntID);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
-  llvm::Value *EmitSMELd1St1(SVETypeFlags TypeFlags,
+  llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                              llvm::SmallVectorImpl<llvm::Value *> &Ops,
                              unsigned IntID);
-  llvm::Value *EmitSMEReadWrite(SVETypeFlags TypeFlags,
+  llvm::Value *EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
                                 llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                 unsigned IntID);
-  llvm::Value *EmitSMEZero(SVETypeFlags TypeFlags,
+  llvm::Value *EmitSMEZero(const SVETypeFlags &TypeFlags,
                            llvm::SmallVectorImpl<llvm::Value *> &Ops,
                            unsigned IntID);
-  llvm::Value *EmitSMELdrStr(SVETypeFlags TypeFlags,
+  llvm::Value *EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                              llvm::SmallVectorImpl<llvm::Value *> &Ops,
                              unsigned IntID);
   llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);

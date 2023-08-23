@@ -47,7 +47,7 @@ SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
 }
 
 void SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(
-    SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
+    const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
   OS << "// Bits for subtarget features that participate in "
      << "instruction matching.\n";
   OS << "enum SubtargetFeatureBits : "

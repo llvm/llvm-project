@@ -209,6 +209,7 @@ def parse_commandline_args(parser):
         "--version", type=int, default=1, help="The version of output format"
     )
     args = parser.parse_args()
+    # TODO: This should not be handled differently from the other options
     global _verbose, _global_value_regex, _global_hex_value_regex
     _verbose = args.verbose
     _global_value_regex = args.global_value_regex
@@ -220,6 +221,11 @@ def parse_args(parser, argv):
     args = parser.parse_args(argv)
     if args.version >= 2:
         args.function_signature = True
+    # TODO: This should not be handled differently from the other options
+    global _verbose, _global_value_regex, _global_hex_value_regex
+    _verbose = args.verbose
+    _global_value_regex = args.global_value_regex
+    _global_hex_value_regex = args.global_hex_value_regex
     return args
 
 

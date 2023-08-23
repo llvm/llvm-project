@@ -23,12 +23,23 @@ using namespace mlir::vector;
 // Returns `vector<1xT>` if `oldType` only has one element.
 static VectorType trimLeadingOneDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
-  ArrayRef<int64_t> newShape =
-      oldShape.drop_while([](int64_t dim) { return dim == 1; });
+  ArrayRef<int64_t> newShape = oldShape;
+
+  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
+  ArrayRef<bool> newScalableDims = oldScalableDims;
+
+  while (!newShape.empty() && newShape.front() == 1 &&
+         !newScalableDims.front()) {
+    newShape = newShape.drop_front(1);
+    newScalableDims = newScalableDims.drop_front(1);
+  }
+
   // Make sure we have at least 1 dimension per vector type requirements.
-  if (newShape.empty())
+  if (newShape.empty()) {
     newShape = oldShape.take_back();
-  return VectorType::get(newShape, oldType.getElementType());
+    newScalableDims = oldType.getScalableDims().take_back();
+  }
+  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
 /// Return a smallVector of size `rank` containing all zeros.
@@ -406,6 +417,18 @@ struct CastAwayContractionLeadingOneDim
   }
 };
 
+/// Looks at elementwise operations on vectors with at least one leading
+/// dimension equal 1, e.g. vector<1x[4]x1xf32> (but not vector<2x[4]x1xf32>),
+/// and cast aways the leading one dimensions (_plural_) and then broadcasts
+/// the results.
+///
+/// Example before:
+///     %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
+/// Example after:
+///    %2 = arith.mulf %0, %1 : vector<4x1xf32>
+///    %3 = vector.broadcast %2 : vector<4x1xf32> to vector<1x4x1xf32>
+///
+/// Does support scalable vectors.
 class CastAwayElementwiseLeadingOneDim : public RewritePattern {
 public:
   CastAwayElementwiseLeadingOneDim(MLIRContext *context,

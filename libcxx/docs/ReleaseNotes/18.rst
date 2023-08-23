@@ -38,6 +38,7 @@ What's New in Libc++ 18.0.0?
 
 Implemented Papers
 ------------------
+- P2497R0 - Testing for success or failure of ``<charconv>`` functions
 
 
 Improvements and New Features

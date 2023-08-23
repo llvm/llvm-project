@@ -1132,7 +1132,7 @@ public:
         return CGM.GetAddrOfConstantStringFromLiteral(S).getPointer();
       return nullptr;
     case CK_NullToPointer:
-      if (llvm::Constant *C = Visit(subExpr, destType))
+      if (Visit(subExpr, destType))
         return CGM.EmitNullConstant(destType);
       return nullptr;
 

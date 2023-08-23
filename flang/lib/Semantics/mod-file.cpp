@@ -412,6 +412,35 @@ void ModFileWriter::PutDECStructure(
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
 
+static void PutOpenACCRoutineInfo(
+    llvm::raw_ostream &os, const SubprogramDetails &details) {
+  for (auto info : details.openACCRoutineInfos()) {
+    os << "!$acc routine";
+    if (info.isSeq()) {
+      os << " seq";
+    }
+    if (info.isGang()) {
+      os << " gang";
+      if (info.gangDim() > 0) {
+        os << "(dim: " << info.gangDim() << ")";
+      }
+    }
+    if (info.isVector()) {
+      os << " vector";
+    }
+    if (info.isWorker()) {
+      os << " worker";
+    }
+    if (info.isNohost()) {
+      os << " nohost";
+    }
+    if (info.bindName()) {
+      os << " bind(" << *info.bindName() << ")";
+    }
+    os << "\n";
+  }
+}
+
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
   if (const Symbol * interface{details.moduleInterface()}) {
@@ -513,6 +542,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     decls_ << "import::" << import << "\n";
   }
   os << writer.decls_.str();
+  PutOpenACCRoutineInfo(os, details);
   os << "end\n";
   if (isInterface) {
     os << "end interface\n";

@@ -15,11 +15,10 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Target/LLVM/NVVM/Target.h"
-#include "mlir/Target/LLVM/ROCDL/Target.h"
-#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -46,13 +45,13 @@ public:
 void GpuModuleToBinaryPass::getDependentDialects(
     DialectRegistry &registry) const {
   // Register all GPU related translations.
-  registerLLVMDialectTranslation(registry);
-  registerGPUDialectTranslation(registry);
+  registry.insert<gpu::GPUDialect>();
+  registry.insert<LLVM::LLVMDialect>();
 #if MLIR_CUDA_CONVERSIONS_ENABLED == 1
-  registerNVVMTarget(registry);
+  registry.insert<NVVM::NVVMDialect>();
 #endif
 #if MLIR_ROCM_CONVERSIONS_ENABLED == 1
-  registerROCDLTarget(registry);
+  registry.insert<ROCDL::ROCDLDialect>();
 #endif
 }
 

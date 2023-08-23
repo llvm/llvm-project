@@ -115,25 +115,10 @@ entry:
 }
 
 define <3 x float> @fabs_v3f32(<3 x float> %a) {
-; CHECK-SD-LABEL: fabs_v3f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fabs_v3f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
-; CHECK-GI-NEXT:    fabs v0.4s, v0.4s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fabs_v3f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fabs v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = call <3 x float> @llvm.fabs.v3f32(<3 x float> %a)
   ret <3 x float> %c
@@ -213,29 +198,19 @@ define <7 x half> @fabs_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[4]
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    fabs v2.4s, v3.4s
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fabs v1.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    fabs v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[3]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    fabs v1.4s, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v3.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v4.h[0]
@@ -249,33 +224,7 @@ define <7 x half> @fabs_v7f16(<7 x half> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v7f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-FP16-NEXT:    fabs v0.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.fabs.v7f16(<7 x half> %a)

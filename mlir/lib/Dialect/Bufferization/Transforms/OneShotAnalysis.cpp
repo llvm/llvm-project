@@ -446,6 +446,26 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
   }
 }
 
+/// Return 'true' if a tensor that is equivalent to `other` can be found in the
+/// reverse use-def chain of `start`. Note: If an OpOperand bufferizes out of
+/// place along that use-def chain, the two tensors may not materialize as
+/// equivalent buffers (but separate allocations).
+///
+/// Note: This function also requires that the two tensors have equivalent
+/// indexing. I.e., the tensor types do not change along the use-def chain,
+/// apart from static <-> dynamic dim casts.
+static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
+                                                   Value start, Value other) {
+  TraversalConfig config;
+  config.followEquivalentOnly = true;
+  config.alwaysIncludeLeaves = false;
+  config.followSameTypeOrCastsOnly = true;
+  return !state
+              .findValueInReverseUseDefChain(
+                  start, [&](Value v) { return v == other; }, config)
+              .empty();
+}
+
 /// Given sets of uses and writes, return true if there is a RaW conflict under
 /// the assumption that all given reads/writes alias the same buffer and that
 /// all given writes bufferize inplace.
@@ -545,15 +565,19 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       // Two equivalent operands of the same op are not conflicting if the op
       // bufferizes to element-wise access. I.e., all loads at a position happen
       // before all stores to the same position.
-      if (conflictingWritingOp == readingOp &&
-          state.areEquivalentBufferizedValues(uRead->get(),
-                                              uConflictingWrite->get())) {
+      if (conflictingWritingOp == readingOp) {
         if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
-          if (bufferizableOp.bufferizesToElementwiseAccess(state)) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "  no conflict: op bufferizes to element-wise access\n");
-            continue;
+          if (bufferizableOp.bufferizesToElementwiseAccess(
+                  state, {uRead, uConflictingWrite})) {
+            if (hasEquivalentValueInReverseUseDefChain(
+                    state, uRead->get(), uConflictingWrite->get()) ||
+                hasEquivalentValueInReverseUseDefChain(
+                    state, uConflictingWrite->get(), uRead->get())) {
+              LLVM_DEBUG(
+                  llvm::dbgs()
+                  << "  no conflict: op bufferizes to element-wise access\n");
+              continue;
+            }
           }
         }
       }

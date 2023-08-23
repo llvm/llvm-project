@@ -63,7 +63,6 @@ body:             |
 
 ...
 
-# FIXME: Probably should be able to replace this.
 ---
 name:            mul_0_cant_replace
 tracksRegLiveness: true
@@ -75,9 +74,8 @@ body:             |
     ; CHECK-LABEL: name: mul_0_cant_replace
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
     ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %op:gpr(s32) = G_MUL %x, %cst
+    ; CHECK-NEXT: %op:gpr(s32) = COPY %cst(s32)
     ; CHECK-NEXT: $w0 = COPY %op(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
@@ -312,7 +310,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %zero:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: %zext_zero:_(s64) = G_ZEXT %zero(s8)
-    ; CHECK-NEXT: $x0 = COPY %zext_zero(s64)
+    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT i64 72340172838076673
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %zext_zero, %c
+    ; CHECK-NEXT: $x0 = COPY %mul(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %zext_zero:_(s64) = G_ZEXT %zero(s8)
@@ -431,5 +431,31 @@ body:             |
     %5:_(s128) = G_OR %2, %4
     G_STORE %5(s128), %0(p0) :: (store (s128), align 4)
     RET_ReallyLR
+
+...
+---
+name:            mul_1_shift_of_shift
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: mul_1_shift_of_shift
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[OR]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s64) = G_SHL %0, %1(s64)
+    %3:_(s64) = G_OR %2, %1
+    %4:_(s64) = G_MUL %3, %1
+    $x0 = COPY %4(s64)
+    RET_ReallyLR implicit $x0
 
 ...
