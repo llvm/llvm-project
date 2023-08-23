@@ -3149,7 +3149,17 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 }
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
-  return hasAny64BitVGPROperands(OpDesc);
+  switch (OpDesc.getOpcode()) {
+  case AMDGPU::V_MUL_LO_U32_e64_dpp:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx12:
+    return true;
+  default:
+    return hasAny64BitVGPROperands(OpDesc);
+  }
 }
 
 } // namespace AMDGPU

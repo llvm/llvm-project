@@ -1545,8 +1545,9 @@ multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
 
 multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> {
   defm NAME : VOP2_Real_e32<Gen, op>,
+              VOP2_Real_dpp<Gen, op>,
               VOP2_Real_e64<Gen, op>,
-              VOP2_Real_dpp<Gen, op>;
+              VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
   def Gen.Suffix#"_alias" : MnemonicAlias<alias, NAME>, Requires<[Gen.AssemblerPredicate]>;
 }
 

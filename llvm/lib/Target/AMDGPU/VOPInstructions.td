@@ -858,8 +858,9 @@ class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
   let Size = 12;
   let VOP3 = 1;
   let AsmMatchConverter = "cvtVOP3DPP";
-  let AsmVariantName = !if(P.HasExtVOP3DPP, AMDGPUAsmVariants.VOP3_DPP,
-                                            AMDGPUAsmVariants.Disable);
+  let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
+                           AMDGPUAsmVariants.VOP3_DPP,
+                           AMDGPUAsmVariants.Disable);
 }
 
 class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
@@ -932,8 +933,9 @@ class VOP3_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
   let OutOperandList = P.OutsVOP3DPP;
   let AsmMatchConverter = "cvtVOP3DPP";
   let VOP3 = 1;
-  let AsmVariantName = !if(P.HasExtVOP3DPP, AMDGPUAsmVariants.VOP3_DPP,
-                                            AMDGPUAsmVariants.Disable);
+  let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
+                           AMDGPUAsmVariants.VOP3_DPP,
+                           AMDGPUAsmVariants.Disable);
   let Size = 12;
 }
 
@@ -1314,7 +1316,8 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag,
+                    list<Predicate> predicates = []> {
   def _e64 : VOP3InstBase<OpName, P, node>;
   if P.HasExtVOP3DPP then
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
@@ -1322,7 +1325,7 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
     }
   else if P.HasExt64BitDPP then
     def _e64_dpp  : VOP3_DPP_Pseudo <OpName, P> {
-      let OtherPredicates = [HasDPALU_DPP];
+      let OtherPredicates = !listconcat(predicates, [HasDPALU_DPP]);
     }
 }
 
@@ -1655,12 +1658,9 @@ multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op> :
 multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
                                        string asmName, bit isSingle = 0> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-  let AsmString = asmName # ps.AsmOperands,
-      IsSingle = !or(isSingle, ps.Pfl.IsSingle) in
-    def _e64_gfx12 :
-      VOP3_Real_Gen<ps, GFX12Gen, asmName>,
-      VOP3be_gfx11_gfx12<op, ps.Pfl>,
-      MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Only]>;
+  defm NAME : VOP3be_Realtriple<GFX12Gen, op, !or(isSingle, ps.Pfl.IsSingle),
+                                opName, asmName>;
+  def : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Only]>;
 }
 
 multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,

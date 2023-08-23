@@ -1705,6 +1705,11 @@ class getVGPRSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), VGPRSrc_64, VGPRSrc_32);
 }
 
+// VGPR only VOP3DPP src with 9 bit encoding
+class getVOP3DPPVRegSrcForVT<ValueType VT> {
+  RegisterOperand ret = !if(!eq(VT.Size, 64), VRegSrc_64, VRegSrc_32);
+}
+
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
@@ -1712,7 +1717,9 @@ class getVOP3DPPSrcForVT<ValueType VT> {
       !if (!eq(VT.Value, i1.Value), SSrc_i1,
            !if (isFP,
                 !if (!eq(VT.Value, f16.Value), VCSrc_f16,
-                     !if (!eq(VT.Value, v2f16.Value), VCSrc_v2f16, VCSrc_f32)),
+                     !if (!eq(VT.Value, v2f16.Value), VCSrc_v2f16,
+                          !if (!eq(VT.Value, f64.Value), VCSrc_f64,
+                               VCSrc_f32))),
                 !if (!eq(VT.Value, i16.Value), VCSrc_b16,
                      !if (!eq(VT.Value, v2i16.Value), VCSrc_v2b16,
                           !if (!eq(VT.Value, i64.Value), VCSrc_b64,
@@ -2426,7 +2433,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = getVGPRSrcForVT<Src0VT>.ret;
-  field RegisterOperand Src1VOP3DPP = VRegSrc_32;
+  field RegisterOperand Src1VOP3DPP = getVOP3DPPVRegSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;

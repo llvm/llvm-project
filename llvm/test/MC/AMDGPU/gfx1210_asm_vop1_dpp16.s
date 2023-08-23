@@ -80,19 +80,19 @@ v_floor_f64 v[2:3], v[4:5] row_share:1
 // GFX12-ERR-NEXT:{{^}}                           ^
 
 v_frexp_exp_i32_f64 v2, v[4:5] row_share:1
-// GFX1210: v_frexp_exp_i32_f64_dpp v2, v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x60,0x04,0x7e,0x04,0x51,0x01,0xff]
+// GFX1210: v_frexp_exp_i32_f64_dpp v2, v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x78,0x04,0x7e,0x04,0x51,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 // GFX12-ERR-NEXT:{{^}}v_frexp_exp_i32_f64 v2, v[4:5] row_share:1
 // GFX12-ERR-NEXT:{{^}}                               ^
 
 v_frexp_mant_f64 v[2:3], v[4:5] row_share:1
-// GFX1210: v_frexp_mant_f64_dpp v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x62,0x04,0x7e,0x04,0x51,0x01,0xff]
+// GFX1210: v_frexp_mant_f64_dpp v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x7a,0x04,0x7e,0x04,0x51,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 // GFX12-ERR-NEXT:{{^}}v_frexp_mant_f64 v[2:3], v[4:5] row_share:1
 // GFX12-ERR-NEXT:{{^}}                                ^
 
 v_fract_f64 v[2:3], v[4:5] row_share:1
-// GFX1210: v_fract_f64_dpp v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x64,0x04,0x7e,0x04,0x51,0x01,0xff]
+// GFX1210: v_fract_f64_dpp v[2:3], v[4:5] row_share:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x7c,0x04,0x7e,0x04,0x51,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 // GFX12-ERR-NEXT:{{^}}v_fract_f64 v[2:3], v[4:5] row_share:1
 // GFX12-ERR-NEXT:{{^}}                           ^
