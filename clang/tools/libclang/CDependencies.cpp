@@ -110,6 +110,11 @@ void clang_experimental_DependencyScannerServiceOptions_setCASDatabases(
   unwrap(Opts)->Cache = DBs.Cache;
 }
 
+void clang_experimental_DependencyScannerServiceOptions_setCASOptions(
+    CXDependencyScannerServiceOptions Opts, CXCASOptions CASOpts) {
+  unwrap(Opts)->CASOpts = *cas::unwrap(CASOpts);
+}
+
 void clang_experimental_DependencyScannerServiceOptions_setObjectStore(
     CXDependencyScannerServiceOptions Opts, CXCASObjectStore CAS) {
   unwrap(Opts)->CAS = cas::unwrap(CAS)->CAS;

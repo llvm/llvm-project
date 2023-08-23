@@ -2,9 +2,9 @@
 // RUN: split-file %s %t
 
 // Scan repeatedly
-// RUN: c-index-test core -scan-deps %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output1
-// RUN: c-index-test core -scan-deps %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output2
-// RUN: c-index-test core -scan-deps %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output3
+// RUN: c-index-test core -scan-deps -working-dir %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output1
+// RUN: c-index-test core -scan-deps -working-dir %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output2
+// RUN: c-index-test core -scan-deps -working-dir %S -- clang_tool -c %t/main.c -fmodules -fmodules-cache-path=%t/module-cache -fimplicit-modules -fimplicit-module-maps 2>&1 > %t/output3
 
 // Ensure the output is identical each time
 // RUN: diff %t/output1 %t/output2
