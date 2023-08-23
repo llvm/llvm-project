@@ -21,7 +21,12 @@ function(_get_common_compile_options output_var flags)
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
-    list(APPEND compile_options "-ffreestanding")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+    endif()
+
     list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
