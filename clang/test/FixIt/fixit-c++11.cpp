@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++11 -Wno-anonymous-pack-parens -Wno-deprecated-literal-operator %s
+// RUN: %clang_cc1 -verify -std=c++11 -Wno-anonymous-pack-parens %s
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -x c++ -std=c++11 -fixit %t
 // RUN: %clang_cc1 -Wall -pedantic -x c++ -std=c++11 %t
@@ -68,9 +68,9 @@ void S2::f(int i) {
 }
 
 #define bar "bar"
-const char *p = "foo" bar;
+const char *p = "foo"bar; // expected-error {{requires a space between}}
 #define ord - '0'
-int k = '4' ord;
+int k = '4'ord; // expected-error {{requires a space between}}
 
 void operator"x" _y(char); // expected-error {{must be '""'}}
 void operator L"" _z(char); // expected-error {{encoding prefix}}

@@ -2025,11 +2025,53 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   }
 
   // C++11 [lex.ext]p10, [usrlit.suffix]p1: A program containing a ud-suffix
-  // that does not start with an underscore is ill-formed. We assume a suffix
-  // beginning with a UCN or UTF-8 character is more likely to be a ud-suffix
-  // than a macro, however, and accept that.
-  if (!Consumed)
+  // that does not start with an underscore is ill-formed. As a conforming
+  // extension, we treat all such suffixes as if they had whitespace before
+  // them. We assume a suffix beginning with a UCN or UTF-8 character is more
+  // likely to be a ud-suffix than a macro, however, and accept that.
+  if (!Consumed) {
+    bool IsUDSuffix = false;
+    if (C == '_')
+      IsUDSuffix = true;
+    else if (IsStringLiteral && LangOpts.CPlusPlus14) {
+      // In C++1y, we need to look ahead a few characters to see if this is a
+      // valid suffix for a string literal or a numeric literal (this could be
+      // the 'operator""if' defining a numeric literal operator).
+      const unsigned MaxStandardSuffixLength = 3;
+      char Buffer[MaxStandardSuffixLength] = { C };
+      unsigned Consumed = Size;
+      unsigned Chars = 1;
+      while (true) {
+        unsigned NextSize;
+        char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize, LangOpts);
+        if (!isAsciiIdentifierContinue(Next)) {
+          // End of suffix. Check whether this is on the allowed list.
+          const StringRef CompleteSuffix(Buffer, Chars);
+          IsUDSuffix =
+              StringLiteralParser::isValidUDSuffix(LangOpts, CompleteSuffix);
+          break;
+        }
+
+        if (Chars == MaxStandardSuffixLength)
+          // Too long: can't be a standard suffix.
+          break;
+
+        Buffer[Chars++] = Next;
+        Consumed += NextSize;
+      }
+    }
+
+    if (!IsUDSuffix) {
+      if (!isLexingRawMode())
+        Diag(CurPtr, LangOpts.MSVCCompat
+                         ? diag::ext_ms_reserved_user_defined_literal
+                         : diag::ext_reserved_user_defined_literal)
+            << FixItHint::CreateInsertion(getSourceLocation(CurPtr), " ");
+      return CurPtr;
+    }
+
     CurPtr = ConsumeChar(CurPtr, Size, Result);
+  }
 
   Result.setFlag(Token::HasUDSuffix);
   while (true) {

@@ -64,6 +64,8 @@ int test_specialization() {
 
 namespace dr2521 { // dr2521: 17
 #if __cplusplus >= 201103L
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wdeprecated-literal-operator"
 long double operator""      _\u03C0___(long double);
 // expected-warning@-1 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
 // expected-warning@-2 {{user-defined literal suffixes containing '__' are reserved}}
@@ -75,6 +77,7 @@ operator""  _div();
 using ::dr2521::operator"" _\u03C0___;
 using ::dr2521::operator""_div;
 // expected-warning@-2 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
+#pragma clang diagnostic pop
 #endif
 } // namespace dr2521
 

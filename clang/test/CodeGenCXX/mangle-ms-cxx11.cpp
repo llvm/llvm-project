@@ -210,7 +210,7 @@ void A::foo() __restrict && {}
 // CHECK-DAG: @"?foo@A@PR19361@@QIHAEXXZ"
 }
 
-int operator""_deg(long double) { return 0; }
+int operator"" _deg(long double) { return 0; }
 // CHECK-DAG: @"??__K_deg@@YAHO@Z"
 
 template <char...>
