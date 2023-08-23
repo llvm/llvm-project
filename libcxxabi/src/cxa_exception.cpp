@@ -206,12 +206,12 @@ void __cxa_free_exception(void *thrown_object) throw() {
     __aligned_free_with_fallback((void *)raw_buffer);
 }
 
-__cxa_exception *__cxa_init_primary_exception(void *object, std::type_info* tinfo,
-		void (_LIBCXXABI_DTOR_FUNC *dest)(void *)) throw() {
+__cxa_exception* __cxa_init_primary_exception(void* object, std::type_info* tinfo,
+                                              void(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw() {
     __cxa_exception* exception_header = cxa_exception_from_thrown_object(object);
     exception_header->referenceCount = 0;
     exception_header->unexpectedHandler = std::get_unexpected();
-    exception_header->terminateHandler  = std::get_terminate();
+    exception_header->terminateHandler = std::get_terminate();
     exception_header->exceptionType = tinfo;
     exception_header->exceptionDestructor = dest;
     setOurExceptionClass(&exception_header->unwindHeader);
@@ -219,7 +219,6 @@ __cxa_exception *__cxa_init_primary_exception(void *object, std::type_info* tinf
 
     return exception_header;
 }
-
 
 //  This function shall allocate a __cxa_dependent_exception and
 //  return a pointer to it. (Really to the object, not past its' end).
@@ -274,11 +273,11 @@ __cxa_throw(void *thrown_object, std::type_info *tinfo, void *(_LIBCXXABI_DTOR_F
 #else
 __cxa_throw(void *thrown_object, std::type_info *tinfo, void (_LIBCXXABI_DTOR_FUNC *dest)(void *)) {
 #endif
-    __cxa_eh_globals *globals = __cxa_get_globals();
+    __cxa_eh_globals* globals = __cxa_get_globals();
     globals->uncaughtExceptions += 1;   // Not atomically, since globals are thread-local
 
-    __cxa_exception *exception_header = __cxa_init_primary_exception(thrown_object, tinfo, dest);
-    exception_header->referenceCount = 1;  // This is a newly allocated exception, no need for thread safety.
+    __cxa_exception* exception_header = __cxa_init_primary_exception(thrown_object, tinfo, dest);
+    exception_header->referenceCount = 1; // This is a newly allocated exception, no need for thread safety.
 
 #if __has_feature(address_sanitizer)
     // Inform the ASan runtime that now might be a good time to clean stuff up.
