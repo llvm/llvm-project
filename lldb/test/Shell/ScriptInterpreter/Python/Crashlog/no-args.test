@@ -6,6 +6,6 @@
 # CHECK: Symbolicate one or more darwin crash log files to provide source file and line
 # CHECK: positional arguments:
 # CHECK-NEXT: FILE                  crash report(s) to symbolicate (default: None)
-# CHECK: options:
+# CHECK: option
 # CHECK:  -h, --help            show this help message and exit
 
