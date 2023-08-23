@@ -44,16 +44,16 @@ static bool isKnownControlFlowInterface(Operation *op) {
 /// and it supports the dominate block hoisting.
 static bool allowAllocDominateBlockHoisting(Operation *op) {
   auto allocOp = dyn_cast<AllocationOpInterface>(op);
-  return allocOp && (static_cast<uint8_t>(allocOp.getHoistingKind()) &
-                     static_cast<uint8_t>(HoistingKind::Block));
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Block);
 }
 
 /// Returns true if the given operation implements the AllocationOpInterface
 /// and it supports the loop hoisting.
 static bool allowAllocLoopHoisting(Operation *op) {
   auto allocOp = dyn_cast<AllocationOpInterface>(op);
-  return allocOp && (static_cast<uint8_t>(allocOp.getHoistingKind()) &
-                     static_cast<uint8_t>(HoistingKind::Loop));
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Loop);
 }
 
 /// Check if the size of the allocation is less than the given size. The
