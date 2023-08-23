@@ -291,6 +291,80 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   return CI;
 }
 
+/// IsConstantOne - Return true only if val is constant int 1
+static bool IsConstantOne(Value *val) {
+  assert(val && "IsConstantOne does not work with nullptr val");
+  const ConstantInt *CVal = dyn_cast<ConstantInt>(val);
+  return CVal && CVal->isOne();
+}
+
+static CallInst *createMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
+                              Value *ArraySize, ArrayRef<OperandBundleDef> OpB,
+                              Function *MallocF, const Twine &Name) {
+  // malloc(type) becomes:
+  //       bitcast (i8* malloc(typeSize)) to type*
+  // malloc(type, arraySize) becomes:
+  //       bitcast (i8* malloc(typeSize*arraySize)) to type*
+  if (!ArraySize)
+    ArraySize = ConstantInt::get(IntPtrTy, 1);
+  else if (ArraySize->getType() != IntPtrTy) {
+    ArraySize = CastInst::CreateIntegerCast(ArraySize, IntPtrTy, false, "");
+  }
+
+  if (!IsConstantOne(ArraySize)) {
+    if (IsConstantOne(AllocSize)) {
+      AllocSize = ArraySize; // Operand * 1 = Operand
+    } else if (Constant *CO = dyn_cast<Constant>(ArraySize)) {
+      Constant *Scale =
+          ConstantExpr::getIntegerCast(CO, IntPtrTy, false /*ZExt*/);
+      // Malloc arg is constant product of type size and array size
+      AllocSize = ConstantExpr::getMul(Scale, cast<Constant>(AllocSize));
+    } else {
+      // Multiply type size by the array size...
+      AllocSize = BinaryOperator::CreateMul(ArraySize, AllocSize, "mallocsize");
+    }
+  }
+
+  assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
+  // Create the call to Malloc.
+  Module *M = BB->getParent()->getParent();
+  Type *BPTy = PointerType::getUnqual(BB->getContext());
+  FunctionCallee MallocFunc = MallocF;
+  if (!MallocFunc)
+    // prototype malloc as "void *malloc(size_t)"
+    MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
+  PointerType *AllocPtrType = PointerType::getUnqual(AllocTy);
+  CallInst *MCall = nullptr;
+  Instruction *Result = nullptr;
+
+  MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "MCall");
+
+  MCall->setTailCall();
+  if (Function *F = dyn_cast<Function>(MallocFunc.getCallee())) {
+    MCall->setCallingConv(F->getCallingConv());
+    if (!F->returnDoesNotAlias())
+      F->setReturnDoesNotAlias();
+  }
+  assert(!MCall->getType()->isVoidTy() && "Malloc has void return type");
+
+  return MCall;
+}
+
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      Function *MallocF, const Twine &Name) {
+
+  return createMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
+                      MallocF, Name);
+}
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      ArrayRef<OperandBundleDef> OpB,
+                                      Function *MallocF, const Twine &Name) {
+  return createMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, OpB, MallocF,
+                      Name);
+}
+
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
