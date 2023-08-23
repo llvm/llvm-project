@@ -16,19 +16,46 @@ using namespace mlir::sparse_tensor::ir_detail;
 // `DimLvlExpr` implementation.
 //===----------------------------------------------------------------------===//
 
+Var DimLvlExpr::castAnyVar() const {
+  assert(expr && "uninitialized DimLvlExpr");
+  const auto var = dyn_castAnyVar();
+  assert(var && "expected DimLvlExpr to be a Var");
+  return *var;
+}
+
+std::optional<Var> DimLvlExpr::dyn_castAnyVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 SymVar DimLvlExpr::castSymVar() const {
   return SymVar(expr.cast<AffineSymbolExpr>());
+}
+
+std::optional<SymVar> DimLvlExpr::dyn_castSymVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  return std::nullopt;
 }
 
 Var DimLvlExpr::castDimLvlVar() const {
   return Var(getAllowedVarKind(), expr.cast<AffineDimExpr>());
 }
 
+std::optional<Var> DimLvlExpr::dyn_castDimLvlVar() const {
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 int64_t DimLvlExpr::castConstantValue() const {
   return expr.cast<AffineConstantExpr>().getValue();
 }
 
-std::optional<int64_t> DimLvlExpr::tryGetConstantValue() const {
+std::optional<int64_t> DimLvlExpr::dyn_castConstantValue() const {
   const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
   return k ? std::make_optional(k.getValue()) : std::nullopt;
 }
@@ -98,7 +125,7 @@ static std::optional<MatchNeg> matchNeg(DimLvlExpr expr) {
       return MatchNeg{DimLvlExpr{expr.getExprKind(), AffineExpr()}, val};
   }
   if (op == AffineExprKind::Mul)
-    if (const auto rval = rhs.tryGetConstantValue(); rval && *rval < 0)
+    if (const auto rval = rhs.dyn_castConstantValue(); rval && *rval < 0)
       return MatchNeg{lhs, *rval};
   return std::nullopt;
 }
