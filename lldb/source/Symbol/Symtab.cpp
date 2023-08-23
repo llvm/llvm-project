@@ -260,6 +260,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeMSVC:
   case Mangled::eManglingSchemeRustV0:
   case Mangled::eManglingSchemeD:
+  case Mangled::eManglingSchemeSwift:
     return false;
 
 #ifdef LLDB_ENABLE_SWIFT
