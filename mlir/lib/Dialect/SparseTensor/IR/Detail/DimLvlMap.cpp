@@ -98,6 +98,12 @@ void DimLvlExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+std::string DimLvlExpr::str() const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os);
+  return os.str();
+}
 void DimLvlExpr::print(AsmPrinter &printer) const {
   print(printer.getStream());
 }
@@ -220,6 +226,12 @@ void DimSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
 }
+std::string DimSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
+}
 void DimSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
 }
@@ -259,6 +271,12 @@ void LvlSpec::getFreeVars(VarSet &vars) const { vars.add(expr); }
 void LvlSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
+}
+std::string LvlSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
 }
 void LvlSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
@@ -344,6 +362,12 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
 void DimLvlMap::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
+}
+std::string DimLvlMap::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
 }
 void DimLvlMap::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
