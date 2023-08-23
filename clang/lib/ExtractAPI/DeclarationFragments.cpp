@@ -397,6 +397,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   DeclarationFragments QualsFragments = getFragmentsForQualifiers(SQT.Quals),
                        TypeFragments =
                            getFragmentsForType(SQT.Ty, Context, After);
+  if (QT.getAsString() == "_Bool")
+    TypeFragments.replace("bool", 0);
+
   if (QualsFragments.getFragments().empty())
     return TypeFragments;
 
