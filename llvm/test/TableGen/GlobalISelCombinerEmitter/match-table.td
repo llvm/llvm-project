@@ -64,7 +64,7 @@ def PatFragTest0 : GICombineRule<
 
 // TODO: add test with temp reg use
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
   WipOpcodeTest1,
   InstTest0,

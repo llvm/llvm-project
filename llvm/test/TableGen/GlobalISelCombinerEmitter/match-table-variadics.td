@@ -28,7 +28,7 @@ def InstTest3 : GICombineRule<
   (match (G_UNMERGE_VALUES $a, $b, $c, $d)),
   (apply [{ APPLY }])>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest0,
   InstTest1,
   InstTest2,
