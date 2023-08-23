@@ -264,6 +264,16 @@ def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
     "$_builder.getI32IntegerAttr($_self)">;
 }
 
+def TestPropOp : TEST_Op<"prop">,
+  Arguments<(ins Variadic<Index>:$upperInits,
+      I32ElementsAttr:$transforms)>,
+  Results<(outs Variadic<AnyType>:$results)> {
+  DerivedAttr upperLen = DerivedAttr<"uint32_t", [{
+    return getUpperInits().size() / getTransforms().size();
+  }], [{ $_builder.getI32IntegerAttr($_self) }]>;
+}
+
+
 def StringElementsAttrOp : TEST_Op<"string_elements_attr"> {
   let arguments = (ins
       StringElementsAttr:$scalar_string_attr
