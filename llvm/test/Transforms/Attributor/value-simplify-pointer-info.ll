@@ -61,6 +61,8 @@
 ; CHECK: @[[GLOBAL:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_STY:%.*]] zeroinitializer, align 8
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
 ; CHECK: @[[GC:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
+; CHECK: @[[GRS:[a-zA-Z0-9_$"\\.-]+]] = internal thread_local global i32 undef
+; CHECK: @[[GRS2:[a-zA-Z0-9_$"\\.-]+]] = global i32 undef
 ;.
 define void @write_arg(ptr %p, i32 %v) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
@@ -3135,6 +3137,75 @@ m:
   ret void
 }
 
+@GRS = internal thread_local global i32 undef
+@GRS2 = global i32 undef
+
+define i32 @recSimplify(i32 %v, i1 %cond) {
+; TUNIT: Function Attrs: nofree nosync nounwind
+; TUNIT-LABEL: define {{[^@]+}}@recSimplify
+; TUNIT-SAME: (i32 [[V:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR14]] {
+; TUNIT-NEXT:    br i1 [[COND]], label [[REC:%.*]], label [[COMP:%.*]]
+; TUNIT:       rec:
+; TUNIT-NEXT:    [[RV:%.*]] = call i32 @recSimplify(i32 [[V]], i1 noundef false) #[[ATTR14]]
+; TUNIT-NEXT:    ret i32 [[RV]]
+; TUNIT:       comp:
+; TUNIT-NEXT:    store i32 [[V]], ptr @GRS, align 4
+; TUNIT-NEXT:    store i32 1, ptr @GRS2, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @GRS, align 4
+; TUNIT-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR23:[0-9]+]]
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @recSimplify2() #[[ATTR24:[0-9]+]]
+; TUNIT-NEXT:    ret i32 [[R]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind
+; CGSCC-LABEL: define {{[^@]+}}@recSimplify
+; CGSCC-SAME: (i32 [[V:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR17]] {
+; CGSCC-NEXT:    br i1 [[COND]], label [[REC:%.*]], label [[COMP:%.*]]
+; CGSCC:       rec:
+; CGSCC-NEXT:    [[RV:%.*]] = call i32 @recSimplify(i32 [[V]], i1 noundef false) #[[ATTR17]]
+; CGSCC-NEXT:    ret i32 [[RV]]
+; CGSCC:       comp:
+; CGSCC-NEXT:    store i32 [[V]], ptr @GRS, align 4
+; CGSCC-NEXT:    store i32 1, ptr @GRS2, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @GRS, align 4
+; CGSCC-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
+; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR27:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @recSimplify2() #[[ATTR27]]
+; CGSCC-NEXT:    ret i32 [[R]]
+;
+  br i1 %cond, label %rec, label %comp
+rec:
+  %rv = call i32 @recSimplify(i32 %v, i1 false)
+  ret i32 %rv
+comp:
+  store i32 %v, ptr @GRS
+  %s1 = select i1 %cond, i32 1, i32 1
+  %s2 = select i1 %cond, i32 1, i32 %s1
+  store i32 %s2, ptr @GRS2
+  %l = load i32, ptr @GRS
+  %c = icmp eq i32 %l, %s2
+  call void @llvm.assume(i1 %c)
+  %r = call i32 @recSimplify2()
+  ret i32 %r
+}
+
+define internal i32 @recSimplify2() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
+; TUNIT-LABEL: define {{[^@]+}}@recSimplify2
+; TUNIT-SAME: () #[[ATTR6]] {
+; TUNIT-NEXT:    [[R:%.*]] = load i32, ptr @GRS, align 4
+; TUNIT-NEXT:    ret i32 [[R]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
+; CGSCC-LABEL: define {{[^@]+}}@recSimplify2
+; CGSCC-SAME: () #[[ATTR7]] {
+; CGSCC-NEXT:    [[R:%.*]] = load i32, ptr @GRS, align 4
+; CGSCC-NEXT:    ret i32 [[R]]
+;
+  %r = load i32, ptr @GRS
+  ret i32 %r
+}
+
 declare void @llvm.assume(i1 noundef)
 
 
@@ -3197,6 +3268,8 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR20]] = { norecurse }
 ; TUNIT: attributes #[[ATTR21]] = { nounwind }
 ; TUNIT: attributes #[[ATTR22]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR23]] = { nofree }
+; TUNIT: attributes #[[ATTR24]] = { nofree nosync nounwind memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -3225,6 +3298,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR24]] = { nounwind }
 ; CGSCC: attributes #[[ATTR25]] = { nofree nounwind }
 ; CGSCC: attributes #[[ATTR26]] = { nofree nounwind willreturn }
+; CGSCC: attributes #[[ATTR27]] = { nofree }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; TUNIT: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}
