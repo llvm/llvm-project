@@ -896,7 +896,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
           std::string str{std::get<std::string>(charConst->t)};
           std::stringstream bindName;
           bindName << "\"" << str << "\"";
-          info.set_bindName(std::move(bindName.str()));
+          info.set_bindName(bindName.str());
         }
       }
     }
