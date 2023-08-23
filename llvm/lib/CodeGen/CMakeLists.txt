@@ -200,6 +200,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterCoalescer.cpp
   RegisterPressure.cpp
   RegisterScavenging.cpp
+  GCEmptyBasicBlocks.cpp
   RemoveRedundantDebugValues.cpp
   RenameIndependentSubregs.cpp
   MachineStableHash.cpp
