@@ -1603,32 +1603,6 @@ public:
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
-  /// Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
-  /// 2. Call malloc with that argument.
-  /// 3. Bitcast the result of the malloc call to the specified type.
-  static Instruction *CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
   /// Generate the IR for a call to the builtin free function.
   static Instruction *CreateFree(Value *Source, Instruction *InsertBefore);
   static Instruction *CreateFree(Value *Source, BasicBlock *InsertAtEnd);

@@ -1290,9 +1290,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // setjmpTable = (int *) malloc(40);
   Type *IntPtrTy = getAddrIntType(&M);
   Constant *size = ConstantInt::get(IntPtrTy, 40);
-  Instruction *SetjmpTable =
-      CallInst::CreateMalloc(SetjmpTableSize, IntPtrTy, IRB.getInt32Ty(), size,
-                             nullptr, nullptr, "setjmpTable");
+  IRB.SetInsertPoint(SetjmpTableSize);
+  auto *SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size,
+                                       nullptr, nullptr, "setjmpTable");
   SetjmpTable->setDebugLoc(FirstDL);
   // CallInst::CreateMalloc may return a bitcast instruction if the result types
   // mismatch. We need to set the debug loc for the original call too.
@@ -1301,7 +1301,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     MallocCallI->setDebugLoc(FirstDL);
   }
   // setjmpTable[0] = 0;
-  IRB.SetInsertPoint(SetjmpTableSize);
   IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
   SetjmpTableInsts.push_back(SetjmpTable);
   SetjmpTableSizeInsts.push_back(SetjmpTableSize);
