@@ -237,19 +237,17 @@ int32_t UnixSignals::GetNextSignalNumber(int32_t current_signal) const {
   }
 }
 
-const char *UnixSignals::GetSignalInfo(int32_t signo, bool &should_suppress,
-                                       bool &should_stop,
-                                       bool &should_notify) const {
-  collection::const_iterator pos = m_signals.find(signo);
+bool UnixSignals::GetSignalInfo(int32_t signo, bool &should_suppress,
+                                bool &should_stop, bool &should_notify) const {
+  const auto pos = m_signals.find(signo);
   if (pos == m_signals.end())
-    return nullptr;
-  else {
-    const Signal &signal = pos->second;
-    should_suppress = signal.m_suppress;
-    should_stop = signal.m_stop;
-    should_notify = signal.m_notify;
-    return signal.m_name.AsCString("");
-  }
+    return false;
+
+  const Signal &signal = pos->second;
+  should_suppress = signal.m_suppress;
+  should_stop = signal.m_stop;
+  should_notify = signal.m_notify;
+  return true;
 }
 
 bool UnixSignals::GetShouldSuppress(int signo) const {

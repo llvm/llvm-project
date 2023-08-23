@@ -14648,14 +14648,14 @@ static __inline__ void __ATTRS_o_ai vec_stvrxl(vector float __a, int __b,
 static __inline__ vector signed char __ATTRS_o_ai vec_promote(signed char __a,
                                                               int __b) {
   vector signed char __res = (vector signed char)(0);
-  __res[__b & 0x7] = __a;
+  __res[__b & 0xf] = __a;
   return __res;
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_promote(unsigned char __a, int __b) {
   vector unsigned char __res = (vector unsigned char)(0);
-  __res[__b & 0x7] = __a;
+  __res[__b & 0xf] = __a;
   return __res;
 }
 

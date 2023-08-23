@@ -31,26 +31,6 @@
 @O = global i1 icmp eq (i32 zext (i1 icmp ult (ptr @X, ptr @Y) to i32), i32 0)
 ; CHECK: @O = global i1 icmp uge (ptr @X, ptr @Y)
 
-
-
-; PR5176
-
-; CHECK: @T1 = global i1 true
-@T1 = global i1 icmp eq (i64 and (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 64) to i64), i64 1), i64 0)
-
-; CHECK: @T2 = global ptr @B
-@T2 = global ptr inttoptr (i64 add (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 192)), i256 192) to i64), i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 192)), i256 128) to i64)) to ptr)
-
-; CHECK: @T3 = global i64 add (i64 ptrtoint (ptr @B to i64), i64 -1)
-@T3 = global i64 add (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 64) to i64), i64 -1)
-
-; CHECK: @T4 = global ptr @B
-@T4 = global ptr inttoptr (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 64) to i64) to ptr)
-
-; CHECK: @T5 = global ptr @A
-@T5 = global ptr inttoptr (i64 add (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 192) to i64), i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 128) to i64)) to ptr)
-
-
 ; PR9011
 
 @pr9011_1 = constant <4 x i32> zext (<4 x i8> zeroinitializer to <4 x i32>)

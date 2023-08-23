@@ -170,6 +170,11 @@ public:
     return *this;
   }
 
+  DeclarationFragments &replace(std::string NewSpelling, unsigned Position) {
+    Fragments.at(Position).Spelling = NewSpelling;
+    return *this;
+  }
+
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
@@ -257,16 +262,18 @@ public:
   static AccessControl getAccessControl(const Decl *Decl) {
     switch (Decl->getAccess()) {
     case AS_public:
+    case AS_none:
       return AccessControl("public");
     case AS_private:
       return AccessControl("private");
     case AS_protected:
       return AccessControl("protected");
-    case AS_none:
-      return AccessControl("none");
     }
     llvm_unreachable("Unhandled access control");
   }
+
+  static DeclarationFragments
+  getFragmentsForNamespace(const NamespaceDecl *Decl);
 
   /// Build DeclarationFragments for a variable declaration VarDecl.
   static DeclarationFragments getFragmentsForVar(const VarDecl *);

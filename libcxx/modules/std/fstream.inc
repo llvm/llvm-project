@@ -11,7 +11,9 @@ export namespace std {
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::basic_filebuf;
 
+#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
   using std::swap;
+#  endif
 
   using std::filebuf;
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

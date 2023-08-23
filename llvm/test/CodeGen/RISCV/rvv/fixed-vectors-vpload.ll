@@ -449,12 +449,11 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
-; CHECK-NEXT:    addi a1, a0, 256
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v24, (a1)
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v16, (a0)
+; CHECK-NEXT:    addi a1, a0, 128
+; CHECK-NEXT:    vse64.v v16, (a1)
+; CHECK-NEXT:    addi a0, a0, 256
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vse64.v v24, (a0)
 ; CHECK-NEXT:    ret
   %load = call <33 x double> @llvm.vp.load.v33f64.p0(ptr %ptr, <33 x i1> %m, i32 %evl)
   ret <33 x double> %load

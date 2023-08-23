@@ -256,6 +256,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeMSVC:
   case Mangled::eManglingSchemeRustV0:
   case Mangled::eManglingSchemeD:
+  case Mangled::eManglingSchemeSwift:
     return false;
 
   // Don't try and demangle things we can't categorize.

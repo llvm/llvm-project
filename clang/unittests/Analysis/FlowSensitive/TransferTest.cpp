@@ -2667,11 +2667,7 @@ TEST(TransferTest, CannotAnalyzeFunctionTemplate) {
     void target() {}
   )";
   ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(
-          Code,
-          [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-             ASTContext &ASTCtx) {},
-          {BuiltinOptions()}),
+      checkDataflowWithNoopAnalysis(Code),
       llvm::FailedWithMessage("Cannot analyze templated declarations"));
 }
 
@@ -2683,11 +2679,7 @@ TEST(TransferTest, CannotAnalyzeMethodOfClassTemplate) {
     };
   )";
   ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(
-          Code,
-          [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-             ASTContext &ASTCtx) {},
-          {BuiltinOptions()}),
+      checkDataflowWithNoopAnalysis(Code),
       llvm::FailedWithMessage("Cannot analyze templated declarations"));
 }
 
@@ -3834,6 +3826,52 @@ TEST(TransferTest, LoopWithStructReferenceAssignmentConverges) {
         EXPECT_NE(&LVal->getPointeeLoc(),
                   OuterEnv.getStorageLocation(*ValDecl));
       });
+}
+
+TEST(TransferTest, LoopDereferencingChangingPointerConverges) {
+  std::string Code = R"cc(
+    bool some_condition();
+
+    void target(int i1, int i2) {
+      int *p = &i1;
+      while (true) {
+        (void)*p;
+        if (some_condition())
+          p = &i1;
+        else
+          p = &i2;
+      }
+    }
+  )cc";
+  // FIXME: Implement pointer value widening to make analysis converge.
+  ASSERT_THAT_ERROR(
+      checkDataflowWithNoopAnalysis(Code),
+      llvm::FailedWithMessage("maximum number of iterations reached"));
+}
+
+TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
+  std::string Code = R"cc(
+    struct Lookup {
+      int x;
+    };
+
+    bool some_condition();
+
+    void target(Lookup l1, Lookup l2) {
+      Lookup *l = &l1;
+      while (true) {
+        (void)l->x;
+        if (some_condition())
+          l = &l1;
+        else
+          l = &l2;
+      }
+    }
+  )cc";
+  // FIXME: Implement pointer value widening to make analysis converge.
+  ASSERT_THAT_ERROR(
+      checkDataflowWithNoopAnalysis(Code),
+      llvm::FailedWithMessage("maximum number of iterations reached"));
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {

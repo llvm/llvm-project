@@ -84,7 +84,7 @@ struct DelayedDefaultArgumentParseInitList {
   }
 };
 
-int operator""_hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
+int operator"" _hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
 
 enum EnumFixed : int { // expected-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
 };

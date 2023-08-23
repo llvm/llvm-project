@@ -212,6 +212,8 @@ namespace {
     bool matchAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchVectorAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchAdd(SDValue &N, X86ISelAddressMode &AM, unsigned Depth);
+    SDValue matchIndexRecursively(SDValue N, X86ISelAddressMode &AM,
+                                  unsigned Depth);
     bool matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                  unsigned Depth);
     bool matchVectorAddressRecursively(SDValue N, X86ISelAddressMode &AM,
@@ -2201,6 +2203,49 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
   return false;
 }
 
+// Attempt to peek further into a scaled index register, collecting additional
+// extensions / offsets / etc. Returns /p N if we can't peek any further.
+SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
+                                               X86ISelAddressMode &AM,
+                                               unsigned Depth) {
+  assert(AM.IndexReg.getNode() == nullptr && "IndexReg already matched");
+  assert((AM.Scale == 1 || AM.Scale == 2 || AM.Scale == 4 || AM.Scale == 8) &&
+         "Illegal index scale");
+
+  // Limit recursion.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return N;
+
+  // index: add(x,c) -> index: x, disp + c
+  if (CurDAG->isBaseWithConstantOffset(N)) {
+    auto *AddVal = cast<ConstantSDNode>(N.getOperand(1));
+    uint64_t Offset = (uint64_t)AddVal->getSExtValue() * AM.Scale;
+    if (!foldOffsetIntoAddress(Offset, AM))
+      return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+  }
+
+  // index: add(x,x) -> index: x, scale * 2
+  if (N.getOpcode() == ISD::ADD && N.getOperand(0) == N.getOperand(1)) {
+    if (AM.Scale <= 4) {
+      AM.Scale *= 2;
+      return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+    }
+  }
+
+  // index: shl(x,i) -> index: x, scale * (1 << i)
+  if (N.getOpcode() == X86ISD::VSHLI) {
+    uint64_t ShiftAmt = N.getConstantOperandVal(1);
+    uint64_t ScaleAmt = 1ULL << ShiftAmt;
+    if ((AM.Scale * ScaleAmt) <= 8) {
+      AM.Scale *= ScaleAmt;
+      return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+    }
+  }
+
+  // TODO: Handle extensions, shifted masks etc.
+  return N;
+}
+
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
   SDLoc dl(N);
@@ -2278,21 +2323,9 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       // the base doesn't end up getting used, a post-processing step
       // in MatchAddress turns (,x,2) into (x,x), which is cheaper.
       if (Val == 1 || Val == 2 || Val == 3) {
-        AM.Scale = 1 << Val;
         SDValue ShVal = N.getOperand(0);
-
-        // Okay, we know that we have a scale by now.  However, if the scaled
-        // value is an add of something and a constant, we can fold the
-        // constant into the disp field here.
-        if (CurDAG->isBaseWithConstantOffset(ShVal)) {
-          AM.IndexReg = ShVal.getOperand(0);
-          auto *AddVal = cast<ConstantSDNode>(ShVal.getOperand(1));
-          uint64_t Disp = (uint64_t)AddVal->getSExtValue() << Val;
-          if (!foldOffsetIntoAddress(Disp, AM))
-            return false;
-        }
-
-        AM.IndexReg = ShVal;
+        AM.Scale = 1 << Val;
+        AM.IndexReg = matchIndexRecursively(ShVal, AM, Depth + 1);
         return false;
       }
     }
@@ -2658,8 +2691,14 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
                                        SDValue &Index, SDValue &Disp,
                                        SDValue &Segment) {
   X86ISelAddressMode AM;
-  AM.IndexReg = IndexOp;
   AM.Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+
+  // Attempt to match index patterns, as long as we're not relying on implicit
+  // sign-extension, which is performed BEFORE scale.
+  if (IndexOp.getScalarValueSizeInBits() == BasePtr.getScalarValueSizeInBits())
+    AM.IndexReg = matchIndexRecursively(IndexOp, AM, 0);
+  else
+    AM.IndexReg = IndexOp;
 
   unsigned AddrSpace = Parent->getPointerInfo().getAddrSpace();
   if (AddrSpace == X86AS::GS)

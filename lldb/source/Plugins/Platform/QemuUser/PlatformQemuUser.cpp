@@ -162,9 +162,18 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
                                                Target &target, Status &error) {
   Log *log = GetLog(LLDBLog::Platform);
 
+  // If platform.plugin.qemu-user.emulator-path is set, use it.
   FileSpec qemu = GetGlobalProperties().GetEmulatorPath();
-  if (!qemu)
-    qemu.SetPath(("qemu-" + GetGlobalProperties().GetArchitecture()).str());
+  // If platform.plugin.qemu-user.emulator-path is not set, build the
+  // executable name from platform.plugin.qemu-user.architecture.
+  if (!qemu) {
+    llvm::StringRef arch = GetGlobalProperties().GetArchitecture();
+    // If platform.plugin.qemu-user.architecture is not set, build the
+    // executable name from the target Triple's ArchName
+    if (arch.empty())
+      arch = target.GetArchitecture().GetTriple().getArchName();
+    qemu.SetPath(("qemu-" + arch).str());
+  }
   FileSystem::Instance().ResolveExecutableLocation(qemu);
 
   llvm::SmallString<0> socket_model, socket_path;

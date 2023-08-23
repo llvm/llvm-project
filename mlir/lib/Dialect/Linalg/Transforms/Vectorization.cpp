@@ -169,21 +169,6 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   return res;
 }
 
-/// Return true if the scalable vector dimensions are supported. For now, we
-/// only support scalable vectors in the trailing dimension.
-static bool areValidScalableVecDims(ArrayRef<bool> scalableVecDims) {
-  if (scalableVecDims.empty())
-    return true;
-
-  auto isScalable = [](bool isScalableVecSize) { return isScalableVecSize; };
-  if (std::any_of(scalableVecDims.begin(), scalableVecDims.end() - 1,
-                  isScalable)) {
-    return false;
-  }
-
-  return true;
-}
-
 /// Contains the vectorization state and related methods used across the
 /// vectorization process of a given operation.
 struct VectorizationState {
@@ -216,12 +201,6 @@ struct VectorizationState {
       vectorShape.append(canonicalVecShape.begin(), canonicalVecShape.end());
       scalableDims.append(scalableVecDims.begin(), scalableVecDims.end());
     }
-
-    // Make sure we don't end up with unsupported scalable vector dimensions
-    // after the permutation. If so, we should bail out on that operation in the
-    // scalable preconditions.
-    assert(areValidScalableVecDims(scalableDims) &&
-           "Permuted scalable vector dimensions are not supported");
 
     return VectorType::get(vectorShape, elementType, scalableDims);
   }
@@ -1629,11 +1608,6 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   if (inputVectorSizes.empty())
     return success();
-
-  if (!areValidScalableVecDims(inputScalableVecDims)) {
-    LDBG("Non-trailing scalable vector dimensions are not supported\n");
-    return failure();
-  }
 
   bool isScalable = inputScalableVecDims.back();
   if (!isScalable)

@@ -1662,7 +1662,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
           body << "1";
       };
       if (op.getDialect().usePropertiesForAttributes()) {
-        body << "llvm::copy(ArrayRef<int32_t>({";
+        body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
         llvm::interleaveComma(op.getOperands(), body, interleaveFn);
         body << formatv("}), "
                         "result.getOrAddProperties<{0}::Properties>()."

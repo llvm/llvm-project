@@ -2,4 +2,4 @@
 
 #include <no-warn-user-defined-literals-in-system-headers.h>
 
-void operator ""bar(long double); // expected-warning{{user-defined literal suffixes not starting with '_' are reserved}}
+void operator "" bar(long double); // expected-warning{{user-defined literal suffixes not starting with '_' are reserved}}

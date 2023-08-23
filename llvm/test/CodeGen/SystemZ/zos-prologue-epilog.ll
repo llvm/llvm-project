@@ -380,6 +380,10 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
 }
 
 ; CHECK-LABEL: leaf_func
+; CHECK: .long	8 * DSA Size 0x0
+; CHECK-NEXT:     * Entry Flags
+; CHECK-NEXT:     *   Bit 1: 1 = Leaf function
+; CHECK-NEXT:     *   Bit 2: 0 = Does not use alloca
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: stmg
 ; CHECK: agr	1, 2

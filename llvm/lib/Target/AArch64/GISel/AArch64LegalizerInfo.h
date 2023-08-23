@@ -51,6 +51,10 @@ private:
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+  bool legalizeFunnelShift(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &MIRBuilder,
+                           GISelChangeObserver &Observer,
+                           LegalizerHelper &Helper) const;
   bool legalizeCTPOP(MachineInstr &MI, MachineRegisterInfo &MRI,
                      LegalizerHelper &Helper) const;
   bool legalizeAtomicCmpxchg128(MachineInstr &MI, MachineRegisterInfo &MRI,

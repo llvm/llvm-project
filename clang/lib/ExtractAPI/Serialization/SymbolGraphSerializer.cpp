@@ -357,6 +357,10 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
   case APIRecord::RK_Unknown:
     llvm_unreachable("Records should have an explicit kind");
     break;
+  case APIRecord::RK_Namespace:
+    Kind["identifier"] = AddLangPrefix("namespace");
+    Kind["displayName"] = "Namespace";
+    break;
   case APIRecord::RK_GlobalFunction:
     Kind["identifier"] = AddLangPrefix("func");
     Kind["displayName"] = "Function";
@@ -834,6 +838,17 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Relationships.emplace_back(std::move(Relationship));
 }
 
+void SymbolGraphSerializer::visitNamespaceRecord(
+    const NamespaceRecord &Record) {
+  auto Namespace = serializeAPIRecord(Record);
+  if (!Namespace)
+    return;
+  Symbols.emplace_back(std::move(*Namespace));
+  if (!Record.ParentInformation.empty())
+    serializeRelationship(RelationshipKind::MemberOf, Record,
+                          Record.ParentInformation.ParentRecord);
+}
+
 void SymbolGraphSerializer::visitGlobalFunctionRecord(
     const GlobalFunctionRecord &Record) {
   auto Obj = serializeAPIRecord(Record);
@@ -887,6 +902,9 @@ void SymbolGraphSerializer::visitCXXClassRecord(const CXXClassRecord &Record) {
   Symbols.emplace_back(std::move(*Class));
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+  if (!Record.ParentInformation.empty())
+    serializeRelationship(RelationshipKind::MemberOf, Record,
+                          Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitClassTemplateRecord(
@@ -898,6 +916,9 @@ void SymbolGraphSerializer::visitClassTemplateRecord(
   Symbols.emplace_back(std::move(*Class));
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+  if (!Record.ParentInformation.empty())
+    serializeRelationship(RelationshipKind::MemberOf, Record,
+                          Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
@@ -910,6 +931,9 @@ void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+  if (!Record.ParentInformation.empty())
+    serializeRelationship(RelationshipKind::MemberOf, Record,
+                          Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
@@ -922,6 +946,9 @@ void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
 
   for (const auto Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
+  if (!Record.ParentInformation.empty())
+    serializeRelationship(RelationshipKind::MemberOf, Record,
+                          Record.ParentInformation.ParentRecord);
 }
 
 void SymbolGraphSerializer::visitCXXInstanceMethodRecord(

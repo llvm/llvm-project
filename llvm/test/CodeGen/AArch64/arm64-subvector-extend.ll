@@ -41,9 +41,9 @@ define <16 x i16> @func3(<16 x i8> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: func3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
-; CHECK-GI-NEXT:    ushll.8h v1, v1, #0
+; CHECK-GI-NEXT:    ushll.8h v2, v0, #0
+; CHECK-GI-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = zext <16 x i8> %v0 to <16 x i16>
   ret <16 x i16> %r
@@ -58,9 +58,9 @@ define <16 x i16> @func4(<16 x i8> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: func4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
-; CHECK-GI-NEXT:    sshll.8h v1, v1, #0
+; CHECK-GI-NEXT:    sshll.8h v2, v0, #0
+; CHECK-GI-NEXT:    sshll2.8h v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = sext <16 x i8> %v0 to <16 x i16>
   ret <16 x i16> %r
@@ -97,9 +97,9 @@ define <8 x i32> @afunc3(<8 x i16> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: afunc3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    ushll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ushll.4s v2, v0, #0
+; CHECK-GI-NEXT:    ushll2.4s v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = zext <8 x i16> %v0 to <8 x i32>
   ret <8 x i32> %r
@@ -114,9 +114,9 @@ define <8 x i32> @afunc4(<8 x i16> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: afunc4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
-; CHECK-GI-NEXT:    sshll.4s v1, v1, #0
+; CHECK-GI-NEXT:    sshll.4s v2, v0, #0
+; CHECK-GI-NEXT:    sshll2.4s v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = sext <8 x i16> %v0 to <8 x i32>
   ret <8 x i32> %r
@@ -132,10 +132,9 @@ define <8 x i32> @bfunc1(<8 x i8> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: bfunc1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    ushll.4s v1, v1, #0
+; CHECK-GI-NEXT:    ushll.8h v1, v0, #0
+; CHECK-GI-NEXT:    ushll.4s v0, v1, #0
+; CHECK-GI-NEXT:    ushll2.4s v1, v1, #0
 ; CHECK-GI-NEXT:    ret
   %r = zext <8 x i8> %v0 to <8 x i32>
   ret <8 x i32> %r
@@ -151,10 +150,9 @@ define <8 x i32> @bfunc2(<8 x i8> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: bfunc2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
-; CHECK-GI-NEXT:    sshll.4s v1, v1, #0
+; CHECK-GI-NEXT:    sshll.8h v1, v0, #0
+; CHECK-GI-NEXT:    sshll.4s v0, v1, #0
+; CHECK-GI-NEXT:    sshll2.4s v1, v1, #0
 ; CHECK-GI-NEXT:    ret
   %r = sext <8 x i8> %v0 to <8 x i32>
   ret <8 x i32> %r
@@ -173,9 +171,9 @@ define <4 x i64> @zfunc1(<4 x i32> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: zfunc1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
-; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ushll.2d v2, v0, #0
+; CHECK-GI-NEXT:    ushll2.2d v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = zext <4 x i32> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -190,9 +188,9 @@ define <4 x i64> @zfunc2(<4 x i32> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: zfunc2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
-; CHECK-GI-NEXT:    sshll.2d v1, v1, #0
+; CHECK-GI-NEXT:    sshll.2d v2, v0, #0
+; CHECK-GI-NEXT:    sshll2.2d v1, v0, #0
+; CHECK-GI-NEXT:    mov.16b v0, v2
 ; CHECK-GI-NEXT:    ret
   %r = sext <4 x i32> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -208,10 +206,9 @@ define <4 x i64> @bfunc3(<4 x i16> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: bfunc3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
-; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
+; CHECK-GI-NEXT:    ushll.4s v1, v0, #0
+; CHECK-GI-NEXT:    ushll.2d v0, v1, #0
+; CHECK-GI-NEXT:    ushll2.2d v1, v1, #0
 ; CHECK-GI-NEXT:    ret
   %r = zext <4 x i16> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -227,10 +224,9 @@ define <4 x i64> @cfunc4(<4 x i16> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: cfunc4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
-; CHECK-GI-NEXT:    sshll.2d v1, v1, #0
+; CHECK-GI-NEXT:    sshll.4s v1, v0, #0
+; CHECK-GI-NEXT:    sshll.2d v0, v1, #0
+; CHECK-GI-NEXT:    sshll2.2d v1, v1, #0
 ; CHECK-GI-NEXT:    ret
   %r = sext <4 x i16> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -249,12 +245,11 @@ define <4 x i64> @zext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
-; CHECK-GI-NEXT:    and.16b v0, v0, v2
-; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
-; CHECK-GI-NEXT:    and.16b v1, v1, v2
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI14_0]
+; CHECK-GI-NEXT:    ushll.2d v1, v0, #0
+; CHECK-GI-NEXT:    ushll2.2d v2, v0, #0
+; CHECK-GI-NEXT:    and.16b v0, v1, v3
+; CHECK-GI-NEXT:    and.16b v1, v2, v3
 ; CHECK-GI-NEXT:    ret
   %r = zext <4 x i8> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -275,13 +270,12 @@ define <4 x i64> @sext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
 ; CHECK-GI-LABEL: sext_v4i8_to_v4i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
-; CHECK-GI-NEXT:    shl.2d v0, v0, #56
-; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
-; CHECK-GI-NEXT:    sshr.2d v0, v0, #56
+; CHECK-GI-NEXT:    ushll.2d v1, v0, #0
+; CHECK-GI-NEXT:    ushll2.2d v0, v0, #0
 ; CHECK-GI-NEXT:    shl.2d v1, v1, #56
-; CHECK-GI-NEXT:    sshr.2d v1, v1, #56
+; CHECK-GI-NEXT:    shl.2d v2, v0, #56
+; CHECK-GI-NEXT:    sshr.2d v0, v1, #56
+; CHECK-GI-NEXT:    sshr.2d v1, v2, #56
 ; CHECK-GI-NEXT:    ret
   %r = sext <4 x i8> %v0 to <4 x i64>
   ret <4 x i64> %r
@@ -302,15 +296,12 @@ define <8 x i64> @zext_v8i8_to_v8i64(<8 x i8> %v0) nounwind {
 ; CHECK-GI-LABEL: zext_v8i8_to_v8i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    ushll.4s v2, v1, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
-; CHECK-GI-NEXT:    mov d3, v2[1]
-; CHECK-GI-NEXT:    ushll.2d v2, v2, #0
-; CHECK-GI-NEXT:    ushll.2d v1, v1, #0
-; CHECK-GI-NEXT:    ushll.2d v3, v3, #0
+; CHECK-GI-NEXT:    ushll.4s v1, v0, #0
+; CHECK-GI-NEXT:    ushll2.4s v3, v0, #0
+; CHECK-GI-NEXT:    ushll.2d v0, v1, #0
+; CHECK-GI-NEXT:    ushll2.2d v1, v1, #0
+; CHECK-GI-NEXT:    ushll.2d v2, v3, #0
+; CHECK-GI-NEXT:    ushll2.2d v3, v3, #0
 ; CHECK-GI-NEXT:    ret
   %r = zext <8 x i8> %v0 to <8 x i64>
   ret <8 x i64> %r
@@ -331,15 +322,12 @@ define <8 x i64> @sext_v8i8_to_v8i64(<8 x i8> %v0) nounwind {
 ; CHECK-GI-LABEL: sext_v8i8_to_v8i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll.8h v0, v0, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.4s v0, v0, #0
-; CHECK-GI-NEXT:    sshll.4s v2, v1, #0
-; CHECK-GI-NEXT:    mov d1, v0[1]
-; CHECK-GI-NEXT:    sshll.2d v0, v0, #0
-; CHECK-GI-NEXT:    mov d3, v2[1]
-; CHECK-GI-NEXT:    sshll.2d v2, v2, #0
-; CHECK-GI-NEXT:    sshll.2d v1, v1, #0
-; CHECK-GI-NEXT:    sshll.2d v3, v3, #0
+; CHECK-GI-NEXT:    sshll.4s v1, v0, #0
+; CHECK-GI-NEXT:    sshll2.4s v3, v0, #0
+; CHECK-GI-NEXT:    sshll.2d v0, v1, #0
+; CHECK-GI-NEXT:    sshll2.2d v1, v1, #0
+; CHECK-GI-NEXT:    sshll.2d v2, v3, #0
+; CHECK-GI-NEXT:    sshll2.2d v3, v3, #0
 ; CHECK-GI-NEXT:    ret
   %r = sext <8 x i8> %v0 to <8 x i64>
   ret <8 x i64> %r

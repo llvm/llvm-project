@@ -358,10 +358,10 @@ def select_same_val: GICombineRule<
 
 // Fold (undef ? x : y) -> y
 def select_undef_cmp: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SELECT):$root,
-    [{ return Helper.matchUndefSelectCmp(*${root}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+  (defs root:$dst),
+  (match (G_IMPLICIT_DEF $undef),
+         (G_SELECT $dst, $undef, $x, $y)),
+  (apply (COPY $dst, $y))
 >;
 
 // Fold (true ? x : y) -> x
@@ -400,28 +400,37 @@ def commute_constant_to_rhs : GICombineRule<
 >;
 
 // Fold x op 0 -> x
+def right_identity_zero_frags : GICombinePatFrag<
+  (outs root:$dst), (ins $x),
+  !foreach(op,
+           [G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR,
+            G_LSHR, G_PTR_ADD, G_ROTL, G_ROTR],
+           (pattern (op $dst, $x, 0)))>;
 def right_identity_zero: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
-                           G_PTR_ADD, G_ROTL, G_ROTR):$root,
-    [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (right_identity_zero_frags $dst, $lhs)),
+  (apply (COPY $dst, $lhs))
 >;
 
 // Fold x op 1 -> x
 def right_identity_one: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_MUL):$root,
-    [{ return Helper.matchConstantOp(${root}->getOperand(2), 1); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (G_MUL $dst, $x, 1)),
+  (apply (COPY $dst, $x))
 >;
 
 // Fold (x op x) - > x
+def binop_same_val_frags : GICombinePatFrag<
+  (outs root:$dst), (ins $x),
+  [
+    (pattern (G_AND $dst, $x, $x)),
+    (pattern (G_OR $dst, $x, $x)),
+  ]
+>;
 def binop_same_val: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_AND, G_OR):$root,
-    [{ return Helper.matchBinOpSameVal(*${root}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (binop_same_val_frags $dst, $src)),
+  (apply (COPY $dst, $src))
 >;
 
 // Fold (0 op x) - > 0
@@ -470,10 +479,9 @@ def div_rem_to_divrem : GICombineRule<
 
 // Fold (x op 0) - > 0
 def binop_right_to_zero: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_MUL):$root,
-    [{ return Helper.matchOperandIsZero(*${root}, 2); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+  (defs root:$dst),
+  (match (G_MUL $dst, $lhs, 0:$zero)),
+  (apply (COPY $dst, $zero))
 >;
 
 // Erase stores of undef values.
@@ -637,11 +645,10 @@ def not_cmp_fold : GICombineRule<
 
 // Fold (fneg (fneg x)) -> x.
 def fneg_fneg_fold: GICombineRule <
-  (defs root:$dst, register_matchinfo:$matchinfo),
+  (defs root:$dst),
   (match (G_FNEG $t, $src),
-         (G_FNEG $dst, $t):$mi,
-         [{ ${matchinfo} = ${src}.getReg(); return true; }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
+         (G_FNEG $dst, $t)),
+  (apply (COPY $dst, $src))
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
@@ -663,10 +670,10 @@ def merge_unmerge : GICombineRule<
 
 // Fold (fabs (fneg x)) -> (fabs x).
 def fabs_fneg_fold: GICombineRule <
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FABS):$root,
-         [{ return Helper.matchCombineFAbsOfFNeg(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+  (defs root:$dst),
+  (match  (G_FNEG $tmp, $x),
+          (G_FABS $dst, $tmp)),
+  (apply (G_FABS $dst, $x))>;
 
 // Fold (unmerge cst) -> cst1, cst2, ...
 def unmerge_cst_matchinfo : GIDefMatchData<"SmallVector<APInt, 8>">;
@@ -1036,12 +1043,16 @@ def combine_minmax_nan: GICombineRule<
 
 // Transform (add x, (sub y, x)) -> y
 // Transform (add (sub y, x), x) -> y
+def add_sub_reg_frags : GICombinePatFrag<
+  (outs root:$dst), (ins $src),
+  [
+    (pattern (G_ADD $dst, $x, $tmp), (G_SUB $tmp, $src, $x)),
+    (pattern (G_ADD $dst, $tmp, $x), (G_SUB $tmp, $src, $x))
+  ]>;
 def add_sub_reg: GICombineRule <
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ADD):$root,
-         [{ return Helper.matchAddSubSameReg(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${root},
-                                                      ${matchinfo}); }])>;
+  (defs root:$dst),
+  (match (add_sub_reg_frags $dst, $src)),
+  (apply (COPY $dst, $src))>;
 
 def buildvector_identity_fold : GICombineRule<
   (defs root:$build_vector, register_matchinfo:$matchinfo),

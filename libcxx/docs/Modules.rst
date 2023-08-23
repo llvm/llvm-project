@@ -44,17 +44,22 @@ What works
 
    * ``LIBCXX_ENABLE_LOCALIZATION``
    * ``LIBCXX_ENABLE_WIDE_CHARACTERS``
+   * ``LIBCXX_ENABLE_THREADS``
+   * ``LIBCXX_ENABLE_FILESYSTEM``
+   * ``LIBCXX_ENABLE_RANDOM_DEVICE``
+   * ``LIBCXX_ENABLE_UNICODE``
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  * There is no official build system support, libc++ has experimental CMake support
- * Requires CMake 3.26
+ * Requires CMake 3.26 for C++23 support
+ * Requires CMake 3.27 for C++26 support
  * Requires Ninja 1.11
  * Requires a recent Clang 17
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
- * Only C++23 is tested
+ * Only C++23 and C++26 are tested
  * Libc++ is not tested with modules instead of headers
  * The module ``.cppm`` files are not installed
  * The experimental ``PSTL`` library is not supported

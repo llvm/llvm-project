@@ -18204,17 +18204,15 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
   if (GV && GV->isAbsoluteSymbolRef())
     return X86ISD::Wrapper;
 
-  // The following OpFlags under RIP-rel PIC use RIP.
+  CodeModel::Model M = getTargetMachine().getCodeModel();
   if (Subtarget.isPICStyleRIPRel() &&
-      (OpFlags == X86II::MO_NO_FLAG || OpFlags == X86II::MO_COFFSTUB ||
-       OpFlags == X86II::MO_DLLIMPORT))
+      (M == CodeModel::Small || M == CodeModel::Kernel))
     return X86ISD::WrapperRIP;
 
   // In the medium model, functions can always be referenced RIP-relatively,
   // since they must be within 2GiB. This is also possible in non-PIC mode, and
   // shorter than the 64-bit absolute immediate that would otherwise be emitted.
-  if (getTargetMachine().getCodeModel() == CodeModel::Medium &&
-      isa_and_nonnull<Function>(GV))
+  if (M == CodeModel::Medium && isa_and_nonnull<Function>(GV))
     return X86ISD::WrapperRIP;
 
   // GOTPCREL references must always use RIP.
@@ -18242,8 +18240,7 @@ X86TargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   SDValue Result = DAG.getTargetConstantPool(
       CP->getConstVal(), PtrVT, CP->getAlign(), CP->getOffset(), OpFlag);
   SDLoc DL(CP);
-  Result =
-      DAG.getNode(getGlobalWrapperKind(nullptr, OpFlag), DL, PtrVT, Result);
+  Result = DAG.getNode(getGlobalWrapperKind(), DL, PtrVT, Result);
   // With PIC, the address is actually $g + Offset.
   if (OpFlag) {
     Result =
@@ -18264,8 +18261,7 @@ SDValue X86TargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT, OpFlag);
   SDLoc DL(JT);
-  Result =
-      DAG.getNode(getGlobalWrapperKind(nullptr, OpFlag), DL, PtrVT, Result);
+  Result = DAG.getNode(getGlobalWrapperKind(), DL, PtrVT, Result);
 
   // With PIC, the address is actually $g + Offset.
   if (OpFlag)
@@ -18291,8 +18287,7 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetBlockAddress(BA, PtrVT, Offset, OpFlags);
-  Result =
-      DAG.getNode(getGlobalWrapperKind(nullptr, OpFlags), dl, PtrVT, Result);
+  Result = DAG.getNode(getGlobalWrapperKind(), dl, PtrVT, Result);
 
   // With PIC, the address is actually $g + Offset.
   if (isGlobalRelativeToPICBase(OpFlags)) {
@@ -25980,7 +25975,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     auto &Context = MF.getMMI().getContext();
     MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
                                             Twine(MF.getFunctionNumber()));
-    return DAG.getNode(getGlobalWrapperKind(nullptr, /*OpFlags=*/0), dl, VT,
+    return DAG.getNode(getGlobalWrapperKind(), dl, VT,
                        DAG.getMCSymbol(S, PtrVT));
   }
 
@@ -52947,42 +52942,9 @@ static SDValue combineTESTP(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
-                                       TargetLowering::DAGCombinerInfo &DCI,
-                                       const X86Subtarget &Subtarget) {
+                                       TargetLowering::DAGCombinerInfo &DCI) {
   auto *MemOp = cast<X86MaskedGatherScatterSDNode>(N);
-  SDValue BasePtr = MemOp->getBasePtr();
-  SDValue Index = MemOp->getIndex();
-  SDValue Scale = MemOp->getScale();
   SDValue Mask = MemOp->getMask();
-
-  // Attempt to fold an index scale into the scale value directly.
-  // For smaller indices, implicit sext is performed BEFORE scale, preventing
-  // this fold under most circumstances.
-  // TODO: Move this into X86DAGToDAGISel::matchVectorAddressRecursively?
-  if ((Index.getOpcode() == X86ISD::VSHLI ||
-       (Index.getOpcode() == ISD::ADD &&
-        Index.getOperand(0) == Index.getOperand(1))) &&
-      isa<ConstantSDNode>(Scale) &&
-      BasePtr.getScalarValueSizeInBits() == Index.getScalarValueSizeInBits()) {
-    unsigned ShiftAmt =
-        Index.getOpcode() == ISD::ADD ? 1 : Index.getConstantOperandVal(1);
-    uint64_t ScaleAmt = cast<ConstantSDNode>(Scale)->getZExtValue();
-    uint64_t NewScaleAmt = ScaleAmt * (1ULL << ShiftAmt);
-    if (isPowerOf2_64(NewScaleAmt) && NewScaleAmt <= 8) {
-      SDValue NewIndex = Index.getOperand(0);
-      SDValue NewScale =
-          DAG.getTargetConstant(NewScaleAmt, SDLoc(N), Scale.getValueType());
-      if (N->getOpcode() == X86ISD::MGATHER)
-        return getAVX2GatherNode(N->getOpcode(), SDValue(N, 0), DAG,
-                                 MemOp->getOperand(1), Mask,
-                                 MemOp->getBasePtr(), NewIndex, NewScale,
-                                 MemOp->getChain(), Subtarget);
-      if (N->getOpcode() == X86ISD::MSCATTER)
-        return getScatterNode(N->getOpcode(), SDValue(N, 0), DAG,
-                              MemOp->getOperand(1), Mask, MemOp->getBasePtr(),
-                              NewIndex, NewScale, MemOp->getChain(), Subtarget);
-    }
-  }
 
   // With vector masks we only demand the upper bit of the mask.
   if (Mask.getScalarValueSizeInBits() != 1) {
@@ -55281,11 +55243,10 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
   // Combine scalar_to_vector of an extract_vector_elt into an extract_subvec.
   if (VT == MVT::v1i1 && Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       Src.hasOneUse() && Src.getOperand(0).getValueType().isVector() &&
-      Src.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
-    if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(1)))
-      if (C->isZero())
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src.getOperand(0),
-                           Src.getOperand(1));
+      Src.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+      isNullConstant(Src.getOperand(1)))
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src.getOperand(0),
+                       Src.getOperand(1));
 
   // Reduce v2i64 to v4i32 if we don't need the upper bits or are known zero.
   // TODO: Move to DAGCombine/SimplifyDemandedBits?
@@ -55920,8 +55881,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI, Subtarget);
   case X86ISD::TESTP:       return combineTESTP(N, DAG, DCI, Subtarget);
   case X86ISD::MGATHER:
-  case X86ISD::MSCATTER:
-    return combineX86GatherScatter(N, DAG, DCI, Subtarget);
+  case X86ISD::MSCATTER:    return combineX86GatherScatter(N, DAG, DCI);
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI);
   case X86ISD::PCMPEQ:

@@ -194,12 +194,49 @@ bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
   for (auto *DA : It->second)
     Visited.insert(DA->getParent());
 
+  SmallPtrSet<const BasicBlock *, 32> EscapingBBs;
+  for (auto *U : CB->users()) {
+    // The use from coroutine intrinsics are not a problem.
+    if (isa<CoroFreeInst, CoroSubFnInst, CoroSaveInst>(U))
+      continue;
+
+    // Think all other usages may be an escaping candidate conservatively.
+    //
+    // Note that the major user of switch ABI coroutine (the C++) will store
+    // resume.fn, destroy.fn and the index to the coroutine frame immediately.
+    // So the parent of the coro.begin in C++ will be always escaping.
+    // Then we can't get any performance benefits for C++ by improving the
+    // precision of the method.
+    //
+    // The reason why we still judge it is we want to make LLVM Coroutine in
+    // switch ABIs to be self contained as much as possible instead of a
+    // by-product of C++20 Coroutines.
+    EscapingBBs.insert(cast<Instruction>(U)->getParent());
+  }
+
+  bool PotentiallyEscaped = false;
+
   do {
     const auto *BB = Worklist.pop_back_val();
     if (!Visited.insert(BB).second)
       continue;
-    if (TIs.count(BB))
-      return true;
+
+    // A Path insensitive marker to test whether the coro.begin escapes.
+    // It is intentional to make it path insensitive while it may not be
+    // precise since we don't want the process to be too slow.
+    PotentiallyEscaped |= EscapingBBs.count(BB);
+
+    if (TIs.count(BB)) {
+      if (!BB->getTerminator()->isExceptionalTerminator() || PotentiallyEscaped)
+        return true;
+
+      // If the function ends with the exceptional terminator, the memory used
+      // by the coroutine frame can be released by stack unwinding
+      // automatically. So we can think the coro.begin doesn't escape if it
+      // exits the function by exceptional terminator.
+
+      continue;
+    }
 
     // Conservatively say that there is potentially a path.
     if (!--Limit)
@@ -236,36 +273,36 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // memory location storing that value and not the virtual register.
 
   SmallPtrSet<BasicBlock *, 8> Terminators;
-  // First gather all of the non-exceptional terminators for the function.
+  // First gather all of the terminators for the function.
   // Consider the final coro.suspend as the real terminator when the current
   // function is a coroutine.
-    for (BasicBlock &B : *F) {
-      auto *TI = B.getTerminator();
-      if (TI->getNumSuccessors() == 0 && !TI->isExceptionalTerminator() &&
-          !isa<UnreachableInst>(TI))
-        Terminators.insert(&B);
-    }
+  for (BasicBlock &B : *F) {
+    auto *TI = B.getTerminator();
+
+    if (TI->getNumSuccessors() != 0 || isa<UnreachableInst>(TI))
+      continue;
+
+    Terminators.insert(&B);
+  }
 
   // Filter out the coro.destroy that lie along exceptional paths.
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
   for (const auto &It : DestroyAddr) {
-    // If there is any coro.destroy dominates all of the terminators for the
-    // coro.begin, we could know the corresponding coro.begin wouldn't escape.
-    for (Instruction *DA : It.second) {
-      if (llvm::all_of(Terminators, [&](auto *TI) {
-            return DT.dominates(DA, TI->getTerminator());
-          })) {
-        ReferencedCoroBegins.insert(It.first);
-        break;
-      }
-    }
-
-    // Whether there is any paths from coro.begin to Terminators which not pass
-    // through any of the coro.destroys.
+    // If every terminators is dominated by coro.destroy, we could know the
+    // corresponding coro.begin wouldn't escape.
+    //
+    // Otherwise hasEscapePath would decide whether there is any paths from
+    // coro.begin to Terminators which not pass through any of the
+    // coro.destroys.
     //
     // hasEscapePath is relatively slow, so we avoid to run it as much as
     // possible.
-    if (!ReferencedCoroBegins.count(It.first) &&
+    if (llvm::all_of(Terminators,
+                     [&](auto *TI) {
+                       return llvm::any_of(It.second, [&](auto *DA) {
+                         return DT.dominates(DA, TI->getTerminator());
+                       });
+                     }) ||
         !hasEscapePath(It.first, Terminators))
       ReferencedCoroBegins.insert(It.first);
   }
