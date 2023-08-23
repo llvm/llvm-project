@@ -351,7 +351,6 @@ CHECK_SIMPLE_CLAUSE(Delete, ACCC_delete)
 CHECK_SIMPLE_CLAUSE(Detach, ACCC_detach)
 CHECK_SIMPLE_CLAUSE(Device, ACCC_device)
 CHECK_SIMPLE_CLAUSE(DeviceNum, ACCC_device_num)
-CHECK_SIMPLE_CLAUSE(DeviceType, ACCC_device_type)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
 CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
@@ -485,6 +484,19 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   }
   CheckMultipleOccurrenceInDeclare(
       modifierClause, llvm::acc::Clause::ACCC_copyout);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::DeviceType &d) {
+  CheckAllowed(llvm::acc::Clause::ACCC_device_type);
+  if (GetContext().directive == llvm::acc::Directive::ACCD_set &&
+      d.v.v.size() > 1) {
+    context_.Say(GetContext().clauseSource,
+        "The %s clause on the %s directive accepts only one value"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_device_type)
+                .str()),
+        ContextDirectiveAsFortran());
+  }
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
