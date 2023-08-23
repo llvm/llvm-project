@@ -1292,9 +1292,9 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       unsigned Size = SAI->getElemSizeInBytes();
 
       // Insert the malloc call at polly.start
-      auto InstIt = std::get<0>(StartExitBlocks)->getTerminator();
-      auto *CreatedArray = CallInst::CreateMalloc(
-          &*InstIt, IntPtrTy, SAI->getElementType(),
+      Builder.SetInsertPoint(std::get<0>(StartExitBlocks)->getTerminator());
+      auto *CreatedArray = Builder.CreateMalloc(
+          IntPtrTy, SAI->getElementType(),
           ConstantInt::get(Type::getInt64Ty(Ctx), Size),
           ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
           SAI->getName());
