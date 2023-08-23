@@ -844,10 +844,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "int_ptr_kind") {
     return Expr<T>{8};
   } else if (name == "kind") {
-    if constexpr (common::HasMember<T, IntegerTypes>) {
-      return Expr<T>{args[0].value().GetType()->kind()};
-    } else {
-      DIE("kind() result not integral");
+    // FoldOperation(FunctionRef &&) in fold-implementation.h will not
+    // have folded the argument; in the case of TypeParamInquiry,
+    // try to get the type of the parameter itself.
+    if (const auto *expr{args[0] ? args[0]->UnwrapExpr() : nullptr}) {
+      std::optional<DynamicType> dyType;
+      if (const auto *inquiry{UnwrapExpr<TypeParamInquiry>(*expr)}) {
+        if (const auto *typeSpec{inquiry->parameter().GetType()}) {
+          if (const auto *intrinType{typeSpec->AsIntrinsic()}) {
+            if (auto k{ToInt64(Fold(
+                    context, Expr<SubscriptInteger>{intrinType->kind()}))}) {
+              return Expr<T>{*k};
+            }
+          }
+        }
+      } else if (auto dyType{expr->GetType()}) {
+        return Expr<T>{dyType->kind()};
+      }
     }
   } else if (name == "iparity") {
     return FoldBitReduction(
