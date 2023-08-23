@@ -263,23 +263,15 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
 }
 
 Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
-                                Level dstLvl) {
+                                Level lvl) {
   Value crd = C_IDX(0);
-  const auto reassoc = getCollapseReassociation(tid, dstLvl);
-  const unsigned reassocSize = reassoc.size();
-  for (unsigned i = 0; i < reassocSize; i++) {
-    const Level srcLvl = reassoc[i];
-    // A load on the coordinates array yields the coordinate.
-    const Value mem = coordinatesBuffers[tid][srcLvl];
-    /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
-    const Value pos = posits[tid][dstLvl];
-    const Value off = genIndexLoad(builder, loc, mem, pos);
-    // Linearized the coordinates within the same collapse reassociation.
-    crd = ADDI(crd, off);
-    if (i != reassocSize - 1) {
-      crd = MULI(crd, this->lvlSizes[tid][reassoc[i + 1]]);
-    }
-  }
+  // A load on the coordinates array yields the coordinate.
+  const Value mem = coordinatesBuffers[tid][lvl];
+  /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+  const Value pos = posits[tid][lvl];
+  const Value off = genIndexLoad(builder, loc, mem, pos);
+  // Linearized the coordinates within the same collapse reassociation.
+  crd = ADDI(crd, off);
   return crd;
 }
 
@@ -312,7 +304,6 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->positionsBuffers.assign(numTensors, std::vector<Value>());
   this->coordinatesBuffers.assign(numTensors, std::vector<Value>());
   this->valBuffer.assign(numTensors, nullptr);
-  this->collapseReassoc.assign(numTensors, nullptr);
   this->isSparseSlices.assign(numTensors, false);
   this->sliceOffsets.assign(numTensors, std::vector<Value>());
   this->sliceStrides.assign(numTensors, std::vector<Value>());
@@ -348,16 +339,6 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
         continue;
 
       auto rtp = getRankedTensorType(t);
-      if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
-          isUniqueCOOType(rtp) && reshape) {
-        // TODO: Supports more kinds of sparse tensors.
-        // FIXME: We should instead lower reshape operations on sparse tensors
-        // to view change.
-        collapseReassoc[tid] = reshape.getReassociation();
-        rtp = reshape.getSrcType();
-        // Overwrites the tensor to the source tensor of reshape operations.
-        tensors[tid] = reshape.getSrc();
-      }
       const SparseTensorType stt(rtp);
       lvlRank = stt.getLvlRank();
 
@@ -394,16 +375,11 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
                                  /*offset=*/Value(), /*isNonEmpty*/ Value(),
                                  std::nullopt, 0);
     if (dimGetter && !isSynTensor(tid)) {
-      auto reassoc = collapseReassoc[tid];
-      Level dstRank = reassoc ? reassoc.size() : lvlRank;
-      for (Level l = 0; l < dstRank; l++) {
+      for (Level l = 0; l < lvlRank; l++) {
         dependentLvlMap[tid][l] = dimGetter(tid, l);
         unsigned depends = dependentLvlMap[tid][l].size();
         if (depends == 0)
           continue;
-        // TODO: View-base collapse and dependent index reduction are not
-        // compatible right now.
-        assert(!reassoc);
         // We need `depends - 1` slices to fully  the affine expression.
         sliceSizes[tid][l].assign(depends - 1, nullptr);
         slicePosBuffer[tid][l].assign(depends - 1, nullptr);
@@ -645,23 +621,18 @@ Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
 }
 
 std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
-    OpBuilder &builder, Location loc, TensorId tid, Level dstLvl, Value lo,
+    OpBuilder &builder, Location loc, TensorId tid, Level lvl, Value lo,
     Value hi, MutableArrayRef<Value> reduc, bool isParallel) {
-  bool isSparseCond = isCompressedDLT(lvlTypes[tid][dstLvl]) ||
-                      isCompressedWithHiDLT(lvlTypes[tid][dstLvl]) ||
-                      isSingletonDLT(lvlTypes[tid][dstLvl]);
-
-  const auto reassoc = getCollapseReassociation(tid, dstLvl);
+  bool isSparseCond = isCompressedDLT(lvlTypes[tid][lvl]) ||
+                      isCompressedWithHiDLT(lvlTypes[tid][lvl]) ||
+                      isSingletonDLT(lvlTypes[tid][lvl]);
   // TODO: support dynamic slices.
   // Uses the first dimension here to build the loop bound (which is also the
   // biggest range).
-  const Level srcLvl = reassoc.front();
   Value step = C_IDX(1);
-
   Operation *loop = nullptr;
   Value iv;
   if (isParallel) {
-    assert(collapseReassoc[tid] == nullptr);
     scf::ParallelOp parOp =
         builder.create<scf::ParallelOp>(loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(parOp.getBody());
@@ -693,12 +664,10 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
 
   Value crd;
   if (isSparseCond) {
-    assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
     // For COO, the position is the same across consecutive levels.
     /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
-    llvm::for_each(reassoc,
-                   [this, tid, iv](Level srcLvl) { posits[tid][srcLvl] = iv; });
-    crd = genSparseCrd(builder, loc, tid, dstLvl);
+    posits[tid][lvl] = iv;
+    crd = genSparseCrd(builder, loc, tid, lvl);
   } else {
     // Dense tensor, the coordinate is the inducation variable.
     crd = iv;
@@ -711,7 +680,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
     for (Value red : reduc)
       types.push_back(red.getType());
 
-    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, tid, srcLvl);
+    auto [trans, pred] = genSliceLegitPredicate(builder, loc, crd, tid, lvl);
     bool hasReduc = !types.empty();
     scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, pred,
                                                /*else*/ hasReduc);
@@ -733,7 +702,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
   }
 
   assert(crd);
-  coords[tid][dstLvl] = crd;
+  coords[tid][lvl] = crd;
   return {loop, crd};
 }
 
@@ -743,11 +712,9 @@ Value LoopEmitter::genWhileLoopConditions(OpBuilder &builder, Location loc,
 
   switch (cond.second) {
   case LoopCondKind::SparseCond: {
-    const auto reassoc = getCollapseReassociation(tid, lvl);
-    assert(reassoc.size() == ivs.size());
-    assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
+    assert(ivs.size() == 1);
     // We used the first level bound as the bound the collapsed set of levels.
-    return CMPI(ult, ivs.back(), highs[tid][reassoc.front()]);
+    return CMPI(ult, ivs.back(), highs[tid][lvl]);
   }
   case LoopCondKind::SparseSliceCond: {
     assert(ivs.size() == 1);
@@ -787,17 +754,9 @@ std::optional<Value> LoopEmitter::genWhileLoopBody(OpBuilder &builder,
 
   switch (cond.second) {
   case LoopCondKind::SparseCond: {
-    const auto reassoc = getCollapseReassociation(tid, lvl);
-    assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
-    // Links the SSA chain for segHi.
-    for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++)
-      if (!isUniqueDLT(lvlTypes[tid][reassoc[i]]))
-        segHi[tid][reassoc[i]] = ivs[i];
-
     // Updates position. For collapsed COO, the position is the same across
     // consecutive levels.
-    for (auto srcLvl : reassoc)
-      posits[tid][srcLvl] = ivs.back();
+    posits[tid][lvl] = ivs.back();
 
     // Update coordinates.
     coords[tid][lvl] = genSparseCrd(builder, loc, tid, lvl);
@@ -883,11 +842,9 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     (void)lvlTp;
 
     unsigned prevSz = ivs.size();
-    const auto reassoc = getCollapseReassociation(tid, lvl);
     if (isAffineIdxCond(cKind)) {
       // TODO: Support view-based reshape on sparse levels with affine index
       // expressions.
-      assert(reassoc.size() == 1);
       if (isAffineIdxUnRedCond(cKind)) {
         SliceInfo &sliceInfo = sliceStack[tid].back();
         // The order matters!
@@ -901,12 +858,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
       levelReducedDep[tid][lvl]++;
     } else {
       assert(dependentLvlMap[tid][lvl].empty());
-      for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-        // This is the segment high for each non-unique levels.
-        if (!isUniqueDLT(lvlTypes[tid][reassoc[i]]))
-          ivs.push_back(C_IDX(0));
-      }
-      const Value pos = posits[tid][reassoc.front()];
+      const Value pos = posits[tid][lvl];
       ivs.push_back(pos);
     }
     opSegSize.push_back(ivs.size() - prevSz);
@@ -985,49 +937,11 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  for (auto [tid, dstLvl] : unpackTensorLevelFromCondRange(spConds)) {
-    const auto reassoc = getCollapseReassociation(tid, dstLvl);
-    assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
-    // TODO: Refactors this into smaller functions.
-    // NOTE: For all the collapsed level (except for the last one, that is why
-    // the loop ends with `reassoc.size() - 1`), as each iteration is advanced
-    // by the segment size of the last level, which does not always invalidate
-    // the segment size for the previous levels, thus we need to propagate the
-    // segment sizes across loop iterations and only forward if needed.
-    //
-    // E.g., for a COO tensor with the following coordinates array.
-    // (0, 0, 1),
-    // (0, 0, 2),
-    // (1, 1, 1),
-    // segHi[lvl=0] = segHi[lvl=1] = 2
-    // segHi[lvl=2] = 1,
-    // the first iteration does not invalidate segHi[0] and segHi[1]
-    for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-      const Level srcLvl = reassoc[i];
-      if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
-        const Value pos = posits[tid][srcLvl];
-        const auto oldSegHi = segHi[tid][srcLvl];
-        assert(oldSegHi);
-        Value newSegHi = builder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::uge, pos, oldSegHi);
-        auto ifNewSegHi = builder.create<scf::IfOp>(loc, builder.getIndexType(),
-                                                    newSegHi, true);
-        {
-          OpBuilder::InsertionGuard guard(builder);
-          builder.setInsertionPointToStart(ifNewSegHi.thenBlock());
-          YIELD(genSegmentHigh(builder, loc, tid, srcLvl, pos,
-                               highs[tid][srcLvl]));
-          // Else, resues the same segment high.
-          builder.setInsertionPointToStart(ifNewSegHi.elseBlock());
-          YIELD(oldSegHi);
-        }
-        highs[tid][srcLvl + 1] = segHi[tid][srcLvl] = ifNewSegHi.getResult(0);
-      }
-    };
-    const auto srcLvl = reassoc.back();
-    if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
-      segHi[tid][srcLvl] = genSegmentHigh(
-          builder, loc, tid, srcLvl, posits[tid][srcLvl], highs[tid][srcLvl]);
+  for (auto [tid, lvl] : unpackTensorLevelFromCondRange(spConds)) {
+    // Generates segment high for non-unique level.
+    if (!isUniqueDLT(lvlTypes[tid][lvl])) {
+      segHi[tid][lvl] = genSegmentHigh(builder, loc, tid, lvl, posits[tid][lvl],
+                                       highs[tid][lvl]);
     }
   }
 
@@ -1074,9 +988,8 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<TensorLvlCond> sparseConds,
   // non-unique levels when deduplication is required.
   if (sparseConds.size() == 1) {
     auto [tid, lvl] = unpackTensorLevel(sparseConds.back().first);
-    auto reassoc = getCollapseReassociation(tid, lvl);
     return !isAffineIdxCond(sparseConds.back().second) &&
-           !(genDedup && !isUniqueDLT(lvlTypes[tid][reassoc.back()]));
+           !(genDedup && !isUniqueDLT(lvlTypes[tid][lvl]));
   }
 
   return true;
@@ -1245,50 +1158,45 @@ void LoopEmitter::genDenseAffineAddress(OpBuilder &builder, Location loc,
 }
 
 void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
-                                             TensorId tid, Level dstLvl) {
-  assert(isValidLevel(tid, dstLvl));
-  const auto lvlTp = lvlTypes[tid][dstLvl];
+                                             TensorId tid, Level lvl) {
+  assert(isValidLevel(tid, lvl));
+  const auto lvlTp = lvlTypes[tid][lvl];
 
   if (isDenseDLT(lvlTp))
     return;
 
   const Value c0 = C_IDX(0);
   const Value c1 = C_IDX(1);
-  for (const Level srcLvl : getCollapseReassociation(tid, dstLvl)) {
-    // Either the first level, or the previous level has been set.
-    /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
-    assert(srcLvl == 0 || posits[tid][srcLvl - 1]);
-    if (isDenseDLT(lvlTp))
-      continue;
-    if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
-      const Value mem = positionsBuffers[tid][srcLvl];
+  // Either the first level, or the previous level has been set.
+  /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
+  assert(lvl == 0 || posits[tid][lvl - 1]);
+  if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
+    const Value mem = positionsBuffers[tid][lvl];
 
-      Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
-      if (isCompressedWithHiDLT(lvlTp))
-        pLo = builder.create<arith::MulIOp>(loc, pLo, C_IDX(2));
-      posits[tid][srcLvl] = genIndexLoad(builder, loc, mem, pLo);
+    Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
+    if (isCompressedWithHiDLT(lvlTp))
+      pLo = builder.create<arith::MulIOp>(loc, pLo, C_IDX(2));
+    posits[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
 
-      const Value pHi = ADDI(pLo, c1);
-      highs[tid][srcLvl] = genIndexLoad(builder, loc, mem, pHi);
-      return;
-    }
-    if (isSingletonDLT(lvlTp)) {
-      const Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
-      posits[tid][srcLvl] = pLo;
+    const Value pHi = ADDI(pLo, c1);
+    highs[tid][lvl] = genIndexLoad(builder, loc, mem, pHi);
+    return;
+  }
+  if (isSingletonDLT(lvlTp)) {
+    const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
+    posits[tid][lvl] = pLo;
 
-      // If we are coiterating non-unique levels, then use pHi=segHi;
-      // otherwise use pHi=pLo+1.
-      // NOTE: Just because the level is non-unique, that does not
-      // guarantee that segHi is defined: because we only generate segHi
-      // whenever coiterating, in order to improve code quality for the
-      // non-coiterating cases.
-      const auto parentSegHi = segHi[tid][srcLvl - 1];
-      highs[tid][srcLvl] =
-          (!isUniqueDLT(lvlTypes[tid][srcLvl - 1]) && parentSegHi)
-              ? parentSegHi
-              : ADDI(pLo, c1);
-      return;
-    }
+    // If we are coiterating non-unique levels, then use pHi=segHi;
+    // otherwise use pHi=pLo+1.
+    // NOTE: Just because the level is non-unique, that does not
+    // guarantee that segHi is defined: because we only generate segHi
+    // whenever coiterating, in order to improve code quality for the
+    // non-coiterating cases.
+    const auto parentSegHi = segHi[tid][lvl - 1];
+    highs[tid][lvl] = (!isUniqueDLT(lvlTypes[tid][lvl - 1]) && parentSegHi)
+                          ? parentSegHi
+                          : ADDI(pLo, c1);
+    return;
   }
 
   llvm_unreachable("Unrecognized level-type!");
@@ -1542,28 +1450,18 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
     posits[tid][lvl] = whileOp->getResult(o++);
   };
 
-  for (auto [tid, dstLvl] : unpackTensorLevelRange(loopInfo.trivialTidLvls)) {
-    const auto lvlTp = lvlTypes[tid][dstLvl];
+  for (auto [tid, lvl] : unpackTensorLevelRange(loopInfo.trivialTidLvls)) {
+    const auto lvlTp = lvlTypes[tid][lvl];
     if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
         isCompressedWithHiDLT(lvlTp)) {
-      const auto reassoc = getCollapseReassociation(tid, dstLvl);
-      assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
-      for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
-        const Level srcLvl = reassoc[i];
-        if (!isUniqueDLT(lvlTypes[tid][srcLvl])) {
-          operands.push_back(segHi[tid][srcLvl]);
-          o++;
-        }
-      }
-      const Value crd = coords[tid][dstLvl];
-      const Value pos = posits[tid][dstLvl];
+      const Value crd = coords[tid][lvl];
+      const Value pos = posits[tid][lvl];
       Value cmp = CMPI(eq, crd, iv);
       // If the loop contains a coiteration with non-unique level, we fast
       // forward all the duplicated coords by setting the position to the
       // segment high.
-      Value add = !isUniqueDLT(lvlTypes[tid][reassoc.back()])
-                      ? segHi[tid][reassoc.back()]
-                      : ADDI(pos, one);
+      Value add =
+          !isUniqueDLT(lvlTypes[tid][lvl]) ? segHi[tid][lvl] : ADDI(pos, one);
 
       operands.push_back(SELECT(cmp, add, pos));
       // Following loops continue iteration from the break point of the
@@ -1573,14 +1471,12 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       // warnings about "captured structured bindings are a C++20 extension".
       // FIXME(wrengr): define a helper function to capture this idiom!
       const TensorId newTid = tid;
-      llvm::for_each(reassoc, [this, newTid, newPos](Level srcLvl) {
-        posits[newTid][srcLvl] = newPos;
-      });
+      posits[newTid][lvl] = newPos;
 
       // The coordinate is invalid now.
-      coords[tid][dstLvl] = nullptr;
+      coords[tid][lvl] = nullptr;
       // The segment high is invalid now.
-      segHi[tid][dstLvl] = nullptr;
+      segHi[tid][lvl] = nullptr;
       // highs remains unchanged.
     }
   }
