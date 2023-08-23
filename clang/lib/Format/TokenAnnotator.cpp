@@ -5193,30 +5193,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
   }
 
-  // Deal with lambda arguments in C++ - we want consistent line breaks whether
-  // they happen to be at arg0, arg1 or argN. The selection is a bit nuanced
-  // as aggressive line breaks are placed when the lambda is not the last arg.
-  if ((Style.Language == FormatStyle::LK_Cpp ||
-       Style.Language == FormatStyle::LK_ObjC) &&
-      Left.is(tok::l_paren) && Left.BlockParameterCount > 0 &&
-      !Right.isOneOf(tok::l_paren, TT_LambdaLSquare)) {
-    // Multiple lambdas in the same function call force line breaks.
-    if (Left.BlockParameterCount > 1)
-      return true;
-
-    // A lambda followed by another arg forces a line break.
-    if (!Left.Role)
-      return false;
-    auto Comma = Left.Role->lastComma();
-    if (!Comma)
-      return false;
-    auto Next = Comma->getNextNonComment();
-    if (!Next)
-      return false;
-    if (!Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret))
-      return true;
-  }
-
   return false;
 }
 
