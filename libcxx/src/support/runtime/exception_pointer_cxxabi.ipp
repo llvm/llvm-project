@@ -34,6 +34,24 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
+void *exception_ptr::init_ex(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept {
+  void *__ex = __cxa_allocate_exception(size);
+  (void)__cxa_init_primary_exception(__ex, tinfo, dest);
+  return __ex;
+}
+
+void exception_ptr::free_ex(void *thrown_object) noexcept {
+  __cxa_free_exception(thrown_object);
+}
+
+exception_ptr exception_ptr::from_ex_ptr(void *__e) noexcept {
+    exception_ptr ptr;
+    ptr.__ptr_ = __e;
+    __cxa_increment_exception_refcount(ptr.__ptr_);
+
+    return ptr;
+}
+
 nested_exception::nested_exception() noexcept
     : __ptr_(current_exception())
 {

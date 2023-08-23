@@ -14,6 +14,8 @@
 #include <__memory/addressof.h>
 #include <cstddef>
 #include <cstdlib>
+#include <typeinfo>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,6 +27,18 @@ namespace std { // purposefully not using versioning namespace
 
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
+
+  template <class _Ep>
+  static inline void __dest_thunk(void *__x) {
+	static_cast<_Ep*>(__x)->~_Ep();
+  }
+
+  static void *init_ex(size_t, std::type_info*, void (*)(void *)) _NOEXCEPT;
+  static void free_ex(void *) _NOEXCEPT;
+  static exception_ptr from_ex_ptr(void *__e) _NOEXCEPT;
+
+  template <class _Ep>
+  friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
 
 public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
@@ -51,11 +65,24 @@ public:
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+# if defined(LIBCXX_BUILDING_LIBCXXABI)
+  using _Ep2 = typename decay<_Ep>::type;
+  void *__ex = exception_ptr::init_ex(
+    sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
+  try {
+    ::new (__ex) _Ep2(__e);
+    return exception_ptr::from_ex_ptr(__ex);
+  } catch (...) {
+    exception_ptr::free_ex(__ex);
+    return current_exception();
+  }
+# else
   try {
     throw __e;
   } catch (...) {
     return current_exception();
   }
+# endif
 #  else
   ((void)__e);
   std::abort();
