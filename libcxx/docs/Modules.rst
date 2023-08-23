@@ -45,6 +45,7 @@ What works
    * ``LIBCXX_ENABLE_LOCALIZATION``
    * ``LIBCXX_ENABLE_WIDE_CHARACTERS``
    * ``LIBCXX_ENABLE_THREADS``
+   * ``LIBCXX_ENABLE_FILESYSTEM``
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
