@@ -49,7 +49,7 @@ define void @entry1(i1 %c, i32 %v) {
 ; TUNIT-SAME: (i1 [[C:%.*]], i32 [[V:%.*]]) #[[ATTR5:[0-9]+]] {
 ; TUNIT-NEXT:    [[L0:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L0]])
-; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR12:[0-9]+]]
 ; TUNIT-NEXT:    [[L1:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L1]])
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -61,7 +61,7 @@ define void @entry1(i1 %c, i32 %v) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    [[L3:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L3]])
-; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR11]]
+; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR12]]
 ; TUNIT-NEXT:    [[L4:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L4]])
 ; TUNIT-NEXT:    ret void
@@ -114,7 +114,7 @@ define void @entry2(i1 %c, i32 %v) {
 ; TUNIT-SAME: (i1 [[C:%.*]], i32 [[V:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[L0:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L0]])
-; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR11]]
+; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR12]]
 ; TUNIT-NEXT:    [[L1:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L1]])
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -126,7 +126,7 @@ define void @entry2(i1 %c, i32 %v) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    [[L3:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L3]])
-; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR11]]
+; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR12]]
 ; TUNIT-NEXT:    [[L4:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L4]])
 ; TUNIT-NEXT:    ret void
@@ -794,11 +794,14 @@ define i32 @exclusion_set3(i1 %c) {
 @B = global i32 0
 
 define internal i32 @readI32(ptr %a) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none)
 ; TUNIT-LABEL: define {{[^@]+}}@readI32
-; TUNIT-SAME: () #[[ATTR9:[0-9]+]] {
+; TUNIT-SAME: (i32 [[TMP0:%.*]]) #[[ATTR9:[0-9]+]] {
+; TUNIT-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
+; TUNIT-NEXT:    [[R:%.*]] = load i32, ptr [[A_PRIV]], align 4
 ; TUNIT-NEXT:    store i32 1, ptr @B, align 4
-; TUNIT-NEXT:    ret i32 undef
+; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@readI32
@@ -813,11 +816,14 @@ define internal i32 @readI32(ptr %a) {
 }
 
 define internal i32 @broker(ptr %a) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none)
 ; TUNIT-LABEL: define {{[^@]+}}@broker
-; TUNIT-SAME: () #[[ATTR9]] {
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @readI32() #[[ATTR12:[0-9]+]]
-; TUNIT-NEXT:    ret i32 undef
+; TUNIT-SAME: (i32 [[TMP0:%.*]]) #[[ATTR9]] {
+; TUNIT-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_PRIV]], align 4
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @readI32(i32 [[TMP2]]) #[[ATTR13:[0-9]+]]
+; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, argmem: none)
 ; CGSCC-LABEL: define {{[^@]+}}@broker
@@ -833,13 +839,17 @@ define internal i32 @broker(ptr %a) {
 
 ; FIXME: This function should return 1, not 0
 define i32 @two_calls() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@two_calls
-; TUNIT-SAME: () #[[ATTR4]] {
+; TUNIT-SAME: () #[[ATTR10:[0-9]+]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[D:%.*]] = call i32 @broker() #[[ATTR12]]
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @broker() #[[ATTR12]]
-; TUNIT-NEXT:    ret i32 0
+; TUNIT-NEXT:    store i32 0, ptr [[A]], align 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
+; TUNIT-NEXT:    [[D:%.*]] = call i32 @broker(i32 [[TMP1]]) #[[ATTR13]]
+; TUNIT-NEXT:    store i32 1, ptr [[A]], align 4
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @broker(i32 [[TMP2]]) #[[ATTR13]]
+; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@two_calls
@@ -870,10 +880,11 @@ define i32 @two_calls() {
 ; TUNIT: attributes #[[ATTR6]] = { nocallback }
 ; TUNIT: attributes #[[ATTR7]] = { norecurse }
 ; TUNIT: attributes #[[ATTR8]] = { nosync }
-; TUNIT: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none) }
-; TUNIT: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR11]] = { nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR12]] = { nosync nounwind memory(write) }
+; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
