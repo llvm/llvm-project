@@ -294,7 +294,7 @@ public:
 
 } // namespace std
 
-#endif   // defined(_LIBCPP_ABI_VCRUNTIME)
+#endif // defined(_LIBCPP_ABI_VCRUNTIME)
 
 #if defined(_LIBCPP_ABI_VCRUNTIME) && _HAS_EXCEPTIONS == 0
 
