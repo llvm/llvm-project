@@ -13,8 +13,9 @@
 
 namespace std {
 
-exception_ptr::~exception_ptr() noexcept {
-  __cxa_decrement_exception_refcount(__ptr_);
+exception_ptr::~exception_ptr() noexcept
+{
+    __cxa_decrement_exception_refcount(__ptr_);
 }
 
 exception_ptr::exception_ptr(const exception_ptr& other) noexcept
@@ -34,17 +35,19 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-void *exception_ptr::init_ex(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept {
-  void *__ex = __cxa_allocate_exception(size);
-  (void)__cxa_init_primary_exception(__ex, tinfo, dest);
-  return __ex;
+void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept 
+{
+    void *__ex = __cxa_allocate_exception(size);
+    (void)__cxa_init_primary_exception(__ex, tinfo, dest);
+    return __ex;
 }
 
-void exception_ptr::free_ex(void *thrown_object) noexcept {
-  __cxa_free_exception(thrown_object);
+void exception_ptr::__free_native_exception(void *thrown_object) noexcept
+{
+    __cxa_free_exception(thrown_object);
 }
 
-exception_ptr exception_ptr::from_ex_ptr(void *__e) noexcept {
+exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
     exception_ptr ptr;
     ptr.__ptr_ = __e;
     __cxa_increment_exception_refcount(ptr.__ptr_);

@@ -698,6 +698,7 @@ set(files
   __tuple/tuple_like_ext.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
+  __typeinfo/typeinfo.h
   __type_traits/add_const.h
   __type_traits/add_cv.h
   __type_traits/add_lvalue_reference.h
