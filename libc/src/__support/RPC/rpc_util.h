@@ -17,9 +17,6 @@
 namespace __llvm_libc {
 namespace rpc {
 
-/// Maximum amount of data a single lane can use.
-constexpr uint64_t MAX_LANE_SIZE = 64;
-
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700

@@ -20,9 +20,6 @@ extern "C" {
 /// The maxium number of ports that can be opened for any server.
 const uint64_t RPC_MAXIMUM_PORT_COUNT = 512;
 
-/// The maximum number of parallel lanes that we can support.
-const uint64_t RPC_MAXIMUM_LANE_SIZE = 64;
-
 /// The symbol name associated with the client for use with the LLVM C library
 /// implementation.
 const char *const rpc_client_symbol_name = "__llvm_libc_rpc_client";

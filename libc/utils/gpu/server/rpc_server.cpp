@@ -26,9 +26,6 @@ static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
 static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
               "Incorrect maximum port count");
 
-static_assert(RPC_MAXIMUM_LANE_SIZE == rpc::MAX_LANE_SIZE,
-              "Incorrect maximum port count");
-
 // The client needs to support different lane sizes for the SIMT model. Because
 // of this we need to select between the possible sizes that the client can use.
 struct Server {
@@ -80,9 +77,9 @@ private:
     case RPC_WRITE_TO_STREAM:
     case RPC_WRITE_TO_STDERR:
     case RPC_WRITE_TO_STDOUT: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
-      FILE *files[rpc::MAX_LANE_SIZE] = {nullptr};
+      uint64_t sizes[lane_size] = {0};
+      void *strs[lane_size] = {nullptr};
+      FILE *files[lane_size] = {nullptr};
       if (port->get_opcode() == RPC_WRITE_TO_STREAM)
         port->recv([&](rpc::Buffer *buffer, uint32_t id) {
           files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
@@ -96,18 +93,15 @@ private:
                                                              : files[id]);
         uint64_t ret = fwrite(strs[id], 1, sizes[id], file);
         std::memcpy(buffer->data, &ret, sizeof(uint64_t));
+        delete[] reinterpret_cast<uint8_t *>(strs[id]);
       });
-      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
-        if (strs[i])
-          delete[] reinterpret_cast<uint8_t *>(strs[i]);
-      }
       break;
     }
     case RPC_READ_FROM_STREAM:
     case RPC_READ_FROM_STDIN: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *data[rpc::MAX_LANE_SIZE] = {nullptr};
-      uint64_t rets[rpc::MAX_LANE_SIZE] = {0};
+      uint64_t sizes[lane_size] = {0};
+      void *data[lane_size] = {nullptr};
+      uint64_t rets[lane_size] = {0};
       port->recv([&](rpc::Buffer *buffer, uint32_t id) {
         sizes[id] = buffer->data[0];
         data[id] = new char[sizes[id]];
@@ -124,8 +118,8 @@ private:
       break;
     }
     case RPC_OPEN_FILE: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *paths[rpc::MAX_LANE_SIZE] = {nullptr};
+      uint64_t sizes[lane_size] = {0};
+      void *paths[lane_size] = {nullptr};
       port->recv_n(paths, sizes, [&](uint64_t size) { return new char[size]; });
       port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
         FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
@@ -152,8 +146,8 @@ private:
       break;
     }
     case RPC_HOST_CALL: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *args[rpc::MAX_LANE_SIZE] = {nullptr};
+      uint64_t sizes[lane_size] = {0};
+      void *args[lane_size] = {nullptr};
       port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
       port->recv([&](rpc::Buffer *buffer, uint32_t id) {
         reinterpret_cast<void (*)(void *)>(buffer->data[0])(args[id]);
