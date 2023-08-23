@@ -14379,10 +14379,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       if (Stack != &ConstSegStack && MSVCEnv &&
           ConstSegStack.CurrentValue != ConstSegStack.DefaultValue &&
           var->getType().isConstQualified()) {
-        assert(!Reason ||
-               Reason != QualType::NonConstantStorageReason::
-                             NonConstNonReferenceType &&
-                   "This case should've already been handled elsewhere");
+        assert((!Reason || Reason != QualType::NonConstantStorageReason::
+                                         NonConstNonReferenceType) &&
+               "This case should've already been handled elsewhere");
         Diag(var->getLocation(), diag::warn_section_msvc_compat)
                 << var << ConstSegStack.CurrentValue << (int)(!HasConstInit
             ? QualType::NonConstantStorageReason::NonTrivialCtor

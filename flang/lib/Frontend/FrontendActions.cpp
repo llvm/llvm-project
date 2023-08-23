@@ -919,6 +919,108 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   mpm.run(*llvmModule, mam);
 }
 
+// This class handles optimization remark messages requested if
+// any of -Rpass, -Rpass-analysis or -Rpass-missed flags were provided
+class BackendRemarkConsumer : public llvm::DiagnosticHandler {
+
+  const CodeGenOptions &codeGenOpts;
+  clang::DiagnosticsEngine &diags;
+
+public:
+  BackendRemarkConsumer(clang::DiagnosticsEngine &diags,
+                        const CodeGenOptions &codeGenOpts)
+      : codeGenOpts(codeGenOpts), diags(diags) {}
+
+  bool isAnalysisRemarkEnabled(llvm::StringRef passName) const override {
+    return codeGenOpts.OptimizationRemarkAnalysis.patternMatches(passName);
+  }
+  bool isMissedOptRemarkEnabled(llvm::StringRef passName) const override {
+    return codeGenOpts.OptimizationRemarkMissed.patternMatches(passName);
+  }
+  bool isPassedOptRemarkEnabled(llvm::StringRef passName) const override {
+    return codeGenOpts.OptimizationRemark.patternMatches(passName);
+  }
+
+  bool isAnyRemarkEnabled() const override {
+    return codeGenOpts.OptimizationRemarkAnalysis.hasValidPattern() ||
+           codeGenOpts.OptimizationRemarkMissed.hasValidPattern() ||
+           codeGenOpts.OptimizationRemark.hasValidPattern();
+  }
+
+  void
+  emitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &diagInfo,
+                          unsigned diagID) {
+    // We only support warnings and remarks.
+    assert(diagInfo.getSeverity() == llvm::DS_Remark ||
+           diagInfo.getSeverity() == llvm::DS_Warning);
+
+    std::string msg;
+    llvm::raw_string_ostream msgStream(msg);
+    msgStream << diagInfo.getMsg();
+
+    // Emit message.
+    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName())
+                         << msgStream.str();
+  }
+
+  void optimizationRemarkHandler(
+      const llvm::DiagnosticInfoOptimizationBase &diagInfo) {
+    auto passName = diagInfo.getPassName();
+    if (diagInfo.isPassed()) {
+      if (codeGenOpts.OptimizationRemark.patternMatches(passName))
+        // Optimization remarks are active only if the -Rpass flag has a regular
+        // expression that matches the name of the pass name in \p d.
+        emitOptimizationMessage(
+            diagInfo, clang::diag::remark_fe_backend_optimization_remark);
+
+      return;
+    }
+
+    if (diagInfo.isMissed()) {
+      if (codeGenOpts.OptimizationRemarkMissed.patternMatches(passName))
+        // Missed optimization remarks are active only if the -Rpass-missed
+        // flag has a regular expression that matches the name of the pass
+        // name in \p d.
+        emitOptimizationMessage(
+            diagInfo,
+            clang::diag::remark_fe_backend_optimization_remark_missed);
+
+      return;
+    }
+
+    assert(diagInfo.isAnalysis() && "Unknown remark type");
+
+    bool shouldAlwaysPrint = false;
+    auto *ora = llvm::dyn_cast<llvm::OptimizationRemarkAnalysis>(&diagInfo);
+    if (ora)
+      shouldAlwaysPrint = ora->shouldAlwaysPrint();
+
+    if (shouldAlwaysPrint ||
+        codeGenOpts.OptimizationRemarkAnalysis.patternMatches(passName))
+      emitOptimizationMessage(
+          diagInfo,
+          clang::diag::remark_fe_backend_optimization_remark_analysis);
+  }
+
+  bool handleDiagnostics(const llvm::DiagnosticInfo &di) override {
+    switch (di.getKind()) {
+    case llvm::DK_OptimizationRemark:
+      optimizationRemarkHandler(llvm::cast<llvm::OptimizationRemark>(di));
+      break;
+    case llvm::DK_OptimizationRemarkMissed:
+      optimizationRemarkHandler(llvm::cast<llvm::OptimizationRemarkMissed>(di));
+      break;
+    case llvm::DK_OptimizationRemarkAnalysis:
+      optimizationRemarkHandler(
+          llvm::cast<llvm::OptimizationRemarkAnalysis>(di));
+      break;
+    default:
+      break;
+    }
+    return true;
+  }
+};
+
 void CodeGenAction::embedOffloadObjects() {
   CompilerInstance &ci = this->getInstance();
   const auto &cgOpts = ci.getInvocation().getCodeGenOpts();
@@ -1028,6 +1130,11 @@ void CodeGenAction::executeAction() {
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
     embedOffloadObjects();
+
+  BackendRemarkConsumer remarkConsumer(diags, codeGenOpts);
+
+  llvmModule->getContext().setDiagnosticHandler(
+      std::make_unique<BackendRemarkConsumer>(remarkConsumer));
 
   // write optimization-record
   llvm::Expected<std::unique_ptr<llvm::ToolOutputFile>> optRecordFileOrErr =

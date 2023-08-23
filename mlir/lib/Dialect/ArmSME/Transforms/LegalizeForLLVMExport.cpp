@@ -223,6 +223,10 @@ struct LoadTileSliceToArmSMELowering
       rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(loc, allActiveMask, ptr,
                                                        tileI32, tileSliceI32);
       break;
+    case 128:
+      rewriter.create<arm_sme::aarch64_sme_ld1q_horiz>(loc, allActiveMask, ptr,
+                                                       tileI32, tileSliceI32);
+      break;
     }
 
     // The load intrinsics have no result, replace 'arm_sme.tile_load' with
@@ -294,6 +298,10 @@ struct StoreTileSliceToArmSMELowering
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_horiz>(
           storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
       break;
+    case 128:
+      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1q_horiz>(
+          storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+      break;
     }
 
     return success();
@@ -309,9 +317,10 @@ void mlir::configureArmSMELegalizeForExportTarget(
       arm_sme::CastVectorToTile, arm_sme::aarch64_sme_zero,
       arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
       arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
-      arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_st1b_horiz,
-      arm_sme::aarch64_sme_st1h_horiz, arm_sme::aarch64_sme_st1w_horiz,
-      arm_sme::aarch64_sme_st1d_horiz, arm_sme::aarch64_sme_za_enable,
+      arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_ld1q_horiz,
+      arm_sme::aarch64_sme_st1b_horiz, arm_sme::aarch64_sme_st1h_horiz,
+      arm_sme::aarch64_sme_st1w_horiz, arm_sme::aarch64_sme_st1d_horiz,
+      arm_sme::aarch64_sme_st1q_horiz, arm_sme::aarch64_sme_za_enable,
       arm_sme::aarch64_sme_za_disable>();
   target.addLegalOp<GetTileID>();
 

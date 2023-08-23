@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -327,6 +328,88 @@ private:
   AliasAnalysis &aliasAnalysis;
 };
 
+/// Check for every retained memref if a must-aliasing memref exists in the
+/// 'memref' operand list with constant 'true' condition. If so, we can replace
+/// the operation result corresponding to that retained memref with 'true'. If
+/// this condition holds for all retained memrefs we can also remove the
+/// aliasing memrefs and their conditions since they will never be deallocated
+/// due to the must-alias and we don't need them to compute the result value
+/// anymore since it got replaced with 'true'.
+///
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%arg0, %arg1, %arg2 : ...)
+///                           if (%true, %true, %true)
+///                       retain (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+/// ```
+/// becomes
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%arg2 : memref<2xi32>) if (%true)
+///                       retain (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+/// // replace %0#0 with %true
+/// // replace %0#1 with %true
+/// ```
+/// Note that the dealloc operation will still have the result values, but they
+/// don't have uses anymore.
+struct RetainedMemrefAliasingAlwaysDeallocatedMemref
+    : public OpRewritePattern<DeallocOp> {
+  RetainedMemrefAliasingAlwaysDeallocatedMemref(MLIRContext *context,
+                                                AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    BitVector aliasesWithConstTrueMemref(deallocOp.getRetained().size());
+    SmallVector<Value> newMemrefs, newConditions;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      bool canDropMemref = false;
+      for (auto [i, retained, res] : llvm::enumerate(
+               deallocOp.getRetained(), deallocOp.getUpdatedConditions())) {
+        if (!matchPattern(cond, m_One()))
+          continue;
+
+        AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
+        if (analysisResult.isMust() || analysisResult.isPartial()) {
+          rewriter.replaceAllUsesWith(res, cond);
+          aliasesWithConstTrueMemref[i] = true;
+          canDropMemref = true;
+          continue;
+        }
+
+        // TODO: once our alias analysis is powerful enough we can remove the
+        // rest of this loop body
+        auto extractOp =
+            memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
+        if (!extractOp)
+          continue;
+
+        AliasResult extractAnalysisResult =
+            aliasAnalysis.alias(retained, extractOp.getOperand());
+        if (extractAnalysisResult.isMust() ||
+            extractAnalysisResult.isPartial()) {
+          rewriter.replaceAllUsesWith(res, cond);
+          aliasesWithConstTrueMemref[i] = true;
+          canDropMemref = true;
+        }
+      }
+
+      if (!canDropMemref) {
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
+      }
+    }
+    if (!aliasesWithConstTrueMemref.all())
+      return failure();
+
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+
+private:
+  AliasAnalysis &aliasAnalysis;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -346,8 +429,9 @@ struct BufferDeallocationSimplificationPass
     RewritePatternSet patterns(&getContext());
     patterns.add<RemoveDeallocMemrefsContainedInRetained,
                  RemoveRetainedMemrefsGuaranteedToNotAlias,
-                 SplitDeallocWhenNotAliasingAnyOther>(&getContext(),
-                                                      aliasAnalysis);
+                 SplitDeallocWhenNotAliasingAnyOther,
+                 RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
+                                                                aliasAnalysis);
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))

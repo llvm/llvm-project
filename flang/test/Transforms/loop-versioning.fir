@@ -14,6 +14,7 @@
 module {
   func.func @sum1d(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
     %decl = fir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
+    %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
     %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmoduleFsum1dEi"}
     %1 = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QMmoduleFsum1dEsum"}
     %cst = arith.constant 0.000000e+00 : f64
@@ -31,7 +32,7 @@ module {
       %9 = fir.convert %8 : (i32) -> i64
       %c1_i64 = arith.constant 1 : i64
       %10 = arith.subi %9, %c1_i64 : i64
-      %11 = fir.coordinate_of %decl, %10 : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
+      %11 = fir.coordinate_of %rebox, %10 : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
       %12 = fir.load %11 : !fir.ref<f64>
       %13 = arith.addf %7, %12 fastmath<contract> : f64
       fir.store %13 to %1 : !fir.ref<f64>
@@ -49,12 +50,13 @@ module {
 // CHECK-LABEL: func.func @sum1d(
 // CHECK-SAME:                  %[[ARG0:.*]]: !fir.box<!fir.array<?xf64>> {{.*}})
 // CHECK: %[[DECL:.*]] = fir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
+// CHECK: %[[REBOX:.*]] = fir.rebox %[[DECL]]
 // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %[[ZERO]] : {{.*}}
+// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[REBOX]], %[[ZERO]] : {{.*}}
 // CHECK: %[[SIZE:.*]] = arith.constant 8 : index
 // CHECK: %[[CMP:.*]] = arith.cmpi eq, %[[DIMS]]#2, %[[SIZE]]
 // CHECK: %[[IF_RES:.*]]:2 = fir.if %[[CMP]] -> {{.*}}
-// CHECK: %[[NEWARR:.*]] = fir.convert %[[ARG0]]
+// CHECK: %[[NEWARR:.*]] = fir.convert %[[REBOX]]
 // CHECK: %[[BOXADDR:.*]] = fir.box_addr %[[NEWARR]] : {{.*}} -> !fir.ref<!fir.array<?xf64>>
 // CHECK: %[[LOOP_RES:.*]]:2 = fir.do_loop {{.*}}
 // CHECK: %[[COORD:.*]] = fir.coordinate_of %[[BOXADDR]], %{{.*}} : (!fir.ref<!fir.array<?xf64>>, index) -> !fir.ref<f64>
@@ -64,7 +66,7 @@ module {
 // CHECK  fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
 // CHECK: } else {
 // CHECK: %[[LOOP_RES2:.*]]:2 = fir.do_loop {{.*}}
-// CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[DECL]], %{{.*}} : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
+// CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[REBOX]], %{{.*}} : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
 // CHECK: %{{.*}}= fir.load %[[COORD2]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }

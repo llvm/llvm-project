@@ -1376,7 +1376,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       // Reduction expression should have no use.
       assert(redExp->getUses().empty());
       // This must be a binary operation.
-      // NOTE: This is users' responsibilty to ensure the operation are
+      // NOTE: This is users' responsibility to ensure the operation are
       // commutative.
       assert(redExp->getNumOperands() == 2 && redExp->getNumResults() == 1);
 

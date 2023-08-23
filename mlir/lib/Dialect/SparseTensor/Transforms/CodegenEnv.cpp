@@ -31,20 +31,20 @@ static bool isMaterializing(Value val) {
 /// Makes target array's elements sorted according to the `order` array.
 static void sortArrayBasedOnOrder(std::vector<LoopId> &target,
                                   ArrayRef<LoopId> order) {
-  std::sort(target.begin(), target.end(), [&order](LoopId l, LoopId r) {
-    assert(l != r);
-    int idxL = -1, idxR = -1;
-    for (int i = 0, e = order.size(); i < e; i++) {
-      if (order[i] == l)
-        idxL = i;
-      if (order[i] == r)
-        idxR = i;
-    }
-    assert(idxL >= 0 && idxR >= 0);
-    return idxL < idxR;
-  });
+  std::sort(target.begin(), target.end(),
+            [&order](const LoopId &l, const LoopId &r) {
+              assert(std::addressof(l) == std::addressof(r) || l != r);
+              int idxL = -1, idxR = -1;
+              for (int i = 0, e = order.size(); i < e; i++) {
+                if (order[i] == l)
+                  idxL = i;
+                if (order[i] == r)
+                  idxR = i;
+              }
+              assert(idxL >= 0 && idxR >= 0);
+              return idxL < idxR;
+            });
 }
-
 //===----------------------------------------------------------------------===//
 // Code generation environment constructor and general methods
 //===----------------------------------------------------------------------===//

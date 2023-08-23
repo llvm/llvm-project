@@ -2270,7 +2270,13 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
   def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
   def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
-  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "xf", "vfwcvt_f">;
+  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
+  let RequiredFeatures = ["ZvfhminOrZvfh"] in
+    def vfwcvt_f_f_v_fp16 : RVVConvBuiltin<"w", "wv", "x", "vfwcvt_f"> {
+      let Name = "vfwcvt_f_f_v";
+      let IRName = "vfwcvt_f_f_v";
+      let MaskedIRName = "vfwcvt_f_f_v_mask";
+    }
 }
 
 // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
@@ -2360,9 +2366,11 @@ let ManualCodegen = [{
         defm :
           RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
       }
-      let OverloadedName = "vfncvt_f" in
-        defm :
-          RVVConvBuiltinSet<"vfncvt_f_f_w", "xf", [["v", "vwu"]]>;
+      let OverloadedName = "vfncvt_f" in {
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vwu"]]>;
+        let RequiredFeatures = ["ZvfhminOrZvfh"] in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vwu"]]>;
+      }
     }
   }
 
@@ -2403,9 +2411,11 @@ let ManualCodegen = [{
       defm :
         RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
     }
-    let OverloadedName = "vfncvt_f" in
-      defm :
-        RVVConvBuiltinSet<"vfncvt_f_f_w", "xf", [["v", "vw"]]>;
+    let OverloadedName = "vfncvt_f" in {
+      defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vw"]]>;
+      let RequiredFeatures = ["ZvfhminOrZvfh"] in
+      defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vw"]]>;
+    }
   }
 }
 }
@@ -2828,6 +2838,32 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       defvar T = "(Tuple:" # nf # ")";
       def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "csilxfd">;
       def : RVVBuiltin<"Uv" # T # "Uv", T # "Uv" # T # "UvKzUv", "csil">;
+    }
+  }
+
+  let Name = "vcreate_v",
+      UnMaskedPolicyScheme = NonePolicy,
+      MaskedPolicyScheme = NonePolicy,
+      SupportOverloading = false,
+      ManualCodegen = [{
+      {
+        assert(isa<StructType>(ResultType));
+        unsigned NF = cast<StructType>(ResultType)->getNumElements();
+        llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+        for (unsigned I = 0; I < NF; ++I) {
+          ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+        }
+        return ReturnTuple;
+      }
+      }] in {
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        defvar V = VString<nf, /*signed=*/true>.S;
+        defvar UV = VString<nf, /*signed=*/false>.S;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfd">;
+        def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
+      }
     }
   }
 }
