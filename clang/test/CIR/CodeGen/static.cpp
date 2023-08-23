@@ -31,7 +31,7 @@ static Init __ioinit2(false);
 // BEFORE-NEXT: }
 
 
-// AFTER:      module {{.*}} {
+// AFTER:      module {{.*}} attributes {{.*}}cir.globalCtors = [#cir.globalCtor<"__cxx_global_var_init">, #cir.globalCtor<"__cxx_global_var_init.1">]
 // AFTER-NEXT:   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22class2EInit22>, !cir.bool)
 // AFTER-NEXT:   cir.global "private" internal @_ZL8__ioinit =  #cir.zero : !ty_22class2EInit22 {ast = #cir.vardecl.ast}
 // AFTER-NEXT:   cir.func internal private @__cxx_global_var_init()
@@ -50,9 +50,9 @@ static Init __ioinit2(false);
 // AFTER-NEXT:     cir.call @__cxx_global_var_init.1() : () -> ()
 // AFTER-NEXT:     cir.return
 
-
 // LLVM:      @_ZL8__ioinit = internal global %class.Init zeroinitializer
 // LLVM:      @_ZL9__ioinit2 = internal global %class.Init zeroinitializer
+// LLVM:      @llvm.global_ctors = appending constant [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init, ptr null }, { i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init.1, ptr null }]
 // LLVM:      define internal void @__cxx_global_var_init()
 // LLVM-NEXT:   call void @_ZN4InitC1Eb(ptr @_ZL8__ioinit, i8 1)
 // LLVM-NEXT:   ret void

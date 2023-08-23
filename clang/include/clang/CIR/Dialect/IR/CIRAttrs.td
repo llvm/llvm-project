@@ -452,4 +452,25 @@ def OptNoneAttr : CIRUnitAttr<"OptNone", "optnone"> {
   let storageType = [{ OptNoneAttr }];
 }
 
+def GlobalCtorAttr : CIR_Attr<"GlobalCtor", "globalCtor"> {
+  let summary = "Indicates a function is a global constructor.";
+  let description = [{
+    Describing a global constructor with an optional priority.
+  }];
+  let parameters = (ins "StringAttr":$name,
+                        OptionalParameter<"std::optional<int>">:$priority);
+  let assemblyFormat = [{
+    `<`
+      $name
+      (`,` $priority^)?
+    `>`
+  }];
+  let builders = [
+    AttrBuilder<(ins "StringRef":$name,
+                      CArg<"std::optional<int>", "{}">:$priority), [{
+      return $_get($_ctxt, StringAttr::get($_ctxt, name), priority);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+}
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS
