@@ -3146,16 +3146,11 @@ define i32 @recSimplify(i32 %v, i1 %cond) {
 ; TUNIT-SAME: (i32 [[V:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR14]] {
 ; TUNIT-NEXT:    br i1 [[COND]], label [[REC:%.*]], label [[COMP:%.*]]
 ; TUNIT:       rec:
-; TUNIT-NEXT:    [[RV:%.*]] = call i32 @recSimplify(i32 [[V]], i1 noundef false) #[[ATTR14]]
-; TUNIT-NEXT:    ret i32 [[RV]]
+; TUNIT-NEXT:    [[RV:%.*]] = call i32 @recSimplify(i32 undef, i1 noundef false) #[[ATTR14]]
+; TUNIT-NEXT:    ret i32 1
 ; TUNIT:       comp:
-; TUNIT-NEXT:    store i32 [[V]], ptr @GRS, align 4
 ; TUNIT-NEXT:    store i32 1, ptr @GRS2, align 4
-; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @GRS, align 4
-; TUNIT-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR23:[0-9]+]]
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @recSimplify2() #[[ATTR24:[0-9]+]]
-; TUNIT-NEXT:    ret i32 [[R]]
+; TUNIT-NEXT:    ret i32 1
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@recSimplify
@@ -3190,12 +3185,6 @@ comp:
 }
 
 define internal i32 @recSimplify2() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
-; TUNIT-LABEL: define {{[^@]+}}@recSimplify2
-; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[R:%.*]] = load i32, ptr @GRS, align 4
-; TUNIT-NEXT:    ret i32 [[R]]
-;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@recSimplify2
 ; CGSCC-SAME: () #[[ATTR7]] {
@@ -3268,8 +3257,6 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR20]] = { norecurse }
 ; TUNIT: attributes #[[ATTR21]] = { nounwind }
 ; TUNIT: attributes #[[ATTR22]] = { nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR23]] = { nofree }
-; TUNIT: attributes #[[ATTR24]] = { nofree nosync nounwind memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
