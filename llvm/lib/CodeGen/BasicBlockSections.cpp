@@ -134,6 +134,14 @@ INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "into clusters of basic blocks.",
                     false, false)
 
+// Returns whether the given basic block has an unconditional branch.
+bool hasUnconditionalBranch(const MachineBasicBlock &MBB) {
+  if (MBB.terminators().empty())
+    return false;
+  const MachineInstr &Terminator = *(--MBB.terminators().end());
+  return Terminator.isUnconditionalBranch();
+}
+
 // This function updates and optimizes the branching instructions of every basic
 // block in a given function to account for changes in the layout.
 static void
@@ -145,12 +153,14 @@ updateBranches(MachineFunction &MF,
     auto NextMBBI = std::next(MBB.getIterator());
     auto *FTMBB = PreLayoutFallThroughs[MBB.getNumber()];
     // If this block had a fallthrough before we need an explicit unconditional
-    // branch to that block if either
+    // branch to that block if either one of these two conditions hold and the
+    // block doesn't currently have an unconditional branch.
     //     1- the block ends a section, which means its next block may be
     //        reorderd by the linker, or
     //     2- the fallthrough block is not adjacent to the block in the new
     //        order.
-    if (FTMBB && (MBB.isEndSection() || &*NextMBBI != FTMBB))
+    if (FTMBB && (MBB.isEndSection() || &*NextMBBI != FTMBB) &&
+        !hasUnconditionalBranch(MBB))
       TII->insertUnconditionalBranch(MBB, FTMBB, MBB.findBranchDebugLoc());
 
     // We do not optimize branches for machine basic blocks ending sections, as
