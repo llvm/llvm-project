@@ -34,9 +34,7 @@ module m03
   end type
   type(kpdt(4)) :: x
 !CHECK: .c.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.a,genre=1_1,category=1_1,kind=4_1,rank=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
-!CHECK: .dt.kpdt, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(name=.n.kpdt,uninstantiated=NULL(),kindparameter=.kp.kpdt,lenparameterkind=NULL())
-!CHECK: .dt.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.kpdt,sizeinbytes=4_8,uninstantiated=.dt.kpdt,kindparameter=.kp.kpdt.4,lenparameterkind=NULL(),component=.c.kpdt.4,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
-!CHECK: .kp.kpdt, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(8) shape: 0_8:0_8 init:[INTEGER(8)::1_8]
+!CHECK: .dt.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.kpdt,sizeinbytes=4_8,uninstantiated=NULL(),kindparameter=.kp.kpdt.4,lenparameterkind=NULL(),component=.c.kpdt.4,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
 !CHECK: .kp.kpdt.4, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: INTEGER(8) shape: 0_8:0_8 init:[INTEGER(8)::4_8]
 end module
 
