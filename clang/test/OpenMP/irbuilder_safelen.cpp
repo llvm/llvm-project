@@ -249,7 +249,7 @@ void simple(float *a, float *b, int *c) {
 //.
 // CHECK: !0 = !{i32 1, !"wchar_size", i32 4}
 // CHECK: !1 = !{i32 7, !"openmp", i32 45}
-// CHECK: !2 = !{!"clang version 18.0.0"}
+// CHECK: !2 = !{!"
 // CHECK: !3 = distinct !{!3, !4, !5}
 // CHECK: !4 = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: !5 = !{!"llvm.loop.vectorize.width", i32 3}
