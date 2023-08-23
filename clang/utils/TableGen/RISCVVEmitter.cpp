@@ -482,8 +482,6 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
       PrintFatalError("Builtin with same name has different IRName");
     else if (P.first->second->getManualCodegen() != Def->getManualCodegen())
       PrintFatalError("Builtin with same name has different ManualCodegen");
-    else if (P.first->second->getNF() != Def->getNF())
-      PrintFatalError("Builtin with same name has different NF");
     else if (P.first->second->isMasked() != Def->isMasked())
       PrintFatalError("Builtin with same name has different isMasked");
     else if (P.first->second->hasVL() != Def->hasVL())
