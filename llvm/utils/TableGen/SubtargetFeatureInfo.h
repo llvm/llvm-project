@@ -54,9 +54,8 @@ struct SubtargetFeatureInfo {
   ///
   /// This version emits the bit index for the feature and can therefore support
   /// more than 64 feature bits.
-  static void
-  emitSubtargetFeatureBitEnumeration(SubtargetFeatureInfoMap &SubtargetFeatures,
-                                     raw_ostream &OS);
+  static void emitSubtargetFeatureBitEnumeration(
+      const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
 
   static void emitNameTable(SubtargetFeatureInfoMap &SubtargetFeatures,
                             raw_ostream &OS);
