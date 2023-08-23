@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Region.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
@@ -125,6 +126,8 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     ctorRegion.getBlocks().clear();
 
     // Add a function call to the variable initialization function.
+    assert(!op.getAst()->getAstDecl()->getAttr<clang::InitPriorityAttr>() &&
+           "custom initialization priority NYI");
     dynamicInitializers.push_back(f);
   }
 }
@@ -132,6 +135,17 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
   if (dynamicInitializers.empty())
     return;
+
+  SmallVector<mlir::Attribute, 4> attrs;
+  for (auto &f : dynamicInitializers) {
+    // TODO: handle globals with a user-specified initialzation priority.
+    auto ctorAttr =
+        mlir::cir::GlobalCtorAttr::get(&getContext(), f.getName());
+    attrs.push_back(ctorAttr);
+  }
+
+  theModule->setAttr("cir.globalCtors",
+                     mlir::ArrayAttr::get(&getContext(), attrs));
 
   SmallString<256> fnName;
   // Include the filename in the symbol name. Including "sub_" matches gcc
@@ -161,9 +175,9 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
       builder.getContext(), mlir::cir::GlobalLinkageKind::ExternalLinkage));
   mlir::SymbolTable::setSymbolVisibility(
       f, mlir::SymbolTable::Visibility::Private);
-  mlir::NamedAttrList attrs;
+  mlir::NamedAttrList extraAttrs;
   f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-      builder.getContext(), attrs.getDictionary(builder.getContext())));
+      builder.getContext(), extraAttrs.getDictionary(builder.getContext())));
 
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (auto &f : dynamicInitializers) {
