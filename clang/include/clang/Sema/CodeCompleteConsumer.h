@@ -336,7 +336,10 @@ public:
     CCC_Recovery,
 
     /// Code completion in a @class forward declaration.
-    CCC_ObjCClassForwardDecl
+    CCC_ObjCClassForwardDecl,
+
+    /// Code completion at a top level in a REPL session.
+    CCC_TopLevelOrExpression,
   };
 
   using VisitedContextSet = llvm::SmallPtrSet<DeclContext *, 8>;
