@@ -253,6 +253,47 @@ define i32 @sub_sub1_nsw_nsw(i32 %a, i32 %b, i32 %c) {
   ret i32 %s2
 }
 
+define i8 @neg_nsw_freeze(i8 %a1, i8 %a2) {
+; CHECK-LABEL: @neg_nsw_freeze(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[FR_NEG:%.*]] = freeze i8 [[A_NEG]]
+; CHECK-NEXT:    ret i8 [[FR_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %fr = freeze i8 %a
+  %neg = sub nsw i8 0, %fr
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_phi(i1 %c, i8 %a1, i8 %a2, i8 %b1, i8 %b2) {
+; CHECK-LABEL: @neg_nsw_phi(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub i8 [[B2:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_NEG:%.*]] = phi i8 [ [[A_NEG]], [[IF]] ], [ [[B_NEG]], [[ELSE]] ]
+; CHECK-NEXT:    ret i8 [[PHI_NEG]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %a = sub nsw i8 %a1, %a2
+  br label %join
+
+else:
+  %b = sub nsw i8 %b1, %b2
+  br label %join
+
+join:
+  %phi = phi i8 [ %a, %if ], [ %b, %else ]
+  %neg = sub nsw i8 0, %phi
+  ret i8 %neg
+}
+
 define i8 @neg_nsw_select(i1 %c, i8 %a1, i8 %a2, i8 %b1, i8 %b2) {
 ; CHECK-LABEL: @neg_nsw_select(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
