@@ -210,8 +210,8 @@ entry:
   ret i8 %and13.7
 }
 
-define i8 @reduce_or(ptr %a, ptr %b) {
-; CHECK-LABEL: @reduce_or(
+define i8 @reduce_or_1(ptr %a, ptr %b) {
+; CHECK-LABEL: @reduce_or_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_BUF:%.*]], ptr [[A:%.*]], i64 0, i32 0, i64 0
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], ptr [[B:%.*]], i64 0, i32 0, i64 0
@@ -271,6 +271,95 @@ entry:
   %xor12.7 = xor i8 %15, %14
   %or13.7 = or i8 %xor12.7, %or13.6
   ret i8 %or13.7
+}
+
+define void @reduce_or_2() {
+; CHECK-LABEL: @reduce_or_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 0, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    ret void
+; CHECK:       9:
+; CHECK-NEXT:    ret void
+;
+  %1 = shl i64 0, 0
+  %2 = icmp ult i64 0, 0
+  %3 = icmp ult i64 0, 0
+  %4 = or i1 %2, %3
+  %5 = icmp ult i64 0, 0
+  %6 = or i1 %4, %5
+  %7 = icmp ult i64 0, 0
+  %8 = or i1 %6, %7
+  %9 = icmp ult i64 0, 0
+  %10 = or i1 %8, %9
+  %11 = icmp ult i64 0, 0
+  %12 = or i1 %10, %11
+  %13 = icmp ult i64 0, 0
+  %14 = or i1 %12, %13
+  %15 = icmp ult i64 0, 0
+  %16 = or i1 %14, %15
+  %17 = icmp ult i64 0, 0
+  %18 = or i1 %16, %17
+  %19 = icmp ult i64 0, 0
+  %20 = or i1 %18, %19
+  %21 = icmp ult i64 0, 0
+  %22 = or i1 %20, %21
+  %23 = icmp ult i64 0, 0
+  %24 = or i1 %22, %23
+  %25 = icmp ult i64 0, 0
+  %26 = or i1 %24, %25
+  %27 = icmp ult i64 0, 0
+  %28 = or i1 %26, %27
+  %29 = icmp ult i64 0, 0
+  %30 = or i1 %28, %29
+  %31 = icmp ult i64 %1, 0
+  %32 = or i1 %30, %31
+  %33 = icmp ult i64 0, 0
+  %34 = or i1 %32, %33
+  %35 = icmp ult i64 0, 0
+  %36 = or i1 %34, %35
+  %37 = icmp ult i64 0, 0
+  %38 = or i1 %36, %37
+  %39 = icmp ult i64 0, 0
+  %40 = or i1 %38, %39
+  %41 = icmp ult i64 0, 0
+  %42 = or i1 %40, %41
+  %43 = icmp ult i64 0, 0
+  %44 = or i1 %42, %43
+  %45 = icmp ult i64 %1, 0
+  %46 = or i1 %44, %45
+  %47 = icmp ult i64 0, 0
+  %48 = or i1 %46, %47
+  %49 = icmp ult i64 0, 0
+  %50 = or i1 %48, %49
+  %51 = icmp ult i64 0, 0
+  %52 = or i1 %50, %51
+  %53 = icmp ult i64 0, 0
+  %54 = or i1 %52, %53
+  %55 = icmp ult i64 0, 0
+  %56 = or i1 %54, %55
+  %57 = icmp ult i64 0, 0
+  %58 = or i1 %56, %57
+  %59 = icmp ult i64 0, 0
+  %60 = or i1 %58, %59
+  %61 = icmp ult i64 0, 0
+  %62 = or i1 %60, %61
+  %63 = icmp ult i64 0, 0
+  %64 = or i1 %62, %63
+  br i1 %64, label %66, label %65
+
+65:                                               ; preds = %0
+  ret void
+
+66:                                               ; preds = %0
+  ret void
 }
 
 define i8 @reduce_xor(ptr %a, ptr %b) {
