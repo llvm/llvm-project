@@ -5829,26 +5829,6 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (!Op)
     return false;
 
-  // If the expression refers to the entry value of an Argument, use the
-  // corresponding livein physical register. As per the Verifier, this is only
-  // allowed for swiftasync Arguments.
-  if (Op->isReg() && Expr->isEntryValue()) {
-    assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
-    auto OpReg = Op->getReg();
-    for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
-      if (OpReg == VirtReg || OpReg == PhysReg) {
-        SDDbgValue *SDV = DAG.getVRegDbgValue(
-            Variable, Expr, PhysReg,
-            Kind != FuncArgumentDbgValueKind::Value /*is indirect*/, DL,
-            SDNodeOrder);
-        DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
-        return true;
-      }
-    LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
-                         "couldn't find a physical register\n");
-    return true;
-  }
-
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   MachineInstr *NewMI = nullptr;
@@ -5935,6 +5915,41 @@ static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
     }
   }
   llvm_unreachable("expected corresponding call to preallocated setup/arg");
+}
+
+/// If DI is a debug value with an EntryValue expression, lower it using the
+/// corresponding physical register of the associated Argument value
+/// (guaranteed to exist by the verifier).
+bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
+  DILocalVariable *Variable = DI.getVariable();
+  DIExpression *Expr = DI.getExpression();
+  if (!Expr->isEntryValue() || !hasSingleElement(DI.getValues()))
+    return false;
+
+  // These properties are guaranteed by the verifier.
+  Argument *Arg = cast<Argument>(DI.getValue(0));
+  assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
+
+  auto ArgIt = FuncInfo.ValueMap.find(Arg);
+  if (ArgIt == FuncInfo.ValueMap.end()) {
+    LLVM_DEBUG(
+        dbgs() << "Dropping dbg.value: expression is entry_value but "
+                  "couldn't find an associated register for the Argument\n");
+    return true;
+  }
+  Register ArgVReg = ArgIt->getSecond();
+
+  for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
+    if (ArgVReg == VirtReg || ArgVReg == PhysReg) {
+      SDDbgValue *SDV =
+          DAG.getVRegDbgValue(Variable, Expr, PhysReg, false /*IsIndidrect*/,
+                              DI.getDebugLoc(), SDNodeOrder);
+      DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
+      return true;
+    }
+  LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
+                       "couldn't find a physical register\n");
+  return true;
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -6265,6 +6280,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
+
+    if (visitEntryValueDbgValue(DI))
+      return;
 
     if (DI.isKillLocation()) {
       handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
