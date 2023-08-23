@@ -645,8 +645,7 @@ struct DefaultAllocationInterface
         .getResult();
   }
   static ::mlir::HoistingKind getHoistingKind() {
-    return static_cast<HoistingKind>(static_cast<uint8_t>(HoistingKind::Loop) |
-                                     static_cast<uint8_t>(HoistingKind::Block));
+    return HoistingKind::Loop | HoistingKind::Block;
   }
   static ::std::optional<::mlir::Operation *>
   buildPromotedAlloc(OpBuilder &builder, Value alloc) {

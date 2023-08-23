@@ -19,9 +19,10 @@ namespace mlir {
 // Enum class representing different hoisting kinds for the allocation
 // operation
 enum class HoistingKind : uint8_t {
-  None = 0,      // No hoisting kind selected
-  Loop = 1 << 0, // Indicates loop hoisting kind
-  Block = 1 << 1 // Indicates dominated block hoisting kind
+  None = 0,       // No hoisting kind selected
+  Loop = 1 << 0,  // Indicates loop hoisting kind
+  Block = 1 << 1, // Indicates dominated block hoisting kind
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Block)
 };
 } // namespace mlir
 
