@@ -39,6 +39,9 @@ def GENX_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
+    /// Get the name of the attribute used to annotate external kernel
+    /// functions.
+    static StringRef getKernelFuncAttrName() { return "opencl.kernels"; }
     /// Get the name of the attribute used to annotate max work group size
     /// required for kernel functions.
     static constexpr ::llvm::StringLiteral getMaxWorkGroupSizeAttrName() {
