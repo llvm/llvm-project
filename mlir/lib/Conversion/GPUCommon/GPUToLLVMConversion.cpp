@@ -593,7 +593,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
         return converter.isLegal(op->getOperandTypes()) &&
                converter.isLegal(op->getResultTypes()) &&
                (module && module.getTargetsAttr() &&
-                module.getTargetsAttr().size());
+                !module.getTargetsAttr().empty());
       });
 
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
@@ -1092,7 +1092,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   // If the module has Targets then just update the op operands.
   if (ArrayAttr targets = kernelModule.getTargetsAttr()) {
     Value stream = Value();
-    if (adaptor.getAsyncDependencies().size())
+    if (!adaptor.getAsyncDependencies().empty())
       stream = adaptor.getAsyncDependencies().front();
     // If the async keyword is present and there are no dependencies, then a
     // stream must be created to pass to subsequent operations.
