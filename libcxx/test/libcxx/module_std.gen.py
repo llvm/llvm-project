@@ -21,21 +21,11 @@
 import sys
 
 sys.path.append(sys.argv[1])
-from libcxx.header_information import toplevel_headers
+from libcxx.header_information import module_headers
 
 BLOCKLIT = (
     ""  # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 )
-
-### Remove the headers that have no module associated with them
-
-# Note all C-headers using .h are filtered in the loop.
-
-# These headers are not available in C++23, but in older language Standards.
-toplevel_headers.remove("ccomplex")
-toplevel_headers.remove("ciso646")
-toplevel_headers.remove("cstdbool")
-toplevel_headers.remove("ctgmath")
 
 # Ignore several declarations found in the includes.
 #
@@ -140,10 +130,7 @@ print(
 )
 
 # Validate all module parts.
-for header in toplevel_headers:
-    if header.endswith(".h"):  # Skip C compatibility headers
-        continue
-
+for header in module_headers:
     # Generate a module partition for the header module includes. This
     # makes it possible to verify that all headers export all their
     # named declarations.
