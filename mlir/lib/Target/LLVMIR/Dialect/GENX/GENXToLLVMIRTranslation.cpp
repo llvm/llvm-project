@@ -13,7 +13,7 @@
 
 #include "mlir/Target/LLVMIR/Dialect/GENX/GENXToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/GENXDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -66,38 +66,67 @@ public:
   LogicalResult
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
-    if (attribute.getName() == GENX::GENXDialect::getKernelFuncAttrName()) {
-      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
-      if (!func)
-        return failure();
+    auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+    if (!func)
+      return failure();
 
-      // For GPU kernels, set SPIR_KERNEL calling convention.
-      llvm::Function *llvmFunc =
-          moduleTranslation.lookupFunction(func.getName());
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+
+    // Set max_work_group_size metadata.
+    if (attribute.getName() ==
+        GENX::GENXDialect::getMaxWorkGroupSizeAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
-    }
-
-    // Set reqd_work_group_size metadata
-    if (GENX::GENXDialect::getReqdWorkGroupSizeAttrName() ==
-        attribute.getName()) {
-      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
-      if (!func)
-        return failure();
-      auto value = attribute.getValue().dyn_cast<DenseI32ArrayAttr>();
+      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
       if (!value)
         return failure();
-      llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+
       SmallVector<llvm::Metadata *, 3> metadata;
-      llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
-      for (int32_t i : value.asArrayRef()) {
-        llvm::Constant *constant = llvm::ConstantInt::get(i32, i);
+      llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
+      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
+        llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
         metadata.push_back(llvm::ConstantAsMetadata::get(constant));
       }
-      llvm::Function *llvmFunc =
-          moduleTranslation.lookupFunction(func.getName());
+      llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
+      llvmFunc->setMetadata("max_work_group_size", node);
+    }
+
+    // Set reqd_work_group_size metadata.
+    if (attribute.getName() ==
+        GENX::GENXDialect::getReqdWorkGroupSizeAttrName()) {
+      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
+      if (!value)
+        return failure();
+
+      SmallVector<llvm::Metadata *, 3> metadata;
+      llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
+      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
+        llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
+        metadata.push_back(llvm::ConstantAsMetadata::get(constant));
+      }
       llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
       llvmFunc->setMetadata("reqd_work_group_size", node);
     }
+
+    // Set intel_reqd_sub_group_size metadata.
+    if (attribute.getName() ==
+        GENX::GENXDialect::getReqdSubGroupSizeAttrName()) {
+      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
+      if (!value)
+        return failure();
+
+      SmallVector<llvm::Metadata *, 3> metadata;
+      llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
+      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
+        llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
+        metadata.push_back(llvm::ConstantAsMetadata::get(constant));
+      }
+      llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
+      llvmFunc->setMetadata("intel_reqd_sub_group_size", node);
+    }
+
     return success();
   }
 };

@@ -39,18 +39,20 @@ def GENX_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
-    static StringRef getKernelFuncAttrName() { return "opencl.kernels"; }
     /// Get the name of the attribute used to annotate max work group size
-    /// required for kernel functions
+    /// required for kernel functions.
     static constexpr ::llvm::StringLiteral getMaxWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("max_work_group_size");
+      return ::llvm::StringLiteral("genx.max_work_group_size");
     }
     /// Get the name of the attribute used to annotate exact work group size
     /// required for kernel functions.
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("reqd_work_group_size");
+      return ::llvm::StringLiteral("genx.reqd_work_group_size");
+    }
+    /// Get the name for the attribute used to annotate the exact sub group 
+    /// size required for kernel functions.
+    static constexpr ::llvm::StringLiteral getReqdSubGroupSizeAttrName() {
+      return ::llvm::StringLiteral("genx.intel_reqd_sub_group_size");
     }
 
     /// The address space value that represents global memory.
@@ -59,13 +61,7 @@ def GENX_Dialect : Dialect {
     static constexpr unsigned kSharedMemoryAddressSpace = 3;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 0;
-
-    /// private:
-    ///  Attribute parseAttribute(DialectAsmParser& parser, Type type) const override;
-    ///  void printAttribute(Attribute attr, DialectAsmPrinter& p) const override;
   }];
-
-  /// let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -79,13 +75,13 @@ class GENX_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 // GENX intrinsic operations
 //===----------------------------------------------------------------------===//
+
 class GENX_IntrOp<string mnem, list<Trait> traits,
                   int numResults>
   : LLVM_IntrOpBase<GENX_Dialect, mnem, "genx_" # !subst(".", "_", mnem),
                     /*list<int> overloadedResults=*/[],
                     /*list<int> overloadedOperands=*/[],
                     traits, numResults>;
-
 
 //===----------------------------------------------------------------------===//
 // GENX special register op definitions
