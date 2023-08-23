@@ -3350,11 +3350,10 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), Queue(nullptr),
-      SignalManager(Device.getSignalManager()),
+      SignalManager(Device.getSignalManager()), Device(Device),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
-      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
-      Device(Device) {}
+      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
