@@ -134,6 +134,13 @@ struct SelectOpInterface
     auto selectOp = cast<arith::SelectOp>(op);
     Location loc = selectOp.getLoc();
 
+    // Elementwise conditions are not supported yet. To bufferize such an op,
+    // it could be lowered to an elementwise "linalg.generic" with a new
+    // "tensor.empty" out tensor, followed by "empty tensor elimination". Such
+    // IR will bufferize.
+    if (!selectOp.getCondition().getType().isInteger(1))
+      return op->emitOpError("only i1 condition values are supported");
+
     // TODO: It would be more efficient to copy the result of the `select` op
     // instead of its OpOperands. In the worst case, 2 copies are inserted at
     // the moment (one for each tensor). When copying the op result, only one
