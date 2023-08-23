@@ -21,10 +21,11 @@
 ! RUN: %flang %s -O1 -Rpass-analysis 2>&1 | FileCheck %s --check-prefix=REMARKS-ANALYSIS
 
 ! CHECK: remark: Loop deleted because it is invariant
+! REMARKS-MISSED: {{.*}} will not be inlined into {{.*}} because its definition is unavailable
 ! REMARKS-MISSED: remark: loop not vectorized
-! REMARKS-MISSED-NOT: instruction cannot be vectorized
+! REMARKS-MISSED-NOT: loop not vectorized: instruction cannot be vectorized
 ! REMARKS-ANALYSIS: remark: loop not vectorized: instruction cannot be vectorized
-! REMARKS-ANALYSIS-NOT: will not be inlined into {{.*}} because its definition is unavailable
+! REMARKS-ANALYSIS-NOT: {{.*}} will not be inlined into {{.*}} because its definition is unavailable
 
 ! REMARKS: remark:
 ! NO-REMARKS-NOT: remark:
