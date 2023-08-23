@@ -277,6 +277,14 @@ InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) {
   return getLMULCost(VT);
 }
 
+/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
+/// for the type VT.  (This does not cover the vslide1up or vslide1down
+/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTTIImpl::getVSlideCost(MVT VT) {
+  return getLMULCost(VT);
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -397,12 +405,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVSlideCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVSlideCost(LT.second);
   case TTI::SK_Select: {
     // Example sequence:
     // li           a0, 90
@@ -449,7 +457,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    return 2 * LT.first * getLMULCost(LT.second);
+    return 2 * LT.first * getVSlideCost(LT.second);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
     // * Illegal vector types
