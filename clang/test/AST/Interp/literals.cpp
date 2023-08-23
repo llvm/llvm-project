@@ -91,6 +91,15 @@ static_assert(-(1 << 31), ""); // expected-error {{not an integral constant expr
                                // ref-error {{not an integral constant expression}} \
                                // ref-note {{outside the range of representable values}} \
 
+namespace PrimitiveEmptyInitList {
+  constexpr int a = {};
+  static_assert(a == 0, "");
+  constexpr bool b = {};
+  static_assert(!b, "");
+  constexpr double d = {};
+  static_assert(d == 0.0, "");
+}
+
 
 enum E {};
 constexpr E e = static_cast<E>(0);
