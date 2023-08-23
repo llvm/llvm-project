@@ -225,6 +225,18 @@ def G_DYN_STACKALLOC : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_STACKSAVE : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_STACKRESTORE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$src);
+  let hasSideEffects = true;
+}
+
 def G_FREEZE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -1386,6 +1398,8 @@ def G_VECREDUCE_FMUL : VectorReduction;
 
 def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;
+def G_VECREDUCE_FMAXIMUM : VectorReduction;
+def G_VECREDUCE_FMINIMUM : VectorReduction;
 
 def G_VECREDUCE_ADD : VectorReduction;
 def G_VECREDUCE_MUL : VectorReduction;

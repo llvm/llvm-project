@@ -238,10 +238,9 @@ public:
         return getFieldValue(VectorSizeFieldInfo);
       else
         return getFieldValue(PointerVectorSizeFieldInfo);
-    } else if (IsPointer)
-      return getFieldValue(PointerSizeFieldInfo);
-    else
-      llvm_unreachable("unexpected LLT");
+    }
+    assert(IsPointer && "unexpected LLT");
+    return getFieldValue(PointerSizeFieldInfo);
   }
 
   constexpr unsigned getAddressSpace() const {

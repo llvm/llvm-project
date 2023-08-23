@@ -198,3 +198,20 @@ void enumBitFieldAssignment() {
   s.E = static_cast<unscoped_unspecified_t>(4); // OK.
   s.E = static_cast<unscoped_unspecified_t>(5); // expected-warning {{The value provided to the cast expression is not in the valid range of values for the enum}}
 }
+
+
+enum class empty_unspecified {};
+
+enum class empty_specified: char {};
+
+enum class empty_specified_unsigned: unsigned char {};
+
+void ignore_unused(...);
+
+void empty_enums_init_with_zero_should_not_warn() {
+  auto eu = static_cast<empty_unspecified>(0); //should always be OK to zero initialize any enum
+  auto ef = static_cast<empty_specified>(0);
+  auto efu = static_cast<empty_specified_unsigned>(0);
+
+  ignore_unused(eu, ef, efu);
+}

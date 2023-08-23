@@ -27,7 +27,11 @@ namespace interp {
 class Block;
 class DeadBlock;
 class Pointer;
+class Context;
 enum PrimType : unsigned;
+
+class Pointer;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -83,6 +87,9 @@ public:
   unsigned getIntegerRepresentation() const {
     return reinterpret_cast<uintptr_t>(Pointee) + Offset;
   }
+
+  /// Converts the pointer to an APValue that is an rvalue.
+  APValue toRValue(const Context &Ctx) const;
 
   /// Offsets a pointer inside an array.
   Pointer atIndex(unsigned Idx) const {
@@ -350,7 +357,17 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << Pointee << " {" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {";
+    if (Base == RootPtrMark)
+      OS << "rootptr, ";
+    else
+      OS << Base << ", ";
+
+    if (Offset == PastEndMark)
+      OS << "pastend, ";
+    else
+      OS << Offset << ", ";
+
     if (Pointee)
       OS << Pointee->getSize();
     else

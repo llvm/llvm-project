@@ -2705,7 +2705,7 @@ public:
     VS_Abstract = 16
   };
 
-  VirtSpecifiers() : Specifiers(0), LastSpecifier(VS_None) { }
+  VirtSpecifiers() = default;
 
   bool SetSpecifier(Specifier VS, SourceLocation Loc,
                     const char *&PrevSpec);
@@ -2729,8 +2729,8 @@ public:
   Specifier getLastSpecifier() const { return LastSpecifier; }
 
 private:
-  unsigned Specifiers;
-  Specifier LastSpecifier;
+  unsigned Specifiers = 0;
+  Specifier LastSpecifier = VS_None;
 
   SourceLocation VS_overrideLoc, VS_finalLoc, VS_abstractLoc;
   SourceLocation FirstLocation;

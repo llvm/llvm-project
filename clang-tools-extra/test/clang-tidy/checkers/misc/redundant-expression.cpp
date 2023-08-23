@@ -855,3 +855,11 @@ static_assert(sizeof(X) == sizeof(X));
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: both sides of operator are equivalent
 
 }
+
+namespace PR35857 {
+  void test() {
+    int x = 0;
+    int y = 0;
+    decltype(x + y - (x + y)) z = 10;
+  }
+}

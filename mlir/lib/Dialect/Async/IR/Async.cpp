@@ -33,38 +33,13 @@ void AsyncDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// YieldOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult YieldOp::verify() {
-  // Get the underlying value types from async values returned from the
-  // parent `async.execute` operation.
-  auto executeOp = (*this)->getParentOfType<ExecuteOp>();
-  auto types =
-      llvm::map_range(executeOp.getBodyResults(), [](const OpResult &result) {
-        return llvm::cast<ValueType>(result.getType()).getValueType();
-      });
-
-  if (getOperandTypes() != types)
-    return emitOpError("operand types do not match the types returned from "
-                       "the parent ExecuteOp");
-
-  return success();
-}
-
-MutableOperandRange
-YieldOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
-  return getOperandsMutable();
-}
-
-//===----------------------------------------------------------------------===//
 /// ExecuteOp
 //===----------------------------------------------------------------------===//
 
-constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
+constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
 OperandRange
-ExecuteOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
+ExecuteOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
   return getBodyOperands();
 }
@@ -79,7 +54,6 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
 }
 
 void ExecuteOp::getSuccessorRegions(std::optional<unsigned> index,
-                                    ArrayRef<Attribute>,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
   if (index) {
@@ -100,7 +74,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(dependencies);
   result.addOperands(operands);
 
-  // Add derived `operand_segment_sizes` attribute based on parsed operands.
+  // Add derived `operandSegmentSizes` attribute based on parsed operands.
   int32_t numDependencies = dependencies.size();
   int32_t numOperands = operands.size();
   auto operandSegmentSizes =
@@ -208,7 +182,7 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
   int32_t numOperands = valueArgs.size();
 
-  // Add derived `operand_segment_sizes` attribute based on parsed operands.
+  // Add derived `operandSegmentSizes` attribute based on parsed operands.
   auto operandSegmentSizes =
       parser.getBuilder().getDenseI32ArrayAttr({numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);

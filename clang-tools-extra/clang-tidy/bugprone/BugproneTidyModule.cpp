@@ -28,6 +28,7 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
+#include "IncorrectEnableIfCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -122,6 +123,8 @@ public:
         "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
+    CheckFactories.registerCheck<IncorrectEnableIfCheck>(
+        "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
     CheckFactories.registerCheck<IncDecInConditionsCheck>(

@@ -37,6 +37,10 @@ enum DriverFlag {
   RenderSeparate   = (1 << 3)
 };
 
+enum DriverVisibility {
+  DefaultVis = (1 << 0),
+};
+
 /// Option - Abstract representation for a single form of driver
 /// argument.
 ///
@@ -97,7 +101,7 @@ public:
   /// Get the name of this option without any prefix.
   StringRef getName() const {
     assert(Info && "Must have a valid info!");
-    return Info->Name;
+    return Info->getName();
   }
 
   const Option getGroup() const {
@@ -130,10 +134,9 @@ public:
   }
 
   /// Get the name of this option with the default prefix.
-  std::string getPrefixedName() const {
-    std::string Ret(getPrefix());
-    Ret += getName();
-    return Ret;
+  StringLiteral getPrefixedName() const {
+    assert(Info && "Must have a valid info!");
+    return Info->PrefixedName;
   }
 
   /// Get the help text for this option.
@@ -184,6 +187,11 @@ public:
     return Info->Flags & Val;
   }
 
+  /// Test if this option has the visibility flag \a Val.
+  bool hasVisibilityFlag(unsigned Val) const {
+    return Info->Visibility & Val;
+  }
+
   /// getUnaliasedOption - Return the final option this option
   /// aliases (itself, if the option has no alias).
   const Option getUnaliasedOption() const {
@@ -226,7 +234,7 @@ private:
                                       unsigned &Index) const;
 
 public:
-  void print(raw_ostream &O) const;
+  void print(raw_ostream &O, bool AddNewLine = true) const;
   void dump() const;
 };
 

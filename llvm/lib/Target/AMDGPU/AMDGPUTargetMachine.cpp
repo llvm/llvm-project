@@ -173,12 +173,6 @@ static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
 }
 
-static cl::opt<bool> EnableSROA(
-  "amdgpu-sroa",
-  cl::desc("Run SROA after promote alloca pass"),
-  cl::ReallyHidden,
-  cl::init(true));
-
 static cl::opt<bool>
 EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
                         cl::desc("Run early if-conversion"),
@@ -680,6 +674,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUCodeGenPreparePass(*this));
           return true;
         }
+        if (PassName == "amdgpu-lower-kernel-arguments") {
+          PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
+          return true;
+        }
         return false;
       });
 
@@ -1027,8 +1025,6 @@ void AMDGPUPassConfig::addIRPasses() {
   if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createAMDGPUPromoteAlloca());
 
-    if (EnableSROA)
-      addPass(createSROAPass());
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 

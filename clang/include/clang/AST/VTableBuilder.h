@@ -279,7 +279,7 @@ public:
 
   AddressPointLocation getAddressPoint(BaseSubobject Base) const {
     assert(AddressPoints.count(Base) && "Did not find address point!");
-    return AddressPoints.find(Base)->second;
+    return AddressPoints.lookup(Base);
   }
 
   const AddressPointsMapTy &getAddressPoints() const {

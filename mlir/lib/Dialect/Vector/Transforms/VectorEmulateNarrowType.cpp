@@ -69,19 +69,24 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     if (origElements % scale != 0)
       return failure();
 
-    auto stridedMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
-        loc, adaptor.getBase());
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
 
-    auto [reinterpret, linearizedOffset] = memref::getLinearizeMemRefAndOffset(
-        loc, sourceType, srcBits, dstBits, adaptor.getIndices(),
-        stridedMetadata, rewriter);
+    OpFoldResult linearizedIndices;
+    std::tie(std::ignore, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(),
+            getAsOpFoldResult(adaptor.getIndices()));
 
     auto srcElementType = sourceType.getElementType();
     auto numElements =
         static_cast<int>(std::ceil(static_cast<double>(origElements) / scale));
     auto newLoad = rewriter.create<vector::LoadOp>(
-        loc, VectorType::get(numElements, srcElementType), reinterpret,
-        linearizedOffset);
+        loc, VectorType::get(numElements, srcElementType), adaptor.getBase(),
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
 
     numElements *= scale;
     auto castType = VectorType::get(numElements, oldElementType);

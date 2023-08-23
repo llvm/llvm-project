@@ -8,10 +8,12 @@ body:             |
   bb.0:
       liveins: $x0
     ; CHECK-LABEL: name: ptr_add
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
-    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY1]], 42, 0
-    ; CHECK: $x0 = COPY [[ADDXri]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY1]], 42, 0
+    ; CHECK-NEXT: $x0 = COPY [[ADDXri]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 42
     %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
@@ -26,10 +28,12 @@ body:             |
   bb.0:
       liveins: $x0, $x1
     ; CHECK-LABEL: name: ptr_add_no_constant
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[COPY1]]
-    ; CHECK: $x0 = COPY [[ADDXrr]]
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
@@ -44,11 +48,13 @@ body:             |
   bb.0:
       liveins: $x0, $x1
     ; CHECK-LABEL: name: ptr_add_bad_imm
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 10000
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[SUBREG_TO_REG]]
-    ; CHECK: $x0 = COPY [[ADDXrr]]
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 10000
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 10000
     %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
@@ -63,10 +69,12 @@ body:             |
   bb.0:
       liveins: $q0, $q1
     ; CHECK-LABEL: name: ptr_add_vec
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: [[ADDv2i64_:%[0-9]+]]:fpr128 = ADDv2i64 [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[ADDv2i64_]]
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[ADDv2i64_:%[0-9]+]]:fpr128 = ADDv2i64 [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ADDv2i64_]]
     %0:fpr(<2 x p0>) = COPY $q0
     %1:fpr(<2 x s64>) = COPY $q1
     %3:fpr(<2 x p0>) = G_PTR_ADD %0, %1(<2 x s64>)
@@ -80,10 +88,12 @@ body:             |
   bb.0:
       liveins: $x0
     ; CHECK-LABEL: name: ptr_add_neg_imm
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
-    ; CHECK: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY1]], 10, 0, implicit-def $nzcv
-    ; CHECK: $x0 = COPY [[SUBSXri]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK-NEXT: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY1]], 10, 0, implicit-def dead $nzcv
+    ; CHECK-NEXT: $x0 = COPY [[SUBSXri]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 -10
     %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
@@ -97,11 +107,13 @@ body:             |
   bb.0:
       liveins: $x0
     ; CHECK-LABEL: name: ptr_add_arith_extended
-    ; CHECK: %reg0:gpr32 = COPY $w0
-    ; CHECK: %ptr:gpr64 = COPY $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY %ptr
-    ; CHECK: %ptr_add:gpr64sp = ADDXrx [[COPY]], %reg0, 18
-    ; CHECK: $x0 = COPY %ptr_add
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %reg0:gpr32 = COPY $w0
+    ; CHECK-NEXT: %ptr:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY %ptr
+    ; CHECK-NEXT: %ptr_add:gpr64sp = ADDXrx [[COPY]], %reg0, 18
+    ; CHECK-NEXT: $x0 = COPY %ptr_add
     %reg0:gpr(s32) = COPY $w0
     %ptr:gpr(p0) = COPY $x1
     %ext:gpr(s64) = G_ZEXT %reg0(s32)
@@ -118,10 +130,12 @@ body:             |
   bb.0:
       liveins: $x0, $x1
     ; CHECK-LABEL: name: ptr_add_negated_reg
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: %src:gpr64 = COPY $x1
-    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], %src, implicit-def $nzcv
-    ; CHECK: $x0 = COPY [[SUBSXrr]]
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: %src:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], %src, implicit-def dead $nzcv
+    ; CHECK-NEXT: $x0 = COPY [[SUBSXrr]]
     %0:gpr(p0) = COPY $x0
     %src:gpr(s64) = COPY $x1
     %1:gpr(s64) = G_CONSTANT i64 0

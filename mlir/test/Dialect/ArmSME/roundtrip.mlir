@@ -184,9 +184,73 @@ func.func @arm_sme_get_tile_id_i128() -> i128 {
 
 // -----
 
-func.func @arm_sme_zero() {
+func.func @arm_sme_zero_i8() {
   // CHECK: arm_sme.zero : vector<[16]x[16]xi8>
   %0 = arm_sme.zero : vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_i16() {
+  // CHECK: arm_sme.zero : vector<[8]x[8]xi16>
+  %0 = arm_sme.zero : vector<[8]x[8]xi16>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_i32() {
+  // CHECK: arm_sme.zero : vector<[4]x[4]xi32>
+  %0 = arm_sme.zero : vector<[4]x[4]xi32>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_i64() {
+  // CHECK: arm_sme.zero : vector<[2]x[2]xi64>
+  %0 = arm_sme.zero : vector<[2]x[2]xi64>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_i128() {
+  // CHECK: arm_sme.zero : vector<[1]x[1]xi128>
+  %0 = arm_sme.zero : vector<[1]x[1]xi128>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_f16() {
+  // CHECK: arm_sme.zero : vector<[8]x[8]xf16>
+  %0 = arm_sme.zero : vector<[8]x[8]xf16>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_bf16() {
+  // CHECK: arm_sme.zero : vector<[8]x[8]xbf16>
+  %0 = arm_sme.zero : vector<[8]x[8]xbf16>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_f32() {
+  // CHECK: arm_sme.zero : vector<[4]x[4]xf32>
+  %0 = arm_sme.zero : vector<[4]x[4]xf32>
+  return
+}
+
+// -----
+
+func.func @arm_sme_zero_f64() {
+  // CHECK: arm_sme.zero : vector<[2]x[2]xf64>
+  %0 = arm_sme.zero : vector<[2]x[2]xf64>
   return
 }
 

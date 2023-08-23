@@ -243,9 +243,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT,
-                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
-                               G_FNEARBYINT, G_INTRINSIC_LRINT})
+  getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(
@@ -486,19 +484,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Ty.getElementType() != SrcTy.getElementType();
           },
           0, 1)
-      .clampNumElements(0, v2s32, v4s32);
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(1, s64, 2);
 
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
     unsigned DstSize = Query.Types[0].getSizeInBits();
 
-    if (DstSize == 128 && !Query.Types[0].isVector())
-      return false; // Extending to a scalar s128 needs narrowing.
-
-    // Make sure that we have something that will fit in a register, and
-    // make sure it's a power of 2.
-    if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
+    // Handle legal vectors using legalFor
+    if (Query.Types[0].isVector())
       return false;
+
+    if (DstSize < 8 || DstSize >= 128 || !isPowerOf2_32(DstSize))
+      return false; // Extending to a scalar s128 needs narrowing.
 
     const LLT &SrcTy = Query.Types[1];
 
@@ -513,7 +511,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   };
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalIf(ExtLegalFunc)
-      .clampScalar(0, s64, s64); // Just for s128, others are handled above.
+      .legalFor({{v2s64, v2s32}, {v4s32, v4s16}, {v8s16, v8s8}})
+      .clampScalar(0, s64, s64) // Just for s128, others are handled above.
+      .moreElementsToNextPow2(1)
+      .clampMaxNumElements(1, s8, 8)
+      .clampMaxNumElements(1, s16, 4)
+      .clampMaxNumElements(1, s32, 2)
+      // Tries to convert a large EXTEND into two smaller EXTENDs
+      .lowerIf([=](const LegalityQuery &Query) {
+        return (Query.Types[0].getScalarSizeInBits() >
+                Query.Types[1].getScalarSizeInBits() * 2) &&
+               Query.Types[0].isVector() &&
+               (Query.Types[1].getScalarSizeInBits() == 8 ||
+                Query.Types[1].getScalarSizeInBits() == 16);
+      });
 
   getActionDefinitionsBuilder(G_TRUNC)
       .minScalarOrEltIf(
@@ -799,7 +810,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return Query.Types[0] == p0 && Query.Types[1] == s64;
   });
 
-  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
+                               G_STACKSAVE,
+                               G_STACKRESTORE}).lower();
 
   if (ST.hasMOPS()) {
     // G_BZERO is not supported. Currently it is only emitted by
@@ -845,6 +858,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
+      .lower();
+
+  getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
+                               G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
+      .legalFor({{s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[1];
+        return Query.Types[0] == s16 && (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .minScalarOrElt(0, MinFPScalar)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
       .lower();
 
   getActionDefinitionsBuilder(
@@ -920,8 +946,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
-  getActionDefinitionsBuilder(
-      {G_FABS, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
+  getActionDefinitionsBuilder({G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
@@ -1118,7 +1146,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
     unsigned VaListSize =
@@ -1196,6 +1225,36 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
     MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
+  case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
+  case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv: {
+    MachineIRBuilder MIB(MI);
+    MachineRegisterInfo &MRI = *MIB.getMRI();
+    bool IsSigned = IntrinsicID == Intrinsic::aarch64_neon_saddv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_smaxv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_sminv;
+
+    auto OldDst = MI.getOperand(0).getReg();
+    auto OldDstTy = MRI.getType(OldDst);
+    LLT NewDstTy = MRI.getType(MI.getOperand(2).getReg()).getElementType();
+    if (OldDstTy == NewDstTy)
+      return true;
+
+    auto NewDst = MRI.createGenericVirtualRegister(NewDstTy);
+
+    Helper.Observer.changingInstr(MI);
+    MI.getOperand(0).setReg(NewDst);
+    Helper.Observer.changedInstr(MI);
+
+    MIB.setInsertPt(MIB.getMBB(), ++MIB.getInsertPt());
+    MIB.buildExtOrTrunc(IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT,
+                        OldDst, NewDst);
+
     return true;
   }
   }

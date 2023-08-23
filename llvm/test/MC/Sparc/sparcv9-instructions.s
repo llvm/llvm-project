@@ -433,3 +433,20 @@
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], 1
         ! V9: prefetch  [%i1+%i2], 1  ! encoding: [0xc3,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: done
+        ! V9: done      ! encoding: [0x81,0xf0,0x00,0x00]
+        done
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: retry
+        ! V9: retry     ! encoding: [0x83,0xf0,0x00,0x00]
+        retry
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: saved
+        ! V9: saved     ! encoding: [0x81,0x88,0x00,0x00]
+        saved
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: restored
+        ! V9: restored  ! encoding: [0x83,0x88,0x00,0x00]
+        restored

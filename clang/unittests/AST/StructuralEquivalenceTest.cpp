@@ -992,8 +992,8 @@ TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineVsInline) {
 
 TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineTopLevel) {
   auto Decls =
-      makeNamedDecls("inline namespace A { class X; } }",
-                     "inline namespace B { class X; } }", Lang_CXX17, "X");
+      makeNamedDecls("inline namespace A { class X; }",
+                     "inline namespace B { class X; }", Lang_CXX17, "X");
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 

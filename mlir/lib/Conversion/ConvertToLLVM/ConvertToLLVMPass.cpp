@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -50,7 +51,7 @@ public:
   }
 
   /// Return a copy of this extension.
-  virtual std::unique_ptr<DialectExtensionBase> clone() const final {
+  std::unique_ptr<DialectExtensionBase> clone() const final {
     return std::make_unique<LoadDependentDialectExtension>(*this);
   }
 };
@@ -62,6 +63,7 @@ class ConvertToLLVMPass
     : public impl::ConvertToLLVMPassBase<ConvertToLLVMPass> {
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
   std::shared_ptr<const ConversionTarget> target;
+  std::shared_ptr<const LLVMTypeConverter> typeConverter;
 
 public:
   using impl::ConvertToLLVMPassBase<ConvertToLLVMPass>::ConvertToLLVMPassBase;
@@ -70,25 +72,47 @@ public:
     registry.addExtensions<LoadDependentDialectExtension>();
   }
 
-  ConvertToLLVMPass(const ConvertToLLVMPass &other)
-      : ConvertToLLVMPassBase(other), patterns(other.patterns),
-        target(other.target) {}
-
   LogicalResult initialize(MLIRContext *context) final {
     RewritePatternSet tempPatterns(context);
     auto target = std::make_shared<ConversionTarget>(*context);
     target->addLegalDialect<LLVM::LLVMDialect>();
-    for (Dialect *dialect : context->getLoadedDialects()) {
-      // First time we encounter this dialect: if it implements the interface,
-      // let's populate patterns !
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-      if (!iface)
-        continue;
-      iface->populateConvertToLLVMConversionPatterns(*target, tempPatterns);
+    auto typeConverter = std::make_shared<LLVMTypeConverter>(context);
+
+    if (!filterDialects.empty()) {
+      // Test mode: Populate only patterns from the specified dialects. Produce
+      // an error if the dialect is not loaded or does not implement the
+      // interface.
+      for (std::string &dialectName : filterDialects) {
+        Dialect *dialect = context->getLoadedDialect(dialectName);
+        if (!dialect)
+          return emitError(UnknownLoc::get(context))
+                 << "dialect not loaded: " << dialectName << "\n";
+        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface)
+          return emitError(UnknownLoc::get(context))
+                 << "dialect does not implement ConvertToLLVMPatternInterface: "
+                 << dialectName << "\n";
+        iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
+                                                       tempPatterns);
+      }
+    } else {
+      // Normal mode: Populate all patterns from all dialects that implement the
+      // interface.
+      for (Dialect *dialect : context->getLoadedDialects()) {
+        // First time we encounter this dialect: if it implements the interface,
+        // let's populate patterns !
+        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface)
+          continue;
+        iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
+                                                       tempPatterns);
+      }
     }
-    patterns =
+
+    this->patterns =
         std::make_unique<FrozenRewritePatternSet>(std::move(tempPatterns));
     this->target = target;
+    this->typeConverter = typeConverter;
     return success();
   }
 
@@ -99,3 +123,7 @@ public:
 };
 
 } // namespace
+
+std::unique_ptr<Pass> mlir::createConvertToLLVMPass() {
+  return std::make_unique<ConvertToLLVMPass>();
+}

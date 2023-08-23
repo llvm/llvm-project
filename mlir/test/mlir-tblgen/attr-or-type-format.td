@@ -648,5 +648,5 @@ def TypeN : TestType<"TestP"> {
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
 // DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
 // DEFAULT_TYPE_PARSER: if (parseResult.has_value()) {
-// DEFAULT_TYPE_PARSER:   if (::mlir::succeeded(parseResult.getValue()))
+// DEFAULT_TYPE_PARSER:   if (::mlir::succeeded(parseResult.value()))
 // DEFAULT_TYPE_PARSER:     return genType;

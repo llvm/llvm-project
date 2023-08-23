@@ -57,12 +57,12 @@ define <8 x float> @complex_mul_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.4s, v0.4s, v2.4s, #0
-; CHECK-NEXT:    fcmla v5.4s, v1.4s, v3.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v0.4s, v2.4s, #90
-; CHECK-NEXT:    fcmla v5.4s, v1.4s, v3.4s, #90
-; CHECK-NEXT:    mov v0.16b, v4.16b
-; CHECK-NEXT:    mov v1.16b, v5.16b
+; CHECK-NEXT:    fcmla v5.4s, v0.4s, v2.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v3.4s, #0
+; CHECK-NEXT:    fcmla v5.4s, v0.4s, v2.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v3.4s, #90
+; CHECK-NEXT:    mov v0.16b, v5.16b
+; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
 entry:
   %a.real   = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -88,17 +88,17 @@ define <16 x float> @complex_mul_v16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
 ; CHECK-NEXT:    fcmla v16.4s, v0.4s, v4.4s, #0
-; CHECK-NEXT:    fcmla v17.4s, v1.4s, v5.4s, #0
-; CHECK-NEXT:    fcmla v18.4s, v2.4s, v6.4s, #0
-; CHECK-NEXT:    fcmla v19.4s, v3.4s, v7.4s, #0
+; CHECK-NEXT:    fcmla v18.4s, v1.4s, v5.4s, #0
+; CHECK-NEXT:    fcmla v17.4s, v3.4s, v7.4s, #0
+; CHECK-NEXT:    fcmla v19.4s, v2.4s, v6.4s, #0
 ; CHECK-NEXT:    fcmla v16.4s, v0.4s, v4.4s, #90
-; CHECK-NEXT:    fcmla v17.4s, v1.4s, v5.4s, #90
-; CHECK-NEXT:    fcmla v18.4s, v2.4s, v6.4s, #90
-; CHECK-NEXT:    fcmla v19.4s, v3.4s, v7.4s, #90
+; CHECK-NEXT:    fcmla v18.4s, v1.4s, v5.4s, #90
+; CHECK-NEXT:    fcmla v17.4s, v3.4s, v7.4s, #90
+; CHECK-NEXT:    fcmla v19.4s, v2.4s, v6.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v16.16b
-; CHECK-NEXT:    mov v1.16b, v17.16b
-; CHECK-NEXT:    mov v2.16b, v18.16b
-; CHECK-NEXT:    mov v3.16b, v19.16b
+; CHECK-NEXT:    mov v1.16b, v18.16b
+; CHECK-NEXT:    mov v3.16b, v17.16b
+; CHECK-NEXT:    mov v2.16b, v19.16b
 ; CHECK-NEXT:    ret
 entry:
   %a.real   = shufflevector <16 x float> %a, <16 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>

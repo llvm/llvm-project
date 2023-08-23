@@ -119,6 +119,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zicntr", RISCVExtensionVersion{1, 0}},
     {"zicsr", RISCVExtensionVersion{2, 0}},
     {"zifencei", RISCVExtensionVersion{2, 0}},
+    {"zihintntl", RISCVExtensionVersion{1, 0}},
     {"zihintpause", RISCVExtensionVersion{2, 0}},
     {"zihpm", RISCVExtensionVersion{1, 0}},
 
@@ -167,9 +168,8 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zfa", RISCVExtensionVersion{0, 2}},
     {"zfbfmin", RISCVExtensionVersion{0, 8}},
 
+    {"zicfilp", RISCVExtensionVersion{0, 2}},
     {"zicond", RISCVExtensionVersion{1, 0}},
-
-    {"zihintntl", RISCVExtensionVersion{0, 2}},
 
     {"ztso", RISCVExtensionVersion{0, 1}},
 
@@ -180,6 +180,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zvfbfwma", RISCVExtensionVersion{0, 8}},
 
     // vector crypto
+    {"zvkb", RISCVExtensionVersion{1, 0}},
     {"zvkg", RISCVExtensionVersion{1, 0}},
     {"zvkn", RISCVExtensionVersion{1, 0}},
     {"zvknc", RISCVExtensionVersion{1, 0}},
@@ -975,6 +976,7 @@ static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
 static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
                                        "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
+static const char *ImpliedExtsZvbb[] = {"zvkb"};
 static const char *ImpliedExtsZve32f[] = {"zve32x", "f"};
 static const char *ImpliedExtsZve32x[] = {"zvl32b", "zicsr"};
 static const char *ImpliedExtsZve64d[] = {"zve64f", "d"};
@@ -983,11 +985,11 @@ static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
 static const char *ImpliedExtsZvfbfmin[] = {"zve32f", "zfbfmin"};
 static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin"};
 static const char *ImpliedExtsZvfh[] = {"zve32f", "zfhmin"};
-static const char *ImpliedExtsZvkn[] = {"zvbb", "zvkned", "zvknhb", "zvkt"};
+static const char *ImpliedExtsZvkn[] = {"zvkb", "zvkned", "zvknhb", "zvkt"};
 static const char *ImpliedExtsZvknc[] = {"zvbc", "zvkn"};
 static const char *ImpliedExtsZvkng[] = {"zvkg", "zvkn"};
 static const char *ImpliedExtsZvknhb[] = {"zvknha"};
-static const char *ImpliedExtsZvks[] = {"zvbb", "zvksed", "zvksh", "zvkt"};
+static const char *ImpliedExtsZvks[] = {"zvkb", "zvksed", "zvksh", "zvkt"};
 static const char *ImpliedExtsZvksc[] = {"zvbc", "zvks"};
 static const char *ImpliedExtsZvksg[] = {"zvkg", "zvks"};
 static const char *ImpliedExtsZvl1024b[] = {"zvl512b"};
@@ -1040,6 +1042,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zk"}, {ImpliedExtsZk}},
     {{"zkn"}, {ImpliedExtsZkn}},
     {{"zks"}, {ImpliedExtsZks}},
+    {{"zvbb"}, {ImpliedExtsZvbb}},
     {{"zve32f"}, {ImpliedExtsZve32f}},
     {{"zve32x"}, {ImpliedExtsZve32x}},
     {{"zve64d"}, {ImpliedExtsZve64d}},
@@ -1249,4 +1252,41 @@ StringRef RISCVISAInfo::computeDefaultABI() const {
     return "lp64";
   }
   llvm_unreachable("Invalid XLEN");
+}
+
+bool RISCVISAInfo::isSupportedExtensionWithVersion(StringRef Ext) {
+  if (Ext.empty())
+    return false;
+
+  auto Pos = findLastNonVersionCharacter(Ext) + 1;
+  StringRef Name = Ext.substr(0, Pos);
+  StringRef Vers = Ext.substr(Pos);
+  if (Vers.empty())
+    return false;
+
+  unsigned Major, Minor, ConsumeLength;
+  if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
+                                   true, true)) {
+    consumeError(std::move(E));
+    return false;
+  }
+
+  return true;
+}
+
+std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
+  if (Ext.empty())
+    return std::string();
+
+  auto Pos = findLastNonVersionCharacter(Ext) + 1;
+  StringRef Name = Ext.substr(0, Pos);
+
+  if (Pos != Ext.size() && !isSupportedExtensionWithVersion(Ext))
+    return std::string();
+
+  if (!isSupportedExtension(Name))
+    return std::string();
+
+  return isExperimentalExtension(Name) ? "experimental-" + Name.str()
+                                       : Name.str();
 }

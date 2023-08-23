@@ -15,7 +15,7 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def $scc
+    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BCNT1_I32_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CTPOP %0
@@ -130,8 +130,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def $scc
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def $scc
+    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def dead $scc
+    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -207,7 +207,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def $scc
+    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[S_BCNT1_I32_B32_]], [[COPY1]], 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -231,7 +231,7 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_BCNT1_I32_B64_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B64 [[COPY]], implicit-def $scc
+    ; CHECK-NEXT: [[S_BCNT1_I32_B64_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B64 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BCNT1_I32_B64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s32) = G_CTPOP %0

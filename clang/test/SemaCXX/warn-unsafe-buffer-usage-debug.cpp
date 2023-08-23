@@ -66,3 +66,35 @@ void implied_unclaimed_var(int *b) {  // expected-warning{{'b' is an unsafe poin
   b++;  // expected-note{{used in pointer arithmetic here}} \
         // debug-note{{safe buffers debug: failed to produce fixit for 'b' : has an unclaimed use}}
 }
+
+int *a = new int[3];  // expected-warning{{'a' is an unsafe pointer used for buffer access}} \
+// debug-note{{safe buffers debug: failed to produce fixit for 'a' : neither local nor a parameter}}
+void test_globals() {
+  a[7] = 4;  // expected-note{{used in buffer access here}}
+}
+
+void test_decomp_decl() {
+  int a[2] = {1, 2};
+  auto [x, y] = a;
+  x = 9;
+}
+
+void test_claim_use_multiple() {
+  int *a = new int[8];  // expected-warning{{'a' is an unsafe pointer used for buffer access}}
+  a[6] = 9;  // expected-note{{used in buffer access here}}
+  a++;  // expected-note{{used in pointer arithmetic here}} \
+  // debug-note{{safe buffers debug: failed to produce fixit for 'a' : has an unclaimed use}}
+}
+
+struct S
+{
+    int *x;
+};
+ 
+S f() { return S{new int[4]}; }
+
+void test_struct_claim_use() {
+  auto [x] = f();
+  x[6] = 8;  // expected-warning{{unsafe buffer access}}
+  x++;  // expected-warning{{unsafe pointer arithmetic}}
+}

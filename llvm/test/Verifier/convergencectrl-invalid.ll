@@ -1,5 +1,16 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
+; CHECK: Entry or anchor intrinsic must not have a convergencectrl bundle.
+; CHECK-NEXT: %t04_tok2 = call token
+; CHECK: Loop intrinsic must have a convergencectrl bundle.
+; CHECK-NEXT: %t04_tok3 = call token
+define void @basic_syntax() {
+  %t04_tok1 = call token @llvm.experimental.convergence.anchor()
+  %t04_tok2 = call token @llvm.experimental.convergence.anchor() [ "convergencectrl"(token %t04_tok1) ]
+  %t04_tok3 = call token @llvm.experimental.convergence.loop()
+  ret void
+}
+
 ; CHECK: Convergence control tokens can only be produced by calls to the convergence control intrinsics.
 ; CHECK-NEXT:  %t04_tok1 = call token @produce_token()
 ; CHECK-NEXT:  call void @f() [ "convergencectrl"(token %t04_tok1) ]

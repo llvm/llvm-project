@@ -33,16 +33,20 @@ tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Unconditional_branch
   ; MIPS32: bb.0.entry:
-  ; MIPS32:   successors: %bb.2(0x80000000)
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32:   J %bb.2, implicit-def $at
-  ; MIPS32: bb.1.end:
-  ; MIPS32:   $v0 = COPY [[COPY]]
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.2.block:
-  ; MIPS32:   successors: %bb.1(0x80000000)
-  ; MIPS32:   J %bb.1, implicit-def $at
+  ; MIPS32-NEXT:   successors: %bb.2(0x80000000)
+  ; MIPS32-NEXT:   liveins: $a0, $a1
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.1.end:
+  ; MIPS32-NEXT:   $v0 = COPY [[COPY]]
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.2.block:
+  ; MIPS32-NEXT:   successors: %bb.1(0x80000000)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   J %bb.1, implicit-def dead $at
   bb.1.entry:
     liveins: $a0, $a1
 
@@ -66,20 +70,23 @@ tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Conditional_branch
   ; MIPS32: bb.0 (%ir-block.0):
-  ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32:   liveins: $a0, $a1, $a2
-  ; MIPS32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32:   J %bb.2, implicit-def $at
-  ; MIPS32: bb.1.if.then:
-  ; MIPS32:   $v0 = COPY [[COPY1]]
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.2.if.else:
-  ; MIPS32:   $v0 = COPY [[COPY2]]
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.1.if.then:
+  ; MIPS32-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.2.if.else:
+  ; MIPS32-NEXT:   $v0 = COPY [[COPY2]]
+  ; MIPS32-NEXT:   RetRA implicit $v0
   bb.1 (%ir-block.0):
     liveins: $a0, $a1, $a2
 

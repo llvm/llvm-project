@@ -16,6 +16,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
@@ -387,6 +388,7 @@ private:
       genSourceMoldAllocation(alloc, boxAddr, /*isSource=*/false);
     else
       genSimpleAllocation(alloc, boxAddr);
+    postAllocationAction(alloc);
   }
 
   static bool lowerBoundsAreOnes(const Allocation &alloc) {
@@ -440,6 +442,12 @@ private:
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
                                        lenParams, mangleAlloc(alloc),
                                        /*mustBeHeap=*/true);
+  }
+
+  void postAllocationAction(const Allocation &alloc) {
+    if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
+      Fortran::lower::attachDeclarePostAllocAction(converter, builder,
+                                                   alloc.getSymbol());
   }
 
   void genSimpleAllocation(const Allocation &alloc,
@@ -730,16 +738,15 @@ void Fortran::lower::genAllocateStmt(
 //===----------------------------------------------------------------------===//
 
 // Generate deallocation of a pointer/allocatable.
-static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
-                          const fir::MutableBoxValue &box,
-                          ErrorManager &errorManager,
-                          mlir::Value declaredTypeDesc = {}) {
+static mlir::Value genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 const fir::MutableBoxValue &box,
+                                 ErrorManager &errorManager,
+                                 mlir::Value declaredTypeDesc = {}) {
   // Deallocate intrinsic types inline.
   if (!box.isDerived() && !box.isPolymorphic() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime) {
-    fir::factory::genInlinedDeallocate(builder, loc, box);
-    return;
+    return fir::factory::genInlinedDeallocate(builder, loc, box);
   }
   // Use runtime calls to deallocate descriptor cases. Sync MutableBoxValue
   // with its descriptor before and after calls if needed.
@@ -748,6 +755,7 @@ static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
       genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
   errorManager.assignStat(builder, loc, stat);
+  return stat;
 }
 
 void Fortran::lower::genDeallocateBox(
@@ -760,6 +768,22 @@ void Fortran::lower::genDeallocateBox(
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+}
+
+static void preDeallocationAction(Fortran::lower::AbstractConverter &converter,
+                                  fir::FirOpBuilder &builder,
+                                  mlir::Value beginOpValue,
+                                  const Fortran::semantics::Symbol &sym) {
+  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+    Fortran::lower::attachDeclarePreDeallocAction(converter, builder,
+                                                  beginOpValue, sym);
+}
+
+static void postDeallocationAction(Fortran::lower::AbstractConverter &converter,
+                                   fir::FirOpBuilder &builder,
+                                   const Fortran::semantics::Symbol &sym) {
+  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+    Fortran::lower::attachDeclarePostDeallocAction(converter, builder, sym);
 }
 
 void Fortran::lower::genDeallocateStmt(
@@ -784,12 +808,11 @@ void Fortran::lower::genDeallocateStmt(
   mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
   for (const Fortran::parser::AllocateObject &allocateObject :
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
+    const Fortran::semantics::Symbol &symbol = unwrapSymbol(allocateObject);
     fir::MutableBoxValue box =
         genMutableBoxValue(converter, loc, allocateObject);
-
     mlir::Value declaredTypeDesc = {};
     if (box.isPolymorphic()) {
-      const Fortran::semantics::Symbol &symbol = unwrapSymbol(allocateObject);
       assert(symbol.GetType());
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               symbol.GetType()->AsDerived()) {
@@ -797,7 +820,10 @@ void Fortran::lower::genDeallocateStmt(
             Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
       }
     }
-    genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+    mlir::Value beginOpValue =
+        genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+    preDeallocationAction(converter, builder, beginOpValue, symbol);
+    postDeallocationAction(converter, builder, symbol);
   }
   builder.restoreInsertionPoint(insertPt);
 }

@@ -22,7 +22,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
@@ -161,6 +165,11 @@ public:
     return *this;
   }
 
+  DeclarationFragments &pop_back() {
+    Fragments.pop_back();
+    return *this;
+  }
+
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
@@ -262,6 +271,8 @@ public:
   /// Build DeclarationFragments for a variable declaration VarDecl.
   static DeclarationFragments getFragmentsForVar(const VarDecl *);
 
+  static DeclarationFragments getFragmentsForVarTemplate(const VarDecl *);
+
   /// Build DeclarationFragments for a function declaration FunctionDecl.
   static DeclarationFragments getFragmentsForFunction(const FunctionDecl *);
 
@@ -291,6 +302,40 @@ public:
 
   static DeclarationFragments
   getFragmentsForOverloadedOperator(const CXXMethodDecl *);
+
+  static DeclarationFragments
+      getFragmentsForTemplateParameters(ArrayRef<NamedDecl *>);
+
+  static std::string
+  getNameForTemplateArgument(const ArrayRef<NamedDecl *>, std::string);
+
+  static DeclarationFragments
+  getFragmentsForTemplateArguments(const ArrayRef<TemplateArgument>,
+                                   ASTContext &,
+                                   const std::optional<ArrayRef<NamedDecl *>>);
+
+  static DeclarationFragments getFragmentsForConcept(const ConceptDecl *);
+
+  static DeclarationFragments
+  getFragmentsForRedeclarableTemplate(const RedeclarableTemplateDecl *);
+
+  static DeclarationFragments getFragmentsForClassTemplateSpecialization(
+      const ClassTemplateSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForClassTemplatePartialSpecialization(
+      const ClassTemplatePartialSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForVarTemplateSpecialization(
+      const VarTemplateSpecializationDecl *);
+
+  static DeclarationFragments getFragmentsForVarTemplatePartialSpecialization(
+      const VarTemplatePartialSpecializationDecl *);
+
+  static DeclarationFragments
+  getFragmentsForFunctionTemplate(const FunctionTemplateDecl *Decl);
+
+  static DeclarationFragments
+  getFragmentsForFunctionTemplateSpecialization(const FunctionDecl *Decl);
 
   /// Build DeclarationFragments for an Objective-C category declaration
   /// ObjCCategoryDecl.
@@ -366,10 +411,21 @@ DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
   FunctionSignature Signature;
 
   DeclarationFragments ReturnType, After;
-  ReturnType
-      .append(getFragmentsForType(Function->getReturnType(),
-                                  Function->getASTContext(), After))
-      .append(std::move(After));
+  ReturnType = getFragmentsForType(Function->getReturnType(),
+                                   Function->getASTContext(), After);
+  if (isa<FunctionDecl>(Function) &&
+      dyn_cast<FunctionDecl>(Function)->getDescribedFunctionTemplate() &&
+      ReturnType.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
+          0) {
+    std::string ProperArgName =
+        getNameForTemplateArgument(dyn_cast<FunctionDecl>(Function)
+                                       ->getDescribedFunctionTemplate()
+                                       ->getTemplateParameters()
+                                       ->asArray(),
+                                   ReturnType.begin()->Spelling);
+    ReturnType.begin()->Spelling.swap(ProperArgName);
+  }
+  ReturnType.append(std::move(After));
   Signature.setReturnType(ReturnType);
 
   for (const auto *Param : Function->parameters())

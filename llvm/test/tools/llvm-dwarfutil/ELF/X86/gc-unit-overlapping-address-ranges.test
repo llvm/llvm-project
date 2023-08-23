@@ -6,6 +6,9 @@
 # RUN: llvm-dwarfutil --garbage-collection %t.o %t1
 # RUN: llvm-dwarfdump -a %t1 | FileCheck %s
 
+# RUN: llvm-dwarfutil --linker llvm --garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_name{{.*}}"CU1"
 # CHECK: DW_TAG_class_type

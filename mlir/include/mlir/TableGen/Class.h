@@ -166,6 +166,21 @@ public:
   /// method definition).
   void writeDefTo(raw_indented_ostream &os, StringRef namePrefix) const;
 
+  /// Write the template parameters of the signature.
+  void writeTemplateParamsTo(raw_indented_ostream &os) const;
+
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.push_back(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
+
 private:
   /// The method's C++ return type.
   std::string returnType;
@@ -173,6 +188,8 @@ private:
   std::string methodName;
   /// The method's parameter list.
   MethodParameters parameters;
+  /// An optional list of template parameters.
+  SmallVector<std::string, 0> templateParams;
 };
 
 /// This class contains the body of a C++ method.
@@ -367,6 +384,14 @@ public:
   void writeDefTo(raw_indented_ostream &os,
                   StringRef namePrefix) const override;
 
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param);
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container);
+
 protected:
   /// A collection of method properties.
   Properties properties;
@@ -458,6 +483,20 @@ operator|=(mlir::tblgen::Method::Properties &lhs,
 
 namespace mlir {
 namespace tblgen {
+
+template <typename ParamT>
+void Method::addTemplateParam(ParamT param) {
+  // Templates imply inline.
+  properties |= Method::Inline;
+  methodSignature.addTemplateParam(param);
+}
+
+template <typename ContainerT>
+void Method::addTemplateParams(ContainerT &&container) {
+  // Templates imply inline.
+  properties |= Method::Inline;
+  methodSignature.addTemplateParam(std::forward<ContainerT>(container));
+}
 
 /// This class describes a C++ parent class declaration.
 class ParentClass {

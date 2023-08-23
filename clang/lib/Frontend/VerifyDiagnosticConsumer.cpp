@@ -876,8 +876,10 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
     OS << ": " << I->second;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/true << OS.str();
+      << KindStr << /*Unexpected=*/true << OS.str();
   return std::distance(diag_begin, diag_end);
 }
 
@@ -907,8 +909,10 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
     OS << ": " << D->Text;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/false << OS.str();
+      << KindStr << /*Unexpected=*/false << OS.str();
   return DL.size();
 }
 

@@ -183,9 +183,7 @@ void PseudoProbeRewriter::updatePseudoProbes() {
         // A call probe may be duplicated due to ICP
         // Go through output of InputOffsetToAddressMap to collect all related
         // probes
-        const InputOffsetToAddressMapTy &Offset2Addr =
-            F->getInputOffsetToAddressMap();
-        auto CallOutputAddresses = Offset2Addr.equal_range(Offset);
+        auto CallOutputAddresses = BC.getIOAddressMap().lookupAll(AP.first);
         auto CallOutputAddress = CallOutputAddresses.first;
         if (CallOutputAddress == CallOutputAddresses.second) {
           Probe->setAddress(INT64_MAX);

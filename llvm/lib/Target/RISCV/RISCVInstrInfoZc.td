@@ -131,7 +131,7 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
 
 class RVInstZcCPPP<bits<5> funct5, string opcodestr>
     : RVInst16<(outs), (ins rlist:$rlist, spimm:$spimm),
-               opcodestr, "{$rlist}, $spimm", [], InstFormatOther> {
+               opcodestr, "$rlist, $spimm", [], InstFormatOther> {
   bits<4> rlist;
   bits<16> spimm;
 

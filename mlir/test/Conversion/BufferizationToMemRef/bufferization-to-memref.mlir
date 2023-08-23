@@ -66,14 +66,26 @@ func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, strided<[10]
   memref.dealloc %arg0 : memref<?xf32, strided<[10], offset: ?>>
   return %1 : memref<?xf32, strided<[10], offset: ?>>
 }
+
 // -----
 
 // CHECK-LABEL: func @conversion_dealloc_empty
 func.func @conversion_dealloc_empty() {
-  // CHECK-NEXT: return
+  // CHECK-NOT: bufferization.dealloc
   bufferization.dealloc
   return
 }
+
+// -----
+
+func.func @conversion_dealloc_empty_but_retains(%arg0: memref<2xi32>, %arg1: memref<2xi32>) -> (i1, i1) {
+  %0:2 = bufferization.dealloc retain (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+  return %0#0, %0#1 : i1, i1
+}
+
+// CHECK-LABEL: func @conversion_dealloc_empty
+//  CHECK-NEXT: [[FALSE:%.+]] = arith.constant false
+//  CHECK-NEXT: return [[FALSE]], [[FALSE]] :
 
 // -----
 
@@ -90,6 +102,33 @@ func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
 // CHECk-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
 // CHECk-NEXT: }
 // CHECk-NEXT: return
+
+// -----
+
+func.func @conversion_dealloc_one_memref_and_multiple_retained(%arg0: memref<2xf32>, %arg1: memref<1xf32>, %arg2: i1, %arg3: memref<2xf32>) -> (i1, i1) {
+  %0:2 = bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg2) retain (%arg1, %arg3 : memref<1xf32>, memref<2xf32>)
+  return %0#0, %0#1 : i1, i1
+}
+
+// CHECK-LABEL: func @conversion_dealloc_one_memref_and_multiple_retained
+//  CHECK-SAME: ([[ARG0:%.+]]: memref<2xf32>, [[ARG1:%.+]]: memref<1xf32>, [[ARG2:%.+]]: i1, [[ARG3:%.+]]: memref<2xf32>)
+//   CHECK-DAG: [[M0:%.+]] = memref.extract_aligned_pointer_as_index [[ARG0]]
+//   CHECK-DAG: [[R0:%.+]] = memref.extract_aligned_pointer_as_index [[ARG1]]
+//   CHECK-DAG: [[R1:%.+]] = memref.extract_aligned_pointer_as_index [[ARG3]]
+//   CHECK-DAG: [[DOES_NOT_ALIAS_R0:%.+]] = arith.cmpi ne, [[M0]], [[R0]] : index
+//   CHECK-DAG: [[DOES_NOT_ALIAS_R1:%.+]] = arith.cmpi ne, [[M0]], [[R1]] : index
+//       CHECK: [[NOT_RETAINED:%.+]] = arith.andi [[DOES_NOT_ALIAS_R0]], [[DOES_NOT_ALIAS_R1]]
+//       CHECK: [[SHOULD_DEALLOC:%.+]] = arith.andi [[NOT_RETAINED]], [[ARG2]]
+//       CHECK: scf.if [[SHOULD_DEALLOC]]
+//       CHECK:   memref.dealloc [[ARG0]]
+//       CHECK: }
+//   CHECK-DAG: [[ALIASES_R0:%.+]] = arith.xori [[DOES_NOT_ALIAS_R0]], %true
+//   CHECK-DAG: [[ALIASES_R1:%.+]] = arith.xori [[DOES_NOT_ALIAS_R1]], %true
+//   CHECK-DAG: [[RES0:%.+]] = arith.andi [[ALIASES_R0]], [[ARG2]]
+//   CHECK-DAG: [[RES1:%.+]] = arith.andi [[ALIASES_R1]], [[ARG2]]
+//       CHECK: return [[RES0]], [[RES1]]
+
+// CHECK-NOT: func @dealloc_helper
 
 // -----
 

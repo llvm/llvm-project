@@ -675,6 +675,16 @@ std::vector<AppliedConstraint> Pattern::getConstraints() const {
   return ret;
 }
 
+int Pattern::getNumSupplementalPatterns() const {
+  auto *results = def.getValueAsListInit("supplementalPatterns");
+  return results->size();
+}
+
+DagNode Pattern::getSupplementalPattern(unsigned index) const {
+  auto *results = def.getValueAsListInit("supplementalPatterns");
+  return DagNode(cast<llvm::DagInit>(results->getElement(index)));
+}
+
 int Pattern::getBenefit() const {
   // The initial benefit value is a heuristic with number of ops in the source
   // pattern.

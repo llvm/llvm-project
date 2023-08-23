@@ -93,7 +93,7 @@ public:
   void addRegMasked(MCPhysReg Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
       LaneBitmask UnitMask = (*Unit).second;
-      if (UnitMask.none() || (UnitMask & Mask).any())
+      if ((UnitMask & Mask).any())
         Units.set((*Unit).first);
     }
   }

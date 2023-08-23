@@ -20,13 +20,13 @@ __attribute__((objc_root_class))
 
 - (void)tooManyArguments __attribute__((enforce_tcb("test", 12))); // expected-error{{'enforce_tcb' attribute takes one argument}}
 
-- (void)wrongArgumentType __attribute__((enforce_tcb(12))); // expected-error{{'enforce_tcb' attribute requires a string}}
+- (void)wrongArgumentType __attribute__((enforce_tcb(12))); // expected-error{{expected string literal as argument of 'enforce_tcb' attribute}}
 
 - (void)noArgumentsLeaf __attribute__((enforce_tcb_leaf)); // expected-error{{'enforce_tcb_leaf' attribute takes one argument}}
 
 - (void)tooManyArgumentsLeaf __attribute__((enforce_tcb_leaf("test", 12))); // expected-error{{'enforce_tcb_leaf' attribute takes one argument}}
 
-- (void)wrongArgumentTypeLeaf __attribute__((enforce_tcb_leaf(12))); // expected-error{{'enforce_tcb_leaf' attribute requires a string}}
+- (void)wrongArgumentTypeLeaf __attribute__((enforce_tcb_leaf(12))); // expected-error{{expected string literal as argument of 'enforce_tcb_leaf' attribute}}
 @end
 
 @implementation AClass

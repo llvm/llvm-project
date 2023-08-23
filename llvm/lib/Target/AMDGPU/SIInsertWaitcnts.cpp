@@ -585,6 +585,8 @@ private:
   bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
+  bool OptNone;
+
   // In any given run of this pass, WCG will point to one of these two
   // generator objects, which must have been re-initialised before use
   // from a value made using a subtarget constructor.
@@ -1722,7 +1724,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // do this if there are no outstanding scratch stores.
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !OptNone &&
         ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
       ReleaseVGPRInsts.insert(&MI);
@@ -2590,6 +2592,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const unsigned *WaitEventMaskForInst = WCG->getWaitEventMask();
 
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
+
+  OptNone = MF.getFunction().hasOptNone() ||
+            MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
   HardwareLimits Limits = {};
   if (ST->hasExtendedWaitCounts()) {

@@ -28,8 +28,7 @@
 define zeroext i1 @func_umin_var_i1(i1 noundef zeroext %0, i1 noundef zeroext %1) {
 ; CHECK-LABEL: func_umin_var_i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mins.w.sx %s0, %s0, %s1
-; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = tail call i1 @llvm.umin.i1(i1 %0, i1 %1)
   ret i1 %3

@@ -167,14 +167,16 @@ private:
   using __can_convert =
       _And< is_constructible<_Tp, _UfQual>,
             is_constructible<_Err, _OtherErrQual>,
-            _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
-            _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
-            _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
-            _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
-            _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
-            _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>,
+            _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
+                _And< _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
+                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
+                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
+                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
+                      _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
+                      _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
+                      _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
+                      _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>>,
+                true_type>,
             _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
             _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>>>,
             _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
@@ -221,14 +223,13 @@ public:
 
   template <class _Up = _Tp>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             !__is_std_unexpected<remove_cvref_t<_Up>>::value && is_constructible_v<_Tp, _Up>)
+             is_constructible_v<_Tp, _Up> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
+             (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
-  expected(_Up&& __u)
-    noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
+      expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
       : __has_val_(true) {
     std::construct_at(std::addressof(__union_.__val_), std::forward<_Up>(__u));
   }
-
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, const _OtherErr&>

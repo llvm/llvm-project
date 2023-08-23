@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
     if (LIBC_UNLIKELY(xbits.is_nan()))
       return x + 1.0f; // sNaN to qNaN + signal
 
-    const double SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
+    constexpr float SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
 
     bool sign = xbits.get_sign();
     int idx = static_cast<int>(sign);

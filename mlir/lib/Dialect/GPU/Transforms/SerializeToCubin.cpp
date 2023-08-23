@@ -27,13 +27,14 @@ using namespace mlir;
 
 static void emitCudaError(const llvm::Twine &expr, const char *buffer,
                           CUresult result, Location loc) {
-  const char *error;
+  const char *error = nullptr;
   cuGetErrorString(result, &error);
-  emitError(loc, expr.concat(" failed with error code ")
-                     .concat(llvm::Twine{error})
-                     .concat("[")
-                     .concat(buffer)
-                     .concat("]"));
+  emitError(loc,
+            expr.concat(error ? " failed with error code " + llvm::Twine{error}
+                              : llvm::Twine(" failed with unknown error "))
+                .concat("[")
+                .concat(buffer)
+                .concat("]"));
 }
 
 #define RETURN_ON_CUDA_ERROR(expr)                                             \

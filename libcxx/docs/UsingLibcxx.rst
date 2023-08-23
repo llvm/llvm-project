@@ -127,15 +127,15 @@ provide pretty-printers itself. Those can be used as:
 include-what-you-use (IWYU)
 ===========================
 
-libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`,
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
 which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
 IWYU, you should run the tool like so:
 
 .. code-block:: bash
 
-  $ include-what-you-use -Xiwyu /path/to/libcxx/include/libcxx.imp file.cpp
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
 
-If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp```
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
 .. _termination-handler:

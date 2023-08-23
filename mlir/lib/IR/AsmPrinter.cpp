@@ -3197,7 +3197,7 @@ void OperationPrinter::printResourceFileMetadata(
     ResourceBuilder entryBuilder(*this, printFn);
     provider.buildResources(op, providerArgs..., entryBuilder);
 
-    needEntryComma = hadEntry;
+    needEntryComma |= hadEntry;
     if (hadEntry)
       os << newLine << "    }";
   };

@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
 
 define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX940-LABEL: test_cvt_f32_bf8_byte0:
-; GFX940: v_cvt_f32_bf8_e32 v0, v0
+; GFX940: v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_0{{$}}
 ;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX12: v_cvt_f32_bf8_e32 v0, v0
@@ -53,7 +53,7 @@ define float @test_cvt_f32_bf8_byte3(i32 %a) {
 
 define float @test_cvt_f32_fp8_byte0(i32 %a) {
 ; GFX940-LABEL: test_cvt_f32_fp8_byte0:
-; GFX940: v_cvt_f32_fp8_e32 v0, v0
+; GFX940: v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_0{{$}}
 ;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte0:
 ; GFX12: v_cvt_f32_fp8_e32 v0, v0

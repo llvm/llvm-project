@@ -472,3 +472,125 @@ define void @strided_non_load(ptr %x, ptr %z, <4 x i16> %b) {
   ret void
 }
 
+define void @strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
+; CHECK-LABEL: strided_constant_neg_4xv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -64
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vlse64.v v8, (a0), a2
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    ret
+  %a = load <2 x float>, ptr %x
+  %b.gep = getelementptr i8, ptr %x, i64 -64
+  %b = load <2 x float>, ptr %b.gep
+  %c.gep = getelementptr i8, ptr %b.gep, i64 -64
+  %c = load <2 x float>, ptr %c.gep
+  %d.gep = getelementptr i8, ptr %c.gep, i64 -64
+  %d = load <2 x float>, ptr %d.gep
+  %e.0 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.1 = shufflevector <2 x float> %c, <2 x float> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.2 = shufflevector <4 x float> %e.0, <4 x float> %e.1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float> %e.2, ptr %z
+  ret void
+}
+
+; TODO: This is a strided load with a negative stride
+define void @reverse_strided_constant_pos_4xv2f32(ptr %x, ptr %z, i64 %s) {
+; CHECK-LABEL: reverse_strided_constant_pos_4xv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, a0, 64
+; CHECK-NEXT:    addi a3, a0, 128
+; CHECK-NEXT:    addi a4, a0, 192
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a4)
+; CHECK-NEXT:    vle32.v v10, (a3)
+; CHECK-NEXT:    vle32.v v12, (a2)
+; CHECK-NEXT:    vle32.v v14, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v14, 6
+; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %x.1 = getelementptr i8, ptr %x, i64 64
+  %x.2 = getelementptr i8, ptr %x.1, i64 64
+  %x.3 = getelementptr i8, ptr %x.2, i64 64
+  %a = load <2 x float>, ptr %x.3
+  %b = load <2 x float>, ptr %x.2
+  %c = load <2 x float>, ptr %x.1
+  %d = load <2 x float>, ptr %x
+  %e.0 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.1 = shufflevector <2 x float> %c, <2 x float> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.2 = shufflevector <4 x float> %e.0, <4 x float> %e.1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float> %e.2, ptr %z
+  ret void
+}
+
+define void @reverse_strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
+; CHECK-LABEL: reverse_strided_constant_neg_4xv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, a0, -64
+; CHECK-NEXT:    addi a3, a0, -128
+; CHECK-NEXT:    addi a4, a0, -192
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a4)
+; CHECK-NEXT:    vle32.v v10, (a3)
+; CHECK-NEXT:    vle32.v v12, (a2)
+; CHECK-NEXT:    vle32.v v14, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v14, 6
+; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %x.1 = getelementptr i8, ptr %x, i64 -64
+  %x.2 = getelementptr i8, ptr %x.1, i64 -64
+  %x.3 = getelementptr i8, ptr %x.2, i64 -64
+  %a = load <2 x float>, ptr %x.3
+  %b = load <2 x float>, ptr %x.2
+  %c = load <2 x float>, ptr %x.1
+  %d = load <2 x float>, ptr %x
+  %e.0 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.1 = shufflevector <2 x float> %c, <2 x float> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.2 = shufflevector <4 x float> %e.0, <4 x float> %e.1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float> %e.2, ptr %z
+  ret void
+}
+
+; TODO: This is a strided load with a negative stride
+define void @reverse_strided_runtime_4xv2f32(ptr %x, ptr %z, i64 %s) {
+; CHECK-LABEL: reverse_strided_runtime_4xv2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    add a3, a0, a2
+; CHECK-NEXT:    add a4, a3, a2
+; CHECK-NEXT:    add a2, a4, a2
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a2)
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    vle32.v v12, (a3)
+; CHECK-NEXT:    vle32.v v14, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v14, 6
+; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %x.1 = getelementptr i8, ptr %x, i64 %s
+  %x.2 = getelementptr i8, ptr %x.1, i64 %s
+  %x.3 = getelementptr i8, ptr %x.2, i64 %s
+  %a = load <2 x float>, ptr %x.3
+  %b = load <2 x float>, ptr %x.2
+  %c = load <2 x float>, ptr %x.1
+  %d = load <2 x float>, ptr %x
+  %e.0 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.1 = shufflevector <2 x float> %c, <2 x float> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e.2 = shufflevector <4 x float> %e.0, <4 x float> %e.1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float> %e.2, ptr %z
+  ret void
+}

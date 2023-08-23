@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 struct OptionWithMarshallingInfo {
-  llvm::StringRef Name;
+  llvm::StringLiteral PrefixedName;
   const char *KeyPath;
   const char *ImpliedCheck;
   const char *ImpliedValue;
@@ -18,20 +18,20 @@ struct OptionWithMarshallingInfo {
 
 static const OptionWithMarshallingInfo MarshallingTable[] = {
 #define OPTION_WITH_MARSHALLING(                                               \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  {NAME, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
+    PREFIX_TYPE, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,      \
+    VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT,   \
+    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
+    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
+  {PREFIXED_NAME, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING
 };
 
 TEST(OptionMarshalling, EmittedOrderSameAsDefinitionOrder) {
-  ASSERT_STREQ(MarshallingTable[0].Name.data(), "marshalled-flag-d");
-  ASSERT_STREQ(MarshallingTable[1].Name.data(), "marshalled-flag-c");
-  ASSERT_STREQ(MarshallingTable[2].Name.data(), "marshalled-flag-b");
-  ASSERT_STREQ(MarshallingTable[3].Name.data(), "marshalled-flag-a");
+  ASSERT_EQ(MarshallingTable[0].PrefixedName, "-marshalled-flag-d");
+  ASSERT_EQ(MarshallingTable[1].PrefixedName, "-marshalled-flag-c");
+  ASSERT_EQ(MarshallingTable[2].PrefixedName, "-marshalled-flag-b");
+  ASSERT_EQ(MarshallingTable[3].PrefixedName, "-marshalled-flag-a");
 }
 
 TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {

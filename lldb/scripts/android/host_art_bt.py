@@ -5,8 +5,6 @@
 #   'command script import host_art_bt.py'
 #   'host_art_bt'
 
-from __future__ import print_function
-
 import sys
 import re
 

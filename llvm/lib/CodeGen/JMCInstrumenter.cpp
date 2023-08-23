@@ -120,7 +120,7 @@ void attachDebugInfo(GlobalVariable &GV, DISubprogram &SP) {
 
 FunctionType *getCheckFunctionType(LLVMContext &Ctx) {
   Type *VoidTy = Type::getVoidTy(Ctx);
-  PointerType *VoidPtrTy = Type::getInt8PtrTy(Ctx);
+  PointerType *VoidPtrTy = PointerType::getUnqual(Ctx);
   return FunctionType::get(VoidTy, VoidPtrTy, false);
 }
 

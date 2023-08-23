@@ -2,13 +2,12 @@
 
 // CHECK-LABEL: func private @sparse_1d_tensor(
 // CHECK-SAME: tensor<32xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>)
-func.func private @sparse_1d_tensor(tensor<32xf64, #sparse_tensor.encoding<{ lvlTypes = ["compressed"] }>>)
+func.func private @sparse_1d_tensor(tensor<32xf64, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>)
 
 // -----
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>,
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 64,
   crdWidth = 64
 }>
@@ -19,9 +18,20 @@ func.func private @sparse_csr(tensor<?x?xf32, #CSR>)
 
 // -----
 
+#CSR_explicit = #sparse_tensor.encoding<{
+  map = {l0, l1} (d0 = l0, d1 = l1) -> (l0 = d0 : dense, l1 = d1 : compressed)
+}>
+
+// CHECK-LABEL: func private @CSR_explicit(
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
+func.func private @CSR_explicit(%arg0: tensor<?x?xf64, #CSR_explicit>) {
+  return
+}
+
+// -----
+
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>,
+  map = (d0, d1) -> (d1 : dense, d0 : compressed),
   posWidth = 0,
   crdWidth = 0
 }>
@@ -33,8 +43,7 @@ func.func private @sparse_csc(tensor<?x?xf32, #CSC>)
 // -----
 
 #DCSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>,
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed),
   posWidth = 0,
   crdWidth = 64
 }>
@@ -129,7 +138,6 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, ?, 1), (?, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
-
 // -----
 
 // TODO: It is probably better to use [dense, dense, 2:4] (see NV_24 defined using new syntax
@@ -143,43 +151,10 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed24" ] }>>
 func.func private @sparse_2_out_of_4(tensor<?x?xf64, #NV_24>)
 
-///////////////////////////////////////////////////////////////////////////////
-// Migration plan for new STEA surface syntax,
-// use the NEW_SYNTAX on selected examples
-// and then TODO: remove when fully migrated
-///////////////////////////////////////////////////////////////////////////////
-
 // -----
 
-#CSR_implicit = #sparse_tensor.encoding<{
-  NEW_SYNTAX =
-  (d0, d1) -> (d0 : dense, d1 : compressed)
-}>
-
-// CHECK-LABEL: func private @CSR_implicit(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
-func.func private @CSR_implicit(%arg0: tensor<?x?xf64, #CSR_implicit>) {
-  return
-}
-
-// -----
-
-#CSR_explicit = #sparse_tensor.encoding<{
-  NEW_SYNTAX =
-  {l0, l1} (d0 = l0, d1 = l1) -> (l0 = d0 : dense, l1 = d1 : compressed)
-}>
-
-// CHECK-LABEL: func private @CSR_explicit(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
-func.func private @CSR_explicit(%arg0: tensor<?x?xf64, #CSR_explicit>) {
-  return
-}
-
-// -----
-
-#BCSR_implicit = #sparse_tensor.encoding<{
-  NEW_SYNTAX =
-  ( i, j ) ->
+#BCSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
   ( i floordiv 2 : compressed,
     j floordiv 3 : compressed,
     i mod 2      : dense,
@@ -187,16 +162,16 @@ func.func private @CSR_explicit(%arg0: tensor<?x?xf64, #CSR_explicit>) {
   )
 }>
 
-// CHECK-LABEL: func private @BCSR_implicit(
+// CHECK-LABEL: func private @BCSR(
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "dense", "dense" ], dimToLvl = affine_map<(d0, d1) -> (d0 floordiv 2, d1 floordiv 3, d0 mod 2, d1 mod 3)> }>>
-func.func private @BCSR_implicit(%arg0: tensor<?x?xf64, #BCSR_implicit>) {
+func.func private @BCSR(%arg0: tensor<?x?xf64, #BCSR>) {
   return
 }
 
 // -----
 
 #BCSR_explicit = #sparse_tensor.encoding<{
-  NEW_SYNTAX =
+  map =
   {il, jl, ii, jj}
   ( i = il * 2 + ii,
     j = jl * 3 + jj
@@ -217,8 +192,7 @@ func.func private @BCSR_explicit(%arg0: tensor<?x?xf64, #BCSR_explicit>) {
 // -----
 
 #NV_24 = #sparse_tensor.encoding<{
-  NEW_SYNTAX =
-  ( i, j ) ->
+  map = ( i, j ) ->
   ( i            : dense,
     j floordiv 4 : dense,
     j mod 4      : compressed24

@@ -985,7 +985,7 @@ def OpF : TEST_Op<"op_f">, Arguments<(ins I32)>, Results<(outs I32)>;
 def OpG : TEST_Op<"op_g">, Arguments<(ins I32)>, Results<(outs I32)>;
 // Verify that bumping benefit results in selecting different op.
 def : Pat<(OpD $input), (OpE $input)>;
-def : Pat<(OpD $input), (OpF $input), [], (addBenefit 10)>;
+def : Pat<(OpD $input), (OpF $input), [], [], (addBenefit 10)>;
 // Verify that patterns with more source nodes are selected before those with fewer.
 def : Pat<(OpG $input), (OpB $input, ConstantAttr<I32Attr, "20">:$attr)>;
 def : Pat<(OpG (OpG $input)), (OpB $input, ConstantAttr<I32Attr, "34">:$attr)>;
@@ -1660,6 +1660,24 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                           $x),
           (TestEitherOpB $arg2, $x)>;
 
+def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
+  let arguments = (ins I32:$arg0);
+  let results = (outs I32:$output);
+}
+
+def TestEitherHelperOpB : TEST_Op<"either_helper_op_b"> {
+  let arguments = (ins I32:$arg0);
+  let results = (outs I32:$output);
+}
+
+// This test case ensures `emitOpMatch` doesn't redefine `castedOp{0}` local
+// variables. To trigger this, we must ensure the matcher for
+// `TestEitherHelperOpA` and `TestEitherHelperOpB` are not lifted as a static
+// matcher.
+def : Pat<(TestEitherOpB (either (TestEitherHelperOpA I32:$either_helper_0),
+                                 (TestEitherHelperOpB I32:$either_helper_1))),
+          (TestEitherOpB $either_helper_0, $either_helper_1)>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Location)
 
@@ -1785,7 +1803,7 @@ def : Pat<(ILLegalOpB), (LegalOpA Test_LegalizerEnum_Failure)>;
 def : Pat<(ILLegalOpC), (ILLegalOpD)>;
 def : Pat<(ILLegalOpD), (LegalOpA Test_LegalizerEnum_Failure)>;
 
-def : Pat<(ILLegalOpC), (ILLegalOpE), [], (addBenefit 10)>;
+def : Pat<(ILLegalOpC), (ILLegalOpE), [], [], (addBenefit 10)>;
 def : Pat<(ILLegalOpE), (LegalOpA Test_LegalizerEnum_Success)>;
 
 // Check that patterns use the most up-to-date value when being replaced.
@@ -2047,7 +2065,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getEntrySuccessorOperands"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2071,8 +2090,6 @@ def RegionIfOp : TEST_Op<"region_if",
     ::mlir::Block::BlockArgListType getJoinArgs() {
       return getBody(2)->getArguments();
     }
-    ::mlir::OperandRange getSuccessorEntryOperands(
-        ::std::optional<unsigned> index);
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -2083,6 +2100,30 @@ def AnyCondOp : TEST_Op<"any_cond",
        RecursiveMemoryEffects]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$region);
+}
+
+def LoopBlockOp : TEST_Op<"loop_block",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands"]>, RecursiveMemoryEffects]> {
+
+  let results = (outs F32:$floatResult);
+  let arguments = (ins I32:$init);
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    $init `:` functional-type($init, $floatResult) $body
+    attr-dict-with-keyword
+  }];
+}
+
+def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
+     Terminator]> {
+  let arguments = (ins I32:$nextIterArg, F32:$exitArg);
+
+  let assemblyFormat = [{
+    `iter` $nextIterArg `exit` $exitArg attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2811,6 +2852,21 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     "`:` functional-type(operands, results)";
 }
 
+def TestCallOnDeviceOp : TEST_Op<"call_on_device",
+    [DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Variadic<AnyType>:$forwarded_operands,
+    AnyType:$non_forwarded_device_operand
+  );
+  let results = (outs
+    Variadic<AnyType>:$results
+  );
+  let assemblyFormat =
+    "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
+    "attr-dict `:` functional-type(operands, results)";
+}
+
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlock]> {
@@ -2824,7 +2880,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Terminator, NoMemoryEffect]> {
+    [ReturnLike, Terminator, NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
 }
 

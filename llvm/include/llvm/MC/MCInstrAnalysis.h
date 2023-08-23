@@ -18,6 +18,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include <cstdint>
 #include <vector>
 
@@ -62,6 +63,17 @@ public:
 
   virtual bool isTerminator(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isTerminator();
+  }
+
+  virtual bool mayAffectControlFlow(const MCInst &Inst,
+                                    const MCRegisterInfo &MCRI) const {
+    if (isBranch(Inst) || isCall(Inst) || isReturn(Inst) ||
+        isIndirectBranch(Inst))
+      return true;
+    unsigned PC = MCRI.getProgramCounter();
+    if (PC == 0)
+      return false;
+    return Info->get(Inst.getOpcode()).hasDefOfPhysReg(Inst, PC, MCRI);
   }
 
   /// Returns true if at least one of the register writes performed by

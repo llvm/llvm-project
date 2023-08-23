@@ -60,6 +60,7 @@ define void @sincos_f32(float %x, ptr addrspace(1) nocapture writeonly %sin_out,
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[__SINCOS_]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__SINCOS_]], align 4
 ; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call contract float @_Z3cosf(float [[X]])
 ; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;

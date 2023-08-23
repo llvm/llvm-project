@@ -59,6 +59,10 @@ public:
   /// the specified block.
   void insertBefore(Block *block);
 
+  /// Insert this block (which must not already be in a region) right after
+  /// the specified block.
+  void insertAfter(Block *block);
+
   /// Unlink this block from its current region and insert it right before the
   /// specific block.
   void moveBefore(Block *block);

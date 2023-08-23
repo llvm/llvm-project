@@ -10,8 +10,8 @@ entry:
 }
 
 ; CHECK: .option push
-; CHECK-NEXT: .option arch, +experimental-zihintntl
-define void @test2() "target-features"="+a,+d,+f,+m,+experimental-zihintntl,+zifencei" {
+; CHECK-NEXT: .option arch, +zihintntl
+define void @test2() "target-features"="+a,+d,+f,+m,+zihintntl,+zifencei" {
 ; CHECK-LABEL: test2
 ; CHECK: .option pop
 entry:

@@ -440,9 +440,11 @@ def testOperationResultList():
         r"""
     func.func @f1() {
       %0:3 = call @f2() : () -> (i32, f64, index)
+      call @f3() : () -> ()
       return
     }
     func.func private @f2() -> (i32, f64, index)
+    func.func private @f3() -> ()
   """,
         ctx,
     )
@@ -464,6 +466,10 @@ def testOperationResultList():
     # Out of range
     expect_index_error(lambda: call.results[3])
     expect_index_error(lambda: call.results[-4])
+
+    no_results_call = caller.regions[0].blocks[0].operations[1]
+    assert len(no_results_call.results) == 0
+    assert no_results_call.results.owner == no_results_call
 
 
 # CHECK-LABEL: TEST: testOperationResultListSlice

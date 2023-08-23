@@ -47,11 +47,24 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+static bool getPIE(const ArgList &Args, const ToolChain &TC) {
+  if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static) ||
+      Args.hasArg(options::OPT_r))
+    return false;
+
+  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
+                           options::OPT_nopie);
+  if (!A)
+    return TC.isPIEDefault(Args);
+  return A->getOption().matches(options::OPT_pie);
+}
+
 void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
+  const bool IsPIE = getPIE(Args, getToolChain());
   ArgStringList CmdArgs;
 
   // Demangle C++ names in errors
@@ -60,6 +73,11 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
     CmdArgs.push_back("-e");
     CmdArgs.push_back("_start");
+  }
+
+  if (IsPIE) {
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("type=pie");
   }
 
   if (Args.hasArg(options::OPT_static)) {
@@ -113,8 +131,13 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       values_xpg = "values-xpg4.o";
     CmdArgs.push_back(
         Args.MakeArgString(getToolChain().GetFilePath(values_xpg)));
-    CmdArgs.push_back(
-        Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
+
+    const char *crtbegin = nullptr;
+    if (Args.hasArg(options::OPT_shared) || IsPIE)
+      crtbegin = "crtbeginS.o";
+    else
+      crtbegin = "crtbegin.o";
+    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath(crtbegin)));
     // Add crtfastmath.o if available and fast math is enabled.
     getToolChain().addFastMathRuntimeIfAvailable(Args, CmdArgs);
   }
@@ -171,8 +194,12 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
-    CmdArgs.push_back(
-        Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
+    if (Args.hasArg(options::OPT_shared) || IsPIE)
+      CmdArgs.push_back(
+          Args.MakeArgString(getToolChain().GetFilePath("crtendS.o")));
+    else
+      CmdArgs.push_back(
+          Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
     CmdArgs.push_back(
         Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
   }

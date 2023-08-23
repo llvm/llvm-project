@@ -95,8 +95,8 @@ entry:
 define float @copysign32(float %a, float %b) {
 ; CHECK-LABEL: copysign32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
@@ -156,8 +156,8 @@ define half @copysign16(half %a, half %b) {
 ; CHECK-NONEON-NEXT:    fcvt s0, h0
 ; CHECK-NONEON-NEXT:    str h1, [sp, #12]
 ; CHECK-NONEON-NEXT:    ldrb w8, [sp, #13]
-; CHECK-NONEON-NEXT:    fabs s0, s0
 ; CHECK-NONEON-NEXT:    tst w8, #0x80
+; CHECK-NONEON-NEXT:    fabs s0, s0
 ; CHECK-NONEON-NEXT:    fneg s1, s0
 ; CHECK-NONEON-NEXT:    fcsel s0, s1, s0, ne
 ; CHECK-NONEON-NEXT:    fcvt h0, s0

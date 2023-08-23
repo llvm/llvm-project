@@ -24,6 +24,11 @@ struct OneShotBufferizationOptions;
 /// buffers.
 std::unique_ptr<Pass> createBufferDeallocationPass();
 
+/// Creates a pass that optimizes `bufferization.dealloc` operations. For
+/// example, it reduces the number of alias checks needed at runtime using
+/// static alias analysis.
+std::unique_ptr<Pass> createBufferDeallocationSimplificationPass();
+
 /// Run buffer deallocation.
 LogicalResult deallocateBuffers(Operation *op);
 

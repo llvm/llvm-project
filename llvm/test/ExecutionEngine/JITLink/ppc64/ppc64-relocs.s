@@ -1,9 +1,10 @@
-# RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj -o %t %s \
+# RUN:   --defsym LE=1
 # RUN: llvm-jitlink -abs external_var=0xffff0000 -abs puts=0xffff6400 -abs \
-# RUN:   foo=0xffff8800 -noexec %t
+# RUN:   foo=0xffff8800 -abs low_addr=0x0320 -noexec %t
 # RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj -o %t %s
 # RUN: llvm-jitlink -abs external_var=0xffff0000 -abs puts=0xffff6400 -abs \
-# RUN:   foo=0xffff8800 -noexec %t
+# RUN:   foo=0xffff8800 -abs low_addr=0x0320 -noexec %t
 #
 # Check typical relocations involving external function call, external variable
 # reference, local function call and referencing global variable defined in the
@@ -187,7 +188,7 @@ bar:
 	.size	bar, .Lfunc_end7-.Lfunc_begin7
 
   .global foobar
-  .p2align
+  .p2align 4
   .type foobar,@function
 foobar:
 .Lfunc_begin8:
@@ -195,7 +196,103 @@ foobar:
   paddi 3, 0, .L.str@PCREL, 1
   blr
 .Lfunc_end8:
-  .size foobar, .Lfunc_end8-.Lfunc_end8
+  .size foobar, .Lfunc_end8-.Lfunc_begin8
+
+  .global reloc_addr14
+  .p2align 4
+  .type reloc_addr14,@function
+reloc_addr14:
+.Lfunc_begin9:
+  bca 21, 30, low_addr
+.Lfunc_end9:
+  .size reloc_addr14, .Lfunc_end9-.Lfunc_begin9
+
+  .global reloc_half16
+  .p2align 4
+  .type reloc_half16,@function
+reloc_half16:
+.Lfunc_begin10:
+.ifdef LE
+  li 3, 0
+  .reloc .Lfunc_begin10, R_PPC64_ADDR16_DS, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+4, R_PPC64_ADDR16_LO, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+8, R_PPC64_ADDR16_LO_DS, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+12, R_PPC64_ADDR16, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+16, R_PPC64_ADDR16_HI, low_addr
+.else
+  li 3, 0
+  .reloc .Lfunc_begin10+2, R_PPC64_ADDR16_DS, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+6, R_PPC64_ADDR16_LO, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+10, R_PPC64_ADDR16_LO_DS, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+14, R_PPC64_ADDR16, low_addr
+  li 3, 0
+  .reloc .Lfunc_begin10+18, R_PPC64_ADDR16_HI, low_addr
+.endif
+  li 3, low_addr@ha
+  li 3, low_addr@high
+  li 3, low_addr@higha
+  li 3, low_addr@higher
+  li 3, low_addr@highera
+  li 3, low_addr@highest
+  li 3, low_addr@highesta
+.Ldelta16:
+.ifdef LE
+  li 3, 0
+  .reloc .Ldelta16, R_PPC64_REL16, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+4, R_PPC64_REL16_HI, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+8, R_PPC64_REL16_HA, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+12, R_PPC64_REL16_LO, reloc_half16
+.else
+  li 3, 0
+  .reloc .Ldelta16+2, R_PPC64_REL16, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+6, R_PPC64_REL16_HI, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+10, R_PPC64_REL16_HA, reloc_half16
+  li 3, 0
+  .reloc .Ldelta16+14, R_PPC64_REL16_LO, reloc_half16
+.endif
+.Ltocdetal16:
+.ifdef LE
+  li 3, 0
+  .reloc .Ltocdetal16, R_PPC64_TOC16, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+4, R_PPC64_TOC16_HI, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+8, R_PPC64_TOC16_DS, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+12, R_PPC64_TOC16_HA, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+16, R_PPC64_TOC16_LO, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+20, R_PPC64_TOC16_LO_DS, .L.str
+.else
+  li 3, 0
+  .reloc .Ltocdetal16+2, R_PPC64_TOC16, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+6, R_PPC64_TOC16_HI, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+10, R_PPC64_TOC16_DS, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+14, R_PPC64_TOC16_HA, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+18, R_PPC64_TOC16_LO, .L.str
+  li 3, 0
+  .reloc .Ltocdetal16+22, R_PPC64_TOC16_LO_DS, .L.str
+.endif
+  blr
+.Lfunc_end10:
+  .size reloc_half16, .Lfunc_end10-.Lfunc_begin10
 
 	.type	local_var,@object
 	.section	.bss,"aw",@nobits

@@ -41,6 +41,7 @@ static_library("Host") {
     "common/PseudoTerminal.cpp",
     "common/Socket.cpp",
     "common/SocketAddress.cpp",
+    "common/StreamFile.cpp",
     "common/TCPSocket.cpp",
     "common/Terminal.cpp",
     "common/ThreadLauncher.cpp",

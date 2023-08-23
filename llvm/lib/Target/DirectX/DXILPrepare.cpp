@@ -98,7 +98,7 @@ class DXILPrepareModule : public ModulePass {
     PointerType *PtrTy = cast<PointerType>(Operand->getType());
     return Builder.Insert(
         CastInst::Create(Instruction::BitCast, Operand,
-                         Builder.getInt8PtrTy(PtrTy->getAddressSpace())));
+                         Builder.getPtrTy(PtrTy->getAddressSpace())));
   }
 
 public:

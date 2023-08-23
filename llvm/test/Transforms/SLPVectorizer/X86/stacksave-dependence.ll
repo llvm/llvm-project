@@ -91,10 +91,10 @@ define void @stacksave(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = getelementptr i8, ptr [[V1]], i32 1
 ; CHECK-NEXT:    store ptr [[ADD1]], ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    [[ADD2:%.*]] = getelementptr i8, ptr [[V2]], i32 1
 ; CHECK-NEXT:    store ptr [[ADD1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr ptr, ptr [[B]], i32 1
@@ -122,7 +122,7 @@ define void @stacksave(ptr %a, ptr %b, ptr %c) {
 define void @stacksave2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave2(
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
@@ -130,7 +130,7 @@ define void @stacksave2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -154,11 +154,11 @@ define void @stacksave2(ptr %a, ptr %b, ptr %c) {
 
 define void @stacksave3(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave3(
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
@@ -189,10 +189,10 @@ define void @stacksave4(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[X:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[X]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -219,10 +219,10 @@ define void @stacksave5(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[X:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[X]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -250,10 +250,10 @@ define void @stacksave5(ptr %a, ptr %b, ptr %c) {
 ; bug.
 define void @stackrestore1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stackrestore1(
-; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 0, ptr [[V1]], align 1
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[STACK]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    [[V2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 0, ptr [[V2]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
@@ -298,10 +298,10 @@ define void @ham() #1 {
 ; CHECK-NEXT:    [[VAR15:%.*]] = call ptr @wibble(ptr [[VAR2]])
 ; CHECK-NEXT:    [[VAR16:%.*]] = call ptr @wibble(ptr [[VAR3]])
 ; CHECK-NEXT:    [[VAR17:%.*]] = call ptr @wibble(ptr [[VAR4]])
-; CHECK-NEXT:    [[VAR23:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[VAR23:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[VAR24:%.*]] = alloca inalloca i32, align 4
 ; CHECK-NEXT:    call void @quux(ptr inalloca(i32) [[VAR24]])
-; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[VAR23]])
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[VAR23]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[VAR4]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[VAR12]], align 8

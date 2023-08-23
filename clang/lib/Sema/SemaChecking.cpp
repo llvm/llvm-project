@@ -86,6 +86,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <bitset>
@@ -2641,6 +2642,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_rint:
   case Builtin::BI__builtin_elementwise_nearbyint:
   case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_trunc:
   case Builtin::BI__builtin_elementwise_canonicalize: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -3847,39 +3849,12 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   default:
     break;
   case LoongArch::BI__builtin_loongarch_cacop_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
-    [[fallthrough]];
   case LoongArch::BI__builtin_loongarch_cacop_w: {
-    if (BuiltinID == LoongArch::BI__builtin_loongarch_cacop_w &&
-        !TI.hasFeature("32bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la32)
-             << TheCall->getSourceRange();
     SemaBuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5));
     SemaBuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12),
                                 llvm::maxIntN(12));
     break;
   }
-  case LoongArch::BI__builtin_loongarch_crc_w_b_w:
-  case LoongArch::BI__builtin_loongarch_crc_w_h_w:
-  case LoongArch::BI__builtin_loongarch_crc_w_w_w:
-  case LoongArch::BI__builtin_loongarch_crc_w_d_w:
-  case LoongArch::BI__builtin_loongarch_crcc_w_b_w:
-  case LoongArch::BI__builtin_loongarch_crcc_w_h_w:
-  case LoongArch::BI__builtin_loongarch_crcc_w_w_w:
-  case LoongArch::BI__builtin_loongarch_crcc_w_d_w:
-  case LoongArch::BI__builtin_loongarch_iocsrrd_d:
-  case LoongArch::BI__builtin_loongarch_iocsrwr_d:
-  case LoongArch::BI__builtin_loongarch_asrtle_d:
-  case LoongArch::BI__builtin_loongarch_asrtgt_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
-    break;
   case LoongArch::BI__builtin_loongarch_break:
   case LoongArch::BI__builtin_loongarch_dbar:
   case LoongArch::BI__builtin_loongarch_ibar:
@@ -3887,35 +3862,16 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
     // Check if immediate is in [0, 32767].
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 32767);
   case LoongArch::BI__builtin_loongarch_csrrd_w:
+  case LoongArch::BI__builtin_loongarch_csrrd_d:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 16383);
   case LoongArch::BI__builtin_loongarch_csrwr_w:
+  case LoongArch::BI__builtin_loongarch_csrwr_d:
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 16383);
   case LoongArch::BI__builtin_loongarch_csrxchg_w:
-    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 16383);
-  case LoongArch::BI__builtin_loongarch_csrrd_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
-    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 16383);
-  case LoongArch::BI__builtin_loongarch_csrwr_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
-    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 16383);
   case LoongArch::BI__builtin_loongarch_csrxchg_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 16383);
   case LoongArch::BI__builtin_loongarch_lddir_d:
   case LoongArch::BI__builtin_loongarch_ldpte_d:
-    if (!TI.hasFeature("64bit"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_loongarch_builtin_requires_la64)
-             << TheCall->getSourceRange();
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
   case LoongArch::BI__builtin_loongarch_movfcsr2gr:
   case LoongArch::BI__builtin_loongarch_movgr2fcsr:
@@ -4513,6 +4469,37 @@ bool Sema::CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum) {
          << Arg->getSourceRange();
 }
 
+static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
+                                    Sema &S, QualType Type, int EGW) {
+  assert((EGW == 128 || EGW == 256) && "EGW can only be 128 or 256 bits");
+
+  // LMUL * VLEN >= EGW
+  unsigned ElemSize = Type->isRVVType(32, false) ? 32 : 64;
+  unsigned MinElemCount = Type->isRVVType(1)   ? 1
+                          : Type->isRVVType(2) ? 2
+                          : Type->isRVVType(4) ? 4
+                          : Type->isRVVType(8) ? 8
+                                               : 16;
+
+  unsigned EGS = EGW / ElemSize;
+  // If EGS is less than or equal to the minimum number of elements, then the
+  // type is valid.
+  if (EGS <= MinElemCount)
+    return false;
+
+  // Otherwise, we need vscale to be at least EGS / MinElemCont.
+  assert(EGS % MinElemCount == 0);
+  unsigned VScaleFactor = EGS / MinElemCount;
+  // Vscale is VLEN/RVVBitsPerBlock.
+  unsigned MinRequiredVLEN = VScaleFactor * llvm::RISCV::RVVBitsPerBlock;
+  std::string RequiredExt = "zvl" + std::to_string(MinRequiredVLEN) + "b";
+  if (!TI.hasFeature(RequiredExt))
+    return S.Diag(TheCall->getBeginLoc(),
+        diag::err_riscv_type_requires_extension) << Type << RequiredExt;
+
+  return false;
+}
+
 bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID,
                                          CallExpr *TheCall) {
@@ -4671,6 +4658,76 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                  (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors);
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
   }
+  // Vector Crypto
+  case RISCVVector::BI__builtin_rvv_vaeskf1_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vaeskf2_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vaeskf2_vi:
+  case RISCVVector::BI__builtin_rvv_vsm4k_vi_tu: {
+    QualType Op1Type = TheCall->getArg(0)->getType();
+    QualType Op2Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, 128) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vsm3c_vi_tu:
+  case RISCVVector::BI__builtin_rvv_vsm3c_vi: {
+    QualType Op1Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, 256) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vaeskf1_vi:
+  case RISCVVector::BI__builtin_rvv_vsm4k_vi: {
+    QualType Op1Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, 128) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  }
+  case RISCVVector::BI__builtin_rvv_vaesdf_vv:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vs:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vv:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vs:
+  case RISCVVector::BI__builtin_rvv_vaesef_vv:
+  case RISCVVector::BI__builtin_rvv_vaesef_vs:
+  case RISCVVector::BI__builtin_rvv_vaesem_vv:
+  case RISCVVector::BI__builtin_rvv_vaesem_vs:
+  case RISCVVector::BI__builtin_rvv_vaesz_vs:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vv:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vs:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdf_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesdm_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesef_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesef_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesem_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vaesem_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vaesz_vs_tu:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsm4r_vs_tu: {
+    QualType Op1Type = TheCall->getArg(0)->getType();
+    QualType Op2Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, 128);
+  }
+  case RISCVVector::BI__builtin_rvv_vsha2ch_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2cl_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2ms_vv:
+  case RISCVVector::BI__builtin_rvv_vsha2ch_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsha2cl_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsha2ms_vv_tu: {
+    QualType Op1Type = TheCall->getArg(0)->getType();
+    QualType Op2Type = TheCall->getArg(1)->getType();
+    QualType Op3Type = TheCall->getArg(2)->getType();
+    uint64_t ElemSize = Op1Type->isRVVType(32, false) ? 32 : 64;
+    if (ElemSize == 64 && !TI.hasFeature("experimental-zvknhb"))
+      return
+          Diag(TheCall->getBeginLoc(), diag::err_riscv_type_requires_extension)
+              << Op1Type << "experimental-zvknhb";
+
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, ElemSize << 2) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, ElemSize << 2) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op3Type, ElemSize << 2);
+  }
+
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf8:
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf4:
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf2:
@@ -6669,8 +6726,8 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
 }
 
 /// Handles the checks for format strings, non-POD arguments to vararg
-/// functions, NULL arguments passed to non-NULL parameters, and diagnose_if
-/// attributes.
+/// functions, NULL arguments passed to non-NULL parameters, diagnose_if
+/// attributes and AArch64 SME attributes.
 void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
@@ -6750,6 +6807,36 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),
                           ArgTy, ParamTy);
       }
+    }
+
+    // If the callee has an AArch64 SME attribute to indicate that it is an
+    // __arm_streaming function, then the caller requires SME to be available.
+    FunctionProtoType::ExtProtoInfo ExtInfo = Proto->getExtProtoInfo();
+    if (ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask) {
+      if (auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+        llvm::StringMap<bool> CallerFeatureMap;
+        Context.getFunctionFeatureMap(CallerFeatureMap, CallerFD);
+        if (!CallerFeatureMap.contains("sme"))
+          Diag(Loc, diag::err_sme_call_in_non_sme_target);
+      } else if (!Context.getTargetInfo().hasFeature("sme")) {
+        Diag(Loc, diag::err_sme_call_in_non_sme_target);
+      }
+    }
+
+    // If the callee uses AArch64 SME ZA state but the caller doesn't define
+    // any, then this is an error.
+    if (ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateZASharedMask) {
+      bool CallerHasZAState = false;
+      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+        if (CallerFD->hasAttr<ArmNewZAAttr>())
+          CallerHasZAState = true;
+        else if (const auto *FPT = CallerFD->getType()->getAs<FunctionProtoType>())
+          CallerHasZAState = FPT->getExtProtoInfo().AArch64SMEAttributes &
+                             FunctionType::SME_PStateZASharedMask;
+      }
+
+      if (!CallerHasZAState)
+        Diag(Loc, diag::err_sme_za_call_no_za_state);
     }
   }
 
@@ -8130,9 +8217,9 @@ bool Sema::SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   if (checkVAStartABI(*this, BuiltinID, Fn))
     return true;
 
-  // In C2x mode, va_start only needs one argument. However, the builtin still
+  // In C23 mode, va_start only needs one argument. However, the builtin still
   // requires two arguments (which matches the behavior of the GCC builtin),
-  // <stdarg.h> passes `0` as the second argument in C2x mode.
+  // <stdarg.h> passes `0` as the second argument in C23 mode.
   if (checkArgCount(*this, TheCall, 2))
     return true;
 
@@ -8146,14 +8233,14 @@ bool Sema::SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
     return true;
 
   // Verify that the second argument to the builtin is the last argument of the
-  // current function or method. In C2x mode, if the second argument is an
+  // current function or method. In C23 mode, if the second argument is an
   // integer constant expression with value 0, then we don't bother with this
   // check.
   bool SecondArgIsLastNamedArgument = false;
   const Expr *Arg = TheCall->getArg(1)->IgnoreParenCasts();
   if (std::optional<llvm::APSInt> Val =
           TheCall->getArg(1)->getIntegerConstantExpr(Context);
-      Val && LangOpts.C2x && *Val == 0)
+      Val && LangOpts.C23 && *Val == 0)
     return false;
 
   // These are valid if SecondArgIsLastNamedArgument is false after the next
@@ -14740,7 +14827,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   // Strip vector types.
   if (isa<VectorType>(Source)) {
-    if (Target->isVLSTBuiltinType() &&
+    if (Target->isSveVLSBuiltinType() &&
         (S.Context.areCompatibleSveTypes(QualType(Target, 0),
                                          QualType(Source, 0)) ||
          S.Context.areLaxCompatibleSveTypes(QualType(Target, 0),
@@ -14791,7 +14878,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   const BuiltinType *TargetBT = dyn_cast<BuiltinType>(Target);
 
   // Strip SVE vector types
-  if (SourceBT && SourceBT->isVLSTBuiltinType()) {
+  if (SourceBT && SourceBT->isSveVLSBuiltinType()) {
     // Need the original target type for vector type checks
     const Type *OriginalTarget = S.Context.getCanonicalType(T).getTypePtr();
     // Handle conversion from scalable to fixed when msve-vector-bits is
@@ -14810,7 +14897,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     Source = SourceBT->getSveEltType(S.Context).getTypePtr();
   }
 
-  if (TargetBT && TargetBT->isVLSTBuiltinType())
+  if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(S.Context).getTypePtr();
 
   // If the source is floating point...
@@ -15809,19 +15896,19 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   /// Bundle together a sequencing region and the expression corresponding
   /// to a specific usage. One Usage is stored for each usage kind in UsageInfo.
   struct Usage {
-    const Expr *UsageExpr;
+    const Expr *UsageExpr = nullptr;
     SequenceTree::Seq Seq;
 
-    Usage() : UsageExpr(nullptr) {}
+    Usage() = default;
   };
 
   struct UsageInfo {
     Usage Uses[UK_Count];
 
     /// Have we issued a diagnostic for this object already?
-    bool Diagnosed;
+    bool Diagnosed = false;
 
-    UsageInfo() : Diagnosed(false) {}
+    UsageInfo() = default;
   };
   using UsageInfoMap = llvm::SmallDenseMap<Object, UsageInfo, 16>;
 
@@ -16670,8 +16757,8 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
     if (CheckParameterNames && Param->getIdentifier() == nullptr &&
         !Param->isImplicit() && !getLangOpts().CPlusPlus) {
       // Diagnose this as an extension in C17 and earlier.
-      if (!getLangOpts().C2x)
-        Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c2x);
+      if (!getLangOpts().C23)
+        Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c23);
     }
 
     // C99 6.7.5.3p12:
@@ -17070,7 +17157,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
           ASTC.getTypeSizeInCharsIfKnown(EffectiveType);
       // PR50741 - If EffectiveType has unknown size (e.g., if it's a void
       // pointer) bounds-checking isn't meaningful.
-      if (!ElemCharUnits)
+      if (!ElemCharUnits || ElemCharUnits->isZero())
         return;
       llvm::APInt ElemBytes(index.getBitWidth(), ElemCharUnits->getQuantity());
       // If index has more active bits than address space, we already know
