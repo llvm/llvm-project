@@ -1535,7 +1535,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
   // Find a matching one-use shift by constant.
   const Register C1 = MI.getOperand(2).getReg();
   auto MaybeImmVal = getIConstantVRegValWithLookThrough(C1, MRI);
-  if (!MaybeImmVal)
+  if (!MaybeImmVal || MaybeImmVal->Value == 0)
     return false;
 
   const uint64_t C1Val = MaybeImmVal->Value.getZExtValue();

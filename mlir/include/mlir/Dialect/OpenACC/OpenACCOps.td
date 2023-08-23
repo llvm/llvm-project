@@ -1495,6 +1495,39 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.14.3. Set
+//===----------------------------------------------------------------------===//
+
+def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments]> {
+  let summary = "set operation";
+
+  let description = [{
+    The "acc.set" operation represents the OpenACC set directive.
+
+    Example:
+
+    ```mlir
+    acc.set device_num(%dev1 : i32)
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$deviceType,
+                       Optional<IntOrIndex>:$defaultAsync,
+                       Optional<IntOrIndex>:$deviceNum,
+                       Optional<I1>:$ifCond);
+
+  let assemblyFormat = [{
+    oilist(
+      `device_type` `(` $deviceType `:` type($deviceType) `)`
+    | `default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
+    | `device_num` `(` $deviceNum `:` type($deviceNum) `)`
+    | `if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.14.4. Update Directive
 //===----------------------------------------------------------------------===//
 

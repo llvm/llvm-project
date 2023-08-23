@@ -28,6 +28,7 @@ namespace std {
     char* ptr;
     errc ec;
     friend bool operator==(const to_chars_result&, const to_chars_result&) = default; // since C++20
+    constexpr explicit operator bool() const noexcept { return ec == errc{}; }        // since C++26
   };
 
   constexpr to_chars_result to_chars(char* first, char* last, see below value,
@@ -58,6 +59,7 @@ namespace std {
     const char* ptr;
     errc ec;
     friend bool operator==(const from_chars_result&, const from_chars_result&) = default; // since C++20
+    constexpr explicit operator bool() const noexcept { return ec == errc{}; }            // since C++26
   };
 
   constexpr from_chars_result from_chars(const char* first, const char* last,

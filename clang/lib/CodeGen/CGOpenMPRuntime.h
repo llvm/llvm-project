@@ -640,18 +640,19 @@ public:
                                                 int32_t &DefaultVal);
   llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
                                               const OMPExecutableDirective &D);
-  /// Emit the number of threads for a target directive.  Inspect the
-  /// thread_limit clause associated with a teams construct combined or closely
-  /// nested with the target directive.
-  ///
-  /// Emit the num_threads clause for directives such as 'target parallel' that
-  /// have no associated teams construct.
-  ///
-  /// Otherwise, return nullptr.
-  const Expr *
-  getNumThreadsExprForTargetDirective(CodeGenFunction &CGF,
-                                      const OMPExecutableDirective &D,
-                                      int32_t &DefaultVal);
+
+  /// Check for a number of threads upper bound constant value (stored in \p
+  /// UpperBound), or expression (returned). If the value is conditional (via an
+  /// if-clause), store the condition in \p CondExpr. Similarly, a potential
+  /// thread limit expression is stored in \p ThreadLimitExpr. If \p
+  /// UpperBoundOnly is true, no expression evaluation is perfomed.
+  const Expr *getNumThreadsExprForTargetDirective(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      uint32_t &UpperBound, bool UpperBoundOnly,
+      llvm::Value **CondExpr = nullptr, const Expr **ThreadLimitExpr = nullptr);
+
+  /// Emit an expression that denotes the number of threads a target region
+  /// shall use. Will generate "i32 0" to allow the runtime to choose.
   llvm::Value *
   emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
                                    const OMPExecutableDirective &D);

@@ -150,8 +150,6 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
 
   // Register RPC callbacks for the malloc and free functions on HSA.
   uint32_t device_id = 0;
-  register_rpc_callbacks(device_id);
-
   auto tuple = std::make_tuple(dev_agent, coarsegrained_pool);
   rpc_register_callback(
       device_id, RPC_MALLOC,
@@ -423,6 +421,14 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (rpc_status_t err = rpc_server_init(device_id, RPC_MAXIMUM_PORT_COUNT,
                                          wavefront_size, rpc_alloc, &tuple))
     handle_error(err);
+
+  // Register callbacks for the RPC unit tests.
+  if (wavefront_size == 32)
+    register_rpc_callbacks<32>(device_id);
+  else if (wavefront_size == 64)
+    register_rpc_callbacks<64>(device_id);
+  else
+    handle_error("Invalid wavefront size");
 
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
   // If the clock_freq symbol is missing, no work to do.

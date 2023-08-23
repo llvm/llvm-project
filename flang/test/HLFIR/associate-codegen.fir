@@ -239,55 +239,6 @@ func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
 // CHECK:           return
 // CHECK:         }
 
-// The hlfir.associate op is cloned when the elemental is bufferized into the
-// fir.do_loop. When the associate op conversion is run, if the source of the
-// assoicate is used directly (not accessing the bufferized version through
-// the adaptor) then both the associate inside the elemental and the associate
-// inside the fir.do_loop are found as uses. Therefore being erroneously
-// flagged as an associate with more than one use
-func.func @test_cloned_associate() {
-  %false = arith.constant false
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %0 = fir.alloca !fir.char<1>
-  %2 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %4 = hlfir.as_expr %0 move %false : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
-  %5 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<10x!fir.logical<4>> {
-  ^bb0(%arg0: index):
-    %8:3 = hlfir.associate %4 typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
-    hlfir.end_associate %8#1, %8#2 : !fir.ref<!fir.char<1>>, i1
-    %15 = fir.convert %false : (i1) -> !fir.logical<4>
-    hlfir.yield_element %15 : !fir.logical<4>
-  }
-  hlfir.destroy %5 : !hlfir.expr<10x!fir.logical<4>>
-  hlfir.destroy %4 : !hlfir.expr<!fir.char<1>>
-  return
-}
-// CHECK-LABEL:   func.func @test_cloned_associate() {
-// CHECK:           %[[VAL_0:.*]] = arith.constant false
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
-// CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.char<1>
-// CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1>>, i1>
-// CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_0]], [1 : index] : (tuple<!fir.ref<!fir.char<1>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1>>, i1>
-// CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]], [0 : index] : (tuple<!fir.ref<!fir.char<1>>, i1>, !fir.ref<!fir.char<1>>) -> tuple<!fir.ref<!fir.char<1>>, i1>
-// CHECK:           %[[VAL_8:.*]] = fir.allocmem !fir.array<10x!fir.logical<4>> {bindc_name = ".tmp.array", uniq_name = ""}
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_4]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10x!fir.logical<4>>>, !fir.heap<!fir.array<10x!fir.logical<4>>>)
-// CHECK:           %[[VAL_10:.*]] = arith.constant true
-// CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_12:.*]] = %[[VAL_11]] to %[[VAL_2]] step %[[VAL_11]] unordered {
-// CHECK:             %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<4>
-// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_12]])  : (!fir.heap<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
-// CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_14]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-// CHECK:           }
-// CHECK:           %[[VAL_15:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
-// CHECK:           %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_10]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
-// CHECK:           %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_9]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>, !fir.heap<!fir.array<10x!fir.logical<4>>>) -> tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
-// CHECK:           fir.freemem %[[VAL_9]]#1 : !fir.heap<!fir.array<10x!fir.logical<4>>>
-// CHECK:           return
-// CHECK:         }
-
 func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -420,3 +371,86 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
 // CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_12]]#0, [0 : index] : (tuple<!fir.box<!fir.array<?x!fir.logical<4>>>, i1>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> tuple<!fir.box<!fir.array<?x!fir.logical<4>>>, i1>
 // CHECK:           return
 // CHECK:         }
+
+// Verify that we properly recognize mutliple consequent hlfir.associate using
+// the same result of hlfir.elemental.
+func.func @_QPtest_multitple_associates_for_same_expr() {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %4 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %11 = hlfir.elemental %4 typeparams %c1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<10x!fir.char<1>> {
+  ^bb0(%arg1: index):
+    %44 = fir.undefined !fir.ref<!fir.char<1>>
+    hlfir.yield_element %44 : !fir.ref<!fir.char<1>>
+  }
+  %12:3 = hlfir.associate %11(%4) typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
+  hlfir.end_associate %12#1, %12#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
+  %31:3 = hlfir.associate %11(%4) typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
+  hlfir.end_associate %31#1, %31#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
+  hlfir.destroy %11 : !hlfir.expr<10x!fir.char<1>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_multitple_associates_for_same_expr() {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_3:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
+// CHECK:           %[[VAL_5:.*]] = arith.constant true
+// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_6]] to %[[VAL_1]] step %[[VAL_6]] unordered {
+// CHECK:             %[[VAL_8:.*]] = fir.undefined !fir.ref<!fir.char<1>>
+// CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]])  typeparams %[[VAL_0]] : (!fir.heap<!fir.array<10x!fir.char<1>>>, index, index) -> !fir.ref<!fir.char<1>>
+// CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_9]] temporary_lhs : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
+// CHECK:           }
+// CHECK:           %[[VAL_10:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_5]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_4]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_14:.*]] = arith.constant true
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
+// CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_15]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_16:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_14]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_18:.*]] = fir.insert_value %[[VAL_17]], %[[VAL_15]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_15]]#0 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_15]]#1 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.array<10x!fir.char<1>>>) -> !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           fir.freemem %[[VAL_21]] : !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_22:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_23:.*]] = arith.constant true
+// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
+// CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_24]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_25:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_23]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_24]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
+// CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_24]]#0 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_24]]#1 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.array<10x!fir.char<1>>>) -> !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           fir.freemem %[[VAL_4]]#1 : !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           return
+// CHECK:         }
+
+// Test hlfir.associate codegen, when its operand is used
+// by hlfir.shape located in a block different from the block
+// of the hlfir.end_associate.
+func.func @_QPtest(%arg0: index, %arg1: index, %arg2 : i32) {
+  %c1_i32 = arith.constant 1 : i32
+  %3 = fir.shape %arg0, %arg1 : (index, index) -> !fir.shape<2>
+  %4 = hlfir.elemental %3 unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+  ^bb0(%arg3: index, %arg4: index):
+    %16 = fir.undefined i32
+    hlfir.yield_element %16 : i32
+  }
+  %5 = hlfir.shape_of %4 : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
+  %6:3 = hlfir.associate %4(%5) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x?xi32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.ref<!fir.array<?x?xi32>>, i1)
+  %13 = arith.cmpi ne, %arg2, %c1_i32 : i32
+  cf.cond_br %13, ^bb1, ^bb2
+^bb1:  // pred: ^bb0
+  fir.unreachable
+^bb2:  // pred: ^bb0
+  hlfir.end_associate %6#1, %6#2 : !fir.ref<!fir.array<?x?xi32>>, i1
+  hlfir.destroy %4 : !hlfir.expr<?x?xi32>
+  return
+}
