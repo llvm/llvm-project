@@ -13,6 +13,7 @@
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
+#include "mlir/Dialect/IRDL/IRDLVerifiers.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -190,7 +191,7 @@ LogicalResult getResultSegmentSizes(Operation *op,
 /// This encodes the logic of the verification method for operations defined
 /// with IRDL.
 static LogicalResult irdlOpVerifier(
-    Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
+    Operation *op, ConstraintVerifier &verifier,
     ArrayRef<size_t> operandConstrs, ArrayRef<Variadicity> operandVariadicity,
     ArrayRef<size_t> resultConstrs, ArrayRef<Variadicity> resultVariadicity,
     const DenseMap<StringAttr, size_t> &attributeConstrs) {
@@ -208,8 +209,6 @@ static LogicalResult irdlOpVerifier(
     return failure();
 
   auto emitError = [op] { return op->emitError(); };
-
-  ConstraintVerifier verifier(constraints);
 
   /// Сheck that we have all needed attributes passed
   /// and they satisfy the constraints.
@@ -254,6 +253,23 @@ static LogicalResult irdlOpVerifier(
   return success();
 }
 
+static LogicalResult irdlRegionVerifier(
+    Operation *op, ConstraintVerifier &verifier,
+    ArrayRef<std::unique_ptr<RegionConstraint>> regionsConstraints) {
+  if (op->getNumRegions() != regionsConstraints.size()) {
+    return op->emitOpError()
+           << "unexpected number of regions: expected "
+           << regionsConstraints.size() << " but got " << op->getNumRegions();
+  }
+
+  for (auto [constraint, region] :
+       llvm::zip(regionsConstraints, op->getRegions()))
+    if (failed(constraint->verify(region, verifier)))
+      return failure();
+
+  return success();
+}
+
 /// Define and load an operation represented by a `irdl.operation`
 /// operation.
 static WalkResult loadOperation(
@@ -262,12 +278,19 @@ static WalkResult loadOperation(
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> &attrs) {
   // Resolve SSA values to verifier constraint slots
   SmallVector<Value> constrToValue;
+  SmallVector<Value> regionToValue;
   for (Operation &op : op->getRegion(0).getOps()) {
     if (isa<VerifyConstraintInterface>(op)) {
       if (op.getNumResults() != 1)
         return op.emitError()
                << "IRDL constraint operations must have exactly one result";
       constrToValue.push_back(op.getResult(0));
+    }
+    if (isa<VerifyRegionInterface>(op)) {
+      if (op.getNumResults() != 1)
+        return op.emitError()
+               << "IRDL constraint operations must have exactly one result";
+      regionToValue.push_back(op.getResult(0));
     }
   }
 
@@ -281,6 +304,15 @@ static WalkResult loadOperation(
     if (!verifier)
       return WalkResult::interrupt();
     constraints.push_back(std::move(verifier));
+  }
+
+  // Build region constraints
+  SmallVector<std::unique_ptr<RegionConstraint>> regionConstraints;
+  for (Value v : regionToValue) {
+    VerifyRegionInterface op = cast<VerifyRegionInterface>(v.getDefiningOp());
+    std::unique_ptr<RegionConstraint> verifier =
+        op.getVerifier(constrToValue, types, attrs);
+    regionConstraints.push_back(std::move(verifier));
   }
 
   SmallVector<size_t> operandConstraints;
@@ -352,18 +384,25 @@ static WalkResult loadOperation(
 
   auto verifier =
       [constraints{std::move(constraints)},
+       regionConstraints{std::move(regionConstraints)},
        operandConstraints{std::move(operandConstraints)},
        operandVariadicity{std::move(operandVariadicity)},
        resultConstraints{std::move(resultConstraints)},
        resultVariadicity{std::move(resultVariadicity)},
        attributesContraints{std::move(attributesContraints)}](Operation *op) {
-        return irdlOpVerifier(op, constraints, operandConstraints,
-                              operandVariadicity, resultConstraints,
-                              resultVariadicity, attributesContraints);
+        ConstraintVerifier verifier(constraints);
+        const LogicalResult opVerifierResult = irdlOpVerifier(
+            op, verifier, operandConstraints, operandVariadicity,
+            resultConstraints, resultVariadicity, attributesContraints);
+        const LogicalResult opRegionVerifierResult =
+            irdlRegionVerifier(op, verifier, regionConstraints);
+        return LogicalResult::success(opVerifierResult.succeeded() &&
+                                      opRegionVerifierResult.succeeded());
       };
 
-  // IRDL does not support defining regions.
-  auto regionVerifier = [](Operation *op) { return success(); };
+  // IRDL supports only checking number of blocks and argument contraints
+  // It is done in the main verifier to reuse `ConstraintVerifier` context
+  auto regionVerifier = [](Operation *op) { return LogicalResult::success(); };
 
   auto opDef = DynamicOpDefinition::get(
       op.getName(), dialect, std::move(verifier), std::move(regionVerifier),
