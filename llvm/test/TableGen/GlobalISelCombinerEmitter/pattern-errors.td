@@ -219,7 +219,7 @@ def def_named_imm_apply : GICombineRule<
 
 // CHECK: error: Failed to parse one or more rules
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   root_not_found,
   misleading_root,
   cxx_root,
