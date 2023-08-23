@@ -26,19 +26,26 @@ declare void @llvm.assume(i1)
 ; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = global i32 42
 ; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global i32 0
 ;.
-define void @pos_empty_1() "kernel" {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_1
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    ret void
+define void @pos_empty_1(i1 %c) "kernel" {
+; MODULE-LABEL: define {{[^@]+}}@pos_empty_1
+; MODULE-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; MODULE-NEXT:    ret void
 ;
-  call void @llvm.assume(i1 true)
+; CGSCC-LABEL: define {{[^@]+}}@pos_empty_1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-NEXT:    call void @llvm.assume(i1 [[C]])
+; CGSCC-NEXT:    call void @unknown() #[[ATTR0:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.assume(i1 [[C]])
+; CGSCC-NEXT:    ret void
+;
+  call void @llvm.assume(i1 %c)
   call void @unknown() "llvm.assume"="ompx_aligned_barrier"
-  call void @llvm.assume(i1 true)
+  call void @llvm.assume(i1 %c)
   ret void
 }
 define void @pos_empty_2() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_2
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @aligned_barrier()
