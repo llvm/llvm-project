@@ -186,7 +186,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       addRegClassForRVV(VT);
     }
 
-    if (Subtarget.hasVInstructionsF16())
+    if (Subtarget.hasVInstructionsF16Minimal())
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
@@ -910,6 +910,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         SetCommonVFPActions(VT);
       }
+    } else if (Subtarget.hasVInstructionsF16Minimal()) {
+      for (MVT VT : F16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+        setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+        // TODO: make others promote?
+      }
     }
 
     if (Subtarget.hasVInstructionsF32()) {
@@ -1092,6 +1100,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // Custom lower fixed vector undefs to scalable vector undefs to avoid
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
+
+        if (VT.getVectorElementType() == MVT::f16 &&
+            !Subtarget.hasVInstructionsF16()) {
+          setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+          setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+          // TODO: make others promote?
+          continue;
+        }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
@@ -2260,7 +2276,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
       return false;
     break;
   case MVT::f16:
-    if (!Subtarget.hasVInstructionsF16())
+    if (!Subtarget.hasVInstructionsF16Minimal())
       return false;
     break;
   case MVT::f32:
@@ -12338,9 +12354,17 @@ static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
                      VL);
 }
 
-static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineVFMADD_VLWithVFNEG_VL(N, DAG))
     return V;
+
+  if (N->getValueType(0).isScalableVector() &&
+      N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      (Subtarget.hasVInstructionsF16Minimal() &&
+       !Subtarget.hasVInstructionsF16())) {
+    return SDValue();
+  }
 
   // FIXME: Ignore strict opcodes for now.
   if (N->isTargetStrictFPOpcode())
@@ -12392,7 +12416,15 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
                      N->getOperand(2), Mask, VL);
 }
 
-static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  if (N->getValueType(0).isScalableVector() &&
+      N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      (Subtarget.hasVInstructionsF16Minimal() &&
+       !Subtarget.hasVInstructionsF16())) {
+    return SDValue();
+  }
+
   // FIXME: Ignore strict opcodes for now.
   assert(!N->isTargetStrictFPOpcode() && "Unexpected opcode");
 
@@ -12425,7 +12457,15 @@ static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG) {
                      Op1, Merge, Mask, VL);
 }
 
-static SDValue performFADDSUB_VLCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performFADDSUB_VLCombine(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  if (N->getValueType(0).isScalableVector() &&
+      N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      (Subtarget.hasVInstructionsF16Minimal() &&
+       !Subtarget.hasVInstructionsF16())) {
+    return SDValue();
+  }
+
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Merge = N->getOperand(2);
@@ -13561,12 +13601,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::STRICT_VFNMADD_VL:
   case RISCVISD::STRICT_VFMSUB_VL:
   case RISCVISD::STRICT_VFNMSUB_VL:
-    return performVFMADD_VLCombine(N, DAG);
+    return performVFMADD_VLCombine(N, DAG, Subtarget);
   case RISCVISD::FMUL_VL:
-    return performVFMUL_VLCombine(N, DAG);
+    return performVFMUL_VLCombine(N, DAG, Subtarget);
   case RISCVISD::FADD_VL:
   case RISCVISD::FSUB_VL:
-    return performFADDSUB_VLCombine(N, DAG);
+    return performFADDSUB_VLCombine(N, DAG, Subtarget);
   case ISD::LOAD:
   case ISD::STORE: {
     if (DCI.isAfterLegalizeDAG())
