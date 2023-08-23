@@ -62,7 +62,7 @@ public:
     return failure();
   }
 
-  /// Attaches module-level metadata for functions marked as kernels.
+  /// Attaches metadata for functions marked as kernels.
   LogicalResult
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
@@ -72,62 +72,46 @@ public:
 
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+    StringAttr attrName = attribute.getName();
+    Attribute attrVal = attribute.getValue();
 
     // Set calling convention for kernel
-    if (attribute.getName() ==
-        GENX::GENXDialect::getKernelFuncAttrName()) {
+    if (attrName == GENX::GENXDialect::getKernelFuncAttrName())
       llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
-    }
 
-    // Set max_work_group_size metadata.
-    if (attribute.getName() ==
-        GENX::GENXDialect::getMaxWorkGroupSizeAttrName()) {
-      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
-      if (!value)
-        return failure();
-
+    auto attachMetadata = [&](StringRef name) {
       SmallVector<llvm::Metadata *, 3> metadata;
       llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
-      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
+      for (int64_t i : extractFromI64ArrayAttr(attrVal)) {
         llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
         metadata.push_back(llvm::ConstantAsMetadata::get(constant));
       }
       llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
-      llvmFunc->setMetadata("max_work_group_size", node);
+      llvmFunc->setMetadata(name, node);
+    };
+
+    // Set max_work_group_size metadata.
+    if (attrName == GENX::GENXDialect::getMaxWorkGroupSizeAttrName()) {
+      if (!attrVal.dyn_cast<ArrayAttr>())
+        return failure();
+
+      attachMetadata("max_work_group_size");
     }
 
     // Set reqd_work_group_size metadata.
-    if (attribute.getName() ==
-        GENX::GENXDialect::getReqdWorkGroupSizeAttrName()) {
-      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
-      if (!value)
+    if (attrName == GENX::GENXDialect::getReqdWorkGroupSizeAttrName()) {
+      if (!attrVal.dyn_cast<ArrayAttr>())
         return failure();
 
-      SmallVector<llvm::Metadata *, 3> metadata;
-      llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
-      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
-        llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
-        metadata.push_back(llvm::ConstantAsMetadata::get(constant));
-      }
-      llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
-      llvmFunc->setMetadata("reqd_work_group_size", node);
+      attachMetadata("reqd_work_group_size");
     }
 
     // Set intel_reqd_sub_group_size metadata.
-    if (attribute.getName() ==
-        GENX::GENXDialect::getReqdSubGroupSizeAttrName()) {
-      auto value = attribute.getValue().dyn_cast<ArrayAttr>();
-      if (!value)
+    if (attrName == GENX::GENXDialect::getReqdSubGroupSizeAttrName()) {
+      if (!attrVal.dyn_cast<ArrayAttr>())
         return failure();
 
-      SmallVector<llvm::Metadata *, 3> metadata;
-      llvm::Type *i64 = llvm::IntegerType::get(llvmContext, 64);
-      for (int64_t i : extractFromI64ArrayAttr(attribute.getValue())) {
-        llvm::Constant *constant = llvm::ConstantInt::get(i64, i);
-        metadata.push_back(llvm::ConstantAsMetadata::get(constant));
-      }
-      llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
-      llvmFunc->setMetadata("intel_reqd_sub_group_size", node);
+      attachMetadata("intel_reqd_sub_group_size");
     }
 
     return success();
