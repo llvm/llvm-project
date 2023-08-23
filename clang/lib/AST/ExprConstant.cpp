@@ -13310,6 +13310,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.rel]p4, [expr.eq]p3: If two operands of type std::nullptr_t
     // are compared, the result is true of the operator is <=, >= or ==, and
     // false otherwise.
+    LValue Res;
+    if (!EvaluatePointer(E->getLHS(), Res, Info) ||
+        !EvaluatePointer(E->getRHS(), Res, Info))
+      return false;
     return Success(CmpResult::Equal, E);
   }
 
