@@ -430,7 +430,7 @@ void EditedSource::applyRewrites(EditsReceiver &receiver,
     if (offs == CurEnd) {
       StrVec += act.Text;
       CurLen += act.RemoveLen;
-      CurEnd.getWithOffset(act.RemoveLen);
+      CurEnd = CurEnd.getWithOffset(act.RemoveLen);
       continue;
     }
 

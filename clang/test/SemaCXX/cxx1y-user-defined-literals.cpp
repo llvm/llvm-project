@@ -32,7 +32,7 @@ namespace std {
 using namespace std;
 duration a = 1ns, b = 1us, c = 1ms, d = 1s, e = 1min, f = 1h;
 string s = "foo"s;
-char error = 'x's; // expected-error {{no matching literal operator for call to 'operator""s' with argument of type 'char'}}
+char error = 'x's; // expected-error {{invalid suffix}} expected-error {{expected ';'}}
 
 int _1y = 1y; // expected-error {{invalid suffix}}
 int _1b = 1b; // expected-error {{invalid digit}}

@@ -517,10 +517,11 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   Binary &Binary = *BinOrErr.get().getBinary();
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
-    if (DICtx->getMaxVersion() >= 5) {
+    if (DICtx->getMaxVersion() > 5) {
       std::lock_guard<std::mutex> Guard(Mutex);
-      WithColor::warning() << "verification skipped for " << Arch
-                           << " because DWARFv5 is not fully supported yet.\n";
+      WithColor::warning()
+          << "verification skipped for " << Arch
+          << " because DWARF standard greater than v5 is not supported yet.\n";
       return true;
     }
 

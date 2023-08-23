@@ -25,17 +25,15 @@ unsigned mlir::arm_sme::getSMETileSliceMinNumElts(Type type) {
 }
 
 bool mlir::arm_sme::isValidSMETileElementType(Type type) {
-  // TODO: add support for i128.
   return type.isInteger(8) || type.isInteger(16) || type.isInteger(32) ||
-         type.isInteger(64) || type.isF16() || type.isBF16() || type.isF32() ||
-         type.isF64();
+         type.isInteger(64) || type.isInteger(128) || type.isF16() ||
+         type.isBF16() || type.isF32() || type.isF64() || type.isF128();
 }
 
 bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
   if ((vType.getRank() != 2) && vType.allDimsScalable())
     return false;
 
-  // TODO: add support for i128.
   auto elemType = vType.getElementType();
   if (!isValidSMETileElementType(elemType))
     return false;

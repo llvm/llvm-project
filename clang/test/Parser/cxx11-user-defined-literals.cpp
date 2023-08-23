@@ -38,19 +38,19 @@ int cake() __attribute__((availability(macosx, unavailable, message = "is a lie"
 #endif
 
 // But they can appear in expressions.
-constexpr char operator""_id(char c) { return c; }
-constexpr wchar_t operator""_id(wchar_t c) { return c; }
-constexpr char16_t operator""_id(char16_t c) { return c; }
-constexpr char32_t operator""_id(char32_t c) { return c; }
+constexpr char operator"" _id(char c) { return c; }
+constexpr wchar_t operator"" _id(wchar_t c) { return c; }
+constexpr char16_t operator"" _id(char16_t c) { return c; }
+constexpr char32_t operator"" _id(char32_t c) { return c; }
 
 using size_t = decltype(sizeof(int));
-constexpr const char operator""_id(const char *p, size_t n) { return *p; }
-constexpr const wchar_t operator""_id(const wchar_t *p, size_t n) { return *p; }
-constexpr const char16_t operator""_id(const char16_t *p, size_t n) { return *p; }
-constexpr const char32_t operator""_id(const char32_t *p, size_t n) { return *p; }
+constexpr const char operator"" _id(const char *p, size_t n) { return *p; }
+constexpr const wchar_t operator"" _id(const wchar_t *p, size_t n) { return *p; }
+constexpr const char16_t operator"" _id(const char16_t *p, size_t n) { return *p; }
+constexpr const char32_t operator"" _id(const char32_t *p, size_t n) { return *p; }
 
-constexpr unsigned long long operator""_id(unsigned long long n) { return n; }
-constexpr long double operator""_id(long double d) { return d; }
+constexpr unsigned long long operator"" _id(unsigned long long n) { return n; }
+constexpr long double operator"" _id(long double d) { return d; }
 
 template<int n> struct S {};
 S<"a"_id> sa;
@@ -96,20 +96,20 @@ _no_such_suffix; // expected-error {{'operator""_no_such_suffix'}}
 // Make sure we handle more interesting ways of writing a string literal which
 // is "" in translation phase 7.
 void operator "\
-"_foo(unsigned long long); // ok
+" _foo(unsigned long long); // ok
 
-void operator R"xyzzy()xyzzy"_foo(long double); // ok
+void operator R"xyzzy()xyzzy" _foo(long double); // ok
 
-void operator"" "" R"()" ""_foo(const char *); // ok
+void operator"" "" R"()" "" _foo(const char *); // ok
 
 void operator ""_no_space(const char *); // ok
 
 // Ensure we diagnose the bad cases.
-void operator "\0"_non_empty(const char *); // expected-error {{must be '""'}}
-void operator L""_not_char(const char *); // expected-error {{cannot have an encoding prefix}}
+void operator "\0" _non_empty(const char *); // expected-error {{must be '""'}}
+void operator L"" _not_char(const char *); // expected-error {{cannot have an encoding prefix}}
 void operator "" ""
 U"" // expected-error {{cannot have an encoding prefix}}
-""_also_not_char(const char *);
+"" _also_not_char(const char *);
 void operator "" u8"" "\u0123" "hello"_all_of_the_things ""(const char*); // expected-error {{must be '""'}}
 
 // Make sure we treat UCNs and UTF-8 as equivalent.
