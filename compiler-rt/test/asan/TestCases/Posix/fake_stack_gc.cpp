@@ -3,6 +3,10 @@
 // Check that fake stack does not discard frames on the main stack, when GC is
 // triggered from high alt stack.
 
+// This test does not work on iOS simulator
+// (https://github.com/llvm/llvm-project/issues/64942).
+// UNSUPPORTED: iossim
+
 #include <algorithm>
 #include <assert.h>
 #include <csignal>
