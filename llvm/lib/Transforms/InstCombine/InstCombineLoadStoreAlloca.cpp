@@ -36,6 +36,8 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
     cl::desc("Maximum users to visit in copy from constant transform"),
     cl::Hidden);
 
+extern cl::opt<bool> EnableInferAlignmentPass;
+
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
@@ -1048,11 +1050,13 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   if (Instruction *Res = combineLoadToOperationType(*this, LI))
     return Res;
 
-  // Attempt to improve the alignment.
-  Align KnownAlign = getOrEnforceKnownAlignment(
-      Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
-  if (KnownAlign > LI.getAlign())
-    LI.setAlignment(KnownAlign);
+  if (!EnableInferAlignmentPass) {
+    // Attempt to improve the alignment.
+    Align KnownAlign = getOrEnforceKnownAlignment(
+        Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
+    if (KnownAlign > LI.getAlign())
+      LI.setAlignment(KnownAlign);
+  }
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI))
@@ -1445,11 +1449,13 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (combineStoreToValueType(*this, SI))
     return eraseInstFromFunction(SI);
 
-  // Attempt to improve the alignment.
-  const Align KnownAlign = getOrEnforceKnownAlignment(
-      Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
-  if (KnownAlign > SI.getAlign())
-    SI.setAlignment(KnownAlign);
+  if (!EnableInferAlignmentPass) {
+    // Attempt to improve the alignment.
+    const Align KnownAlign = getOrEnforceKnownAlignment(
+        Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
+    if (KnownAlign > SI.getAlign())
+      SI.setAlignment(KnownAlign);
+  }
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))
