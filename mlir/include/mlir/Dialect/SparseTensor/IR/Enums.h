@@ -207,27 +207,27 @@ constexpr const char *toMLIRString(DimLevelType dlt) {
   case DimLevelType::Compressed:
     return "compressed";
   case DimLevelType::CompressedNu:
-    return "compressed-nu";
+    return "compressed_nu";
   case DimLevelType::CompressedNo:
-    return "compressed-no";
+    return "compressed_no";
   case DimLevelType::CompressedNuNo:
-    return "compressed-nu-no";
+    return "compressed_nu_no";
   case DimLevelType::Singleton:
     return "singleton";
   case DimLevelType::SingletonNu:
-    return "singleton-nu";
+    return "singleton_nu";
   case DimLevelType::SingletonNo:
-    return "singleton-no";
+    return "singleton_no";
   case DimLevelType::SingletonNuNo:
-    return "singleton-nu-no";
+    return "singleton_nu_no";
   case DimLevelType::CompressedWithHi:
-    return "compressed-hi";
+    return "compressed_hi";
   case DimLevelType::CompressedWithHiNu:
-    return "compressed-hi-nu";
+    return "compressed_hi_nu";
   case DimLevelType::CompressedWithHiNo:
-    return "compressed-hi-no";
+    return "compressed_hi_no";
   case DimLevelType::CompressedWithHiNuNo:
-    return "compressed-hi-nu-no";
+    return "compressed_hi_nu_no";
   case DimLevelType::TwoOutOfFour:
     return "compressed24";
   }

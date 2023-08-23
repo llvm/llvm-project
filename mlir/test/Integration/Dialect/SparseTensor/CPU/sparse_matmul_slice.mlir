@@ -41,7 +41,7 @@
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
@@ -55,12 +55,12 @@
 }>
 
 #COO_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (0, 4, 2), (0, 4, 1) ]
 }>
 
 #COO_SLICE_2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (0, 4, 2), (1, 4, 1) ]
 }>
 

@@ -1205,7 +1205,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
     if (!isUniqueLvl(l) && isCompressedLvl(l)) {
-      // A `compressed-nu` level marks the start of trailing COO start level.
+      // A `compressed_nu` level marks the start of trailing COO start level.
       // Since the coordinate buffer used for trailing COO are passed in as AoS
       // scheme, and SparseTensorStorage uses a SoA scheme, we can not simply
       // copy the value from the provided buffers.
@@ -1213,7 +1213,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       break;
     }
     assert(!isSingletonLvl(l) &&
-           "Singleton level not following a compressed-nu level");
+           "Singleton level not following a compressed_nu level");
     if (isCompressedLvl(l)) {
       P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
       C *crdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);

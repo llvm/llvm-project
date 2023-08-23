@@ -824,7 +824,7 @@ Level mlir::sparse_tensor::toStoredDim(RankedTensorType type, Dimension d) {
 //===----------------------------------------------------------------------===//
 
 /// We normalized sparse tensor encoding attribute by always using
-/// ordered/unique DLT such that "compressed-nu-no" and "compressed-nu" (as well
+/// ordered/unique DLT such that "compressed_nu_no" and "compressed_nu" (as well
 /// as other variants) lead to the same storage specifier type, and stripping
 /// irrelevant fields that do not alter the sparse tensor memory layout.
 static SparseTensorEncodingAttr
