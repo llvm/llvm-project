@@ -1139,6 +1139,9 @@ public:
   /// Return the size limit for printing large ElementsAttr.
   std::optional<int64_t> getLargeElementsAttrLimit() const;
 
+  /// Return the size limit in chars for printing large resources.
+  std::optional<uint64_t> getLargeResourceStringLimit() const;
+
   /// Return if debug information should be printed.
   bool shouldPrintDebugInfo() const;
 
@@ -1164,6 +1167,9 @@ private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
   std::optional<int64_t> elementsAttrElementLimit;
+
+  /// Elide printing large resources based on size of string.
+  std::optional<uint64_t> resourceStringCharLimit;
 
   /// Print debug information.
   bool printDebugInfoFlag : 1;
