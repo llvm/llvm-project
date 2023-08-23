@@ -2683,10 +2683,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     break;
   }
 
-  // Always append the drivers target triple to the end, in case it doesn't
-  // match any of our aliases.
-  TripleAliases.push_back(TargetTriple.str());
-
   // Also include the multiarch variant if it's different.
   if (TargetTriple.str() != BiarchTriple.str())
     BiarchTripleAliases.push_back(BiarchTriple.str());
