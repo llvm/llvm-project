@@ -64,3 +64,21 @@ def testTransferReadOp():
     # CHECK: vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %[[PAD]]
     # CHECK-NOT: %[[MASK]]
     print(module)
+
+
+# CHECK-LABEL: TEST: testBitEnumCombiningKind
+@run
+def testBitEnumCombiningKind():
+    module = Module.create()
+    with InsertionPoint(module.body):
+        f32 = F32Type.get()
+        vector_type = VectorType.get([16], f32)
+
+        @func.FuncOp.from_py_func(vector_type)
+        def reduction(arg):
+            v = vector.ReductionOp(f32, vector.CombiningKind.ADD, arg)
+            return v
+
+    # CHECK: func.func @reduction(%[[VEC:.*]]: vector<16xf32>) -> f32 {
+    # CHECK: %0 = vector.reduction <add>, %[[VEC]] : vector<16xf32> into f32
+    print(module)
