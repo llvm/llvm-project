@@ -954,6 +954,13 @@ private:
       // Do a regular lookup.
       if (Fortran::semantics::IsProcedure(sym))
         return symMap->lookupSymbol(sym);
+
+      // Commonblock names are not variables, but in some lowerings (like
+      // OpenMP) it is useful to maintain the address of the commonblock in an
+      // MLIR value and query it. hlfir.declare need not be created for these.
+      if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
+        return symMap->lookupSymbol(sym);
+
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
