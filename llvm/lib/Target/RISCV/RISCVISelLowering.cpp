@@ -13730,7 +13730,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
       SDLoc DL(N);
-      SDValue VL = N->getOperand(3);
+      SDValue VL = N->getOperand(4);
       EVT VT = N->getValueType(0);
       ShAmt = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, DAG.getUNDEF(VT),
                           ShAmt.getOperand(1), VL);
