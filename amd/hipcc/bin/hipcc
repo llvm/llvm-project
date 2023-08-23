@@ -1,0 +1,74 @@
+#!/usr/bin/env perl
+# Copyright (c) 2015 - 2021 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Need perl > 5.10 to use logic-defined or
+use 5.006; use v5.10.1;
+
+use warnings;
+
+use File::Basename;
+use File::Spec::Functions 'catfile';
+
+# TODO: By default select perl script until change incorporated in HIP build script.
+my $USE_PERL_SCRIPT = $ENV{'HIP_USE_PERL_SCRIPTS'};
+$USE_PERL_SCRIPT //= 1;  # use defined-or assignment operator.  Use env var, but if not defined default to 1.
+
+my $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
+# escapes args with quotes SWDEV-341955
+foreach $arg (@ARGV) {
+  if ($isWindows) {
+    $arg =~ s/[^-a-zA-Z0-9_=+,.:\/\\ ]/\\$&/g;
+  }
+}
+
+my $SCRIPT_DIR=dirname(__FILE__);
+if ($USE_PERL_SCRIPT) {
+    #Invoke hipcc.pl
+    my $HIPCC_PERL=catfile($SCRIPT_DIR, '/hipcc.pl');
+    system($^X, $HIPCC_PERL, @ARGV);
+} else {
+    $BIN_NAME="/hipcc.bin";
+    if ($isWindows) {
+        $BIN_NAME="/hipcc.bin.exe";
+    }
+    my $HIPCC_BIN=catfile($SCRIPT_DIR, $BIN_NAME);
+    if ( -e $HIPCC_BIN ) {
+        #Invoke hipcc.bin
+        system($HIPCC_BIN, @ARGV);
+    } else {
+        print "hipcc.bin not present; install HIPCC binaries before proceeding\n";
+        exit(-1);
+    }
+}
+
+# Because of this wrapper we need to check
+# the output of the system command for perl and bin
+# else the failures are ignored and build fails silently
+if ($? == -1) {
+    exit($?);
+}
+elsif ($? & 127) {
+    exit($?);
+}
+else {
+     $CMD_EXIT_CODE = $? >> 8;
+}
+exit($CMD_EXIT_CODE);

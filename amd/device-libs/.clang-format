@@ -1,0 +1,6 @@
+AlwaysBreakAfterReturnType: All
+BraceWrapping:
+  AfterFunction:   true
+BreakBeforeBraces: Custom
+IndentWidth:     4
+PenaltyBreakBeforeFirstCallParameter: 300
