@@ -1990,7 +1990,7 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
   return isRegClass(AMDGPU::VGPR_32RegClassID) ||
          // GFX90A allows DPP on 64-bit operands.
          (isRegClass(AMDGPU::VReg_64RegClassID) &&
-          AsmParser->getFeatureBits()[AMDGPU::Feature64BitDPP]);
+          AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
 bool AMDGPUOperand::isT16VRegWithInputMods() const {
@@ -4196,15 +4196,12 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     return true;
   unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-  if (!AMDGPU::isLegal64BitDPPControl(DppCtrl)) {
-    // DPP64 is supported for row_newbcast only.
-    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-    if (Src0Idx >= 0 &&
-        getMRI()->getSubReg(Inst.getOperand(Src0Idx).getReg(), AMDGPU::sub1)) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "64 bit dpp only supports row_newbcast");
-      return false;
-    }
+  if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
+      AMDGPU::isDPALU_DPP(MII.get(Opc))) {
+    // DP ALU DPP is supported for row_newbcast only on GFX9*
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
+    Error(S, "DP ALU dpp only supports row_newbcast");
+    return false;
   }
 
   return true;
