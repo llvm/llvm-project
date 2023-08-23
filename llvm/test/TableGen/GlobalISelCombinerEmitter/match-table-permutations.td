@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner-matchtable \
-// RUN:     -combiners=MyCombiner -gicombiner-matchtable-debug-cxxpreds %s | \
+// RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN:     -combiners=MyCombiner -gicombiner-debug-cxxpreds %s | \
 // RUN: FileCheck %s
 
 include "llvm/Target/Target.td"
