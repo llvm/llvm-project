@@ -3534,9 +3534,8 @@ LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
   Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
   Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
   AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  Instruction* Malloc = CallInst::CreateMalloc(unwrap(B)->GetInsertBlock(),
-                                               ITy, unwrap(Ty), AllocSize,
-                                               nullptr, nullptr, "");
+  CallInst *Malloc =
+      unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, nullptr, nullptr, "");
   return wrap(unwrap(B)->Insert(Malloc, Twine(Name)));
 }
 
@@ -3545,9 +3544,8 @@ LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
   Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
   Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
   AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  Instruction* Malloc = CallInst::CreateMalloc(unwrap(B)->GetInsertBlock(),
-                                               ITy, unwrap(Ty), AllocSize,
-                                               unwrap(Val), nullptr, "");
+  CallInst *Malloc = unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize,
+                                             unwrap(Val), nullptr, "");
   return wrap(unwrap(B)->Insert(Malloc, Twine(Name)));
 }
 
