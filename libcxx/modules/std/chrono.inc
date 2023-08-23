@@ -112,8 +112,10 @@ export namespace std {
 
     using std::chrono::file_time;
 
+#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
     // [time.clock.steady], class steady_clock
     using std::chrono::steady_clock;
+#endif
 
     // [time.clock.hires], class high_resolution_clock
     using std::chrono::high_resolution_clock;

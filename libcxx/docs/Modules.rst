@@ -44,6 +44,7 @@ What works
 
    * ``LIBCXX_ENABLE_LOCALIZATION``
    * ``LIBCXX_ENABLE_WIDE_CHARACTERS``
+   * ``LIBCXX_ENABLE_THREADS``
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
