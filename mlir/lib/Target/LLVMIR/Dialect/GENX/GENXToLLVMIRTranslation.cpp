@@ -73,10 +73,15 @@ public:
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
+    // Set calling convention for kernel
+    if (attribute.getName() ==
+        GENX::GENXDialect::getKernelFuncAttrName()) {
+      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    }
+
     // Set max_work_group_size metadata.
     if (attribute.getName() ==
         GENX::GENXDialect::getMaxWorkGroupSizeAttrName()) {
-      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
       auto value = attribute.getValue().dyn_cast<ArrayAttr>();
       if (!value)
         return failure();
@@ -94,7 +99,6 @@ public:
     // Set reqd_work_group_size metadata.
     if (attribute.getName() ==
         GENX::GENXDialect::getReqdWorkGroupSizeAttrName()) {
-      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
       auto value = attribute.getValue().dyn_cast<ArrayAttr>();
       if (!value)
         return failure();
@@ -112,7 +116,6 @@ public:
     // Set intel_reqd_sub_group_size metadata.
     if (attribute.getName() ==
         GENX::GENXDialect::getReqdSubGroupSizeAttrName()) {
-      llvmFunc->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
       auto value = attribute.getValue().dyn_cast<ArrayAttr>();
       if (!value)
         return failure();
