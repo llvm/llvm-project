@@ -43,8 +43,26 @@ public:
 
   int32_t GetSignalNumberFromName(const char *name) const;
 
-  const char *GetSignalInfo(int32_t signo, bool &should_suppress,
-                            bool &should_stop, bool &should_notify) const;
+  /// Gets the information for a particular signal
+  ///
+  /// GetSignalInfo takes a signal number and populates 3 out parameters
+  /// describing how lldb should react when a particular signal is received in
+  /// the inferior.
+  ///
+  /// \param[in] signo
+  ///   The signal number to get information about.
+  /// \param[out] should_suppress
+  ///   Should we suppress this signal?
+  /// \param[out] should_stop
+  ///   Should we stop if this signal is received?
+  /// \param[out] should_notify
+  ///   Should we notify the user if this signal is received?
+  ///
+  /// \return
+  ///   Returns a boolean value. Returns true if the out parameters were
+  ///   successfully populated, false otherwise.
+  bool GetSignalInfo(int32_t signo, bool &should_suppress, bool &should_stop,
+                     bool &should_notify) const;
 
   bool GetShouldSuppress(int32_t signo) const;
 
