@@ -22224,8 +22224,25 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  }\n"
                "};");
 
-  // Multiple lambdas in the same parentheses change indentation rules. These
-  // lambdas are forced to start on new lines.
+  // Lambdas that fit on a single line within an argument list are not forced
+  // onto new lines.
+  verifyFormat("SomeFunction([] {});");
+  verifyFormat("SomeFunction(0, [] {});");
+  verifyFormat("SomeFunction([] {}, 0);");
+  verifyFormat("SomeFunction(0, [] {}, 0);");
+  verifyFormat("SomeFunction([] { return 0; }, 0);");
+  verifyFormat("SomeFunction(a, [] { return 0; }, b);");
+  verifyFormat("SomeFunction([] { return 0; }, [] { return 0; });");
+  verifyFormat("SomeFunction([] { return 0; }, [] { return 0; }, b);");
+  verifyFormat("auto loooooooooooooooooooooooooooong =\n"
+               "    SomeFunction([] { return 0; }, [] { return 0; }, b);");
+  // Exceeded column limit. We need to break.
+  verifyFormat("auto loooooooooooooooooooooooooooongName = SomeFunction(\n"
+               "    [] { return anotherLooooooooooonoooooooongName; }, [] { "
+               "return 0; }, b);");
+
+  // Multiple multi-line lambdas in the same parentheses change indentation
+  // rules. These lambdas are always forced to start on new lines.
   verifyFormat("SomeFunction(\n"
                "    []() {\n"
                "      //\n"
@@ -22234,7 +22251,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      //\n"
                "    });");
 
-  // A lambda passed as arg0 is always pushed to the next line.
+  // A multi-line lambda passed as arg0 is always pushed to the next line.
   verifyFormat("SomeFunction(\n"
                "    [this] {\n"
                "      //\n"
