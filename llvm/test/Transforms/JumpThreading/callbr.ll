@@ -47,3 +47,17 @@ bb10:
 bb11:
   ret i1 %i9
 }
+
+define i32 @callbr_no_block_merge() {
+; CHECK-LABEL: @callbr_no_block_merge(
+; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"()
+; CHECK-NEXT:    to label [[BB:%.*]] []
+; CHECK:       bb:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = callbr i32 asm sideeffect "", "=r"()
+  to label %bb []
+
+bb:
+  ret i32 %x
+}
