@@ -1695,3 +1695,33 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 
 // CHECK-LABEL: func.func @compute3
 // CHECK: acc.declare dataOperands(
+
+// -----
+
+%i64Value = arith.constant 1 : i64
+%i32Value = arith.constant 1 : i32
+%i32Value2 = arith.constant 2 : i32
+%idxValue = arith.constant 1 : index
+%ifCond = arith.constant true
+acc.set device_type(%i32Value : i32)
+acc.set device_type(%i32Value, %i32Value2 : i32, i32)
+acc.set device_num(%i64Value : i64)
+acc.set device_num(%i32Value : i32)
+acc.set device_num(%idxValue : index)
+acc.set device_num(%idxValue : index) if(%ifCond)
+acc.set device_num(%idxValue : index) if(%ifCond)
+acc.set default_async(%i32Value : i32)
+
+// CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK: [[I32VALUE2:%.*]] = arith.constant 2 : i32
+// CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK: [[IFCOND:%.*]] = arith.constant true
+// CHECK: acc.set device_type([[I32VALUE]] : i32)
+// CHECK: acc.set device_type([[I32VALUE]], [[I32VALUE2]] : i32, i32)
+// CHECK: acc.set device_num([[I64VALUE]] : i64)
+// CHECK: acc.set device_num([[I32VALUE]] : i32)
+// CHECK: acc.set device_num([[IDXVALUE]] : index)
+// CHECK: acc.set device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.set device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.set default_async([[I32VALUE]] : i32)
