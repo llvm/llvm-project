@@ -3093,8 +3093,7 @@ private:
     using ValueFn = function_ref<void(raw_ostream &)>;
     using PrintFn = function_ref<void(StringRef, ValueFn)>;
 
-    ResourceBuilder(OperationPrinter &p, PrintFn printFn)
-        : p(p), printFn(printFn) {}
+    ResourceBuilder(PrintFn printFn) : printFn(printFn) {}
     ~ResourceBuilder() override = default;
 
     void buildBool(StringRef key, bool data) final {
@@ -3118,7 +3117,6 @@ private:
     }
 
   private:
-    OperationPrinter &p;
     PrintFn printFn;
   };
 
@@ -3225,7 +3223,7 @@ void OperationPrinter::printResourceFileMetadata(
         valueFn(os);
       }
     };
-    ResourceBuilder entryBuilder(*this, printFn);
+    ResourceBuilder entryBuilder(printFn);
     provider.buildResources(op, providerArgs..., entryBuilder);
 
     needEntryComma |= hadEntry;
