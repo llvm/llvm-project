@@ -956,17 +956,20 @@ namespace {
 class TestTypeConverter : public TypeConverter {
 public:
   TestTypeConverter() {
+    addConversion([](Type t) { return t; });
     addConversion([](RankedTensorType type) -> Type {
       return MemRefType::get(type.getShape(), type.getElementType());
     });
-    addSourceMaterialization([&](OpBuilder &builder, Type resultType,
-                                 ValueRange inputs,
-                                 Location loc) -> std::optional<Value> {
+    auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
+                                       ValueRange inputs,
+                                       Location loc) -> std::optional<Value> {
       if (inputs.size() != 1)
         return std::nullopt;
       return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
           .getResult(0);
-    });
+    };
+    addSourceMaterialization(unrealizedCastConverter);
+    addTargetMaterialization(unrealizedCastConverter);
   }
 };
 } // namespace
