@@ -57,18 +57,15 @@ public:
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
-#include <__availability>
 #include <__config>
-#include <__exception/exception.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__verbose_abort>
-#include <cstddef>
-#include <cstdint>
+#include <__typeinfo/typeinfo.h>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+<<<<<<< HEAD
 #if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <vcruntime_typeinfo.h>
 #else
