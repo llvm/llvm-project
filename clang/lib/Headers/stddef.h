@@ -51,107 +51,54 @@
 #endif
 
 #if defined(__need_ptrdiff_t)
-#if !defined(_PTRDIFF_T) || __has_feature(modules)
-/* Always define ptrdiff_t when modules are available. */
-#if !__has_feature(modules)
-#define _PTRDIFF_T
-#endif
-typedef __PTRDIFF_TYPE__ ptrdiff_t;
-#endif
+#include <__stddef_ptrdiff_t.h>
 #undef __need_ptrdiff_t
 #endif /* defined(__need_ptrdiff_t) */
 
 #if defined(__need_size_t)
-#if !defined(_SIZE_T) || __has_feature(modules)
-/* Always define size_t when modules are available. */
-#if !__has_feature(modules)
-#define _SIZE_T
-#endif
-typedef __SIZE_TYPE__ size_t;
-#endif
+#include <__stddef_size_t.h>
 #undef __need_size_t
 #endif /*defined(__need_size_t) */
 
 #if defined(__need_rsize_t)
-#if !defined(_RSIZE_T) || __has_feature(modules)
-/* Always define rsize_t when modules are available. */
-#if !__has_feature(modules)
-#define _RSIZE_T
-#endif
-typedef __SIZE_TYPE__ rsize_t;
-#endif
+#include <__stddef_rsize_t.h>
 #undef __need_rsize_t
 #endif /* defined(__need_rsize_t) */
 
 #if defined(__need_wchar_t)
-#if !defined(__cplusplus) || (defined(_MSC_VER) && !_NATIVE_WCHAR_T_DEFINED)
-/* Always define wchar_t when modules are available. */
-#if !defined(_WCHAR_T) || __has_feature(modules)
-#if !__has_feature(modules)
-#define _WCHAR_T
-#if defined(_MSC_EXTENSIONS)
-#define _WCHAR_T_DEFINED
-#endif
-#endif
-typedef __WCHAR_TYPE__ wchar_t;
-#endif
-#endif
+#include <__stddef_wchar_t.h>
 #undef __need_wchar_t
 #endif /* defined(__need_wchar_t) */
 
 #if defined(__need_NULL)
-#undef NULL
-#ifdef __cplusplus
-#  if !defined(__MINGW32__) && !defined(_MSC_VER)
-#    define NULL __null
-#  else
-#    define NULL 0
-#  endif
-#else
-#  define NULL ((void*)0)
-#endif
+#include <__stddef_null.h>
 #undef __need_NULL
 #endif /* defined(__need_NULL) */
 
 #if defined(__need_nullptr_t)
-#ifdef __cplusplus
-#if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
-namespace std {
-typedef decltype(nullptr) nullptr_t;
-}
-using ::std::nullptr_t;
-#endif
-#else
-typedef typeof(nullptr) nullptr_t;
-#endif
+#include <__stddef_nullptr_t.h>
 #undef __need_nullptr_t
 #endif /* defined(__need_nullptr_t) */
 
 #if defined(__need_unreachable)
-#define unreachable() __builtin_unreachable()
+#include <__stddef_unreachable.h>
 #undef __need_unreachable
 #endif /* defined(__need_unreachable) */
 
 #if defined(__need_max_align_t)
-#include "__stddef_max_align_t.h"
+#include <__stddef_max_align_t.h>
 #undef __need_max_align_t
 #endif /* defined(__need_max_align_t) */
 
 #if defined(__need_offsetof)
-#define offsetof(t, d) __builtin_offsetof(t, d)
+#include <__stddef_offsetof.h>
 #undef __need_offsetof
 #endif /* defined(__need_offsetof) */
 
 /* Some C libraries expect to see a wint_t here. Others (notably MinGW) will use
 __WINT_TYPE__ directly; accommodate both by requiring __need_wint_t */
 #if defined(__need_wint_t)
-/* Always define wint_t when modules are available. */
-#if !defined(_WINT_T) || __has_feature(modules)
-#if !__has_feature(modules)
-#define _WINT_T
-#endif
-typedef __WINT_TYPE__ wint_t;
-#endif
+#include <__stddef_wint_t.h>
 #undef __need_wint_t
 #endif /* __need_wint_t */
 
