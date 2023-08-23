@@ -361,7 +361,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // We are going to permute multiple sources and the result will be in
       // multiple destinations. Providing an accurate cost only for splits where
       // the element type remains the same.
-      if (LT.first.isValid() && LT.first != 1 &&
+      if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
           LT.second.isFixedLengthVector() &&
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
