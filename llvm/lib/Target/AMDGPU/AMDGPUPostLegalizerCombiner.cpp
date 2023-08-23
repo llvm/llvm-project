@@ -266,17 +266,20 @@ void AMDGPUPostLegalizerCombinerImpl::applyUCharToFloat(
 bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
     MachineInstr &MI,
     std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  auto getRcpSrc = [=](const MachineInstr &MI) -> MachineInstr * {
+    if (!MI.getFlag(MachineInstr::FmContract))
+      return nullptr;
 
-  auto getRcpSrc = [=](const MachineInstr &MI) {
-    MachineInstr *ResMI = nullptr;
     if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
       if (GI->is(Intrinsic::amdgcn_rcp))
-        ResMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+        return MRI.getVRegDef(MI.getOperand(2).getReg());
     }
-    return ResMI;
+    return nullptr;
   };
 
-  auto getSqrtSrc = [=](const MachineInstr &MI) {
+  auto getSqrtSrc = [=](const MachineInstr &MI) -> MachineInstr * {
+    if (!MI.getFlag(MachineInstr::FmContract))
+      return nullptr;
     MachineInstr *SqrtSrcMI = nullptr;
     auto Match =
         mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));
@@ -304,7 +307,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
     };
     return true;
   }
-
   return false;
 }
 

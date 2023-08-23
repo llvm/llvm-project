@@ -340,7 +340,11 @@ OPTIONS
 
  Map the paths in the coverage data to local source file paths. This allows you
  to generate the coverage data on one machine, and then use llvm-cov on a
- different machine where you have the same files on a different path.
+ different machine where you have the same files on a different path. Multiple
+ `-path-equivalence` arguments can be passed to specify different mappings. Each
+ argument consists of a source path `<from>` and its corresponding local path `<to>`.
+ The mappings are applied in the order they are specified. If multiple mappings can
+ be applied to a single path, the first mapping encountered is used.
 
 .. option:: -coverage-watermark=<high>,<low>
 

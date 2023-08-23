@@ -2465,7 +2465,8 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   //        Also check whether this is used for setting library search paths.
   ToolChain::AddClangCXXStdlibIncludeArgs(DriverArgs, CC1Args);
 
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc, options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc,
+                        options::OPT_nostdincxx))
     return;
 
   llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
@@ -2473,8 +2474,8 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // On Darwin, libc++ can be installed in one of the following two places:
-    // 1. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
-    // 2. Alongside the compiler in         <install>/include/c++/v1
+    // 1. Alongside the compiler in         <install>/include/c++/v1
+    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
     // The precendence of paths is as listed above, i.e. we take the first path
     // that exists. Also note that we never include libc++ twice -- we take the
@@ -2482,17 +2483,6 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
     // include_next could break).
 
     // Check for (1)
-    llvm::SmallString<128> SysrootUsr = Sysroot;
-    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
-    if (getVFS().exists(SysrootUsr)) {
-      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
-      return;
-    } else if (DriverArgs.hasArg(options::OPT_v)) {
-      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
-                   << "\"\n";
-    }
-
-    // Otherwise, check for (2)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
     // Note that InstallBin can be relative, so we use '..' instead of
     // parent_path.
@@ -2504,6 +2494,17 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
       return;
     } else if (DriverArgs.hasArg(options::OPT_v)) {
       llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
+                   << "\"\n";
+    }
+
+    // Otherwise, check for (2)
+    llvm::SmallString<128> SysrootUsr = Sysroot;
+    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
+    if (getVFS().exists(SysrootUsr)) {
+      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
+      return;
+    } else if (DriverArgs.hasArg(options::OPT_v)) {
+      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
                    << "\"\n";
     }
 
