@@ -3,7 +3,7 @@
 // RUN: echo %S > %t.result
 // RUN: echo %S > %t_v2.result
 //
-// RUN: c-index-test core --scan-deps-by-mod-name -output-dir %t -module-name=ModA %S -- %clang -c -I %S/Inputs/module \
+// RUN: c-index-test core --scan-deps-by-mod-name -output-dir %t -module-name=ModA -working-dir %S -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t.mcp \
 // RUN:     -o FoE.o -x objective-c >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t

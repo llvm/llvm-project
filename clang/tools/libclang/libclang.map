@@ -471,9 +471,25 @@ LLVM_13 {
 
 LLVM_16 {
   global:
+    clang_Error_dispose;
+    clang_Error_getCode;
+    clang_Error_getDescription;
     clang_experimental_cas_ActionCache_dispose;
+    clang_experimental_cas_CachedCompilation_dispose;
+    clang_experimental_cas_CachedCompilation_getNumOutputs;
+    clang_experimental_cas_CachedCompilation_getOutputCASIDString;
+    clang_experimental_cas_CachedCompilation_getOutputName;
+    clang_experimental_cas_CachedCompilation_isOutputMaterialized;
+    clang_experimental_cas_CachedCompilation_makeGlobal;
+    clang_experimental_cas_CancellationToken_cancel;
+    clang_experimental_cas_CancellationToken_dispose;
+    clang_experimental_cas_CASObject_dispose;
     clang_experimental_cas_Databases_create;
     clang_experimental_cas_Databases_dispose;
+    clang_experimental_cas_getCachedCompilation;
+    clang_experimental_cas_getCachedCompilation_async;
+    clang_experimental_cas_loadObjectByString;
+    clang_experimental_cas_loadObjectByString_async;
     clang_experimental_cas_ObjectStore_dispose;
     clang_experimental_cas_OnDiskActionCache_create;
     clang_experimental_cas_OnDiskObjectStore_create;
@@ -482,11 +498,15 @@ LLVM_16 {
     clang_experimental_cas_Options_setOnDiskPath;
     clang_experimental_cas_Options_setPluginOption;
     clang_experimental_cas_Options_setPluginPath;
+    clang_experimental_cas_replayCompilation;
+    clang_experimental_cas_ReplayResult_dispose;
+    clang_experimental_cas_ReplayResult_getStderr;
     clang_experimental_DependencyScannerService_create_v1;
     clang_experimental_DependencyScannerServiceOptions_create;
     clang_experimental_DependencyScannerServiceOptions_dispose;
     clang_experimental_DependencyScannerServiceOptions_setActionCache;
     clang_experimental_DependencyScannerServiceOptions_setCASDatabases;
+    clang_experimental_DependencyScannerServiceOptions_setCASOptions;
     clang_experimental_DependencyScannerServiceOptions_setDependencyMode;
     clang_experimental_DependencyScannerServiceOptions_setObjectStore;
     clang_experimental_DependencyScannerWorker_getDepGraph;

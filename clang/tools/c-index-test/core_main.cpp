@@ -37,6 +37,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <future>
 #include <thread>
 
 using namespace clang;
@@ -57,6 +58,8 @@ enum class ActionType {
   AggregateAsJSON,
   ScanDeps,
   ScanDepsByModuleName,
+  MaterializeCachedJob,
+  ReplayCachedJob,
   WatchDir,
 };
 
@@ -81,6 +84,10 @@ Action(cl::desc("Action:"), cl::init(ActionType::None),
                      "Get file dependencies"),
           clEnumValN(ActionType::ScanDepsByModuleName, "scan-deps-by-mod-name",
                      "Get file dependencies by module name alone"),
+          clEnumValN(ActionType::MaterializeCachedJob, "materialize-cached-job",
+                     "Materialize cached compilation data from upstream CAS"),
+          clEnumValN(ActionType::ReplayCachedJob, "replay-cached-job",
+                     "Replay a cached compilation from the CAS"),
           clEnumValN(ActionType::WatchDir,
                      "watch-dir", "Watch directory for file events")),
        cl::cat(IndexTestCoreCategory));
@@ -139,6 +146,12 @@ static cl::list<std::string> DependencyTargets(
     cl::desc("module builds should use the given dependency target(s)"));
 static llvm::cl::opt<std::string>
     CASPath("cas-path", llvm::cl::desc("Path for on-disk CAS/cache."));
+static llvm::cl::opt<std::string>
+    CASPluginPath("fcas-plugin-path", llvm::cl::desc("Path for CAS plugin"));
+static cl::list<std::string> CASPluginOpts("fcas-plugin-option",
+                                           cl::desc("Plugin CAS Options"));
+static llvm::cl::opt<std::string>
+    WorkingDir("working-dir", llvm::cl::desc("Path for working directory"));
 }
 } // anonymous namespace
 
@@ -682,7 +695,7 @@ static void printSymbolNameAndUSR(const clang::Module *Mod, raw_ostream &OS) {
 static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
-                    Optional<std::string> CASPath,
+                    CXCASDatabases DBs,
                     Optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
@@ -692,25 +705,9 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
   clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
       Opts, CXDependencyMode_Full);
 
-  CXString Error;
-  if (CASPath) {
-    CXCASOptions CASOpts = clang_experimental_cas_Options_create();
-    auto CleanupCASOpts = llvm::make_scope_exit(
-        [&] { clang_experimental_cas_Options_dispose(CASOpts); });
-    clang_experimental_cas_Options_setOnDiskPath(CASOpts, CASPath->c_str());
-    CXCASDatabases DBs =
-        clang_experimental_cas_Databases_create(CASOpts, &Error);
-    auto CleanupCaches = llvm::make_scope_exit(
-        [&] { clang_experimental_cas_Databases_dispose(DBs); });
-    if (!DBs) {
-      llvm::errs() << "error: failed to create cache instances\n";
-      llvm::errs() << clang_getCString(Error) << "\n";
-      clang_disposeString(Error);
-      return 1;
-    }
+  if (DBs)
     clang_experimental_DependencyScannerServiceOptions_setCASDatabases(Opts,
                                                                        DBs);
-  }
 
   CXDependencyScannerService Service =
       clang_experimental_DependencyScannerService_create_v1(Opts);
@@ -864,6 +861,133 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
     clang_disposeDiagnostic(Diag);
   }
   return 1;
+}
+
+static int materializeCachedJob(std::string CacheKey, CXCASDatabases DBs) {
+  struct CompResult {
+    CXCASCachedCompilation Comp = nullptr;
+    CXError Err = nullptr;
+  };
+  std::promise<CompResult> CompPromise;
+  auto CompFuture = CompPromise.get_future();
+  struct CompCall {
+    std::promise<CompResult> Promise;
+  };
+  CompCall *CallCtx = new CompCall{std::move(CompPromise)};
+  clang_experimental_cas_getCachedCompilation_async(
+      DBs, CacheKey.c_str(), /*Globally*/ true, CallCtx,
+      [](void *Ctx, CXCASCachedCompilation Comp, CXError Err) {
+        std::unique_ptr<CompCall> CallCtx(static_cast<CompCall *>(Ctx));
+        CallCtx->Promise.set_value(CompResult{Comp, Err});
+      },
+      /*cancelToken*/ nullptr);
+  CompResult Res = CompFuture.get();
+  CXCASCachedCompilation CComp = Res.Comp;
+
+  auto CleanupCachedComp = llvm::make_scope_exit([&] {
+    if (CComp)
+      clang_experimental_cas_CachedCompilation_dispose(CComp);
+    if (Res.Err)
+      clang_Error_dispose(Res.Err);
+  });
+  if (!CComp) {
+    if (Res.Err) {
+      llvm::errs() << clang_Error_getDescription(Res.Err) << "\n";
+    } else {
+      llvm::errs() << "cache key was not found\n";
+    }
+    return 1;
+  }
+
+  for (unsigned
+           I = 0,
+           E = clang_experimental_cas_CachedCompilation_getNumOutputs(CComp);
+       I != E; ++I) {
+    if (clang_experimental_cas_CachedCompilation_isOutputMaterialized(CComp, I))
+      continue;
+    CXString OutputID =
+        clang_experimental_cas_CachedCompilation_getOutputCASIDString(CComp, I);
+    auto CleanupOutputID =
+        llvm::make_scope_exit([&] { clang_disposeString(OutputID); });
+
+    struct LoadResult {
+      CXCASObject Obj = nullptr;
+      CXError Err = nullptr;
+    };
+    std::promise<LoadResult> LoadPromise;
+    auto LoadFuture = LoadPromise.get_future();
+    struct LoadCall {
+      std::promise<LoadResult> Promise;
+    };
+    LoadCall *CallCtx = new LoadCall{std::move(LoadPromise)};
+    clang_experimental_cas_loadObjectByString_async(
+        DBs, clang_getCString(OutputID), CallCtx,
+        [](void *Ctx, CXCASObject Obj, CXError Err) {
+          std::unique_ptr<LoadCall> CallCtx(static_cast<LoadCall *>(Ctx));
+          CallCtx->Promise.set_value(LoadResult{Obj, Err});
+        },
+        /*cancelToken*/ nullptr);
+
+    LoadResult Res = LoadFuture.get();
+    CXCASObject CASObj = Res.Obj;
+
+    auto CleanupLoadObj = llvm::make_scope_exit([&] {
+      if (CASObj)
+        clang_experimental_cas_CASObject_dispose(CASObj);
+      if (Res.Err)
+        clang_Error_dispose(Res.Err);
+    });
+
+    if (!CASObj) {
+      if (Res.Err) {
+        llvm::errs() << clang_Error_getDescription(Res.Err) << "\n";
+      } else {
+        llvm::errs() << "compilation output ID was not found\n";
+      }
+      return 1;
+    }
+    if (!clang_experimental_cas_CachedCompilation_isOutputMaterialized(CComp,
+                                                                       I))
+      report_fatal_error("output was not materialized?");
+  }
+
+  return 0;
+}
+
+static int replayCachedJob(ArrayRef<const char *> Args,
+                           std::string WorkingDirectory, std::string CacheKey,
+                           CXCASDatabases DBs) {
+  CXError Err = nullptr;
+  CXCASCachedCompilation CComp = clang_experimental_cas_getCachedCompilation(
+      DBs, CacheKey.c_str(), /*Globally*/ false, &Err);
+  auto CleanupCachedComp = llvm::make_scope_exit(
+      [&] { clang_experimental_cas_CachedCompilation_dispose(CComp); });
+  if (!CComp) {
+    if (Err) {
+      llvm::errs() << clang_Error_getDescription(Err) << "\n";
+      clang_Error_dispose(Err);
+    } else {
+      llvm::errs() << "cache key was not found\n";
+    }
+    return 1;
+  }
+
+  CXCASReplayResult ReplayRes = clang_experimental_cas_replayCompilation(
+      CComp, Args.size(), Args.data(),
+      WorkingDirectory.empty() ? nullptr : WorkingDirectory.c_str(),
+      /*reserved*/ nullptr, &Err);
+  auto CleanupReplayRes = llvm::make_scope_exit(
+      [&] { clang_experimental_cas_ReplayResult_dispose(ReplayRes); });
+  if (!ReplayRes) {
+    llvm::errs() << clang_Error_getDescription(Err) << "\n";
+    clang_Error_dispose(Err);
+    return 1;
+  }
+
+  CXString DiagText = clang_experimental_cas_ReplayResult_getStderr(ReplayRes);
+  llvm::errs() << clang_getCString(DiagText);
+  clang_disposeString(DiagText);
+  return 0;
 }
 
 static void printSymbol(const IndexRecordDecl &Rec, raw_ostream &OS) {
@@ -1171,29 +1295,88 @@ int indextest_core_main(int argc, const char **argv) {
                                       ? std::nullopt
                                       : Optional<std::string>(options::CASPath);
 
-  if (options::Action == ActionType::ScanDeps) {
-    if (options::InputFiles.empty()) {
-      errs() << "error: missing working directory\n";
+  CXCASOptions CASOpts = nullptr;
+  CXCASDatabases DBs = nullptr;
+  auto CleanupCASOpts = llvm::make_scope_exit([&] {
+    if (CASOpts)
+      clang_experimental_cas_Options_dispose(CASOpts);
+  });
+  auto CleanupCaches = llvm::make_scope_exit([&] {
+    if (DBs)
+      clang_experimental_cas_Databases_dispose(DBs);
+  });
+
+  if (CASPath) {
+    CASOpts = clang_experimental_cas_Options_create();
+    clang_experimental_cas_Options_setOnDiskPath(CASOpts, CASPath->c_str());
+    if (!options::CASPluginPath.empty())
+      clang_experimental_cas_Options_setPluginPath(
+          CASOpts, options::CASPluginPath.c_str());
+    for (const auto &PluginOpt : options::CASPluginOpts) {
+      auto [Name, Val] = StringRef(PluginOpt).split('=');
+      std::string NameStr(Name);
+      std::string ValStr(Val);
+      clang_experimental_cas_Options_setPluginOption(CASOpts, NameStr.c_str(),
+                                                     ValStr.c_str());
+    }
+    CXString Error;
+    DBs = clang_experimental_cas_Databases_create(CASOpts, &Error);
+    if (!DBs) {
+      llvm::errs() << "error: failed to create cas/cache databases\n";
+      llvm::errs() << clang_getCString(Error) << "\n";
+      clang_disposeString(Error);
       return 1;
     }
-    return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
+  }
+
+  if (options::Action == ActionType::ScanDeps) {
+    if (options::WorkingDir.empty()) {
+      errs() << "error: missing -working-dir\n";
+      return 1;
+    }
+    return scanDeps(CompArgs, options::WorkingDir, options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir, CASPath);
+                    options::OutputDir, DBs);
   }
 
   if (options::Action == ActionType::ScanDepsByModuleName) {
     // InputFiles should be set to the working directory name.
-    if (options::InputFiles.empty()) {
-      errs() << "error: missing working directory\n";
+    if (options::WorkingDir.empty()) {
+      errs() << "error: missing -working-dir\n";
       return 1;
     }
     if (options::ModuleName.empty()) {
       errs() << "error: missing module name\n";
       return 1;
     }
-    return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
+    return scanDeps(CompArgs, options::WorkingDir, options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir, CASPath, options::ModuleName);
+                    options::OutputDir, DBs, options::ModuleName);
+  }
+
+  if (options::Action == ActionType::MaterializeCachedJob) {
+    if (options::InputFiles.empty()) {
+      errs() << "error: missing cache key\n";
+      return 1;
+    }
+    if (!DBs) {
+      errs() << "error: CAS was not configured\n";
+      return 1;
+    }
+    return materializeCachedJob(options::InputFiles[0], DBs);
+  }
+
+  if (options::Action == ActionType::ReplayCachedJob) {
+    if (options::InputFiles.empty()) {
+      errs() << "error: missing cache key\n";
+      return 1;
+    }
+    if (!DBs) {
+      errs() << "error: CAS was not configured\n";
+      return 1;
+    }
+    return replayCachedJob(CompArgs, options::WorkingDir,
+                           options::InputFiles[0], DBs);
   }
 
   if (options::Action == ActionType::WatchDir) {

@@ -14,6 +14,7 @@
 namespace clang {
 
 class CompilerInstance;
+class CompilerInvocation;
 class DiagnosticsEngine;
 
 // Manage caching and replay of compile jobs.
@@ -79,6 +80,13 @@ public:
   ///
   /// \returns true if finished successfully.
   bool finishComputedResult(CompilerInstance &Clang, bool Success);
+
+  static llvm::Expected<std::optional<int>> replayCachedResult(
+      std::shared_ptr<CompilerInvocation> Invok,
+      const llvm::cas::CASID &CacheKey,
+      cas::CompileJobCacheResult &CachedResult, SmallVectorImpl<char> &DiagText,
+      bool WriteOutputAsCASID = false, bool UseCASBackend = false,
+      std::optional<llvm::cas::CASID> *MCOutputID = nullptr);
 
   class CachingOutputs;
 

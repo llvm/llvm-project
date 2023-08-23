@@ -4,12 +4,12 @@
 // RUN: echo %S > %t_savetemps.result
 // RUN: echo %S > %t_v3.result
 //
-// RUN: c-index-test core --scan-deps %S -output-dir=%t -- %clang -c -I %S/Inputs/module \
+// RUN: c-index-test core --scan-deps -working-dir %S -output-dir=%t -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t.mcp \
 // RUN:     -o FoE.o -x objective-c %s >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t --check-prefixes=CHECK,CC1
 
-// RUN: c-index-test core --scan-deps %S -output-dir=%t -- %clang -c -I %S/Inputs/module \
+// RUN: c-index-test core --scan-deps -working-dir %S -output-dir=%t -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t.mcp -save-temps=obj \
 // RUN:     -o FoE.o -x objective-c %s >> %t_savetemps.result
 // RUN: cat %t_savetemps.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t --check-prefixes=CHECK,SAVETEMPS
