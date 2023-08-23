@@ -63,7 +63,7 @@ public:
 // ResourceRef::second is a bitmask of the referenced sub-unit of the resource.
 using ResourceRef = std::pair<uint64_t, uint64_t>;
 
-using ResourceUse = std::pair<ResourceRef, ResourceCycles>;
+using ResourceUse = std::pair<ResourceRef, ReleaseAtCycles>;
 
 class HWInstructionIssuedEvent : public HWInstructionEvent {
 public:
