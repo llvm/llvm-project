@@ -48,6 +48,7 @@
   { include: [ "@<__thread/.*>", "private", "<thread>", "public" ] },
   { include: [ "@<__tuple/.*>", "private", "<tuple>", "public" ] },
   { include: [ "@<__type_traits/.*>", "private", "<type_traits>", "public" ] },
+  { include: [ "@<__typeinfo/.*>", "private", "<typeinfo>", "public" ] },
   { include: [ "@<__utility/.*>", "private", "<utility>", "public" ] },
   { include: [ "@<__variant/.*>", "private", "<variant>", "public" ] },
 ]
