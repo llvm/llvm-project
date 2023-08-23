@@ -16,6 +16,6 @@ namespace std {
 using namespace std;
 string_view s = "foo"sv;
 const char* p = "bar"sv; // expected-error {{no viable conversion}}
-char error = 'x'sv; // expected-error {{no matching literal operator for call to 'operator""sv' with argument of type 'char'}}
+char error = 'x'sv; // expected-error {{invalid suffix}} expected-error {{expected ';'}}
 
 #endif
