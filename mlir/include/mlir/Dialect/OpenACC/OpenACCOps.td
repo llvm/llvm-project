@@ -1511,16 +1511,16 @@ def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Variadic<IntOrIndex>:$deviceTypeOperands,
+  let arguments = (ins Optional<IntOrIndex>:$deviceType,
                        Optional<IntOrIndex>:$defaultAsync,
-                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
     oilist(
-      `device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
+      `device_type` `(` $deviceType `:` type($deviceType) `)`
     | `default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
-    | `device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    | `device_num` `(` $deviceNum `:` type($deviceNum) `)`
     | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
