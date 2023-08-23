@@ -25,8 +25,8 @@ Tutorial <https://lldb.llvm.org/use/tutorial.html>`_. For users already familiar
 with GDB there is a cheat sheet listing common tasks and their LLDB equivalent
 in the `GDB to LLDB command map <https://lldb.llvm.org/use/map.html>`_.
 
-There are also multiple resources on how to script LLDB using Python:
-`use/python-reference`_ is a great starting point for that.
+There are also multiple resources on how to script LLDB using Python: the
+:doc:`use/python-reference` is a great starting point for that.
 
 Compiler Integration Benefits
 -----------------------------
