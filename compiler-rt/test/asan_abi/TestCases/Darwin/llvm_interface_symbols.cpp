@@ -7,7 +7,6 @@
 // RUN: | grep " [TU] "                                           \
 // RUN: | grep -o "\(__asan\)[^ ]*"                               \
 // RUN: | grep -v "\(__asan_abi\)[^ ]*"                           \
-// RUN: | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN: > %t.exports
 // RUN: sed -e ':a' -e 'N' -e '$!ba'                              \
 // RUN:     -e 's/ //g'                                           \
@@ -17,7 +16,9 @@
 // RUN: | grep -v -f %p/../../../../lib/asan_abi/asan_abi_tbd.txt \
 // RUN: | grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                 \
 // RUN: | grep -v "__sanitizer[^ ]*"                              \
-// RUN: | sed -e "s/.*(//" -e "s/).*//" > %t.imports
+// RUN: | sed -e "s/.*(//" -e "s/).*//"                           \
+// RUN: | sed -e "/^__asan_version_mismatch_check/d"              \
+// RUN: > %t.imports
 // RUN: sort %t.imports | uniq > %t.imports-sorted
 // RUN: sort %t.exports | uniq > %t.exports-sorted
 // RUN: diff %t.imports-sorted %t.exports-sorted
