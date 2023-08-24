@@ -697,12 +697,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     }
 
     // Get Signature.
-    if (State == DiagnosticOptionsBlock && Code == SIGNATURE) {
-      auto Signature = ASTFileSignature::create(Blob.begin(), Blob.end());
-      assert(Signature != ASTFileSignature::createDummy() &&
-             "Dummy AST file signature not backpatched in ASTWriter.");
-      getModuleFileInfo(File).Signature = Signature;
-    }
+    if (State == DiagnosticOptionsBlock && Code == SIGNATURE)
+      getModuleFileInfo(File).Signature = ASTFileSignature::create(
+          Record.begin(), Record.begin() + ASTFileSignature::size);
 
     // We don't care about this record.
   }
