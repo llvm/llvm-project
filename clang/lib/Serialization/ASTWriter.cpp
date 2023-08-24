@@ -1120,97 +1120,50 @@ adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
 }
 
 std::pair<ASTFileSignature, ASTFileSignature>
-ASTWriter::createSignature() const {
-  StringRef AllBytes(Buffer.data(), Buffer.size());
-
+ASTWriter::createSignature(StringRef AllBytes, StringRef ASTBlockBytes) {
   llvm::SHA1 Hasher;
-  Hasher.update(AllBytes.slice(ASTBlockRange.first, ASTBlockRange.second));
+  Hasher.update(ASTBlockBytes);
   ASTFileSignature ASTBlockHash = ASTFileSignature::create(Hasher.result());
 
-  // Add the remaining bytes:
-  //  1. Before the unhashed control block.
-  Hasher.update(AllBytes.slice(0, UnhashedControlBlockRange.first));
-  //  2. Between the unhashed control block and the AST block.
+  // Add the remaining bytes (i.e. bytes before the unhashed control block that
+  // are not part of the AST block).
   Hasher.update(
-      AllBytes.slice(UnhashedControlBlockRange.second, ASTBlockRange.first));
-  //  3. After the AST block.
-  Hasher.update(AllBytes.slice(ASTBlockRange.second, StringRef::npos));
+      AllBytes.take_front(ASTBlockBytes.bytes_end() - AllBytes.bytes_begin()));
+  Hasher.update(
+      AllBytes.take_back(AllBytes.bytes_end() - ASTBlockBytes.bytes_end()));
   ASTFileSignature Signature = ASTFileSignature::create(Hasher.result());
 
   return std::make_pair(ASTBlockHash, Signature);
 }
 
-ASTFileSignature ASTWriter::backpatchSignature() {
-  if (!WritingModule ||
-      !PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent)
-    return {};
-
-  // For implicit modules, write the hash of the PCM as its signature.
-
-  auto BackpatchSignatureAt = [&](const ASTFileSignature &S, uint64_t BitNo) {
-    using WordT = unsigned;
-    std::array<WordT, sizeof(ASTFileSignature) / sizeof(WordT)> Words;
-    static_assert(sizeof(Words) == sizeof(S));
-    std::memcpy(Words.data(), S.data(), sizeof(ASTFileSignature));
-    for (WordT Word : Words) {
-      Stream.BackpatchWord(BitNo, Word);
-      BitNo += sizeof(WordT) * 8;
-    }
-  };
-
-  ASTFileSignature ASTBlockHash;
-  ASTFileSignature Signature;
-  std::tie(ASTBlockHash, Signature) = createSignature();
-
-  BackpatchSignatureAt(ASTBlockHash, ASTBlockHashOffset);
-  BackpatchSignatureAt(Signature, SignatureOffset);
-
-  return Signature;
-}
-
-void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
-                                          ASTContext &Context) {
+ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
+                                                      ASTContext &Context) {
   using namespace llvm;
 
   // Flush first to prepare the PCM hash (signature).
   Stream.FlushToWord();
-  UnhashedControlBlockRange.first = Stream.GetCurrentBitNo() >> 3;
+  auto StartOfUnhashedControl = Stream.GetCurrentBitNo() >> 3;
 
   // Enter the block and prepare to write records.
   RecordData Record;
   Stream.EnterSubblock(UNHASHED_CONTROL_BLOCK_ID, 5);
 
   // For implicit modules, write the hash of the PCM as its signature.
+  ASTFileSignature Signature;
   if (WritingModule &&
       PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent) {
-    // At this point, we don't know the actual signature of the file or the AST
-    // block - we're only able to compute those at the end of the serialization
-    // process. Let's store dummy signatures for now, and replace them with the
-    // real ones later on.
-    // The bitstream VBR-encodes record elements, which makes backpatching them
-    // really difficult. Let's store the signatures as blobs instead - they are
-    // guaranteed to be word-aligned, and we control their format/encoding.
-    auto Dummy = ASTFileSignature::createDummy();
-    SmallString<128> Blob{Dummy.begin(), Dummy.end()};
+    ASTFileSignature ASTBlockHash;
+    auto ASTBlockStartByte = ASTBlockRange.first >> 3;
+    auto ASTBlockByteLength = (ASTBlockRange.second >> 3) - ASTBlockStartByte;
+    std::tie(ASTBlockHash, Signature) = createSignature(
+        StringRef(Buffer.begin(), StartOfUnhashedControl),
+        StringRef(Buffer.begin() + ASTBlockStartByte, ASTBlockByteLength));
 
-    auto Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
-    Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(SIGNATURE));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned SignatureAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
-    Record.push_back(AST_BLOCK_HASH);
-    Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
-    ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
+    Record.append(ASTBlockHash.begin(), ASTBlockHash.end());
+    Stream.EmitRecord(AST_BLOCK_HASH, Record);
     Record.clear();
-
-    Record.push_back(SIGNATURE);
-    Stream.EmitRecordWithBlob(SignatureAbbrev, Record, Blob);
-    SignatureOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
+    Record.append(Signature.begin(), Signature.end());
+    Stream.EmitRecord(SIGNATURE, Record);
     Record.clear();
   }
 
@@ -1279,7 +1232,7 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
 
   // Leave the options block.
   Stream.ExitBlock();
-  UnhashedControlBlockRange.second = Stream.GetCurrentBitNo() >> 3;
+  return Signature;
 }
 
 /// Write the control block.
@@ -4737,7 +4690,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   ASTContext &Context = SemaRef.Context;
   Preprocessor &PP = SemaRef.PP;
-  writeUnhashedControlBlock(PP, Context);
 
   collectNonAffectingInputFiles();
 
@@ -4886,7 +4838,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // Write the remaining AST contents.
   Stream.FlushToWord();
-  ASTBlockRange.first = Stream.GetCurrentBitNo() >> 3;
+  ASTBlockRange.first = Stream.GetCurrentBitNo();
   Stream.EnterSubblock(AST_BLOCK_ID, 5);
   ASTBlockStartOffset = Stream.GetCurrentBitNo();
 
@@ -5239,13 +5191,13 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   Stream.EmitRecord(STATISTICS, Record);
   Stream.ExitBlock();
   Stream.FlushToWord();
-  ASTBlockRange.second = Stream.GetCurrentBitNo() >> 3;
+  ASTBlockRange.second = Stream.GetCurrentBitNo();
 
   // Write the module file extension blocks.
   for (const auto &ExtWriter : ModuleFileExtensionWriters)
     WriteModuleFileExtension(SemaRef, *ExtWriter);
 
-  return backpatchSignature();
+  return writeUnhashedControlBlock(PP, Context);
 }
 
 void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
