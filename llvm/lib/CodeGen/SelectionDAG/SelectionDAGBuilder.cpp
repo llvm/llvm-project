@@ -6665,6 +6665,25 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::reset_fpenv:
     DAG.setRoot(DAG.getNode(ISD::RESET_FPENV, sdl, MVT::Other, getRoot()));
     return;
+  case Intrinsic::get_fpmode:
+    Res = DAG.getNode(
+        ISD::GET_FPMODE, sdl,
+        DAG.getVTList(TLI.getValueType(DAG.getDataLayout(), I.getType()),
+                      MVT::Other),
+        DAG.getRoot());
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(1));
+    return;
+  case Intrinsic::set_fpmode:
+    Res = DAG.getNode(ISD::SET_FPMODE, sdl, MVT::Other, {DAG.getRoot()},
+                      getValue(I.getArgOperand(0)));
+    DAG.setRoot(Res);
+    return;
+  case Intrinsic::reset_fpmode: {
+    Res = DAG.getNode(ISD::RESET_FPMODE, sdl, MVT::Other, getRoot());
+    DAG.setRoot(Res);
+    return;
+  }
   case Intrinsic::pcmarker: {
     SDValue Tmp = getValue(I.getArgOperand(0));
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));
