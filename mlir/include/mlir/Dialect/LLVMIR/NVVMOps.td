@@ -483,6 +483,34 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_sc_cluster);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
 def ShflKindUp   : I32EnumAttrCase<"up", 1>;
 def ShflKindDown : I32EnumAttrCase<"down", 2>;
