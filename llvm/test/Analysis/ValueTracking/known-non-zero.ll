@@ -1125,11 +1125,7 @@ define i1 @src_mul_maybe_zero_no_nonzero_mul(i8 %x, i8 %y) {
 
 define i1 @sdiv_known_non_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_known_non_zero(
-; CHECK-NEXT:    [[XX0:%.*]] = or i8 [[X:%.*]], -121
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[XX0]], -2
-; CHECK-NEXT:    [[XY:%.*]] = sdiv i8 [[XX]], -2
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[XY]], 0
-; CHECK-NEXT:    ret i1 [[NZ]]
+; CHECK-NEXT:    ret i1 true
 ;
   %xx0 = or i8 %x, 135
   %xx = and i8 %xx0, -2
@@ -1140,12 +1136,7 @@ define i1 @sdiv_known_non_zero(i8 %x, i8 %y) {
 
 define i1 @sdiv_known_non_zero2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_known_non_zero2(
-; CHECK-NEXT:    [[XX0:%.*]] = or i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[XX0]], -4
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 3
-; CHECK-NEXT:    [[XY:%.*]] = sdiv i8 [[XX]], [[YY]]
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[XY]], 0
-; CHECK-NEXT:    ret i1 [[NZ]]
+; CHECK-NEXT:    ret i1 true
 ;
   %xx0 = or i8 %x, 15
   %xx = and i8 %xx0, -4
