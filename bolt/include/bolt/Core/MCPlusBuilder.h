@@ -498,9 +498,9 @@ public:
   }
 
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
-                                                   MCContext *Ctx,
-                                                   bool IsLeaf) const {
+  virtual InstructionListType
+  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
+                       unsigned CodePointerSize) const {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -1600,16 +1600,9 @@ public:
     return false;
   }
 
-  virtual void createLoadImmediate(MCInst &Inst, const MCPhysReg Dest,
-                                   uint32_t Imm) const {
+  virtual InstructionListType createLoadImmediate(const MCPhysReg Dest,
+                                                  uint64_t Imm) const {
     llvm_unreachable("not implemented");
-  }
-
-  /// Create instruction to increment contents of target by 1
-  virtual bool createIncMemory(MCInst &Inst, const MCSymbol *Target,
-                               MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Create a fragment of code (sequence of instructions) that load a 32-bit
@@ -2014,7 +2007,7 @@ public:
   }
 
   virtual InstructionListType createSymbolTrampoline(const MCSymbol *TgtSym,
-                                                     MCContext *Ctx) const {
+                                                     MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }

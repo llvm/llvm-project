@@ -25569,6 +25569,101 @@ to default state. It is similar to the call 'fesetenv(FE_DFL_ENV)', except it
 does not return any value.
 
 
+'``llvm.get.fpmode``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+The '``llvm.get.fpmode``' intrinsic returns bits of the current floating-point
+control modes. The return value type is platform-specific.
+
+::
+
+      declare <integer_type> @llvm.get.fpmode()
+
+Overview:
+"""""""""
+
+The '``llvm.get.fpmode``' intrinsic reads the current dynamic floating-point
+control modes and returns it as an integer value.
+
+Arguments:
+""""""""""
+
+None.
+
+Semantics:
+""""""""""
+
+The '``llvm.get.fpmode``' intrinsic reads the current dynamic floating-point
+control modes, such as rounding direction, precision, treatment of denormals and
+so on. It is similar to the C library function 'fegetmode', however this
+function does not store the set of control modes into memory but returns it as
+an integer value. Interpretation of the bits in this value is target-dependent.
+
+'``llvm.set.fpmode``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+The '``llvm.set.fpmode``' intrinsic sets the current floating-point control modes.
+
+::
+
+      declare void @llvm.set.fpmode(<integer_type> <val>)
+
+Overview:
+"""""""""
+
+The '``llvm.set.fpmode``' intrinsic sets the current dynamic floating-point
+control modes.
+
+Arguments:
+""""""""""
+
+The argument is a set of floating-point control modes, represented as an integer
+value in a target-dependent way.
+
+Semantics:
+""""""""""
+
+The '``llvm.set.fpmode``' intrinsic sets the current dynamic floating-point
+control modes to the state specified by the argument, which must be obtained by
+a call to '``llvm.get.fpmode``' or constructed in a target-specific way. It is
+similar to the C library function 'fesetmode', however this function does not
+read the set of control modes from memory but gets it as integer value.
+
+'``llvm.reset.fpmode``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.reset.fpmode()
+
+Overview:
+"""""""""
+
+The '``llvm.reset.fpmode``' intrinsic sets the default dynamic floating-point
+control modes.
+
+Arguments:
+""""""""""
+
+None.
+
+Semantics:
+""""""""""
+
+The '``llvm.reset.fpmode``' intrinsic sets the current dynamic floating-point
+environment to default state. It is similar to the C library function call
+'fesetmode(FE_DFL_MODE)', however this function does not return any value.
+
+
 Floating-Point Test Intrinsics
 ------------------------------
 

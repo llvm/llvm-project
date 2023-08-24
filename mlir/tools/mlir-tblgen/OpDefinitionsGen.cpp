@@ -164,7 +164,7 @@ if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
     $_reader.emitError("size mismatch for operand/result_segment_size");
     return ::mlir::failure();
   }
-  llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
+  ::llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
 } else {
   return $_reader.readSparseArray(::llvm::MutableArrayRef($_storage));
 }

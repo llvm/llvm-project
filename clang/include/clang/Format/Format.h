@@ -2008,8 +2008,6 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
-  ///
-  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -2018,34 +2016,8 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
-  ///
-  /// In C#, Java, and JavaScript:
-  /// \code
-  ///    true:
-  ///    var x = "veryVeryVeryVeryVeryVe" +
-  ///            "ryVeryVeryVeryVeryVery" +
-  ///            "VeryLongString";
-  ///
-  ///    false:
-  ///    var x =
-  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
-  /// \endcode
-  /// C# and JavaScript interpolated strings are not broken.
-  ///
-  /// In Verilog:
-  /// \code
-  ///    true:
-  ///    string x = {"veryVeryVeryVeryVeryVe",
-  ///                "ryVeryVeryVeryVeryVery",
-  ///                "VeryLongString"};
-  ///
-  ///    false:
-  ///    string x =
-  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
-  /// \endcode
-  ///
   /// \version 3.9
   bool BreakStringLiterals;
 

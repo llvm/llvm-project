@@ -1004,6 +1004,19 @@ enum NodeType {
   /// from. The result is a token chain.
   SET_FPENV_MEM,
 
+  /// Reads the current dynamic floating-point control modes. The operand is
+  /// a token chain.
+  GET_FPMODE,
+
+  /// Sets the current dynamic floating-point control modes. The first operand
+  /// is a token chain, the second is control modes set represented as integer
+  /// value.
+  SET_FPMODE,
+
+  /// Sets default dynamic floating-point control modes. The operand is a
+  /// token chain.
+  RESET_FPMODE,
+
   /// LOAD and STORE have token chains as their first operand, then the same
   /// operands as an LLVM load/store instruction, then an offset node that
   /// is added / subtracted from the base pointer to form the address (for
@@ -1528,6 +1541,12 @@ inline bool isUnsignedIntSetCC(CondCode Code) {
 /// comparison when used with integer operands.
 inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
+}
+
+/// Return true if this is a setcc instruction that performs an equality
+/// comparison when used with floating point operands.
+inline bool isFPEqualitySetCC(CondCode Code) {
+  return Code == SETOEQ || Code == SETONE || Code == SETUEQ || Code == SETUNE;
 }
 
 /// Return true if the specified condition returns true if the two operands to

@@ -166,6 +166,9 @@ Bug Fixes in This Version
   The current solution may bring performance regressions if the awaiters have
   non-static data members. See
   `#64945 <https://github.com/llvm/llvm-project/issues/64945>`_ for details.
+- Clang now prints unnamed members in diagnostic messages instead of giving an
+  empty ''. Fixes
+  (`#63759 <https://github.com/llvm/llvm-project/issues/63759>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,6 +200,11 @@ Bug Fixes to C++ Support
 
 - Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
   (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
+
+- Expressions producing ``nullptr`` are correctly evaluated
+  by the constant interpreter when appearing as the operand
+  of a binary comparision.
+  (`#64923 <https://github.com/llvm/llvm-project/issues/64923>_``)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

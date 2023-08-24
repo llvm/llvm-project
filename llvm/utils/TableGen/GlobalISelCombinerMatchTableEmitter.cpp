@@ -581,6 +581,16 @@ public:
   InstructionOperand &getOperand(unsigned K) { return Operands[K]; }
   const InstructionOperand &getOperand(unsigned K) const { return Operands[K]; }
 
+  /// When this InstructionPattern is used as the match root, returns the
+  /// operands that must be redefined in the 'apply' pattern for the rule to be
+  /// valid.
+  ///
+  /// For CodeGenInstructionPatterns, this just returns the defs of the CGI.
+  /// For PatFrag this only returns the root of the PF.
+  ///
+  /// Returns an empty array on error.
+  virtual ArrayRef<InstructionOperand> getApplyDefsNeeded() const = 0;
+
   auto named_operands() {
     return make_filter_range(Operands,
                              [&](auto &O) { return O.isNamedOperand(); });
@@ -760,6 +770,8 @@ public:
   unsigned getNumInstDefs() const override;
   unsigned getNumInstOperands() const override;
 
+  ArrayRef<InstructionOperand> getApplyDefsNeeded() const override;
+
   const CodeGenInstruction &getInst() const { return I; }
   StringRef getInstName() const override { return I.TheDef->getName(); }
 
@@ -796,6 +808,11 @@ unsigned CodeGenInstructionPattern::getNumInstOperands() const {
   unsigned NumCGIOps = I.Operands.size();
   return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())
                       : NumCGIOps;
+}
+
+ArrayRef<InstructionOperand>
+CodeGenInstructionPattern::getApplyDefsNeeded() const {
+  return {operands().begin(), getNumInstDefs()};
 }
 
 //===- OperandTypeChecker -------------------------------------------------===//
@@ -1078,10 +1095,22 @@ bool PatFrag::checkSemantics() {
 
     // Check this operand is defined in all alternative's patterns.
     for (const auto &Alt : Alts) {
-      if (!Alt.OpTable.getDef(Op.Name)) {
+      const auto *OpDef = Alt.OpTable.getDef(Op.Name);
+      if (!OpDef) {
         PrintError("output parameter '" + Op.Name +
                    "' must be defined by all alternative patterns in '" +
                    Def.getName() + "'");
+        return false;
+      }
+
+      if (Op.Kind == PK_Root && OpDef->getNumInstDefs() != 1) {
+        // The instruction that defines the root must have a single def.
+        // Otherwise we'd need to support multiple roots and it gets messy.
+        //
+        // e.g. this is not supported:
+        //   (pattern (G_UNMERGE_VALUES $x, $root, $vec))
+        PrintError("all instructions that define root '" + Op.Name + "' in '" +
+                   Def.getName() + "' can only have a single output operand");
         return false;
       }
     }
@@ -1232,6 +1261,8 @@ public:
   unsigned getNumInstDefs() const override { return PF.num_out_params(); }
   unsigned getNumInstOperands() const override { return PF.num_params(); }
 
+  ArrayRef<InstructionOperand> getApplyDefsNeeded() const override;
+
   bool checkSemantics(ArrayRef<SMLoc> DiagLoc) override;
 
   /// Before emitting the patterns inside the PatFrag, add all necessary code
@@ -1257,6 +1288,16 @@ public:
 private:
   const PatFrag &PF;
 };
+
+ArrayRef<InstructionOperand> PatFragPattern::getApplyDefsNeeded() const {
+  assert(PF.num_roots() == 1);
+  // Only roots need to be redef.
+  for (auto [Idx, Param] : enumerate(PF.out_params())) {
+    if (Param.Kind == PatFrag::PK_Root)
+      return getOperand(Idx);
+  }
+  llvm_unreachable("root not found!");
+}
 
 bool PatFragPattern::checkSemantics(ArrayRef<SMLoc> DiagLoc) {
   if (!InstructionPattern::checkSemantics(DiagLoc))
@@ -1990,16 +2031,14 @@ bool CombineRuleBuilder::findRoots() {
 
     // Collect all redefinitions of the MatchRoot's defs and put them in
     // ApplyRoots.
-    for (unsigned K = 0; K < IPRoot->getNumInstDefs(); ++K) {
-      auto &O = IPRoot->getOperand(K);
-      assert(O.isDef() && O.isNamedOperand());
-      StringRef Name = O.getOperandName();
+    const auto DefsNeeded = IPRoot->getApplyDefsNeeded();
+    for (auto &Op : DefsNeeded) {
+      assert(Op.isDef() && Op.isNamedOperand());
+      StringRef Name = Op.getOperandName();
 
       auto *ApplyRedef = ApplyOpTable.getDef(Name);
       if (!ApplyRedef) {
-        PrintError("def of pattern root '" + Name +
-                   "' is not redefined in the apply pattern!");
-        PrintNote("match pattern root is '" + MatchRoot->getName() + "'");
+        PrintError("'" + Name + "' must be redefined in the 'apply' pattern");
         return false;
       }
 

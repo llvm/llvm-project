@@ -246,3 +246,17 @@ void check_params_tpl() {
     static_assert(is_same<int&, decltype((ap))>);
   };
 }
+
+namespace GH61267 {
+template <typename> concept C = true;
+
+template<typename>
+void f(int) {
+  int i;
+  [i]<C P>(P) {}(0);
+  i = 4;
+}
+
+void test() { f<int>(0);  }
+
+}

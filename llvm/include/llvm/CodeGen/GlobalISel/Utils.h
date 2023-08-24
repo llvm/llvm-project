@@ -277,6 +277,10 @@ SmallVector<APInt> ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                                            const Register Op2,
                                            const MachineRegisterInfo &MRI);
 
+std::optional<APInt> ConstantFoldCastOp(unsigned Opcode, LLT DstTy,
+                                        const Register Op0,
+                                        const MachineRegisterInfo &MRI);
+
 std::optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                        uint64_t Imm,
                                        const MachineRegisterInfo &MRI);
