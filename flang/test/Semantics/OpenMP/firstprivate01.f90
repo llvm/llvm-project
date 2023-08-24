@@ -38,27 +38,27 @@ program omp_firstprivate
     a(i) = a(i) + b(i) - i
   end do
   !$omp end teams distribute
-  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
+  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
   !$omp teams distribute firstprivate(a,b) lastprivate(b)
   do i = 1, 10
     a(i) = a(i) + b(i) - i
   end do
   !$omp end teams distribute
-  !ERROR: Variable 'a' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
-  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
+  !ERROR: Variable 'a' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
+  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
   !$omp teams distribute firstprivate(a,b) lastprivate(a,b)
   do i = 1, 10
     a(i) = a(i) + b(i) - i
   end do
   !$omp end teams distribute
-  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
+  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
   !$omp teams distribute lastprivate(a,b) firstprivate(b)
   do i = 1, 10
     a(i) = a(i) + b(i) - i
   end do
   !$omp end teams distribute
-  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
-  !ERROR: Variable 'a' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a DISTRIBUTE construct
+  !ERROR: Variable 'b' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
+  !ERROR: Variable 'a' may not appear on both FIRSTPRIVATE and LASTPRIVATE clauses on a TEAMS DISTRIBUTE construct
   !$omp teams distribute lastprivate(a,b) firstprivate(b,a)
   do i = 1, 10
     a(i) = a(i) + b(i) - i
