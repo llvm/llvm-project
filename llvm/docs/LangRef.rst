@@ -7829,6 +7829,20 @@ Some optimisations are only when the entire LTO unit is present in the current
 module. This is represented by the ``LTOPostLink`` module flags metadata, which
 will be created with a value of ``1`` when LTO linking occurs.
 
+Stack Alignment Metadata
+------------------------
+
+Changes the default stack alignment from the target ABI's implicit default
+stack alignment. Takes an i32 value in bytes. It is considered an error to link
+two modules together with different values for this metadata.
+
+For example:
+
+    !llvm.module.flags = !{!0}
+    !0 = !{i32 1, !"override-stack-alignment", i32 8}
+
+This will change the stack alignment to 8B.
+
 Embedded Objects Names Metadata
 ===============================
 
