@@ -18,6 +18,10 @@
 
 
 define void @foo(ptr %unused_arg, ptr swiftasync %async_arg) !dbg !6 {
+entry:
+  br label %other
+
+other:
   call void @llvm.dbg.value(metadata ptr %async_arg, metadata !12, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !14
   call void @llvm.dbg.value(metadata ptr %async_arg, metadata !12, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !14
   call void @consume(ptr %async_arg)

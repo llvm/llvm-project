@@ -369,28 +369,6 @@ instructions as such:
   represented as a single pseudo-instruction in the backend to guarantee that
   the intermediate raw pointer value is not spilled and attackable.
 
-### arm64e
-
-Darwin supports ARMv8.3 Pointer Authentication Codes via the arm64e MachO
-architecture slice.
-
-#### CPU Subtype
-
-The arm64e slice is an extension of the ``arm64`` slice (so uses the same
-MachO ``cpu_type``, ``CPU_TYPE_ARM64``).
-
-It is mainly represented using the ``cpu_subtype`` 2, or ``CPU_SUBTYPE_ARM64E``.
-
-The subtype also encodes the version of the pointer authentication ABI used in
-the object:
-
-```
-| 31-28 |     28-25    |      24-0      |
-| ----- | ------------ | -------------- |
-|  0000 |  ABI version | 0000 0000 0010 |
-```
-
-
 #### Assembly Representation
 
 At the assembly level,
@@ -417,7 +395,7 @@ For example:
     .quad _sym@AUTH(ia,12,addr)
 ```
 
-#### Object File Representation
+#### MachO Object File Representation
 
 At the binary object file level,
 [Authenticated Relocations](#authenticated-global-relocation) are represented
@@ -430,4 +408,40 @@ The pointer authentication information is encoded into the addend, as such:
 | 63 | 62 | 61-51 | 50-49 |   48   | 47     -     32 | 31  -  0 |
 | -- | -- | ----- | ----- | ------ | --------------- | -------- |
 |  1 |  0 |   0   |  key  |  addr  |  discriminator  |  addend  |
+```
+
+#### ELF Object File Representation
+
+At the object file level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
+
+The signing schema is encoded in the place of relocation to be applied
+as follows:
+
+```
+| 63                | 62       | 61:60    | 59:48    |  47:32        | 31:0                |
+| ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
+| address diversity | reserved | key      | reserved | discriminator | reserved for addend |
+```
+
+### arm64e
+
+Darwin supports ARMv8.3 Pointer Authentication Codes via the arm64e MachO
+architecture slice.
+
+#### CPU Subtype
+
+The arm64e slice is an extension of the ``arm64`` slice (so uses the same
+MachO ``cpu_type``, ``CPU_TYPE_ARM64``).
+
+It is mainly represented using the ``cpu_subtype`` 2, or ``CPU_SUBTYPE_ARM64E``.
+
+The subtype also encodes the version of the pointer authentication ABI used in
+the object:
+
+```
+| 31-28 |     28-25    |      24-0      |
+| ----- | ------------ | -------------- |
+|  0000 |  ABI version | 0000 0000 0010 |
 ```

@@ -1,6 +1,10 @@
-; RUN: opt %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; NOENTRY-NOT: OP_llvm_entry_value
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-apple-macosx13.0.0"
 
 ; This coroutine has one split point and two variables defined by:
 ;   %var_with_dbg_value,   which has multiple dbg.value intrinsics associated with

@@ -738,16 +738,23 @@ static void AttemptToFoldSymbolOffsetDifference(
 /// They might look redundant, but this function can be used before layout
 /// is done (see the object streamer for example) and having the Asm argument
 /// lets us avoid relaxations early.
-static bool
-EvaluateSymbolicAdd(const MCAssembler *Asm, const MCAsmLayout *Layout,
-                    const SectionAddrMap *Addrs, bool InSet, const MCValue &LHS,
-                    const MCSymbolRefExpr *RHS_A, const MCSymbolRefExpr *RHS_B,
-                    int64_t RHS_Cst, MCValue &Res) {
+static bool EvaluateSymbolicAdd(const MCAssembler *Asm,
+                                const MCAsmLayout *Layout,
+                                const SectionAddrMap *Addrs, bool InSet,
+                                const MCValue &LHS, const MCValue &RHS,
+                                MCValue &Res) {
   // FIXME: This routine (and other evaluation parts) are *incredibly* sloppy
   // about dealing with modifiers. This will ultimately bite us, one day.
   const MCSymbolRefExpr *LHS_A = LHS.getSymA();
   const MCSymbolRefExpr *LHS_B = LHS.getSymB();
   int64_t LHS_Cst = LHS.getConstant();
+
+  const MCSymbolRefExpr *RHS_A = RHS.getSymA();
+  const MCSymbolRefExpr *RHS_B = RHS.getSymB();
+  int64_t RHS_Cst = RHS.getConstant();
+
+  if (LHS.getRefKind() != RHS.getRefKind())
+    return false;
 
   // Fold the result constant immediately.
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
@@ -957,14 +964,19 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       case MCBinaryExpr::Sub:
         // Negate RHS and add.
         // The cast avoids undefined behavior if the constant is INT64_MIN.
-        return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
-                                   RHSValue.getSymB(), RHSValue.getSymA(),
-                                   -(uint64_t)RHSValue.getConstant(), Res);
+        return EvaluateSymbolicAdd(
+            Asm, Layout, Addrs, InSet, LHSValue,
+            MCValue::get(RHSValue.getSymB(), RHSValue.getSymA(),
+                         -(uint64_t)RHSValue.getConstant(),
+                         RHSValue.getRefKind()),
+            Res);
 
       case MCBinaryExpr::Add:
-        return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
-                                   RHSValue.getSymA(), RHSValue.getSymB(),
-                                   RHSValue.getConstant(), Res);
+        return EvaluateSymbolicAdd(
+            Asm, Layout, Addrs, InSet, LHSValue,
+            MCValue::get(RHSValue.getSymA(), RHSValue.getSymB(),
+                         RHSValue.getConstant(), RHSValue.getRefKind()),
+            Res);
       }
     }
 
