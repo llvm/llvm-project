@@ -905,10 +905,16 @@ def reassoc_comm_binops : GICombineRule<
 def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 
 // Constant fold operations.
-def constant_fold : GICombineRule<
+def constant_fold_binop : GICombineRule<
   (defs root:$d, apint_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL, G_LSHR, G_ASHR):$d,
-   [{ return Helper.matchConstantFold(*${d}, ${matchinfo}); }]),
+   [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+
+def constant_fold_cast_op : GICombineRule<
+  (defs root:$d, apint_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ZEXT, G_SEXT, G_ANYEXT):$d,
+   [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
 def mulo_by_2: GICombineRule<
@@ -1170,7 +1176,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, commute_shift,
-    form_bitfield_extract, constant_fold, fabs_fneg_fold,
+    form_bitfield_extract, constant_fold_binop, constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
