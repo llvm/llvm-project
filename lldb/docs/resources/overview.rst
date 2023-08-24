@@ -7,6 +7,9 @@ general architecture.
 
 LLDB has many code groupings that makeup the source base:
 
+.. contents::
+   :local:
+
 API
 ---
 
