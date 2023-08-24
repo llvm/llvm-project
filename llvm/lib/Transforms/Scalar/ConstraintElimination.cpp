@@ -1069,7 +1069,8 @@ static std::optional<bool> checkCondition(CmpInst *Cmp, ConstraintInfo &Info,
 static bool checkAndReplaceCondition(
     CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
-    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
+    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
+    SmallVectorImpl<Instruction *> &ToRemove) {
   auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
@@ -1090,6 +1091,8 @@ static bool checkAndReplaceCondition(
       return !II || II->getIntrinsicID() != Intrinsic::assume;
     });
     NumCondsRemoved++;
+    if (Cmp->use_empty())
+      ToRemove.push_back(Cmp);
     return true;
   };
 
@@ -1355,7 +1358,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
       } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
         bool Simplified = checkAndReplaceCondition(
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
-            ReproducerModule.get(), ReproducerCondStack, S.DT);
+            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
         if (!Simplified && match(CB.getContextInst(),
                                  m_LogicalAnd(m_Value(), m_Specific(Inst)))) {
           Simplified =

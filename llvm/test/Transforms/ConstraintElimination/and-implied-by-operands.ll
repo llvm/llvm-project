@@ -138,7 +138,6 @@ define i1 @test_remove_variables(i1 %c, ptr %A, i64 %B, ptr %C) {
 ; CHECK:       else.2:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit:
-; CHECK-NEXT:    [[T:%.*]] = icmp eq ptr null, null
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -167,7 +166,6 @@ define i1 @test_and_op_0_simplified(i32 %v) {
 ; CHECK-LABEL: @test_and_op_0_simplified(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[V:%.*]], 0
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sgt i32 0, 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 false, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
@@ -182,7 +180,6 @@ define i1 @test_and_op_1_simplified(i32 %v) {
 ; CHECK-LABEL: @test_and_op_1_simplified(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[V:%.*]], 0
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sgt i32 0, 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
