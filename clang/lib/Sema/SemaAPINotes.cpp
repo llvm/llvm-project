@@ -814,7 +814,8 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   // Globals.
   if (D->getDeclContext()->isFileContext() ||
-      D->getDeclContext()->isExternCContext()) {
+      D->getDeclContext()->isExternCContext() ||
+      D->getDeclContext()->isExternCXXContext()) {
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
