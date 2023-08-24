@@ -47,6 +47,13 @@ struct VectorizerParams {
   /// \When performing memory disambiguation checks at runtime do not
   /// make more than this number of comparisons.
   static unsigned RuntimeMemoryCheckThreshold;
+
+  // When creating runtime checks for nested loops, where possible try to
+  // write the checks in a form that allows them to be easily hoisted out of
+  // the outermost loop. For example, we can do this by expanding the range of
+  // addresses considered to include the entire nested loop so that they are
+  // loop invariant.
+  static bool HoistRuntimeChecks;
 };
 
 /// Checks memory dependences among accesses to the same underlying

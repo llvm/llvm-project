@@ -449,3 +449,16 @@ define float @minnum_no_nnan(float %a, float %b) {
   %f = select nsz i1 %cond, float %a, float %b
   ret float %f
 }
+
+define float @pr64937_preserve_min_idiom(float %a) {
+; CHECK-LABEL: @pr64937_preserve_min_idiom(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], 3.276700e+04
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP]], float [[A]], float 3.276700e+04
+; CHECK-NEXT:    [[RES:%.*]] = fmul nnan float [[SEL]], 6.553600e+04
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp nnan olt float %a, 3.276700e+04
+  %sel = select nnan i1 %cmp, float %a, float 3.276700e+04
+  %res = fmul nnan float %sel, 6.553600e+04
+  ret float %res
+}
