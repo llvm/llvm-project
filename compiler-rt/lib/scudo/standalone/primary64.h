@@ -1018,6 +1018,7 @@ private:
         Region->FreeListInfo.PoppedBlocks - Region->FreeListInfo.PushedBlocks;
     const uptr AllocatedPagesCount =
         roundUp(Region->MemMapInfo.AllocatedUser, PageSize) / PageSize;
+    DCHECK_GE(AllocatedPagesCount, Recorder.getReleasedPagesCount());
     const uptr InUsePages =
         AllocatedPagesCount - Recorder.getReleasedPagesCount();
     const uptr InUseBytes = InUsePages * PageSize;

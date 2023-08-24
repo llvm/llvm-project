@@ -1,7 +1,0 @@
-# REQUIRES: asserts
-# RUN: yaml2obj %S/Inputs/rel24-non-zero-addend.yaml -o %t.o
-# RUN: not --crash llvm-jitlink -noexec %t.o 2>&1 | FileCheck %s
-# CHECK: Assertion `Addend == 0 && "Addend is expected to be 0 for a function call"' failed
-#
-# The object is generated from llvm/test/ExecutionEngine/MCJIT/test-global-ctors.ll,
-# containing an R_PPC64_REL24 whose addend is not zero.

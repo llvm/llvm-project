@@ -2729,24 +2729,23 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
-; CHECK-NOLSE-O1-NEXT:    mov w9, w1
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
 ; CHECK-NOLSE-O1-NEXT:  LBB47_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrb w0, [x8]
-; CHECK-NOLSE-O1-NEXT:    and w10, w0, #0xff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9, uxtb
+; CHECK-NOLSE-O1-NEXT:    and w9, w0, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB47_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB47_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxrb w10, w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB47_1
+; CHECK-NOLSE-O1-NEXT:    stxrb w9, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB47_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
 ; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB47_4: ; %cmpxchg.nostore
+; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
@@ -2796,24 +2795,23 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
-; CHECK-NOLSE-O1-NEXT:    mov w9, w1
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
 ; CHECK-NOLSE-O1-NEXT:  LBB48_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrh w0, [x8]
-; CHECK-NOLSE-O1-NEXT:    and w10, w0, #0xffff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9, uxth
+; CHECK-NOLSE-O1-NEXT:    and w9, w0, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB48_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB48_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxrh w10, w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB48_1
+; CHECK-NOLSE-O1-NEXT:    stxrh w9, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB48_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
 ; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB48_4: ; %cmpxchg.nostore
+; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret

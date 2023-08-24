@@ -227,3 +227,23 @@ struct : public A, public B {
     .a = 1, // reorder-error {{field 'b' will be initialized after field 'a'}}
 };
 }
+
+namespace GH63759 {
+struct C {
+  int y = 1;
+  union {
+    int a;
+    short b;
+  };
+  int x = 1;
+};
+
+void foo() {
+  C c1 = {.x = 3, .a = 1}; // reorder-error-re {{ISO C++ requires field designators to be specified in declaration order; field 'x' will be initialized after field 'GH63759::C::(anonymous union at {{.*}})'}}
+                           // reorder-note@-1 {{previous initialization for field 'x' is here}}
+
+  C c2 = {.a = 3, .y = 1}; // reorder-error-re {{ISO C++ requires field designators to be specified in declaration order; field 'GH63759::C::(anonymous union at {{.*}})' will be initialized after field 'y'}}
+                           // reorder-note-re@-1 {{previous initialization for field 'GH63759::C::(anonymous union at {{.*}})' is here}}
+                           //
+}
+}

@@ -632,7 +632,10 @@ public:
   bool matchReassocCommBinOp(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Do constant folding when opportunities are exposed after MIR building.
-  bool matchConstantFold(MachineInstr &MI, APInt &MatchInfo);
+  bool matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo);
+
+  /// Do constant folding when opportunities are exposed after MIR building.
+  bool matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo);
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
