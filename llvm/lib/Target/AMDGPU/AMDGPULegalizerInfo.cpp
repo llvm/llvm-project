@@ -6219,13 +6219,11 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   // Handle needing to s.buffer.load() a p8 value.
   if (hasBufferRsrcWorkaround(Ty)) {
     Ty = castBufferRsrcFromV4I32(MI, B, *B.getMRI(), 0);
-    Dst = MI.getOperand(0).getReg();
     B.setInsertPt(B.getMBB(), MI);
   }
   if (shouldBitcastLoadStoreType(ST, Ty, LLT::scalar(Size))) {
     Ty = getBitcastRegisterType(Ty);
     Helper.bitcastDst(MI, Ty, 0);
-    Dst = MI.getOperand(0).getReg();
     B.setInsertPt(B.getMBB(), MI);
   }
 

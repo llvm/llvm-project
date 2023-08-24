@@ -2121,11 +2121,14 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
     insertDAGNode(DAG, N, NewX);
     X = NewX;
   }
+
+  MVT XVT = X.getSimpleValueType();
   SDLoc DL(N);
   SDValue NewSRLAmt = DAG.getConstant(ShiftAmt + AMShiftAmt, DL, MVT::i8);
-  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, VT, X, NewSRLAmt);
+  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, XVT, X, NewSRLAmt);
+  SDValue NewExt = DAG.getZExtOrTrunc(NewSRL, DL, VT);
   SDValue NewSHLAmt = DAG.getConstant(AMShiftAmt, DL, MVT::i8);
-  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewSRL, NewSHLAmt);
+  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewExt, NewSHLAmt);
 
   // Insert the new nodes into the topological ordering. We must do this in
   // a valid topological ordering as nothing is going to go back and re-sort
@@ -2134,13 +2137,14 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   // hierarchy left to express.
   insertDAGNode(DAG, N, NewSRLAmt);
   insertDAGNode(DAG, N, NewSRL);
+  insertDAGNode(DAG, N, NewExt);
   insertDAGNode(DAG, N, NewSHLAmt);
   insertDAGNode(DAG, N, NewSHL);
   DAG.ReplaceAllUsesWith(N, NewSHL);
   DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << AMShiftAmt;
-  AM.IndexReg = NewSRL;
+  AM.IndexReg = NewExt;
   return false;
 }
 
@@ -2619,11 +2623,17 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       return false;
     }
 
-    // Try to fold the mask and shift into an extract and scale.
-    if (Src.getOpcode() == ISD::SRL && !Mask.isAllOnes() &&
-        !foldMaskAndShiftToExtract(*CurDAG, N, Mask.getZExtValue(), Src,
+    if (Src.getOpcode() == ISD::SRL && !Mask.isAllOnes()) {
+      // Try to fold the mask and shift into an extract and scale.
+      if (!foldMaskAndShiftToExtract(*CurDAG, N, Mask.getZExtValue(), Src,
+                                     Src.getOperand(0), AM))
+        return false;
+
+      // Try to fold the mask and shift directly into the scale.
+      if (!foldMaskAndShiftToScale(*CurDAG, N, Mask.getZExtValue(), Src,
                                    Src.getOperand(0), AM))
-      return false;
+        return false;
+    }
 
     break;
   }

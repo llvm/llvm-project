@@ -2162,6 +2162,16 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     switch (IntNo) {
     default:
       break;
+    case Intrinsic::aarch64_neon_uaddlv: {
+      MVT VT = Op.getOperand(1).getValueType().getSimpleVT();
+      unsigned BitWidth = Known.getBitWidth();
+      if (VT == MVT::v8i8) {
+        assert(BitWidth >= 16 && "Unexpected width!");
+        APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+        Known.Zero |= Mask;
+      }
+      break;
+    }
     case Intrinsic::aarch64_neon_umaxv:
     case Intrinsic::aarch64_neon_uminv: {
       // Figure out the datatype of the vector operand. The UMINV instruction
