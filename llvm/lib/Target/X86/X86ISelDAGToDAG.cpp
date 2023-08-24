@@ -2067,21 +2067,21 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
       !isa<ConstantSDNode>(Shift.getOperand(1)))
     return true;
 
+  // We need to ensure that mask is a continuous run of bits.
+  unsigned MaskIdx, MaskLen;
+  if (!isShiftedMask_64(Mask, MaskIdx, MaskLen))
+    return true;
+  unsigned MaskLZ = 64 - (MaskIdx + MaskLen);
+
   unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-  unsigned MaskLZ = llvm::countl_zero(Mask);
-  unsigned MaskTZ = llvm::countr_zero(Mask);
 
   // The amount of shift we're trying to fit into the addressing mode is taken
-  // from the trailing zeros of the mask.
-  unsigned AMShiftAmt = MaskTZ;
+  // from the shifted mask index (number of trailing zeros of the mask).
+  unsigned AMShiftAmt = MaskIdx;
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
   if (AMShiftAmt == 0 || AMShiftAmt > 3) return true;
-
-  // We also need to ensure that mask is a continuous run of bits.
-  if (llvm::countr_one(Mask >> MaskTZ) + MaskTZ + MaskLZ != 64)
-    return true;
 
   // Scale the leading zero count down based on the actual size of the value.
   // Also scale it down based on the size of the shift.
@@ -2163,13 +2163,15 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
     return true;
 
   // We need to ensure that mask is a continuous run of bits.
-  if (!isShiftedMask_64(Mask)) return true;
+  unsigned MaskIdx, MaskLen;
+  if (!isShiftedMask_64(Mask, MaskIdx, MaskLen))
+    return true;
 
   unsigned ShiftAmt = Shift.getConstantOperandVal(1);
 
   // The amount of shift we're trying to fit into the addressing mode is taken
-  // from the trailing zeros of the mask.
-  unsigned AMShiftAmt = llvm::countr_zero(Mask);
+  // from the shifted mask index (number of trailing zeros of the mask).
+  unsigned AMShiftAmt = MaskIdx;
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
