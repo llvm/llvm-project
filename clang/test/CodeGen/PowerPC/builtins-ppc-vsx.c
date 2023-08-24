@@ -2232,35 +2232,45 @@ res_vuc = vec_xxsldwi(vuc, vuc, 1);
 
 res_vd = vec_promote(d, 0);
 // CHECK: store <2 x double> zeroinitializer
+// CHECK: store <2 x double> poison
 // CHECK: insertelement <2 x double>
 // CHECK-LE: store <2 x double> zeroinitializer
+// CHECK-LE: store <2 x double> poison
 // CHECK-LE: insertelement <2 x double>
 
 res_vsll = vec_promote(sll, 0);
 // CHECK: store <2 x i64> zeroinitializer
+// CHECK: store <2 x i64> poison
 // CHECK: insertelement <2 x i64>
 // CHECK-LE: store <2 x i64> zeroinitializer
+// CHECK-LE: store <2 x i64> poison
 // CHECK-LE: insertelement <2 x i64>
 
 res_vull = vec_promote(ull, 0);
 // CHECK: store <2 x i64> zeroinitializer
+// CHECK: store <2 x i64> poison
 // CHECK: insertelement <2 x i64>
 // CHECK-LE: store <2 x i64> zeroinitializer
+// CHECK-LE: store <2 x i64> poison
 // CHECK-LE: insertelement <2 x i64>
 
 res_vsc = vec_promote(asc[0], 8);
 // CHECK: store <16 x i8> zeroinitializer
+// CHECK: store <16 x i8> poison
 // CHECK: [[IDX:%.*]] = and i32 {{.*}}, 15
 // CHECK: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
 // CHECK-LE: store <16 x i8> zeroinitializer
+// CHECK-LE: store <16 x i8> poison
 // CHECK-LE: [[IDX:%.*]] = and i32 {{.*}}, 15
 // CHECK-LE: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
 
 res_vuc = vec_promote(auc[0], 8);
 // CHECK: store <16 x i8> zeroinitializer
+// CHECK: store <16 x i8> poison
 // CHECK: [[IDX:%.*]] = and i32 {{.*}}, 15
 // CHECK: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
 // CHECK-LE: store <16 x i8> zeroinitializer
+// CHECK-LE: store <16 x i8> poison
 // CHECK-LE: [[IDX:%.*]] = and i32 {{.*}}, 15
 // CHECK-LE: insertelement <16 x i8> {{.*}}, i8 {{.*}}, i32 [[IDX]]
 }
