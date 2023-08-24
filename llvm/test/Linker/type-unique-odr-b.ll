@@ -19,6 +19,8 @@
 
 ; ModuleID = 'type-unique-odr-b.cpp'
 
+target triple = "x86_64-unknown-linux-gnu"
+
 %class.A = type { i32 }
 
 ; Function Attrs: nounwind
