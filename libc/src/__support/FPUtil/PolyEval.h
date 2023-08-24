@@ -23,12 +23,27 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> LIBC_INLINE T polyeval(const T &, const T &a0) {
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+polyeval(const T &, const T &a0) {
+  return a0;
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T> polyeval(T,
+                                                                        T a0) {
   return a0;
 }
 
 template <typename T, typename... Ts>
-LIBC_INLINE T polyeval(const T &x, const T &a0, const Ts &...a) {
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+polyeval(const T &x, const T &a0, const Ts &...a) {
+  return multiply_add(x, polyeval(x, a...), a0);
+}
+
+template <typename T, typename... Ts>
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+polyeval(T x, T a0, Ts... a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }
 
