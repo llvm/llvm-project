@@ -22,13 +22,8 @@ namespace format {
 bool WhitespaceManager::Change::IsBeforeInFile::operator()(
     const Change &C1, const Change &C2) const {
   return SourceMgr.isBeforeInTranslationUnit(
-             C1.OriginalWhitespaceRange.getBegin(),
-             C2.OriginalWhitespaceRange.getBegin()) ||
-         (C1.OriginalWhitespaceRange.getBegin() ==
-              C2.OriginalWhitespaceRange.getBegin() &&
-          SourceMgr.isBeforeInTranslationUnit(
-              C1.OriginalWhitespaceRange.getEnd(),
-              C2.OriginalWhitespaceRange.getEnd()));
+      C1.OriginalWhitespaceRange.getBegin(),
+      C2.OriginalWhitespaceRange.getBegin());
 }
 
 WhitespaceManager::Change::Change(const FormatToken &Tok,
@@ -1514,55 +1509,10 @@ WhitespaceManager::linkCells(CellDescriptions &&CellDesc) {
 void WhitespaceManager::generateChanges() {
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     const Change &C = Changes[i];
-    if (i > 0) {
-      auto Last = Changes[i - 1].OriginalWhitespaceRange;
-      auto New = Changes[i].OriginalWhitespaceRange;
-      // Do not generate two replacements for the same location.  As a special
-      // case, it is allowed if there is a replacement for the empty range
-      // between 2 tokens and another non-empty range at the start of the second
-      // token.  We didn't implement logic to combine replacements for 2
-      // consecutive source ranges into a single replacement, because the
-      // program works fine without it.
-      //
-      // We can't eliminate empty original whitespace ranges.  They appear when
-      // 2 tokens have no whitespace in between in the input.  It does not
-      // matter whether whitespace is to be added.  If no whitespace is to be
-      // added, the replacement will be empty, and it gets eliminated after this
-      // step in storeReplacement.  For example, if the input is `foo();`,
-      // there will be a replacement for the range between every consecutive
-      // pair of tokens.
-      //
-      // A replacement at the start of a token can be added by
-      // BreakableStringLiteralUsingOperators::insertBreak when it adds braces
-      // around the string literal.  Say Verilog code is being formatted and the
-      // first line is to become the next 2 lines.
-      //     x("long string");
-      //     x({"long ",
-      //        "string"});
-      // There will be a replacement for the empty range between the parenthesis
-      // and the string and another replacement for the quote character.  The
-      // replacement for the empty range between the parenthesis and the quote
-      // comes from ContinuationIndenter::addTokenOnCurrentLine when it changes
-      // the original empty range between the parenthesis and the string to
-      // another empty one.  The replacement for the quote character comes from
-      // BreakableStringLiteralUsingOperators::insertBreak when it adds the
-      // brace.  In the example, the replacement for the empty range is the same
-      // as the original text.  However, eliminating replacements that are same
-      // as the original does not help in general.  For example, a newline can
-      // be inserted, causing the first line to become the next 3 lines.
-      //     xxxxxxxxxxx("long string");
-      //     xxxxxxxxxxx(
-      //         {"long ",
-      //          "string"});
-      // In that case, the empty range between the parenthesis and the string
-      // will be replaced by a newline and 4 spaces.  So we will still have to
-      // deal with a replacement for an empty source range followed by a
-      // replacement for a non-empty source range.
-      if (Last.getBegin() == New.getBegin() &&
-          (Last.getEnd() != Last.getBegin() ||
-           New.getEnd() == New.getBegin())) {
-        continue;
-      }
+    if (i > 0 && Changes[i - 1].OriginalWhitespaceRange.getBegin() ==
+                     C.OriginalWhitespaceRange.getBegin()) {
+      // Do not generate two replacements for the same location.
+      continue;
     }
     if (C.CreateReplacement) {
       std::string ReplacementText = C.PreviousLinePostfix;
