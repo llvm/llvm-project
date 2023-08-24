@@ -835,8 +835,10 @@ public:
 
   // Define copy assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
-    CGF = Other.CGF;
-    Other.CGF = nullptr;
+    if (this != &Other) {
+      CGF = Other.CGF;
+      Other.CGF = nullptr;
+    }
     return *this;
   }
 
