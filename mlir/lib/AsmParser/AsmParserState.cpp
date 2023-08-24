@@ -128,6 +128,30 @@ auto AsmParserState::getOpDef(Operation *op) const
                                           : &*impl->operations[it->second];
 }
 
+auto AsmParserState::getAttributeAliasDefs() const
+    -> iterator_range<AttributeDefIterator> {
+  return llvm::make_pointee_range(ArrayRef(impl->attrAliases));
+}
+
+auto AsmParserState::getAttributeAliasDef(StringRef name) const
+    -> const AttributeAliasDefinition * {
+  auto it = impl->attrAliasToIdx.find(name);
+  return it == impl->attrAliasToIdx.end() ? nullptr
+                                          : &*impl->attrAliases[it->second];
+}
+
+auto AsmParserState::getTypeAliasDefs() const
+    -> iterator_range<TypeDefIterator> {
+  return llvm::make_pointee_range(ArrayRef(impl->typeAliases));
+}
+
+auto AsmParserState::getTypeAliasDef(StringRef name) const
+    -> const TypeAliasDefinition * {
+  auto it = impl->typeAliasToIdx.find(name);
+  return it == impl->typeAliasToIdx.end() ? nullptr
+                                          : &*impl->typeAliases[it->second];
+}
+
 /// Lex a string token whose contents start at the given `curPtr`. Returns the
 /// position at the end of the string, after a terminal or invalid character
 /// (e.g. `"` or `\0`).
@@ -277,24 +301,28 @@ void AsmParserState::addDefinition(BlockArgument blockArg, SMLoc location) {
   def.arguments[argIdx] = SMDefinition(convertIdLocToRange(location));
 }
 
-void AsmParserState::addAttrAliasDefinition(StringRef name, SMRange location) {
+void AsmParserState::addAttrAliasDefinition(StringRef name, SMRange location,
+                                            Attribute value) {
   auto [it, inserted] =
       impl->attrAliasToIdx.try_emplace(name, impl->attrAliases.size());
   // Location aliases may be referenced before they are defined.
   if (inserted) {
     impl->attrAliases.push_back(
-        std::make_unique<AttributeAliasDefinition>(name, location));
+        std::make_unique<AttributeAliasDefinition>(name, location, value));
   } else {
-    impl->attrAliases[it->second]->definition.loc = location;
+    AttributeAliasDefinition &attr = *impl->attrAliases[it->second];
+    attr.definition.loc = location;
+    attr.value = value;
   }
 }
 
-void AsmParserState::addTypeAliasDefinition(StringRef name, SMRange location) {
+void AsmParserState::addTypeAliasDefinition(StringRef name, SMRange location,
+                                            Type value) {
   [[maybe_unused]] auto [it, inserted] =
       impl->typeAliasToIdx.try_emplace(name, impl->typeAliases.size());
   assert(inserted && "unexpected attribute alias redefinition");
   impl->typeAliases.push_back(
-      std::make_unique<TypeAliasDefinition>(name, location));
+      std::make_unique<TypeAliasDefinition>(name, location, value));
 }
 
 void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
