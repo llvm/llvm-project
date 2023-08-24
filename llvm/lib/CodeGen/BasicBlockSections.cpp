@@ -258,8 +258,7 @@ void llvm::sortBasicBlocksAndUpdateBranches(
   [[maybe_unused]] const MachineBasicBlock *EntryBlock = &MF.front();
   SmallVector<MachineBasicBlock *> PreLayoutFallThroughs(MF.getNumBlockIDs());
   for (auto &MBB : MF)
-    PreLayoutFallThroughs[MBB.getNumber()] =
-        MBB.getFallThrough(/*JumpToFallThrough=*/false);
+    PreLayoutFallThroughs[MBB.getNumber()] = MBB.getFallThrough();
 
   MF.sort(MBBCmp);
   assert(&MF.front() == EntryBlock &&
