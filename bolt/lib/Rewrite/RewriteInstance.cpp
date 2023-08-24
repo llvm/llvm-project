@@ -5286,8 +5286,10 @@ void RewriteInstance::rewriteFile() {
       if (!BF.getFileOffset() || !BF.isEmitted())
         continue;
       OS.seek(BF.getFileOffset());
-      for (unsigned I = 0; I < BF.getMaxSize(); ++I)
-        OS.write((unsigned char)BC->MIB->getTrapFillValue());
+      StringRef TrapInstr = BC->MIB->getTrapFillValue();
+      unsigned NInstr = BF.getMaxSize() / TrapInstr.size();
+      for (unsigned I = 0; I < NInstr; ++I)
+        OS.write(TrapInstr.data(), TrapInstr.size());
     }
     OS.seek(SavedPos);
   }
