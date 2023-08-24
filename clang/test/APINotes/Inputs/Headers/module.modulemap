@@ -1,3 +1,7 @@
+module ExternCtx {
+  header "ExternCtx.h"
+}
+
 module HeaderLib {
   header "HeaderLib.h"
 }
