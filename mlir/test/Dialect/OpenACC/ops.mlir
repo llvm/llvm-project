@@ -1704,7 +1704,6 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 %idxValue = arith.constant 1 : index
 %ifCond = arith.constant true
 acc.set device_type(%i32Value : i32)
-acc.set device_type(%i32Value : i32)
 acc.set device_num(%i64Value : i64)
 acc.set device_num(%i32Value : i32)
 acc.set device_num(%idxValue : index)
@@ -1716,7 +1715,6 @@ acc.set default_async(%i32Value : i32)
 // CHECK: [[I32VALUE2:%.*]] = arith.constant 2 : i32
 // CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
 // CHECK: [[IFCOND:%.*]] = arith.constant true
-// CHECK: acc.set device_type([[I32VALUE]] : i32)
 // CHECK: acc.set device_type([[I32VALUE]] : i32)
 // CHECK: acc.set device_num([[I64VALUE]] : i64)
 // CHECK: acc.set device_num([[I32VALUE]] : i32)
