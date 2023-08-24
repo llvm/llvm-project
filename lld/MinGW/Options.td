@@ -131,6 +131,13 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
      MetaVarName<"<symbol>">;
 
+def plugin_opt_eq_minus: J<"plugin-opt=-">,
+  HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
+def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
+// This may be either an unhandled LLVMgold.so feature or GCC passed
+// -plugin-opt=path/to/{liblto_plugin.so,lto-wrapper}
+def plugin_opt_eq : J<"plugin-opt=">;
+
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
@@ -174,6 +181,10 @@ defm: EqNoHelp<"minor-image-version">;
 def: F<"no-undefined">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
-defm: EqNoHelp<"plugin-opt">;
 defm: EqNoHelp<"sysroot">;
 def: F<"start-group">;
+
+// Ignore GCC collect2 LTO plugin related options. Note that we don't support
+// GCC LTO, but GCC collect2 passes these options even in non-LTO mode.
+def: J<"plugin-opt=-fresolution=">;
+def: J<"plugin-opt=-pass-through=">;

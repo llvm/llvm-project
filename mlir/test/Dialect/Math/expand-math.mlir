@@ -232,8 +232,91 @@ func.func @powf_func(%a: f64, %b: f64) ->f64 {
 
 // -----
 
-// CHECK-LABEL:   func.func @roundeven
-func.func @roundeven(%arg: f32) -> f32 {
+// CHECK-LABEL:   func.func @roundeven64
+func.func @roundeven64(%arg: f64) -> f64 {
+  %res = math.roundeven %arg : f64
+  return %res : f64
+}
+
+// CHECK-SAME:                   %[[VAL_0:.*]]: f64) -> f64 {
+// CHECK-DAG: %[[C_0:.*]] = arith.constant 0 : i64
+// CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i64
+// CHECK-DAG: %[[C_NEG_1:.*]] = arith.constant -1 : i64
+// CHECK-DAG: %[[C_1_FLOAT:.*]] = arith.constant 1.000000e+00 : f64
+// CHECK-DAG: %[[C_52:.*]] = arith.constant 52 : i64
+// CHECK-DAG: %[[C_63:.*]] = arith.constant 63 : i64
+// CHECK-DAG: %[[C_1023:.*]] = arith.constant 1023 : i64
+// CHECK-DAG: %[[C_2251799813685248:.*]] = arith.constant 2251799813685248 : i64
+// CHECK-DAG: %[[C_4503599627370495:.*]] = arith.constant 4503599627370495 : i64
+// CHECK-DAG: %[[EXP_MASK:.*]] = arith.constant 2047 : i64
+// CHECK:     %[[OPERAND_BITCAST:.*]] = arith.bitcast %[[VAL_0]] : f64 to i64
+// CHECK:     %[[ROUND:.*]] = math.round %[[VAL_0]] : f64
+// CHECK:     %[[ROUND_BITCAST:.*]] = arith.bitcast %[[ROUND]] : f64 to i64
+
+// Get biased exponents of `round` and `operand`
+// CHECK:     %[[SHIFTED_OPERAND_BITCAST:.*]] = arith.shrui %[[OPERAND_BITCAST]], %[[C_52]] : i64
+// CHECK:     %[[OPERAND_EXP:.*]] = arith.andi %[[SHIFTED_OPERAND_BITCAST]], %[[EXP_MASK]] : i64
+// CHECK:     %[[OPERAND_BIASED_EXP:.*]] = arith.subi %[[OPERAND_EXP]], %[[C_1023]] : i64
+// CHECK:     %[[SHIFTED_ROUND_BITCAST:.*]] = arith.shrui %[[ROUND_BITCAST]], %[[C_52]] : i64
+// CHECK:     %[[ROUND_EXP:.*]] = arith.andi %[[SHIFTED_ROUND_BITCAST]], %[[EXP_MASK]] : i64
+// CHECK:     %[[ROUND_BIASED_EXP:.*]] = arith.subi %[[ROUND_EXP]], %[[C_1023]] : i64
+
+// Determine if `ROUND_BITCAST` is an even whole number or a special value
+// +-inf, +-nan.
+//   Mask mantissa of `ROUND_BITCAST` with a mask shifted to the right by
+//   `ROUND_BIASED_EXP - 1`
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_MINUS_1:.*]] = arith.subi %[[ROUND_BIASED_EXP]], %[[C_1]] : i64
+//   CHECK-DAG: %[[CLAMPED_SHIFT_0:.*]] = arith.maxsi %[[ROUND_BIASED_EXP_MINUS_1]], %[[C_0]] : i64
+//   CHECK-DAG: %[[CLAMPED_SHIFT_1:.*]] = arith.minsi %[[CLAMPED_SHIFT_0]], %[[C_63]] : i64
+//   CHECK-DAG: %[[SHIFTED_MANTISSA_MASK_0:.*]] = arith.shrui %[[C_4503599627370495]], %[[CLAMPED_SHIFT_1]] : i64
+//   CHECK-DAG: %[[ROUND_MASKED_MANTISSA:.*]] = arith.andi %[[ROUND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_0]] : i64
+
+//   `ROUND_BITCAST` is not even whole number or special value if masked
+//   mantissa is != 0 or `ROUND_BIASED_EXP == 0`
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0:.*]] = arith.cmpi ne, %[[ROUND_MASKED_MANTISSA]], %[[C_0]] : i64
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_EQ_0:.*]] = arith.cmpi eq, %[[ROUND_BIASED_EXP]], %[[C_0]] : i64
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1:.*]] = arith.ori %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0]], %[[ROUND_BIASED_EXP_EQ_0]] : i1
+
+// Determine if operand is halfway between two integer values
+// CHECK:     %[[OPERAND_BIASED_EXP_EQ_NEG_1:.*]] = arith.cmpi eq, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i64
+// CHECK:     %[[CLAMPED_SHIFT_2:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i64
+// CHECK:     %[[CLAMPED_SHIFT_3:.*]] = arith.minsi %[[CLAMPED_SHIFT_2]], %[[C_63]] : i64
+// CHECK:     %[[SHIFTED_2_TO_9:.*]] = arith.shrui %[[C_2251799813685248]], %[[CLAMPED_SHIFT_3]] : i64
+
+//   CHECK:     %[[EXPECTED_OPERAND_MASKED_MANTISSA:.*]] = arith.select %[[OPERAND_BIASED_EXP_EQ_NEG_1]], %[[C_0]], %[[SHIFTED_2_TO_9]] : i64
+
+//   Mask mantissa of `OPERAND_BITCAST` with a mask shifted to the right by
+//   `OPERAND_BIASED_EXP`
+//   CHECK:     %[[CLAMPED_SHIFT_4:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i64
+//   CHECK:     %[[CLAMPED_SHIFT_5:.*]] = arith.minsi %[[CLAMPED_SHIFT_4]], %[[C_63]] : i64
+//   CHECK:     %[[SHIFTED_MANTISSA_MASK_1:.*]] = arith.shrui %[[C_4503599627370495]], %[[CLAMPED_SHIFT_5]] : i64
+//   CHECK:     %[[OPERAND_MASKED_MANTISSA:.*]] = arith.andi %[[OPERAND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_1]] : i64
+
+//   The operand is halfway between two integers if the masked mantissa is equal
+//   to the expected mantissa and the biased exponent is in the range
+//   [-1,  52).
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_GE_NEG_1:.*]] = arith.cmpi sge, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i64
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_LT_10:.*]] = arith.cmpi slt, %[[OPERAND_BIASED_EXP]], %[[C_52]] : i64
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_0:.*]] = arith.cmpi eq, %[[OPERAND_MASKED_MANTISSA]], %[[EXPECTED_OPERAND_MASKED_MANTISSA]] : i64
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_1:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_0]], %[[OPERAND_BIASED_EXP_LT_10]] : i1
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_2:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_1]], %[[OPERAND_BIASED_EXP_GE_NEG_1]] : i1
+
+// Adjust rounded operand with `round(operand) - sign(operand)` to correct the
+// case where `round` rounded in the oppositve direction of `roundeven`.
+// CHECK:     %[[SIGN:.*]] = math.copysign %[[C_1_FLOAT]], %[[VAL_0]] : f64
+// CHECK:     %[[ROUND_SHIFTED:.*]] = arith.subf %[[ROUND]], %[[SIGN]] : f64
+// CHECK:     %[[NEEDS_SHIFT:.*]] = arith.andi %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1]], %[[OPERAND_IS_HALFWAY_2]] : i1
+// CHECK:     %[[RESULT:.*]] = arith.select %[[NEEDS_SHIFT]], %[[ROUND_SHIFTED]], %[[ROUND]] : f64
+
+// The `x - sign` adjustment does not preserve the sign when we are adjusting the value -1 to -0.
+// CHECK:     %[[COPYSIGN:.*]] = math.copysign %[[RESULT]], %[[VAL_0]] : f64
+
+// CHECK: return %[[COPYSIGN]] : f64
+
+// -----
+
+// CHECK-LABEL:   func.func @roundeven32
+func.func @roundeven32(%arg: f32) -> f32 {
   %res = math.roundeven %arg : f32
   return %res : f32
 }
@@ -331,3 +414,90 @@ func.func @roundeven(%arg: f32) -> f32 {
 // CHECK:     %[[COPYSIGN:.*]] = math.copysign %[[RESULT]], %[[VAL_0]] : f32
 
 // CHECK: return %[[COPYSIGN]] : f32
+
+// -----
+
+// CHECK-LABEL:   func.func @roundeven16
+func.func @roundeven16(%arg: f16) -> f16 {
+  %res = math.roundeven %arg : f16
+  return %res : f16
+}
+
+// CHECK-SAME:                   %[[VAL_0:.*]]: f16) -> f16 {
+// CHECK-DAG: %[[C_0:.*]] = arith.constant 0 : i16
+// CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i16
+// CHECK-DAG: %[[C_NEG_1:.*]] = arith.constant -1 : i16
+// CHECK-DAG: %[[C_1_FLOAT:.*]] = arith.constant 1.000000e+00 : f16
+// CHECK-DAG: %[[C_10:.*]] = arith.constant 10 : i16
+// CHECK-DAG: %[[C_15:.*]] = arith.constant 15 : i16
+// CHECK-DAG: %[[C_512:.*]] = arith.constant 512 : i16
+// CHECK-DAG: %[[C_1023:.*]] = arith.constant 1023 : i16
+// CHECK-DAG: %[[EXP_MASK:.*]] = arith.constant 31 : i16
+
+// CHECK:     %[[OPERAND_BITCAST:.*]] = arith.bitcast %[[VAL_0]] : f16 to i16
+// CHECK:     %[[ROUND:.*]] = math.round %[[VAL_0]] : f16
+// CHECK:     %[[ROUND_BITCAST:.*]] = arith.bitcast %[[ROUND]] : f16 to i16
+
+// Get biased exponents of `round` and `operand`
+// CHECK:     %[[SHIFTED_OPERAND_BITCAST:.*]] = arith.shrui %[[OPERAND_BITCAST]], %[[C_10]] : i16
+// CHECK:     %[[OPERAND_EXP:.*]] = arith.andi %[[SHIFTED_OPERAND_BITCAST]], %[[EXP_MASK]] : i16
+// CHECK:     %[[OPERAND_BIASED_EXP:.*]] = arith.subi %[[OPERAND_EXP]], %[[C_15]] : i16
+// CHECK:     %[[SHIFTED_ROUND_BITCAST:.*]] = arith.shrui %[[ROUND_BITCAST]], %[[C_10]] : i16
+// CHECK:     %[[ROUND_EXP:.*]] = arith.andi %[[SHIFTED_ROUND_BITCAST]], %[[EXP_MASK]] : i16
+// CHECK:     %[[ROUND_BIASED_EXP:.*]] = arith.subi %[[ROUND_EXP]], %[[C_15]] : i16
+
+// Determine if `ROUND_BITCAST` is an even whole number or a special value
+// +-inf, +-nan.
+//   Mask mantissa of `ROUND_BITCAST` with a mask shifted to the right by
+//   `ROUND_BIASED_EXP - 1`
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_MINUS_1:.*]] = arith.subi %[[ROUND_BIASED_EXP]], %[[C_1]] : i16
+//   CHECK-DAG: %[[CLAMPED_SHIFT_0:.*]] = arith.maxsi %[[ROUND_BIASED_EXP_MINUS_1]], %[[C_0]] : i16
+//   CHECK-DAG: %[[CLAMPED_SHIFT_1:.*]] = arith.minsi %[[CLAMPED_SHIFT_0]], %[[C_15]] : i16
+//   CHECK-DAG: %[[SHIFTED_MANTISSA_MASK_0:.*]] = arith.shrui %[[C_1023]], %[[CLAMPED_SHIFT_1]] : i16
+//   CHECK-DAG: %[[ROUND_MASKED_MANTISSA:.*]] = arith.andi %[[ROUND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_0]] : i16
+
+//   `ROUND_BITCAST` is not even whole number or special value if masked
+//   mantissa is != 0 or `ROUND_BIASED_EXP == 0`
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0:.*]] = arith.cmpi ne, %[[ROUND_MASKED_MANTISSA]], %[[C_0]] : i16
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_EQ_0:.*]] = arith.cmpi eq, %[[ROUND_BIASED_EXP]], %[[C_0]] : i16
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1:.*]] = arith.ori %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0]], %[[ROUND_BIASED_EXP_EQ_0]] : i1
+
+// Determine if operand is halfway between two integer values
+// CHECK:     %[[OPERAND_BIASED_EXP_EQ_NEG_1:.*]] = arith.cmpi eq, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i16
+// CHECK:     %[[CLAMPED_SHIFT_2:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i16
+// CHECK:     %[[CLAMPED_SHIFT_3:.*]] = arith.minsi %[[CLAMPED_SHIFT_2]], %[[C_15]] : i16
+// CHECK:     %[[SHIFTED_2_TO_9:.*]] = arith.shrui %[[C_512]], %[[CLAMPED_SHIFT_3]] : i16
+
+//   A value with `0 <= BIASED_EXP < 10` is halfway between two consecutive
+//   integers if the bit at index `BIASED_EXP` starting from the left in the
+//   mantissa is 1 and all the bits to the right are zero. For the case where
+//   `BIASED_EXP == -1, the expected mantissa is all zeros.
+//   CHECK:     %[[EXPECTED_OPERAND_MASKED_MANTISSA:.*]] = arith.select %[[OPERAND_BIASED_EXP_EQ_NEG_1]], %[[C_0]], %[[SHIFTED_2_TO_9]] : i16
+
+//   Mask mantissa of `OPERAND_BITCAST` with a mask shifted to the right by
+//   `OPERAND_BIASED_EXP`
+//   CHECK:     %[[CLAMPED_SHIFT_4:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i16
+//   CHECK:     %[[CLAMPED_SHIFT_5:.*]] = arith.minsi %[[CLAMPED_SHIFT_4]], %[[C_15]] : i16
+//   CHECK:     %[[SHIFTED_MANTISSA_MASK_1:.*]] = arith.shrui %[[C_1023]], %[[CLAMPED_SHIFT_5]] : i16
+//   CHECK:     %[[OPERAND_MASKED_MANTISSA:.*]] = arith.andi %[[OPERAND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_1]] : i16
+
+//   The operand is halfway between two integers if the masked mantissa is equal
+//   to the expected mantissa and the biased exponent is in the range
+//   [-1,  23).
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_GE_NEG_1:.*]] = arith.cmpi sge, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i16
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_LT_10:.*]] = arith.cmpi slt, %[[OPERAND_BIASED_EXP]], %[[C_10]] : i16
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_0:.*]] = arith.cmpi eq, %[[OPERAND_MASKED_MANTISSA]], %[[EXPECTED_OPERAND_MASKED_MANTISSA]] : i16
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_1:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_0]], %[[OPERAND_BIASED_EXP_LT_10]] : i1
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_2:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_1]], %[[OPERAND_BIASED_EXP_GE_NEG_1]] : i1
+
+// Adjust rounded operand with `round(operand) - sign(operand)` to correct the
+// case where `round` rounded in the oppositve direction of `roundeven`.
+// CHECK:     %[[SIGN:.*]] = math.copysign %[[C_1_FLOAT]], %[[VAL_0]] : f16
+// CHECK:     %[[ROUND_SHIFTED:.*]] = arith.subf %[[ROUND]], %[[SIGN]] : f16
+// CHECK:     %[[NEEDS_SHIFT:.*]] = arith.andi %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1]], %[[OPERAND_IS_HALFWAY_2]] : i1
+// CHECK:     %[[RESULT:.*]] = arith.select %[[NEEDS_SHIFT]], %[[ROUND_SHIFTED]], %[[ROUND]] : f16
+
+// The `x - sign` adjustment does not preserve the sign when we are adjusting the value -1 to -0.
+// CHECK:     %[[COPYSIGN:.*]] = math.copysign %[[RESULT]], %[[VAL_0]] : f16
+
+// CHECK: return %[[COPYSIGN]] : f16

@@ -10,6 +10,9 @@ command interpreter (we refer to this for brevity as the embedded interpreter).
 Of course, in this context it has full access to the LLDB API - with some
 additional conveniences we will call out in the FAQ.
 
+.. contents::
+   :local:
+
 Documentation
 --------------
 

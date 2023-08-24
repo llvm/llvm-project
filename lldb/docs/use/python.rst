@@ -11,6 +11,9 @@ some of these things by going through an example, explaining how to use
 Python scripting to find a bug in a program that searches for text in a
 large binary tree.
 
+.. contents::
+   :local:
+
 The Test Program and Input
 --------------------------
 

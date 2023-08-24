@@ -128,17 +128,10 @@ private:
   /// The module we're currently writing, if any.
   Module *WritingModule = nullptr;
 
-  /// The byte range representing all the UNHASHED_CONTROL_BLOCK.
-  std::pair<uint64_t, uint64_t> UnhashedControlBlockRange;
-  /// The bit offset of the AST block hash blob.
-  uint64_t ASTBlockHashOffset = 0;
-  /// The bit offset of the signature blob.
-  uint64_t SignatureOffset = 0;
-
-  /// The bit offset of the first bit inside the AST_BLOCK.
+  /// The offset of the first bit inside the AST_BLOCK.
   uint64_t ASTBlockStartOffset = 0;
 
-  /// The byte range representing all the AST_BLOCK.
+  /// The range representing all the AST_BLOCK.
   std::pair<uint64_t, uint64_t> ASTBlockRange;
 
   /// The base directory for any relative paths we emit.
@@ -502,11 +495,12 @@ private:
                          StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
-  ASTFileSignature backpatchSignature();
+  ASTFileSignature writeUnhashedControlBlock(Preprocessor &PP,
+                                             ASTContext &Context);
 
   /// Calculate hash of the pcm content.
-  std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  static std::pair<ASTFileSignature, ASTFileSignature>
+  createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
