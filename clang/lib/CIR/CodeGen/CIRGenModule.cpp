@@ -1211,6 +1211,16 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
                  << decl->getDeclKindName() << "' not implemented\n";
     assert(false && "Not yet implemented");
 
+  case Decl::TranslationUnit: {
+    // This path is CIR only - CIRGen handles TUDecls because
+    // of clang-tidy checks, that operate on TU granularity.
+    TranslationUnitDecl *TU = cast<TranslationUnitDecl>(decl);
+    for (DeclContext::decl_iterator D = TU->decls_begin(),
+                                    DEnd = TU->decls_end();
+         D != DEnd; ++D)
+      buildTopLevelDecl(*D);
+    return;
+  }
   case Decl::Var:
   case Decl::Decomposition:
   case Decl::VarTemplateSpecialization:
