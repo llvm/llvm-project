@@ -196,7 +196,7 @@ Error ExecuteStage::execute(InstRef &IR) {
 
   // Reserve a slot in each buffered resource. Also, mark units with
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
-  // be released after MCIS is issued, and all the ReleaseAtCycles for those
+  // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
   bool IsReadyInstruction = HWS.dispatch(IR);
   const Instruction &Inst = *IR.getInstruction();

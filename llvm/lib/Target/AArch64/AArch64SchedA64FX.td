@@ -672,13 +672,13 @@ def : WriteRes<WriteIS,      [A64FXGI2456]> {
 // Divide, W-form
 def : WriteRes<WriteID32,    [A64FXGI4]> {
   let Latency = 39;
-  let ReleaseAtCycles = [39];
+  let ResourceCycles = [39];
 }
 
 // Divide, X-form
 def : WriteRes<WriteID64,    [A64FXGI4]> {
   let Latency = 23;
-  let ReleaseAtCycles = [23];
+  let ResourceCycles = [23];
 }
 
 // Multiply accumulate, W-form
@@ -1254,7 +1254,7 @@ def : InstRW<[A64FXWrite_STUR, ReadAdrBase],
 // FP negate
 def : WriteRes<WriteF,       [A64FXGI03]> {
   let Latency = 4;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 
 // FP arithmetic
@@ -1265,7 +1265,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI03], (instrs FSUBDrr, FSUBHrr)>;
 // FP compare
 def : WriteRes<WriteFCmp,    [A64FXGI03]> {
   let Latency = 4;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 
 // FP Div, Sqrt
@@ -1327,21 +1327,21 @@ def : InstRW<[A64FXWrite_4Cyc_GI03], (instregex "^FCSEL")>;
 // FP convert, from vec to gen reg
 def : WriteRes<WriteFCvt, [A64FXGI03]> {
   let Latency = 9;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 
 // FP move, immed
 // FP move, register
 def : WriteRes<WriteFImm, [A64FXGI0]> {
   let Latency = 4;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 
 // FP transfer, from gen to vec reg
 // FP transfer, from vec to gen reg
 def : WriteRes<WriteFCopy, [A64FXGI0]> {
   let Latency = 4;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 
 def : InstRW<[A64FXWrite_FMOV_GV], (instrs FMOVXDHighr)>;
@@ -2113,14 +2113,14 @@ def : InstRW<[A64FXWrite_None], (instregex "^SETFFR", "^MOVPRFX")>;
 def A64FXWrite_FMAIndexed : SchedWriteRes<[A64FXGI03]> {
   let Latency = 15;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_FMAIndexed], (instregex "^F(MLA|MLS|MUL)_ZZZI")>;
 
 def A64FXWrite_ADR_LSL_Z : SchedWriteRes<[A64FXGI0]> {
   let Latency = 5;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_ADR_LSL_Z], (instregex "^ADR_LSL_Z")>;
 
@@ -2133,7 +2133,7 @@ def : InstRW<[A64FXWrite_ASRD], (instregex "^ASRD_Z")>;
 def A64FXWrite_Reduction4CycB : SchedWriteRes<[A64FXGI03]> {
   let Latency = 46;
   let NumMicroOps = 10;
-  let ReleaseAtCycles = [10];
+  let ResourceCycles = [10];
 }
 def : InstRW<[A64FXWrite_Reduction4CycB],
       (instregex "^(AND|EOR|OR|SADD|SMAX|SMIN|UADD|UMAX|UMIN)V_VPZ_B")>;
@@ -2141,7 +2141,7 @@ def : InstRW<[A64FXWrite_Reduction4CycB],
 def A64FXWrite_Reduction4CycH : SchedWriteRes<[A64FXGI03]> {
   let Latency = 42;
   let NumMicroOps = 9;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 def : InstRW<[A64FXWrite_Reduction4CycH],
       (instregex "^(AND|EOR|OR|SADD|SMAX|SMIN|UADD|UMAX|UMIN)V_VPZ_H")>;
@@ -2149,7 +2149,7 @@ def : InstRW<[A64FXWrite_Reduction4CycH],
 def A64FXWrite_Reduction4CycS : SchedWriteRes<[A64FXGI03]> {
   let Latency = 38;
   let NumMicroOps = 8;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
 }
 def : InstRW<[A64FXWrite_Reduction4CycS],
       (instregex "^(AND|EOR|OR|SADD|SMAX|SMIN|UADD|UMAX|UMIN)V_VPZ_S")>;
@@ -2157,7 +2157,7 @@ def : InstRW<[A64FXWrite_Reduction4CycS],
 def A64FXWrite_Reduction4CycD : SchedWriteRes<[A64FXGI03]> {
   let Latency = 34;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [7];
+  let ResourceCycles = [7];
 }
 def : InstRW<[A64FXWrite_Reduction4CycD],
       (instregex "^(AND|EOR|OR|SADD|SMAX|SMIN|UADD|UMAX|UMIN)V_VPZ_D")>;
@@ -2184,7 +2184,7 @@ def : InstRW<[A64FXWrite_CPYScalar], (instregex "^CPY_ZPmR")>;
 
 def A64FXWrite_CTERM : SchedWriteRes<[A64FXGI24]> {
   let Latency = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_CTERM], (instregex "^CTERM")>;
 
@@ -2202,42 +2202,42 @@ def : InstRW<[A64FXWrite_INCPVector], (instregex "^DECP_Z", "^INCP_Z")>;
 def A64FXWrite_FADDVH : SchedWriteRes<[A64FXGI03]> {
   let Latency = 75;
   let NumMicroOps = 11;
-  let ReleaseAtCycles = [11];
+  let ResourceCycles = [11];
 }
 def : InstRW<[A64FXWrite_FADDVH], (instrs FADDV_VPZ_H)>;
 
 def A64FXWrite_FADDVS : SchedWriteRes<[A64FXGI03]> {
   let Latency = 60;
   let NumMicroOps = 9;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 def : InstRW<[A64FXWrite_FADDVS], (instrs FADDV_VPZ_S)>;
 
 def A64FXWrite_FADDVD : SchedWriteRes<[A64FXGI03]> {
   let Latency = 45;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [7];
+  let ResourceCycles = [7];
 }
 def : InstRW<[A64FXWrite_FADDVD], (instrs FADDV_VPZ_D)>;
 
 def A64FXWrite_FADDAH : SchedWriteRes<[A64FXGI03]> {
   let Latency = 468;
   let NumMicroOps = 63;
-  let ReleaseAtCycles = [63];
+  let ResourceCycles = [63];
 }
 def : InstRW<[A64FXWrite_FADDAH], (instrs FADDA_VPZ_H)>;
 
 def A64FXWrite_FADDAS : SchedWriteRes<[A64FXGI03]> {
   let Latency = 228;
   let NumMicroOps = 31;
-  let ReleaseAtCycles = [31];
+  let ResourceCycles = [31];
 }
 def : InstRW<[A64FXWrite_FADDAS], (instrs FADDA_VPZ_S)>;
 
 def A64FXWrite_FADDAD : SchedWriteRes<[A64FXGI03]> {
   let Latency = 108;
   let NumMicroOps = 15;
-  let ReleaseAtCycles = [15];
+  let ResourceCycles = [15];
 }
 def : InstRW<[A64FXWrite_FADDAD], (instrs FADDA_VPZ_D)>;
 
@@ -2250,53 +2250,53 @@ def : InstRW<[A64FXWrite_FCADDZ], (instregex "^FCADD_Z")>;
 def A64FXWrite_FCMLAZ : SchedWriteRes<[A64FXGI03]> {
   let Latency = 15;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 def : InstRW<[A64FXWrite_FCMLAZ], (instregex "^FCMLA_Z")>;
 
 def A64FXWrite_FDIVH : SchedWriteRes<[A64FXGI0]> {
   let Latency = 134;
-  let ReleaseAtCycles = [134];
+  let ResourceCycles = [134];
 }
 def : InstRW<[A64FXWrite_FDIVH], (instregex "^F(DIVR?|SQRT)_Z.*_H")>;
 
 def A64FXWrite_FDIVS : SchedWriteRes<[A64FXGI0]> {
   let Latency = 98;
-  let ReleaseAtCycles = [98];
+  let ResourceCycles = [98];
 }
 def : InstRW<[A64FXWrite_FDIVS], (instregex "^F(DIVR?|SQRT)_Z.*_S")>;
 
 def A64FXWrite_FDIVD : SchedWriteRes<[A64FXGI0]> {
   let Latency = 154;
-  let ReleaseAtCycles = [154];
+  let ResourceCycles = [154];
 }
 def : InstRW<[A64FXWrite_FDIVD], (instregex "^F(DIVR?|SQRT)_Z.*_D")>;
 
 def A64FXWrite_FMAXVH : SchedWriteRes<[A64FXGI03]> {
   let Latency = 54;
   let NumMicroOps = 11;
-  let ReleaseAtCycles = [11];
+  let ResourceCycles = [11];
 }
 def : InstRW<[A64FXWrite_FMAXVH], (instregex "^F(MAX|MIN)(NM)?V_VPZ_H")>;
 
 def A64FXWrite_FMAXVS : SchedWriteRes<[A64FXGI03]> {
   let Latency = 44;
   let NumMicroOps = 9;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 def : InstRW<[A64FXWrite_FMAXVS], (instregex "^F(MAX|MIN)(NM)?V_VPZ_S")>;
 
 def A64FXWrite_FMAXVD : SchedWriteRes<[A64FXGI03]> {
   let Latency = 34;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [7];
+  let ResourceCycles = [7];
 }
 def : InstRW<[A64FXWrite_FMAXVH], (instregex "^F(MAX|MIN)(NM)?V_VPZ_D")>;
 
 def A64FXWrite_INDEX_RI_BH : SchedWriteRes<[A64FXGI0, A64FXGI2]> {
   let Latency = 17;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2, 2];
+  let ResourceCycles = [2, 2];
 }
 def : InstRW<[A64FXWrite_INDEX_RI_BH], (instregex "^INDEX_(RI|IR)_[BH]")>;
 
@@ -2309,21 +2309,21 @@ def : InstRW<[A64FXWrite_INDEX_RI_SD], (instregex "^INDEX_(RI|IR)_[SD]")>;
 def A64FXWrite_INDEX_II_BH : SchedWriteRes<[A64FXGI0]> {
   let Latency = 13;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_INDEX_II_BH], (instregex "^INDEX_II_[BH]")>;
 
 def A64FXWrite_INDEX_RR_BH : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI3]> {
   let Latency = 17;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [2, 2, 1];
+  let ResourceCycles = [2, 2, 1];
 }
 def : InstRW<[A64FXWrite_INDEX_RR_BH], (instregex "^INDEX_RR_[BH]")>;
 
 def A64FXWrite_INDEX_RR_SD : SchedWriteRes<[A64FXGI0, A64FXGI2]> {
   let Latency = 17;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2, 1];
+  let ResourceCycles = [2, 1];
 }
 def : InstRW<[A64FXWrite_INDEX_RR_SD], (instregex "^INDEX_RR_[SD]")>;
 
@@ -2339,28 +2339,28 @@ def : InstRW<[A64FXWrite_CLAST_R], (instregex "^LAST[AB]_R")>;
 
 def A64FXWrite_GLD_S_ZI : SchedWriteRes<[A64FXGI0, A64FXGI5, A64FXGI6]> {
   let Latency = 19;
-  let ReleaseAtCycles = [2, 4, 4];
+  let ResourceCycles = [2, 4, 4];
 }
 def : InstRW<[A64FXWrite_GLD_S_ZI],
       (instregex "^GLD(FF)?1W_IMM", "^GLD(FF)?1S?[BHW]_S_IMM")>;
 
 def A64FXWrite_GLD_D_ZI : SchedWriteRes<[A64FXGI0, A64FXGI5, A64FXGI6]> {
   let Latency = 16;
-  let ReleaseAtCycles = [1, 2, 2];
+  let ResourceCycles = [1, 2, 2];
 }
 def : InstRW<[A64FXWrite_GLD_D_ZI],
       (instregex "^GLD(FF)?1D_IMM", "^GLD(FF)?1S?[BHW]_D_IMM")>;
 
 def A64FXWrite_GLD_S_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI5, A64FXGI6]> {
   let Latency = 23;
-  let ReleaseAtCycles = [2, 1, 4, 4];
+  let ResourceCycles = [2, 1, 4, 4];
 }
 def : InstRW<[A64FXWrite_GLD_S_RZ],
       (instregex "^GLD(FF)?1W_[^DI]", "^GLD(FF)?1S?[BHW]_S_[^I]")>;
 
 def A64FXWrite_GLD_D_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI5, A64FXGI6]> {
   let Latency = 20;
-  let ReleaseAtCycles = [1, 1, 2, 2];
+  let ResourceCycles = [1, 1, 2, 2];
 }
 def : InstRW<[A64FXWrite_GLD_D_RZ],
       (instregex "^GLD(FF)?1D_[^I]", "^GLD(FF)?1D$", "^GLD(FF)?1S?[BHW]_D_[^I]",
@@ -2369,63 +2369,63 @@ def : InstRW<[A64FXWrite_GLD_D_RZ],
 def A64FXWrite_LD2_BH : SchedWriteRes<[A64FXGI56]> {
   let Latency = 15;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 def : InstRW<[A64FXWrite_LD2_BH], (instregex "^LD2[BH]")>;
 
 def A64FXWrite_LD2_WD_IMM : SchedWriteRes<[A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_LD2_WD_IMM], (instregex "^LD2[WD]_IMM")>;
 
 def A64FXWrite_LD2_WD : SchedWriteRes<[A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 def : InstRW<[A64FXWrite_LD2_WD], (instregex "^LD2[WD]$")>;
 
 def A64FXWrite_LD3_BH : SchedWriteRes<[A64FXGI56]> {
   let Latency = 15;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [13];
+  let ResourceCycles = [13];
 }
 def : InstRW<[A64FXWrite_LD3_BH], (instregex "^LD3[BH]")>;
 
 def A64FXWrite_LD3_WD_IMM : SchedWriteRes<[A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 def : InstRW<[A64FXWrite_LD3_WD_IMM], (instregex "^LD3[WD]_IMM")>;
 
 def A64FXWrite_LD3_WD : SchedWriteRes<[A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 def : InstRW<[A64FXWrite_LD3_WD], (instregex "^LD3[WD]$")>;
 
 def A64FXWrite_LD4_BH : SchedWriteRes<[A64FXGI56]> {
   let Latency = 15;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [17];
+  let ResourceCycles = [17];
 }
 def : InstRW<[A64FXWrite_LD4_BH], (instregex "^LD4[BH]")>;
 
 def A64FXWrite_LD4_WD_IMM : SchedWriteRes<[A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 def : InstRW<[A64FXWrite_LD4_WD_IMM], (instregex "^LD4[WD]_IMM")>;
 
 def A64FXWrite_LD4_WD : SchedWriteRes<[A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [5];
+  let ResourceCycles = [5];
 }
 def : InstRW<[A64FXWrite_LD4_WD], (instregex "^LD4[WD]$")>;
 
@@ -2434,34 +2434,34 @@ def A64FXWrite_PRF : SchedWriteRes<[A64FXGI56]> {
 def : InstRW<[A64FXWrite_PRF], (instregex "^PRF._PR")>;
 
 def A64FXWrite_PRF_W_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI56]> {
-  let ReleaseAtCycles = [2, 1, 4];
+  let ResourceCycles = [2, 1, 4];
 }
 def : InstRW<[A64FXWrite_PRF_W_RZ], (instregex "^PRF._S_[^P]")>;
 
 def A64FXWrite_PRF_W_ZI : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
-  let ReleaseAtCycles = [2, 4];
+  let ResourceCycles = [2, 4];
 }
 def : InstRW<[A64FXWrite_PRF_W_ZI], (instregex "^PRF._S_PZI")>;
 
 def A64FXWrite_PRF_D_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI56]> {
-  let ReleaseAtCycles = [1, 1, 2];
+  let ResourceCycles = [1, 1, 2];
 }
 def : InstRW<[A64FXWrite_PRF_D_RZ], (instregex "^PRF._D_[^P]")>;
 
 def A64FXWrite_PRF_D_ZI : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
-  let ReleaseAtCycles = [1, 2];
+  let ResourceCycles = [1, 2];
 }
 def : InstRW<[A64FXWrite_PRF_D_ZI], (instregex "^PRF._D_PZI")>;
 
 def A64FXWrite_SDIV_S : SchedWriteRes<[A64FXGI0]> {
   let Latency = 114;
-  let ReleaseAtCycles = [114];
+  let ResourceCycles = [114];
 }
 def : InstRW<[A64FXWrite_SDIV_S], (instregex "^[SU]DIVR?.*_S")>;
 
 def A64FXWrite_SDIV_D : SchedWriteRes<[A64FXGI0]> {
   let Latency = 178;
-  let ReleaseAtCycles = [178];
+  let ResourceCycles = [178];
 }
 def : InstRW<[A64FXWrite_SDIV_D], (instregex "^[SU]DIVR?.*_D")>;
 
@@ -2473,14 +2473,14 @@ def : InstRW<[A64FXWrite_SDOT_I], (instregex "^[SU]DOT_ZZZI")>;
 
 def A64FXWrite_SQINC_Scalar : SchedWriteRes<[A64FXGI24]> {
   let Latency = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def : InstRW<[A64FXWrite_SQINC_Scalar], (instregex "^[SU]Q(INC|DEC)[BHWD]_[WX]")>;
 
 def A64FXWrite_SQINCP_X : SchedWriteRes<[A64FXGI24, A64FXGI3]> {
   let Latency = 6;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [3, 1];
+  let ResourceCycles = [3, 1];
 }
 def : InstRW<[A64FXWrite_SQINCP_X], (instregex "^[SU]Q(INC|DEC)P_[WX]")>;
 
@@ -2497,7 +2497,7 @@ def : InstRW<[A64FXWrite_ST1], (instregex "^ST(NT)?1[BHWD]")>;
 def A64FXWrite_SST1_W_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI5, A64FXGI6]> {
   let Latency = 20;
   let NumMicroOps = 8;
-  let ReleaseAtCycles = [8, 8, 8, 8];
+  let ResourceCycles = [8, 8, 8, 8];
 }
 def : InstRW<[A64FXWrite_SST1_W_RZ],
       (instregex "^SST1[BH]_S(_[^I]|$)", "^SST1W(_[^ID]|$)")>;
@@ -2505,7 +2505,7 @@ def : InstRW<[A64FXWrite_SST1_W_RZ],
 def A64FXWrite_SST1_D_RZ : SchedWriteRes<[A64FXGI0, A64FXGI2, A64FXGI5, A64FXGI6]> {
   let Latency = 20;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4, 4, 4, 4];
+  let ResourceCycles = [4, 4, 4, 4];
 }
 def : InstRW<[A64FXWrite_SST1_D_RZ],
       (instregex "^SST1[BHW]_D(_[^I]|$)", "^SST1D(_[^I]|$)")>;
@@ -2513,7 +2513,7 @@ def : InstRW<[A64FXWrite_SST1_D_RZ],
 def A64FXWrite_SST1_W_ZI : SchedWriteRes<[A64FXGI0, A64FXGI5, A64FXGI6]> {
   let Latency = 16;
   let NumMicroOps = 8;
-  let ReleaseAtCycles = [12, 8, 8];
+  let ResourceCycles = [12, 8, 8];
 }
 def : InstRW<[A64FXWrite_SST1_W_ZI],
       (instregex "^SST1[BH]_S_I", "^SST1W_I")>;
@@ -2521,7 +2521,7 @@ def : InstRW<[A64FXWrite_SST1_W_ZI],
 def A64FXWrite_SST1_D_ZI : SchedWriteRes<[A64FXGI0, A64FXGI5, A64FXGI6]> {
   let Latency = 16;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4, 4, 4];
+  let ResourceCycles = [4, 4, 4];
 }
 def : InstRW<[A64FXWrite_SST1_D_ZI],
       (instregex "^SST1[BHW]_D_I", "^SST1D_I")>;
@@ -2529,63 +2529,63 @@ def : InstRW<[A64FXWrite_SST1_D_ZI],
 def A64FXWrite_ST2_BH : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [8, 9];
+  let ResourceCycles = [8, 9];
 }
 def : InstRW<[A64FXWrite_ST2_BH], (instregex "^ST2[BH]")>;
 
 def A64FXWrite_ST2_WD_RI : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2, 2];
+  let ResourceCycles = [2, 2];
 }
 def : InstRW<[A64FXWrite_ST2_WD_RI], (instregex "^ST2[WD]$")>;
 
 def A64FXWrite_ST2_WD_RR : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [2, 3];
+  let ResourceCycles = [2, 3];
 }
 def : InstRW<[A64FXWrite_ST2_WD_RR], (instregex "^ST2[WD]_I")>;
 
 def A64FXWrite_ST3_BH : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 15;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [12, 13];
+  let ResourceCycles = [12, 13];
 }
 def : InstRW<[A64FXWrite_ST3_BH], (instregex "^ST3[BH]")>;
 
 def A64FXWrite_ST3_WD_RI : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [3, 3];
+  let ResourceCycles = [3, 3];
 }
 def : InstRW<[A64FXWrite_ST3_WD_RI], (instregex "^ST3[WD]$")>;
 
 def A64FXWrite_ST3_WD_RR : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [3, 4];
+  let ResourceCycles = [3, 4];
 }
 def : InstRW<[A64FXWrite_ST3_WD_RR], (instregex "^ST3[WD]_I")>;
 
 def A64FXWrite_ST4_BH : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 15;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [16, 17];
+  let ResourceCycles = [16, 17];
 }
 def : InstRW<[A64FXWrite_ST4_BH], (instregex "^ST4[BH]")>;
 
 def A64FXWrite_ST4_WD_RI : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 11;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4, 4];
+  let ResourceCycles = [4, 4];
 }
 def : InstRW<[A64FXWrite_ST4_WD_RI], (instregex "^ST4[WD]$")>;
 
 def A64FXWrite_ST4_WD_RR : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 12;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [4, 5];
+  let ResourceCycles = [4, 5];
 }
 def : InstRW<[A64FXWrite_ST4_WD_RR], (instregex "^ST4[WD]_I")>;
 

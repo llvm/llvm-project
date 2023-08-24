@@ -27,13 +27,13 @@ def ReadInt2Fpu : SchedRead;
 // load + WriteRMW.
 def WriteRMW : SchedWrite;
 
-// Helper to set SchedWrite ExePorts/Latency/ReleaseAtCycles/NumMicroOps.
+// Helper to set SchedWrite ExePorts/Latency/ResourceCycles/NumMicroOps.
 multiclass X86WriteRes<SchedWrite SchedRW,
                        list<ProcResourceKind> ExePorts,
                        int Lat, list<int> Res, int UOps> {
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ReleaseAtCycles = Res;
+    let ResourceCycles = Res;
     let NumMicroOps = UOps;
   }
 }

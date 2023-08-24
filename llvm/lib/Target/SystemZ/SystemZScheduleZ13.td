@@ -92,7 +92,7 @@ let NumMicroOps = 0 in {
   def : WriteRes<VecMul,  [Z13_VecUnit]>;
   def : WriteRes<VecStr,  [Z13_VecUnit]>;
   def : WriteRes<VecXsPm, [Z13_VecUnit]>;
-  foreach Num = 2-5 in { let ReleaseAtCycles = [Num] in {
+  foreach Num = 2-5 in { let ResourceCycles = [Num] in {
     def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z13_FXaUnit]>;
     def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z13_FXbUnit]>;
     def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z13_LSUnit]>;
@@ -104,7 +104,7 @@ let NumMicroOps = 0 in {
     def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z13_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
+  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
 
   def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 }
