@@ -2326,8 +2326,7 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   // Go find this input file.
   BitstreamCursor &Cursor = F.InputFilesCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  if (llvm::Error Err = Cursor.JumpToBit(F.InputFilesOffsetBase +
-                                         F.InputFileOffsets[ID - 1])) {
+  if (llvm::Error Err = Cursor.JumpToBit(F.InputFileOffsets[ID - 1])) {
     // FIXME this drops errors on the floor.
     consumeError(std::move(Err));
   }
@@ -2411,8 +2410,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // Go find this input file.
   BitstreamCursor &Cursor = F.InputFilesCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  if (llvm::Error Err = Cursor.JumpToBit(F.InputFilesOffsetBase +
-                                         F.InputFileOffsets[ID - 1])) {
+  if (llvm::Error Err = Cursor.JumpToBit(F.InputFileOffsets[ID - 1])) {
     // FIXME this drops errors on the floor.
     consumeError(std::move(Err));
   }
@@ -2790,7 +2788,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           Error("malformed block record in AST file");
           return Failure;
         }
-        F.InputFilesOffsetBase = F.InputFilesCursor.GetCurrentBitNo();
         continue;
 
       case OPTIONS_BLOCK_ID:
@@ -5331,7 +5328,6 @@ bool ASTReader::readASTFileControlBlock(
   bool NeedsSystemInputFiles = Listener.needsSystemInputFileVisitation();
   bool NeedsImports = Listener.needsImportVisitation();
   BitstreamCursor InputFilesCursor;
-  uint64_t InputFilesOffsetBase = 0;
 
   RecordData Record;
   std::string ModuleDir;
@@ -5367,7 +5363,6 @@ bool ASTReader::readASTFileControlBlock(
         if (NeedsInputFiles &&
             ReadBlockAbbrevs(InputFilesCursor, INPUT_FILES_BLOCK_ID))
           return true;
-        InputFilesOffsetBase = InputFilesCursor.GetCurrentBitNo();
         break;
 
       default:
@@ -5440,8 +5435,7 @@ bool ASTReader::readASTFileControlBlock(
 
         BitstreamCursor &Cursor = InputFilesCursor;
         SavedStreamPosition SavedPosition(Cursor);
-        if (llvm::Error Err =
-                Cursor.JumpToBit(InputFilesOffsetBase + InputFileOffs[I])) {
+        if (llvm::Error Err = Cursor.JumpToBit(InputFileOffs[I])) {
           // FIXME this drops errors on the floor.
           consumeError(std::move(Err));
         }
