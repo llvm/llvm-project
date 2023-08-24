@@ -469,8 +469,6 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printOpen();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printClose();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
-extern "C" MLIR_CRUNNERUTILS_EXPORT void printF16(uint16_t bits);  // bits!
-extern "C" MLIR_CRUNNERUTILS_EXPORT void printBF16(uint16_t bits); // bits!
 
 //===----------------------------------------------------------------------===//
 // Small runtime support library for timing execution and printing GFLOPS

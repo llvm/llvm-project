@@ -305,31 +305,40 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Type operandETy = getElementTypeOrSelf(operandTy);
   Type resultETy = getElementTypeOrSelf(resultTy);
 
-  if (!operandETy.isF32() || !resultETy.isF32()) {
-    return rewriter.notifyMatchFailure(op, "not a roundeven of f32.");
+  if (!isa<FloatType>(operandETy) || !isa<FloatType>(resultETy)) {
+    return rewriter.notifyMatchFailure(op, "not a roundeven of f16 or f32.");
   }
 
-  Type i32Ty = b.getI32Type();
-  Type f32Ty = b.getF32Type();
-  if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-    i32Ty = shapedTy.clone(i32Ty);
-    f32Ty = shapedTy.clone(f32Ty);
+  Type fTy = operandTy;
+  Type iTy = rewriter.getIntegerType(operandETy.getIntOrFloatBitWidth());
+  if (auto shapedTy = dyn_cast<ShapedType>(fTy)) {
+    iTy = shapedTy.clone(iTy);
   }
 
-  Value c1Float = createFloatConst(loc, f32Ty, 1.0, b);
-  Value c0 = createIntConst(loc, i32Ty, 0, b);
-  Value c1 = createIntConst(loc, i32Ty, 1, b);
-  Value cNeg1 = createIntConst(loc, i32Ty, -1, b);
-  Value c23 = createIntConst(loc, i32Ty, 23, b);
-  Value c31 = createIntConst(loc, i32Ty, 31, b);
-  Value c127 = createIntConst(loc, i32Ty, 127, b);
-  Value c2To22 = createIntConst(loc, i32Ty, 1 << 22, b);
-  Value c23Mask = createIntConst(loc, i32Ty, (1 << 23) - 1, b);
-  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
+  unsigned bitWidth = operandETy.getIntOrFloatBitWidth();
+  // The width returned by getFPMantissaWidth includes the integer bit.
+  unsigned mantissaWidth =
+      llvm::cast<FloatType>(operandETy).getFPMantissaWidth() - 1;
+  unsigned exponentWidth = bitWidth - mantissaWidth - 1;
 
-  Value operandBitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+  // The names of the variables correspond to f32.
+  // f64: 1 bit sign | 11 bits exponent | 52 bits mantissa.
+  // f32: 1 bit sign | 8 bits exponent  | 23 bits mantissa.
+  // f16: 1 bit sign | 5 bits exponent  | 10 bits mantissa.
+  Value c1Float = createFloatConst(loc, fTy, 1.0, b);
+  Value c0 = createIntConst(loc, iTy, 0, b);
+  Value c1 = createIntConst(loc, iTy, 1, b);
+  Value cNeg1 = createIntConst(loc, iTy, -1, b);
+  Value c23 = createIntConst(loc, iTy, mantissaWidth, b);
+  Value c31 = createIntConst(loc, iTy, bitWidth - 1, b);
+  Value c127 = createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b);
+  Value c2To22 = createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b);
+  Value c23Mask = createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b);
+  Value expMask = createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b);
+
+  Value operandBitcast = b.create<arith::BitcastOp>(iTy, operand);
   Value round = b.create<math::RoundOp>(operand);
-  Value roundBitcast = b.create<arith::BitcastOp>(i32Ty, round);
+  Value roundBitcast = b.create<arith::BitcastOp>(iTy, round);
 
   // Get biased exponents for operand and round(operand)
   Value operandExp = b.create<arith::AndIOp>(
@@ -340,7 +349,7 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Value roundBiasedExp = b.create<arith::SubIOp>(roundExp, c127);
 
   auto safeShiftRight = [&](Value x, Value shift) -> Value {
-    // Clamp shift to valid range [0, 31] to avoid undefined behavior
+    // Clamp shift to valid range [0, bitwidth - 1] to avoid undefined behavior
     Value clampedShift = b.create<arith::MaxSIOp>(shift, c0);
     clampedShift = b.create<arith::MinSIOp>(clampedShift, c31);
     return b.create<arith::ShRUIOp>(x, clampedShift);

@@ -191,6 +191,7 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             void **Args, int64_t *ArgSizes,
                                             int64_t *ArgTypes,
                                             map_var_info_t *ArgNames,
+                                            void **ArgMappers) {
   
   targetDataMapper<AsyncInfoTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
