@@ -701,9 +701,13 @@ void CoroCloner::salvageDebugInfo() {
   SmallVector<DbgVariableIntrinsic *, 8> Worklist =
       collectDbgVariableIntrinsics(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
+
+  // Only 64-bit ABIs have a register we can refer to with the entry value.
+  bool UseEntryValue =
+      llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
     coro::salvageDebugInfo(ArgToAllocaMap, DVI, Shape.OptimizeFrame,
-                           false /*IsEntryPoint*/);
+                           UseEntryValue);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1997,7 +2001,7 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   for (auto *DDI : collectDbgVariableIntrinsics(F))
     coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
-                           true /*IsEntryPoint*/);
+                           false /*UseEntryValue*/);
 
   return Shape;
 }
