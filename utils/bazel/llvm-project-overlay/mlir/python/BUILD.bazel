@@ -557,11 +557,11 @@ gentbl_filegroup(
             "mlir/dialects/_omp_ops_gen.py",
         ),
     ],
-    tblgen = "//third_party/llvm/llvm-project/mlir:mlir-tblgen",
+    tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/OpenMPOps.td",
     deps = [
-        "//third_party/llvm/llvm-project/mlir:OpBaseTdFiles",
-        "//third_party/llvm/llvm-project/mlir:OpenMPOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:OpenMPOpsTdFiles",
     ],
 )
 
