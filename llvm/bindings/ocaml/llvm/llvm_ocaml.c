@@ -1210,18 +1210,6 @@ value llvm_const_nuw_mul(value LHS, value RHS) {
 }
 
 /* llvalue -> llvalue -> llvalue */
-value llvm_const_and(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstAnd(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_or(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstOr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
   return to_val(Value);

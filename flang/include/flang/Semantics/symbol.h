@@ -82,6 +82,35 @@ private:
   bool isExplicitBindName_{false};
 };
 
+class OpenACCRoutineInfo {
+public:
+  bool isSeq() const { return isSeq_; }
+  void set_isSeq(bool value = true) { isSeq_ = value; }
+  bool isVector() const { return isVector_; }
+  void set_isVector(bool value = true) { isVector_ = value; }
+  bool isWorker() const { return isWorker_; }
+  void set_isWorker(bool value = true) { isWorker_ = value; }
+  bool isGang() const { return isGang_; }
+  void set_isGang(bool value = true) { isGang_ = value; }
+  unsigned gangDim() const { return gangDim_; }
+  void set_gangDim(unsigned value) { gangDim_ = value; }
+  bool isNohost() const { return isNohost_; }
+  void set_isNohost(bool value = true) { isNohost_ = value; }
+  const std::string *bindName() const {
+    return bindName_ ? &*bindName_ : nullptr;
+  }
+  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
+
+private:
+  bool isSeq_{false};
+  bool isVector_{false};
+  bool isWorker_{false};
+  bool isGang_{false};
+  unsigned gangDim_{0};
+  bool isNohost_{false};
+  std::optional<std::string> bindName_;
+};
+
 // A subroutine or function definition, or a subprogram interface defined
 // in an INTERFACE block as part of the definition of a dummy procedure
 // or a procedure pointer (with just POINTER).
@@ -137,6 +166,12 @@ public:
   void set_cudaClusterDims(std::vector<std::int64_t> &&x) {
     cudaClusterDims_ = std::move(x);
   }
+  const std::vector<OpenACCRoutineInfo> &openACCRoutineInfos() const {
+    return openACCRoutineInfos_;
+  }
+  void add_openACCRoutineInfo(OpenACCRoutineInfo info) {
+    openACCRoutineInfos_.push_back(info);
+  }
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
@@ -154,6 +189,8 @@ private:
   std::optional<common::CUDASubprogramAttrs> cudaSubprogramAttrs_;
   // CUDA LAUNCH_BOUNDS(...) & CLUSTER_DIMS(...) from prefix
   std::vector<std::int64_t> cudaLaunchBounds_, cudaClusterDims_;
+  // OpenACC routine information
+  std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);

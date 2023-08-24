@@ -223,6 +223,8 @@ public:
 
   // Map of predicates to their subtarget features.
   SubtargetFeatureInfoMap SubtargetFeatures;
+
+  std::map<std::string, unsigned> HwModes;
 };
 } // namespace llvm
 

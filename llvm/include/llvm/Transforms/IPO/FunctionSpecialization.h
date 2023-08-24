@@ -225,6 +225,7 @@ class FunctionSpecializer {
   SmallPtrSet<Function *, 32> Specializations;
   SmallPtrSet<Function *, 32> FullySpecialized;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
+  DenseMap<Function *, unsigned> FunctionGrowth;
 
 public:
   FunctionSpecializer(

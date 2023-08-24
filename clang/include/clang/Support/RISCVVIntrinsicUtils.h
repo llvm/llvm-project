@@ -483,7 +483,8 @@ public:
 enum RVVRequire : uint8_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
-  RVV_REQ_Xsfvcp = 1 << 1,
+  RVV_REQ_ZvfhminOrZvfh = 1 << 1,
+  RVV_REQ_Xsfvcp = 1 << 2,
 
   LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Xsfvcp)
 };

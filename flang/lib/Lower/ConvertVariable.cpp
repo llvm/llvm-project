@@ -1470,8 +1470,12 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   // would add too much complexity to hlfir.declare to support this case, and
   // this would bring very little (the only point being debug info, that are not
   // yet emitted) since alias analysis is meaningless for those.
+  // Commonblock names are not variables, but in some lowerings (like OpenMP) it
+  // is useful to maintain the address of the commonblock in an MLIR value and
+  // query it. hlfir.declare need not be created for these.
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      !Fortran::semantics::IsProcedure(sym)) {
+      !Fortran::semantics::IsProcedure(sym) &&
+      !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
@@ -1521,7 +1525,8 @@ void Fortran::lower::genDeclareSymbol(
     Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
     const fir::ExtendedValue &exv, bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      !Fortran::semantics::IsProcedure(sym)) {
+      !Fortran::semantics::IsProcedure(sym) &&
+      !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =

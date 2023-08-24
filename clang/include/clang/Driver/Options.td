@@ -5887,7 +5887,7 @@ def fbinutils_version_EQ : Joined<["-"], "fbinutils-version=">,
   "generated assembly will consider GNU as support. 'none' means that all ELF "
   "features can be used, regardless of binutils support. Defaults to 2.26.">;
 def fuse_ld_EQ : Joined<["-"], "fuse-ld=">, Group<f_Group>,
-  Flags<[LinkOption]>, Visibility<[ClangOption, CLOption]>;
+  Flags<[LinkOption]>, Visibility<[ClangOption, FlangOption, CLOption]>;
 def ld_path_EQ : Joined<["--"], "ld-path=">, Group<Link_Group>;
 
 defm align_labels : BooleanFFlag<"align-labels">, Group<clang_ignored_gcc_optimization_f_Group>;

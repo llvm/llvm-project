@@ -4165,6 +4165,14 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   });
 }
 
+void ScalarEvolution::getPoisonGeneratingValues(
+    SmallPtrSetImpl<const Value *> &Result, const SCEV *S) {
+  SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ false);
+  visitAll(S, PC);
+  for (const SCEVUnknown *SU : PC.MaybePoison)
+    Result.insert(SU->getValue());
+}
+
 const SCEV *
 ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
                                          SmallVectorImpl<const SCEV *> &Ops) {

@@ -736,8 +736,7 @@ void ThreadList::Update(ThreadList &rhs) {
   if (this != &rhs) {
     // Lock both mutexes to make sure neither side changes anyone on us while
     // the assignment occurs
-    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> guard(
-        GetMutex(), rhs.GetMutex());
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> guard(GetMutex(), rhs.GetMutex());
 
     m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;
@@ -780,6 +779,10 @@ void ThreadList::Flush() {
   collection::iterator pos, end = m_threads.end();
   for (pos = m_threads.begin(); pos != end; ++pos)
     (*pos)->Flush();
+}
+
+std::recursive_mutex &ThreadList::GetMutex() const {
+  return m_process->m_thread_mutex;
 }
 
 ThreadList::ExpressionExecutionThreadPusher::ExpressionExecutionThreadPusher(

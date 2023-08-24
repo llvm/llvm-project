@@ -46,20 +46,15 @@ namespace __sanitizer {
 
 // Attempts to demangle the name via __cxa_demangle from __cxxabiv1.
 const char *DemangleCXXABI(const char *name) {
-  // __cxa_demangle aggressively insists on allocating memory.
+  // FIXME: __cxa_demangle aggressively insists on allocating memory.
   // There's not much we can do about that, short of providing our
   // own demangler (libc++abi's implementation could be adapted so that
-  // it does not allocate). For now, we just call it anyway, and use
-  // InternalAlloc to prevent lsan error.
-  if (&__cxxabiv1::__cxa_demangle) {
-    if (char *demangled_name = __cxxabiv1::__cxa_demangle(name, 0, 0, 0)) {
-      size_t size = internal_strlen(demangled_name) + 1;
-      char *buf = (char *)InternalAlloc(size);
-      internal_memcpy(buf, demangled_name, size);
-      free(demangled_name);
-      return buf;
-    }
-  }
+  // it does not allocate). For now, we just call it anyway, and we leak
+  // the returned value.
+  if (&__cxxabiv1::__cxa_demangle)
+    if (const char *demangled_name =
+          __cxxabiv1::__cxa_demangle(name, 0, 0, 0))
+      return demangled_name;
 
   return name;
 }

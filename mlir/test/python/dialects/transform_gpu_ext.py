@@ -10,7 +10,7 @@ def run(f):
         module = Module.create()
         with InsertionPoint(module.body):
             sequence = transform.SequenceOp(
-                transform.FailurePropagationMode.PROPAGATE,
+                transform.FailurePropagationMode.Propagate,
                 [],
                 transform.AnyOpType.get(),
             )

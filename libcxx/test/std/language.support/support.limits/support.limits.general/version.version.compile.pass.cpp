@@ -189,6 +189,7 @@
     __cpp_lib_to_address                             201711L [C++20]
     __cpp_lib_to_array                               201907L [C++20]
     __cpp_lib_to_chars                               201611L [C++17]
+                                                     202306L [C++26]
     __cpp_lib_to_string                              202306L [C++23]
     __cpp_lib_to_underlying                          202102L [C++23]
     __cpp_lib_transformation_trait_aliases           201304L [C++14]
@@ -6954,8 +6955,8 @@
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++26"
 #   endif
-#   if __cpp_lib_to_chars != 201611L
-#     error "__cpp_lib_to_chars should have the value 201611L in c++26"
+#   if __cpp_lib_to_chars != 202306L
+#     error "__cpp_lib_to_chars should have the value 202306L in c++26"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_to_chars

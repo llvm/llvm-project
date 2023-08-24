@@ -1257,19 +1257,6 @@ Constant *llvm::ConstantFoldCompareInstOperands(
       }
     }
 
-    // icmp eq (or x, y), 0 -> (icmp eq x, 0) & (icmp eq y, 0)
-    // icmp ne (or x, y), 0 -> (icmp ne x, 0) | (icmp ne y, 0)
-    if ((Predicate == ICmpInst::ICMP_EQ || Predicate == ICmpInst::ICMP_NE) &&
-        CE0->getOpcode() == Instruction::Or && Ops1->isNullValue()) {
-      Constant *LHS = ConstantFoldCompareInstOperands(
-          Predicate, CE0->getOperand(0), Ops1, DL, TLI);
-      Constant *RHS = ConstantFoldCompareInstOperands(
-          Predicate, CE0->getOperand(1), Ops1, DL, TLI);
-      unsigned OpC =
-        Predicate == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
-      return ConstantFoldBinaryOpOperands(OpC, LHS, RHS, DL);
-    }
-
     // Convert pointer comparison (base+offset1) pred (base+offset2) into
     // offset1 pred offset2, for the case where the offset is inbounds. This
     // only works for equality and unsigned comparison, as inbounds permits

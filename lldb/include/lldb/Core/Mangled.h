@@ -43,7 +43,8 @@ public:
     eManglingSchemeMSVC,
     eManglingSchemeItanium,
     eManglingSchemeRustV0,
-    eManglingSchemeD
+    eManglingSchemeD,
+    eManglingSchemeSwift,
   };
 
   /// Default constructor.

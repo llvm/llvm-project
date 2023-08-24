@@ -942,6 +942,12 @@ void TargetLoweringBase::initActions() {
 
   setOperationAction(ISD::GET_FPENV_MEM, MVT::Other, Expand);
   setOperationAction(ISD::SET_FPENV_MEM, MVT::Other, Expand);
+
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::GET_FPMODE, VT, Expand);
+    setOperationAction(ISD::SET_FPMODE, VT, Expand);
+  }
+  setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,

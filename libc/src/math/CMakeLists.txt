@@ -79,6 +79,7 @@ add_math_entrypoint_object(coshf)
 
 add_math_entrypoint_object(erff)
 
+add_math_entrypoint_object(exp)
 add_math_entrypoint_object(expf)
 
 add_math_entrypoint_object(exp2f)

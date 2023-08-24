@@ -680,7 +680,7 @@ getSymbols(MemoryBufferRef Buf, uint16_t Index, raw_ostream &SymNames,
 static Expected<std::vector<MemberData>>
 computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, bool Deterministic,
-                  bool NeedSymbols, SymMap *SymMap,
+                  SymtabWritingMode NeedSymbols, SymMap *SymMap,
                   ArrayRef<NewArchiveMember> NewMembers) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
 
@@ -796,7 +796,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     Out.flush();
 
     std::vector<unsigned> Symbols;
-    if (NeedSymbols) {
+    if (NeedSymbols != SymtabWritingMode::NoSymtab) {
       Expected<std::vector<unsigned>> SymbolsOrErr =
           getSymbols(Buf, Index, SymNames, SymMap, HasObject);
       if (!SymbolsOrErr)
@@ -860,7 +860,8 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
 
 static Error writeArchiveToStream(raw_ostream &Out,
                                   ArrayRef<NewArchiveMember> NewMembers,
-                                  bool WriteSymtab, object::Archive::Kind Kind,
+                                  SymtabWritingMode WriteSymtab,
+                                  object::Archive::Kind Kind,
                                   bool Deterministic, bool Thin, bool IsEC) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
@@ -897,6 +898,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
   uint64_t LastMemberHeaderOffset = 0;
   uint64_t NumSyms = 0;
   uint64_t NumSyms32 = 0; // Store symbol number of 32-bit member files.
+  bool ShouldWriteSymtab = WriteSymtab != SymtabWritingMode::NoSymtab;
 
   for (const auto &M : Data) {
     // Record the start of the member's offset
@@ -910,7 +912,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // symbols; the second global symbol table does the same for 64-bit file
     // members. As a big archive can have both 32-bit and 64-bit file members,
     // we need to know the number of symbols in each symbol table individually.
-    if (isAIXBigArchive(Kind) && WriteSymtab) {
+    if (isAIXBigArchive(Kind) && ShouldWriteSymtab) {
       Expected<bool> Is64BitOrErr = is64BitSymbolicFile(M.Data);
       if (Error E = Is64BitOrErr.takeError())
         return E;
@@ -924,7 +926,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
 
   // The symbol table is put at the end of the big archive file. The symbol
   // table is at the start of the archive file for other archive formats.
-  if (WriteSymtab && !is64BitKind(Kind)) {
+  if (ShouldWriteSymtab && !is64BitKind(Kind)) {
     // We assume 32-bit offsets to see if 32-bit symbols are possible or not.
     HeadersSize = computeHeadersSize(Kind, Data.size(), StringTableSize,
                                      NumSyms, SymNamesBuf.size(),
@@ -962,7 +964,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
     Out << "!<arch>\n";
 
   if (!isAIXBigArchive(Kind)) {
-    if (WriteSymtab) {
+    if (ShouldWriteSymtab) {
       if (!HeadersSize)
         HeadersSize = computeHeadersSize(
             Kind, Data.size(), StringTableSize, NumSyms, SymNamesBuf.size(),
@@ -978,7 +980,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
       Out << StringTableMember.Header << StringTableMember.Data
           << StringTableMember.Padding;
 
-    if (WriteSymtab && SymMap.ECMap.size())
+    if (ShouldWriteSymtab && SymMap.ECMap.size())
       writeECSymbols(Out, Kind, Deterministic, Data, SymMap);
 
     for (const MemberData &M : Data)
@@ -1017,7 +1019,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
     raw_svector_ostream SymNames32(SymNamesBuf32);
     raw_svector_ostream SymNames64(SymNamesBuf64);
 
-    if (WriteSymtab && NumSyms)
+    if (ShouldWriteSymtab && NumSyms)
       // Generate the symbol names for the members.
       for (const NewArchiveMember &M : NewMembers) {
         MemoryBufferRef Buf = M.Buf->getMemBufferRef();
@@ -1041,11 +1043,15 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // the offset to the 32-bit global symbol table, and the 'GlobSym64Offset'
     // contains the offset to the 64-bit global symbol table.
     uint64_t GlobalSymbolOffset =
-        (WriteSymtab && NumSyms32 > 0) ? MemberTableEndOffset : 0;
+        (ShouldWriteSymtab &&
+         (WriteSymtab != SymtabWritingMode::BigArchive64) && NumSyms32 > 0)
+            ? MemberTableEndOffset
+            : 0;
 
     uint64_t GlobalSymbolOffset64 = 0;
     uint64_t NumSyms64 = NumSyms - NumSyms32;
-    if (WriteSymtab && NumSyms64 > 0) {
+    if (ShouldWriteSymtab && (WriteSymtab != SymtabWritingMode::BigArchive32) &&
+        NumSyms64 > 0) {
       if (GlobalSymbolOffset == 0)
         GlobalSymbolOffset64 = MemberTableEndOffset;
       else
@@ -1095,7 +1101,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
         Out << '\0'; // Name table must be tail padded to an even number of
                      // bytes.
 
-      if (WriteSymtab) {
+      if (ShouldWriteSymtab) {
         // Write global symbol table for 32-bit file members.
         if (GlobalSymbolOffset) {
           writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf32,
@@ -1121,7 +1127,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
 }
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
-                   bool WriteSymtab, object::Archive::Kind Kind,
+                   SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf, bool IsEC) {
   Expected<sys::fs::TempFile> Temp =
@@ -1153,9 +1159,9 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers, bool WriteSymtab,
-                     object::Archive::Kind Kind, bool Deterministic,
-                     bool Thin) {
+writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
+                     SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
+                     bool Deterministic, bool Thin) {
   SmallVector<char, 0> ArchiveBufferVector;
   raw_svector_ostream ArchiveStream(ArchiveBufferVector);
 

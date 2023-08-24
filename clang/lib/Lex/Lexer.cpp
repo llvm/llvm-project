@@ -705,6 +705,22 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
       // directive or it was one that can't occur in the preamble at this
       // point. Roll back the current token to the location of the '#'.
       TheTok = HashTok;
+    } else if (TheTok.isAtStartOfLine() &&
+               TheTok.getKind() == tok::raw_identifier &&
+               TheTok.getRawIdentifier() == "module" &&
+               LangOpts.CPlusPlusModules) {
+      // The initial global module fragment introducer "module;" is part of
+      // the preamble, which runs up to the module declaration "module foo;".
+      Token ModuleTok = TheTok;
+      do {
+        TheLexer.LexFromRawLexer(TheTok);
+      } while (TheTok.getKind() == tok::comment);
+      if (TheTok.getKind() != tok::semi) {
+        // Not global module fragment, roll back.
+        TheTok = ModuleTok;
+        break;
+      }
+      continue;
     }
 
     // We hit a token that we don't recognize as being in the
@@ -2009,11 +2025,53 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   }
 
   // C++11 [lex.ext]p10, [usrlit.suffix]p1: A program containing a ud-suffix
-  // that does not start with an underscore is ill-formed. We assume a suffix
-  // beginning with a UCN or UTF-8 character is more likely to be a ud-suffix
-  // than a macro, however, and accept that.
-  if (!Consumed)
+  // that does not start with an underscore is ill-formed. As a conforming
+  // extension, we treat all such suffixes as if they had whitespace before
+  // them. We assume a suffix beginning with a UCN or UTF-8 character is more
+  // likely to be a ud-suffix than a macro, however, and accept that.
+  if (!Consumed) {
+    bool IsUDSuffix = false;
+    if (C == '_')
+      IsUDSuffix = true;
+    else if (IsStringLiteral && LangOpts.CPlusPlus14) {
+      // In C++1y, we need to look ahead a few characters to see if this is a
+      // valid suffix for a string literal or a numeric literal (this could be
+      // the 'operator""if' defining a numeric literal operator).
+      const unsigned MaxStandardSuffixLength = 3;
+      char Buffer[MaxStandardSuffixLength] = { C };
+      unsigned Consumed = Size;
+      unsigned Chars = 1;
+      while (true) {
+        unsigned NextSize;
+        char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize, LangOpts);
+        if (!isAsciiIdentifierContinue(Next)) {
+          // End of suffix. Check whether this is on the allowed list.
+          const StringRef CompleteSuffix(Buffer, Chars);
+          IsUDSuffix =
+              StringLiteralParser::isValidUDSuffix(LangOpts, CompleteSuffix);
+          break;
+        }
+
+        if (Chars == MaxStandardSuffixLength)
+          // Too long: can't be a standard suffix.
+          break;
+
+        Buffer[Chars++] = Next;
+        Consumed += NextSize;
+      }
+    }
+
+    if (!IsUDSuffix) {
+      if (!isLexingRawMode())
+        Diag(CurPtr, LangOpts.MSVCCompat
+                         ? diag::ext_ms_reserved_user_defined_literal
+                         : diag::ext_reserved_user_defined_literal)
+            << FixItHint::CreateInsertion(getSourceLocation(CurPtr), " ");
+      return CurPtr;
+    }
+
     CurPtr = ConsumeChar(CurPtr, Size, Result);
+  }
 
   Result.setFlag(Token::HasUDSuffix);
   while (true) {

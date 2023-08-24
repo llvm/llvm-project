@@ -447,8 +447,9 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   }
   case Predicates::ConstraintQuestion: {
     auto *cstQuestion = cast<ConstraintQuestion>(question);
-    builder.create<pdl_interp::ApplyConstraintOp>(loc, cstQuestion->getName(),
-                                                  args, success, failure);
+    builder.create<pdl_interp::ApplyConstraintOp>(
+        loc, cstQuestion->getName(), args, cstQuestion->getIsNegated(), success,
+        failure);
     break;
   }
   default:

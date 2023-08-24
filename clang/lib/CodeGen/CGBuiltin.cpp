@@ -54,6 +54,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -9515,7 +9516,7 @@ Value *CodeGenFunction::EmitTileslice(Value *Offset, Value *Base) {
   return Builder.CreateAdd(Base, CastOffset, "tileslice");
 }
 
-Value *CodeGenFunction::EmitSMELd1St1(SVETypeFlags TypeFlags,
+Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
   Ops[3] = EmitSVEPredicateCast(
@@ -9545,7 +9546,7 @@ Value *CodeGenFunction::EmitSMELd1St1(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, NewOps);
 }
 
-Value *CodeGenFunction::EmitSMEReadWrite(SVETypeFlags TypeFlags,
+Value *CodeGenFunction::EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
                                          SmallVectorImpl<Value *> &Ops,
                                          unsigned IntID) {
   auto *VecTy = getSVEType(TypeFlags);
@@ -9562,7 +9563,7 @@ Value *CodeGenFunction::EmitSMEReadWrite(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
-Value *CodeGenFunction::EmitSMEZero(SVETypeFlags TypeFlags,
+Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
                                     SmallVectorImpl<Value *> &Ops,
                                     unsigned IntID) {
   // svzero_za() intrinsic zeros the entire za tile and has no paramters.
@@ -9572,7 +9573,7 @@ Value *CodeGenFunction::EmitSMEZero(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
-Value *CodeGenFunction::EmitSMELdrStr(SVETypeFlags TypeFlags,
+Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
   Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
@@ -13324,16 +13325,15 @@ Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
 }
 
 Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
-  return EmitX86CpuSupports(llvm::X86::getCpuSupportsMask(FeatureStrs));
+  uint64_t Mask = llvm::X86::getCpuSupportsMask(FeatureStrs);
+  std::array<uint32_t, 4> FeatureMask{Lo_32(Mask), Hi_32(Mask), 0, 0};
+  return EmitX86CpuSupports(FeatureMask);
 }
 
-llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
-  uint32_t Features1 = Lo_32(FeaturesMask);
-  uint32_t Features2 = Hi_32(FeaturesMask);
-
+llvm::Value *
+CodeGenFunction::EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask) {
   Value *Result = Builder.getTrue();
-
-  if (Features1 != 0) {
+  if (FeatureMask[0] != 0) {
     // Matching the struct layout from the compiler-rt/libgcc structure that is
     // filled in:
     // unsigned int __cpu_vendor;
@@ -13356,22 +13356,26 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
                                                 CharUnits::fromQuantity(4));
 
     // Check the value of the bit corresponding to the feature requested.
-    Value *Mask = Builder.getInt32(Features1);
+    Value *Mask = Builder.getInt32(FeatureMask[0]);
     Value *Bitset = Builder.CreateAnd(Features, Mask);
     Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
     Result = Builder.CreateAnd(Result, Cmp);
   }
 
-  if (Features2 != 0) {
-    llvm::Constant *CpuFeatures2 = CGM.CreateRuntimeVariable(Int32Ty,
-                                                             "__cpu_features2");
-    cast<llvm::GlobalValue>(CpuFeatures2)->setDSOLocal(true);
-
-    Value *Features = Builder.CreateAlignedLoad(Int32Ty, CpuFeatures2,
-                                                CharUnits::fromQuantity(4));
-
+  llvm::Type *ATy = llvm::ArrayType::get(Int32Ty, 3);
+  llvm::Constant *CpuFeatures2 =
+      CGM.CreateRuntimeVariable(ATy, "__cpu_features2");
+  cast<llvm::GlobalValue>(CpuFeatures2)->setDSOLocal(true);
+  for (int i = 1; i != 4; ++i) {
+    const uint32_t M = FeatureMask[i];
+    if (!M)
+      continue;
+    Value *Idxs[] = {Builder.getInt32(0), Builder.getInt32(i - 1)};
+    Value *Features = Builder.CreateAlignedLoad(
+        Int32Ty, Builder.CreateGEP(ATy, CpuFeatures2, Idxs),
+        CharUnits::fromQuantity(4));
     // Check the value of the bit corresponding to the feature requested.
-    Value *Mask = Builder.getInt32(Features2);
+    Value *Mask = Builder.getInt32(M);
     Value *Bitset = Builder.CreateAnd(Features, Mask);
     Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
     Result = Builder.CreateAnd(Result, Cmp);

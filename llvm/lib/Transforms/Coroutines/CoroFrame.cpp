@@ -1883,7 +1883,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
           coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
-                                 true /*IsEntryPoint*/);
+                                 false /*UseEntryValue*/);
         }
       }
 
@@ -2819,7 +2819,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool IsEntryPoint) {
+    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool UseEntryValue) {
   Function *F = DVI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
@@ -2874,7 +2874,7 @@ void coro::salvageDebugInfo(
   // For the EntryPoint funclet, don't use EntryValues. This funclet can be
   // inlined, which would remove the guarantee that this intrinsic targets an
   // Argument.
-  if (IsSwiftAsyncArg && !IsEntryPoint && !Expr->isEntryValue())
+  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue())
     Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve

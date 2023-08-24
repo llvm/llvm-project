@@ -197,6 +197,7 @@ public:
   template <typename U>
   constexpr std::optional<U> dyn_cast() const;
 
+  std::string str() const;
   void print(llvm::raw_ostream &os) const;
   void print(AsmPrinter &printer) const;
   void dump() const;

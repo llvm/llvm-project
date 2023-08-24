@@ -38,7 +38,7 @@ struct NVVMAttachTarget
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registerNVVMTarget(registry);
+    registry.insert<NVVM::NVVMDialect>();
   }
 };
 } // namespace
@@ -53,7 +53,7 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
     addFlag("fast");
   if (ftzFlag)
     addFlag("ftz");
-  if (flags.size())
+  if (!flags.empty())
     return builder.getDictionaryAttr(flags);
   return nullptr;
 }
@@ -64,7 +64,7 @@ void NVVMAttachTarget::runOnOperation() {
   SmallVector<StringRef> filesToLink(libs.begin(), libs.end());
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
-      filesToLink.size() ? builder.getStrArrayAttr(filesToLink) : nullptr);
+      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())

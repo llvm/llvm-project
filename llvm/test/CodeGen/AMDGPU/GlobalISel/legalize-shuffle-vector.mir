@@ -161,11 +161,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[COPY]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, undef)

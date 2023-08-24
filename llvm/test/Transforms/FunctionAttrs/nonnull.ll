@@ -251,9 +251,8 @@ define ptr @test10(ptr %a, i64 %n) {
 ; char* test11(char *p) {
 ;   return p? p: nonnull();
 ; }
-; FIXME: missing nonnull
 define ptr @test11(ptr) local_unnamed_addr {
-; FNATTRS-LABEL: define ptr @test11
+; FNATTRS-LABEL: define nonnull ptr @test11
 ; FNATTRS-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr {
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; FNATTRS-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
@@ -264,7 +263,7 @@ define ptr @test11(ptr) local_unnamed_addr {
 ; FNATTRS-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP4]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
 ; FNATTRS-NEXT:    ret ptr [[TMP6]]
 ;
-; ATTRIBUTOR-LABEL: define ptr @test11
+; ATTRIBUTOR-LABEL: define nonnull ptr @test11
 ; ATTRIBUTOR-SAME: (ptr [[TMP0:%.*]]) local_unnamed_addr {
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]

@@ -19,6 +19,8 @@ namespace llvm {
 
 using namespace coverage;
 
+class ThreadPool;
+
 struct FileCoverageSummary;
 
 /// A coverage printer for html output.
@@ -36,12 +38,30 @@ public:
   CoveragePrinterHTML(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
 
+protected:
+  Error emitStyleSheet();
+  void emitReportHeader(raw_ostream &OSRef, const std::string &Title);
+
 private:
   void emitFileSummary(raw_ostream &OS, StringRef SF,
                        const FileCoverageSummary &FCS,
                        bool IsTotals = false) const;
   std::string buildLinkToFile(StringRef SF,
                               const FileCoverageSummary &FCS) const;
+};
+
+/// A coverage printer for html output, but generates index files in every
+/// subdirectory to show a hierarchical view.
+class CoveragePrinterHTMLDirectory : public CoveragePrinterHTML {
+public:
+  using CoveragePrinterHTML::CoveragePrinterHTML;
+
+  Error createIndexFile(ArrayRef<std::string> SourceFiles,
+                        const coverage::CoverageMapping &Coverage,
+                        const CoverageFiltersMatchAll &Filters) override;
+
+private:
+  struct Reporter;
 };
 
 /// A code coverage view which supports html-based rendering.

@@ -159,9 +159,9 @@ define amdgpu_cs float @v_s_rsq_f32(float inreg %src) {
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %sqrt = call float @llvm.sqrt.f32(float %src)
-  %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
-  ret float %rcp
+  %sqrt = call fast float @llvm.sqrt.f32(float %src)
+  %fdiv = fdiv fast float 1.0, %sqrt
+  ret float %fdiv
 }
 
 define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
@@ -171,9 +171,9 @@ define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %sqrt = call half @llvm.sqrt.f16(half %src)
-  %rcp = call half @llvm.amdgcn.rcp.f16(half %sqrt)
-  ret half %rcp
+  %sqrt = call fast half @llvm.sqrt.f16(half %src)
+  %result = fdiv fast half 1.0, %sqrt
+  ret half %result
 }
 
 define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {

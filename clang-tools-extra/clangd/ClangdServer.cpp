@@ -1117,7 +1117,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
      __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
-  (*TimeoutSeconds) *= 10;
+  if (TimeoutSeconds.has_value())
+    (*TimeoutSeconds) *= 10;
 #endif
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe

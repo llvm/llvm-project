@@ -162,7 +162,8 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-    AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp">, Symbol]> {
+    AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp, RegionsOp">,
+    Symbol]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`
@@ -326,6 +327,92 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
   }];
 
   let hasVerifier = true;
+}
+
+def IRDL_RegionOp : IRDL_Op<"region",
+    [HasParent<"OperationOp">, VerifyRegionInterface,
+    DeclareOpInterfaceMethods<VerifyRegionInterface>]> {
+  let summary = "Define a region of an operation";
+  let description = [{
+    The irdl.region construct defines a set of characteristics
+    that a region of an operation should satify.
+
+    These characteristics include constraints for the entry block arguments
+    of the region and the total number of blocks it contains.
+    The number of blocks must be a non-zero and non-negative integer,
+    and it is optional by default.
+    The set of constraints for the entry block arguments may be optional or
+    empty. If no parentheses are provided, the set is assumed to be optional,
+    and the arguments are not constrained in any way. If parentheses are
+    provided with no arguments, it means that the region must have
+    no entry block arguments
+
+
+    Example:
+
+    ```mlir
+    irdl.dialect @example {
+      irdl.operation @op_with_regions {
+          %r0 = irdl.region
+          %r1 = irdl.region()
+          %v0 = irdl.is i32
+          %v1 = irdl.is i64
+          %r2 = irdl.region(%v0, %v1)
+          %r3 = irdl.region with size 3
+
+          irdl.regions(%r0, %r1, %r2, %r3)
+      }
+    }
+    ```
+
+    The above snippet demonstrates an operation named `@op_with_regions`,
+    which is constrained to have four regions.
+
+    * Region `%r0` doesn't have any constraints on the arguments
+      or the number of blocks.
+    * Region `%r1` should have an empty set of arguments.
+    * Region `%r2` should have two arguments of types `i32` and `i64`.
+    * Region `%r3` should contain exactly three blocks.
+  }];
+  let arguments = (ins Variadic<IRDL_AttributeType>:$entryBlockArgs,
+                    OptionalAttr<I32Attr>:$numberOfBlocks,
+                    UnitAttr:$constrainedArguments);
+  let results = (outs IRDL_RegionType:$output);
+
+  let assemblyFormat = [{
+    ``(`(` $entryBlockArgs $constrainedArguments^ `)`)?
+    ``(` ` `with` `size` $numberOfBlocks^)? attr-dict
+  }];
+
+  let hasVerifier = true;
+}
+
+def IRDL_RegionsOp : IRDL_Op<"regions", [HasParent<"OperationOp">]> {
+  let summary = "Define the regions of an operation";
+  let description = [{
+    `irdl.regions` defines the regions of an operation by accepting
+    values produced by `irdl.region` operation as arguments.
+
+    Example:
+
+    ```mlir
+    irdl.dialect @example {
+      irdl.operation @op_with_regions {
+        %r1 = irdl.region with size 3
+        %0 = irdl.any
+        %r2 = irdl.region(%0)
+        irdl.regions(%r1, %r2)
+      }
+    }
+    ```
+
+    In the snippet above the operation is constrained to have two regions.
+    The first region should contain three blocks.
+    The second region should have one region with one argument.
+  }];
+
+  let arguments = (ins Variadic<IRDL_RegionType>:$args);
+  let assemblyFormat = " `(` $args `)` attr-dict ";
 }
 
 //===----------------------------------------------------------------------===//

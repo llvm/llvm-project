@@ -331,28 +331,6 @@ public:
   using OSTargetInfo<Target>::OSTargetInfo;
 };
 
-// Minix Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY MinixTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // Minix defines
-
-    Builder.defineMacro("__minix", "3");
-    Builder.defineMacro("_EM_WSIZE", "4");
-    Builder.defineMacro("_EM_PSIZE", "4");
-    Builder.defineMacro("_EM_SSIZE", "2");
-    Builder.defineMacro("_EM_LSIZE", "4");
-    Builder.defineMacro("_EM_FSIZE", "4");
-    Builder.defineMacro("_EM_DSIZE", "8");
-    DefineStd(Builder, "unix", Opts);
-  }
-
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
 // Linux target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY LinuxTargetInfo : public OSTargetInfo<Target> {

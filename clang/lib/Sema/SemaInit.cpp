@@ -2858,7 +2858,8 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
       if (PrevField &&
           PrevField->getFieldIndex() > KnownField->getFieldIndex()) {
-        SemaRef.Diag(DIE->getBeginLoc(), diag::ext_designated_init_reordered)
+        SemaRef.Diag(DIE->getInit()->getBeginLoc(),
+                     diag::ext_designated_init_reordered)
             << KnownField << PrevField << DIE->getSourceRange();
 
         unsigned OldIndex = StructuredIndex - 1;

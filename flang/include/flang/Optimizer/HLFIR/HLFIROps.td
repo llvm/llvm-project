@@ -746,7 +746,13 @@ def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
   let cppNamespace = "hlfir";
 }
 
-def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_ElementalOpInterface, AttrSizedOperandSegments]> {
+def hlfir_ElementalOp : hlfir_Op<"elemental",
+    // The ElementalOp, in general, causes an allocation of a temporary,
+    // so to guarantee proper behavior of MLIR optimization passes
+    // we explicitly set MemAlloc effect for it. On top of this,
+    // the recursive memory effects also apply.
+    [RecursiveMemoryEffects, MemoryEffects<[MemAlloc]>,
+     hlfir_ElementalOpInterface, AttrSizedOperandSegments]> {
   let summary = "elemental expression";
   let description = [{
     Represent an elemental expression as a function of the indices.

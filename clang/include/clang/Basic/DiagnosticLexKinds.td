@@ -276,6 +276,12 @@ def warn_cxx11_compat_reserved_user_defined_literal : Warning<
   "identifier after literal will be treated as a reserved user-defined literal "
   "suffix in C++11">,
   InGroup<CXX11CompatReservedUserDefinedLiteral>, DefaultIgnore;
+def ext_reserved_user_defined_literal : ExtWarn<
+  "invalid suffix on literal; C++11 requires a space between literal and "
+  "identifier">, InGroup<ReservedUserDefinedLiteral>, DefaultError;
+def ext_ms_reserved_user_defined_literal : ExtWarn<
+  "invalid suffix on literal; C++11 requires a space between literal and "
+  "identifier">, InGroup<ReservedUserDefinedLiteral>;
 def err_unsupported_string_concat : Error<
   "unsupported non-standard concatenation of string literals">;
 

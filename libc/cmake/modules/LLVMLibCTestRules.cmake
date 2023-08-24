@@ -156,8 +156,14 @@ function(create_libc_unittest fq_target_name)
   )
   target_compile_options(
     ${fq_build_target_name}
-    PRIVATE -fpie -ffreestanding ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
+  if(LLVM_LIBC_FULL_BUILD)
+    target_compile_options(
+      ${fq_build_target_name}
+      PRIVATE -ffreestanding
+    )
+  endif()
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
       ${fq_build_target_name}

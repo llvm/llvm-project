@@ -486,7 +486,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* USE_ITT_BUILD */
 
 #if KMP_AFFINITY_SUPPORTED
-  __kmp_affinity_set_init_mask(gtid, FALSE);
+  __kmp_affinity_bind_init_mask(gtid);
 #endif
 
 #ifdef KMP_CANCEL_THREADS

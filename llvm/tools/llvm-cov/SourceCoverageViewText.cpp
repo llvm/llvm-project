@@ -14,7 +14,9 @@
 #include "CoverageReport.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 
 using namespace llvm;
@@ -44,6 +46,69 @@ Error CoveragePrinterText::createIndexFile(
                                                  << Opts.getLLVMVersionString();
 
   return Error::success();
+}
+
+struct CoveragePrinterTextDirectory::Reporter : public DirectoryCoverageReport {
+  CoveragePrinterTextDirectory &Printer;
+
+  Reporter(CoveragePrinterTextDirectory &Printer,
+           const coverage::CoverageMapping &Coverage,
+           const CoverageFiltersMatchAll &Filters)
+      : DirectoryCoverageReport(Printer.Opts, Coverage, Filters),
+        Printer(Printer) {}
+
+  Error generateSubDirectoryReport(SubFileReports &&SubFiles,
+                                   SubDirReports &&SubDirs,
+                                   FileCoverageSummary &&SubTotals) override {
+    auto &LCPath = SubTotals.Name;
+    assert(Options.hasOutputDirectory() &&
+           "No output directory for index file");
+
+    SmallString<128> OSPath = LCPath;
+    sys::path::append(OSPath, "index");
+    auto OSOrErr = Printer.createOutputStream(OSPath, "txt",
+                                              /*InToplevel=*/false);
+    if (auto E = OSOrErr.takeError())
+      return E;
+    auto OS = std::move(OSOrErr.get());
+    raw_ostream &OSRef = *OS.get();
+
+    std::vector<FileCoverageSummary> Reports;
+    for (auto &&SubDir : SubDirs)
+      Reports.push_back(std::move(SubDir.second.first));
+    for (auto &&SubFile : SubFiles)
+      Reports.push_back(std::move(SubFile.second));
+
+    CoverageReport Report(Options, Coverage);
+    Report.renderFileReports(OSRef, Reports, SubTotals, Filters.empty());
+
+    Options.colored_ostream(OSRef, raw_ostream::CYAN)
+        << "\n"
+        << Options.getLLVMVersionString();
+
+    return Error::success();
+  }
+};
+
+Error CoveragePrinterTextDirectory::createIndexFile(
+    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
+    const CoverageFiltersMatchAll &Filters) {
+  if (SourceFiles.size() <= 1)
+    return CoveragePrinterText::createIndexFile(SourceFiles, Coverage, Filters);
+
+  Reporter Report(*this, Coverage, Filters);
+  auto TotalsOrErr = Report.prepareDirectoryReports(SourceFiles);
+  if (auto E = TotalsOrErr.takeError())
+    return E;
+  auto &LCPath = TotalsOrErr->Name;
+
+  auto TopIndexFilePath =
+      getOutputPath("index", "txt", /*InToplevel=*/true, /*Relative=*/false);
+  auto LCPIndexFilePath =
+      getOutputPath((LCPath + "index").str(), "txt", /*InToplevel=*/false,
+                    /*Relative=*/false);
+  return errorCodeToError(
+      sys::fs::copy_file(LCPIndexFilePath, TopIndexFilePath));
 }
 
 namespace {

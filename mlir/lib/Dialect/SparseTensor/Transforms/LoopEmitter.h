@@ -566,40 +566,6 @@ private:
                      MutableArrayRef<Value> reduc);
 
   //
-  // View-based-reshape methods.
-  //
-
-  /// Get the collapse reassociation for `tensors[tid][dstLvl]`.
-  /// For unreshaped operands, the reassociation is simply an identity
-  /// transformation.
-  ///
-  /// NOTE: the result uses `Level` rather than the `int64_t` of
-  /// `ReassociationIndices`, since the former gives clarity to what
-  /// the values actually mean.
-  ///
-  /// TODO: why not do this computation when we first store the reassoc,
-  /// instead of doing it every time we look it up?
-  SmallVector<Level, 2> getCollapseReassociation(TensorId tid, Level dstLvl) {
-    assert(tid < getNumTensors() && "Invalid TensorId");
-    assert(collapseReassoc.size() == getNumTensors());
-    if (const auto reassoc = collapseReassoc[tid]) {
-      assert(!isSynTensor(tid) && !isOutputTensor(tid) &&
-             "Output/Synthetic tensor should not have reassociation");
-      // TODO: store the dstLvlRank in the LoopEmitter so that we can
-      // check `dstLvl < dstLvlRank` at the top; and only here need to
-      // assert that `reassoc.size() == dstLvlRank`.
-      assert(dstLvl < reassoc.size() && "Level is out-of-bounds");
-      const auto srcLvls = cast<ArrayAttr>(reassoc[dstLvl]);
-      return llvm::to_vector<2>(
-          llvm::map_range(srcLvls, [&](Attribute srcLvl) -> Level {
-            // TODO: replace this with the converter for `LevelAttr`.
-            return cast<IntegerAttr>(srcLvl).getValue().getZExtValue();
-          }));
-    }
-    return {dstLvl};
-  }
-
-  //
   // Slice-driven loop related methods.
   //
 
@@ -760,14 +726,6 @@ private:
 
   // sliceStack[tid] holds the generated slice stack on tid.
   std::vector<std::vector<SliceInfo>> sliceStack;
-
-  //
-  // View based reshape related-fields and methods
-  //
-
-  /// Collapse Reassociations related to a specific tensor
-  // TODO: support expand.
-  std::vector<ArrayAttr> collapseReassoc;
 
   /// TODO: not yet used, it should track the current level for each tensor
   /// to help eliminate `lvls` paramters from above APIs.

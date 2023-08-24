@@ -1049,169 +1049,277 @@ define double @v_mul_0x1pn15_f64(double %x) {
 }
 
 define double @v_mul_neg256_f64(double %x) {
-; GFX9-LABEL: v_mul_neg256_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0700000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg256_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 8
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg256_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0700000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg256_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0700000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg256_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0700000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg256_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 8
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg256_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0700000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg256_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 8
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg256_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0700000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -256.0
   ret double %mul
 }
 
 define double @v_mul_neg128_f64(double %x) {
-; GFX9-LABEL: v_mul_neg128_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0600000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg128_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 7
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg128_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0600000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg128_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0600000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg128_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0600000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg128_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 7
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg128_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0600000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg128_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 7
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg128_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0600000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -128.0
   ret double %mul
 }
 
 define double @v_mul_neg64_f64(double %x) {
-; GFX9-LABEL: v_mul_neg64_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0500000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg64_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 6
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg64_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0500000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg64_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0500000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg64_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0500000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg64_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 6
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg64_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0500000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg64_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 6
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg64_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0500000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -64.0
   ret double %mul
 }
 
 define double @v_mul_neg32_f64(double %x) {
-; GFX9-LABEL: v_mul_neg32_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0400000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg32_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 5
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg32_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0400000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg32_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0400000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg32_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0400000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg32_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 5
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg32_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0400000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg32_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 5
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg32_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0400000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -32.0
   ret double %mul
 }
 
 define double @v_mul_neg16_f64(double %x) {
-; GFX9-LABEL: v_mul_neg16_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0300000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg16_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg16_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0300000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg16_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0300000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg16_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0300000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg16_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg16_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0300000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg16_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg16_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0300000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -16.0
   ret double %mul
 }
 
 define double @v_mul_neg8_f64(double %x) {
-; GFX9-LABEL: v_mul_neg8_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0200000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg8_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 3
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg8_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0200000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg8_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0200000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg8_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0200000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg8_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 3
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg8_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0200000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg8_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 3
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg8_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0200000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -8.0
   ret double %mul
 }
@@ -1297,29 +1405,47 @@ define double @v_mul_neg_half_f64(double %x) {
 }
 
 define double @v_mul_neg_quarter_f64(double %x) {
-; GFX9-LABEL: v_mul_neg_quarter_f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xbfd00000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg_quarter_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], -2
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg_quarter_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xbfd00000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg_quarter_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xbfd00000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg_quarter_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xbfd00000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg_quarter_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], -2
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg_quarter_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xbfd00000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg_quarter_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], -2
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg_quarter_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xbfd00000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul double %x, -0.25
   ret double %mul
 }
@@ -2517,32 +2643,53 @@ define <2 x double> @v_mul_16_v2f64(<2 x double> %x) {
 }
 
 define <2 x double> @v_mul_neg16_v2f64(<2 x double> %x) {
-; GFX9-LABEL: v_mul_neg16_v2f64:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    s_mov_b32 s5, 0xc0300000
-; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX9-NEXT:    v_mul_f64 v[2:3], v[2:3], s[4:5]
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: v_mul_neg16_v2f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[2:3], -v[2:3], 4
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_mul_neg16_v2f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s5, 0xc0300000
-; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
-; GFX10-NEXT:    v_mul_f64 v[2:3], v[2:3], s[4:5]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: v_mul_neg16_v2f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0300000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX9-GISEL-NEXT:    v_mul_f64 v[2:3], v[2:3], s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_mul_neg16_v2f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0xc0300000
-; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
-; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], s[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-LABEL: v_mul_neg16_v2f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[2:3], -v[2:3], 4
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_neg16_v2f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0300000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
+; GFX10-GISEL-NEXT:    v_mul_f64 v[2:3], v[2:3], s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_neg16_v2f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -v[0:1], 4
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[2:3], -v[2:3], 4
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_neg16_v2f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0300000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
+; GFX11-GISEL-NEXT:    v_mul_f64 v[2:3], v[2:3], s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul <2 x double> %x, <double -16.0, double -16.0>
   ret <2 x double> %mul
 }
@@ -6828,6 +6975,437 @@ define half @v_constrained_fmul_32_f16(half %x, half %y) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fmul.f16(half %x, half 32.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %val
+}
+
+define double @v_mul_fabs_0x1pn1031_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0xfbf9
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, s4
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_movk_i32 s5, 0x800
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, 0xfffffbf9
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_movk_i32 s5, 0x800
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, 0xfffffbf9
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_0x1pn1031_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_movk_i32 s1, 0x800
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 4.34584737989687770135e-311
+  ret double %mul
+}
+
+define double @v_mul_fabs_neg256_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_neg256_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 8
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_neg256_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0700000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_neg256_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 8
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_neg256_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0700000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_neg256_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 8
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_neg256_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0700000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -256.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_neg8_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_neg8_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 3
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_neg8_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc0200000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_neg8_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 3
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_neg8_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xc0200000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_neg8_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, 3
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_neg8_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xc0200000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -8.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_neg4_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_neg4_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -4.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -4.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_neg2_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_neg2_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -2.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -2.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_neg1_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_neg1_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_or_b32_e32 v1, 0x80000000, v1
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_neg1_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -1.0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_neg1_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v1, 0x80000000, v1
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_neg1_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -1.0
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_neg1_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v1, 0x80000000, v1
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_neg1_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -1.0
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -1.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_neghalf_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_neghalf_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, -0.5
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -0.5
+  ret double %mul
+}
+
+define double @v_mul_fabs_negquarter_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_negquarter_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, -2
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_negquarter_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xbfd00000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_negquarter_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, -2
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_negquarter_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0xbfd00000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_negquarter_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, -2
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_negquarter_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xbfd00000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, -0.25
+  ret double %mul
+}
+
+define double @v_mul_fabs_quarter_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_quarter_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, -2
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_quarter_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0x3fd00000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_quarter_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, -2
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_quarter_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0x3fd00000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_quarter_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, -2
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_quarter_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0x3fd00000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 0.25
+  ret double %mul
+}
+
+define double @v_mul_fabs_half_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_half_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, 0.5
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 0.5
+  ret double %mul
+}
+
+define double @v_mul_fabs_1_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_1_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 1.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_2_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_2_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], |v[0:1]|, |v[0:1]|
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_2_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, 2.0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_2_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], |v[0:1]|, |v[0:1]|
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_2_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, 2.0
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_2_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], |v[0:1]|, |v[0:1]|
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_2_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, 2.0
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 2.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_4_f64(double %x) {
+; GCN-LABEL: v_mul_fabs_4_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, 4.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 4.0
+  ret double %mul
+}
+
+define double @v_mul_fabs_8_f64(double %x) {
+; GFX9-SDAG-LABEL: v_mul_fabs_8_f64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, 3
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_mul_fabs_8_f64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0x40200000
+; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: v_mul_fabs_8_f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, 3
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_mul_fabs_8_f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX10-GISEL-NEXT:    s_mov_b32 s5, 0x40200000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[4:5]
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_mul_fabs_8_f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, 3
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_mul_fabs_8_f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0x40200000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], |v[0:1]|, s[0:1]
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %fabs.x = call double @llvm.fabs.f64(double %x)
+  %mul = fmul double %fabs.x, 8.0
+  ret double %mul
 }
 
 declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)

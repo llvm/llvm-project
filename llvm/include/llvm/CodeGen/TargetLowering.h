@@ -2555,6 +2555,13 @@ protected:
     setOperationAction(Opc, OrigVT, Promote);
     AddPromotedToType(Opc, OrigVT, DestVT);
   }
+  void setOperationPromotedToType(ArrayRef<unsigned> Ops, MVT OrigVT,
+                                  MVT DestVT) {
+    for (auto Op : Ops) {
+      setOperationAction(Op, OrigVT, Promote);
+      AddPromotedToType(Op, OrigVT, DestVT);
+    }
+  }
 
   /// Targets should invoke this method for each target independent node that
   /// they want to provide a custom DAG combiner for by implementing the

@@ -13,12 +13,14 @@
 #include "clang/Sema/SemaConcept.h"
 #include "TreeTransform.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
@@ -540,11 +542,6 @@ bool Sema::addInstantiatedCapturesToScope(
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
     ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
-    if (cast<CXXMethodDecl>(Function)->isConst()) {
-      QualType T = CapturedVar->getType();
-      T.addConst();
-      CapturedVar->setType(T);
-    }
     if (CapturedVar->isInitCapture())
       Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
@@ -714,6 +711,22 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
     Record = const_cast<CXXRecordDecl *>(Method->getParent());
   }
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+
+  // When checking the constraints of a lambda, we need to restore a
+  // LambdaScopeInfo populated with correct capture information so that the type
+  // of a variable referring to a capture is correctly const-adjusted.
+  FunctionScopeRAII FuncScope(*this);
+  if (isLambdaCallOperator(FD)) {
+    LambdaScopeInfo *LSI = RebuildLambdaScopeInfo(
+        const_cast<CXXMethodDecl *>(cast<CXXMethodDecl>(FD)));
+    // Constraints are checked from the parent context of the lambda, so we set
+    // AfterParameterList to false, so that `tryCaptureVariable` finds
+    // explicit captures in the appropriate context.
+    LSI->AfterParameterList = false;
+  } else {
+    FuncScope.disable();
+  }
+
   return CheckConstraintSatisfaction(
       FD, {FD->getTrailingRequiresClause()}, *MLTAL,
       SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
@@ -902,10 +915,13 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   }
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
   FunctionScopeRAII FuncScope(*this);
-  if (isLambdaCallOperator(Decl))
-    PushLambdaScope();
-  else
+
+  if (isLambdaCallOperator(Decl)) {
+    LambdaScopeInfo *LSI = RebuildLambdaScopeInfo(cast<CXXMethodDecl>(Decl));
+    LSI->AfterParameterList = false;
+  } else {
     FuncScope.disable();
+  }
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,

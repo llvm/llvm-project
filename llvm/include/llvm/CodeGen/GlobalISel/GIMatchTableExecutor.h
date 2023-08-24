@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -46,32 +47,6 @@ class MachineRegisterInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
 class TargetRegisterInfo;
-
-/// Container class for CodeGen predicate results.
-/// This is convenient because std::bitset does not have a constructor
-/// with an initializer list of set bits.
-///
-/// Each GIMatchTableExecutor subclass should define a PredicateBitset class
-/// with:
-///   const unsigned MAX_SUBTARGET_PREDICATES = 192;
-///   using PredicateBitset = PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;
-/// and updating the constant to suit the target. Tablegen provides a suitable
-/// definition for the predicates in use in <Target>GenGlobalISel.inc when
-/// GET_GLOBALISEL_PREDICATE_BITSET is defined.
-template <std::size_t MaxPredicates>
-class PredicateBitsetImpl : public std::bitset<MaxPredicates> {
-public:
-  // Cannot inherit constructors because it's not supported by VC++..
-  PredicateBitsetImpl() = default;
-
-  PredicateBitsetImpl(const std::bitset<MaxPredicates> &B)
-      : std::bitset<MaxPredicates>(B) {}
-
-  PredicateBitsetImpl(std::initializer_list<unsigned> Init) {
-    for (auto I : Init)
-      std::bitset<MaxPredicates>::set(I);
-  }
-};
 
 enum {
   GICXXPred_Invalid = 0,

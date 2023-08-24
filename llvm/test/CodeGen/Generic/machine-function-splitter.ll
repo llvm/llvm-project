@@ -7,6 +7,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
 
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+
 ; COM: Machine function splitting with AFDO profiles
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll
 ; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s --check-prefix=FSAFDO-MFS
@@ -19,6 +24,8 @@ define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; MFS-DEFAULTS-NEXT:          foo1.cold:
 ; MFS-DEFAULTS-X86-NOT:       callq   bar
 ; MFS-DEFAULTS-X86-NEXT:      callq   baz
+; MFS-DEFAULTS-AARCH64-NOT:   bl      bar
+; MFS-DEFAULTS-AARCH64-NEXT:  bl      baz
   br i1 %0, label %2, label %4, !prof !17
 
 2:                                                ; preds = %1
@@ -80,6 +87,9 @@ define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ; MFS-OPTS1-X86-NOT:       callq    bar
 ; MFS-OPTS1-X86-NOT:       callq    baz
 ; MFS-OPTS1-X86-NEXT:      callq    bam
+; MFS-OPTS1-AARCH64-NOT:   bl       bar
+; MFS-OPTS1-AARCH64-NOT:   bl       baz
+; MFS-OPTS1-AARCH64-NEXT:  bl       bam
   br i1 %0, label %3, label %7, !prof !18
 
 3:
@@ -114,6 +124,9 @@ define void @foo5(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ; MFS-OPTS2-X86-NOT:       callq    bar
 ; MFS-OPTS2-X86-NOT:       callq    baz
 ; MFS-OPTS2-X86-NEXT:      callq    bam
+; MFS-OPTS2-AARCH64-NOT:   bl       bar
+; MFS-OPTS2-AARCH64-NOT:   bl       baz
+; MFS-OPTS2-AARCH64-NEXT:  bl       bam
   br i1 %0, label %3, label %7, !prof !21
 
 3:
@@ -166,6 +179,7 @@ define i32 @foo7(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 
 ; MFS-DEFAULTS-NEXT:          foo7.cold:
 ; MFS-DEFAULTS-X86:           callq   baz
 ; MFS-DEFAULTS-X86:           callq   _Unwind_Resume@PLT
+; MFS-DEFAULTS-AARCH64:       bl      baz
 entry:
   invoke void @_Z1fv()
           to label %try.cont unwind label %lpad
@@ -200,12 +214,14 @@ define i32 @foo8(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 
 ; MFS-DEFAULTS:               .section        .text.split.foo8,"ax",@progbits
 ; MFS-DEFAULTS-NEXT:          foo8.cold:
 ; MFS-DEFAULTS-X86:           callq   baz
+; MFS-DEFAULTS-AARCH64:       bl      baz
 
 ;; Check that all ehpads are by default treated as cold with -mfs-split-ehcode.
 ; MFS-EH-SPLIT-LABEL:         foo8
 ; MFS-EH-SPLIT-X86:           callq   baz
-; MFS-EH-SPLIT:               .section        .text.split.foo8,"ax",@progbits
-; MFS-EH-SPLIT-NEXT:          foo8.cold:
+; MFS-EH-SPLIT-AARCH64:       bl      baz
+; MFS-EH-SPLIT-X86:           .section        .text.split.foo8,"ax",@progbits
+; MFS-EH-SPLIT-X86-NEXT:      foo8.cold:
 ; MFS-EH-SPLIT-X86:           callq   _Unwind_Resume@PLT
 ; MFS-EH-SPLIT-X86:           callq   _Unwind_Resume@PLT
 entry:
@@ -264,8 +280,9 @@ define i32 @foo10(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14
 ;; Check that nop is inserted just before the EH pad if it's beginning a section.
 ; MFS-DEFAULTS-LABEL:         foo10
 ; MFS-DEFAULTS-X86-LABEL:     callq   baz
-; MFS-DEFAULTS:               .section        .text.split.foo10,"ax",@progbits
-; MFS-DEFAULTS-NEXT:          foo10.cold:
+; MFS-DEFAULTS-AARCH64:       bl      baz
+; MFS-DEFAULTS-X86:           .section        .text.split.foo10,"ax",@progbits
+; MFS-DEFAULTS-X86-NEXT:      foo10.cold:
 ; MFS-DEFAULTS-X86:           nop
 ; MFS-DEFAULTS-X86:           callq   _Unwind_Resume@PLT
 entry:
@@ -287,8 +304,8 @@ define void @foo11(i1 zeroext %0) personality ptr @__gxx_personality_v0 {
 ;; Check that function having landing pads are split with mfs-split-ehcode
 ;; even in the absence of profile data
 ; MFS-EH-SPLIT-LABEL:         foo11
-; MFS-EH-SPLIT:               .section        .text.split.foo11,"ax",@progbits
-; MFS-EH-SPLIT-NEXT:          foo11.cold:
+; MFS-EH-SPLIT-X86:           .section        .text.split.foo11,"ax",@progbits
+; MFS-EH-SPLIT-X86-NEXT:      foo11.cold:
 ; MFS-EH-SPLIT-X86:           nop
 ; MFS-EH-SPLIT-X86:           callq   _Unwind_Resume@PLT
 entry:
@@ -314,6 +331,9 @@ define i32 @foo12(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14
 ; MFS-EH-SPLIT-X86:           callq   bar
 ; MFS-EH-SPLIT-X86:           callq   baz
 ; MFS-EH-SPLIT-X86:           callq   qux
+; MFS-EH-SPLIT-AARCH64:       bl      bar
+; MFS-EH-SPLIT-AARCH64:       bl      baz
+; MFS-EH-SPLIT-AARCH64:       bl      qux
 entry:
   invoke void @_Z1fv()
           to label %8 unwind label %lpad
@@ -346,11 +366,15 @@ define i32 @foo13(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14
 ;; is not touched.
 ; MFS-EH-SPLIT-LABEL:         foo13
 ; MFS-EH-SPLIT-X86:           callq   bam
+; MFS-EH-SPLIT-AARCH64:       bl      bam
 ; MFS-EH-SPLIT:               .section        .text.split.foo13,"ax",@progbits
 ; MFS-EH-SPLIT-NEXT:          foo13.cold:
 ; MFS-EH-SPLIT-X86:           callq   baz
 ; MFS-EH-SPLIT-X86:           callq   bar
 ; MFS-EH-SPLIT-X86:           callq   qux
+; MFS-EH-SPLIT-AARCH64:       bl      baz
+; MFS-EH-SPLIT-AARCH64:       bl      bar
+; MFS-EH-SPLIT-AARCH64:       bl      qux
 entry:
   invoke void @_Z1fv()
           to label %try.cont unwind label %lpad, !prof !17

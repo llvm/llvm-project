@@ -270,6 +270,21 @@ InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) {
   return getLMULCost(VT) * getLMULCost(VT);
 }
 
+/// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
+/// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) {
+  return getLMULCost(VT);
+}
+
+/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
+/// for the type VT.  (This does not cover the vslide1up or vslide1down
+/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTTIImpl::getVSlideCost(MVT VT) {
+  return getLMULCost(VT);
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -309,36 +324,33 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
               return LT.first * getLMULCost(LT.second);
           }
         }
-
-        // vrgather + cost of generating the mask constant.
-        // We model this for an unknown mask with a single vrgather.
-        if (LT.first == 1 &&
-            (LT.second.getScalarSizeInBits() != 8 ||
-             LT.second.getVectorNumElements() <= 256)) {
-          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
-          InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-          return IndexCost + getVRGatherVVCost(LT.second);
-        }
+      }
+      // vrgather + cost of generating the mask constant.
+      // We model this for an unknown mask with a single vrgather.
+      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
+          (LT.second.getScalarSizeInBits() != 8 ||
+           LT.second.getVectorNumElements() <= 256)) {
+        VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
+        InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
+        return IndexCost + getVRGatherVVCost(LT.second);
       }
       [[fallthrough]];
     }
     case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
-      if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
-        // 2 x (vrgather + cost of generating the mask constant) + cost of mask
-        // register for the second vrgather. We model this for an unknown
-        // (shuffle) mask.
-        if (LT.first == 1 &&
-            (LT.second.getScalarSizeInBits() != 8 ||
-             LT.second.getVectorNumElements() <= 256)) {
-          auto &C = Tp->getContext();
-          auto EC = Tp->getElementCount();
-          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
-          VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
-          InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-          InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-          return 2 * IndexCost + 2 * getVRGatherVVCost(LT.second) + MaskCost;
-        }
+      // 2 x (vrgather + cost of generating the mask constant) + cost of mask
+      // register for the second vrgather. We model this for an unknown
+      // (shuffle) mask.
+      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
+          (LT.second.getScalarSizeInBits() != 8 ||
+           LT.second.getVectorNumElements() <= 256)) {
+        auto &C = Tp->getContext();
+        auto EC = Tp->getElementCount();
+        VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
+        VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
+        InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
+        InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
+        return 2 * IndexCost + 2 * getVRGatherVVCost(LT.second) + MaskCost;
       }
       [[fallthrough]];
     }
@@ -346,7 +358,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // We are going to permute multiple sources and the result will be in
       // multiple destinations. Providing an accurate cost only for splits where
       // the element type remains the same.
-      if (LT.first.isValid() && LT.first != 1 &&
+      if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
           LT.second.isFixedLengthVector() &&
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
@@ -390,12 +402,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVSlideCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVSlideCost(LT.second);
   case TTI::SK_Select: {
     // Example sequence:
     // li           a0, 90
@@ -436,15 +448,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
     // Example sequence:
     //   vrgather.vi     v9, v8, 0
-    // TODO: vrgather could be slower than vmv.v.x. It is
-    // implementation-dependent.
-    return LT.first * getLMULCost(LT.second);
+    return LT.first * getVRGatherVICost(LT.second);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    return 2 * LT.first * getLMULCost(LT.second);
+    return 2 * LT.first * getVSlideCost(LT.second);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
     // * Illegal vector types

@@ -21,21 +21,12 @@
 import sys
 
 sys.path.append(sys.argv[1])
-from libcxx.header_information import toplevel_headers
+from libcxx.header_information import module_headers
+from libcxx.header_information import header_restrictions
 
 BLOCKLIT = (
     ""  # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 )
-
-### Remove the headers that have no module associated with them
-
-# Note all C-headers using .h are filtered in the loop.
-
-# These headers are not available in C++23, but in older language Standards.
-toplevel_headers.remove("ccomplex")
-toplevel_headers.remove("ciso646")
-toplevel_headers.remove("cstdbool")
-toplevel_headers.remove("ctgmath")
 
 # Ignore several declarations found in the includes.
 #
@@ -127,9 +118,10 @@ print(
     f"""\
 //--- module_std.sh.cpp
 // UNSUPPORTED{BLOCKLIT}: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED{BLOCKLIT}: libcpp-has-no-std-modules
+// UNSUPPORTED{BLOCKLIT}: modules-build
 
 // REQUIRES{BLOCKLIT}: has-clang-tidy
-// REQUIRES{BLOCKLIT}: use_module_std
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED{BLOCKLIT}: gcc
@@ -139,19 +131,35 @@ print(
 )
 
 # Validate all module parts.
-for header in toplevel_headers:
-    if header.endswith(".h"):  # Skip C compatibility headers
-        continue
+for header in module_headers:
+    # Some headers cannot be included when a libc++ feature is disabled.
+    # In that case include the header conditionally. The header __config
+    # ensures the libc++ feature macros are available.
+    if header in header_restrictions:
+        include = (
+            f"#include <__config>{nl}"
+            + f"#if {header_restrictions[header]}{nl}"
+            + f"#  include <{header}>{nl}"
+            + f"#endif{nl}"
+        )
+    elif header == "chrono":
+        # When localization is disabled the header string is not included.
+        # When string is included chrono's operator""s is a named declaration
+        #   using std::chrono_literals::operator""s;
+        # else it is a named declaration
+        #   using std::operator""s;
+        # TODO MODULES investigate why
+        include = f"#include <string>{nl}#include <chrono>{nl}"
+    else:
+        include = f"#include <{header}>{nl}"
 
     # Generate a module partition for the header module includes. This
     # makes it possible to verify that all headers export all their
     # named declarations.
-    #
-    # TODO MODULES This needs to take the header restrictions into account.
     print(
         f"// RUN{BLOCKLIT}: echo -e \""
         f"module;{nl}"
-        f"#include <{header}>{nl}"
+        f"{include}"
         f"{nl}"
         f"// Use __libcpp_module_<HEADER> to ensure that modules {nl}"
         f"// are not named as keywords or reserved names.{nl}"
@@ -207,7 +215,7 @@ for header in toplevel_headers:
         )
 
     # Clang-tidy needs a file input
-    print(f'// RUN{BLOCKLIT}: echo "#include <{header}>" > %t.{header}.cpp')
+    print(f'// RUN{BLOCKLIT}: echo -e "' f"{include}" f'" > %t.{header}.cpp')
     print(
         f"// RUN{BLOCKLIT}: %{{clang-tidy}} %t.{header}.cpp "
         "  --checks='-*,libcpp-header-exportable-declarations' "

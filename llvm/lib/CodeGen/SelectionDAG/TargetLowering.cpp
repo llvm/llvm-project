@@ -1040,13 +1040,10 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
     // larger type size to do the transform.
     if (!TLI.isOperationLegalOrCustom(AVGOpc, VT))
       return SDValue();
-
-    if (DAG.computeOverflowForAdd(IsSigned, Add.getOperand(0),
-                                  Add.getOperand(1)) ==
-            SelectionDAG::OFK_Never &&
-        (!Add2 || DAG.computeOverflowForAdd(IsSigned, Add2.getOperand(0),
-                                            Add2.getOperand(1)) ==
-                      SelectionDAG::OFK_Never))
+    if (DAG.willNotOverflowAdd(IsSigned, Add.getOperand(0),
+                               Add.getOperand(1)) &&
+        (!Add2 || DAG.willNotOverflowAdd(IsSigned, Add2.getOperand(0),
+                                         Add2.getOperand(1))))
       NVT = VT;
     else
       return SDValue();
@@ -5093,7 +5090,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       if (isBitwiseNot(N1))
         return DAG.getSetCC(dl, VT, N1.getOperand(0), N0.getOperand(0), Cond);
 
-      if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
+      if (DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
+          !DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(0))) {
         SDValue Not = DAG.getNOT(dl, N1, OpVT);
         return DAG.getSetCC(dl, VT, Not, N0.getOperand(0), Cond);
       }
