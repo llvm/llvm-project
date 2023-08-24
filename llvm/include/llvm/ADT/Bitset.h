@@ -56,23 +56,17 @@ public:
   }
 
   constexpr Bitset &set(unsigned I) {
-    // GCC <6.2 crashes if this is written in a single statement.
-    BitWord NewBits = Bits[I / BITWORD_SIZE] | (BitWord(1) << (I % BITWORD_SIZE));
-    Bits[I / BITWORD_SIZE] = NewBits;
+    Bits[I / BITWORD_SIZE] |= BitWord(1) << (I % BITWORD_SIZE);
     return *this;
   }
 
   constexpr Bitset &reset(unsigned I) {
-    // GCC <6.2 crashes if this is written in a single statement.
-    BitWord NewBits = Bits[I / BITWORD_SIZE] & ~(BitWord(1) << (I % BITWORD_SIZE));
-    Bits[I / BITWORD_SIZE] = NewBits;
+    Bits[I / BITWORD_SIZE] &= ~(BitWord(1) << (I % BITWORD_SIZE));
     return *this;
   }
 
   constexpr Bitset &flip(unsigned I) {
-    // GCC <6.2 crashes if this is written in a single statement.
-    BitWord NewBits = Bits[I / BITWORD_SIZE] ^ (BitWord(1) << (I % BITWORD_SIZE));
-    Bits[I / BITWORD_SIZE] = NewBits;
+    Bits[I / BITWORD_SIZE] ^= BitWord(1) << (I % BITWORD_SIZE);
     return *this;
   }
 
@@ -109,9 +103,8 @@ public:
   }
 
   constexpr Bitset &operator&=(const Bitset &RHS) {
-    for (unsigned I = 0, E = Bits.size(); I != E; ++I) {
+    for (unsigned I = 0, E = Bits.size(); I != E; ++I)
       Bits[I] &= RHS.Bits[I];
-    }
     return *this;
   }
   constexpr Bitset operator&(const Bitset &RHS) const {
