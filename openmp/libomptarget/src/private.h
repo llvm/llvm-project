@@ -429,9 +429,13 @@ public:
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
   SourceInfo SI(IDENT);                                                        \
   llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                     \
+  SourceInfo SI(IDENT);                                                        \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation() + RegionTypeMsg)
 #else
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                                    \
 
 #endif
