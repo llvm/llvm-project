@@ -877,59 +877,15 @@ private:
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
 
-    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint)
-      Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-
-    // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value
-    // so that we won't underestimate the releasable pages. For example, the
-    // following is the region usage,
-    //
-    //  BytesInFreeListAtLastCheckpoint   AllocatedUser
-    //                v                         v
-    //  |--------------------------------------->
-    //         ^                   ^
-    //  BytesInFreeList     ReleaseThreshold
-    //
-    // In general, if we have collected enough bytes and the amount of free
-    // bytes meets the ReleaseThreshold, we will try to do page release. If we
-    // don't update `BytesInFreeListAtLastCheckpoint` when the current
-    // `BytesInFreeList` is smaller, we may take longer time to wait for enough
-    // freed blocks because we miss the bytes between
-    // (BytesInFreeListAtLastCheckpoint - BytesInFreeList).
-    const uptr PushedBytesDelta =
-        BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
-    if (PushedBytesDelta < PageSize && ReleaseType != ReleaseToOS::ForceAll)
+    // ====================================================================== //
+    // Check if we have enough free blocks and if it's worth doing a page
+    // release.
+    // ====================================================================== //
+    if (ReleaseType != ReleaseToOS::ForceAll &&
+        !hasChanceToReleasePages(Sci, BlockSize, BytesInFreeList,
+                                 ReleaseType)) {
       return 0;
-
-    const bool CheckDensity =
-        isSmallBlock(BlockSize) && ReleaseType != ReleaseToOS::ForceAll;
-    // Releasing smaller blocks is expensive, so we want to make sure that a
-    // significant amount of bytes are free, and that there has been a good
-    // amount of batches pushed to the freelist before attempting to release.
-    if (CheckDensity && ReleaseType == ReleaseToOS::Normal)
-      if (PushedBytesDelta < Sci->AllocatedUser / 16U)
-        return 0;
-
-    if (ReleaseType == ReleaseToOS::Normal) {
-      const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-      if (IntervalMs < 0)
-        return 0;
-
-      // The constant 8 here is selected from profiling some apps and the number
-      // of unreleased pages in the large size classes is around 16 pages or
-      // more. Choose half of it as a heuristic and which also avoids page
-      // release every time for every pushBlocks() attempt by large blocks.
-      const bool ByPassReleaseInterval =
-          isLargeBlock(BlockSize) && PushedBytesDelta > 8 * PageSize;
-      if (!ByPassReleaseInterval) {
-        if (Sci->ReleaseInfo.LastReleaseAtNs +
-                static_cast<u64>(IntervalMs) * 1000000 >
-            getMonotonicTimeFast()) {
-          // Memory was returned recently.
-          return 0;
-        }
-      }
-    } // if (ReleaseType == ReleaseToOS::Normal)
+    }
 
     const uptr First = Sci->MinRegionIndex;
     const uptr Last = Sci->MaxRegionIndex;
@@ -966,21 +922,23 @@ private:
                              BG.Batches.front()->getCount();
       const uptr BytesInBG = NumBlocks * BlockSize;
 
-      if (ReleaseType != ReleaseToOS::ForceAll &&
-          BytesInBG <= BG.BytesInBGAtLastCheckpoint) {
-        BG.BytesInBGAtLastCheckpoint = BytesInBG;
-        continue;
-      }
-      const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
-      if (ReleaseType != ReleaseToOS::ForceAll && PushedBytesDelta < PageSize)
-        continue;
+      if (ReleaseType != ReleaseToOS::ForceAll) {
+        if (BytesInBG <= BG.BytesInBGAtLastCheckpoint) {
+          BG.BytesInBGAtLastCheckpoint = BytesInBG;
+          continue;
+        }
 
-      // Given the randomness property, we try to release the pages only if the
-      // bytes used by free blocks exceed certain proportion of allocated
-      // spaces.
-      if (CheckDensity && (BytesInBG * 100U) / AllocatedGroupSize <
-                              (100U - 1U - BlockSize / 16U)) {
-        continue;
+        const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
+        if (PushedBytesDelta < PageSize)
+          continue;
+
+        // Given the randomness property, we try to release the pages only if
+        // the bytes used by free blocks exceed certain proportion of allocated
+        // spaces.
+        if (isSmallBlock(BlockSize) && (BytesInBG * 100U) / AllocatedGroupSize <
+                                           (100U - 1U - BlockSize / 16U)) {
+          continue;
+        }
       }
 
       // TODO: Consider updating this after page release if `ReleaseRecorder`
@@ -1033,6 +991,67 @@ private:
     Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
     return TotalReleasedBytes;
+  }
+
+  bool hasChanceToReleasePages(SizeClassInfo *Sci, uptr BlockSize,
+                               uptr BytesInFreeList, ReleaseToOS ReleaseType)
+      REQUIRES(Sci->Mutex) {
+    DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
+    const uptr PageSize = getPageSizeCached();
+
+    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint)
+      Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
+
+    // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value
+    // so that we won't underestimate the releasable pages. For example, the
+    // following is the region usage,
+    //
+    //  BytesInFreeListAtLastCheckpoint   AllocatedUser
+    //                v                         v
+    //  |--------------------------------------->
+    //         ^                   ^
+    //  BytesInFreeList     ReleaseThreshold
+    //
+    // In general, if we have collected enough bytes and the amount of free
+    // bytes meets the ReleaseThreshold, we will try to do page release. If we
+    // don't update `BytesInFreeListAtLastCheckpoint` when the current
+    // `BytesInFreeList` is smaller, we may take longer time to wait for enough
+    // freed blocks because we miss the bytes between
+    // (BytesInFreeListAtLastCheckpoint - BytesInFreeList).
+    const uptr PushedBytesDelta =
+        BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
+    if (PushedBytesDelta < PageSize)
+      return false;
+
+    // Releasing smaller blocks is expensive, so we want to make sure that a
+    // significant amount of bytes are free, and that there has been a good
+    // amount of batches pushed to the freelist before attempting to release.
+    if (isSmallBlock(BlockSize) && ReleaseType == ReleaseToOS::Normal)
+      if (PushedBytesDelta < Sci->AllocatedUser / 16U)
+        return false;
+
+    if (ReleaseType == ReleaseToOS::Normal) {
+      const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+      if (IntervalMs < 0)
+        return false;
+
+      // The constant 8 here is selected from profiling some apps and the number
+      // of unreleased pages in the large size classes is around 16 pages or
+      // more. Choose half of it as a heuristic and which also avoids page
+      // release every time for every pushBlocks() attempt by large blocks.
+      const bool ByPassReleaseInterval =
+          isLargeBlock(BlockSize) && PushedBytesDelta > 8 * PageSize;
+      if (!ByPassReleaseInterval) {
+        if (Sci->ReleaseInfo.LastReleaseAtNs +
+                static_cast<u64>(IntervalMs) * 1000000 >
+            getMonotonicTimeFast()) {
+          // Memory was returned recently.
+          return false;
+        }
+      }
+    } // if (ReleaseType == ReleaseToOS::Normal)
+
+    return true;
   }
 
   SizeClassInfo SizeClassInfoArray[NumClasses] = {};
