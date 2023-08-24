@@ -3,6 +3,7 @@
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
 // RUN:     -shared-libs=%mlir_runner_utils    \
+// RUN:     -shared-libs=%mlir_float16_utils   \
 // RUN: | FileCheck %s
 
 // -------------------------------------------------------------------------- //
@@ -243,26 +244,26 @@ func.func @powf() {
 // roundeven.
 // -------------------------------------------------------------------------- //
 
-func.func @func_roundeven(%a : f32) {
+func.func @func_roundeven32(%a : f32) {
   %b = math.roundeven %a : f32
   vector.print %b : f32
   return
 }
 
-func.func @func_roundeven$bitcast_result_to_int(%a : f32) {
+func.func @func_roundeven32$bitcast_result_to_int(%a : f32) {
   %b = math.roundeven %a : f32
   %c = arith.bitcast %b : f32 to i32
   vector.print %c : i32
   return
 }
 
-func.func @func_roundeven$vector(%a : vector<1xf32>) {
+func.func @func_roundeven32$vector(%a : vector<1xf32>) {
   %b = math.roundeven %a : vector<1xf32>
   vector.print %b : vector<1xf32>
   return
 }
 
-func.func @roundeven() {
+func.func @roundeven32() {
   %c0_25 = arith.constant 0.25 : f32
   %c0_5 = arith.constant 0.5 : f32
   %c0_75 = arith.constant 0.75 : f32
@@ -296,67 +297,66 @@ func.func @roundeven() {
   %cNeg3_75 = arith.constant -3.75 : f32
 
   // CHECK-NEXT: 0
-  call @func_roundeven(%c0_25) : (f32) -> ()
+  call @func_roundeven32(%c0_25) : (f32) -> ()
   // CHECK-NEXT: 0
-  call @func_roundeven(%c0_5) : (f32) -> ()
+  call @func_roundeven32(%c0_5) : (f32) -> ()
   // CHECK-NEXT: 1
-  call @func_roundeven(%c0_75) : (f32) -> ()
+  call @func_roundeven32(%c0_75) : (f32) -> ()
   // CHECK-NEXT: 1
-  call @func_roundeven(%c1) : (f32) -> ()
+  call @func_roundeven32(%c1) : (f32) -> ()
   // CHECK-NEXT: 1
-  call @func_roundeven(%c1_25) : (f32) -> ()
+  call @func_roundeven32(%c1_25) : (f32) -> ()
   // CHECK-NEXT: 2
-  call @func_roundeven(%c1_5) : (f32) -> ()
+  call @func_roundeven32(%c1_5) : (f32) -> ()
   // CHECK-NEXT: 2
-  call @func_roundeven(%c1_75) : (f32) -> ()
+  call @func_roundeven32(%c1_75) : (f32) -> ()
   // CHECK-NEXT: 2
-  call @func_roundeven(%c2) : (f32) -> ()
+  call @func_roundeven32(%c2) : (f32) -> ()
   // CHECK-NEXT: 2
-  call @func_roundeven(%c2_25) : (f32) -> ()
+  call @func_roundeven32(%c2_25) : (f32) -> ()
   // CHECK-NEXT: 2
-  call @func_roundeven(%c2_5) : (f32) -> ()
+  call @func_roundeven32(%c2_5) : (f32) -> ()
   // CHECK-NEXT: 3
-  call @func_roundeven(%c2_75) : (f32) -> ()
+  call @func_roundeven32(%c2_75) : (f32) -> ()
   // CHECK-NEXT: 3
-  call @func_roundeven(%c3) : (f32) -> ()
+  call @func_roundeven32(%c3) : (f32) -> ()
   // CHECK-NEXT: 3
-  call @func_roundeven(%c3_25) : (f32) -> ()
+  call @func_roundeven32(%c3_25) : (f32) -> ()
   // CHECK-NEXT: 4
-  call @func_roundeven(%c3_5) : (f32) -> ()
+  call @func_roundeven32(%c3_5) : (f32) -> ()
   // CHECK-NEXT: 4
-  call @func_roundeven(%c3_75) : (f32) -> ()
+  call @func_roundeven32(%c3_75) : (f32) -> ()
 
   // CHECK-NEXT: -0
-  call @func_roundeven(%cNeg0_25) : (f32) -> ()
+  call @func_roundeven32(%cNeg0_25) : (f32) -> ()
   // CHECK-NEXT: -0
-  call @func_roundeven(%cNeg0_5) : (f32) -> ()
+  call @func_roundeven32(%cNeg0_5) : (f32) -> ()
   // CHECK-NEXT: -1
-  call @func_roundeven(%cNeg0_75) : (f32) -> ()
+  call @func_roundeven32(%cNeg0_75) : (f32) -> ()
   // CHECK-NEXT: -1
-  call @func_roundeven(%cNeg1) : (f32) -> ()
+  call @func_roundeven32(%cNeg1) : (f32) -> ()
   // CHECK-NEXT: -1
-  call @func_roundeven(%cNeg1_25) : (f32) -> ()
+  call @func_roundeven32(%cNeg1_25) : (f32) -> ()
   // CHECK-NEXT: -2
-  call @func_roundeven(%cNeg1_5) : (f32) -> ()
+  call @func_roundeven32(%cNeg1_5) : (f32) -> ()
   // CHECK-NEXT: -2
-  call @func_roundeven(%cNeg1_75) : (f32) -> ()
+  call @func_roundeven32(%cNeg1_75) : (f32) -> ()
   // CHECK-NEXT: -2
-  call @func_roundeven(%cNeg2) : (f32) -> ()
+  call @func_roundeven32(%cNeg2) : (f32) -> ()
   // CHECK-NEXT: -2
-  call @func_roundeven(%cNeg2_25) : (f32) -> ()
+  call @func_roundeven32(%cNeg2_25) : (f32) -> ()
   // CHECK-NEXT: -2
-  call @func_roundeven(%cNeg2_5) : (f32) -> ()
+  call @func_roundeven32(%cNeg2_5) : (f32) -> ()
   // CHECK-NEXT: -3
-  call @func_roundeven(%cNeg2_75) : (f32) -> ()
+  call @func_roundeven32(%cNeg2_75) : (f32) -> ()
   // CHECK-NEXT: -3
-  call @func_roundeven(%cNeg3) : (f32) -> ()
+  call @func_roundeven32(%cNeg3) : (f32) -> ()
   // CHECK-NEXT: -3
-  call @func_roundeven(%cNeg3_25) : (f32) -> ()
+  call @func_roundeven32(%cNeg3_25) : (f32) -> ()
   // CHECK-NEXT: -4
-  call @func_roundeven(%cNeg3_5) : (f32) -> ()
+  call @func_roundeven32(%cNeg3_5) : (f32) -> ()
   // CHECK-NEXT: -4
-  call @func_roundeven(%cNeg3_75) : (f32) -> ()
-
+  call @func_roundeven32(%cNeg3_75) : (f32) -> ()
 
   // Special values: 0, -0, inf, -inf, nan, -nan
   %cNeg0 = arith.constant -0.0 : f32
@@ -371,22 +371,22 @@ func.func @roundeven() {
   %cNegNan = arith.bitcast %cNegNanInt : i32 to f32
 
   // CHECK-NEXT: -0
-  call @func_roundeven(%cNeg0) : (f32) -> ()
+  call @func_roundeven32(%cNeg0) : (f32) -> ()
   // CHECK-NEXT: 0
-  call @func_roundeven(%c0) : (f32) -> ()
+  call @func_roundeven32(%c0) : (f32) -> ()
   // CHECK-NEXT: inf
-  call @func_roundeven(%cInf) : (f32) -> ()
+  call @func_roundeven32(%cInf) : (f32) -> ()
   // CHECK-NEXT: -inf
-  call @func_roundeven(%cNegInf) : (f32) -> ()
+  call @func_roundeven32(%cNegInf) : (f32) -> ()
   // Per IEEE 754-2008, sign is not required when printing a negative NaN, so
   // print as an int to ensure input NaN is left unchanged.
   // CHECK-NEXT: 2143289344
   // CHECK-NEXT: 2143289344
-  call @func_roundeven$bitcast_result_to_int(%cNan) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%cNan) : (f32) -> ()
   vector.print %cNanInt : i32
   // CHECK-NEXT: -4194304
   // CHECK-NEXT: -4194304
-  call @func_roundeven$bitcast_result_to_int(%cNegNan) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%cNegNan) : (f32) -> ()
   vector.print %cNegNanInt : i32
 
 
@@ -402,25 +402,199 @@ func.func @roundeven() {
 
   // CHECK-NEXT: 1258291196
   // hex: 0x4AFFFFFC
-  call @func_roundeven$bitcast_result_to_int(%c8388606_5) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%c8388606_5) : (f32) -> ()
   // CHECK-NEXT: 1258291198
   // hex: 0x4AFFFFFE
-  call @func_roundeven$bitcast_result_to_int(%c8388607) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%c8388607) : (f32) -> ()
   // CHECK-NEXT: 1258291200
   // hex: 0x4B000000
-  call @func_roundeven$bitcast_result_to_int(%c8388607_5) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%c8388607_5) : (f32) -> ()
   // CHECK-NEXT: 1258291200
   // hex: 0x4B000000
-  call @func_roundeven$bitcast_result_to_int(%c8388608) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%c8388608) : (f32) -> ()
   // CHECK-NEXT: 1258291201
   // hex: 0x4B000001
-  call @func_roundeven$bitcast_result_to_int(%c8388609) : (f32) -> ()
+  call @func_roundeven32$bitcast_result_to_int(%c8388609) : (f32) -> ()
 
 
   // Check that vector type works
   %cVec = arith.constant dense<[0.5]> : vector<1xf32>
   // CHECK-NEXT: ( 0 )
-  call @func_roundeven$vector(%cVec) : (vector<1xf32>) -> ()
+  call @func_roundeven32$vector(%cVec) : (vector<1xf32>) -> ()
+  return
+}
+
+func.func @func_roundeven64(%a : f64) {
+  %b = math.roundeven %a : f64
+  vector.print %b : f64
+  return
+}
+
+func.func @func_roundeven64$bitcast_result_to_int(%a : f64) {
+  %b = math.roundeven %a : f64
+  %c = arith.bitcast %b : f64 to i64
+  vector.print %c : i64
+  return
+}
+
+func.func @func_roundeven64$vector(%a : vector<1xf64>) {
+  %b = math.roundeven %a : vector<1xf64>
+  vector.print %b : vector<1xf64>
+  return
+}
+
+func.func @roundeven64() {
+  %c0_25 = arith.constant 0.25 : f64
+  %c0_5 = arith.constant 0.5 : f64
+  %c0_75 = arith.constant 0.75 : f64
+  %c1 = arith.constant 1.0 : f64
+  %c1_25 = arith.constant 1.25 : f64
+  %c1_5 = arith.constant 1.5 : f64
+  %c1_75 = arith.constant 1.75 : f64
+  %c2 = arith.constant 2.0 : f64
+  %c2_25 = arith.constant 2.25 : f64
+  %c2_5 = arith.constant 2.5 : f64
+  %c2_75 = arith.constant 2.75 : f64
+  %c3 = arith.constant 3.0 : f64
+  %c3_25 = arith.constant 3.25 : f64
+  %c3_5 = arith.constant 3.5 : f64
+  %c3_75 = arith.constant 3.75 : f64
+
+  %cNeg0_25 = arith.constant -0.25 : f64
+  %cNeg0_5 = arith.constant -0.5 : f64
+  %cNeg0_75 = arith.constant -0.75 : f64
+  %cNeg1 = arith.constant -1.0 : f64
+  %cNeg1_25 = arith.constant -1.25 : f64
+  %cNeg1_5 = arith.constant -1.5 : f64
+  %cNeg1_75 = arith.constant -1.75 : f64
+  %cNeg2 = arith.constant -2.0 : f64
+  %cNeg2_25 = arith.constant -2.25 : f64
+  %cNeg2_5 = arith.constant -2.5 : f64
+  %cNeg2_75 = arith.constant -2.75 : f64
+  %cNeg3 = arith.constant -3.0 : f64
+  %cNeg3_25 = arith.constant -3.25 : f64
+  %cNeg3_5 = arith.constant -3.5 : f64
+  %cNeg3_75 = arith.constant -3.75 : f64
+
+  // CHECK-NEXT: 0
+  call @func_roundeven64(%c0_25) : (f64) -> ()
+  // CHECK-NEXT: 0
+  call @func_roundeven64(%c0_5) : (f64) -> ()
+  // CHECK-NEXT: 1
+  call @func_roundeven64(%c0_75) : (f64) -> ()
+  // CHECK-NEXT: 1
+  call @func_roundeven64(%c1) : (f64) -> ()
+  // CHECK-NEXT: 1
+  call @func_roundeven64(%c1_25) : (f64) -> ()
+  // CHECK-NEXT: 2
+  call @func_roundeven64(%c1_5) : (f64) -> ()
+  // CHECK-NEXT: 2
+  call @func_roundeven64(%c1_75) : (f64) -> ()
+  // CHECK-NEXT: 2
+  call @func_roundeven64(%c2) : (f64) -> ()
+  // CHECK-NEXT: 2
+  call @func_roundeven64(%c2_25) : (f64) -> ()
+  // CHECK-NEXT: 2
+  call @func_roundeven64(%c2_5) : (f64) -> ()
+  // CHECK-NEXT: 3
+  call @func_roundeven64(%c2_75) : (f64) -> ()
+  // CHECK-NEXT: 3
+  call @func_roundeven64(%c3) : (f64) -> ()
+  // CHECK-NEXT: 3
+  call @func_roundeven64(%c3_25) : (f64) -> ()
+  // CHECK-NEXT: 4
+  call @func_roundeven64(%c3_5) : (f64) -> ()
+  // CHECK-NEXT: 4
+  call @func_roundeven64(%c3_75) : (f64) -> ()
+
+  // CHECK-NEXT: -0
+  call @func_roundeven64(%cNeg0_25) : (f64) -> ()
+  // CHECK-NEXT: -0
+  call @func_roundeven64(%cNeg0_5) : (f64) -> ()
+  // CHECK-NEXT: -1
+  call @func_roundeven64(%cNeg0_75) : (f64) -> ()
+  // CHECK-NEXT: -1
+  call @func_roundeven64(%cNeg1) : (f64) -> ()
+  // CHECK-NEXT: -1
+  call @func_roundeven64(%cNeg1_25) : (f64) -> ()
+  // CHECK-NEXT: -2
+  call @func_roundeven64(%cNeg1_5) : (f64) -> ()
+  // CHECK-NEXT: -2
+  call @func_roundeven64(%cNeg1_75) : (f64) -> ()
+  // CHECK-NEXT: -2
+  call @func_roundeven64(%cNeg2) : (f64) -> ()
+  // CHECK-NEXT: -2
+  call @func_roundeven64(%cNeg2_25) : (f64) -> ()
+  // CHECK-NEXT: -2
+  call @func_roundeven64(%cNeg2_5) : (f64) -> ()
+  // CHECK-NEXT: -3
+  call @func_roundeven64(%cNeg2_75) : (f64) -> ()
+  // CHECK-NEXT: -3
+  call @func_roundeven64(%cNeg3) : (f64) -> ()
+  // CHECK-NEXT: -3
+  call @func_roundeven64(%cNeg3_25) : (f64) -> ()
+  // CHECK-NEXT: -4
+  call @func_roundeven64(%cNeg3_5) : (f64) -> ()
+  // CHECK-NEXT: -4
+  call @func_roundeven64(%cNeg3_75) : (f64) -> ()
+
+  // Special values: 0, -0, inf, -inf, nan, -nan
+  %cNeg0 = arith.constant -0.0 : f64
+  %c0 = arith.constant 0.0 : f64
+  %cInfInt = arith.constant 0x7FF0000000000000 : i64
+  %cInf = arith.bitcast %cInfInt : i64 to f64
+  %cNegInfInt = arith.constant 0xFFF0000000000000 : i64
+  %cNegInf = arith.bitcast %cNegInfInt : i64 to f64
+  %cNanInt = arith.constant 0x7FF0000000000001 : i64
+  %cNan = arith.bitcast %cNanInt : i64 to f64
+  %cNegNanInt = arith.constant 0xFFF0000000000001 : i64
+  %cNegNan = arith.bitcast %cNegNanInt : i64 to f64
+
+  // CHECK-NEXT: -0
+  call @func_roundeven64(%cNeg0) : (f64) -> ()
+  // CHECK-NEXT: 0
+  call @func_roundeven64(%c0) : (f64) -> ()
+  // CHECK-NEXT: inf
+  call @func_roundeven64(%cInf) : (f64) -> ()
+  // CHECK-NEXT: -inf
+  call @func_roundeven64(%cNegInf) : (f64) -> ()
+
+  // Values above and below 2^52 = 4503599627370496
+  %c4503599627370494_5 = arith.constant 4503599627370494.5 : f64
+  %c4503599627370495 = arith.constant 4503599627370495.0 : f64
+  %c4503599627370495_5 = arith.constant 4503599627370495.5 : f64
+  %c4503599627370496 = arith.constant 4503599627370496.0 : f64
+  %c4503599627370497 = arith.constant 4503599627370497.0 : f64
+
+  // Bitcast result to int to avoid printing in scientific notation,
+  // which does not display all significant digits.
+
+  // CHECK-NEXT: 4841369599423283196
+  // hex: 0x432ffffffffffffc
+  call @func_roundeven64$bitcast_result_to_int(%c4503599627370494_5) : (f64) -> ()
+  // CHECK-NEXT: 4841369599423283198
+  // hex: 0x432ffffffffffffe
+  call @func_roundeven64$bitcast_result_to_int(%c4503599627370495) : (f64) -> ()
+  // CHECK-NEXT: 4841369599423283200
+  // hex: 0x4330000000000000
+  call @func_roundeven64$bitcast_result_to_int(%c4503599627370495_5) : (f64) -> ()
+  // CHECK-NEXT: 4841369599423283200
+  // hex: 0x10000000000000
+  call @func_roundeven64$bitcast_result_to_int(%c4503599627370496) : (f64) -> ()
+  // CHECK-NEXT: 4841369599423283201
+  // hex: 0x10000000000001
+  call @func_roundeven64$bitcast_result_to_int(%c4503599627370497) : (f64) -> ()
+
+  // Check that vector type works
+  %cVec = arith.constant dense<[0.5]> : vector<1xf64>
+  // CHECK-NEXT: ( 0 )
+  call @func_roundeven64$vector(%cVec) : (vector<1xf64>) -> ()
+  return
+}
+
+func.func @roundeven() {
+  call @roundeven32() : () -> ()
+  call @roundeven64() : () -> ()
   return
 }
 
