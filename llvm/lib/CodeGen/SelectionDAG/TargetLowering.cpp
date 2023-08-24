@@ -1040,13 +1040,10 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
     // larger type size to do the transform.
     if (!TLI.isOperationLegalOrCustom(AVGOpc, VT))
       return SDValue();
-
-    if (DAG.computeOverflowForAdd(IsSigned, Add.getOperand(0),
-                                  Add.getOperand(1)) ==
-            SelectionDAG::OFK_Never &&
-        (!Add2 || DAG.computeOverflowForAdd(IsSigned, Add2.getOperand(0),
-                                            Add2.getOperand(1)) ==
-                      SelectionDAG::OFK_Never))
+    if (DAG.willNotOverflowAdd(IsSigned, Add.getOperand(0),
+                               Add.getOperand(1)) &&
+        (!Add2 || DAG.willNotOverflowAdd(IsSigned, Add2.getOperand(0),
+                                         Add2.getOperand(1))))
       NVT = VT;
     else
       return SDValue();

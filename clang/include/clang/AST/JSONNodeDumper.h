@@ -285,7 +285,6 @@ public:
   void VisitBinaryOperator(const BinaryOperator *BO);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *CAO);
   void VisitMemberExpr(const MemberExpr *ME);
-  void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
   void VisitCXXThisExpr(const CXXThisExpr *TE);

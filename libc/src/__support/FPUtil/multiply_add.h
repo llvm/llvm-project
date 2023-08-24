@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
@@ -21,7 +22,14 @@ namespace fputil {
 // which uses FMA instructions to speed up if available.
 
 template <typename T>
-LIBC_INLINE T multiply_add(const T &x, const T &y, const T &z) {
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+multiply_add(const T &x, const T &y, const T &z) {
+  return x * y + z;
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+multiply_add(T x, T y, T z) {
   return x * y + z;
 }
 

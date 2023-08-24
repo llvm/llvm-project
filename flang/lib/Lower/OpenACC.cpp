@@ -1412,11 +1412,10 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
           tileOperands.push_back(fir::getBase(converter.genExprValue(
               *Fortran::semantics::GetExpr(*expr), stmtCtx)));
         } else {
-          // * was passed as value and will be represented as a -1 constant
-          // integer.
+          // * was passed as value and will be represented as a special
+          // constant.
           mlir::Value tileStar = builder.createIntegerConstant(
-              clauseLocation, builder.getIntegerType(32),
-              /* STAR */ -1);
+              clauseLocation, builder.getIntegerType(32), starCst);
           tileOperands.push_back(tileStar);
         }
       }
