@@ -24,47 +24,81 @@
 #define SKIP_MISMATCH_TESTS 0
 #endif
 
+struct AllocContext {
+  void *Ptr;
+  size_t Size;
+};
+struct DeallocContext {
+  void *Ptr;
+};
+static AllocContext AC;
+static DeallocContext DC;
+
 void operator delete(void *, size_t) noexcept;
 void operator delete[](void *, size_t) noexcept;
 
+extern "C" {
+__attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
+                                                                  size_t Size) {
+  AC.Ptr = Ptr;
+  AC.Size = Size;
+}
+__attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
+  DC.Ptr = Ptr;
+}
+}
 // Note that every Cxx allocation function in the test binary will be fulfilled
 // by Scudo. See the comment in the C counterpart of this file.
 
 template <typename T> static void testCxxNew() {
   T *P = new T;
   EXPECT_NE(P, nullptr);
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(sizeof(T), AC.Size);
   memset(P, 0x42, sizeof(T));
   EXPECT_DEATH(delete[] P, "");
   delete P;
+  EXPECT_EQ(P, DC.Ptr);
   EXPECT_DEATH(delete P, "");
 
   P = new T;
   EXPECT_NE(P, nullptr);
   memset(P, 0x42, sizeof(T));
   operator delete(P, sizeof(T));
+  EXPECT_EQ(P, DC.Ptr);
 
   P = new (std::nothrow) T;
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(sizeof(T), AC.Size);
   EXPECT_NE(P, nullptr);
   memset(P, 0x42, sizeof(T));
   delete P;
+  EXPECT_EQ(P, DC.Ptr);
 
   const size_t N = 16U;
   T *A = new T[N];
   EXPECT_NE(A, nullptr);
+  EXPECT_EQ(A, AC.Ptr);
+  EXPECT_EQ(sizeof(T) * N, AC.Size);
   memset(A, 0x42, sizeof(T) * N);
   EXPECT_DEATH(delete A, "");
   delete[] A;
+  EXPECT_EQ(A, DC.Ptr);
   EXPECT_DEATH(delete[] A, "");
 
   A = new T[N];
   EXPECT_NE(A, nullptr);
   memset(A, 0x42, sizeof(T) * N);
   operator delete[](A, sizeof(T) * N);
+  EXPECT_EQ(A, DC.Ptr);
 
   A = new (std::nothrow) T[N];
+  EXPECT_EQ(A, AC.Ptr);
+  EXPECT_EQ(sizeof(T) * N, AC.Size);
   EXPECT_NE(A, nullptr);
   memset(A, 0x42, sizeof(T) * N);
   delete[] A;
+  EXPECT_EQ(A, DC.Ptr);
 }
 
 class Pixel {
