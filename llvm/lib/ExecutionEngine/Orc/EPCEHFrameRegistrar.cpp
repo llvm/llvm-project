@@ -28,7 +28,7 @@ EPCEHFrameRegistrar::Create(ExecutionSession &ES) {
             rt::RegisterEHFrameSectionWrapperName},
            {DeregisterEHFrameSectionWrapper,
             rt::DeregisterEHFrameSectionWrapperName}}))
-    return Err;
+    return std::move(Err);
 
   return std::make_unique<EPCEHFrameRegistrar>(
       ES, RegisterEHFrameSectionWrapper, DeregisterEHFrameSectionWrapper);
