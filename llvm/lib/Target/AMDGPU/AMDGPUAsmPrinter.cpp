@@ -1098,10 +1098,30 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   StringRef FnName = MF.getFunction().getName();
   MD->setFunctionScratchSize(FnName, MFI.getStackSize());
 
-  // Set compute registers
-  MD->setRsrc1(CallingConv::AMDGPU_CS,
-               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS));
-  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
+  if (MD->getPALMajorVersion() < 3) {
+    // Set compute registers
+    MD->setRsrc1(CallingConv::AMDGPU_CS,
+                 CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS));
+    MD->setRsrc2(CallingConv::AMDGPU_CS,
+                 CurrentProgramInfo.getComputePGMRSrc2());
+  } else {
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".ieee_mode",
+                   (bool)CurrentProgramInfo.IEEEMode);
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".wgp_mode",
+                   (bool)CurrentProgramInfo.WgpMode);
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".mem_ordered",
+                   (bool)CurrentProgramInfo.MemOrdered);
+
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".trap_present",
+                   (bool)CurrentProgramInfo.TrapHandlerEnable);
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".excp_en",
+                   CurrentProgramInfo.EXCPEnable);
+
+    const unsigned LdsDwGranularity = 128;
+    MD->setHwStage(CallingConv::AMDGPU_CS, ".lds_size",
+                   (unsigned)(CurrentProgramInfo.LdsSize * LdsDwGranularity *
+                              sizeof(uint32_t)));
+  }
 
   // Set optional info
   MD->setFunctionLdsSize(FnName, CurrentProgramInfo.LDSSize);
