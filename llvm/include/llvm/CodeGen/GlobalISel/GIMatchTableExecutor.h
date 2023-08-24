@@ -463,9 +463,7 @@ public:
   // For some predicates, we need to track the current MBB.
   MachineBasicBlock *CurMBB = nullptr;
 
-  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
-    llvm_unreachable("TableGen should have emitted implementation");
-  }
+  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
   virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,

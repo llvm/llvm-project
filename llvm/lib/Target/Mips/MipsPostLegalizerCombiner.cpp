@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -40,27 +39,24 @@ namespace {
 #include "MipsGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-class MipsPostLegalizerCombinerImpl : public GIMatchTableExecutor {
+class MipsPostLegalizerCombinerImpl : public Combiner {
 protected:
-  CombinerHelper &Helper;
   const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig;
-
   const MipsSubtarget &STI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-
-  MachineRegisterInfo &MRI;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
 
 public:
   MipsPostLegalizerCombinerImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
       const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig,
-      const MipsSubtarget &STI, GISelChangeObserver &Observer,
-      MachineIRBuilder &B, CombinerHelper &Helper);
+      const MipsSubtarget &STI, MachineDominatorTree *MDT,
+      const LegalizerInfo *LI);
 
   static const char *getName() { return "MipsPostLegalizerCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -73,45 +69,17 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 MipsPostLegalizerCombinerImpl::MipsPostLegalizerCombinerImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
     const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig,
-    const MipsSubtarget &STI, GISelChangeObserver &Observer,
-    MachineIRBuilder &B, CombinerHelper &Helper)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), Observer(Observer),
-      B(B), MF(B.getMF()), MRI(*B.getMRI()),
+    const MipsSubtarget &STI, MachineDominatorTree *MDT,
+    const LegalizerInfo *LI)
+    : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "MipsGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
-}
-
-class MipsPostLegalizerCombinerInfo final : public CombinerInfo {
-  GISelKnownBits *KB;
-
-public:
-  MipsPostLegalizerCombinerImplRuleConfig RuleConfig;
-
-  MipsPostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                GISelKnownBits *KB, const MipsLegalizerInfo *LI)
-      : CombinerInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
-                     /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
-        KB(KB) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool MipsPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
-                                            MachineInstr &MI,
-                                            MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<MipsSubtarget>();
-  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB,
-                        /*DominatorTree*/ nullptr, LInfo);
-  MipsPostLegalizerCombinerImpl Impl(RuleConfig, STI, Observer, B, Helper);
-  Impl.setupMF(*MI.getMF(), KB);
-  return Impl.tryCombineAll(MI);
 }
 
 // Pass boilerplate
@@ -123,9 +91,7 @@ public:
 
   MipsPostLegalizerCombiner(bool IsOptNone = false);
 
-  StringRef getPassName() const override {
-    return "MipsPostLegalizerCombiner";
-  }
+  StringRef getPassName() const override { return "MipsPostLegalizerCombiner"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -133,6 +99,7 @@ public:
 
 private:
   bool IsOptNone;
+  MipsPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -152,6 +119,9 @@ void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 MipsPostLegalizerCombiner::MipsPostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeMipsPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -168,10 +138,13 @@ bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  MipsPostLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                       F.hasMinSize(), KB, LI);
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+  MachineDominatorTree *MDT =
+      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+  CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
+                     LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  MipsPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
+                                     RuleConfig, ST, MDT, LI);
+  return Impl.combineMachineInstrs();
 }
 
 char MipsPostLegalizerCombiner::ID = 0;

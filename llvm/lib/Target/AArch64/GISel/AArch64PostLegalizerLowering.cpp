@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -1067,27 +1066,23 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
   Helper.lower(MI, 0, /* Unused hint type */ LLT());
 }
 
-class AArch64PostLegalizerLoweringImpl : public GIMatchTableExecutor {
+class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
-  CombinerHelper &Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig;
-
   const AArch64Subtarget &STI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-
-  MachineRegisterInfo &MRI;
 
 public:
   AArch64PostLegalizerLoweringImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
-      const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-      MachineIRBuilder &B, CombinerHelper &Helper);
+      const AArch64Subtarget &STI);
 
   static const char *getName() { return "AArch6400PreLegalizerCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -1100,42 +1095,19 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
-    const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-    MachineIRBuilder &B, CombinerHelper &Helper)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), Observer(Observer),
-      B(B), MF(B.getMF()), MRI(*B.getMRI()),
+    const AArch64Subtarget &STI)
+    : Combiner(MF, CInfo, TPC, /*KB*/ nullptr, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
+      STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
 }
 
-class AArch64PostLegalizerLoweringInfo : public CombinerInfo {
-public:
-  AArch64PostLegalizerLoweringImplRuleConfig RuleConfig;
-
-  AArch64PostLegalizerLoweringInfo(bool OptSize, bool MinSize)
-      : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, /*OptEnabled = */ true, OptSize,
-                     MinSize) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool AArch64PostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
-                                               MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<AArch64Subtarget>();
-  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false);
-  AArch64PostLegalizerLoweringImpl Impl(RuleConfig, STI, Observer, B, Helper);
-  Impl.setupMF(*MI.getMF(), Helper.getKnownBits());
-  return Impl.tryCombineAll(MI);
-}
 class AArch64PostLegalizerLowering : public MachineFunctionPass {
 public:
   static char ID;
@@ -1148,6 +1120,9 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+private:
+  AArch64PostLegalizerLoweringImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -1161,6 +1136,9 @@ void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
     : MachineFunctionPass(ID) {
   initializeAArch64PostLegalizerLoweringPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
@@ -1172,9 +1150,14 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
          "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  AArch64PostLegalizerLoweringInfo PCInfo(F.hasOptSize(), F.hasMinSize());
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                     /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
+                     F.hasOptSize(), F.hasMinSize());
+  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
+                                        RuleConfig, ST);
+  return Impl.combineMachineInstrs();
 }
 
 char AArch64PostLegalizerLowering::ID = 0;

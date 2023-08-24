@@ -142,6 +142,7 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 def AMDGPUPreLegalizerCombiner: GICombinerHelper<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, clamp_i64_to_i16, foldable_fneg]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AMDGPUPostLegalizerCombiner: GICombinerHelper<
@@ -149,6 +150,7 @@ def AMDGPUPostLegalizerCombiner: GICombinerHelper<
   [all_combines, gfx6gfx7_combines, gfx8_combines,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    rcp_sqrt_to_rsq, sign_extension_in_reg]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AMDGPURegBankCombiner : GICombinerHelper<

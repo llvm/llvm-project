@@ -38,10 +38,12 @@ def AArch64PreLegalizerCombiner: GICombinerHelper<
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AArch64O0PreLegalizerCombiner: GICombinerHelper<
   "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
