@@ -1823,9 +1823,14 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Assumption found "
                         << *Assumption.second << ": " << *LoadI
                         << " == " << *Assumption.first << "\n");
-
+      bool UsedAssumedInformation = false;
+      std::optional<Value *> Content = nullptr;
+      if (Assumption.first)
+        Content =
+            A.getAssumedSimplified(*Assumption.first, *this,
+                                   UsedAssumedInformation, AA::Interprocedural);
       return handleAccess(
-          A, *Assumption.second, Assumption.first, AccessKind::AK_ASSUMPTION,
+          A, *Assumption.second, Content, AccessKind::AK_ASSUMPTION,
           OffsetInfoMap[CurPtr].Offsets, Changed, *LoadI->getType());
     }
 
