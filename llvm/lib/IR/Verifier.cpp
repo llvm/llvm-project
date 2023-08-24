@@ -5927,23 +5927,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    Check(Call.getFunction()->isConvergent(),
-          "Entry intrinsic can occur only in a convergent function.", &Call);
-    Check(Call.getParent()->isEntryBlock(),
-          "Entry intrinsic must occur in the entry block.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Entry intrinsic must occur at the start of the basic block.", &Call);
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
-    Check(!Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Entry or anchor intrinsic must not have a convergencectrl bundle.",
-          &Call);
     break;
   case Intrinsic::experimental_convergence_loop:
-    Check(Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Loop intrinsic must have a convergencectrl bundle.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Loop intrinsic must occur at the start of the basic block.", &Call);
     break;
   };
 

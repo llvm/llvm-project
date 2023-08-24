@@ -49,6 +49,7 @@ static_library("CodeGen") {
     "CFGuardLongjmp.cpp",
     "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
+    "GCEmptyBasicBlocks.cpp",
     "CalcSpillWeights.cpp",
     "CallBrPrepare.cpp",
     "CallingConvLower.cpp",

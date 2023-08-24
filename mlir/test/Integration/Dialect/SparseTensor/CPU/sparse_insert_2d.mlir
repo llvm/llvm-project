@@ -32,7 +32,7 @@
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #CSR = #sparse_tensor.encoding<{

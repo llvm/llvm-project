@@ -83,6 +83,17 @@ bool Parser::isCXXDeclarationStatement(
                                       isDeductionGuide,
                                       DeclSpec::FriendSpecified::No))
             return true;
+        } else if (SS.isNotEmpty()) {
+          // If the scope is not empty, it could alternatively be something like
+          // a typedef or using declaration. That declaration might be private
+          // in the global context, which would be diagnosed by calling into
+          // isCXXSimpleDeclaration, but may actually be fine in the context of
+          // member functions and static variable definitions. Check if the next
+          // token is also an identifier and assume a declaration.
+          // We cannot check if the scopes match because the declarations could
+          // involve namespaces and friend declarations.
+          if (NextToken().is(tok::identifier))
+            return true;
         }
         break;
       }

@@ -1845,8 +1845,9 @@ void RewriteInstance::adjustCommandLineOptions() {
     exit(1);
   }
 
-  if (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
-      !opts::HotText.getNumOccurrences()) {
+  if (opts::Instrument ||
+      (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
+       !opts::HotText.getNumOccurrences())) {
     opts::HotText = true;
   } else if (opts::HotText && !BC->HasRelocations) {
     errs() << "BOLT-WARNING: hot text is disabled in non-relocation mode\n";
@@ -5285,8 +5286,10 @@ void RewriteInstance::rewriteFile() {
       if (!BF.getFileOffset() || !BF.isEmitted())
         continue;
       OS.seek(BF.getFileOffset());
-      for (unsigned I = 0; I < BF.getMaxSize(); ++I)
-        OS.write((unsigned char)BC->MIB->getTrapFillValue());
+      StringRef TrapInstr = BC->MIB->getTrapFillValue();
+      unsigned NInstr = BF.getMaxSize() / TrapInstr.size();
+      for (unsigned I = 0; I < NInstr; ++I)
+        OS.write(TrapInstr.data(), TrapInstr.size());
     }
     OS.seek(SavedPos);
   }

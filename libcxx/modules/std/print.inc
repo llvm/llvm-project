@@ -13,5 +13,7 @@ export namespace std {
   using std::println;
 
   using std::vprint_nonunicode;
+#ifndef _LIBCPP_HAS_NO_UNICODE
   using std::vprint_unicode;
+#endif // _LIBCPP_HAS_NO_UNICODE
 } // namespace std

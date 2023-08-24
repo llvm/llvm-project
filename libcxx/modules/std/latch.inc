@@ -8,5 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#ifndef _LIBCPP_HAS_NO_THREADS
   using std::latch;
+#endif // _LIBCPP_HAS_NO_THREADS
 } // namespace std

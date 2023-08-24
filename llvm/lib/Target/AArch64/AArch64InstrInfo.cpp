@@ -4892,6 +4892,12 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return false;
 }
 
+void AArch64InstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  BuildMI(MBB, MI, DL, get(AArch64::HINT)).addImm(0);
+}
+
 MCInst AArch64InstrInfo::getNop() const {
   return MCInstBuilder(AArch64::HINT).addImm(0);
 }
@@ -5508,8 +5514,8 @@ static bool getFNEGPatterns(MachineInstr &Root,
   auto Match = [&](unsigned Opcode, MachineCombinerPattern Pattern) -> bool {
     MachineOperand &MO = Root.getOperand(1);
     MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
-    if (MI != nullptr && MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()) &&
-        (MI->getOpcode() == Opcode) &&
+    if (MI != nullptr && (MI->getOpcode() == Opcode) &&
+        MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()) &&
         Root.getFlag(MachineInstr::MIFlag::FmContract) &&
         Root.getFlag(MachineInstr::MIFlag::FmNsz) &&
         MI->getFlag(MachineInstr::MIFlag::FmContract) &&

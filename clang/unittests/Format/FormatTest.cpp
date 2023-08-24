@@ -7950,6 +7950,11 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   verifyFormat("template <typename T>\n"
                "Constructor() : Initializer(FitsOnTheLine) {}",
                getStyleWithColumns(Style, 50));
+  verifyFormat(
+      "Class::Class(int some, int arguments, int loooooooooooooooooooong,\n"
+      "             int mooooooooooooore) noexcept :\n"
+      "    Super{some, arguments}, Member{5}, Member2{2} {}",
+      Style);
   Style.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
   verifyFormat(
       "SomeClass::Constructor() :\n"
@@ -7986,10 +7991,10 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa),\n"
       "    aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
       Style);
-  verifyFormat("Constructor(aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "            aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) :\n"
-               "    aaaaaaaaaa(aaaaaa) {}",
-               Style);
+  verifyFormat(
+      "Ctor(aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) : aaaaaaaaaa(aaaaaa) {}",
+      Style);
 
   verifyFormat("Constructor() :\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaa),\n"
@@ -16537,7 +16542,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16562,7 +16567,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();
@@ -22224,8 +22229,25 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  }\n"
                "};");
 
-  // Multiple lambdas in the same parentheses change indentation rules. These
-  // lambdas are forced to start on new lines.
+  // Lambdas that fit on a single line within an argument list are not forced
+  // onto new lines.
+  verifyFormat("SomeFunction([] {});");
+  verifyFormat("SomeFunction(0, [] {});");
+  verifyFormat("SomeFunction([] {}, 0);");
+  verifyFormat("SomeFunction(0, [] {}, 0);");
+  verifyFormat("SomeFunction([] { return 0; }, 0);");
+  verifyFormat("SomeFunction(a, [] { return 0; }, b);");
+  verifyFormat("SomeFunction([] { return 0; }, [] { return 0; });");
+  verifyFormat("SomeFunction([] { return 0; }, [] { return 0; }, b);");
+  verifyFormat("auto loooooooooooooooooooooooooooong =\n"
+               "    SomeFunction([] { return 0; }, [] { return 0; }, b);");
+  // Exceeded column limit. We need to break.
+  verifyFormat("auto loooooooooooooooooooooooooooongName = SomeFunction(\n"
+               "    [] { return anotherLooooooooooonoooooooongName; }, [] { "
+               "return 0; }, b);");
+
+  // Multiple multi-line lambdas in the same parentheses change indentation
+  // rules. These lambdas are always forced to start on new lines.
   verifyFormat("SomeFunction(\n"
                "    []() {\n"
                "      //\n"
@@ -22234,7 +22256,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      //\n"
                "    });");
 
-  // A lambda passed as arg0 is always pushed to the next line.
+  // A multi-line lambda passed as arg0 is always pushed to the next line.
   verifyFormat("SomeFunction(\n"
                "    [this] {\n"
                "      //\n"
@@ -26220,18 +26242,18 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Never);
 
-  const StringRef Code("[[nodiscard]] inline int f(int &i);\n"
-                       "[[foo([[]])]] [[nodiscard]]\n"
-                       "int g(int &i);\n"
-                       "[[nodiscard]]\n"
-                       "inline int f(int &i) {\n"
-                       "  i = 1;\n"
-                       "  return 0;\n"
-                       "}\n"
-                       "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
-                       "  i = 0;\n"
-                       "  return 1;\n"
-                       "}");
+  constexpr StringRef Code("[[nodiscard]] inline int f(int &i);\n"
+                           "[[foo([[]])]] [[nodiscard]]\n"
+                           "int g(int &i);\n"
+                           "[[nodiscard]]\n"
+                           "inline int f(int &i) {\n"
+                           "  i = 1;\n"
+                           "  return 0;\n"
+                           "}\n"
+                           "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
+                           "  i = 0;\n"
+                           "  return 1;\n"
+                           "}");
 
   verifyFormat("[[nodiscard]] inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]] int g(int &i);\n"
@@ -26244,6 +26266,9 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "  return 1;\n"
                "}",
                Code, Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+  verifyNoChange(Code, Style);
 
   Style.BreakAfterAttributes = FormatStyle::ABS_Always;
   verifyFormat("[[nodiscard]]\n"
@@ -26262,8 +26287,73 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "}",
                Code, Style);
 
-  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
-  verifyNoChange(Code, Style);
+  constexpr StringRef CtorDtorCode("struct Foo {\n"
+                                   "  [[deprecated]] Foo();\n"
+                                   "  [[deprecated]] Foo() {}\n"
+                                   "  [[deprecated]] ~Foo();\n"
+                                   "  [[deprecated]] ~Foo() {}\n"
+                                   "  [[deprecated]] void f();\n"
+                                   "  [[deprecated]] void f() {}\n"
+                                   "};\n"
+                                   "[[deprecated]] Bar::Bar() {}\n"
+                                   "[[deprecated]] Bar::~Bar() {}\n"
+                                   "[[deprecated]] void g() {}");
+  verifyFormat("struct Foo {\n"
+               "  [[deprecated]]\n"
+               "  Foo();\n"
+               "  [[deprecated]]\n"
+               "  Foo() {}\n"
+               "  [[deprecated]]\n"
+               "  ~Foo();\n"
+               "  [[deprecated]]\n"
+               "  ~Foo() {}\n"
+               "  [[deprecated]]\n"
+               "  void f();\n"
+               "  [[deprecated]]\n"
+               "  void f() {}\n"
+               "};\n"
+               "[[deprecated]]\n"
+               "Bar::Bar() {}\n"
+               "[[deprecated]]\n"
+               "Bar::~Bar() {}\n"
+               "[[deprecated]]\n"
+               "void g() {}",
+               CtorDtorCode, Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Linux;
+  verifyFormat("struct Foo {\n"
+               "  [[deprecated]]\n"
+               "  Foo();\n"
+               "  [[deprecated]]\n"
+               "  Foo()\n"
+               "  {\n"
+               "  }\n"
+               "  [[deprecated]]\n"
+               "  ~Foo();\n"
+               "  [[deprecated]]\n"
+               "  ~Foo()\n"
+               "  {\n"
+               "  }\n"
+               "  [[deprecated]]\n"
+               "  void f();\n"
+               "  [[deprecated]]\n"
+               "  void f()\n"
+               "  {\n"
+               "  }\n"
+               "};\n"
+               "[[deprecated]]\n"
+               "Bar::Bar()\n"
+               "{\n"
+               "}\n"
+               "[[deprecated]]\n"
+               "Bar::~Bar()\n"
+               "{\n"
+               "}\n"
+               "[[deprecated]]\n"
+               "void g()\n"
+               "{\n"
+               "}",
+               CtorDtorCode, Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {

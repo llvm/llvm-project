@@ -9,9 +9,9 @@
 // Implements the required interoperability API from ISO_Fortran_binding.h
 // as specified in section 18.5.5 of Fortran 2018.
 
-#include "flang/ISO_Fortran_binding.h"
 #include "ISO_Fortran_util.h"
 #include "terminator.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdlib>

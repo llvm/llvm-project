@@ -59,7 +59,8 @@ using GISelFlags = std::uint16_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset);
+std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+                                    int HwModeIdx);
 
 /// Takes a sequence of \p Rules and group them based on the predicates
 /// they share. \p MatcherStorage is used as a memory container
@@ -458,6 +459,9 @@ protected:
   /// ID for the next temporary register ID allocated with allocateTempRegID()
   unsigned NextTempRegID;
 
+  // HwMode predicate index for this rule. -1 if no HwMode.
+  int HwModeIdx = -1;
+
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
@@ -497,6 +501,9 @@ public:
   InstructionMatcher &addInstructionMatcher(StringRef SymbolicName);
   void addRequiredFeature(Record *Feature);
   const std::vector<Record *> &getRequiredFeatures() const;
+
+  void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
+  int getHwModeIdx() const { return HwModeIdx; }
 
   void addRequiredSimplePredicate(StringRef PredName);
   const std::vector<std::string> &getRequiredSimplePredicates();

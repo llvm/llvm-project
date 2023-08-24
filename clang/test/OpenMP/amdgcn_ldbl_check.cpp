@@ -6,7 +6,7 @@
 
 void print(double);
 
-constexpr double operator""_X (long double a)
+constexpr double operator"" _X (long double a)
 {
 	return (double)a;
 }

@@ -664,5 +664,20 @@ inline const parser::Name *getDesignatorNameIfDataRef(
 
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
+template <typename R, typename T>
+std::optional<R> GetConstExpr(
+    Fortran::semantics::SemanticsContext &semanticsContext, const T &x) {
+  using DefaultCharConstantType = Fortran::evaluate::Ascii;
+  if (const auto *expr{Fortran::semantics::GetExpr(semanticsContext, x)}) {
+    const auto foldExpr{Fortran::evaluate::Fold(
+        semanticsContext.foldingContext(), Fortran::common::Clone(*expr))};
+    if constexpr (std::is_same_v<R, std::string>) {
+      return Fortran::evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+          foldExpr);
+    }
+  }
+  return std::nullopt;
+}
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

@@ -223,7 +223,7 @@ define i1 @flo(float %c, float %a, float %b) {
 ; CHECK-RV64I-NEXT:    mv a0, s0
 ; CHECK-RV64I-NEXT:    mv a1, s1
 ; CHECK-RV64I-NEXT:    call __gesf2@plt
-; CHECK-RV64I-NEXT:    min a0, s2, a0
+; CHECK-RV64I-NEXT:    or a0, s2, a0
 ; CHECK-RV64I-NEXT:    slti a0, a0, 0
 ; CHECK-RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -269,7 +269,7 @@ define i1 @dlo(double %c, double %a, double %b) {
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    mv a1, s1
 ; CHECK-NEXT:    call __gedf2@plt
-; CHECK-NEXT:    min a0, s2, a0
+; CHECK-NEXT:    or a0, s2, a0
 ; CHECK-NEXT:    slti a0, a0, 0
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload

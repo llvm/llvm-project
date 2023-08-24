@@ -440,7 +440,6 @@ bool MergeFunctions::runOnModule(Module &M) {
 
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  Constant *BitcastNew = ConstantExpr::getBitCast(New, Old->getType());
   for (Use &U : llvm::make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
@@ -449,7 +448,7 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
       // type congruences in byval(), in which case we need to keep the byval
       // type of the call-site, not the callee function.
       remove(CB->getFunction());
-      U.set(BitcastNew);
+      U.set(New);
     }
   }
 }
@@ -740,10 +739,9 @@ static bool canCreateAliasFor(Function *F) {
 
 // Replace G with an alias to F (deleting function G)
 void MergeFunctions::writeAlias(Function *F, Function *G) {
-  Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
   PointerType *PtrType = G->getType();
   auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
-                                 G->getLinkage(), "", BitcastF, G->getParent());
+                                 G->getLinkage(), "", F, G->getParent());
 
   const MaybeAlign FAlign = F->getAlign();
   const MaybeAlign GAlign = G->getAlign();
@@ -824,9 +822,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);
         // If G's address is not significant, replace it entirely.
-        Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
         removeUsers(G);
-        G->replaceAllUsesWith(BitcastF);
+        G->replaceAllUsesWith(F);
       } else {
         // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
         // above).

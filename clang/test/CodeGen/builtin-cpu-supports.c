@@ -5,7 +5,7 @@
 extern void a(const char *);
 
 // CHECK: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
-// CHECK: @__cpu_features2 = external dso_local global i32
+// CHECK: @__cpu_features2 = external dso_local global [3 x i32]
 
 int main(void) {
   __builtin_cpu_init();

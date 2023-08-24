@@ -38,16 +38,16 @@
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #COO_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (1, 4, 1), (1, 4, 2) ]
 }>
 
 #COO_SLICE_DYN = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (?, ?, ?), (?, ?, ?) ]
 }>
 

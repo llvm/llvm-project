@@ -192,9 +192,9 @@ static Error unbundleImages() {
             Binary->getImage(),
             Binary->getMemoryBufferRef().getBufferIdentifier()));
 
-      if (Error E = writeArchive(Args["file"], Members, true,
-                                 Archive::getDefaultKindForHost(), true, false,
-                                 nullptr))
+      if (Error E = writeArchive(
+              Args["file"], Members, SymtabWritingMode::NormalSymtab,
+              Archive::getDefaultKindForHost(), true, false, nullptr))
         return E;
     } else if (Args.count("file")) {
       if (Extracted.size() > 1)

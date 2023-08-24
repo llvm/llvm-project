@@ -1535,7 +1535,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
   // Find a matching one-use shift by constant.
   const Register C1 = MI.getOperand(2).getReg();
   auto MaybeImmVal = getIConstantVRegValWithLookThrough(C1, MRI);
-  if (!MaybeImmVal)
+  if (!MaybeImmVal || MaybeImmVal->Value == 0)
     return false;
 
   const uint64_t C1Val = MaybeImmVal->Value.getZExtValue();
@@ -2258,23 +2258,6 @@ void CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
   Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
                    MI.getFlags());
   MI.eraseFromParent();
-}
-
-bool CombinerHelper::matchCombineFAbsOfFNeg(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
-  Register Src = MI.getOperand(1).getReg();
-  Register NegSrc;
-
-  if (!mi_match(Src, MRI, m_GFNeg(m_Reg(NegSrc))))
-    return false;
-
-  MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(NegSrc);
-    Observer.changedInstr(MI);
-  };
-  return true;
 }
 
 bool CombinerHelper::matchCombineTruncOfExt(
@@ -4519,7 +4502,19 @@ bool CombinerHelper::matchReassocCommBinOp(MachineInstr &MI,
   return false;
 }
 
-bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
+bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register SrcOp = MI.getOperand(1).getReg();
+
+  if (auto MaybeCst = ConstantFoldCastOp(MI.getOpcode(), DstTy, SrcOp, MRI)) {
+    MatchInfo = *MaybeCst;
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) {
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);

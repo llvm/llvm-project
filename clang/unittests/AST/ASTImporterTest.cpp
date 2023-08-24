@@ -4054,6 +4054,25 @@ struct ImportFriendClasses : ASTImporterOptionSpecificTestBase {
                      ->lookup(ToRecordOfFriend->getDeclName())
                      .empty());
   }
+
+  void testRepeatedFriendImport(const char *Code) {
+    Decl *ToTu = getToTuDecl(Code, Lang_CXX03);
+    Decl *FromTu = getTuDecl(Code, Lang_CXX03, "from.cc");
+
+    auto *ToFriend1 = FirstDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
+    auto *ToFriend2 = LastDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
+    auto *FromFriend1 =
+        FirstDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
+    auto *FromFriend2 =
+        LastDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
+
+    FriendDecl *ToImportedFriend1 = Import(FromFriend1, Lang_CXX03);
+    FriendDecl *ToImportedFriend2 = Import(FromFriend2, Lang_CXX03);
+
+    EXPECT_NE(ToImportedFriend1, ToImportedFriend2);
+    EXPECT_EQ(ToFriend1, ToImportedFriend1);
+    EXPECT_EQ(ToFriend2, ToImportedFriend2);
+  }
 };
 
 TEST_P(ImportFriendClasses, ImportOfFriendRecordDoesNotMergeDefinition) {
@@ -4246,6 +4265,58 @@ TEST_P(ImportFriendClasses, DeclsFromFriendsShouldBeInRedeclChains) {
   EXPECT_TRUE(Imported->getPreviousDecl());
 }
 
+TEST_P(ImportFriendClasses, SkipComparingFriendTemplateDepth) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <class T, T U>
+      class A;
+
+      template <class T, T U>
+      class A {
+      public:
+        template <class P, P Q>
+        friend class A;
+
+        A(T x)  :x(x) {}
+
+      private:
+        T x;
+      };
+      )",
+      Lang_CXX11);
+
+  auto *Fwd = FirstDeclMatcher<ClassTemplateDecl>().match(
+      ToTU,
+      classTemplateDecl(has(cxxRecordDecl(hasDefinition(), hasName("A")))));
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class T, T U>
+      class A;
+
+      template <class T, T U>
+      class A {
+      public:
+        template <class P, P Q>
+        friend class A;
+
+        A(T x) : x(x) {}
+
+      private:
+        T x;
+      };
+
+      A<int,3> a1(0);
+      )",
+      Lang_CXX11, "input1.cc");
+  auto *FromA = FirstDeclMatcher<ClassTemplateDecl>().match(
+      FromTU,
+      classTemplateDecl(has(cxxRecordDecl(hasDefinition(), hasName("A")))));
+  auto *ToA = Import(FromA, Lang_CXX11);
+  EXPECT_TRUE(ToA);
+  EXPECT_EQ(Fwd->getTemplatedDecl()->getTypeForDecl(),
+            ToA->getTemplatedDecl()->getTypeForDecl());
+}
+
 TEST_P(ImportFriendClasses,
        ImportOfClassTemplateDefinitionShouldConnectToFwdFriend) {
   Decl *ToTU = getToTuDecl(
@@ -4343,21 +4414,7 @@ TEST_P(ImportFriendClasses, ImportOfRepeatedFriendType) {
         friend class X;
       };
       )";
-  Decl *ToTu = getToTuDecl(Code, Lang_CXX03);
-  Decl *FromTu = getTuDecl(Code, Lang_CXX03, "from.cc");
-
-  auto *ToFriend1 = FirstDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
-  auto *ToFriend2 = LastDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
-  auto *FromFriend1 =
-      FirstDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
-  auto *FromFriend2 = LastDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
-
-  FriendDecl *ToImportedFriend1 = Import(FromFriend1, Lang_CXX03);
-  FriendDecl *ToImportedFriend2 = Import(FromFriend2, Lang_CXX03);
-
-  EXPECT_NE(ToImportedFriend1, ToImportedFriend2);
-  EXPECT_EQ(ToFriend1, ToImportedFriend1);
-  EXPECT_EQ(ToFriend2, ToImportedFriend2);
+  testRepeatedFriendImport(Code);
 }
 
 TEST_P(ImportFriendClasses, ImportOfRepeatedFriendDecl) {
@@ -4368,21 +4425,31 @@ TEST_P(ImportFriendClasses, ImportOfRepeatedFriendDecl) {
         friend void f();
       };
       )";
-  Decl *ToTu = getToTuDecl(Code, Lang_CXX03);
-  Decl *FromTu = getTuDecl(Code, Lang_CXX03, "from.cc");
+  testRepeatedFriendImport(Code);
+}
 
-  auto *ToFriend1 = FirstDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
-  auto *ToFriend2 = LastDeclMatcher<FriendDecl>().match(ToTu, friendDecl());
-  auto *FromFriend1 =
-      FirstDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
-  auto *FromFriend2 = LastDeclMatcher<FriendDecl>().match(FromTu, friendDecl());
+TEST_P(ImportFriendClasses, ImportOfRepeatedFriendFunctionTemplateDecl) {
+  const char *Code =
+      R"(
+        template <class T>
+        class Container {
+          template <class U> friend void m();
+          template <class U> friend void m();
+        };
+      )";
+  testRepeatedFriendImport(Code);
+}
 
-  FriendDecl *ToImportedFriend1 = Import(FromFriend1, Lang_CXX03);
-  FriendDecl *ToImportedFriend2 = Import(FromFriend2, Lang_CXX03);
-
-  EXPECT_NE(ToImportedFriend1, ToImportedFriend2);
-  EXPECT_EQ(ToFriend1, ToImportedFriend1);
-  EXPECT_EQ(ToFriend2, ToImportedFriend2);
+TEST_P(ImportFriendClasses, ImportOfRepeatedFriendClassTemplateDecl) {
+  const char *Code =
+      R"(
+        template <class T>
+        class Container {
+          template <class U> friend class X;
+          template <class U> friend class X;
+        };
+      )";
+  testRepeatedFriendImport(Code);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, FriendFunInClassTemplate) {

@@ -289,16 +289,99 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1070596096, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; GCN-NEXT: [[V_MUL_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MUL_F64_e64 0, [[COPY]], 0, [[REG_SEQUENCE]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_MUL_F64_e64_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+    ; GCN-NEXT: [[V_LDEXP_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_LDEXP_F64_e64 1, [[COPY]], 0, [[S_MOV_B32_]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_LDEXP_F64_e64_]]
     ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FCONSTANT double -16.0
     %2:vgpr(s64) = G_FMUL %0, %1
     $vgpr0_vgpr1 = COPY %2
+    SI_RETURN implicit $vgpr0_vgpr1
+
+...
+
+---
+name:            fmul_to_ldexp_f64_3
+legalized:       true
+regBankSelected: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: fmul_to_ldexp_f64_3
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+    ; GCN-NEXT: [[V_LDEXP_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_LDEXP_F64_e64 3, [[COPY]], 0, [[S_MOV_B32_]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_LDEXP_F64_e64_]]
+    ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    %1:vgpr(s64) = G_FABS %0
+    %2:vgpr(s64) = G_FCONSTANT double -16.0
+    %3:vgpr(s64) = G_FMUL %1, %2
+    $vgpr0_vgpr1 = COPY %3
+    SI_RETURN implicit $vgpr0_vgpr1
+
+...
+
+---
+name:            fmul_to_ldexp_f64_4
+legalized:       true
+regBankSelected: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: fmul_to_ldexp_f64_4
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GCN-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[S_MOV_B32_]], [[COPY1]], implicit $exec
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_OR_B32_e64_]], %subreg.sub1
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+    ; GCN-NEXT: [[V_LDEXP_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_LDEXP_F64_e64 1, [[REG_SEQUENCE]], 0, [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_LDEXP_F64_e64_]]
+    ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    %1:vgpr(s64) = G_FABS %0
+    %2:vgpr(s64) = G_FNEG %1
+    %3:vgpr(s64) = G_FCONSTANT double -16.0
+    %4:vgpr(s64) = G_FMUL %2, %3
+    $vgpr0_vgpr1 = COPY %4
+    SI_RETURN implicit $vgpr0_vgpr1
+
+...
+
+---
+name:            fmul_to_ldexp_f64_5
+legalized:       true
+regBankSelected: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GCN-LABEL: name: fmul_to_ldexp_f64_5
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1070596096, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; GCN-NEXT: [[V_MUL_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MUL_F64_e64 3, [[COPY]], 1, [[REG_SEQUENCE]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_MUL_F64_e64_]]
+    ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    %1:vgpr(s64) = G_FABS %0
+    %2:vgpr(s64) = G_FNEG %1
+    %3:vgpr(s64) = G_FCONSTANT double -16.0
+    %4:vgpr(s64) = G_FNEG %3
+    %5:vgpr(s64) = G_FMUL %2, %4
+    $vgpr0_vgpr1 = COPY %5
     SI_RETURN implicit $vgpr0_vgpr1
 
 ...

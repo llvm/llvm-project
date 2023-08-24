@@ -99,7 +99,7 @@ define half @amdgcn_rcp_amdgcn_sqrt_f16_contract(half %x) {
 define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract0(half %x) {
 ; CHECK-LABEL: define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract0
 ; CHECK-SAME: (half [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call half @llvm.amdgcn.sqrt.f16(half [[X]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call half @llvm.sqrt.f16(half [[X]])
 ; CHECK-NEXT:    [[RSQ:%.*]] = call contract half @llvm.amdgcn.rcp.f16(half [[SQRT]])
 ; CHECK-NEXT:    ret half [[RSQ]]
 ;
@@ -112,7 +112,7 @@ define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract0(half %x) {
 define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract1(half %x) {
 ; CHECK-LABEL: define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract1
 ; CHECK-SAME: (half [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call contract half @llvm.amdgcn.sqrt.f16(half [[X]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call contract half @llvm.sqrt.f16(half [[X]])
 ; CHECK-NEXT:    [[RSQ:%.*]] = call half @llvm.amdgcn.rcp.f16(half [[SQRT]])
 ; CHECK-NEXT:    ret half [[RSQ]]
 ;
@@ -125,7 +125,7 @@ define half @amdgcn_rcp_amdgcn_sqrt_f16_missing_contract1(half %x) {
 define half @amdgcn_rcp_amdgcn_sqrt_f16_contract_multi_use(half %x, ptr %ptr) {
 ; CHECK-LABEL: define half @amdgcn_rcp_amdgcn_sqrt_f16_contract_multi_use
 ; CHECK-SAME: (half [[X:%.*]], ptr [[PTR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call contract half @llvm.amdgcn.sqrt.f16(half [[X]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call contract half @llvm.sqrt.f16(half [[X]])
 ; CHECK-NEXT:    store half [[SQRT]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    [[RSQ:%.*]] = call contract half @llvm.amdgcn.rcp.f16(half [[SQRT]])
 ; CHECK-NEXT:    ret half [[RSQ]]

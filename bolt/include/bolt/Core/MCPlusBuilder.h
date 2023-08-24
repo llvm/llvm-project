@@ -639,9 +639,12 @@ public:
     return false;
   }
 
-  /// If non-zero, this is used to fill the executable space with instructions
-  /// that will trap. Defaults to 0.
-  virtual unsigned getTrapFillValue() const { return 0; }
+  /// Used to fill the executable space with instructions
+  /// that will trap.
+  virtual StringRef getTrapFillValue() const {
+    llvm_unreachable("not implemented");
+    return StringRef();
+  }
 
   /// Interface and basic functionality of a MCInstMatcher. The idea is to make
   /// it easy to match one or more MCInsts against a tree-like pattern and
@@ -1735,6 +1738,48 @@ public:
     Inst.addOperand(MCOperand::createExpr(
         MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_None, *Ctx)));
     return true;
+  }
+
+  /// Extract a symbol and an addend out of the fixup value expression.
+  ///
+  /// Only the following limited expression types are supported:
+  ///   Symbol + Addend
+  ///   Symbol + Constant + Addend
+  ///   Const + Addend
+  ///   Symbol
+  std::pair<MCSymbol *, uint64_t> extractFixupExpr(const MCFixup &Fixup) const {
+    uint64_t Addend = 0;
+    MCSymbol *Symbol = nullptr;
+    const MCExpr *ValueExpr = Fixup.getValue();
+    if (ValueExpr->getKind() == MCExpr::Binary) {
+      const auto *BinaryExpr = cast<MCBinaryExpr>(ValueExpr);
+      assert(BinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+             "unexpected binary expression");
+      const MCExpr *LHS = BinaryExpr->getLHS();
+      if (LHS->getKind() == MCExpr::Constant) {
+        Addend = cast<MCConstantExpr>(LHS)->getValue();
+      } else if (LHS->getKind() == MCExpr::Binary) {
+        const auto *LHSBinaryExpr = cast<MCBinaryExpr>(LHS);
+        assert(LHSBinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+               "unexpected binary expression");
+        const MCExpr *LLHS = LHSBinaryExpr->getLHS();
+        assert(LLHS->getKind() == MCExpr::SymbolRef && "unexpected LLHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LLHS));
+        const MCExpr *RLHS = LHSBinaryExpr->getRHS();
+        assert(RLHS->getKind() == MCExpr::Constant && "unexpected RLHS");
+        Addend = cast<MCConstantExpr>(RLHS)->getValue();
+      } else {
+        assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      }
+      const MCExpr *RHS = BinaryExpr->getRHS();
+      assert(RHS->getKind() == MCExpr::Constant && "unexpected RHS");
+      Addend += cast<MCConstantExpr>(RHS)->getValue();
+    } else {
+      assert(ValueExpr->getKind() == MCExpr::SymbolRef && "unexpected value");
+      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(ValueExpr));
+    }
+    return std::make_pair(Symbol, Addend);
   }
 
   /// Return annotation index matching the \p Name.

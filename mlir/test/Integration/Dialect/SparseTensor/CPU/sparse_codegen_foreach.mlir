@@ -44,11 +44,11 @@
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #SortedCOOPerm = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 

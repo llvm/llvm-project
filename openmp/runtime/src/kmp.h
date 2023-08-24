@@ -3795,7 +3795,8 @@ extern void __kmp_affinity_initialize(kmp_affinity_t &affinity);
 extern void __kmp_affinity_uninitialize(void);
 extern void __kmp_affinity_set_init_mask(
     int gtid, int isa_root); /* set affinity according to KMP_AFFINITY */
-extern void __kmp_affinity_set_place(int gtid);
+void __kmp_affinity_bind_init_mask(int gtid);
+extern void __kmp_affinity_bind_place(int gtid);
 extern void __kmp_affinity_determine_capable(const char *env_var);
 extern int __kmp_aux_set_affinity(void **mask);
 extern int __kmp_aux_get_affinity(void **mask);
@@ -3811,7 +3812,8 @@ static inline void __kmp_assign_root_init_mask() {
   int gtid = __kmp_entry_gtid();
   kmp_root_t *r = __kmp_threads[gtid]->th.th_root;
   if (r->r.r_uber_thread == __kmp_threads[gtid] && !r->r.r_affinity_assigned) {
-    __kmp_affinity_set_init_mask(gtid, TRUE);
+    __kmp_affinity_set_init_mask(gtid, /*isa_root=*/TRUE);
+    __kmp_affinity_bind_init_mask(gtid);
     r->r.r_affinity_assigned = TRUE;
   }
 }

@@ -284,6 +284,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         Worklist.push_back(std::make_pair(UserMI, Bits));
         break;
 
+      case RISCV::CZERO_EQZ:
+      case RISCV::CZERO_NEZ:
       case RISCV::VT_MASKC:
       case RISCV::VT_MASKCN:
         if (OpIdx != 1)
@@ -505,6 +507,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       break;
     }
 
+    case RISCV::CZERO_EQZ:
+    case RISCV::CZERO_NEZ:
     case RISCV::VT_MASKC:
     case RISCV::VT_MASKCN:
       // Instructions return zero or operand 1. Result is sign extended if

@@ -4,7 +4,8 @@
 define amdgpu_cs float @div_sqrt(float inreg %arg1) {
 ; GCN-LABEL: div_sqrt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s0
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %a = call float @llvm.sqrt.f32(float %arg1)
@@ -15,7 +16,8 @@ define amdgpu_cs float @div_sqrt(float inreg %arg1) {
 define amdgpu_cs float @sqrt_div(float inreg %arg1) {
 ; GCN-LABEL: sqrt_div:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %a = fdiv afn float 1.000000e+00, %arg1
@@ -26,7 +28,8 @@ define amdgpu_cs float @sqrt_div(float inreg %arg1) {
 define amdgpu_cs float @rcp_sqrt(float inreg %arg1) {
 ; GCN-LABEL: rcp_sqrt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s0
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %a = call float @llvm.sqrt.f32(float %arg1)
@@ -37,7 +40,8 @@ define amdgpu_cs float @rcp_sqrt(float inreg %arg1) {
 define amdgpu_cs float @sqrt_rcp(float inreg %arg1) {
 ; GCN-LABEL: sqrt_rcp:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_rsq_f32_e32 v0, s0
+; GCN-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
   %a = call float @llvm.amdgcn.rcp.f32(float %arg1)

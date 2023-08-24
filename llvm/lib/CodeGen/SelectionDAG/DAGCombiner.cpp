@@ -6118,6 +6118,13 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       }
     }
 
+    // Don't do this transform for sign bit tests. Let foldLogicOfSetCCs
+    // handle it using OR/AND.
+    if (CC == ISD::SETLT && isNullOrNullSplat(CommonValue))
+      CC = ISD::SETCC_INVALID;
+    else if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(CommonValue))
+      CC = ISD::SETCC_INVALID;
+
     if (CC != ISD::SETCC_INVALID) {
       unsigned NewOpcode;
       bool IsSigned = isSignedIntSetCC(CC);
@@ -21705,14 +21712,15 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     if (DAG.isKnownNeverZero(Index))
       return DAG.getUNDEF(ScalarVT);
 
-    // Check if the result type doesn't match the inserted element type. A
-    // SCALAR_TO_VECTOR may truncate the inserted element and the
-    // EXTRACT_VECTOR_ELT may widen the extracted vector.
+    // Check if the result type doesn't match the inserted element type. 
+    // The inserted element and extracted element may have mismatched bitwidth.
+    // As a result, EXTRACT_VECTOR_ELT may extend or truncate the extracted vector.
     SDValue InOp = VecOp.getOperand(0);
     if (InOp.getValueType() != ScalarVT) {
-      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger() &&
-             InOp.getValueType().bitsGT(ScalarVT));
-      return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, InOp);
+      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger());
+      if (InOp.getValueType().bitsGT(ScalarVT))
+        return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, InOp);
+      return DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, InOp);
     }
     return InOp;
   }

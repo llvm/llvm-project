@@ -7,7 +7,7 @@ define i32 @test(ptr noalias %p, ptr noalias %addr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ADDR:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <8 x ptr> [[TMP1]], <8 x i32> <i32 15, i32 13, i32 11, i32 9, i32 7, i32 5, i32 3, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <8 x ptr> [[TMP1]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP2]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer

@@ -454,7 +454,7 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
       loc, collapsedType, transposeOp->getResult(0),
       packingMetadata.reassociations);
 
-  // 6. ExtractSlice
+  // 6. ExtractSlice.
   int64_t destRank = destTensorType.getRank();
   auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
       loc, destTensorType, reshapeOp->getResult(0),
@@ -462,8 +462,12 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
       tensor::getMixedSizes(rewriter, loc, unPackOp->getResult(0)),
       SmallVector<OpFoldResult>(destRank, one));
 
-  // 7. Replace unPackOp by extractSliceOp.
-  rewriter.replaceOp(unPackOp, extractSliceOp->getResults());
+  // 7. Inject a copy to preserve DPS.
+  auto copyOp = rewriter.create<linalg::CopyOp>(
+      loc, extractSliceOp->getResult(0), unPackOp.getDest());
+
+  // 8. Replace unPackOp by extractSliceOp.
+  rewriter.replaceOp(unPackOp, copyOp->getResults());
 
   return LowerUnPackOpResult{emptyOp, transposeOp, reshapeOp, extractSliceOp};
 }

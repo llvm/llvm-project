@@ -1007,6 +1007,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
   case ISD::SET_FPENV:
+  case ISD::SET_FPMODE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
@@ -4820,6 +4821,46 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
     break;
   }
+  case ISD::GET_FPMODE: {
+    // Call fegetmode, which saves control modes into a stack slot. Then load
+    // the value to return from the stack.
+    EVT ModeVT = Node->getValueType(0);
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue Chain = DAG.makeStateFunctionCall(RTLIB::FEGETMODE, StackPtr,
+                                              Node->getOperand(0), dl);
+    SDValue LdInst = DAG.getLoad(
+        ModeVT, dl, Chain, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(LdInst);
+    Results.push_back(LdInst.getValue(1));
+    break;
+  }
+  case ISD::SET_FPMODE: {
+    // Move control modes to stack slot and then call fesetmode with the pointer
+    // to the slot as argument.
+    SDValue Mode = Node->getOperand(1);
+    EVT ModeVT = Mode.getValueType();
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue StInst = DAG.getStore(
+        Node->getOperand(0), dl, Mode, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, dl));
+    break;
+  }
+  case ISD::RESET_FPMODE: {
+    // It is legalized to a call 'fesetmode(FE_DFL_MODE)'. On most targets
+    // FE_DFL_MODE is defined as '((const femode_t *) -1)' in glibc. If not, the
+    // target must provide custom lowering.
+    const DataLayout &DL = DAG.getDataLayout();
+    EVT PtrTy = TLI.getPointerTy(DL);
+    SDValue Mode = DAG.getConstant(-1LL, dl, PtrTy);
+    Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
+                                                Node->getOperand(0), dl));
+    break;
+  }
   }
 
   // Replace the original node with the legalized result.
@@ -5457,6 +5498,23 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                       AM->getMemOperand());
     Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
     Results.push_back(NewAtomic.getValue(1));
+    break;
+  }
+  case ISD::SPLAT_VECTOR: {
+    SDValue Scalar = Node->getOperand(0);
+    MVT ScalarType = Scalar.getSimpleValueType();
+    MVT NewScalarType = NVT.getVectorElementType();
+    if (ScalarType.isInteger()) {
+      Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NewScalarType, Scalar);
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
+      break;
+    }
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NewScalarType, Scalar);
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+    Results.push_back(
+        DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
   }

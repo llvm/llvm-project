@@ -110,6 +110,8 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
 * Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
+* ``GICombinePatFrag`` can only have a single root.
+* Instructions with multiple defs cannot be the root of a ``GICombinePatFrag``.
 * Using ``GICombinePatFrag`` in the ``apply`` pattern of a ``GICombineRule``
   is not supported.
 * Deleting the matched pattern in a ``GICombineRule`` needs to be done using

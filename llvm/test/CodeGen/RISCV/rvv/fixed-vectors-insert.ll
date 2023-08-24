@@ -49,13 +49,13 @@ define void @insertelt_v4i64_store(ptr %x, i64 %y) {
 define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 3
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 2
-; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 1
-; RV32-NEXT:    vmv.x.s a4, v10
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v9, v8, 3
+; RV32-NEXT:    vmv.x.s a2, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
+; RV32-NEXT:    vmv.x.s a3, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 1
+; RV32-NEXT:    vmv.x.s a4, v9
 ; RV32-NEXT:    vmv.x.s a5, v8
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v8, v8, a5
@@ -69,9 +69,9 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ;
 ; RV64-LABEL: insertelt_v3i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v10
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2

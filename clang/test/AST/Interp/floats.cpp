@@ -150,7 +150,7 @@ namespace LongDouble {
 
     return L;
   };
-  static_assert(f() == __LDBL_MAX__);
+  static_assert(f() == __LDBL_MAX__, "");
 
 #ifdef __FLOAT128__
   constexpr __float128 f128() {
@@ -158,7 +158,7 @@ namespace LongDouble {
 
     return L;
   };
-  static_assert(f128() == __LDBL_MAX__);
+  static_assert(f128() == __LDBL_MAX__, "");
 #endif
 }
 

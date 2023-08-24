@@ -1304,6 +1304,12 @@ public:
   /// to be infinite, it must also be undefined.
   bool loopIsFiniteByAssumption(const Loop *L);
 
+  /// Return the set of Values that, if poison, will definitively result in S
+  /// being poison as well. The returned set may be incomplete, i.e. there can
+  /// be additional Values that also result in S being poison.
+  void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
+                                 const SCEV *S);
+
   class FoldID {
     const SCEV *Op = nullptr;
     const Type *Ty = nullptr;
