@@ -543,6 +543,37 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# OpenMP dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "OpenMPOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=omp",
+            ],
+            "mlir/dialects/_omp_ops_gen.py",
+        ),
+    ],
+    tblgen = "//third_party/llvm/llvm-project/mlir:mlir-tblgen",
+    td_file = "mlir/dialects/OpenMPOps.td",
+    deps = [
+        "//third_party/llvm/llvm-project/mlir:OpBaseTdFiles",
+        "//third_party/llvm/llvm-project/mlir:OpenMPOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenMPOpsPyFiles",
+    srcs = [
+        "mlir/dialects/openmp.py",
+        ":OpenMPOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # PDL dialect.
 ##---------------------------------------------------------------------------##
 
@@ -1097,7 +1128,7 @@ gentbl_filegroup(
                 "-gen-python-enum-bindings",
                 "-bind-dialect=transform",
             ],
-            "mlir/dialects/_structure_transform_enum_gen.py",
+            "mlir/dialects/_structured_transform_enum_gen.py",
         ),
     ],
     tblgen = "//mlir:mlir-tblgen",
