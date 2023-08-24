@@ -181,7 +181,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     tooling::Replacements &Fixes, const FormatToken *const Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // We only need to think about streams that begin with a qualifier.
-  if (!Tok->is(QualifierType))
+  if (Tok->isNot(QualifierType))
     return Tok;
   // Don't concern yourself if nothing follows the qualifier.
   if (!Tok->Next)
@@ -367,7 +367,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
     tooling::Replacements &Fixes, const FormatToken *const Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // We only need to think about streams that begin with a qualifier.
-  if (!Tok->is(QualifierType))
+  if (Tok->isNot(QualifierType))
     return Tok;
   // Don't concern yourself if nothing preceeds the qualifier.
   if (!Tok->getPreviousNonComment())
@@ -614,7 +614,7 @@ bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
 bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
   if (!Tok)
     return false;
-  if (!Tok->is(tok::identifier))
+  if (Tok->isNot(tok::identifier))
     return false;
   if (Tok->TokenText.upper() == Tok->TokenText.str()) {
     // T,K,U,V likely could be template arguments
