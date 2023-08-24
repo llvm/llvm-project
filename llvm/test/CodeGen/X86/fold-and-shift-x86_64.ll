@@ -96,9 +96,8 @@ define i32 @t7(<16 x i8> %a0, ptr %p0) {
 ; CHECK-LABEL: t7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    andl $-4, %eax
-; CHECK-NEXT:    movzbl (%rdi,%rax), %eax
+; CHECK-NEXT:    shrl $3, %eax
+; CHECK-NEXT:    movzbl (%rdi,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %i = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
   %index = lshr i32 %i, 1
