@@ -119,14 +119,13 @@ def undef_in_apply : GICombineRule<
   (match (COPY $a, $b):$d),
   (apply (COPY $a, $x))>;
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: def of pattern root 'a' is not redefined in the apply pattern!
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: match pattern root is 'foo'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'a' must be redefined in the 'apply' pattern
 def no_redef_in_apply : GICombineRule<
   (defs root:$a),
   (match (COPY $a, $b):$foo),
   (apply (COPY $x, $b))>;
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error:  def of pattern root 'b' is not redefined in the apply pattern!
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'b' must be redefined in the 'apply' pattern
 def no_redef_in_apply_multidefroot : GICombineRule<
   (defs root:$a),
   (match (G_UNMERGE_VALUES $a, $b, $c)),

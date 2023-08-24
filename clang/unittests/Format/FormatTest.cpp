@@ -7950,6 +7950,11 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   verifyFormat("template <typename T>\n"
                "Constructor() : Initializer(FitsOnTheLine) {}",
                getStyleWithColumns(Style, 50));
+  verifyFormat(
+      "Class::Class(int some, int arguments, int loooooooooooooooooooong,\n"
+      "             int mooooooooooooore) noexcept :\n"
+      "    Super{some, arguments}, Member{5}, Member2{2} {}",
+      Style);
   Style.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
   verifyFormat(
       "SomeClass::Constructor() :\n"
@@ -7986,10 +7991,10 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa),\n"
       "    aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
       Style);
-  verifyFormat("Constructor(aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "            aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) :\n"
-               "    aaaaaaaaaa(aaaaaa) {}",
-               Style);
+  verifyFormat(
+      "Ctor(aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) : aaaaaaaaaa(aaaaaa) {}",
+      Style);
 
   verifyFormat("Constructor() :\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaa),\n"
