@@ -660,7 +660,6 @@ define void @test_ptr_need_one_upper_check(ptr readonly %src, ptr %dst, i32 %n) 
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[DST_UPPER:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[CMP_DST_IDX_UPPER:%.*]] = icmp ult ptr [[DST_IDX]], [[DST_UPPER]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_LATCH_2]], label [[EXIT]]
 ; CHECK:       loop.latch.2:

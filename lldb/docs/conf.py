@@ -57,16 +57,6 @@ if not building_man_page:
         )
     extensions.append("sphinx_automodapi.automodapi")
 
-    try:
-        import furo
-    except ModuleNotFoundError:
-        print(
-            f"install sphinx furo theme with {sys.executable} -m pip install furo"
-        )
-    # The theme to use for HTML and HTML Help pages.  See the documentation for
-    # a list of builtin themes.
-    html_theme = "furo"
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -141,19 +131,23 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "furo"
+html_theme = "alabaster"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+html_theme_options = {
+    "font_size": "11pt",
+    # Don't generate any links to GitHub.
+    "github_button": "false",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "🐛 LLDB"
+html_title = "The LLDB Debugger"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
@@ -171,6 +165,10 @@ html_title = "🐛 LLDB"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_context = {
+    "css_files": ["_static/lldb.css"],
+}
 
 html_extra_path = [".htaccess"]
 

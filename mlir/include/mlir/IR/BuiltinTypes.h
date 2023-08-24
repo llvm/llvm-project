@@ -67,6 +67,7 @@ public:
   unsigned getWidth();
 
   /// Return the width of the mantissa of this type.
+  /// The width includes the integer bit.
   unsigned getFPMantissaWidth();
 
   /// Get or create a new FloatType with bitwidth scaled by `scale`.

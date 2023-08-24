@@ -419,6 +419,8 @@ public:
         NumInputArgStrings(RHS.NumInputArgStrings) {}
 
   InputArgList &operator=(InputArgList &&RHS) {
+    if (this == &RHS)
+      return *this;
     releaseMemory();
     ArgList::operator=(std::move(RHS));
     ArgStrings = std::move(RHS.ArgStrings);

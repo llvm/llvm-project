@@ -1,6 +1,9 @@
 Testing
 =======
 
+.. contents::
+   :local:
+
 Test Suite Structure
 --------------------
 

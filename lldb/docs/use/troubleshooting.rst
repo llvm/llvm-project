@@ -1,6 +1,9 @@
 Troubleshooting
 ===============
 
+.. contents::
+   :local:
+
 File and Line Breakpoints Are Not Getting Hit
 ---------------------------------------------
 
