@@ -3097,6 +3097,10 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
     return Combiner->getValueAsString("Classname");
   }
 
+  StringRef getCombineAllMethodName() const {
+    return Combiner->getValueAsString("CombineAllMethodName");
+  }
+
   std::string getRuleConfigClassName() const {
     return getClassName().str() + "RuleConfig";
   }
@@ -3222,8 +3226,8 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
 }
 
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
-  OS << "bool " << getClassName()
-     << "::tryCombineAll(MachineInstr &I) const {\n"
+  OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
+     << "(MachineInstr &I) const {\n"
      << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
