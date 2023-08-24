@@ -51,9 +51,8 @@ define void @foo(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    incl %eax
 ; X64-NEXT:    cltq
-; X64-NEXT:    shlq $2, %rax
+; X64-NEXT:    leaq 4(,%rax,4), %rax
 ; X64-NEXT:    leaq (%rax,%rax,4), %rdi
 ; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:    jmp .LBB0_2
