@@ -202,6 +202,12 @@ static cl::opt<CASBackendMode> MCCASBackendMode(
                           "Native object without verifier"),
                clEnumValN(CASBackendMode::CASID, "mccas-casid",
                           "CASID file output")));
+
+static cl::opt<bool>
+    EmitCASIDFile("mccas-emit-casid-file",
+                  cl::desc("Emit a .casid file next to the generated .o file "
+                           "when MC CAS is enabled"),
+                  cl::init(false));
 // END MCCAS
 
 namespace {
@@ -694,6 +700,23 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
 
+  std::unique_ptr<ToolOutputFile> CasIDOS;
+  std::string OutputPathCASIDFile;
+  StringRef OutputFile = StringRef(Out->outputFilename());
+  if (UseMCCASBackend && EmitCASIDFile &&
+      MCCASBackendMode != CASBackendMode::CASID &&
+      codegen::getFileType() == CGFT_ObjectFile && OutputFile != "-") {
+    OutputPathCASIDFile = std::string(OutputFile);
+    OutputPathCASIDFile.append(".casid");
+    std::error_code EC;
+    CasIDOS = std::make_unique<ToolOutputFile>(OutputPathCASIDFile, EC,
+                                               sys::fs::OF_None);
+    if (EC) {
+      reportError(EC.message());
+      return 1;
+    }
+  }
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;
@@ -779,7 +802,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(createFreeMachineFunctionPass());
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
+                   codegen::getFileType(), NoVerify, MMIWP,
+                   CasIDOS ? &CasIDOS->os() : nullptr)) {
       reportError("target does not support generation of this file type");
     }
 
@@ -838,6 +862,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Out->keep();
   if (DwoOut)
     DwoOut->keep();
+  if (CasIDOS)
+    CasIDOS->keep();
 
   return 0;
 }
