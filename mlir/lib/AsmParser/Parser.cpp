@@ -2020,6 +2020,8 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
            << "expected location, but found dialect attribute: '#" << identifier
            << "'";
   }
+  if (state.asmState)
+    state.asmState->addAttrAliasUses(identifier, tok.getLocRange());
 
   // If this alias can be resolved, do it now.
   Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
@@ -2527,6 +2529,7 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
     return emitError("attribute names with a '.' are reserved for "
                      "dialect-defined names");
 
+  SMRange location = getToken().getLocRange();
   consumeToken(Token::hash_identifier);
 
   // Parse the '='.
@@ -2538,6 +2541,9 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   if (!attr)
     return failure();
 
+  // Register this alias with the parser state.
+  if (state.asmState)
+    state.asmState->addAttrAliasDefinition(aliasName, location);
   state.symbols.attributeAliasDefinitions[aliasName] = attr;
   return success();
 }
@@ -2554,6 +2560,8 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   if (aliasName.contains('.'))
     return emitError("type names with a '.' are reserved for "
                      "dialect-defined names");
+
+  SMRange location = getToken().getLocRange();
   consumeToken(Token::exclamation_identifier);
 
   // Parse the '='.
@@ -2566,6 +2574,8 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
     return failure();
 
   // Register this alias with the parser state.
+  if (state.asmState)
+    state.asmState->addTypeAliasDefinition(aliasName, location);
   state.symbols.typeAliasDefinitions.try_emplace(aliasName, aliasedType);
   return success();
 }
