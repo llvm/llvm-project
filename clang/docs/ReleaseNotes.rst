@@ -198,6 +198,11 @@ Bug Fixes to C++ Support
 - Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
   (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
 
+- Expressions producing ``nullptr`` are correctly evaluated
+  by the constant interpreter when appearing as the operand
+  of a binary comparision.
+  (`#64923 <https://github.com/llvm/llvm-project/issues/64923>_``)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
