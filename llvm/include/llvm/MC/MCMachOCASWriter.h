@@ -52,7 +52,8 @@ public:
           CreateFromMcAssembler,
       std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
           SerializeObjectFile,
-      std::optional<MCTargetOptions::ResultCallBackTy> CallBack);
+      std::optional<MCTargetOptions::ResultCallBackTy> CallBack,
+      raw_pwrite_stream *CasIDOS = nullptr);
 
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
@@ -122,6 +123,7 @@ public:
 
 private:
   raw_pwrite_stream &OS;
+  raw_pwrite_stream *CasIDOS;
 
   SmallString<512> InternalBuffer;
   raw_svector_ostream InternalOS;
@@ -157,7 +159,8 @@ std::unique_ptr<MCObjectWriter> createMachOCASWriter(
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,
-    std::optional<MCTargetOptions::ResultCallBackTy> CallBack = std::nullopt);
+    std::optional<MCTargetOptions::ResultCallBackTy> CallBack = std::nullopt,
+    raw_pwrite_stream *CasIDOS = nullptr);
 
 } // end namespace llvm
 

@@ -90,7 +90,8 @@ public:
           const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
           CreateFromMcAssembler,
       std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-          SerializeObjectFile) const;
+          SerializeObjectFile,
+      raw_pwrite_stream *CasIDOS = nullptr) const;
   // END MCCAS
 
 

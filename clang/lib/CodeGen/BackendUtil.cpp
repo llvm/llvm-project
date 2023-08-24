@@ -144,7 +144,8 @@ class EmitAssemblyHelper {
   ///
   /// \return True on success.
   bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
-                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS);
+                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
+                     raw_pwrite_stream *CasIDOS = nullptr);
 
   std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
     std::error_code EC;
@@ -163,7 +164,8 @@ class EmitAssemblyHelper {
                           std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS);
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
-                          std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+                          std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                          std::unique_ptr<raw_pwrite_stream> &CasIDOS);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -198,8 +200,8 @@ public:
   std::unique_ptr<TargetMachine> TM;
 
   // Emit output using the new pass manager for the optimization pipeline.
-  void EmitAssembly(BackendAction Action,
-                    std::unique_ptr<raw_pwrite_stream> OS);
+  void EmitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
+                    std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr);
 };
 }
 
@@ -590,7 +592,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
                                        BackendAction Action,
                                        raw_pwrite_stream &OS,
-                                       raw_pwrite_stream *DwoOS) {
+                                       raw_pwrite_stream *DwoOS,
+                                       raw_pwrite_stream *CasIDOS) {
   // Add LibraryInfo.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       createTLII(TargetTriple, CodeGenOpts));
@@ -607,7 +610,8 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
     CodeGenPasses.add(createObjCARCContractPass());
 
   if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
-                              /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
+                              /*DisableVerify=*/!CodeGenOpts.VerifyModule,
+                              nullptr, CasIDOS)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return false;
   }
@@ -1127,7 +1131,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
 void EmitAssemblyHelper::RunCodegenPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+    std::unique_ptr<raw_pwrite_stream> &CasIDOS) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1146,7 +1151,7 @@ void EmitAssemblyHelper::RunCodegenPipeline(
         return;
     }
     if (!AddEmitPasses(CodeGenPasses, Action, *OS,
-                       DwoOS ? &DwoOS->os() : nullptr))
+                       DwoOS ? &DwoOS->os() : nullptr, CasIDOS.get()))
       // FIXME: Should we handle this error differently?
       return;
     break;
@@ -1161,8 +1166,9 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 }
 
-void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
-                                      std::unique_ptr<raw_pwrite_stream> OS) {
+void EmitAssemblyHelper::EmitAssembly(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
+    std::unique_ptr<raw_pwrite_stream> CasIDOS) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
@@ -1179,7 +1185,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
   RunOptimizationPipeline(Action, OS, ThinLinkOS);
-  RunCodegenPipeline(Action, OS, DwoOS);
+  RunCodegenPipeline(Action, OS, DwoOS, CasIDOS);
 
   if (ThinLinkOS)
     ThinLinkOS->keep();
@@ -1302,7 +1308,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const CASOptions &CASOpts, // MCCAS
                               StringRef TDesc, Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                              std::unique_ptr<raw_pwrite_stream> OS) {
+                              std::unique_ptr<raw_pwrite_stream> OS,
+                              std::unique_ptr<raw_pwrite_stream> CasIDOS) {
 
   llvm::TimeTraceScope TimeScope("Backend");
 
@@ -1348,7 +1355,7 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
   EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts,
                                CASOpts, // MCCAS
                                M, VFS);
-  AsmHelper.EmitAssembly(Action, std::move(OS));
+  AsmHelper.EmitAssembly(Action, std::move(OS), std::move(CasIDOS));
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.

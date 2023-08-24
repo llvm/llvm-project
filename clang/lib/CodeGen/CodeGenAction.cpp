@@ -116,6 +116,7 @@ namespace clang {
     const LangOptions &LangOpts;
     const CASOptions &CASOpts; // MCCAS
     std::unique_ptr<raw_pwrite_stream> AsmOutStream;
+    std::unique_ptr<raw_pwrite_stream> CasIDStream;
     ASTContext *Context;
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
@@ -160,11 +161,13 @@ namespace clang {
                     const std::string &InFile,
                     SmallVector<LinkModule, 4> LinkModules,
                     std::unique_ptr<raw_pwrite_stream> OS, LLVMContext &C,
-                    CoverageSourceInfo *CoverageInfo = nullptr)
+                    CoverageSourceInfo *CoverageInfo = nullptr,
+                    std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr)
         : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
           CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
           CASOpts(CASOpts), // MCCAS
-          AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
+          AsmOutStream(std::move(OS)), CasIDStream(std::move(CasIDOS)),
+          Context(nullptr), FS(VFS),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
           Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
@@ -393,7 +396,8 @@ namespace clang {
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                         LangOpts, CASOpts, // MCCAS
                         C.getTargetInfo().getDataLayoutString(), getModule(),
-                        Action, FS, std::move(AsmOutStream));
+                        Action, FS, std::move(AsmOutStream),
+                        std::move(CasIDStream));
 
       Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
@@ -1079,8 +1083,20 @@ std::unique_ptr<ASTConsumer>
 CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   BackendAction BA = static_cast<BackendAction>(Act);
   std::unique_ptr<raw_pwrite_stream> OS = CI.takeOutputStream();
-  if (!OS)
+  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr;
+  if (!OS) {
     OS = GetOutputStream(CI, InFile, BA);
+    auto OutputFile = StringRef(CI.getFrontendOpts().OutputFile);
+    if (CI.getCodeGenOpts().UseCASBackend &&
+        CI.getCodeGenOpts().EmitCASIDFile &&
+        CI.getCodeGenOpts().getCASObjMode() != llvm::CASBackendMode::CASID &&
+        BA == Backend_EmitObj && OutputFile != "-") {
+      std::string OutputPathCASIDFile = std::string(OutputFile);
+      OutputPathCASIDFile.append(".casid");
+      CasIDOS = CI.createOutputFile(OutputPathCASIDFile, true, true,
+                                    CI.getFrontendOpts().UseTemporary, false);
+    }
+  }
 
   if (BA != Backend_EmitNothing && !OS)
     return nullptr;
@@ -1101,7 +1117,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getTargetOpts(), CI.getLangOpts(),
       CI.getCASOpts(), // MCCAS
       std::string(InFile), std::move(LinkModules), std::move(OS), *VMContext,
-      CoverageInfo));
+      CoverageInfo, std::move(CasIDOS)));
+
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
