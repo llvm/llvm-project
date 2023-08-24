@@ -143,12 +143,29 @@ mlir::Value lowerCirAttrAsValue(mlir::cir::ConstArrayAttr constArr,
                                 const mlir::TypeConverter *converter) {
   auto llvmTy = converter->convertType(constArr.getType());
   mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
-  auto arrayAttr = constArr.getElts().cast<mlir::ArrayAttr>();
 
   // Iteratively lower each constant element of the array.
-  for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
-    mlir::Value init = lowerCirAttrAsValue(elt, loc, rewriter, converter);
-    result = rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+  if (auto arrayAttr = constArr.getElts().dyn_cast<mlir::ArrayAttr>()) {
+    for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
+      mlir::Value init = lowerCirAttrAsValue(elt, loc, rewriter, converter);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
+  }
+  // TODO(cir): this diverges from traditional lowering. Normally the string
+  // would be a global constant that is memcopied.
+  else if (auto strAttr = constArr.getElts().dyn_cast<mlir::StringAttr>()) {
+    auto arrayTy = strAttr.getType().dyn_cast<mlir::cir::ArrayType>();
+    assert(arrayTy && "String attribute must have an array type");
+    auto eltTy = arrayTy.getEltType();
+    for (auto [idx, elt] : llvm::enumerate(strAttr)) {
+      auto init = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, converter->convertType(eltTy), elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
+  } else {
+    llvm_unreachable("unexpected ConstArrayAttr elements");
   }
 
   return result;

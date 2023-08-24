@@ -247,6 +247,8 @@ public:
     }
 
     if (const auto arrayVal = attr.dyn_cast<mlir::cir::ConstArrayAttr>()) {
+      if (arrayVal.getElts().isa<mlir::StringAttr>())
+        return false;
       for (const auto elt : arrayVal.getElts().cast<mlir::ArrayAttr>()) {
         if (!isNullValue(elt))
           return false;
