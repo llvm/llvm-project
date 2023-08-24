@@ -10,12 +10,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "CoverageReport.h"
 #include "SourceCoverageViewHTML.h"
+#include "CoverageReport.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ThreadPool.h"
 #include <optional>
 
 using namespace llvm;
@@ -49,23 +50,41 @@ std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
 }
 
 // Create a \p Name tag around \p Str, and optionally set its \p ClassName.
-std::string tag(const std::string &Name, const std::string &Str,
-                const std::string &ClassName = "") {
-  std::string Tag = "<" + Name;
-  if (!ClassName.empty())
-    Tag += " class='" + ClassName + "'";
-  return Tag + ">" + Str + "</" + Name + ">";
+std::string tag(StringRef Name, StringRef Str, StringRef ClassName = "") {
+  std::string Tag = "<";
+  Tag += Name;
+  if (!ClassName.empty()) {
+    Tag += " class='";
+    Tag += ClassName;
+    Tag += "'";
+  }
+  Tag += ">";
+  Tag += Str;
+  Tag += "</";
+  Tag += Name;
+  Tag += ">";
+  return Tag;
 }
 
 // Create an anchor to \p Link with the label \p Str.
-std::string a(const std::string &Link, const std::string &Str,
-              const std::string &TargetName = "") {
-  std::string Name = TargetName.empty() ? "" : ("name='" + TargetName + "' ");
-  return "<a " + Name + "href='" + Link + "'>" + Str + "</a>";
+std::string a(StringRef Link, StringRef Str, StringRef TargetName = "") {
+  std::string Tag;
+  Tag += "<a ";
+  if (!TargetName.empty()) {
+    Tag += "name='";
+    Tag += TargetName;
+    Tag += "' ";
+  }
+  Tag += "href='";
+  Tag += Link;
+  Tag += "'>";
+  Tag += Str;
+  Tag += "</a>";
+  return Tag;
 }
 
 const char *BeginHeader =
-  "<head>"
+    "<head>"
     "<meta name='viewport' content='width=device-width,initial-scale=1'>"
     "<meta charset='UTF-8'>";
 
@@ -272,6 +291,57 @@ void emitPrelude(raw_ostream &OS, const CoverageViewOptions &Opts,
   OS << EndHeader << "<body>";
 }
 
+void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
+                  const std::string &FirstCol, const FileCoverageSummary &FCS,
+                  bool IsTotals) {
+  SmallVector<std::string, 8> Columns;
+
+  // Format a coverage triple and add the result to the list of columns.
+  auto AddCoverageTripleToColumn =
+      [&Columns, &Opts](unsigned Hit, unsigned Total, float Pctg) {
+        std::string S;
+        {
+          raw_string_ostream RSO{S};
+          if (Total)
+            RSO << format("%*.2f", 7, Pctg) << "% ";
+          else
+            RSO << "- ";
+          RSO << '(' << Hit << '/' << Total << ')';
+        }
+        const char *CellClass = "column-entry-yellow";
+        if (Pctg >= Opts.HighCovWatermark)
+          CellClass = "column-entry-green";
+        else if (Pctg < Opts.LowCovWatermark)
+          CellClass = "column-entry-red";
+        Columns.emplace_back(tag("td", tag("pre", S), CellClass));
+      };
+
+  Columns.emplace_back(tag("td", tag("pre", FirstCol)));
+  AddCoverageTripleToColumn(FCS.FunctionCoverage.getExecuted(),
+                            FCS.FunctionCoverage.getNumFunctions(),
+                            FCS.FunctionCoverage.getPercentCovered());
+  if (Opts.ShowInstantiationSummary)
+    AddCoverageTripleToColumn(FCS.InstantiationCoverage.getExecuted(),
+                              FCS.InstantiationCoverage.getNumFunctions(),
+                              FCS.InstantiationCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.LineCoverage.getCovered(),
+                            FCS.LineCoverage.getNumLines(),
+                            FCS.LineCoverage.getPercentCovered());
+  if (Opts.ShowRegionSummary)
+    AddCoverageTripleToColumn(FCS.RegionCoverage.getCovered(),
+                              FCS.RegionCoverage.getNumRegions(),
+                              FCS.RegionCoverage.getPercentCovered());
+  if (Opts.ShowBranchSummary)
+    AddCoverageTripleToColumn(FCS.BranchCoverage.getCovered(),
+                              FCS.BranchCoverage.getNumBranches(),
+                              FCS.BranchCoverage.getPercentCovered());
+
+  if (IsTotals)
+    OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row-bold");
+  else
+    OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
+}
+
 void emitEpilog(raw_ostream &OS) {
   OS << "</body>"
      << "</html>";
@@ -330,71 +400,7 @@ CoveragePrinterHTML::buildLinkToFile(StringRef SF,
   return a(LinkTarget, LinkText);
 }
 
-/// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
-/// false, link the summary to \p SF.
-void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
-                                          const FileCoverageSummary &FCS,
-                                          bool IsTotals) const {
-  SmallVector<std::string, 8> Columns;
-
-  // Format a coverage triple and add the result to the list of columns.
-  auto AddCoverageTripleToColumn =
-      [&Columns, this](unsigned Hit, unsigned Total, float Pctg) {
-        std::string S;
-        {
-          raw_string_ostream RSO{S};
-          if (Total)
-            RSO << format("%*.2f", 7, Pctg) << "% ";
-          else
-            RSO << "- ";
-          RSO << '(' << Hit << '/' << Total << ')';
-        }
-        const char *CellClass = "column-entry-yellow";
-        if (Pctg >= Opts.HighCovWatermark)
-          CellClass = "column-entry-green";
-        else if (Pctg < Opts.LowCovWatermark)
-          CellClass = "column-entry-red";
-        Columns.emplace_back(tag("td", tag("pre", S), CellClass));
-      };
-
-  // Simplify the display file path, and wrap it in a link if requested.
-  std::string Filename;
-  if (IsTotals) {
-    Filename = std::string(SF);
-  } else {
-    Filename = buildLinkToFile(SF, FCS);
-  }
-
-  Columns.emplace_back(tag("td", tag("pre", Filename)));
-  AddCoverageTripleToColumn(FCS.FunctionCoverage.getExecuted(),
-                            FCS.FunctionCoverage.getNumFunctions(),
-                            FCS.FunctionCoverage.getPercentCovered());
-  if (Opts.ShowInstantiationSummary)
-    AddCoverageTripleToColumn(FCS.InstantiationCoverage.getExecuted(),
-                              FCS.InstantiationCoverage.getNumFunctions(),
-                              FCS.InstantiationCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(FCS.LineCoverage.getCovered(),
-                            FCS.LineCoverage.getNumLines(),
-                            FCS.LineCoverage.getPercentCovered());
-  if (Opts.ShowRegionSummary)
-    AddCoverageTripleToColumn(FCS.RegionCoverage.getCovered(),
-                              FCS.RegionCoverage.getNumRegions(),
-                              FCS.RegionCoverage.getPercentCovered());
-  if (Opts.ShowBranchSummary)
-    AddCoverageTripleToColumn(FCS.BranchCoverage.getCovered(),
-                              FCS.BranchCoverage.getNumBranches(),
-                              FCS.BranchCoverage.getPercentCovered());
-
-  if (IsTotals)
-    OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row-bold");
-  else
-    OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
-}
-
-Error CoveragePrinterHTML::createIndexFile(
-    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
-    const CoverageFiltersMatchAll &Filters) {
-  // Emit the default stylesheet.
+Error CoveragePrinterHTML::emitStyleSheet() {
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
   if (Error E = CSSOrErr.takeError())
     return E;
@@ -402,20 +408,15 @@ Error CoveragePrinterHTML::createIndexFile(
   OwnedStream CSS = std::move(CSSOrErr.get());
   CSS->operator<<(CSSForCoverage);
 
-  // Emit a file index along with some coverage statistics.
-  auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
-  if (Error E = OSOrErr.takeError())
-    return E;
-  auto OS = std::move(OSOrErr.get());
-  raw_ostream &OSRef = *OS.get();
+  return Error::success();
+}
 
-  assert(Opts.hasOutputDirectory() && "No output directory for index file");
-  emitPrelude(OSRef, Opts, getPathToStyle(""));
-
+void CoveragePrinterHTML::emitReportHeader(raw_ostream &OSRef,
+                                           const std::string &Title) {
   // Emit some basic information about the coverage report.
   if (Opts.hasProjectTitle())
     OSRef << tag(ProjectTitleTag, escape(Opts.ProjectTitle, Opts));
-  OSRef << tag(ReportTitleTag, "Coverage Report");
+  OSRef << tag(ReportTitleTag, Title);
   if (Opts.hasCreatedTime())
     OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
 
@@ -430,6 +431,43 @@ Error CoveragePrinterHTML::createIndexFile(
   // Exclude files which don't contain any regions.
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef, Opts);
+}
+
+/// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
+/// false, link the summary to \p SF.
+void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
+                                          const FileCoverageSummary &FCS,
+                                          bool IsTotals) const {
+  // Simplify the display file path, and wrap it in a link if requested.
+  std::string Filename;
+  if (IsTotals) {
+    Filename = std::string(SF);
+  } else {
+    Filename = buildLinkToFile(SF, FCS);
+  }
+
+  emitTableRow(OS, Opts, Filename, FCS, IsTotals);
+}
+
+Error CoveragePrinterHTML::createIndexFile(
+    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
+    const CoverageFiltersMatchAll &Filters) {
+  // Emit the default stylesheet.
+  if (Error E = emitStyleSheet())
+    return E;
+
+  // Emit a file index along with some coverage statistics.
+  auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
+  if (Error E = OSOrErr.takeError())
+    return E;
+  auto OS = std::move(OSOrErr.get());
+  raw_ostream &OSRef = *OS.get();
+
+  assert(Opts.hasOutputDirectory() && "No output directory for index file");
+  emitPrelude(OSRef, Opts, getPathToStyle(""));
+
+  emitReportHeader(OSRef, "Coverage Report");
+
   FileCoverageSummary Totals("TOTALS");
   auto FileReports = CoverageReport::prepareFileReports(
       Coverage, Totals, SourceFiles, Opts, Filters);
@@ -461,6 +499,199 @@ Error CoveragePrinterHTML::createIndexFile(
 
   OSRef << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
   emitEpilog(OSRef);
+
+  return Error::success();
+}
+
+struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
+  CoveragePrinterHTMLDirectory &Printer;
+
+  Reporter(CoveragePrinterHTMLDirectory &Printer,
+           const coverage::CoverageMapping &Coverage,
+           const CoverageFiltersMatchAll &Filters)
+      : DirectoryCoverageReport(Printer.Opts, Coverage, Filters),
+        Printer(Printer) {}
+
+  Error generateSubDirectoryReport(SubFileReports &&SubFiles,
+                                   SubDirReports &&SubDirs,
+                                   FileCoverageSummary &&SubTotals) override {
+    auto &LCPath = SubTotals.Name;
+    assert(Options.hasOutputDirectory() &&
+           "No output directory for index file");
+
+    SmallString<128> OSPath = LCPath;
+    sys::path::append(OSPath, "index");
+    auto OSOrErr = Printer.createOutputStream(OSPath, "html",
+                                              /*InToplevel=*/false);
+    if (auto E = OSOrErr.takeError())
+      return E;
+    auto OS = std::move(OSOrErr.get());
+    raw_ostream &OSRef = *OS.get();
+
+    auto IndexHtmlPath = Printer.getOutputPath((LCPath + "index").str(), "html",
+                                               /*InToplevel=*/false);
+    emitPrelude(OSRef, Options, getPathToStyle(IndexHtmlPath));
+
+    auto NavLink = buildTitleLinks(LCPath);
+    Printer.emitReportHeader(OSRef, "Coverage Report (" + NavLink + ")");
+
+    std::vector<const FileCoverageSummary *> EmptyFiles;
+
+    // Make directories at the top of the table.
+    for (auto &&SubDir : SubDirs) {
+      auto &Report = SubDir.second.first;
+      if (!Report.FunctionCoverage.getNumFunctions())
+        EmptyFiles.push_back(&Report);
+      else
+        emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
+                     /*IsTotals=*/false);
+    }
+
+    for (auto &&SubFile : SubFiles) {
+      auto &Report = SubFile.second;
+      if (!Report.FunctionCoverage.getNumFunctions())
+        EmptyFiles.push_back(&Report);
+      else
+        emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
+                     /*IsTotals=*/false);
+    }
+
+    // Emit the totals row.
+    emitTableRow(OSRef, Options, "Totals", SubTotals, /*IsTotals=*/false);
+    OSRef << EndTable << EndCenteredDiv;
+
+    // Emit links to files which don't contain any functions. These are normally
+    // not very useful, but could be relevant for code which abuses the
+    // preprocessor.
+    if (!EmptyFiles.empty()) {
+      OSRef << tag("p", "Files which contain no functions. (These "
+                        "files contain code pulled into other files "
+                        "by the preprocessor.)\n");
+      OSRef << BeginCenteredDiv << BeginTable;
+      for (auto FCS : EmptyFiles) {
+        auto Link = buildRelLinkToFile(FCS->Name);
+        OSRef << tag("tr", tag("td", tag("pre", Link)), "light-row") << '\n';
+      }
+      OSRef << EndTable << EndCenteredDiv;
+    }
+
+    // Emit epilog.
+    OSRef << tag("h5", escape(Options.getLLVMVersionString(), Options));
+    emitEpilog(OSRef);
+
+    return Error::success();
+  }
+
+  /// Make a title with hyperlinks to the index.html files of each hierarchy
+  /// of the report.
+  std::string buildTitleLinks(StringRef LCPath) const {
+    // For each report level in LCPStack, extract the path component and
+    // calculate the number of "../" relative to current LCPath.
+    SmallVector<std::pair<SmallString<128>, unsigned>, 16> Components;
+
+    auto Iter = LCPStack.begin(), IterE = LCPStack.end();
+    SmallString<128> RootPath;
+    if (*Iter == 0) {
+      // If llvm-cov works on relative coverage mapping data, the LCP of
+      // all source file paths can be 0, which makes the title path empty.
+      // As we like adding a slash at the back of the path to indicate a
+      // directory, in this case, we use "." as the root path to make it
+      // not be confused with the root path "/".
+      RootPath = ".";
+    } else {
+      RootPath = LCPath.substr(0, *Iter);
+      sys::path::native(RootPath);
+      sys::path::remove_dots(RootPath, /*remove_dot_dot=*/true);
+    }
+    Components.emplace_back(std::move(RootPath), 0);
+
+    for (auto Last = *Iter; ++Iter != IterE; Last = *Iter) {
+      SmallString<128> SubPath = LCPath.substr(Last, *Iter - Last);
+      sys::path::native(SubPath);
+      sys::path::remove_dots(SubPath, /*remove_dot_dot=*/true);
+      auto Level = unsigned(SubPath.count(sys::path::get_separator())) + 1;
+      Components.back().second += Level;
+      Components.emplace_back(std::move(SubPath), Level);
+    }
+
+    // Then we make the title accroding to Components.
+    std::string S;
+    for (auto I = Components.begin(), E = Components.end();;) {
+      auto &Name = I->first;
+      if (++I == E) {
+        S += a("./index.html", Name);
+        S += sys::path::get_separator();
+        break;
+      }
+
+      SmallString<128> Link;
+      for (unsigned J = I->second; J > 0; --J)
+        Link += "../";
+      Link += "index.html";
+      S += a(Link, Name);
+      S += sys::path::get_separator();
+    }
+    return S;
+  }
+
+  std::string buildRelLinkToFile(StringRef RelPath) const {
+    SmallString<128> LinkTextStr(RelPath);
+    sys::path::native(LinkTextStr);
+
+    // remove_dots will remove trailing slash, so we need to check before it.
+    auto IsDir = LinkTextStr.endswith(sys::path::get_separator());
+    sys::path::remove_dots(LinkTextStr, /*remove_dot_dot=*/true);
+
+    SmallString<128> LinkTargetStr(LinkTextStr);
+    if (IsDir) {
+      LinkTextStr += sys::path::get_separator();
+      sys::path::append(LinkTargetStr, "index.html");
+    } else {
+      LinkTargetStr += ".html";
+    }
+
+    auto LinkText = escape(LinkTextStr, Options);
+    auto LinkTarget = escape(LinkTargetStr, Options);
+    return a(LinkTarget, LinkText);
+  }
+};
+
+Error CoveragePrinterHTMLDirectory::createIndexFile(
+    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
+    const CoverageFiltersMatchAll &Filters) {
+  // The createSubIndexFile function only works when SourceFiles is
+  // more than one. So we fallback to CoveragePrinterHTML when it is.
+  if (SourceFiles.size() <= 1)
+    return CoveragePrinterHTML::createIndexFile(SourceFiles, Coverage, Filters);
+
+  // Emit the default stylesheet.
+  if (Error E = emitStyleSheet())
+    return E;
+
+  // Emit index files in every subdirectory.
+  Reporter Report(*this, Coverage, Filters);
+  auto TotalsOrErr = Report.prepareDirectoryReports(SourceFiles);
+  if (auto E = TotalsOrErr.takeError())
+    return E;
+  auto &LCPath = TotalsOrErr->Name;
+
+  // Emit the top level index file. Top level index file is just a redirection
+  // to the index file in the LCP directory.
+  auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
+  if (auto E = OSOrErr.takeError())
+    return E;
+  auto OS = std::move(OSOrErr.get());
+  auto LCPIndexFilePath =
+      getOutputPath((LCPath + "index").str(), "html", /*InToplevel=*/false);
+  *OS.get() << R"(<!DOCTYPE html>
+  <html>
+    <head>
+      <meta http-equiv="Refresh" content="0; url=')"
+            << LCPIndexFilePath << R"('" />
+    </head>
+    <body></body>
+  </html>
+  )";
 
   return Error::success();
 }
