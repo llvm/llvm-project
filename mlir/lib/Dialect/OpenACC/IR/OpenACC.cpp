@@ -25,6 +25,17 @@ using namespace acc;
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 
+namespace {
+/// Model for pointer-like types that already provide a `getElementType` method.
+template <typename T>
+struct PointerLikeModel
+    : public PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
+  Type getElementType(Type pointer) const {
+    return llvm::cast<T>(pointer).getElementType();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // OpenACC operations
 //===----------------------------------------------------------------------===//
@@ -46,8 +57,9 @@ void OpenACCDialect::initialize() {
   // By attaching interfaces here, we make the OpenACC dialect dependent on
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
-  LLVM::LLVMPointerType::attachInterface<PointerLikeType>(*getContext());
-  MemRefType::attachInterface<PointerLikeType>(*getContext());
+  LLVM::LLVMPointerType::attachInterface<
+      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
+  MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -973,6 +985,75 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicReadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicReadOp::verify() {
+  return verifyCommon();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicWriteOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicWriteOp::verify() {
+  return verifyCommon();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicUpdateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
+                                           PatternRewriter &rewriter) {
+  if (op.isNoOp()) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+  if (Value writeVal = op.getWriteOpVal()) {
+    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal);
+    return success();
+  }
+
+  return failure();
+}
+
+LogicalResult AtomicUpdateOp::verify() {
+  return verifyCommon();
+}
+
+LogicalResult AtomicUpdateOp::verifyRegions() {
+  return verifyRegionsCommon();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCaptureOp
+//===----------------------------------------------------------------------===//
+
+AtomicReadOp AtomicCaptureOp::getAtomicReadOp() {
+  if (auto op = dyn_cast<AtomicReadOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicReadOp>(getSecondOp());
+}
+
+AtomicWriteOp AtomicCaptureOp::getAtomicWriteOp() {
+  if (auto op = dyn_cast<AtomicWriteOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicWriteOp>(getSecondOp());
+}
+
+AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
+  if (auto op = dyn_cast<AtomicUpdateOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicUpdateOp>(getSecondOp());
+}
+
+LogicalResult AtomicCaptureOp::verifyRegions() {
+  return verifyRegionsCommon();
 }
 
 //===----------------------------------------------------------------------===//

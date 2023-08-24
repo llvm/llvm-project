@@ -874,7 +874,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 // -----
 
 func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  // expected-error @below {{expected three operations in omp.atomic.capture region}}
+  // expected-error @below {{expected three operations in atomic.capture region}}
   omp.atomic.capture {
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.terminator
@@ -974,7 +974,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{updated variable in omp.atomic.update must be captured in second operation}}
+    // expected-error @below {{updated variable in atomic.update must be captured in second operation}}
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -989,7 +989,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %y : memref<i32>, i32
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
@@ -1004,7 +1004,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.atomic.write %y = %expr : memref<i32>, i32
     omp.terminator

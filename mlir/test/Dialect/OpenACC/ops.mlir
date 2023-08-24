@@ -1726,3 +1726,149 @@ acc.set default_async(%i32Value : i32)
 // CHECK: acc.set device_num([[IDXVALUE]] : index)
 // CHECK: acc.set device_num([[IDXVALUE]] : index) if([[IFCOND]])
 // CHECK: acc.set default_async([[I32VALUE]] : i32)
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_read
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>)
+func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
+  // CHECK: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  acc.atomic.read %v = %x : memref<i32>, i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_write
+// CHECK-SAME: (%[[ADDR:.*]]: memref<i32>, %[[VAL:.*]]: i32)
+func.func @acc_atomic_write(%addr : memref<i32>, %val : i32) {
+  // CHECK: acc.atomic.write %[[ADDR]] = %[[VAL]] : memref<i32>, i32
+  acc.atomic.write %addr = %val : memref<i32>, i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_update
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[EXPR:.*]]: i32, %[[XBOOL:.*]]: memref<i1>, %[[EXPRBOOL:.*]]: i1)
+func.func @acc_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exprBool : i1) {
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i1):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.and %[[XVAL]], %[[EXPRBOOL]] : i1
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i1
+  acc.atomic.update %xBool : memref<i1> {
+  ^bb0(%xval: i1):
+    %newval = llvm.and %xval, %exprBool : i1
+    acc.yield %newval : i1
+  }
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.shl %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.shl %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.intr.smax(%[[XVAL]], %[[EXPR]]) : (i32, i32) -> i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.intr.smax(%xval, %expr) : (i32, i32) -> i32
+    acc.yield %newval : i32
+  }
+
+  // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i1):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.icmp "eq" %[[XVAL]], %[[EXPRBOOL]] : i1
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i1
+  // }
+  acc.atomic.update %xBool : memref<i1> {
+  ^bb0(%xval: i1):
+    %newval = llvm.icmp "eq" %xval, %exprBool : i1
+    acc.yield %newval : i1
+  }
+
+  // CHECK: acc.atomic.update %[[X]] : memref<i32> {
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   acc.yield %[[XVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval:i32):
+    acc.yield %xval : i32
+  }
+
+  // CHECK: acc.atomic.update %[[X]] : memref<i32> {
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   acc.yield %{{.+}} : i32
+  // CHECK-NEXT: }
+  %const = arith.constant 42 : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval:i32):
+    acc.yield %const : i32
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_capture
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>, %[[expr:.*]]: i32)
+func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   acc.yield %[[newval]] : i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.read %v = %x : memref<i32>, i32
+  }
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   acc.yield %[[newval]] : i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+  }
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.write %x = %expr : memref<i32>, i32
+  }
+
+  return
+}
