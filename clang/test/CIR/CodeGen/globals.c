@@ -43,6 +43,11 @@ struct {
 } nestedString = {"1", "", "\0"};
 // CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>}>
 
+struct {
+  char *name;
+} nestedStringPtr = {"1"};
+// CHECK: cir.global external @nestedStringPtr = #cir.const_struct<{#cir.global_view<@".str"> : !cir.ptr<!s8i>}>
+
 // TODO: test tentatives with internal linkage.
 
 // Tentative definition is THE definition. Should be zero-initialized.

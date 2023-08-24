@@ -1008,7 +1008,7 @@ struct ConstantLValue {
   /*implicit*/ ConstantLValue(mlir::Value value, bool hasOffsetApplied = false)
       : Value(value), HasOffsetApplied(hasOffsetApplied) {}
 
-  /*implicit*/ ConstantLValue(mlir::SymbolRefAttr address) : Value(address) {}
+  /*implicit*/ ConstantLValue(mlir::cir::GlobalViewAttr address) : Value(address) {}
 
   ConstantLValue(std::nullptr_t) : ConstantLValue({}, false) {}
   ConstantLValue(mlir::Attribute value) : Value(value) {}

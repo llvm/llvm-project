@@ -223,6 +223,9 @@ public:
     if (attr.isa<mlir::cir::ZeroAttr, mlir::cir::NullAttr>())
       return true;
 
+    if (attr.isa<mlir::cir::GlobalViewAttr>())
+      return false;
+
     // TODO(cir): introduce char type in CIR and check for that instead.
     if (const auto intVal = attr.dyn_cast<mlir::cir::IntAttr>())
       return intVal.isNullValue();

@@ -1343,8 +1343,6 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
       // This also prints the type...
       if (initAttr)
         printConstant(p, initAttr);
-      if (initAttr.isa<SymbolRefAttr>())
-        printType();
     }
 
     if (!dtorRegion.empty()) {
@@ -1395,16 +1393,10 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
       if (parseConstantValue(parser, initialValueAttr).failed())
         return failure();
 
-      if (auto sra = initialValueAttr.dyn_cast<SymbolRefAttr>()) {
-        if (parser.parseColonType(opTy))
-          return failure();
-      } else {
-        // Handle StringAttrs
-        assert(initialValueAttr.isa<mlir::TypedAttr>() &&
-               "Non-typed attrs shouldn't appear here.");
-        auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
-        opTy = typedAttr.getType();
-      }
+      assert(initialValueAttr.isa<mlir::TypedAttr>() &&
+             "Non-typed attrs shouldn't appear here.");
+      auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
+      opTy = typedAttr.getType();
     }
 
     // Parse destructor, example:

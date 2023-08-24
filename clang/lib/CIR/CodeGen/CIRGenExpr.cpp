@@ -1322,7 +1322,7 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
 }
 
 LValue CIRGenFunction::buildStringLiteralLValue(const StringLiteral *E) {
-  auto sym = CGM.getAddrOfConstantStringFromLiteral(E);
+  auto sym = CGM.getAddrOfConstantStringFromLiteral(E).getSymbol();
 
   auto cstGlobal = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(), sym);
   assert(cstGlobal && "Expected global");
