@@ -488,6 +488,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, QNaN);
     }
 
+    // f16 amdgcn.sqrt is identical to regular sqrt.
+    if (IID == Intrinsic::amdgcn_sqrt && Src->getType()->isHalfTy()) {
+      Function *NewDecl = Intrinsic::getDeclaration(
+          II.getModule(), Intrinsic::sqrt, {II.getType()});
+      II.setCalledFunction(NewDecl);
+      return &II;
+    }
+
     break;
   }
   case Intrinsic::amdgcn_log:
