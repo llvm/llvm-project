@@ -21,18 +21,36 @@ module attributes {omp.is_target_device = false} {
     }
     llvm.return
   }
+
+  llvm.func @omp_target_no_map() {
+    omp.target {
+      omp.terminator
+    }
+    llvm.return
+  }
 }
 
-// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE:.*]].region_id, ptr %kernel_args)
+// CHECK: define void @omp_target_region_()
+// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE1:.*]].region_id, ptr %kernel_args)
 
 // CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
 // CHECK: omp_offload.failed:
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
 // CHECK: omp_offload.cont:
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
+// CHECK: define void @omp_target_no_map()
+// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
+
+// CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
+// CHECK: omp_offload.failed:
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
+// CHECK: omp_offload.cont:
+
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
 // CHECK: %[[VAL_A:.*]] = load i32, ptr %[[ADDR_A]], align 4
 // CHECK: %[[VAL_B:.*]] = load i32, ptr %[[ADDR_B]], align 4
 // CHECK: %[[SUM:.*]] = add i32 %[[VAL_A]], %[[VAL_B]]
 // CHECK: store i32 %[[SUM]], ptr %[[ADDR_C]], align 4
 
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
+// CHECK: ret void
