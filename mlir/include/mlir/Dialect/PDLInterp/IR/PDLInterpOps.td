@@ -90,7 +90,8 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
     `pdl_interp.apply_constraint` operations apply a generic constraint, that
     has been registered with the interpreter, with a given set of positional
     values. On success, this operation branches to the true destination,
-    otherwise the false destination is taken.
+    otherwise the false destination is taken. This behavior can be reversed
+    by setting the attribute `isNegated` to true.
 
     Example:
 
@@ -101,7 +102,9 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
     ```
   }];
 
-  let arguments = (ins StrAttr:$name, Variadic<PDL_AnyType>:$args);
+  let arguments = (ins StrAttr:$name, 
+                       Variadic<PDL_AnyType>:$args,
+                       DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let assemblyFormat = [{
     $name `(` $args `:` type($args) `)` attr-dict `->` successors
   }];

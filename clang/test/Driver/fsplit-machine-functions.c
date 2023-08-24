@@ -1,10 +1,20 @@
-// REQUIRES: arm-registered-target
+// RUN: %clang -### --target=x86_64 -fprofile-use=default.profdata -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LTO-NEG
+// RUN: %clang -### --target=x86_64 -fprofile-use=default.profdata -fsplit-machine-functions -fno-split-machine-functions %s -c 2>&1 | FileCheck -check-prefix=NEG %s
 
-// RUN: %clang -### -target x86_64 -fprofile-use=default.profdata -fsplit-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-OPT %s
-// RUN: %clang -### -target x86_64 -fsplit-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-OPT %s
-// RUN: %clang -### -target x86_64 -fprofile-use=default.profdata -fsplit-machine-functions -fno-split-machine-functions %s -c 2>&1 | FileCheck -check-prefix=CHECK-NOOPT %s
-// RUN: not %clang -c -target arm-unknown-linux -fsplit-machine-functions %s 2>&1 | FileCheck -check-prefix=CHECK-TRIPLE %s
+// CHECK:      "-fsplit-machine-functions"
+// CHECK-SAME: "-fprofile-instrument-use-path=default.profdata"
 
-// CHECK-OPT:       "-fsplit-machine-functions"
-// CHECK-NOOPT-NOT: "-fsplit-machine-functions"
-// CHECK-TRIPLE:    error: unsupported option '-fsplit-machine-functions' for target
+// NEG-NOT:    "-fsplit-machine-functions"
+
+// RUN: %clang -### --target=x86_64-linux -flto -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=LTO
+// RUN: %clang -### --target=x86_64-linux -flto -fsplit-machine-functions -fno-split-machine-functions %s 2>&1 | FileCheck %s --check-prefix=LTO-NEG
+
+// LTO:         "-plugin-opt=-split-machine-functions"
+// LTO-NEG-NOT: "-plugin-opt=-split-machine-functions"
+
+// RUN: not %clang -### -c --target=arm-unknown-linux -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=ERR
+// ERR: error: unsupported option '-fsplit-machine-functions' for target
+
+/// FIXME
+// RUN: not %clang -### -c --target=arm-unknown-linux -fsplit-machine-functions -fno-split-machine-functions %s 2>&1 | FileCheck %s --check-prefix=ERR2
+// ERR2: error: unsupported option '-fno-split-machine-functions' for target
