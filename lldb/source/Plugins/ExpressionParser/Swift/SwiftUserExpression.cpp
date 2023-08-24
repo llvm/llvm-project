@@ -503,21 +503,21 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
   if (!self_type)
     return false;
 
-  auto *ts = self_type.GetTypeSystem()
-                 .dyn_cast_or_null<TypeSystemSwift>()
-                 ->GetSwiftASTContext();
-
+  auto ts = self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
     return false;
 
-  auto swift_type = ts->GetSwiftType(self_type);
+  auto *swift_ast_ctx = ts->GetSwiftASTContext();
+  if (!swift_ast_ctx)
+    return false;
+
+  auto swift_type = swift_ast_ctx->GetSwiftType(self_type);
   if (!swift_type)
     return false;
 
   auto *decl = swift_type->getAnyGeneric();
   if (!decl)
     return false;
-
 
   auto *env = decl->getGenericEnvironment();
   if (!env)
