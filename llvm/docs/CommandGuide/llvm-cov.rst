@@ -249,6 +249,11 @@ OPTIONS
  line, but show the individual regions if there are multiple on the line.
  Defaults to false.
 
+.. option:: -show-directory-coverage
+
+ Generate an index file in each directory that contains at least one source
+ file with a top level index showing aggregates. Defaults to false.
+
 .. option:: -use-color
 
  Enable or disable color output. By default this is autodetected.
