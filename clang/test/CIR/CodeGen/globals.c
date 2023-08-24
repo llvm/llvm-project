@@ -34,7 +34,14 @@ struct {
   int x;
   int y[2][2];
 } nestedTwoDim = {1, {{2, 3}, {4, 5}}};
-// CHECK: cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22anon22
+// CHECK: cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}>
+
+struct {
+  char x[3];
+  char y[3];
+  char z[3];
+} nestedString = {"1", "", "\0"};
+// CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>}>
 
 // TODO: test tentatives with internal linkage.
 
