@@ -347,7 +347,8 @@ define float @v_fdiv_recip_sqrt_f32_afn(float %x) {
 ; CHECK-LABEL: v_fdiv_recip_sqrt_f32_afn:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, v0
+; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call afn float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv afn float 1.0, %sqrt
@@ -456,11 +457,57 @@ define float @v_fdiv_recip_sqrt_f32_arcp(float %x) {
 }
 
 define float @v_fdiv_recip_sqrt_f32_arcp_afn(float %x) {
-; CHECK-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CODEGEN-IEEE-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; CODEGEN-IEEE-SDAG:       ; %bb.0:
+; CODEGEN-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-IEEE-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; CODEGEN-IEEE-GISEL:       ; %bb.0:
+; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; IR-IEEE-SDAG:       ; %bb.0:
+; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; IR-IEEE-GISEL:       ; %bb.0:
+; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; CODEGEN-DAZ-SDAG:       ; %bb.0:
+; CODEGEN-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; CODEGEN-DAZ-GISEL:       ; %bb.0:
+; CODEGEN-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-DAZ-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; IR-DAZ-SDAG:       ; %bb.0:
+; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn:
+; IR-DAZ-GISEL:       ; %bb.0:
+; IR-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-DAZ-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call arcp afn float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv arcp afn float 1.0, %sqrt
   ret float %fdiv
@@ -571,7 +618,8 @@ define float @v_fdiv_recip_sqrt_f32_afn_fdiv_only(float %x) {
 ; CHECK-LABEL: v_fdiv_recip_sqrt_f32_afn_fdiv_only:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, v0
+; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv afn float 1.0, %sqrt
@@ -579,11 +627,57 @@ define float @v_fdiv_recip_sqrt_f32_afn_fdiv_only(float %x) {
 }
 
 define float @v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only(float %x) {
-; CHECK-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CODEGEN-IEEE-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; CODEGEN-IEEE-SDAG:       ; %bb.0:
+; CODEGEN-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-IEEE-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; CODEGEN-IEEE-GISEL:       ; %bb.0:
+; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; IR-IEEE-SDAG:       ; %bb.0:
+; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; IR-IEEE-GISEL:       ; %bb.0:
+; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; CODEGEN-DAZ-SDAG:       ; %bb.0:
+; CODEGEN-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; CODEGEN-DAZ-GISEL:       ; %bb.0:
+; CODEGEN-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-DAZ-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; IR-DAZ-SDAG:       ; %bb.0:
+; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-GISEL-LABEL: v_fdiv_recip_sqrt_f32_arcp_afn_fdiv_only:
+; IR-DAZ-GISEL:       ; %bb.0:
+; IR-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-DAZ-GISEL-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call float @llvm.sqrt.f32(float %x)
   %fdiv = fdiv arcp afn float 1.0, %sqrt
   ret float %fdiv
@@ -823,7 +917,8 @@ define float @v_recip_sqrt_f32_ulp25(float %x) {
 ; CODEGEN-DAZ-LABEL: v_recip_sqrt_f32_ulp25:
 ; CODEGEN-DAZ:       ; %bb.0:
 ; CODEGEN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-DAZ-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-DAZ-NEXT:    v_rcp_f32_e32 v0, v0
 ; CODEGEN-DAZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; IR-DAZ-LABEL: v_recip_sqrt_f32_ulp25:
@@ -928,7 +1023,8 @@ define float @v_recip_sqrt_f32_afn_ulp25(float %x) {
 ; CHECK-LABEL: v_recip_sqrt_f32_afn_ulp25:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, v0
+; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call afn float @llvm.sqrt.f32(float %x), !fpmath !0
   %fdiv = fdiv afn float 1.0, %sqrt, !fpmath !0
@@ -936,11 +1032,57 @@ define float @v_recip_sqrt_f32_afn_ulp25(float %x) {
 }
 
 define float @v_recip_sqrt_f32_afn_ulp25_contract(float %x) {
-; CHECK-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_rsq_f32_e32 v0, v0
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CODEGEN-IEEE-SDAG-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; CODEGEN-IEEE-SDAG:       ; %bb.0:
+; CODEGEN-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-IEEE-GISEL-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; CODEGEN-IEEE-GISEL:       ; %bb.0:
+; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-IEEE-GISEL-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-SDAG-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; IR-IEEE-SDAG:       ; %bb.0:
+; IR-IEEE-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-IEEE-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-IEEE-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-IEEE-GISEL-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; IR-IEEE-GISEL:       ; %bb.0:
+; IR-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-IEEE-GISEL-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-IEEE-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-SDAG-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; CODEGEN-DAZ-SDAG:       ; %bb.0:
+; CODEGEN-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
+; CODEGEN-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
+; CODEGEN-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CODEGEN-DAZ-GISEL-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; CODEGEN-DAZ-GISEL:       ; %bb.0:
+; CODEGEN-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CODEGEN-DAZ-GISEL-NEXT:    v_rsq_f32_e32 v0, v0
+; CODEGEN-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-SDAG-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; IR-DAZ-SDAG:       ; %bb.0:
+; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
+; IR-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
+; IR-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; IR-DAZ-GISEL-LABEL: v_recip_sqrt_f32_afn_ulp25_contract:
+; IR-DAZ-GISEL:       ; %bb.0:
+; IR-DAZ-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; IR-DAZ-GISEL-NEXT:    v_rsq_f32_e32 v0, v0
+; IR-DAZ-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn float @llvm.sqrt.f32(float %x), !fpmath !0
   %fdiv = fdiv contract afn float 1.0, %sqrt, !fpmath !0
   ret float %fdiv
