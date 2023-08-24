@@ -37,6 +37,9 @@ class GICombinerHelper<string classname, list<GICombine> rules>
     : GICombineGroup<rules> {
   // The class name to use in the generated output.
   string Classname = classname;
+  // Combiners can use this so they're free to define tryCombineAll themselves
+  // and do extra work before/after calling the TableGen-erated code.
+  string CombineAllMethodName = "tryCombineAll";
   // The name of a run-time compiler option that will be generated to disable
   // specific rules within this combiner.
   string DisableRuleOption = ?;
