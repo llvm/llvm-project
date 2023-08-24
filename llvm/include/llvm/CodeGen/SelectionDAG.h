@@ -2041,6 +2041,11 @@ public:
                     : computeOverflowForUnsignedAdd(N0, N1);
   }
 
+  /// Determine if the result of the addition of 2 nodes can never overflow.
+  bool willNotOverflowAdd(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForAdd(IsSigned, N0, N1) == OFK_Never;
+  }
+
   /// Determine if the result of the signed sub of 2 nodes can overflow.
   OverflowKind computeOverflowForSignedSub(SDValue N0, SDValue N1) const;
 
@@ -2052,6 +2057,11 @@ public:
                                      SDValue N1) const {
     return IsSigned ? computeOverflowForSignedSub(N0, N1)
                     : computeOverflowForUnsignedSub(N0, N1);
+  }
+
+  /// Determine if the result of the sub of 2 nodes can never overflow.
+  bool willNotOverflowSub(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForSub(IsSigned, N0, N1) == OFK_Never;
   }
 
   /// Test if the given value is known to have exactly one bit set. This differs
