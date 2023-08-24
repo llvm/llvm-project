@@ -1290,9 +1290,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // setjmpTable = (int *) malloc(40);
   Type *IntPtrTy = getAddrIntType(&M);
   Constant *size = ConstantInt::get(IntPtrTy, 40);
-  CallInst *SetjmpTable =
-      IRB.CreateMalloc(SetjmpTableSize, IntPtrTy, IRB.getInt32Ty(), size,
-                       nullptr, nullptr, "setjmpTable");
+  CallInst *SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size,
+                                           nullptr, nullptr, "setjmpTable");
   SetjmpTable->setDebugLoc(FirstDL);
   // setjmpTable[0] = 0;
   IRB.SetInsertPoint(SetjmpTableSize);

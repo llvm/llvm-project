@@ -298,9 +298,10 @@ static bool IsConstantOne(Value *val) {
   return CVal && CVal->isOne();
 }
 
-static CallInst *createMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
-                              Value *ArraySize, ArrayRef<OperandBundleDef> OpB,
-                              Function *MallocF, const Twine &Name) {
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      ArrayRef<OperandBundleDef> OpB,
+                                      Function *MallocF, const Twine &Name) {
   // malloc(type) becomes:
   //       bitcast (i8* malloc(typeSize)) to type*
   // malloc(type, arraySize) becomes:
@@ -333,9 +334,7 @@ static CallInst *createMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
   if (!MallocFunc)
     // prototype malloc as "void *malloc(size_t)"
     MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
-  PointerType *AllocPtrType = PointerType::getUnqual(AllocTy);
   CallInst *MCall = nullptr;
-  Instruction *Result = nullptr;
 
   MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "MCall");
 
@@ -354,15 +353,7 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return createMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
-                      MallocF, Name);
-}
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
-                                      ArrayRef<OperandBundleDef> OpB,
-                                      Function *MallocF, const Twine &Name) {
-  return createMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, OpB, MallocF,
-                      Name);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt, MallocF, Name);
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(

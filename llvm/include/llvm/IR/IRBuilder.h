@@ -619,6 +619,10 @@ public:
                                               TBAATag, ScopeTag, NoAliasTag);
   }
 
+  CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
+                         Value *ArraySize, ArrayRef<OperandBundleDef> OpB,
+                         Function *MallocF, const Twine &Name);
+
   /// CreateMalloc - Generate the IR for a call to malloc:
   /// 1. Compute the malloc call's argument as the specified type's size,
   ///    possibly multiplied by the array size if the array size is not
@@ -627,9 +631,6 @@ public:
   CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
                             Value *ArraySize, Function *MallocF,
                             const Twine &Name);
-  CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
-                            Value *ArraySize, ArrayRef<OperandBundleDef> OpB,
-                            Function *MallocF, const Twine &Name);
 
   CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
                                                Value *Size, Align Alignment,
