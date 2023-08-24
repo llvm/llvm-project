@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <numeric>
 
@@ -19,76 +20,7 @@ using namespace llvm::X86;
 
 namespace {
 
-/// Container class for CPU features.
-/// This is a constexpr reimplementation of a subset of std::bitset. It would be
-/// nice to use std::bitset directly, but it doesn't support constant
-/// initialization.
-class FeatureBitset {
-  static constexpr unsigned NUM_FEATURE_WORDS =
-      (X86::CPU_FEATURE_MAX + 31) / 32;
-
-  // This cannot be a std::array, operator[] is not constexpr until C++17.
-  uint32_t Bits[NUM_FEATURE_WORDS] = {};
-
-public:
-  constexpr FeatureBitset() = default;
-  constexpr FeatureBitset(std::initializer_list<unsigned> Init) {
-    for (auto I : Init)
-      set(I);
-  }
-
-  bool any() const {
-    return llvm::any_of(Bits, [](uint64_t V) { return V != 0; });
-  }
-
-  constexpr FeatureBitset &set(unsigned I) {
-    Bits[I / 32] |= uint32_t(1) << (I % 32);
-    return *this;
-  }
-
-  constexpr bool operator[](unsigned I) const {
-    uint32_t Mask = uint32_t(1) << (I % 32);
-    return (Bits[I / 32] & Mask) != 0;
-  }
-
-  constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Bits[I] &= RHS.Bits[I];
-    return *this;
-  }
-
-  constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Bits[I] |= RHS.Bits[I];
-    return *this;
-  }
-
-  constexpr FeatureBitset operator&(const FeatureBitset &RHS) const {
-    FeatureBitset Result = *this;
-    Result &= RHS;
-    return Result;
-  }
-
-  constexpr FeatureBitset operator|(const FeatureBitset &RHS) const {
-    FeatureBitset Result = *this;
-    Result |= RHS;
-    return Result;
-  }
-
-  constexpr FeatureBitset operator~() const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = ~Bits[I];
-    return Result;
-  }
-
-  constexpr bool operator!=(const FeatureBitset &RHS) const {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      if (Bits[I] != RHS.Bits[I])
-        return true;
-    return false;
-  }
-};
+using FeatureBitset = Bitset<X86::CPU_FEATURE_MAX>;
 
 struct ProcInfo {
   StringLiteral Name;
