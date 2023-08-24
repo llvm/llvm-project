@@ -40,7 +40,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined (__x86_64__)
 #include "common.h"
 
 // Enables a very verbose logging to stderr useful when debugging
@@ -695,12 +694,12 @@ static char *getBinaryPath() {
   assert(static_cast<int64_t>(FDdir) >= 0,
          "failed to open /proc/self/map_files");
 
-  while (long Nread = __getdents(FDdir, (struct dirent *)Buf, BufSize)) {
+  while (long Nread = __getdents64(FDdir, (struct dirent64 *)Buf, BufSize)) {
     assert(static_cast<int64_t>(Nread) != -1, "failed to get folder entries");
 
-    struct dirent *d;
+    struct dirent64 *d;
     for (long Bpos = 0; Bpos < Nread; Bpos += d->d_reclen) {
-      d = (struct dirent *)(Buf + Bpos);
+      d = (struct dirent64 *)(Buf + Bpos);
 
       uint64_t StartAddress, EndAddress;
       if (!parseAddressRange(d->d_name, StartAddress, EndAddress))
@@ -1668,6 +1667,17 @@ instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
 /// as well as the target address for the call
 extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "ldp x0, x1, [sp, #288]\n"
+                       "bl instrumentIndirectCall\n"
+                       RESTORE_ALL
+                       "ret\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "mov 0xa0(%%rsp), %%rdi\n"
                        "mov 0x98(%%rsp), %%rsi\n"
@@ -1675,10 +1685,23 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "ldp x0, x1, [sp, #288]\n"
+                       "bl instrumentIndirectCall\n"
+                       RESTORE_ALL
+                       "ret\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "mov 0x98(%%rsp), %%rdi\n"
                        "mov 0x90(%%rsp), %%rsi\n"
@@ -1686,21 +1709,48 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 /// This is hooking ELF's entry, it needs to save all machine state.
 extern "C" __attribute((naked)) void __bolt_instr_start()
 {
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "bl __bolt_instr_setup\n"
+                       RESTORE_ALL
+                       "adrp x16, __bolt_start_trampoline\n"
+                       "add x16, x16, #:lo12:__bolt_start_trampoline\n"
+                       "br x16\n"
+                       :::);
+  // clang-format on
+#else
+  // clang-format off
   __asm__ __volatile__(SAVE_ALL
                        "call __bolt_instr_setup\n"
                        RESTORE_ALL
                        "jmp __bolt_start_trampoline\n"
                        :::);
+  // clang-format on
+#endif
 }
 
 /// This is hooking into ELF's DT_FINI
 extern "C" void __bolt_instr_fini() {
-  __bolt_fini_trampoline();
+#if defined(__aarch64__)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                       "adrp x16, __bolt_fini_trampoline\n"
+                       "add x16, x16, #:lo12:__bolt_fini_trampoline\n"
+                       "blr x16\n"
+                       RESTORE_ALL
+                       :::);
+  // clang-format on
+#else
+  __asm__ __volatile__("call __bolt_fini_trampoline\n" :::);
+#endif
   if (__bolt_instr_sleep_time == 0) {
     int FD = openProfile();
     __bolt_instr_data_dump(FD);
@@ -1751,5 +1801,4 @@ void _bolt_instr_fini() {
   __bolt_instr_data_dump();
 }
 
-#endif
 #endif
