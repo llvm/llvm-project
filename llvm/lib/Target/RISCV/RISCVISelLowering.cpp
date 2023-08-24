@@ -3571,6 +3571,10 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
       return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
     }
   }
+  // If the hi bits of the splat are undefined, then it's fine to just splat Lo
+  // even if it might be sign extended.
+  if (Hi.isUndef())
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Lo, VL);
 
   // Fall back to a stack store and stride x0 vector load.
   return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VT, Passthru, Lo,
@@ -6878,6 +6882,12 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
   if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
       isa<ConstantSDNode>(Hi.getOperand(1)) &&
       Hi.getConstantOperandVal(1) == 31)
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT), Lo,
+                       DAG.getRegister(RISCV::X0, MVT::i32));
+
+  // If the hi bits of the splat are undefined, then it's fine to just splat Lo
+  // even if it might be sign extended.
+  if (Hi.isUndef())
     return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT), Lo,
                        DAG.getRegister(RISCV::X0, MVT::i32));
 

@@ -2067,21 +2067,21 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
       !isa<ConstantSDNode>(Shift.getOperand(1)))
     return true;
 
+  // We need to ensure that mask is a continuous run of bits.
+  unsigned MaskIdx, MaskLen;
+  if (!isShiftedMask_64(Mask, MaskIdx, MaskLen))
+    return true;
+  unsigned MaskLZ = 64 - (MaskIdx + MaskLen);
+
   unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-  unsigned MaskLZ = llvm::countl_zero(Mask);
-  unsigned MaskTZ = llvm::countr_zero(Mask);
 
   // The amount of shift we're trying to fit into the addressing mode is taken
-  // from the trailing zeros of the mask.
-  unsigned AMShiftAmt = MaskTZ;
+  // from the shifted mask index (number of trailing zeros of the mask).
+  unsigned AMShiftAmt = MaskIdx;
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
   if (AMShiftAmt == 0 || AMShiftAmt > 3) return true;
-
-  // We also need to ensure that mask is a continuous run of bits.
-  if (llvm::countr_one(Mask >> MaskTZ) + MaskTZ + MaskLZ != 64)
-    return true;
 
   // Scale the leading zero count down based on the actual size of the value.
   // Also scale it down based on the size of the shift.
@@ -2121,11 +2121,14 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
     insertDAGNode(DAG, N, NewX);
     X = NewX;
   }
+
+  MVT XVT = X.getSimpleValueType();
   SDLoc DL(N);
   SDValue NewSRLAmt = DAG.getConstant(ShiftAmt + AMShiftAmt, DL, MVT::i8);
-  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, VT, X, NewSRLAmt);
+  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, XVT, X, NewSRLAmt);
+  SDValue NewExt = DAG.getZExtOrTrunc(NewSRL, DL, VT);
   SDValue NewSHLAmt = DAG.getConstant(AMShiftAmt, DL, MVT::i8);
-  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewSRL, NewSHLAmt);
+  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewExt, NewSHLAmt);
 
   // Insert the new nodes into the topological ordering. We must do this in
   // a valid topological ordering as nothing is going to go back and re-sort
@@ -2134,13 +2137,14 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   // hierarchy left to express.
   insertDAGNode(DAG, N, NewSRLAmt);
   insertDAGNode(DAG, N, NewSRL);
+  insertDAGNode(DAG, N, NewExt);
   insertDAGNode(DAG, N, NewSHLAmt);
   insertDAGNode(DAG, N, NewSHL);
   DAG.ReplaceAllUsesWith(N, NewSHL);
   DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << AMShiftAmt;
-  AM.IndexReg = NewSRL;
+  AM.IndexReg = NewExt;
   return false;
 }
 
@@ -2163,26 +2167,30 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
     return true;
 
   // We need to ensure that mask is a continuous run of bits.
-  if (!isShiftedMask_64(Mask)) return true;
+  unsigned MaskIdx, MaskLen;
+  if (!isShiftedMask_64(Mask, MaskIdx, MaskLen))
+    return true;
 
   unsigned ShiftAmt = Shift.getConstantOperandVal(1);
 
   // The amount of shift we're trying to fit into the addressing mode is taken
-  // from the trailing zeros of the mask.
-  unsigned AMShiftAmt = llvm::countr_zero(Mask);
+  // from the shifted mask index (number of trailing zeros of the mask).
+  unsigned AMShiftAmt = MaskIdx;
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
   if (AMShiftAmt == 0 || AMShiftAmt > 3) return true;
 
+  MVT XVT = X.getSimpleValueType();
   MVT VT = N.getSimpleValueType();
   SDLoc DL(N);
   SDValue NewSRLAmt = DAG.getConstant(ShiftAmt + AMShiftAmt, DL, MVT::i8);
-  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, VT, X, NewSRLAmt);
-  SDValue NewMask = DAG.getConstant(Mask >> AMShiftAmt, DL, VT);
-  SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, NewSRL, NewMask);
+  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, XVT, X, NewSRLAmt);
+  SDValue NewMask = DAG.getConstant(Mask >> AMShiftAmt, DL, XVT);
+  SDValue NewAnd = DAG.getNode(ISD::AND, DL, XVT, NewSRL, NewMask);
+  SDValue NewExt = DAG.getZExtOrTrunc(NewAnd, DL, VT);
   SDValue NewSHLAmt = DAG.getConstant(AMShiftAmt, DL, MVT::i8);
-  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewAnd, NewSHLAmt);
+  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewExt, NewSHLAmt);
 
   // Insert the new nodes into the topological ordering. We must do this in
   // a valid topological ordering as nothing is going to go back and re-sort
@@ -2193,13 +2201,14 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, NewSRL);
   insertDAGNode(DAG, N, NewMask);
   insertDAGNode(DAG, N, NewAnd);
+  insertDAGNode(DAG, N, NewExt);
   insertDAGNode(DAG, N, NewSHLAmt);
   insertDAGNode(DAG, N, NewSHL);
   DAG.ReplaceAllUsesWith(N, NewSHL);
   DAG.RemoveDeadNode(N.getNode());
 
   AM.Scale = 1 << AMShiftAmt;
-  AM.IndexReg = NewAnd;
+  AM.IndexReg = NewExt;
   return false;
 }
 
@@ -2239,6 +2248,32 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     if ((AM.Scale * ScaleAmt) <= 8) {
       AM.Scale *= ScaleAmt;
       return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
+    }
+  }
+
+  // index: sext(add_nsw(x,c)) -> index: sext(x), disp + sext(c)
+  // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
+  if (N.getOpcode() == ISD::SIGN_EXTEND) {
+    SDValue Src = N.getOperand(0);
+    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap()) {
+      if (CurDAG->isBaseWithConstantOffset(Src)) {
+        SDValue AddSrc = Src.getOperand(0);
+        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
+        uint64_t Offset = (uint64_t)AddVal->getSExtValue() * AM.Scale;
+        if (!foldOffsetIntoAddress(Offset, AM)) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          SDValue ExtSrc = CurDAG->getNode(ISD::SIGN_EXTEND, DL, VT, AddSrc);
+          SDValue ExtVal = CurDAG->getConstant(AddVal->getSExtValue(), DL, VT);
+          SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtSrc);
+          insertDAGNode(*CurDAG, N, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtAdd);
+          CurDAG->ReplaceAllUsesWith(N, ExtAdd);
+          CurDAG->RemoveDeadNode(N.getNode());
+          return ExtSrc;
+        }
+      }
     }
   }
 
@@ -2591,11 +2626,22 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       return false;
     }
 
-    // Try to fold the mask and shift into an extract and scale.
-    if (Src.getOpcode() == ISD::SRL && !Mask.isAllOnes() &&
-        !foldMaskAndShiftToExtract(*CurDAG, N, Mask.getZExtValue(), Src,
+    if (Src.getOpcode() == ISD::SRL && !Mask.isAllOnes()) {
+      // Try to fold the mask and shift into an extract and scale.
+      if (!foldMaskAndShiftToExtract(*CurDAG, N, Mask.getZExtValue(), Src,
+                                     Src.getOperand(0), AM))
+        return false;
+
+      // Try to fold the mask and shift directly into the scale.
+      if (!foldMaskAndShiftToScale(*CurDAG, N, Mask.getZExtValue(), Src,
                                    Src.getOperand(0), AM))
-      return false;
+        return false;
+
+      // Try to fold the mask and shift into BEXTR and scale.
+      if (!foldMaskedShiftToBEXTR(*CurDAG, N, Mask.getZExtValue(), Src,
+                                  Src.getOperand(0), AM, *Subtarget))
+        return false;
+    }
 
     break;
   }

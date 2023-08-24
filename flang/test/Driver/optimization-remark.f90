@@ -7,18 +7,18 @@
 ! RUN: %flang_fc1 %s -O1 -Rpass -Rno-pass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=NO-REMARKS
 
 ! Check -Rno-pass, -Rno-pass-analysis, -Rno-pass-missed nothing emitted
-! RUN: %flang %s -O1 -Rno-pass 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-missed 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-analysis 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass-missed -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass-analysis -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check full -Rpass message is emitted
-! RUN: %flang %s -O1 -Rpass 2>&1 | FileCheck %s
+! RUN: %flang %s -O1 -Rpass -c 2>&1 | FileCheck %s
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O1 -Rpass-missed 2>&1 | FileCheck %s --check-prefix=REMARKS-MISSED
+! RUN: %flang %s -O1 -Rpass-missed -c 2>&1 | FileCheck %s --check-prefix=REMARKS-MISSED
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O1 -Rpass-analysis 2>&1 | FileCheck %s --check-prefix=REMARKS-ANALYSIS
+! RUN: %flang %s -O1 -Rpass-analysis -c 2>&1 | FileCheck %s --check-prefix=REMARKS-ANALYSIS
 
 ! CHECK: remark: Loop deleted because it is invariant
 ! REMARKS-MISSED: {{.*}} will not be inlined into {{.*}} because its definition is unavailable

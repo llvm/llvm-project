@@ -954,7 +954,17 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let options = [
     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
                  /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
+                 "instead of typed pointers">,
+    Option<"clientAPI", "client-api", "::mlir::spirv::ClientAPI",
+	   /*default=*/"::mlir::spirv::ClientAPI::Unknown",
+	   "Derive StorageClass to address space mapping from the client API",
+	   [{::llvm::cl::values(
+	     clEnumValN(::mlir::spirv::ClientAPI::Unknown, "Unknown", "Unknown (default)"),
+	     clEnumValN(::mlir::spirv::ClientAPI::Metal, "Metal", "Metal"),
+	     clEnumValN(::mlir::spirv::ClientAPI::OpenCL, "OpenCL", "OpenCL"),
+	     clEnumValN(::mlir::spirv::ClientAPI::Vulkan, "Vulkan", "Vulkan"),
+	     clEnumValN(::mlir::spirv::ClientAPI::WebGPU, "WebGPU", "WebGPU")
+	   )}]>,
   ];
 }
 

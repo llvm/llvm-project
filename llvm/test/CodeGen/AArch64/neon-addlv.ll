@@ -150,3 +150,16 @@ define i32 @saddlv4h_from_v4i16(ptr %A) nounwind {
   %tmp5 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %tmp3)
   ret i32 %tmp5
 }
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8>) nounwind readnone
+
+define i32 @uaddlv_known_bits(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_known_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %tmp1 = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %tmp2 = and i32 %tmp1, 65535
+  ret i32 %tmp2
+}

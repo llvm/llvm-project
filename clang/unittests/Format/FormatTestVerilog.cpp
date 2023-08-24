@@ -1157,66 +1157,6 @@ TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("{<<byte{j}} = x;");
 }
 
-TEST_F(FormatTestVerilog, StringLiteral) {
-  // Long strings should be broken.
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx ",
-   "xxxx"});)",
-               R"(x({"xxxxxxxxxxxxxxxx xxxx"});)",
-               getStyleWithColumns(getDefaultStyle(), 23));
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx",
-   " xxxx"});)",
-               R"(x({"xxxxxxxxxxxxxxxx xxxx"});)",
-               getStyleWithColumns(getDefaultStyle(), 22));
-  // Braces should be added when they don't already exist.
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx ",
-   "xxxx"});)",
-               R"(x("xxxxxxxxxxxxxxxx xxxx");)",
-               getStyleWithColumns(getDefaultStyle(), 23));
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx",
-   " xxxx"});)",
-               R"(x("xxxxxxxxxxxxxxxx xxxx");)",
-               getStyleWithColumns(getDefaultStyle(), 22));
-  verifyFormat(R"(x({{"xxxxxxxxxxxxxxxx ",
-    "xxxx"} == x});)",
-               R"(x({"xxxxxxxxxxxxxxxx xxxx" == x});)",
-               getStyleWithColumns(getDefaultStyle(), 24));
-  verifyFormat(R"(string x = {"xxxxxxxxxxxxxxxx ",
-            "xxxxxxxx"};)",
-               R"(string x = "xxxxxxxxxxxxxxxx xxxxxxxx";)",
-               getStyleWithColumns(getDefaultStyle(), 32));
-  // Space around braces should be correct.
-  auto Style = getStyleWithColumns(getDefaultStyle(), 24);
-  Style.Cpp11BracedListStyle = false;
-  verifyFormat(R"(x({ "xxxxxxxxxxxxxxxx ",
-    "xxxx" });)",
-               R"(x("xxxxxxxxxxxxxxxx xxxx");)", Style);
-  // Braces should not be added twice.
-  verifyFormat(R"(x({"xxxxxxxx",
-   "xxxxxxxx",
-   "xxxxxx"});)",
-               R"(x("xxxxxxxxxxxxxxxxxxxxxx");)",
-               getStyleWithColumns(getDefaultStyle(), 14));
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx ",
-   "xxxxxxxxxxxxxxxx ",
-   "xxxx"});)",
-               R"(x("xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx xxxx");)",
-               getStyleWithColumns(getDefaultStyle(), 23));
-  verifyFormat(R"(x({"xxxxxxxxxxxxxxxx ",
-   "xxxxxxxxxxxxxxxx ",
-   "xxxx"});)",
-               R"(x({"xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx ", "xxxx"});)",
-               getStyleWithColumns(getDefaultStyle(), 23));
-  // These kinds of strings don't exist in Verilog.
-  verifyNoCrash(R"(x(@"xxxxxxxxxxxxxxxx xxxx");)",
-                getStyleWithColumns(getDefaultStyle(), 23));
-  verifyNoCrash(R"(x(u"xxxxxxxxxxxxxxxx xxxx");)",
-                getStyleWithColumns(getDefaultStyle(), 23));
-  verifyNoCrash(R"(x(u8"xxxxxxxxxxxxxxxx xxxx");)",
-                getStyleWithColumns(getDefaultStyle(), 23));
-  verifyNoCrash(R"(x(_T("xxxxxxxxxxxxxxxx xxxx"));)",
-                getStyleWithColumns(getDefaultStyle(), 23));
-}
-
 TEST_F(FormatTestVerilog, StructLiteral) {
   verifyFormat("c = '{0, 0.0};");
   verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");

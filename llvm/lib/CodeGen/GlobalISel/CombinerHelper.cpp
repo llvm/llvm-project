@@ -4502,7 +4502,19 @@ bool CombinerHelper::matchReassocCommBinOp(MachineInstr &MI,
   return false;
 }
 
-bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
+bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register SrcOp = MI.getOperand(1).getReg();
+
+  if (auto MaybeCst = ConstantFoldCastOp(MI.getOpcode(), DstTy, SrcOp, MRI)) {
+    MatchInfo = *MaybeCst;
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) {
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);
