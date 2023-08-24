@@ -238,6 +238,12 @@ TYPED_TEST(OptTableTest, IgnoreCase) {
   EXPECT_TRUE(AL.hasArg(OPT_B));
 }
 
+#if defined(__clang__)
+// Disable the warning that triggers on exactly what is being tested.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif
+
 TYPED_TEST(OptTableTest, InputArgListSelfAssign) {
   TypeParam T;
   unsigned MAI, MAC;
@@ -254,6 +260,10 @@ TYPED_TEST(OptTableTest, InputArgListSelfAssign) {
   EXPECT_TRUE(AL.hasArg(OPT_C));
   EXPECT_FALSE(AL.hasArg(OPT_SLASH_C));
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 TYPED_TEST(OptTableTest, DoNotIgnoreCase) {
   TypeParam T;
