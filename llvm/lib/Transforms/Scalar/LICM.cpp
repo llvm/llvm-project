@@ -2679,7 +2679,7 @@ static bool hoistFPAssociation(Instruction &I, Loop &L,
   Value *VariantOp = nullptr, *InvariantOp = nullptr;
 
   if (!match(&I, m_FMul(m_Value(VariantOp), m_Value(InvariantOp))) ||
-      !I.hasAllowReassoc())
+      !I.hasAllowReassoc() || !I.hasNoSignedZeros())
     return false;
   if (L.isLoopInvariant(VariantOp))
     std::swap(VariantOp, InvariantOp);
@@ -2694,7 +2694,7 @@ static bool hoistFPAssociation(Instruction &I, Loop &L,
     Worklist.push_back(VariantBinOp);
   while (!Worklist.empty()) {
     BinaryOperator *BO = Worklist.pop_back_val();
-    if (!BO->hasOneUse() || !BO->hasAllowReassoc())
+    if (!BO->hasOneUse() || !BO->hasAllowReassoc() || !BO->hasNoSignedZeros())
       return false;
     BinaryOperator *Op0, *Op1;
     if (match(BO, m_FAdd(m_BinOp(Op0), m_BinOp(Op1)))) {

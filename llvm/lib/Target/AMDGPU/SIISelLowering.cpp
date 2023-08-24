@@ -762,6 +762,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::USUBO_CARRY,
                        ISD::FADD,
                        ISD::FSUB,
+                       ISD::FDIV,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
@@ -11128,7 +11129,9 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
                            N->getFlags());
   }
 
-  if ((VT == MVT::f32 || VT == MVT::f16) && N0.getOpcode() == ISD::FSQRT) {
+  // TODO: Could handle f32 + amdgcn.sqrt but probably never reaches here.
+  if ((VT == MVT::f16 && N0.getOpcode() == ISD::FSQRT) &&
+      N->getFlags().hasAllowContract() && N0->getFlags().hasAllowContract()) {
     return DCI.DAG.getNode(AMDGPUISD::RSQ, SDLoc(N), VT,
                            N0.getOperand(0), N->getFlags());
   }
@@ -12497,6 +12500,41 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performFDivCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::f16 || !Subtarget->has16BitInsts())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDNodeFlags Flags = N->getFlags();
+  SDNodeFlags RHSFlags = RHS->getFlags();
+  if (!Flags.hasAllowContract() || !RHSFlags.hasAllowContract() ||
+      !RHS->hasOneUse())
+    return SDValue();
+
+  if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
+    bool IsNegative = false;
+    if (CLHS->isExactlyValue(1.0) ||
+        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+      // fdiv contract 1.0, (sqrt contract x) -> rsq for f16
+      // fdiv contract -1.0, (sqrt contract x) -> fneg(rsq) for f16
+      if (RHS.getOpcode() == ISD::FSQRT) {
+        // TODO: Or in RHS flags, somehow missing from SDNodeFlags
+        SDValue Rsq =
+            DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0), Flags);
+        return IsNegative ? DAG.getNode(ISD::FNEG, SL, VT, Rsq, Flags) : Rsq;
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performFMACombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -12760,6 +12798,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFAddCombine(N, DCI);
   case ISD::FSUB:
     return performFSubCombine(N, DCI);
+  case ISD::FDIV:
+    return performFDivCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::FMAXNUM:

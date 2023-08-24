@@ -21,6 +21,8 @@
 // CHECK: define
 
 #include <omp.h>
+#include <stdio.h>
+
 void f(long *A, int N) {
   long i = 0;
 #pragma omp target map(A[ : N])
@@ -35,5 +37,6 @@ void f(long *A, int N) {
 int main() {
   long A[1];
   f(&A[0], 1);
-  return A[0];
+  printf("%li\n", A[0]);
+  return 0;
 }

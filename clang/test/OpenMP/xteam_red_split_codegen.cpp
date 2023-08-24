@@ -773,7 +773,7 @@ int main()
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l75
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[SUM1:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[SUM1:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SUM1_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
@@ -965,7 +965,7 @@ int main()
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l87
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[SUM1:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[SUM1:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SUM1_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
@@ -1158,7 +1158,7 @@ int main()
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l98
-// CHECK-SAME: (i64 noundef [[N:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[SUM2:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK-SAME: (i64 noundef [[N:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[SUM2:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[SUM2_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)

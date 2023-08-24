@@ -164,7 +164,7 @@ if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
     $_reader.emitError("size mismatch for operand/result_segment_size");
     return ::mlir::failure();
   }
-  llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
+  ::llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
 } else {
   return $_reader.readSparseArray(::llvm::MutableArrayRef($_storage));
 }
@@ -875,10 +875,12 @@ while (true) {{
   if (useProperties) {
     for (const std::pair<StringRef, AttributeMetadata> &it :
          emitHelper.getAttrMetadata()) {
+      const AttributeMetadata &metadata = it.second;
+      if (metadata.constraint && metadata.constraint->isDerivedAttr())
+        continue;
       body << formatv(
           "auto tblgen_{0} = getProperties().{0}; (void)tblgen_{0};\n",
           it.first);
-      const AttributeMetadata &metadata = it.second;
       if (metadata.isRequired)
         body << formatv(
             "if (!tblgen_{0}) return {1}\"requires attribute '{0}'\");\n",

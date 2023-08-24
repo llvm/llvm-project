@@ -2674,6 +2674,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!ED.IsReachedFromAlignedBarrierOnly ||
           ED.EncounteredNonLocalSideEffect)
         return;
+      if (!ED.EncounteredAssumes.empty() && !A.isModulePass())
+        return;
 
       // We can remove this barrier, if it is one, or all aligned barriers
       // reaching the kernel end. In the latter case we can transitively work

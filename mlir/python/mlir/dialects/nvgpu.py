@@ -3,3 +3,4 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._nvgpu_ops_gen import *
+from ._nvgpu_enum_gen import *

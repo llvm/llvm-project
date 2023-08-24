@@ -235,7 +235,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
        .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_FMUL, G_FDIV, G_FNEG})
+  getActionDefinitionsBuilder({G_FDIV, G_FNEG})
       .legalFor({MinFPScalar, s32, s64, v2s64, v4s32, v2s32})
       .clampScalar(0, MinFPScalar, s64)
       .clampNumElements(0, v2s32, v4s32)
@@ -949,7 +949,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
   getActionDefinitionsBuilder(
-      {G_FADD, G_FSUB, G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+      {G_FADD, G_FSUB, G_FMUL, G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
        G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT, G_INTRINSIC_TRUNC,
        G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})

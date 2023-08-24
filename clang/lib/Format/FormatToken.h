@@ -727,7 +727,7 @@ public:
   /// Returns \c true if this is a string literal that's like a label,
   /// e.g. ends with "=" or ":".
   bool isLabelString() const {
-    if (!is(tok::string_literal))
+    if (isNot(tok::string_literal))
       return false;
     StringRef Content = TokenText;
     if (Content.startswith("\"") || Content.startswith("'"))

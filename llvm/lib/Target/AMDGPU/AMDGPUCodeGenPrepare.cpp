@@ -914,7 +914,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
     DivFMF |= SqrtFMF;
     Builder.setFastMathFlags(DivFMF);
 
-    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
+    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) || HasUnsafeFPMath ||
         canIgnoreDenormalInput(Den, CtxI)) {
       Value *Result = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rsq, Den);
       // -1.0 / sqrt(x) -> fneg(rsq(x))
@@ -1078,23 +1078,6 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   const FastMathFlags DivFMF = FPOp->getFastMathFlags();
   const float ReqdAccuracy = FPOp->getFPAccuracy();
 
-  // Inaccurate rcp is allowed with unsafe-fp-math or afn.
-  //
-  // Defer to codegen to handle this.
-  //
-  // TODO: Decide on an interpretation for interactions between afn + arcp +
-  // !fpmath, and make it consistent between here and codegen. For now, defer
-  // expansion of afn to codegen. The current interpretation is so aggressive we
-  // don't need any pre-consideration here when we have better information. A
-  // more conservative interpretation could use handling here.
-  const bool AllowInaccurateRcp = HasUnsafeFPMath || DivFMF.approxFunc();
-  if (AllowInaccurateRcp)
-    return false;
-
-  // Defer the correct implementations to codegen.
-  if (ReqdAccuracy < 1.0f)
-    return false;
-
   FastMathFlags SqrtFMF;
 
   Value *Num = FDiv.getOperand(0);
@@ -1109,6 +1092,23 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
     if (canOptimizeWithRsq(SqrtOp, DivFMF, SqrtFMF))
       RsqOp = SqrtOp->getOperand(0);
   }
+
+  // Inaccurate rcp is allowed with unsafe-fp-math or afn.
+  //
+  // Defer to codegen to handle this.
+  //
+  // TODO: Decide on an interpretation for interactions between afn + arcp +
+  // !fpmath, and make it consistent between here and codegen. For now, defer
+  // expansion of afn to codegen. The current interpretation is so aggressive we
+  // don't need any pre-consideration here when we have better information. A
+  // more conservative interpretation could use handling here.
+  const bool AllowInaccurateRcp = HasUnsafeFPMath || DivFMF.approxFunc();
+  if (!RsqOp && AllowInaccurateRcp)
+    return false;
+
+  // Defer the correct implementations to codegen.
+  if (ReqdAccuracy < 1.0f)
+    return false;
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(DivFMF);

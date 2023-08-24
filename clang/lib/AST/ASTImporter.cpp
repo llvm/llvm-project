@@ -4079,22 +4079,34 @@ struct FriendCountAndPosition {
   unsigned int IndexOfDecl;
 };
 
-template <class T>
-static FriendCountAndPosition getFriendCountAndPosition(
-    const FriendDecl *FD,
-    llvm::function_ref<T(const FriendDecl *)> GetCanTypeOrDecl) {
+static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
+                               FriendDecl *FD2) {
+  if ((!FD1->getFriendType()) != (!FD2->getFriendType()))
+    return false;
+
+  if (const TypeSourceInfo *TSI = FD1->getFriendType())
+    return Importer.IsStructurallyEquivalent(
+        TSI->getType(), FD2->getFriendType()->getType(), /*Complain=*/false);
+
+  ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
+  StructuralEquivalenceContext Ctx(
+      FD1->getASTContext(), FD2->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default,
+      /* StrictTypeSpelling = */ false, /* Complain = */ false);
+  return Ctx.IsEquivalent(FD1, FD2);
+}
+
+static FriendCountAndPosition getFriendCountAndPosition(ASTImporter &Importer,
+                                                        FriendDecl *FD) {
   unsigned int FriendCount = 0;
   std::optional<unsigned int> FriendPosition;
   const auto *RD = cast<CXXRecordDecl>(FD->getLexicalDeclContext());
 
-  T TypeOrDecl = GetCanTypeOrDecl(FD);
-
-  for (const FriendDecl *FoundFriend : RD->friends()) {
+  for (FriendDecl *FoundFriend : RD->friends()) {
     if (FoundFriend == FD) {
       FriendPosition = FriendCount;
       ++FriendCount;
-    } else if (!FoundFriend->getFriendDecl() == !FD->getFriendDecl() &&
-               GetCanTypeOrDecl(FoundFriend) == TypeOrDecl) {
+    } else if (IsEquivalentFriend(Importer, FD, FoundFriend)) {
       ++FriendCount;
     }
   }
@@ -4102,21 +4114,6 @@ static FriendCountAndPosition getFriendCountAndPosition(
   assert(FriendPosition && "Friend decl not found in own parent.");
 
   return {FriendCount, *FriendPosition};
-}
-
-static FriendCountAndPosition getFriendCountAndPosition(const FriendDecl *FD) {
-  if (FD->getFriendType())
-    return getFriendCountAndPosition<QualType>(FD, [](const FriendDecl *F) {
-      if (TypeSourceInfo *TSI = F->getFriendType())
-        return TSI->getType().getCanonicalType();
-      llvm_unreachable("Wrong friend object type.");
-    });
-  else
-    return getFriendCountAndPosition<Decl *>(FD, [](const FriendDecl *F) {
-      if (Decl *D = F->getFriendDecl())
-        return D->getCanonicalDecl();
-      llvm_unreachable("Wrong friend object type.");
-    });
 }
 
 ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
@@ -4129,26 +4126,13 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   // FriendDecl is not a NamedDecl so we cannot use lookup.
   // We try to maintain order and count of redundant friend declarations.
   const auto *RD = cast<CXXRecordDecl>(DC);
-  FriendDecl *ImportedFriend = RD->getFirstFriend();
   SmallVector<FriendDecl *, 2> ImportedEquivalentFriends;
-
-  while (ImportedFriend) {
-    bool Match = false;
-    if (D->getFriendDecl() && ImportedFriend->getFriendDecl()) {
-      Match =
-          IsStructuralMatch(D->getFriendDecl(), ImportedFriend->getFriendDecl(),
-                            /*Complain=*/false);
-    } else if (D->getFriendType() && ImportedFriend->getFriendType()) {
-      Match = Importer.IsStructurallyEquivalent(
-          D->getFriendType()->getType(),
-          ImportedFriend->getFriendType()->getType(), /*Complain=*/false);
-    }
-    if (Match)
+  for (FriendDecl *ImportedFriend : RD->friends())
+    if (IsEquivalentFriend(Importer, D, ImportedFriend))
       ImportedEquivalentFriends.push_back(ImportedFriend);
 
-    ImportedFriend = ImportedFriend->getNextFriend();
-  }
-  FriendCountAndPosition CountAndPosition = getFriendCountAndPosition(D);
+  FriendCountAndPosition CountAndPosition =
+      getFriendCountAndPosition(Importer, D);
 
   assert(ImportedEquivalentFriends.size() <= CountAndPosition.TotalCount &&
          "Class with non-matching friends is imported, ODR check wrong?");

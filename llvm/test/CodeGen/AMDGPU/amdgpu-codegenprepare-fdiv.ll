@@ -1542,14 +1542,12 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[AFN_NO_MD:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-GOODFREXP-NEXT:    [[AFN_25ULP:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_25ULP]], !fpmath !0
+; IEEE-GOODFREXP-NEXT:    [[AFN_25ULP:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_FAST_NO_MD:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[FAST_NO_MD:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-GOODFREXP-NEXT:    [[SQRT_X_FAST_25ULP:%.*]] = call fast float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-GOODFREXP-NEXT:    [[FAST_25ULP:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_25ULP]], !fpmath !0
+; IEEE-GOODFREXP-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
 ; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float 0x4170000000000000, float 1.000000e+00
@@ -1620,14 +1618,12 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[AFN_NO_MD:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-BADFREXP-NEXT:    [[AFN_25ULP:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_25ULP]], !fpmath !0
+; IEEE-BADFREXP-NEXT:    [[AFN_25ULP:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_FAST_NO_MD:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[FAST_NO_MD:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-BADFREXP-NEXT:    [[SQRT_X_FAST_25ULP:%.*]] = call fast float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-BADFREXP-NEXT:    [[FAST_25ULP:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_25ULP]], !fpmath !0
+; IEEE-BADFREXP-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rsq.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = fcmp contract olt float [[X]], 0x3810000000000000
 ; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = select contract i1 [[TMP16]], float 0x4170000000000000, float 1.000000e+00
@@ -1683,14 +1679,12 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; DAZ-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
 ; DAZ-NEXT:    [[AFN_NO_MD:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_NO_MD]]
 ; DAZ-NEXT:    store volatile float [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; DAZ-NEXT:    [[AFN_25ULP:%.*]] = fdiv contract afn float 1.000000e+00, [[SQRT_X_AFN_25ULP]], !fpmath !0
+; DAZ-NEXT:    [[AFN_25ULP:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[SQRT_X_FAST_NO_MD:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; DAZ-NEXT:    [[FAST_NO_MD:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_NO_MD]]
 ; DAZ-NEXT:    store volatile float [[FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_FAST_25ULP:%.*]] = call fast float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; DAZ-NEXT:    [[FAST_25ULP:%.*]] = fdiv fast float 1.000000e+00, [[SQRT_X_FAST_25ULP]], !fpmath !0
+; DAZ-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4

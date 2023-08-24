@@ -439,6 +439,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::RESET_FPENV:                return "reset_fpenv";
   case ISD::GET_FPENV_MEM:              return "get_fpenv_mem";
   case ISD::SET_FPENV_MEM:              return "set_fpenv_mem";
+  case ISD::GET_FPMODE:                 return "get_fpmode";
+  case ISD::SET_FPMODE:                 return "set_fpmode";
+  case ISD::RESET_FPMODE:               return "reset_fpmode";
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";

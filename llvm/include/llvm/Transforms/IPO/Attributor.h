@@ -5537,8 +5537,7 @@ struct AAInterFnReachability
   /// See also AA::isPotentiallyReachable.
   virtual bool instructionCanReach(
       Attributor &A, const Instruction &Inst, const Function &Fn,
-      const AA::InstExclusionSetTy *ExclusionSet = nullptr,
-      SmallPtrSet<const Function *, 16> *Visited = nullptr) const = 0;
+      const AA::InstExclusionSetTy *ExclusionSet = nullptr) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAInterFnReachability &createForPosition(const IRPosition &IRP,
