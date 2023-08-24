@@ -11,9 +11,6 @@ be slow when types from all of the binaries have full debug info as each module
 is queried for very common types, or global name lookups fail due to a mistyped
 expression.
 
-.. contents::
-   :local:
-
 When should I consider enabling this feature?
 ---------------------------------------------
 
