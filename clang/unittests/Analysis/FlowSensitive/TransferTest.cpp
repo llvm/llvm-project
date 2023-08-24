@@ -5621,7 +5621,7 @@ TEST(TransferTest, MemberOperatorCallModelsPointerForCallee) {
         auto Matches = match(
             traverse(TK_AsIs, cxxOperatorCallExpr().bind("call")), ASTCtx);
 
-        ASSERT_EQ(Matches.size(), 2);
+        ASSERT_EQ(Matches.size(), 2UL);
 
         auto *Call1 = Matches[0].getNodeAs<CXXOperatorCallExpr>("call");
         auto *Call2 = Matches[1].getNodeAs<CXXOperatorCallExpr>("call");
