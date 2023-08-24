@@ -36,14 +36,6 @@ static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
   return Style.IndentWrappedFunctionNames || LineType == LT_ObjCMethodDecl;
 }
 
-// Returns true if a binary operator following \p Tok should be unindented when
-// the style permits it.
-static bool shouldUnindentNextOperator(const FormatToken &Tok) {
-  const FormatToken *Previous = Tok.getPreviousNonComment();
-  return Previous && (Previous->getPrecedence() == prec::Assignment ||
-                      Previous->isOneOf(tok::kw_return, TT_RequiresClause));
-}
-
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
 static unsigned getLengthToMatchingParen(const FormatToken &Tok,
@@ -1626,10 +1618,11 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
       NewParenState.Indent = CurrentState.LastSpace;
 
-    if ((shouldUnindentNextOperator(Current) ||
-         (Previous &&
-          (PrecedenceLevel == prec::Conditional &&
-           Previous->is(tok::question) && Previous->is(TT_ConditionalExpr)))) &&
+    if (Previous &&
+        (Previous->getPrecedence() == prec::Assignment ||
+         Previous->isOneOf(tok::kw_return, TT_RequiresClause) ||
+         (PrecedenceLevel == prec::Conditional && Previous->is(tok::question) &&
+          Previous->is(TT_ConditionalExpr))) &&
         !Newline) {
       // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
       // the operator and keep the operands aligned.
@@ -2192,9 +2185,14 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // Strings in JSON can not be broken.
-    if (Style.isJson() || !Style.BreakStringLiterals || !AllowBreak)
+    // FIXME: String literal breaking is currently disabled for C#, Java, Json
+    // and JavaScript, as it requires strings to be merged using "+" which we
+    // don't support.
+    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+        Style.isCSharp() || Style.isJson() || !Style.BreakStringLiterals ||
+        !AllowBreak) {
       return nullptr;
+    }
 
     // Don't break string literals inside preprocessor directives (except for
     // #define directives, as their contents are stored in separate lines and
@@ -2213,33 +2211,6 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       return nullptr;
 
     StringRef Text = Current.TokenText;
-    // We need this to address the case where there is an unbreakable tail only
-    // if certain other formatting decisions have been taken. The
-    // UnbreakableTailLength of Current is an overapproximation is that case and
-    // we need to be correct here.
-    unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
-                                         ? 0
-                                         : Current.UnbreakableTailLength;
-
-    if (Style.isVerilog() || Style.Language == FormatStyle::LK_Java ||
-        Style.isJavaScript() || Style.isCSharp()) {
-      BreakableStringLiteralUsingOperators::QuoteStyleType QuoteStyle;
-      if (Style.isJavaScript() && Text.startswith("'") && Text.endswith("'")) {
-        QuoteStyle = BreakableStringLiteralUsingOperators::SingleQuotes;
-      } else if (Style.isCSharp() && Text.startswith("@\"") &&
-                 Text.endswith("\"")) {
-        QuoteStyle = BreakableStringLiteralUsingOperators::AtDoubleQuotes;
-      } else if (Text.startswith("\"") && Text.endswith("\"")) {
-        QuoteStyle = BreakableStringLiteralUsingOperators::DoubleQuotes;
-      } else {
-        return nullptr;
-      }
-      return std::make_unique<BreakableStringLiteralUsingOperators>(
-          Current, QuoteStyle,
-          /*UnindentPlus=*/shouldUnindentNextOperator(Current), StartColumn,
-          UnbreakableTailLength, State.Line->InPPDirective, Encoding, Style);
-    }
-
     StringRef Prefix;
     StringRef Postfix;
     // FIXME: Handle whitespace between '_T', '(', '"..."', and ')'.
@@ -2252,6 +2223,13 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||
         (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
+      // We need this to address the case where there is an unbreakable tail
+      // only if certain other formatting decisions have been taken. The
+      // UnbreakableTailLength of Current is an overapproximation is that case
+      // and we need to be correct here.
+      unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
+                                           ? 0
+                                           : Current.UnbreakableTailLength;
       return std::make_unique<BreakableStringLiteral>(
           Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
           State.Line->InPPDirective, Encoding, Style);
@@ -2652,9 +2630,6 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                  Current.UnbreakableTailLength;
 
   if (BreakInserted) {
-    if (!DryRun)
-      Token->updateAfterBroken(Whitespaces);
-
     // If we break the token inside a parameter list, we need to break before
     // the next parameter on all levels, so that the next parameter is clearly
     // visible. Line comments already introduce a break.
