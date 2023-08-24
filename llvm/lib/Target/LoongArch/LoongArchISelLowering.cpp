@@ -143,7 +143,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Set operations for LA32 only.
 
-  if (!Subtarget.is64Bit) {
+  if (!Subtarget.is64Bit()) {
     setOperationAction(ISD::READ_REGISTER, MVT::i64, Custom);
     setOperationAction(ISD::WRITE_REGISTER, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i64, Custom);
