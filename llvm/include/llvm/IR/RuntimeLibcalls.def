@@ -294,6 +294,10 @@ HANDLE_LIBCALL(FREXP_PPCF128, "frexpl")
 HANDLE_LIBCALL(FEGETENV, "fegetenv")
 HANDLE_LIBCALL(FESETENV, "fesetenv")
 
+// Floating point control modes
+HANDLE_LIBCALL(FEGETMODE, "fegetmode")
+HANDLE_LIBCALL(FESETMODE, "fesetmode")
+
 // Conversion
 HANDLE_LIBCALL(FPEXT_F32_PPCF128, "__gcc_stoq")
 HANDLE_LIBCALL(FPEXT_F64_PPCF128, "__gcc_dtoq")
