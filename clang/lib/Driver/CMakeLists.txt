@@ -50,7 +50,6 @@ add_clang_library(clangDriver
   ToolChains/Clang.cpp
   ToolChains/CloudABI.cpp
   ToolChains/CommonArgs.cpp
-  ToolChains/Contiki.cpp
   ToolChains/CrossWindows.cpp
   ToolChains/CSKYToolChain.cpp
   ToolChains/Cuda.cpp
@@ -70,7 +69,6 @@ add_clang_library(clangDriver
   ToolChains/Linux.cpp
   ToolChains/MipsLinux.cpp
   ToolChains/MinGW.cpp
-  ToolChains/Minix.cpp
   ToolChains/MSP430.cpp
   ToolChains/MSVC.cpp
   ToolChains/Myriad.cpp
