@@ -866,7 +866,6 @@ private:
                                  ReleaseToOS ReleaseType = ReleaseToOS::Normal)
       REQUIRES(Sci->Mutex) {
     const uptr BlockSize = getSizeByClassId(ClassId);
-    const uptr PageSize = getPageSizeCached();
 
     DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
     const uptr BytesInFreeList =
@@ -878,7 +877,7 @@ private:
       return 0;
 
     // ====================================================================== //
-    // Check if we have enough free blocks and if it's worth doing a page
+    // 1. Check if we have enough free blocks and if it's worth doing a page
     // release.
     // ====================================================================== //
     if (ReleaseType != ReleaseToOS::ForceAll &&
@@ -894,88 +893,20 @@ private:
     uptr TotalReleasedBytes = 0;
     const uptr Base = First * RegionSize;
     const uptr NumberOfRegions = Last - First + 1U;
-    const uptr GroupSize = (1UL << GroupSizeLog);
-    const uptr CurGroupBase =
-        compactPtrGroupBase(compactPtr(ClassId, Sci->CurrentRegion));
 
-    ReleaseRecorder Recorder(Base);
-    PageReleaseContext Context(BlockSize, NumberOfRegions,
-                               /*ReleaseSize=*/RegionSize);
-
-    auto DecompactPtr = [](CompactPtrT CompactPtr) {
-      return reinterpret_cast<uptr>(CompactPtr);
-    };
-    for (BatchGroup &BG : Sci->FreeListInfo.BlockList) {
-      const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
-      // The `GroupSize` may not be divided by `BlockSize`, which means there is
-      // an unused space at the end of Region. Exclude that space to avoid
-      // unused page map entry.
-      uptr AllocatedGroupSize = GroupBase == CurGroupBase
-                                    ? Sci->CurrentRegionAllocated
-                                    : roundDownSlow(GroupSize, BlockSize);
-      if (AllocatedGroupSize == 0)
-        continue;
-
-      // TransferBatches are pushed in front of BG.Batches. The first one may
-      // not have all caches used.
-      const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
-                             BG.Batches.front()->getCount();
-      const uptr BytesInBG = NumBlocks * BlockSize;
-
-      if (ReleaseType != ReleaseToOS::ForceAll) {
-        if (BytesInBG <= BG.BytesInBGAtLastCheckpoint) {
-          BG.BytesInBGAtLastCheckpoint = BytesInBG;
-          continue;
-        }
-
-        const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
-        if (PushedBytesDelta < PageSize)
-          continue;
-
-        // Given the randomness property, we try to release the pages only if
-        // the bytes used by free blocks exceed certain proportion of allocated
-        // spaces.
-        if (isSmallBlock(BlockSize) && (BytesInBG * 100U) / AllocatedGroupSize <
-                                           (100U - 1U - BlockSize / 16U)) {
-          continue;
-        }
-      }
-
-      // TODO: Consider updating this after page release if `ReleaseRecorder`
-      // can tell the releasd bytes in each group.
-      BG.BytesInBGAtLastCheckpoint = BytesInBG;
-
-      const uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
-      const uptr RegionIndex = (GroupBase - Base) / RegionSize;
-
-      if (NumBlocks == MaxContainedBlocks) {
-        for (const auto &It : BG.Batches)
-          for (u16 I = 0; I < It.getCount(); ++I)
-            DCHECK_EQ(compactPtrGroupBase(It.get(I)), BG.CompactPtrGroupBase);
-
-        const uptr To = GroupBase + AllocatedGroupSize;
-        Context.markRangeAsAllCounted(GroupBase, To, GroupBase, RegionIndex,
-                                      AllocatedGroupSize);
-      } else {
-        DCHECK_LT(NumBlocks, MaxContainedBlocks);
-
-        // Note that we don't always visit blocks in each BatchGroup so that we
-        // may miss the chance of releasing certain pages that cross
-        // BatchGroups.
-        Context.markFreeBlocksInRegion(BG.Batches, DecompactPtr, GroupBase,
-                                       RegionIndex, AllocatedGroupSize,
-                                       /*MayContainLastBlockInRegion=*/true);
-      }
-
-      // We may not be able to do the page release In a rare case that we may
-      // fail on PageMap allocation.
-      if (UNLIKELY(!Context.hasBlockMarked()))
-        return 0;
-    }
-
+    // ==================================================================== //
+    // 2. Mark the free blocks and we can tell which pages are in-use by
+    //    querying `PageReleaseContext`.
+    // ==================================================================== //
+    PageReleaseContext Context = markFreeBlocks(Sci, ClassId, BlockSize, Base,
+                                                NumberOfRegions, ReleaseType);
     if (!Context.hasBlockMarked())
       return 0;
 
+    // ==================================================================== //
+    // 3. Release the unused physical pages back to the OS.
+    // ==================================================================== //
+    ReleaseRecorder Recorder(Base);
     auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
       ScopedLock L(ByteMapMutex);
       return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
@@ -1052,6 +983,93 @@ private:
     } // if (ReleaseType == ReleaseToOS::Normal)
 
     return true;
+  }
+
+  PageReleaseContext markFreeBlocks(SizeClassInfo *Sci, const uptr ClassId,
+                                    const uptr BlockSize, const uptr Base,
+                                    const uptr NumberOfRegions,
+                                    ReleaseToOS ReleaseType)
+      REQUIRES(Sci->Mutex) {
+    const uptr PageSize = getPageSizeCached();
+    const uptr GroupSize = (1UL << GroupSizeLog);
+    const uptr CurGroupBase =
+        compactPtrGroupBase(compactPtr(ClassId, Sci->CurrentRegion));
+
+    PageReleaseContext Context(BlockSize, NumberOfRegions,
+                               /*ReleaseSize=*/RegionSize);
+
+    auto DecompactPtr = [](CompactPtrT CompactPtr) {
+      return reinterpret_cast<uptr>(CompactPtr);
+    };
+    for (BatchGroup &BG : Sci->FreeListInfo.BlockList) {
+      const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
+      // The `GroupSize` may not be divided by `BlockSize`, which means there is
+      // an unused space at the end of Region. Exclude that space to avoid
+      // unused page map entry.
+      uptr AllocatedGroupSize = GroupBase == CurGroupBase
+                                    ? Sci->CurrentRegionAllocated
+                                    : roundDownSlow(GroupSize, BlockSize);
+      if (AllocatedGroupSize == 0)
+        continue;
+
+      // TransferBatches are pushed in front of BG.Batches. The first one may
+      // not have all caches used.
+      const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
+                             BG.Batches.front()->getCount();
+      const uptr BytesInBG = NumBlocks * BlockSize;
+
+      if (ReleaseType != ReleaseToOS::ForceAll) {
+        if (BytesInBG <= BG.BytesInBGAtLastCheckpoint) {
+          BG.BytesInBGAtLastCheckpoint = BytesInBG;
+          continue;
+        }
+
+        const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
+        if (PushedBytesDelta < PageSize)
+          continue;
+
+        // Given the randomness property, we try to release the pages only if
+        // the bytes used by free blocks exceed certain proportion of allocated
+        // spaces.
+        if (isSmallBlock(BlockSize) && (BytesInBG * 100U) / AllocatedGroupSize <
+                                           (100U - 1U - BlockSize / 16U)) {
+          continue;
+        }
+      }
+
+      // TODO: Consider updating this after page release if `ReleaseRecorder`
+      // can tell the released bytes in each group.
+      BG.BytesInBGAtLastCheckpoint = BytesInBG;
+
+      const uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
+      const uptr RegionIndex = (GroupBase - Base) / RegionSize;
+
+      if (NumBlocks == MaxContainedBlocks) {
+        for (const auto &It : BG.Batches)
+          for (u16 I = 0; I < It.getCount(); ++I)
+            DCHECK_EQ(compactPtrGroupBase(It.get(I)), BG.CompactPtrGroupBase);
+
+        const uptr To = GroupBase + AllocatedGroupSize;
+        Context.markRangeAsAllCounted(GroupBase, To, GroupBase, RegionIndex,
+                                      AllocatedGroupSize);
+      } else {
+        DCHECK_LT(NumBlocks, MaxContainedBlocks);
+
+        // Note that we don't always visit blocks in each BatchGroup so that we
+        // may miss the chance of releasing certain pages that cross
+        // BatchGroups.
+        Context.markFreeBlocksInRegion(BG.Batches, DecompactPtr, GroupBase,
+                                       RegionIndex, AllocatedGroupSize,
+                                       /*MayContainLastBlockInRegion=*/true);
+      }
+
+      // We may not be able to do the page release In a rare case that we may
+      // fail on PageMap allocation.
+      if (UNLIKELY(!Context.hasBlockMarked()))
+        break;
+    }
+
+    return Context;
   }
 
   SizeClassInfo SizeClassInfoArray[NumClasses] = {};
