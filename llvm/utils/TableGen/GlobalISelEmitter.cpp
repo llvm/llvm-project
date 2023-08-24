@@ -415,6 +415,8 @@ private:
 
   void declareSubtargetFeature(Record *Predicate);
 
+  unsigned declareHwModeCheck(StringRef HwModeFeatures);
+
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules, bool Optimize,
                              bool WithCoverage);
 
@@ -1917,6 +1919,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Error = importRulePredicates(M, Predicates))
     return std::move(Error);
 
+  if (!P.getHwModeFeatures().empty())
+    M.addHwModeIdx(declareHwModeCheck(P.getHwModeFeatures()));
+
   // Next, analyze the pattern operators.
   TreePatternNode *Src = P.getSrcPattern();
   TreePatternNode *Dst = P.getDstPattern();
@@ -2521,6 +2526,10 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
 void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
   SubtargetFeatures.try_emplace(Predicate, Predicate, SubtargetFeatures.size());
+}
+
+unsigned GlobalISelEmitter::declareHwModeCheck(StringRef HwModeFeatures) {
+  return HwModes.emplace(HwModeFeatures.str(), HwModes.size()).first->second;
 }
 
 } // end anonymous namespace

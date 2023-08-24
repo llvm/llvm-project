@@ -242,19 +242,23 @@ struct PyAttrBuilderMap {
   static py::function dundeGetItemNamed(const std::string &attributeKind) {
     auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
     if (!builder)
-      throw py::key_error();
+      throw py::key_error(attributeKind);
     return *builder;
   }
   static void dundeSetItemNamed(const std::string &attributeKind,
-                                py::function func) {
-    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func));
+                                py::function func, bool replace) {
+    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
+                                              replace);
   }
 
   static void bind(py::module &m) {
     py::class_<PyAttrBuilderMap>(m, "AttrBuilder", py::module_local())
         .def_static("contains", &PyAttrBuilderMap::dunderContains)
         .def_static("get", &PyAttrBuilderMap::dundeGetItemNamed)
-        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed);
+        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed,
+                    "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
+                    "Register an attribute builder for building MLIR "
+                    "attributes from python values.");
   }
 };
 

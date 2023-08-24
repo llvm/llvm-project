@@ -98,6 +98,7 @@ def main():
       'ts',  # TypeScript
       'cs',  # C Sharp
       'json',  # Json
+      'sv', 'svh', 'v', 'vh', # Verilog
       ])
 
   p = argparse.ArgumentParser(

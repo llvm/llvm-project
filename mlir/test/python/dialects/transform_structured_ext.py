@@ -21,7 +21,7 @@ def run(f):
 @run
 def testBufferizeToAllocationOpCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.BufferizeToAllocationOp(sequence.bodyTarget)
@@ -34,7 +34,7 @@ def testBufferizeToAllocationOpCompact():
 @run
 def testBufferizeToAllocationOpArgs():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.BufferizeToAllocationOp(
@@ -57,7 +57,7 @@ def testBufferizeToAllocationOpArgs():
 @run
 def testDecompose():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.DecomposeOp(sequence.bodyTarget)
@@ -70,7 +70,7 @@ def testDecompose():
 @run
 def testFuseIntoContainingOpTypes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
@@ -92,7 +92,7 @@ def testFuseIntoContainingOpTypes():
 @run
 def testFuseIntoContainingOpCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
@@ -109,7 +109,7 @@ def testFuseIntoContainingOpCompact():
 @run
 def testGeneralize():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.GeneralizeOp(sequence.bodyTarget)
@@ -122,7 +122,7 @@ def testGeneralize():
 @run
 def testInterchange():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.InterchangeOp(sequence.bodyTarget, iterator_interchange=[1, 0])
@@ -136,7 +136,7 @@ def testInterchange():
 @run
 def testMapCopyToThreadsOpCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MapCopyToThreadsOp(
@@ -153,7 +153,7 @@ def testMapCopyToThreadsOpCompact():
 @run
 def testMapCopyToThreadsOpTypes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MapCopyToThreadsOp(
@@ -174,7 +174,7 @@ def testMapCopyToThreadsOpTypes():
 @run
 def testMatchOpNamesString():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MatchOp.match_op_names(sequence.bodyTarget, "test.dummy")
@@ -188,7 +188,7 @@ def testMatchOpNamesString():
 @run
 def testMatchOpNamesList():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
@@ -202,7 +202,7 @@ def testMatchOpNamesList():
 @run
 def testMaskedVectorizeStatic():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MaskedVectorizeOp(sequence.bodyTarget, [16, 4])
@@ -216,7 +216,7 @@ def testMaskedVectorizeStatic():
 @run
 def testMaskedVectorizeArray():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         sizes = Attribute.parse("[16, 4]")
@@ -231,7 +231,7 @@ def testMaskedVectorizeArray():
 @run
 def testMaskedVectorizeMixed():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
@@ -248,7 +248,7 @@ def testMaskedVectorizeMixed():
 @run
 def testMaskedVectorizeScalable():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         sz1 = structured.MatchOp.match_op_names(sequence.bodyTarget, ["arith.constant"])
@@ -265,7 +265,7 @@ def testMaskedVectorizeScalable():
 @run
 def testMaskedVectorizeArgs():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MaskedVectorizeOp(
@@ -281,7 +281,7 @@ def testMaskedVectorizeArgs():
 @run
 def testMatchOpNamesTyped():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MatchOp.match_op_names(
@@ -299,7 +299,7 @@ def testMatchOpNamesTyped():
 @run
 def testMultitileSizes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MultiTileSizesOp(
@@ -316,7 +316,7 @@ def testMultitileSizes():
 @run
 def testPad():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.PadOp(
@@ -343,7 +343,7 @@ def testPad():
 @run
 def testScalarize():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.ScalarizeOp(sequence.bodyTarget)
@@ -355,7 +355,7 @@ def testScalarize():
 @run
 def testSplit():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         split = structured.SplitOp(sequence.bodyTarget, dimension=1, split_point=42)
@@ -369,7 +369,7 @@ def testSplit():
 @run
 def testTileCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.TileOp(sequence.bodyTarget, sizes=[4, 8], interchange=[0, 1])
@@ -383,7 +383,7 @@ def testTileCompact():
 @run
 def testTileAttributes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     attr = DenseI64ArrayAttr.get([4, 8])
     ichange = DenseI64ArrayAttr.get([0, 1])
@@ -399,7 +399,7 @@ def testTileAttributes():
 @run
 def testTileZero():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.TileOp(
@@ -417,7 +417,7 @@ def testTileDynamic():
     with_pdl = transform_pdl.WithPDLPatternsOp(pdl.OperationType.get())
     with InsertionPoint(with_pdl.body):
         sequence = transform.SequenceOp(
-            transform.FailurePropagationMode.PROPAGATE, [], with_pdl.bodyTarget
+            transform.FailurePropagationMode.Propagate, [], with_pdl.bodyTarget
         )
         with InsertionPoint(sequence.body):
             m1 = transform_pdl.PDLMatchOp(
@@ -437,7 +437,7 @@ def testTileDynamic():
 @run
 def testTileExplicitLoopTypeSingle():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.TileOp(
@@ -452,7 +452,7 @@ def testTileExplicitLoopTypeSingle():
 @run
 def testTileExplicitLoopTypeAll():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     types = [
         transform.OperationType.get(x)
@@ -470,7 +470,7 @@ def testTileExplicitLoopTypeAll():
 @run
 def testTileToForallCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("linalg.matmul"),
     )
@@ -486,7 +486,7 @@ def testTileToForallCompact():
 @run
 def testTileToForallLoopsAndTileOpTypes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.TileToForallOp(
@@ -505,7 +505,7 @@ def testTileToForallLoopsAndTileOpTypes():
 @run
 def testTileToForallTileSizes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.TileToForallOp(sequence.bodyTarget, tile_sizes=[2, 3, 4])
@@ -518,7 +518,7 @@ def testTileToForallTileSizes():
 @run
 def testTileToForallMixedDynamic():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
@@ -532,7 +532,7 @@ def testTileToForallMixedDynamic():
 @run
 def testTileToForallPackedDynamic():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
@@ -546,7 +546,7 @@ def testTileToForallPackedDynamic():
 @run
 def testTileToForallMapping():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         mapping = Attribute.parse("[ #gpu.thread<y>, #gpu.thread<x> ]")
@@ -562,7 +562,7 @@ def testTileToForallMapping():
 @run
 def testVectorize():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.VectorizeOp(sequence.bodyTarget, vectorize_padding=True)
@@ -571,3 +571,53 @@ def testVectorize():
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK: {vectorize_padding}
+
+
+@run
+def testMatchInterfaceEnum():
+    names = ArrayAttr.get([StringAttr.get("test.dummy")])
+    result_type = transform.AnyOpType.get()
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.__base__(
+            result_type,
+            sequence.bodyTarget,
+            ops=names,
+            interface=structured.MatchInterfaceEnum.LinalgOp,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchInterfaceEnum
+    # CHECK: transform.sequence
+    # CHECK: = transform.structured.match
+    # CHECK: interface{LinalgOp}
+
+
+@run
+def testMatchInterfaceEnumReplaceAttributeBuilder():
+    @register_attribute_builder("MatchInterfaceEnum", replace=True)
+    def match_interface_enum(x, context):
+        if x == "LinalgOp":
+            y = 0
+        elif x == "TilingInterface":
+            y = 1
+        return IntegerAttr.get(IntegerType.get_signless(32, context=context), y)
+
+    names = ArrayAttr.get([StringAttr.get("test.dummy")])
+    result_type = transform.AnyOpType.get()
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.__base__(
+            result_type,
+            sequence.bodyTarget,
+            ops=names,
+            interface="TilingInterface",
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchInterfaceEnumReplaceAttributeBuilder
+    # CHECK: transform.sequence
+    # CHECK: = transform.structured.match
+    # CHECK: interface{TilingInterface}

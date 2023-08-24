@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <numeric>
 
@@ -19,88 +20,7 @@ using namespace llvm::X86;
 
 namespace {
 
-/// Container class for CPU features.
-/// This is a constexpr reimplementation of a subset of std::bitset. It would be
-/// nice to use std::bitset directly, but it doesn't support constant
-/// initialization.
-class FeatureBitset {
-  static constexpr unsigned NUM_FEATURE_WORDS =
-      (X86::CPU_FEATURE_MAX + 31) / 32;
-
-  // This cannot be a std::array, operator[] is not constexpr until C++17.
-  uint32_t Bits[NUM_FEATURE_WORDS] = {};
-
-public:
-  constexpr FeatureBitset() = default;
-  constexpr FeatureBitset(std::initializer_list<unsigned> Init) {
-    for (auto I : Init)
-      set(I);
-  }
-
-  bool any() const {
-    return llvm::any_of(Bits, [](uint64_t V) { return V != 0; });
-  }
-
-  constexpr FeatureBitset &set(unsigned I) {
-    // GCC <6.2 crashes if this is written in a single statement.
-    uint32_t NewBits = Bits[I / 32] | (uint32_t(1) << (I % 32));
-    Bits[I / 32] = NewBits;
-    return *this;
-  }
-
-  constexpr bool operator[](unsigned I) const {
-    uint32_t Mask = uint32_t(1) << (I % 32);
-    return (Bits[I / 32] & Mask) != 0;
-  }
-
-  constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
-      // GCC <6.2 crashes if this is written in a single statement.
-      uint32_t NewBits = Bits[I] & RHS.Bits[I];
-      Bits[I] = NewBits;
-    }
-    return *this;
-  }
-
-  constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
-      // GCC <6.2 crashes if this is written in a single statement.
-      uint32_t NewBits = Bits[I] | RHS.Bits[I];
-      Bits[I] = NewBits;
-    }
-    return *this;
-  }
-
-  // gcc 5.3 miscompiles this if we try to write this using operator&=.
-  constexpr FeatureBitset operator&(const FeatureBitset &RHS) const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = Bits[I] & RHS.Bits[I];
-    return Result;
-  }
-
-  // gcc 5.3 miscompiles this if we try to write this using operator&=.
-  constexpr FeatureBitset operator|(const FeatureBitset &RHS) const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = Bits[I] | RHS.Bits[I];
-    return Result;
-  }
-
-  constexpr FeatureBitset operator~() const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = ~Bits[I];
-    return Result;
-  }
-
-  constexpr bool operator!=(const FeatureBitset &RHS) const {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      if (Bits[I] != RHS.Bits[I])
-        return true;
-    return false;
-  }
-};
+using FeatureBitset = Bitset<X86::CPU_FEATURE_MAX>;
 
 struct ProcInfo {
   StringLiteral Name;
@@ -317,6 +237,7 @@ static constexpr FeatureBitset FeaturesZNVER4 =
 // listed here before, which means it doesn't support -march, -mtune and so on.
 // FIXME: Remove OnlyForCPUDispatchSpecific after all CPUs here support both
 // cpu_dispatch/specific() feature and -march, -mtune, and so on.
+// clang-format off
 constexpr ProcInfo Processors[] = {
  // Empty processor. Include X87 and CMPXCHG8 for backwards compatibility.
   { {""}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
@@ -484,13 +405,14 @@ constexpr ProcInfo Processors[] = {
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   // Generic 64-bit processor.
-  { {"x86-64"}, CK_x86_64, ~0U, FeaturesX86_64, '\0', false },
-  { {"x86-64-v2"}, CK_x86_64_v2, ~0U, FeaturesX86_64_V2, '\0', false },
-  { {"x86-64-v3"}, CK_x86_64_v3, ~0U, FeaturesX86_64_V3, '\0', false },
-  { {"x86-64-v4"}, CK_x86_64_v4, ~0U, FeaturesX86_64_V4, '\0', false },
+  { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
+  { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
+  { {"x86-64-v3"}, CK_x86_64_v3, FEATURE_AVX2, FeaturesX86_64_V3, '\0', false },
+  { {"x86-64-v4"}, CK_x86_64_v4, FEATURE_AVX512VL, FeaturesX86_64_V4, '\0', false },
   // Geode processors.
   { {"geode"}, CK_Geode, ~0U, FeaturesGeode, '\0', false },
 };
+// clang-format on
 
 constexpr const char *NoTuneList[] = {"x86-64-v2", "x86-64-v3", "x86-64-v4"};
 

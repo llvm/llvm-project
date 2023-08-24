@@ -3330,7 +3330,7 @@ defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
 // Convert a floating-point power of 2 to the integer exponent.
 def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
   const auto &APF = N->getValueAPF();
-  int Log2 = APF.getExactLog2();
+  int Log2 = APF.getExactLog2Abs();
   assert(Log2 != INT_MIN);
   return CurDAG->getTargetConstant(Log2, SDLoc(N), MVT::i32);
 }]>;
@@ -3339,8 +3339,24 @@ def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
 // immediate where it's preferable to emit a multiply by as an
 // ldexp. We skip over 0.5 to 4.0 as those are inline immediates
 // anyway.
-def fpimm_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
-    int Exp = Imm.getExactLog2();
+def fpimm_pos_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
+    if (Imm.isNegative())
+      return false;
+
+    int Exp = Imm.getExactLog2Abs();
+    // Prefer leaving the FP inline immediates as they are.
+    // 0.5, 1.0, 2.0, 4.0
+
+    // For f64 ldexp is always better than materializing a 64-bit
+    // constant.
+    return Exp != INT_MIN && (Exp < -1 || Exp > 2);
+  }], FPPow2ToExponentXForm
+>;
+
+def fpimm_neg_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
+    if (!Imm.isNegative())
+      return false;
+    int Exp = Imm.getExactLog2Abs();
     // Prefer leaving the FP inline immediates as they are.
     // 0.5, 1.0, 2.0, 4.0
 
@@ -3353,14 +3369,29 @@ def fpimm_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
 // f64 is different because we also want to handle cases that may
 // require materialization of the exponent.
 // TODO: If we know f64 ops are fast, prefer add (ldexp x, N), y over fma
-// TODO: fmul x, -2^n -> ldexp(-x, n)
 // TODO: For f32/f16, it's not a clear win on code size to use ldexp
 // in place of mul since we have to use the vop3 form. Are there power
 // savings or some other reason to prefer ldexp over mul?
 def : GCNPat<
   (any_fmul (f64 (VOP3Mods f64:$src0, i32:$src0_mods)),
-            fpimm_pow2_prefer_ldexp_f64:$src1),
+            fpimm_pos_pow2_prefer_ldexp_f64:$src1),
   (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_b64:$src0,
+                   0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
+>;
+
+def : GCNPat<
+  (any_fmul f64:$src0, fpimm_neg_pow2_prefer_ldexp_f64:$src1),
+  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_b64:$src0,
+                   0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
+>;
+
+// We want to avoid using VOP3Mods which could pull in another fneg
+// which we would need to be re-negated (which should never happen in
+// practice). I don't see a way to apply an SDNodeXForm that accounts
+// for a second operand.
+def : GCNPat<
+  (any_fmul (fabs f64:$src0), fpimm_neg_pow2_prefer_ldexp_f64:$src1),
+  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_b64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 

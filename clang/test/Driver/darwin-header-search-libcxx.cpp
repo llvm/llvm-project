@@ -53,7 +53,7 @@
 // CHECK-LIBCXX-SYSROOT-1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 
 // Check with both headers in the sysroot and headers alongside the installation
-// (the <sysroot> headers should be preferred over the headers in the toolchain).
+// (the headers in the toolchain should be preferred over the <sysroot> headers).
 // Ensure that both -isysroot and --sysroot work, and that isysroot has precedence
 // over --sysroot.
 //
@@ -89,10 +89,10 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1 %s
 //
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-cc1"
-// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Make sure that using -nostdinc++ or -nostdlib will drop both the toolchain
+// Make sure that using -nostdinc, -nostdinc++ or -nostdlib will drop both the toolchain
 // C++ include path and the sysroot one.
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -104,9 +104,9 @@
 // RUN:     -nostdinc \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
-// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDINC %s
+// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDLIBINC %s
 // CHECK-LIBCXX-NOSTDINC: "-cc1"
-// CHECK-LIBCXX-NOSTDINC: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -157,8 +157,8 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain_no_libcxx \
 // RUN:               --check-prefix=CHECK-LIBCXX-MISSING-BOTH %s
-// CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[SYSROOT]]/usr/include/c++/v1"
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[SYSROOT]]/usr/include/c++/v1"
 
 // Make sure that on Darwin, we use libc++ header search paths by default even when
 // -stdlib= isn't passed.

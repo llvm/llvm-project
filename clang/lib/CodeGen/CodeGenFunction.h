@@ -4902,7 +4902,7 @@ private:
   llvm::Value *EmitX86CpuIs(StringRef CPUStr);
   llvm::Value *EmitX86CpuSupports(const CallExpr *E);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
-  llvm::Value *EmitX86CpuSupports(uint64_t Mask);
+  llvm::Value *EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormX86ResolverCondition(const MultiVersionResolverOption &RO);
   llvm::Value *EmitAArch64CpuInit();

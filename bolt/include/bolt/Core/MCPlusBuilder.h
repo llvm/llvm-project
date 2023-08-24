@@ -639,9 +639,12 @@ public:
     return false;
   }
 
-  /// If non-zero, this is used to fill the executable space with instructions
-  /// that will trap. Defaults to 0.
-  virtual unsigned getTrapFillValue() const { return 0; }
+  /// Used to fill the executable space with instructions
+  /// that will trap.
+  virtual StringRef getTrapFillValue() const {
+    llvm_unreachable("not implemented");
+    return StringRef();
+  }
 
   /// Interface and basic functionality of a MCInstMatcher. The idea is to make
   /// it easy to match one or more MCInsts against a tree-like pattern and

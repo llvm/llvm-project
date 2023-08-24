@@ -7,8 +7,7 @@ Coroutines in LLVM
    :depth: 3
 
 .. warning::
-  This is a work in progress. Compatibility across LLVM releases is not
-  guaranteed.
+  Compatibility across LLVM releases is not guaranteed.
 
 Introduction
 ============
