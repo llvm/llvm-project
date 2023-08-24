@@ -1929,8 +1929,7 @@ struct AMDGPUStreamManagerTy final
 
   AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
       : GenericDeviceResourceManagerTy(Device),
-        OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING",
-                           false),
+        OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
         NextQueue(0), Agent(HSAAgent) {}
 
   Error init(uint32_t InitialSize, int NumHSAQueues, int HSAQueueSize) {
@@ -2334,7 +2333,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Compute the number of queues and their size.
     OMPX_NumQueues = std::max(1U, std::min(OMPX_NumQueues.get(), MaxQueues));
     OMPX_QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
-    DP("Using a maximum of %u HSA queues\n", OMPX_NumQueues);
+    DP("Using a maximum of %u HSA queues\n", OMPX_NumQueues.get());
 
     // Initialize stream pool.
     if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams,
