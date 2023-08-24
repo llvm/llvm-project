@@ -16,6 +16,7 @@
 
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -176,7 +177,7 @@ public:
   }
 };
 
-class AArch64AuthMCExpr : public AArch64MCExpr {
+class AArch64AuthMCExpr final : public AArch64MCExpr {
   uint16_t Discriminator;
   AArch64PACKey::ID Key;
 
@@ -186,22 +187,13 @@ class AArch64AuthMCExpr : public AArch64MCExpr {
         Discriminator(Discriminator), Key(Key) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const AArch64AuthMCExpr *
   create(const MCExpr *Expr, uint16_t Discriminator, AArch64PACKey::ID Key,
          bool HasAddressDiversity, MCContext &Ctx);
 
-  /// @}
-  /// @name Accessors
-  /// @{
-
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }
   bool hasAddressDiversity() const { return getKind() == VK_AUTHADDR; }
-
-  /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -212,10 +204,8 @@ public:
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-
   static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
+    return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
   }
 
   static bool classof(const AArch64MCExpr *E) {
