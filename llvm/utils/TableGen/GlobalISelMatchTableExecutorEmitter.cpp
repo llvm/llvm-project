@@ -79,7 +79,7 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
     OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
   }
   OS << "};\n"
-     << "const static PredicateBitset FeatureBitsets[] {\n"
+     << "constexpr static PredicateBitset FeatureBitsets[] {\n"
      << "  {}, // GIFBS_Invalid\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
@@ -188,7 +188,7 @@ void GlobalISelMatchTableExecutorEmitter::emitPredicateBitset(
      << "const unsigned MAX_SUBTARGET_PREDICATES = " << SubtargetFeatures.size()
      << ";\n"
      << "using PredicateBitset = "
-        "llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;\n"
+        "llvm::Bitset<MAX_SUBTARGET_PREDICATES>;\n"
      << "#endif // ifdef " << IfDefName << "\n\n";
 }
 

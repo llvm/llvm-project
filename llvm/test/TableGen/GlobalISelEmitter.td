@@ -67,7 +67,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 //===- Test the function boilerplate. -------------------------------------===//
 
 // CHECK: const unsigned MAX_SUBTARGET_PREDICATES = 3;
-// CHECK: using PredicateBitset = llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;
+// CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 // CHECK-NEXT:    mutable MatcherState State;
@@ -131,7 +131,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GIFBS_HasA,
 // CHECK-NEXT:    GIFBS_HasA_HasB_HasC,
 // CHECK-NEXT:  }
-// CHECK-NEXT:  const static PredicateBitset FeatureBitsets[] {
+// CHECK-NEXT:  constexpr static PredicateBitset FeatureBitsets[] {
 // CHECK-NEXT:    {}, // GIFBS_Invalid
 // CHECK-NEXT:    {Feature_HasABit, },
 // CHECK-NEXT:    {Feature_HasABit, Feature_HasBBit, Feature_HasCBit, },
