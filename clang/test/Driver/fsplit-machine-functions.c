@@ -15,6 +15,4 @@
 // RUN: not %clang -### -c --target=arm-unknown-linux -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=ERR
 // ERR: error: unsupported option '-fsplit-machine-functions' for target
 
-/// FIXME
-// RUN: not %clang -### -c --target=arm-unknown-linux -fsplit-machine-functions -fno-split-machine-functions %s 2>&1 | FileCheck %s --check-prefix=ERR2
-// ERR2: error: unsupported option '-fno-split-machine-functions' for target
+// RUN: %clang -### --target=arm-unknown-linux -fsplit-machine-functions -fno-split-machine-functions %s
