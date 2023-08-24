@@ -12,6 +12,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -mfs-allow-unsupported-triple -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll
@@ -484,6 +485,36 @@ define void @foo16(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 5:                                                ; preds = %1
   %6 = tail call i32 @qux()
   ret void
+}
+
+define i32 @foo17(i1 zeroext %0, i32 %a, i32 %b) nounwind !prof !14 !section_prefix !15 {
+;; Check that cold blocks in functions with red zones aren't split.
+; MFS-DEFAULTS-LABEL:        foo17
+; MFS-DEFAULTS-X86:          foo17.cold:
+; MFS-REDZONE-AARCH64-NOT:   foo17.cold:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  %x = alloca i32, align 4
+
+  br i1 %0, label %2, label %3, !prof !17
+
+2:                                                ; preds = %1
+  store i32 %a, ptr %a.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
+  br label %4
+
+3:                                                ; preds = %1
+  store i32 %a, ptr %b.addr, align 4
+  store i32 %b, ptr %a.addr, align 4
+  br label %4
+
+4:                                                ; preds = %3, %2
+  %tmp = load i32, ptr %a.addr, align 4
+  %tmp1 = load i32, ptr %b.addr, align 4
+  %add = add nsw i32 %tmp, %tmp1
+  store i32 %add, ptr %x, align 4
+  %tmp2 = load i32, ptr %x, align 4
+  ret i32 %tmp2
 }
 
 declare i32 @bar()
