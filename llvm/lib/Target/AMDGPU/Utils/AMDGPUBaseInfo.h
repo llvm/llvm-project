@@ -1344,6 +1344,10 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
+/// Lds size is defined internally in terms of blocks
+/// Lds DW granularity is used to calculate size settings for PAL metadata 3.0+
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+
 } // end namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
