@@ -12,7 +12,7 @@ module {
   cir.global "private" constant internal @".str" : !cir.array<!s8i x 8> {alignment = 1 : i64}
   cir.global "private" internal @c : !s32i
   cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
-  cir.global external @s = @".str2": !cir.ptr<!s8i>
+  cir.global external @s = #cir.global_view<@".str2"> : !cir.ptr<!s8i>
   cir.func @use_global() {
     %0 = cir.get_global @a : cir.ptr <!s32i>
     cir.return
@@ -50,7 +50,8 @@ module {
 // CHECK: cir.global "private" constant internal @".str" : !cir.array<!s8i x 8> {alignment = 1 : i64}
 // CHECK: cir.global "private" internal @c : !s32i
 // CHECK: cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
-// CHECK: cir.global external @s = @".str2": !cir.ptr<!s8i>
+// CHECK: cir.global external @s = #cir.global_view<@".str2"> : !cir.ptr<!s8i>
+
 
 // CHECK: cir.func @use_global()
 // CHECK-NEXT: %0 = cir.get_global @a : cir.ptr <!s32i>

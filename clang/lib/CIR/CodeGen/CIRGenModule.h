@@ -304,7 +304,7 @@ public:
 
   /// Return a global symbol reference to a constant array for the given string
   /// literal.
-  mlir::SymbolRefAttr
+  mlir::cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                      StringRef Name = ".str");
   unsigned StringLiteralCnt = 0;

@@ -39,12 +39,12 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @alpha = #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 4>
 
 // CHECK-NEXT: cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
-// CHECK-NEXT: cir.global external @s = @".str": !cir.ptr<!s8i>
+// CHECK-NEXT: cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
 // CHECK-NEXT: cir.global "private" constant internal @".str1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
-// CHECK-NEXT: cir.global external @s1 = @".str1": !cir.ptr<!s8i>
+// CHECK-NEXT: cir.global external @s1 = #cir.global_view<@".str1"> : !cir.ptr<!s8i>
 
-// CHECK-NEXT: cir.global external @s2 = @".str": !cir.ptr<!s8i>
+// CHECK-NEXT: cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
 //      CHECK: cir.func @_Z10use_globalv()
 // CHECK-NEXT:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["li", init] {alignment = 4 : i64}
