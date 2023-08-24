@@ -333,7 +333,7 @@ td_library(
     includes = ["../include"],
     deps = [
         "//mlir:BufferizableOpInterfaceTdFiles",
-	"//mlir:BufferizationEnumsTdFiles
+        "//mlir:BufferizationEnumsTdFiles",
         "//mlir:BufferizationOpsTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
@@ -380,7 +380,7 @@ filegroup(
     srcs = [
         "mlir/dialects/_bufferization_ops_ext.py",
         "mlir/dialects/bufferization.py",
-	":BufferizationEnumPyGen",
+        ":BufferizationEnumPyGen",
         ":BufferizationOpsPyGen",
     ],
 )
@@ -923,7 +923,7 @@ filegroup(
     name = "SparseTensorOpsPyFiles",
     srcs = [
         "mlir/dialects/sparse_tensor.py",
-	":SparseTensorEnumPyGen",
+        ":SparseTensorEnumPyGen",
         ":SparseTensorOpsPyGen",
     ],
 )
@@ -1276,7 +1276,7 @@ filegroup(
         ":LoopTransformOpsPyGen",
         ":MemRefTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
-	":StructureTransformEnumPyGen",
+        ":StructureTransformEnumPyGen",
         ":StructuredTransformOpsPyGen",
         ":TensorTransformOpsPyGen",
         ":TransformEnumPyGen",
