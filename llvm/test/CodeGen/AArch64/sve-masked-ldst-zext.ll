@@ -108,6 +108,151 @@ define <vscale x 2 x double> @masked_zload_2i16_2f64(<vscale x 2 x i16>* noalias
   ret <vscale x 2 x double> %res
 }
 
+; Extending loads from unpacked to wide illegal types
+
+define <vscale x 4 x i64> @masked_zload_4i8_4i64(ptr %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: masked_zload_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(<vscale x 4 x i8> *%a, i32 16, <vscale x 4 x i1> %b, <vscale x 4 x i8> zeroinitializer)
+  %aext = zext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 4 x i64> @masked_zload_4i16_4i64(ptr %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: masked_zload_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(<vscale x 4 x i16> *%a, i32 16, <vscale x 4 x i1> %b, <vscale x 4 x i16> zeroinitializer)
+  %aext = zext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 8 x i32> @masked_zload_8i8_8i32(ptr %a, <vscale x 8 x i1> %b) {
+; CHECK-LABEL: masked_zload_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%a, i32 16, <vscale x 8 x i1> %b, <vscale x 8 x i8> zeroinitializer)
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %aext
+}
+
+define <vscale x 8 x i64> @masked_zload_8i8_8i64(ptr %a, <vscale x 8 x i1> %b) {
+; CHECK-LABEL: masked_zload_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%a, i32 16, <vscale x 8 x i1> %b, <vscale x 8 x i8> zeroinitializer)
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  ret <vscale x 8 x i64> %aext
+}
+
+define <vscale x 4 x i64> @masked_zload_x2_4i8_4i64(ptr %a, ptr %b, <vscale x 4 x i1> %c) {
+; CHECK-LABEL: masked_zload_x2_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpkhi z3.d, z1.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    add z1.d, z2.d, z3.d
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(<vscale x 4 x i8> *%a, i32 16, <vscale x 4 x i1> %c, <vscale x 4 x i8> zeroinitializer)
+  %bval = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(<vscale x 4 x i8> *%b, i32 16, <vscale x 4 x i1> %c, <vscale x 4 x i8> zeroinitializer)
+  %aext = zext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  %bext = zext <vscale x 4 x i8> %bval to <vscale x 4 x i64>
+  %res = add <vscale x 4 x i64> %aext, %bext
+  ret <vscale x 4 x i64> %res
+}
+
+define <vscale x 4 x i64> @masked_zload_x2_4i16_4i64(ptr %a, ptr %b, <vscale x 4 x i1> %c) {
+; CHECK-LABEL: masked_zload_x2_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpkhi z3.d, z1.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    add z1.d, z2.d, z3.d
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(<vscale x 4 x i16> *%a, i32 16, <vscale x 4 x i1> %c, <vscale x 4 x i16> zeroinitializer)
+  %bval = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(<vscale x 4 x i16> *%b, i32 16, <vscale x 4 x i1> %c, <vscale x 4 x i16> zeroinitializer)
+  %aext = zext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  %bext = zext <vscale x 4 x i16> %bval to <vscale x 4 x i64>
+  %res = add <vscale x 4 x i64> %aext, %bext
+  ret <vscale x 4 x i64> %res
+}
+
+define <vscale x 8 x i32> @masked_zload_x2_8i8_8i32(ptr %a, ptr %b, <vscale x 8 x i1> %c) {
+; CHECK-LABEL: masked_zload_x2_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    uunpkhi z2.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpkhi z3.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    add z1.s, z2.s, z3.s
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%a, i32 16, <vscale x 8 x i1> %c, <vscale x 8 x i8> zeroinitializer)
+  %bval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%b, i32 16, <vscale x 8 x i1> %c, <vscale x 8 x i8> zeroinitializer)
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  %bext = zext <vscale x 8 x i8> %bval to <vscale x 8 x i32>
+  %res = add <vscale x 8 x i32> %aext, %bext
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 8 x i64> @masked_zload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 x i1> %c) {
+; CHECK-LABEL: masked_zload_x2_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    uunpkhi z2.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpkhi z4.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpkhi z5.d, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpklo z6.d, z3.s
+; CHECK-NEXT:    uunpkhi z7.d, z1.s
+; CHECK-NEXT:    uunpklo z24.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z3.s
+; CHECK-NEXT:    add z0.d, z0.d, z6.d
+; CHECK-NEXT:    add z3.d, z4.d, z7.d
+; CHECK-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-NEXT:    add z2.d, z2.d, z24.d
+; CHECK-NEXT:    ret
+  %aval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%a, i32 16, <vscale x 8 x i1> %c, <vscale x 8 x i8> zeroinitializer)
+  %bval = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%b, i32 16, <vscale x 8 x i1> %c, <vscale x 8 x i8> zeroinitializer)
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  %bext = zext <vscale x 8 x i8> %bval to <vscale x 8 x i64>
+  %res = add <vscale x 8 x i64> %aext, %bext
+  ret <vscale x 8 x i64> %res
+}
+
+
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>*, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>*, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32(<vscale x 2 x i32>*, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
