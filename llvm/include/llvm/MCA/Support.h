@@ -48,12 +48,12 @@ template <typename T> char InstructionError<T>::ID;
 /// number of resources, are kept separate.  This is used by the
 /// ResourcePressureView to calculate the average resource cycles
 /// per instruction/iteration.
-class ReleaseAtCycles {
+class ResourceCycles {
   unsigned Numerator, Denominator;
 
 public:
-  ReleaseAtCycles() : Numerator(0), Denominator(1) {}
-  ReleaseAtCycles(unsigned Cycles, unsigned ResourceUnits = 1)
+  ResourceCycles() : Numerator(0), Denominator(1) {}
+  ResourceCycles(unsigned Cycles, unsigned ResourceUnits = 1)
       : Numerator(Cycles), Denominator(ResourceUnits) {}
 
   operator double() const {
@@ -67,7 +67,7 @@ public:
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ReleaseAtCycles &operator+=(const ReleaseAtCycles &RHS);
+  ResourceCycles &operator+=(const ResourceCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
@@ -105,7 +105,7 @@ inline unsigned getResourceStateIndex(uint64_t Mask) {
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:
 ///  - NumMicroOps / DispatchWidth
-///  - ProcReleaseAtCycles / #ProcResourceUnits  (for every consumed resource).
+///  - ProcResourceCycles / #ProcResourceUnits  (for every consumed resource).
 double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
                                unsigned NumMicroOps,
                                ArrayRef<unsigned> ProcResourceUsage);
