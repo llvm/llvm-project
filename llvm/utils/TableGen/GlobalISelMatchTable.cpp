@@ -43,11 +43,13 @@ std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
 
 //===- Helpers ------------------------------------------------------------===//
 
-std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+                                    int HwModeIdx) {
   std::string Name = "GIFBS";
   for (const auto &Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
+  if (HwModeIdx >= 0)
+    Name += ("_HwMode" + std::to_string(HwModeIdx));
   return Name;
 }
 
@@ -851,9 +853,10 @@ void RuleMatcher::emit(MatchTable &Table) {
         << MatchTable::Comment(("Rule ID " + Twine(RuleID) + " //").str())
         << MatchTable::LineBreak;
 
-  if (!RequiredFeatures.empty()) {
+  if (!RequiredFeatures.empty() || HwModeIdx >= 0) {
     Table << MatchTable::Opcode("GIM_CheckFeatures")
-          << MatchTable::NamedValue(getNameForFeatureBitset(RequiredFeatures))
+          << MatchTable::NamedValue(
+                 getNameForFeatureBitset(RequiredFeatures, HwModeIdx))
           << MatchTable::LineBreak;
   }
 
