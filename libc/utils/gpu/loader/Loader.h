@@ -107,7 +107,9 @@ inline void handle_error(rpc_status_t) {
   handle_error("Failure in the RPC server\n");
 }
 
+template <uint32_t lane_size>
 inline void register_rpc_callbacks(uint32_t device_id) {
+  static_assert(lane_size == 32 || lane_size == 64, "Invalid Lane size");
   // Register the ping test for the `libc` tests.
   rpc_register_callback(
       device_id, static_cast<rpc_opcode_t>(RPC_TEST_INCREMENT),
@@ -207,14 +209,14 @@ inline void register_rpc_callbacks(uint32_t device_id) {
   rpc_register_callback(
       device_id, static_cast<rpc_opcode_t>(RPC_TEST_STREAM),
       [](rpc_port_t port, void *data) {
-        uint64_t sizes[RPC_MAXIMUM_LANE_SIZE] = {0};
-        void *dst[RPC_MAXIMUM_LANE_SIZE] = {nullptr};
+        uint64_t sizes[lane_size] = {0};
+        void *dst[lane_size] = {nullptr};
         rpc_recv_n(
             port, dst, sizes,
             [](uint64_t size, void *) -> void * { return new char[size]; },
             nullptr);
         rpc_send_n(port, dst, sizes);
-        for (uint64_t i = 0; i < RPC_MAXIMUM_LANE_SIZE; ++i) {
+        for (uint64_t i = 0; i < lane_size; ++i) {
           if (dst[i])
             delete[] reinterpret_cast<uint8_t *>(dst[i]);
         }

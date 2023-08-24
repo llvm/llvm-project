@@ -433,3 +433,29 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            mul_1_shift_of_shift
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: mul_1_shift_of_shift
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[OR]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s64) = G_SHL %0, %1(s64)
+    %3:_(s64) = G_OR %2, %1
+    %4:_(s64) = G_MUL %3, %1
+    $x0 = COPY %4(s64)
+    RET_ReallyLR implicit $x0
+
+...

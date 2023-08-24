@@ -203,7 +203,8 @@ __cpp_lib_text_encoding                                 202306L <text_encoding>
 __cpp_lib_three_way_comparison                          201907L <compare>
 __cpp_lib_to_address                                    201711L <memory>
 __cpp_lib_to_array                                      201907L <array>
-__cpp_lib_to_chars                                      201611L <charconv>
+__cpp_lib_to_chars                                      202306L <charconv>
+                                                        201611L // C++17
 __cpp_lib_to_string                                     202306L <string>
 __cpp_lib_to_underlying                                 202102L <utility>
 __cpp_lib_transformation_trait_aliases                  201304L <type_traits>
@@ -470,6 +471,8 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_sstream_from_string_view             202306L
 // # define __cpp_lib_submdspan                            202306L
 // # define __cpp_lib_text_encoding                        202306L
+# undef  __cpp_lib_to_chars
+// # define __cpp_lib_to_chars                             202306L
 // # define __cpp_lib_within_lifetime                      202306L
 #endif
 
