@@ -121,6 +121,11 @@ int convertForTestingMain(int argc, const char *argv[]) {
     return 1;
   }
 
+  // If this is a linked PE/COFF file, then we have to skip over the null byte
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  if (isa<COFFObjectFile>(OF) && !OF->isRelocatableObject())
+    ProfileNamesData = ProfileNamesData.drop_front(1);
+
   int FD;
   if (auto Err = sys::fs::openFileForWrite(OutputFilename, FD)) {
     errs() << "error: " << Err.message() << "\n";
