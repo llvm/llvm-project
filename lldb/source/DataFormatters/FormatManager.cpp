@@ -201,11 +201,7 @@ void FormatManager::GetPossibleMatches(
     auto ts = compiler_type.GetTypeSystem();
     if (ts && !ts.isa_and_nonnull<TypeSystemClang>()) {
 // END SWIFT
-      const SymbolContext *sc = nullptr;
-      if (valobj.GetFrameSP())
-        sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
-
-    ConstString display_type_name(compiler_type.GetTypeName());
+    ConstString display_type_name(compiler_type.GetDisplayTypeName());
     if (display_type_name != type_name)
       entries.push_back({display_type_name, script_interpreter,
                          TypeImpl(compiler_type), current_flags});
