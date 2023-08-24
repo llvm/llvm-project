@@ -1179,10 +1179,6 @@ void JSONNodeDumper::VisitBlockDecl(const BlockDecl *D) {
   attributeOnlyIfTrue("capturesThis", D->capturesCXXThis());
 }
 
-void JSONNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
-  JOS.attribute("name", AE->getOpAsString());
-}
-
 void JSONNodeDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE) {
   JOS.attribute("encodedType", createQualType(OEE->getEncodedType()));
 }
