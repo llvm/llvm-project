@@ -5131,7 +5131,7 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
                                                        const MachineInstr &MI,
                                                        int OpIdx) const {
   const APFloat &APF = MI.getOperand(1).getFPImm()->getValueAPF();
-  int ExpVal = APF.getExactLog2();
+  int ExpVal = APF.getExactLog2Abs();
   assert(ExpVal != INT_MIN);
   MIB.addImm(ExpVal);
 }
