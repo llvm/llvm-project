@@ -14,13 +14,20 @@
 
 namespace clang::tidy::cir {
 
+struct CIROpts {
+  std::vector<StringRef> RemarksList;
+  std::vector<StringRef> HistoryList;
+  unsigned HistLimit;
+};
 class Lifetime : public ClangTidyCheck {
 public:
-  Lifetime(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  Lifetime(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  void onEndOfTranslationUnit() override;
+  void setupAndRunClangIRLifetimeChecker(ASTContext &astCtx);
+
+  CodeGenOptions codeGenOpts;
+  CIROpts cirOpts;
 };
 
 } // namespace clang::tidy::cir

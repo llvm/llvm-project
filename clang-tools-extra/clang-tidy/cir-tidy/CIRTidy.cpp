@@ -18,7 +18,9 @@
 #include "CIRASTConsumer.h"
 #include "ClangTidyModuleRegistry.h"
 #include "ClangTidyProfiling.h"
+#ifndef CLANG_TIDY_CONFIG_H
 #include "clang-tidy-config.h"
+#endif
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/DiagnosticsYaml.h"

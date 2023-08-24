@@ -9,7 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
+#ifndef CLANG_TIDY_CONFIG_H
 #include "clang-tidy-config.h"
+#endif
 #include "llvm/Support/Compiler.h"
 
 namespace clang::tidy {
