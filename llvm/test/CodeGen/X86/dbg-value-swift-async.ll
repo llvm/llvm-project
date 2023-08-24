@@ -1,11 +1,11 @@
-; RUN: llc --mtriple="aarch64-" -O0 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AARCH
-; RUN: llc --mtriple="aarch64-" -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=AARCH
-; RUN: llc --mtriple="aarch64-" -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=AARCH
+; RUN: llc --mtriple="x86_64-" -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
+; RUN: llc --mtriple="x86_64-" -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
 
-; AARCH-NOT:  DBG_VALUE
-; AARCH:      DBG_VALUE $x22, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
-; AARCH-NEXT: DBG_VALUE $x22, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
-; AARCH-NOT:  DBG_VALUE
+; X86-NOT:  DBG_VALUE
+; X86:      DBG_VALUE $r14, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; X86-NEXT: DBG_VALUE $r14, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; X86-NOT:  DBG_VALUE
+
 
 define void @foo(ptr %unused_arg, ptr swiftasync %async_arg) !dbg !6 {
   call void @llvm.dbg.value(metadata ptr %async_arg, metadata !12, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !14
