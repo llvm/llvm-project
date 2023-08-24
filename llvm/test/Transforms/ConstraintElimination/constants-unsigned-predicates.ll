@@ -4,12 +4,8 @@
 define i1 @test_ult() {
 ; CHECK-LABEL: @test_ult(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 10, 11
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ult i8 10, 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 10, 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 10, -10
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], true
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
@@ -29,11 +25,8 @@ define i1 @test_ult_gep_1(ptr %base) {
 ; CHECK-LABEL: @test_ult_gep_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i8 1
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ult ptr [[BASE]], [[GEP_1]]
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i8 0
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ult ptr [[BASE]], [[GEP_0]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult ptr [[GEP_1]], [[BASE]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
@@ -51,7 +44,6 @@ entry:
 define i1 @test_ult_gep_2(ptr %base) {
 ; CHECK-LABEL: @test_ult_gep_2(
 ; CHECK-NEXT:    [[GEP_SUB_1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i8 -1
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[BASE]], [[GEP_SUB_1]]
 ; CHECK-NEXT:    ret i1 false
 ;
   %gep.sub.1 = getelementptr inbounds i8, ptr %base, i8 -1
@@ -73,10 +65,7 @@ define i1 @test_ult_gep_3(ptr %base) {
 define i1 @test_eq() {
 ; CHECK-LABEL: @test_eq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F_0:%.*]] = icmp eq i8 10, 11
-; CHECK-NEXT:    [[T_0:%.*]] = icmp eq i8 10, 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i8 10, 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
@@ -92,10 +81,7 @@ entry:
 define i1 @test_ne() {
 ; CHECK-LABEL: @test_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ne i8 10, 11
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ne i8 10, 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i8 10, 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;

@@ -21,7 +21,6 @@ define void @test(i64 %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp ult ptr [[Y]], [[Z]]
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[EARLY_EXIT]], label [[BB38:%.*]]
 ; CHECK:       bb38:
-; CHECK-NEXT:    [[TMP41:%.*]] = icmp ult ptr [[Y]], [[Z]]
 ; CHECK-NEXT:    br i1 false, label [[EARLY_EXIT]], label [[BB43:%.*]]
 ; CHECK:       bb43:
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[W:%.*]], i64 [[X]]
@@ -35,7 +34,6 @@ define void @test(i64 %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[TMP57:%.*]] = icmp ult ptr [[W]], [[Y]]
 ; CHECK-NEXT:    br i1 [[TMP57]], label [[BB59:%.*]], label [[EARLY_EXIT]]
 ; CHECK:       bb59:
-; CHECK-NEXT:    [[TMP60:%.*]] = icmp ult ptr [[W]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;

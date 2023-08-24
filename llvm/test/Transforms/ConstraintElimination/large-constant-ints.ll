@@ -104,7 +104,6 @@ define i1 @sub_decomp_i80(i80 %a) {
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SUB_1:%.*]] = sub nuw i80 [[A]], 1973801615886922022913
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i80 [[SUB_1]], 1346612317380797267967
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -131,7 +130,6 @@ define i1 @gep_decomp_i80(ptr %a) {
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 1973801615886922022913
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -357,7 +355,6 @@ define i1 @gep_decomp_large_index_63_bits(ptr %a) {
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 9223372036854775805
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
-; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RES]]
@@ -381,7 +378,6 @@ define i1 @gep_decomp_large_index_63_bits_chained_overflow(ptr %a) {
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[GEP_2]], i64 1152921504606846976
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_3]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
-; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_3]]
 ; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_3]]
 ; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RES]]
@@ -407,7 +403,6 @@ define i1 @gep_decomp_large_index_63_bits_overflow_struct(ptr %a) {
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds [[STRUCT:%.*]], ptr [[A]], i64 8937376004704240, i32 1, i32 1
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
-; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    [[RES:%.*]] = xor i1 false, false
 ; CHECK-NEXT:    ret i1 [[RES]]

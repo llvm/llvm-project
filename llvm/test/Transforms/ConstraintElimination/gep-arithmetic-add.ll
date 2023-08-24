@@ -294,7 +294,6 @@ define i4 @ptr_N_step_zext_n_zext(ptr %src, ptr %lower, ptr %upper, i16 %N, i16 
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[STEP_ADD_1_EXT]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult ptr [[SRC_STEP]], [[LOWER]]
-; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge ptr [[SRC_STEP]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], false
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:

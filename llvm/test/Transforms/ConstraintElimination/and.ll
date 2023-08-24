@@ -11,10 +11,7 @@ define i1 @test_and_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_3]]
@@ -72,10 +69,7 @@ define i1 @test_and_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_3]]
@@ -153,10 +147,9 @@ define i1 @test_and_condition_trivially_false(i1 %c, ptr %ptr.1, i8 %idx, ptr %p
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT_3:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[PTR_2:%.*]], [[PTR_2]]
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX:%.*]] to i16
 ; CHECK-NEXT:    [[GEP_IDX_EXT:%.*]] = getelementptr inbounds i8, ptr [[PTR_1:%.*]], i16 [[IDX_EXT]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult ptr [[PTR_2]], [[GEP_IDX_EXT]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult ptr [[PTR_2:%.*]], [[GEP_IDX_EXT]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 false, [[CMP_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
@@ -201,14 +194,9 @@ define i1 @test_and_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[C_4]], [[AND_2]]
 ; CHECK-NEXT:    br i1 [[AND_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -289,14 +277,9 @@ define i1 @test_and_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[AND_1]], [[AND_2]]
 ; CHECK-NEXT:    br i1 [[AND_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -378,10 +361,7 @@ define i1 @test_and_chain_with_other_insts_ule(i4 %x, i4 %y, i4 %z, i4 %a, i1 %a
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[AND_1]], [[AND_2]]
 ; CHECK-NEXT:    br i1 [[AND_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
@@ -465,13 +445,10 @@ define i1 @test_and_chain_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    br i1 [[AND_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[T_3]]
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
