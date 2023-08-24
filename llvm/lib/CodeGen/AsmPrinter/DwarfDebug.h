@@ -209,9 +209,12 @@ public:
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
     ValueLoc = std::make_unique<DbgValueLoc>(Value);
-    if (auto *E = ValueLoc->getExpression())
-      if (E->getNumElements())
-        FrameIndexExprs.push_back({0, E});
+    // Use the DbgValueLoc's expression as a FrameIndexExpr iff it is suitable,
+    // which requires it to be non-variadic.
+    if (auto E = DIExpression::convertToNonVariadicExpression(
+            ValueLoc->getExpression()))
+      if ((*E)->getNumElements())
+        FrameIndexExprs.push_back({0, *E});
   }
 
   void initializeEntryValue(MCRegister Reg, const DIExpression &Expr) {
