@@ -35,35 +35,29 @@ RLABEL(reg, op, s, add): ;\
 
 #define ASAN_MEMORY_ACCESS_EXTRA_CHECK_1(reg, op, i) \
 CLABEL(reg, op, 1, i): ;\
-        push   %rcx ;\
-        mov    %##reg,%rcx ;\
-        and    $0x7,%ecx ;\
-        cmp    %r10d,%ecx ;\
-        pop    %rcx ;\
+        mov    %##reg,%r11 ;\
+        and    $0x7,%r11d ;\
+        cmp    %r10d,%r11d ;\
         jl     RLABEL(reg, op, 1, i);\
         mov    %##reg,%rdi ;\
         jmp    __asan_report_##op##1_asm ;\
 
 #define ASAN_MEMORY_ACCESS_EXTRA_CHECK_2(reg, op, i) \
 CLABEL(reg, op, 2, i): ;\
-        push   %rcx ;\
-        mov    %##reg,%rcx ;\
-        and    $0x7,%ecx ;\
-        add    $0x1,%ecx ;\
-        cmp    %r10d,%ecx ;\
-        pop    %rcx ;\
+        mov    %##reg,%r11 ;\
+        and    $0x7,%r11d ;\
+        add    $0x1,%r11d ;\
+        cmp    %r10d,%r11d ;\
         jl     RLABEL(reg, op, 2, i);\
         mov    %##reg,%rdi ;\
         jmp    __asan_report_##op##2_asm ;\
 
 #define ASAN_MEMORY_ACCESS_EXTRA_CHECK_4(reg, op, i) \
 CLABEL(reg, op, 4, i): ;\
-        push   %rcx ;\
-        mov    %##reg,%rcx ;\
-        and    $0x7,%ecx ;\
-        add    $0x3,%ecx ;\
-        cmp    %r10d,%ecx ;\
-        pop    %rcx ;\
+        mov    %##reg,%r11 ;\
+        and    $0x7,%r11d ;\
+        add    $0x3,%r11d ;\
+        cmp    %r10d,%r11d ;\
         jl     RLABEL(reg, op, 4, i);\
         mov    %##reg,%rdi ;\
         jmp    __asan_report_##op##4_asm ;\
