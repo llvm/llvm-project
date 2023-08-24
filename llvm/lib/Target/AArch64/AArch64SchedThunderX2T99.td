@@ -113,14 +113,14 @@ def THX2T99Write_4Cyc_I1 : SchedWriteRes<[THX2T99I1]> {
 // 23 cycles on I1.
 def THX2T99Write_23Cyc_I1 : SchedWriteRes<[THX2T99I1]> {
   let Latency = 23;
-  let ReleaseAtCycles = [13, 23];
+  let ResourceCycles = [13, 23];
   let NumMicroOps = 4;
 }
 
 // 39 cycles on I1.
 def THX2T99Write_39Cyc_I1 : SchedWriteRes<[THX2T99I1]> {
   let Latency = 39;
-  let ReleaseAtCycles = [13, 39];
+  let ResourceCycles = [13, 39];
   let NumMicroOps = 4;
 }
 
@@ -200,14 +200,14 @@ def THX2T99Write_10Cyc_F01 : SchedWriteRes<[THX2T99F01]> {
 def THX2T99Write_16Cyc_F01 : SchedWriteRes<[THX2T99F01]> {
   let Latency = 16;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
 }
 
 // 23 cycles on F0 or F1.
 def THX2T99Write_23Cyc_F01 : SchedWriteRes<[THX2T99F01]> {
   let Latency = 23;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [11];
+  let ResourceCycles = [11];
 }
 
 // 1 cycles on LS0 or LS1.
@@ -418,7 +418,7 @@ def : InstRW<[THX2T99Write_1Cyc_I2],
 // Address generation
 def : WriteRes<WriteI,       [THX2T99I012]> {
   let Latency = 1;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
 
@@ -440,7 +440,7 @@ def : InstRW<[WriteI], (instrs COPY)>;
 // ALU, extend and/or shift
 def : WriteRes<WriteISReg,   [THX2T99I012]> {
   let Latency = 2;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
   let NumMicroOps = 2;
 }
 
@@ -459,7 +459,7 @@ def : InstRW<[WriteISReg],
 
 def : WriteRes<WriteIEReg,   [THX2T99I012]> {
   let Latency = 1;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
 
@@ -502,14 +502,14 @@ def : WriteRes<WriteIS,      [THX2T99I012]> {
 // Latency range of 13-23/13-39.
 def : WriteRes<WriteID32,    [THX2T99I1]> {
   let Latency = 39;
-  let ReleaseAtCycles = [39];
+  let ResourceCycles = [39];
   let NumMicroOps = 4;
 }
 
 // Divide, X-form
 def : WriteRes<WriteID64,    [THX2T99I1]> {
   let Latency = 23;
-  let ReleaseAtCycles = [23];
+  let ResourceCycles = [23];
   let NumMicroOps = 4;
 }
 
@@ -1110,36 +1110,36 @@ def : WriteRes<WriteFCmp,    [THX2T99F01]> {
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFDiv, [THX2T99F01]> {
   let Latency = 22;
-  let ReleaseAtCycles = [19];
+  let ResourceCycles = [19];
 }
 
 def THX2T99XWriteFDiv : SchedWriteRes<[THX2T99F01]> {
   let Latency = 16;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
   let NumMicroOps = 4;
 }
 
 def THX2T99XWriteFDivSP : SchedWriteRes<[THX2T99F01]> {
   let Latency = 16;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
   let NumMicroOps = 4;
 }
 
 def THX2T99XWriteFDivDP : SchedWriteRes<[THX2T99F01]> {
   let Latency = 23;
-  let ReleaseAtCycles = [12];
+  let ResourceCycles = [12];
   let NumMicroOps = 4;
 }
 
 def THX2T99XWriteFSqrtSP : SchedWriteRes<[THX2T99F01]> {
   let Latency = 16;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
   let NumMicroOps = 4;
 }
 
 def THX2T99XWriteFSqrtDP : SchedWriteRes<[THX2T99F01]> {
   let Latency = 23;
-  let ReleaseAtCycles = [12];
+  let ResourceCycles = [12];
   let NumMicroOps = 4;
 }
 
@@ -1163,19 +1163,19 @@ def : InstRW<[THX2T99Write_23Cyc_F01], (instregex "^FDIVDrr", "^FSQRTDr")>;
 // FP multiply accumulate
 def : WriteRes<WriteFMul, [THX2T99F01]> {
   let Latency = 6;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
   let NumMicroOps = 3;
 }
 
 def THX2T99XWriteFMul : SchedWriteRes<[THX2T99F01]> {
   let Latency = 6;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
   let NumMicroOps = 3;
 }
 
 def THX2T99XWriteFMulAcc : SchedWriteRes<[THX2T99F01]> {
   let Latency = 6;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
   let NumMicroOps = 3;
 }
 
@@ -1254,12 +1254,12 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 def : WriteRes<WriteVd, [THX2T99F01]> {
   let Latency = 7;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 def : WriteRes<WriteVq, [THX2T99F01]> {
   let Latency = 7;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 
 // ASIMD arith, reduce, 4H/4S

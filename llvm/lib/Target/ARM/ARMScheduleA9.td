@@ -1995,15 +1995,15 @@ def : WriteRes<WriteVST4, []>;
 // Reserve A9UnitFP for 2 consecutive cycles.
 def A9Write2V4 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 4;
-  let ReleaseAtCycles = [2, 1];
+  let ResourceCycles = [2, 1];
 }
 def A9Write2V7 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 7;
-  let ReleaseAtCycles = [2, 1];
+  let ResourceCycles = [2, 1];
 }
 def A9Write2V9 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 9;
-  let ReleaseAtCycles = [2, 1];
+  let ResourceCycles = [2, 1];
 }
 
 // Branches don't have a def operand but still consume resources.

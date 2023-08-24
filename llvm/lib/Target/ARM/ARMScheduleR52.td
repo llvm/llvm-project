@@ -72,7 +72,7 @@ def : WriteRes<WriteCMPsr, [R52UnitALU]> { let Latency = 0; }
 
 // Div - may stall 0-9 cycles depending on input (i.e. WRI+(0-9)/2)
 def : WriteRes<WriteDIV, [R52UnitDiv]> {
-  let Latency = 8; let ReleaseAtCycles = [8]; // non-pipelined
+  let Latency = 8; let ResourceCycles = [8]; // non-pipelined
 }
 
 // Branches  - LR written in Late EX2
@@ -107,12 +107,12 @@ def : WriteRes<WriteFPMAC64, [R52UnitFPMUL, R52UnitFPMUL,
 
 def : WriteRes<WriteFPDIV32, [R52UnitDiv]> {
   let Latency = 7;          // FP div takes fixed #cycles
-  let ReleaseAtCycles = [7]; // is not pipelined
+  let ResourceCycles = [7]; // is not pipelined
 }
 
 def : WriteRes<WriteFPDIV64, [R52UnitDiv]> {
   let Latency = 17;
-  let ReleaseAtCycles = [17];
+  let ResourceCycles = [17];
 }
 
 def : WriteRes<WriteFPSQRT32, [R52UnitDiv]> { let Latency = 7; }
@@ -145,7 +145,7 @@ def R52WriteMACHi      : SchedWriteRes<[R52UnitMAC]> {
   let Latency = 4; let NumMicroOps = 0;
 }
 def R52WriteDIV        : SchedWriteRes<[R52UnitDiv]> {
-  let Latency = 8; let ReleaseAtCycles = [8]; // not pipelined
+  let Latency = 8; let ResourceCycles = [8]; // not pipelined
 }
 def R52WriteLd         : SchedWriteRes<[R52UnitLd]> { let Latency = 4; }
 def R52WriteST         : SchedWriteRes<[R52UnitLd]> { let Latency = 4; }
@@ -552,7 +552,7 @@ foreach Num = 1-32 in { // reserve LdSt resource, no dual-issue
   def R52ReserveLd#Num#Cy : SchedWriteRes<[R52UnitLd]> {
     let Latency = 0;
     let NumMicroOps = Num;
-    let ReleaseAtCycles = [Num];
+    let ResourceCycles = [Num];
   }
 }
 def R52WriteVLDM : SchedWriteVariant<[
@@ -639,57 +639,57 @@ def R52WriteVLDM : SchedWriteVariant<[
 def R52WriteSTM5  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 5;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
 }
 def R52WriteSTM6  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 4;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def R52WriteSTM7  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 6;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 def R52WriteSTM8  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 8;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 def R52WriteSTM9  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 9;
   let NumMicroOps = 10;
-  let ReleaseAtCycles = [5];
+  let ResourceCycles = [5];
 }
 def R52WriteSTM10 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 10;
   let NumMicroOps = 12;
-  let ReleaseAtCycles = [6];
+  let ResourceCycles = [6];
 }
 def R52WriteSTM11 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 11;
   let NumMicroOps = 14;
-  let ReleaseAtCycles = [7];
+  let ResourceCycles = [7];
 }
 def R52WriteSTM12 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 12;
   let NumMicroOps = 16;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
 }
 def R52WriteSTM13 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 13;
   let NumMicroOps = 18;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 def R52WriteSTM14 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 14;
   let NumMicroOps = 20;
-  let ReleaseAtCycles = [10];
+  let ResourceCycles = [10];
 }
 def R52WriteSTM15 : SchedWriteRes<[R52UnitLd]> {
   let Latency = 15;
   let NumMicroOps = 22;
-  let ReleaseAtCycles = [11];
+  let ResourceCycles = [11];
 }
 
 def R52WriteSTM : SchedWriteVariant<[
@@ -719,45 +719,45 @@ def : WriteRes<WriteVLD1, [R52UnitLd]> { let Latency = 5;}
 def : WriteRes<WriteVLD2, [R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
   let SingleIssue = 1;
 }
 def : WriteRes<WriteVLD3, [R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
   let SingleIssue = 1;
 }
 def : WriteRes<WriteVLD4, [R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
   let SingleIssue = 1;
 }
 def R52WriteVST1Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 5;
   let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
 }
 def R52WriteVST2Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
-  let ReleaseAtCycles = [2];
+  let ResourceCycles = [2];
 }
 def R52WriteVST3Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 5;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 def R52WriteVST4Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 7;
-  let ReleaseAtCycles = [4];
+  let ResourceCycles = [4];
 }
 def R52WriteVST5Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 9;
   let NumMicroOps = 9;
-  let ReleaseAtCycles = [5];
+  let ResourceCycles = [5];
 }
 
 

@@ -76,10 +76,10 @@ def : WriteRes<WriteIM64, [CortexA55UnitMAC]> { let Latency = 4; }   // 64-bit M
 
 // Div
 def : WriteRes<WriteID32, [CortexA55UnitDiv]> {
-  let Latency = 8; let ReleaseAtCycles = [8];
+  let Latency = 8; let ResourceCycles = [8];
 }
 def : WriteRes<WriteID64, [CortexA55UnitDiv]> {
-  let Latency = 8; let ReleaseAtCycles = [8];
+  let Latency = 8; let ResourceCycles = [8];
 }
 
 // Load
@@ -91,23 +91,23 @@ def : WriteRes<WriteLDHi, [CortexA55UnitLd]> { let Latency = 5; }
 //               below, choosing the median of 3 which makes the latency 6.
 // An extra cycle is needed to get the swizzling right.
 def : WriteRes<WriteVLD, [CortexA55UnitLd]> { let Latency = 6;
-                                           let ReleaseAtCycles = [3]; }
+                                           let ResourceCycles = [3]; }
 def CortexA55WriteVLD1 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; }
 def CortexA55WriteVLD1SI : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; let SingleIssue = 1; }
 def CortexA55WriteVLD2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
+                                                  let ResourceCycles = [2]; }
 def CortexA55WriteVLD3 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
+                                                  let ResourceCycles = [3]; }
 def CortexA55WriteVLD4 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 7;
-                                                  let ReleaseAtCycles = [4]; }
+                                                  let ResourceCycles = [4]; }
 def CortexA55WriteVLD5 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 8;
-                                                  let ReleaseAtCycles = [5]; }
+                                                  let ResourceCycles = [5]; }
 def CortexA55WriteVLD6 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 9;
-                                                  let ReleaseAtCycles = [6]; }
+                                                  let ResourceCycles = [6]; }
 def CortexA55WriteVLD7 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 10;
-                                                  let ReleaseAtCycles = [7]; }
+                                                  let ResourceCycles = [7]; }
 def CortexA55WriteVLD8 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 11;
-                                                  let ReleaseAtCycles = [8]; }
+                                                  let ResourceCycles = [8]; }
 
 def CortexA55WriteLDP1 : SchedWriteRes<[]> { let Latency = 4; }
 def CortexA55WriteLDP2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5; }
@@ -126,14 +126,14 @@ def : WriteRes<WriteSTX, [CortexA55UnitSt]> { let Latency = 4; }
 
 // Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
 def : WriteRes<WriteVST, [CortexA55UnitSt]> { let Latency = 5;
-                                          let ReleaseAtCycles = [2];}
+                                          let ResourceCycles = [2];}
 def CortexA55WriteVST1 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 4; }
 def CortexA55WriteVST2 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
+                                                  let ResourceCycles = [2]; }
 def CortexA55WriteVST3 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
+                                                  let ResourceCycles = [3]; }
 def CortexA55WriteVST4 : SchedWriteRes<[CortexA55UnitSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [4]; }
+                                                  let ResourceCycles = [4]; }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
@@ -189,20 +189,20 @@ def : WriteRes<WriteFMul, [CortexA55UnitFPMAC]> { let Latency = 4; }
 
 let RetireOOO = 1 in {
 def : WriteRes<WriteFDiv, [CortexA55UnitFPDIV]> { let Latency = 22;
-                                            let ReleaseAtCycles = [29]; }
+                                            let ResourceCycles = [29]; }
 def CortexA55WriteFMAC : SchedWriteRes<[CortexA55UnitFPMAC]> { let Latency = 4; }
 def CortexA55WriteFDivHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
-                                                     let ReleaseAtCycles = [5]; }
+                                                     let ResourceCycles = [5]; }
 def CortexA55WriteFDivSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 13;
-                                                     let ReleaseAtCycles = [10]; }
+                                                     let ResourceCycles = [10]; }
 def CortexA55WriteFDivDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
-                                                     let ReleaseAtCycles = [19]; }
+                                                     let ResourceCycles = [19]; }
 def CortexA55WriteFSqrtHP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 8;
-                                                      let ReleaseAtCycles = [5]; }
+                                                      let ResourceCycles = [5]; }
 def CortexA55WriteFSqrtSP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 12;
-                                                      let ReleaseAtCycles = [9]; }
+                                                      let ResourceCycles = [9]; }
 def CortexA55WriteFSqrtDP : SchedWriteRes<[CortexA55UnitFPDIV]> { let Latency = 22;
-                                                      let ReleaseAtCycles = [19]; }
+                                                      let ResourceCycles = [19]; }
 }
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.

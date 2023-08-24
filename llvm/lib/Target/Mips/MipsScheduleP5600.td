@@ -119,7 +119,7 @@ def P5600WriteCache : SchedWriteRes<[P5600IssueLDST]>;
 def P5600WriteStore : SchedWriteRes<[P5600IssueLDST, P5600CTISTD]> {
   // FIXME: This is a bit pessimistic. P5600CTISTD is only used during cycle 2
   //        not during 0, 1, and 2.
-  let ReleaseAtCycles = [ 1, 3 ];
+  let ResourceCycles = [ 1, 3 ];
 }
 
 def P5600WriteGPRFromBypass : SchedWriteRes<[P5600IssueLDST]> {
@@ -165,12 +165,12 @@ def P5600WriteAL2CondMov : SchedWriteRes<[P5600IssueAL2, P5600CTISTD]> {
 def P5600WriteAL2Div : SchedWriteRes<[P5600IssueAL2, P5600AL2Div]> {
   // Estimated worst case
   let Latency = 34;
-  let ReleaseAtCycles = [1, 34];
+  let ResourceCycles = [1, 34];
 }
 def P5600WriteAL2DivU : SchedWriteRes<[P5600IssueAL2, P5600AL2Div]> {
   // Estimated worst case
   let Latency = 34;
-  let ReleaseAtCycles = [1, 34];
+  let ResourceCycles = [1, 34];
 }
 def P5600WriteAL2Mul : SchedWriteRes<[P5600IssueAL2]> { let Latency = 3; }
 def P5600WriteAL2Mult: SchedWriteRes<[P5600IssueAL2]> { let Latency = 5; }
@@ -241,47 +241,47 @@ def P5600WriteFPUL_MADDSUB : SchedWriteRes<[P5600IssueFPUL]> { let Latency = 6; 
 def P5600WriteFPUDivI : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 23 / 27
   let Latency = 23; // Using common case
-  let ReleaseAtCycles = [ 1, 23 ];
+  let ResourceCycles = [ 1, 23 ];
 }
 def P5600WriteFPUDivS : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 23 / 27
   let Latency = 23; // Using common case
-  let ReleaseAtCycles = [ 1, 23 ];
+  let ResourceCycles = [ 1, 23 ];
 }
 def P5600WriteFPUDivD : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 31 / 35
   let Latency = 31; // Using common case
-  let ReleaseAtCycles = [ 1, 31 ];
+  let ResourceCycles = [ 1, 31 ];
 }
 def P5600WriteFPURcpS : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 19 / 23
   let Latency = 19; // Using common case
-  let ReleaseAtCycles = [ 1, 19 ];
+  let ResourceCycles = [ 1, 19 ];
 }
 def P5600WriteFPURcpD : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 27 / 31
   let Latency = 27; // Using common case
-  let ReleaseAtCycles = [ 1, 27 ];
+  let ResourceCycles = [ 1, 27 ];
 }
 def P5600WriteFPURsqrtS : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 27 / 27
   let Latency = 27; // Using common case
-  let ReleaseAtCycles = [ 1, 27 ];
+  let ResourceCycles = [ 1, 27 ];
 }
 def P5600WriteFPURsqrtD : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 27 / 31
   let Latency = 27; // Using common case
-  let ReleaseAtCycles = [ 1, 27 ];
+  let ResourceCycles = [ 1, 27 ];
 }
 def P5600WriteFPUSqrtS : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 27 / 31
   let Latency = 27; // Using common case
-  let ReleaseAtCycles = [ 1, 27 ];
+  let ResourceCycles = [ 1, 27 ];
 }
 def P5600WriteFPUSqrtD : SchedWriteRes<[P5600IssueFPUL, P5600FPUDivSqrt]> {
   // Best/Common/Worst case = 7 / 35 / 39
   let Latency = 35; // Using common case
-  let ReleaseAtCycles = [ 1, 35 ];
+  let ResourceCycles = [ 1, 35 ];
 }
 def P5600WriteMSAShortLogic : SchedWriteRes<[P5600IssueFPUS]>;
 def P5600WriteMSAShortInt : SchedWriteRes<[P5600IssueFPUS]> { let Latency = 2; }

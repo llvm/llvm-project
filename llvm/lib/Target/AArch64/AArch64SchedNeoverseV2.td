@@ -102,9 +102,9 @@ def V2Write_2cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 2; }
 def V2Write_3cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 3; }
 def V2Write_5cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 5; }
 def V2Write_12cyc_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 12;
-                                                      let ReleaseAtCycles = [12]; }
+                                                      let ResourceCycles = [12]; }
 def V2Write_20cyc_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 20;
-                                                      let ReleaseAtCycles = [20]; }
+                                                      let ResourceCycles = [20]; }
 def V2Write_4cyc_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 4; }
 def V2Write_6cyc_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 6; }
 def V2Write_2cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 2; }
@@ -113,7 +113,7 @@ def V2Write_2cyc_1V01  : SchedWriteRes<[V2UnitV01]> { let Latency = 2; }
 def V2Write_2cyc_1V23  : SchedWriteRes<[V2UnitV23]> { let Latency = 2; }
 def V2Write_3cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 3; }
 def V2Write_3cyc_1V01  : SchedWriteRes<[V2UnitV01]> { let Latency = 3;
-                                                      let ReleaseAtCycles = [2]; }
+                                                      let ResourceCycles = [2]; }
 def V2Write_3cyc_1V23  : SchedWriteRes<[V2UnitV23]> { let Latency = 3; }
 def V2Write_4cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 4; }
 def V2Write_5cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 5; }
@@ -124,26 +124,26 @@ def V2Write_3cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 3; }
 def V2Write_4cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 4; }
 def V2Write_4cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 4; }
 def V2Write_7cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 7;
-                                                      let ReleaseAtCycles = [7]; }
+                                                      let ResourceCycles = [7]; }
 def V2Write_7cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 7;
-                                                      let ReleaseAtCycles = [2]; }
+                                                      let ResourceCycles = [2]; }
 def V2Write_9cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 9; }
 def V2Write_9cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 9;
-                                                      let ReleaseAtCycles = [2]; }
+                                                      let ResourceCycles = [2]; }
 def V2Write_10cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; }
 def V2Write_10cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 10;
-                                                      let ReleaseAtCycles = [2]; }
+                                                      let ResourceCycles = [2]; }
 def V2Write_12cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 12;
-                                                      let ReleaseAtCycles = [11]; }
+                                                      let ResourceCycles = [11]; }
 def V2Write_13cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; }
 def V2Write_15cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 15; }
 def V2Write_15cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 15;
-                                                      let ReleaseAtCycles = [8]; }
+                                                      let ResourceCycles = [8]; }
 def V2Write_16cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; }
 def V2Write_16cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 16;
-                                                      let ReleaseAtCycles = [8]; }
+                                                      let ResourceCycles = [8]; }
 def V2Write_20cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 20;
-                                                      let ReleaseAtCycles = [20]; }
+                                                      let ResourceCycles = [20]; }
 def V2Write_2cyc_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 2; }
 def V2Write_2cyc_1V13  : SchedWriteRes<[V2UnitV13]> { let Latency = 2; }
 def V2Write_3cyc_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 3; }
@@ -1054,19 +1054,19 @@ def V2Rd_ZBFMAL : SchedReadAdvance<3, [V2Wr_ZBFMAL]>;
 //===----------------------------------------------------------------------===//
 // Define types with long resource cycles (rc)
 
-def V2Write_6cyc_1V1_5rc    : SchedWriteRes<[V2UnitV1]>  { let Latency =  6; let ReleaseAtCycles = [ 5]; }
-def V2Write_7cyc_1V02_7rc   : SchedWriteRes<[V2UnitV02]> { let Latency =  7; let ReleaseAtCycles = [ 7]; }
-def V2Write_10cyc_1V02_5rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 5]; }
-def V2Write_10cyc_1V02_9rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 9]; }
-def V2Write_10cyc_1V02_10rc : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [10]; }
-def V2Write_10cyc_1V0_9rc   : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
-def V2Write_10cyc_1V1_9rc   : SchedWriteRes<[V2UnitV1]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
-def V2Write_13cyc_1V0_12rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; let ReleaseAtCycles = [12]; }
-def V2Write_13cyc_1V02_12rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [12]; }
-def V2Write_13cyc_1V02_13rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [13]; }
-def V2Write_15cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 15; let ReleaseAtCycles = [14]; }
-def V2Write_16cyc_1V02_15rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ReleaseAtCycles = [15]; }
-def V2Write_16cyc_1V0_14rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; let ReleaseAtCycles = [14]; }
+def V2Write_6cyc_1V1_5rc    : SchedWriteRes<[V2UnitV1]>  { let Latency =  6; let ResourceCycles = [ 5]; }
+def V2Write_7cyc_1V02_7rc   : SchedWriteRes<[V2UnitV02]> { let Latency =  7; let ResourceCycles = [ 7]; }
+def V2Write_10cyc_1V02_5rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [ 5]; }
+def V2Write_10cyc_1V02_9rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [ 9]; }
+def V2Write_10cyc_1V02_10rc : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [10]; }
+def V2Write_10cyc_1V0_9rc   : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; let ResourceCycles = [ 9]; }
+def V2Write_10cyc_1V1_9rc   : SchedWriteRes<[V2UnitV1]>  { let Latency = 10; let ResourceCycles = [ 9]; }
+def V2Write_13cyc_1V0_12rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; let ResourceCycles = [12]; }
+def V2Write_13cyc_1V02_12rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ResourceCycles = [12]; }
+def V2Write_13cyc_1V02_13rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ResourceCycles = [13]; }
+def V2Write_15cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 15; let ResourceCycles = [14]; }
+def V2Write_16cyc_1V02_15rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ResourceCycles = [15]; }
+def V2Write_16cyc_1V0_14rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; let ResourceCycles = [14]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
