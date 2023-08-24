@@ -1,6 +1,6 @@
 //
 // TODO: this test case is temporarily disabled as we are improving zero-cost sparse tensor reshaping.
-// UNSUPPORTED: target={{.*}}
+// XFAIL: *
 //
 // RUN: mlir-opt %s --linalg-generalize-named-ops --sparsification --cse --canonicalize | FileCheck %s
 
