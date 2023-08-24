@@ -57,6 +57,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
+#include "VPlanCostModel.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanTransforms.h"
 #include "llvm/ADT/APInt.h"
@@ -362,6 +363,11 @@ cl::opt<bool> EnableVPlanNativePath(
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
 }
+
+cl::opt<bool> CostUsingVPlan("vplan-use-vplan-cost-model", cl::init(false),
+                             cl::Hidden,
+                             cl::desc("Enable VPlan based costing path. To "
+                                      "become the default in the future."));
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
@@ -1171,6 +1177,8 @@ using VectorizationCostTy = std::pair<InstructionCost, bool>;
 /// TargetTransformInfo to query the different backends for the cost of
 /// different operations.
 class LoopVectorizationCostModel {
+  friend class VPlanCostModel;
+
 public:
   LoopVectorizationCostModel(ScalarEpilogueLowering SEL, Loop *L,
                              PredicatedScalarEvolution &PSE, LoopInfo *LI,
@@ -8648,6 +8656,20 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));
 }
 
+Type *VPlanCostModel::truncateToMinimalBitwidth(Type *ValTy,
+                                                Instruction *I) const {
+  auto MinBWs = CM.getMinimalBitwidths();
+  if (MinBWs.contains(I))
+    ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
+  return ValTy;
+}
+
+InstructionCost VPlanCostModel::getLegacyInstructionCost(Instruction *I,
+                                                         ElementCount VF) {
+  VectorizationCostTy Cost = CM.getInstructionCost(I, VF);
+  return Cost.first;
+}
+
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
@@ -8677,10 +8699,16 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     VF = SubRange.End;
   }
 
+  VPlanCostModel VPCM(*TTI, PSE.getSE()->getContext(), CM);
   for (const VPlanPtr &Plan : VPlans) {
     SmallVector<VectorizationFactor> Costs;
     for (ElementCount CostVF : Plan->getVFs()) {
-      auto [VecCost, IsVec] = CM.expectedCost(CostVF, &InvalidCosts);
+      VectorizationCostTy C;
+      if (CostUsingVPlan) {
+        C.first = VPCM.expectedCost(*Plan, CostVF, C.second);
+      } else
+        C = CM.expectedCost(CostVF, &InvalidCosts);
+      auto [VecCost, IsVec] = C;
 #ifndef NDEBUG
       unsigned AssumedMinimumVscale = 1;
       if (std::optional<unsigned> VScale = getVScaleForTuning())

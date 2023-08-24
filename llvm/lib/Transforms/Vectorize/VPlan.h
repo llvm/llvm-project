@@ -756,6 +756,11 @@ public:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
 
+  bool hasUnderlyingInstr() const {
+    return getNumDefinedValues() == 1 &&
+           getVPSingleValue()->getUnderlyingValue() != nullptr;
+  }
+
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPDef *D) {
     // All VPDefs are also VPRecipeBases.
