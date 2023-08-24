@@ -300,3 +300,43 @@ instructions as such:
 * [``llvm.ptrauth.resign``](#llvm-ptrauth-resign): ``AUT*+PAC*``.  These are
   represented as a single pseudo-instruction in the backend to guarantee that
   the intermediate raw pointer value is not spilled and attackable.
+
+#### Assembly Representation
+
+At the assembly level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the `@AUTH` modifier:
+
+```asm
+    .quad _target@AUTH(<key>,<discriminator>[,addr])
+```
+
+where:
+* `key` is the Armv8.3-A key identifier (`ia`, `ib`, `da`, `db`)
+* `discriminator` is the 16-bit unsigned discriminator value
+* `addr` signifies that the authenticated pointer is address-discriminated
+  (that is, that the relocation's target address is to be blended into the
+  `discriminator` before it is used in the sign operation.
+
+For example:
+```asm
+  _authenticated_reference_to_sym:
+    .quad _sym@AUTH(db,0)
+  _authenticated_reference_to_sym_addr_disc:
+    .quad _sym@AUTH(ia,12,addr)
+```
+
+#### ELF Object File Representation
+
+At the object file level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
+
+The signing schema is encoded in the place of relocation to be applied
+as follows:
+
+```
+| 63                | 62       | 61:60    | 59:48    |  47:32        | 31:0                |
+| ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
+| address diversity | reserved | key      | reserved | discriminator | reserved for addend |
+```

@@ -2193,7 +2193,7 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
   if (Unit.getVersion() >= 5)
     RangeAttrVal = RangesSectionOffset;
   // HighPC was conveted into DW_AT_ranges.
-  // For DWARF5 we only access ranges throught index.
+  // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,
                        RangesForm, DIEInteger(RangeAttrVal));
