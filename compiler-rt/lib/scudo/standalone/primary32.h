@@ -312,9 +312,15 @@ public:
   }
 
   void getFragmentationInfo(ScopedString *Str) {
-    // TODO(chiahungduan): Organize the steps in releaseToOSMaybe() into
-    // functions which make the collection of fragmentation data easier.
-    Str->append("Fragmentation Stats: SizeClassAllocator32: Unsupported yet\n");
+    Str->append(
+        "Fragmentation Stats: SizeClassAllocator32: page size = %zu bytes\n",
+        getPageSizeCached());
+
+    for (uptr I = 1; I < NumClasses; I++) {
+      SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
+      getSizeClassFragmentationInfo(Sci, I, Str);
+    }
   }
 
   bool setOption(Option O, sptr Value) {
@@ -860,6 +866,52 @@ private:
                 InUse, AvailableChunks, Sci->ReleaseInfo.RangesReleased,
                 Sci->ReleaseInfo.LastReleasedBytes >> 10,
                 PushedBytesDelta >> 10);
+  }
+
+  void getSizeClassFragmentationInfo(SizeClassInfo *Sci, uptr ClassId,
+                                     ScopedString *Str) REQUIRES(Sci->Mutex) {
+    const uptr BlockSize = getSizeByClassId(ClassId);
+    const uptr First = Sci->MinRegionIndex;
+    const uptr Last = Sci->MaxRegionIndex;
+    const uptr Base = First * RegionSize;
+    const uptr NumberOfRegions = Last - First + 1U;
+    auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
+      ScopedLock L(ByteMapMutex);
+      return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    };
+
+    FragmentationRecorder Recorder;
+    if (!Sci->FreeListInfo.BlockList.empty()) {
+      PageReleaseContext Context =
+          markFreeBlocks(Sci, ClassId, BlockSize, Base, NumberOfRegions,
+                         ReleaseToOS::ForceAll);
+      releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
+    }
+
+    const uptr PageSize = getPageSizeCached();
+    const uptr TotalBlocks = Sci->AllocatedUser / BlockSize;
+    const uptr InUseBlocks =
+        Sci->FreeListInfo.PoppedBlocks - Sci->FreeListInfo.PushedBlocks;
+    uptr AllocatedPagesCount = 0;
+    if (TotalBlocks != 0U) {
+      for (uptr I = 0; I < NumberOfRegions; ++I) {
+        if (SkipRegion(I))
+          continue;
+        AllocatedPagesCount += RegionSize / PageSize;
+      }
+
+      DCHECK_NE(AllocatedPagesCount, 0U);
+    }
+
+    DCHECK_GE(AllocatedPagesCount, Recorder.getReleasedPagesCount());
+    const uptr InUsePages =
+        AllocatedPagesCount - Recorder.getReleasedPagesCount();
+    const uptr InUseBytes = InUsePages * PageSize;
+
+    Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
+                "pages: %6zu/%6zu inuse bytes: %6zuK\n",
+                ClassId, BlockSize, InUseBlocks, TotalBlocks, InUsePages,
+                AllocatedPagesCount, InUseBytes >> 10);
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
