@@ -1007,6 +1007,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
   case ISD::SET_FPENV:
+  case ISD::SET_FPMODE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
@@ -4818,6 +4819,46 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
         DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
+    break;
+  }
+  case ISD::GET_FPMODE: {
+    // Call fegetmode, which saves control modes into a stack slot. Then load
+    // the value to return from the stack.
+    EVT ModeVT = Node->getValueType(0);
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue Chain = DAG.makeStateFunctionCall(RTLIB::FEGETMODE, StackPtr,
+                                              Node->getOperand(0), dl);
+    SDValue LdInst = DAG.getLoad(
+        ModeVT, dl, Chain, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(LdInst);
+    Results.push_back(LdInst.getValue(1));
+    break;
+  }
+  case ISD::SET_FPMODE: {
+    // Move control modes to stack slot and then call fesetmode with the pointer
+    // to the slot as argument.
+    SDValue Mode = Node->getOperand(1);
+    EVT ModeVT = Mode.getValueType();
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue StInst = DAG.getStore(
+        Node->getOperand(0), dl, Mode, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, dl));
+    break;
+  }
+  case ISD::RESET_FPMODE: {
+    // It is legalized to a call 'fesetmode(FE_DFL_MODE)'. On most targets
+    // FE_DFL_MODE is defined as '((const femode_t *) -1)' in glibc. If not, the
+    // target must provide custom lowering.
+    const DataLayout &DL = DAG.getDataLayout();
+    EVT PtrTy = TLI.getPointerTy(DL);
+    SDValue Mode = DAG.getConstant(-1LL, dl, PtrTy);
+    Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
+                                                Node->getOperand(0), dl));
     break;
   }
   }
