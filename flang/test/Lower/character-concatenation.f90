@@ -18,10 +18,10 @@ subroutine concat_1(a, b)
   ! CHECK-DAG: %[[c1:.*]] = arith.constant 1
   ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[a]]#1
   ! CHECK: %[[count:.*]] = arith.muli %[[c1]], %[[a2]]
-  ! CHECK-DAG: constant false
+  ! CHECK-DAG: %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK-DAG: %[[to:.*]] = fir.convert %[[temp]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[from:.*]] = fir.convert %[[a]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[to]], %[[from]], %[[count]], %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[to]], %[[from]], %[[count]], %[[notVolatile]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 
   ! CHECK: %[[c1_0:.*]] = arith.constant 1
   ! CHECK: %[[count2:.*]] = arith.subi %[[len]], %[[c1_0]]

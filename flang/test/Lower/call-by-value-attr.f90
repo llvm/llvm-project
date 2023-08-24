@@ -133,10 +133,10 @@ subroutine test_litteral_copies_2
   ! CHECK: %[[VAL_3:.*]] = arith.constant 1 : i64
   ! CHECK: %[[VAL_4:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
   ! CHECK: %[[VAL_5:.*]] = arith.muli %[[VAL_3]], %[[VAL_4]] : i64
-  ! CHECK: %[[VAL_6:.*]] = arith.constant false
+  ! CHECK: %[[VAL_6:.*]] = arith.constant 0 : i8
   ! CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_7]], %[[VAL_8]], %[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_7]], %[[VAL_8]], %[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[VAL_10:.*]] = fir.emboxchar %[[VAL_9]], %[[VAL_1]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPtakes_char_value(%[[VAL_10]]) {{.*}}: (!fir.boxchar<1>) -> ()

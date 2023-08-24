@@ -20,7 +20,7 @@ subroutine test_simple_copy(t1, t2)
   type(simple_copy) :: t1(10), t2(10)
   ! CHECK-DAG:         %[[VAL_2:.*]] = arith.constant 20 : index
   ! CHECK-DAG:         %[[VAL_3:.*]] = arith.constant 10 : index
-  ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant false
+  ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 0 : i8
   ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 0 : index
   ! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant 1 : index
   ! CHECK-DAG:         %[[VAL_7:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
@@ -50,7 +50,7 @@ subroutine test_simple_copy(t1, t2)
   ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
   ! CHECK:         %[[VAL_27:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
   ! CHECK:         %[[VAL_28:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
-  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_27]], %[[VAL_28]], %[[VAL_26]], %[[VAL_4]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_27]], %[[VAL_28]], %[[VAL_26]], %[[VAL_4]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:         %[[VAL_29:.*]] = arith.addi %[[VAL_21]], %[[VAL_6]] : index
   ! CHECK:         %[[VAL_30:.*]] = arith.subi %[[VAL_22]], %[[VAL_6]] : index
   ! CHECK:         br ^bb3(%[[VAL_29]], %[[VAL_30]] : index, index)

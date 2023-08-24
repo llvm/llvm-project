@@ -27,6 +27,6 @@ end program test
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
 ! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %
-! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i1 false)
+! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i8 0)
 ! CHECK: call void @free(ptr %[[buff]])
 ! CHECK: call ptr @_FortranAioBeginExternalListOutput

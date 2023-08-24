@@ -31,10 +31,10 @@ func.func @concat(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2: !fir.bo
 // CHECK:  %[[VAL_12:.*]] = arith.constant 1 : i64
 // CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_5]]#1 : (index) -> i64
 // CHECK:  %[[VAL_14:.*]] = arith.muli %[[VAL_12]], %[[VAL_13]] : i64
-// CHECK:  %[[VAL_15:.*]] = arith.constant false
+// CHECK:  %[[VAL_15:.*]] = arith.constant 0 : i8
 // CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:  %[[VAL_17:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_14]], %[[VAL_15]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_14]], %[[VAL_15]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 // CHECK:  %[[VAL_18:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_19:.*]] = arith.subi %[[VAL_10]], %[[VAL_18]] : index
 // CHECK:  fir.do_loop %[[VAL_20:.*]] = %[[VAL_5]]#1 to %[[VAL_19]] step %[[VAL_18]] {
@@ -85,10 +85,10 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:  %[[VAL_15:.*]] = arith.constant 1 : i64
 // CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
 // CHECK:  %[[VAL_17:.*]] = arith.muli %[[VAL_15]], %[[VAL_16]] : i64
-// CHECK:  %[[VAL_18:.*]] = arith.constant false
+// CHECK:  %[[VAL_18:.*]] = arith.constant 0 : i8
 // CHECK:  %[[VAL_19:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:  %[[VAL_20:.*]] = fir.convert %[[VAL_7]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %[[VAL_17]], %[[VAL_18]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %[[VAL_17]], %[[VAL_18]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 // CHECK:  %[[VAL_21:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_22:.*]] = arith.subi %[[VAL_13]], %[[VAL_21]] : index
 // CHECK:  fir.do_loop %[[VAL_23:.*]] = %[[VAL_6]]#1 to %[[VAL_22]] step %[[VAL_21]] {
@@ -107,10 +107,10 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:  %[[VAL_34:.*]] = arith.constant 1 : i64
 // CHECK:  %[[VAL_35:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
 // CHECK:  %[[VAL_36:.*]] = arith.muli %[[VAL_34]], %[[VAL_35]] : i64
-// CHECK:  %[[VAL_37:.*]] = arith.constant false
+// CHECK:  %[[VAL_37:.*]] = arith.constant 0 : i8
 // CHECK:  %[[VAL_38:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:  %[[VAL_39:.*]] = fir.convert %[[VAL_30]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_38]], %[[VAL_39]], %[[VAL_36]], %[[VAL_37]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_38]], %[[VAL_39]], %[[VAL_36]], %[[VAL_37]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 // CHECK:  %[[VAL_40:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_41:.*]] = arith.subi %[[VAL_32]], %[[VAL_40]] : index
 // CHECK:  fir.do_loop %[[VAL_42:.*]] = %[[VAL_13]] to %[[VAL_41]] step %[[VAL_40]] {

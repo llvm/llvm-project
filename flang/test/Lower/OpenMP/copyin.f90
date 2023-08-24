@@ -57,10 +57,10 @@ end
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
 ! CHECK:           %[[VAL_10:.*]] = arith.muli %[[VAL_8]], %[[VAL_9]] : i64
-! CHECK:           %[[VAL_11:.*]] = arith.constant false
+! CHECK:           %[[VAL_11:.*]] = arith.constant 0 : i8
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK:           %[[VAL_14:.*]] = omp.threadprivate %[[VAL_3]] : !fir.ref<!fir.array<10x!fir.char<1,5>>> -> !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_16:.*]] = fir.array_load %[[VAL_14]](%[[VAL_15]]) : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.array<10x!fir.char<1,5>>
@@ -76,10 +76,10 @@ end
 ! CHECK:             %[[VAL_28:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_27]] : (index) -> i64
 ! CHECK:             %[[VAL_30:.*]] = arith.muli %[[VAL_28]], %[[VAL_29]] : i64
-! CHECK:             %[[VAL_31:.*]] = arith.constant false
+! CHECK:             %[[VAL_31:.*]] = arith.constant 0 : i8
 ! CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_32]], %[[VAL_33]], %[[VAL_30]], %[[VAL_31]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_32]], %[[VAL_33]], %[[VAL_30]], %[[VAL_31]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK:             %[[VAL_34:.*]] = fir.array_amend %[[VAL_24]], %[[VAL_26]] : (!fir.array<10x!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>) -> !fir.array<10x!fir.char<1,5>>
 ! CHECK:             fir.result %[[VAL_34]] : !fir.array<10x!fir.char<1,5>>
 ! CHECK:           }

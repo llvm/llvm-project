@@ -85,10 +85,10 @@ subroutine test3
   ! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : i64
   ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_5]] : (index) -> i64
   ! CHECK:  %[[VAL_8:.*]] = arith.muli %[[VAL_6]], %[[VAL_7]] : i64
-  ! CHECK:  %[[VAL_9:.*]] = arith.constant false
+  ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : i8
   ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
   ! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
-  ! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_10]], %[[VAL_11]], %[[VAL_8]], %[[VAL_9]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_10]], %[[VAL_11]], %[[VAL_8]], %[[VAL_9]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:  %[[VAL_12:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
   ! CHECK:  %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_12b:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>

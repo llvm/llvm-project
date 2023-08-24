@@ -104,10 +104,10 @@ func.func @scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>) {
 // CHECK:  %[[VAL_10:.*]] = arith.constant 1 : i64
 // CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
 // CHECK:  %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_11]] : i64
-// CHECK:  %[[VAL_13:.*]] = arith.constant false
+// CHECK:  %[[VAL_13:.*]] = arith.constant 0 : i8
 // CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_14]], %[[VAL_15]], %[[VAL_12]], %[[VAL_13]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_14]], %[[VAL_15]], %[[VAL_12]], %[[VAL_13]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 // CHECK:  %[[VAL_16:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_17:.*]] = arith.subi %[[VAL_2]]#1, %[[VAL_16]] : index
 // CHECK:  %[[VAL_18:.*]] = arith.constant 32 : i8

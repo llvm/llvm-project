@@ -24,7 +24,7 @@
 mlir::func::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
+                                        builder.getI8Type()};
   auto memcpyTy =
       mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
@@ -34,7 +34,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
 mlir::func::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
+                                        builder.getI8Type()};
   auto memmoveTy =
       mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
