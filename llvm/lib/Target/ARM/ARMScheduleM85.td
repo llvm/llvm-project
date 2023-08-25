@@ -327,7 +327,7 @@ def M85StoreDP : SchedWriteRes<[M85UnitStoreL, M85UnitStoreH,
                                 M85UnitVPortL, M85UnitVPortH]>;
 def M85StoreSys : SchedWriteRes<[M85UnitStore, M85UnitVPort,
                                  M85UnitVFPA, M85UnitVFPB, M85UnitVFPC, M85UnitVFPD]>;
-let ReleaseAtCycles = [2,2,1,1], EndGroup = 1 in {
+let ResourceCycles = [2,2,1,1], EndGroup = 1 in {
   def M85LoadMVE  : SchedWriteRes<[M85UnitLoadL, M85UnitLoadH,
                                    M85UnitVPortL, M85UnitVPortH]>;
   def M85LoadMVELate  : SchedWriteRes<[M85UnitLoadL, M85UnitLoadH,
@@ -702,49 +702,49 @@ def : InstRW<[M85OverrideVFPLat4, WriteFPMAC64,
 
 let Latency = 4, EndGroup = 1 in {
    def M85GrpALat2MveR : SchedWriteRes<[M85UnitVFPAL, M85UnitVFPAH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpABLat2MveR : SchedWriteRes<[M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]>;
    def M85GrpBLat2MveR : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85Lat2MveR : SchedWriteRes<[]> { let NumMicroOps = 0; }
    def M85GrpBLat4Mve : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
 }
 let Latency = 3, EndGroup = 1 in {
    def M85GrpBLat3Mve : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpBLat1MveR : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85Lat1MveR : SchedWriteRes<[]> { let NumMicroOps = 0; }
 }
 let Latency = 2, EndGroup = 1 in {
    def M85GrpALat2Mve : SchedWriteRes<[M85UnitVFPAL, M85UnitVFPAH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpABLat2Mve : SchedWriteRes<[M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]>;
    def M85GrpBLat2Mve : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85Lat2Mve : SchedWriteRes<[]> { let NumMicroOps = 0; }
 }
 let Latency = 1, EndGroup = 1 in {
    def M85GrpALat1Mve : SchedWriteRes<[M85UnitVFPAL, M85UnitVFPAH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpABLat1Mve : SchedWriteRes<[M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]>;
    def M85GrpBLat1Mve : SchedWriteRes<[M85UnitVFPBL, M85UnitVFPBH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpCLat1Mve : SchedWriteRes<[M85UnitVFPCL, M85UnitVFPCH, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,2,1,1,1];
+     let ResourceCycles = [2,2,1,1,1];
    }
    def M85GrpDLat1Mve : SchedWriteRes<[M85UnitVFPD, M85UnitVPortL, M85UnitVPortH, M85UnitSlot0]> {
-     let ReleaseAtCycles = [2,1,1,1];
+     let ResourceCycles = [2,1,1,1];
    }
 }
 

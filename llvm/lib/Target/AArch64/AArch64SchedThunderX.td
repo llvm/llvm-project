@@ -59,23 +59,23 @@ def : WriteRes<WriteExtr, [THXT8XUnitALU]> { let Latency = 2; }
 // MAC
 def : WriteRes<WriteIM32, [THXT8XUnitMAC]> {
   let Latency = 4;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
 }
 
 def : WriteRes<WriteIM64, [THXT8XUnitMAC]> {
   let Latency = 4;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
 }
 
 // Div
 def : WriteRes<WriteID32, [THXT8XUnitDiv]> {
   let Latency = 12;
-  let ReleaseAtCycles = [6];
+  let ResourceCycles = [6];
 }
 
 def : WriteRes<WriteID64, [THXT8XUnitDiv]> {
   let Latency = 14;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
 }
 
 // Load
@@ -86,32 +86,32 @@ def : WriteRes<WriteLDHi, [THXT8XUnitLdSt]> { let Latency = 3; }
 // Vector Load
 def : WriteRes<WriteVLD, [THXT8XUnitLdSt]> {
   let Latency = 8;
-  let ReleaseAtCycles = [3];
+  let ResourceCycles = [3];
 }
 
 def THXT8XWriteVLD1 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 6;
-  let ReleaseAtCycles = [1];
+  let ResourceCycles = [1];
 }
 
 def THXT8XWriteVLD2 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 11;
-  let ReleaseAtCycles = [7];
+  let ResourceCycles = [7];
 }
 
 def THXT8XWriteVLD3 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 12;
-  let ReleaseAtCycles = [8];
+  let ResourceCycles = [8];
 }
 
 def THXT8XWriteVLD4 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 13;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 
 def THXT8XWriteVLD5 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 13;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 
 // Pre/Post Indexing
@@ -129,12 +129,12 @@ def THXT8XWriteVST1 : SchedWriteRes<[THXT8XUnitLdSt]>;
 
 def THXT8XWriteVST2 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 10;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 
 def THXT8XWriteVST3 : SchedWriteRes<[THXT8XUnitLdSt]> {
   let Latency = 11;
-  let ReleaseAtCycles = [10];
+  let ResourceCycles = [10];
 }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
@@ -162,29 +162,29 @@ def : WriteRes<WriteVq, [THXT8XUnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFMul, [THXT8XUnitFPMDS]> { let Latency = 6; }
 def : WriteRes<WriteFDiv, [THXT8XUnitFPMDS]> {
   let Latency = 22;
-  let ReleaseAtCycles = [19];
+  let ResourceCycles = [19];
 }
 
 def THXT8XWriteFMAC : SchedWriteRes<[THXT8XUnitFPMDS]> { let Latency = 10; }
 
 def THXT8XWriteFDivSP : SchedWriteRes<[THXT8XUnitFPMDS]> {
   let Latency = 12;
-  let ReleaseAtCycles = [9];
+  let ResourceCycles = [9];
 }
 
 def THXT8XWriteFDivDP : SchedWriteRes<[THXT8XUnitFPMDS]> {
   let Latency = 22;
-  let ReleaseAtCycles = [19];
+  let ResourceCycles = [19];
 }
 
 def THXT8XWriteFSqrtSP : SchedWriteRes<[THXT8XUnitFPMDS]> {
   let Latency = 17;
-  let ReleaseAtCycles = [14];
+  let ResourceCycles = [14];
 }
 
 def THXT8XWriteFSqrtDP : SchedWriteRes<[THXT8XUnitFPMDS]> {
   let Latency = 31;
-  let ReleaseAtCycles = [28];
+  let ResourceCycles = [28];
 }
 
 //===----------------------------------------------------------------------===//

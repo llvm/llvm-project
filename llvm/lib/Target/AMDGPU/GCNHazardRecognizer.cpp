@@ -271,7 +271,7 @@ GCNHazardRecognizer::getMFMAPipelineWaitStates(const MachineInstr &MI) const {
   const MCSchedClassDesc *SC = TSchedModel.resolveSchedClass(&MI);
   assert(TSchedModel.getWriteProcResBegin(SC) !=
          TSchedModel.getWriteProcResEnd(SC));
-  return TSchedModel.getWriteProcResBegin(SC)->ReleaseAtCycle;
+  return TSchedModel.getWriteProcResBegin(SC)->Cycles;
 }
 
 void GCNHazardRecognizer::processBundle() {
