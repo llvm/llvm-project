@@ -39,4 +39,12 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
+// Compiler attribute-detection.
+// https://clang.llvm.org/docs/LanguageExtensions.html#has-attribute
+#ifdef __has_attribute
+#define LIBC_HAS_ATTRIBUTE(f) __has_attribute(f)
+#else
+#define LIBC_HAS_ATTRIBUTE(f) 0
+#endif
+
 #endif // LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
