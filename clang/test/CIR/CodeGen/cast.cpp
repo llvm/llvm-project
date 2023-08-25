@@ -95,3 +95,12 @@ void call_cptr(void *d) {
 // CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<!void>) -> !cir.bool
 // CHECK:     %3 = cir.unary(not, %2) : !cir.bool, !cir.bool
 // CHECK:     cir.if %3 {
+
+void lvalue_cast(int x) {    
+  *(int *)&x = 42;
+}  
+
+// CHECK: cir.func @_Z11lvalue_cast
+// CHECK:   %1 = cir.const(#cir.int<42> : !s32i) : !s32i 
+// CHECK:   cir.store %1, %0 : !s32i, cir.ptr <!s32i> 
+
