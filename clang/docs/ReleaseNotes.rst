@@ -140,6 +140,9 @@ Improvements to Clang's diagnostics
   tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
   makes ``-Winfinite-recursion`` diagnose more cases.
   (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
+- Clang constexpr evaluator now diagnoses compound assignment operators against
+  uninitialized variables as a read of uninitialized object.
+  (`#51536 <https://github.com/llvm/llvm-project/issues/51536>_`)
 
 Bug Fixes in This Version
 -------------------------
