@@ -87,7 +87,6 @@ static_library("Driver") {
     "ToolChains/MSVC.cpp",
     "ToolChains/MinGW.cpp",
     "ToolChains/MipsLinux.cpp",
-    "ToolChains/Myriad.cpp",
     "ToolChains/NaCl.cpp",
     "ToolChains/NetBSD.cpp",
     "ToolChains/OHOS.cpp",
