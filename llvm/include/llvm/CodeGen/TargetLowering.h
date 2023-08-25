@@ -4018,7 +4018,8 @@ public:
   /// Returns true if the given Opc is considered a canonical constant for the
   /// target, which should not be transformed back into a BUILD_VECTOR.
   virtual bool isTargetCanonicalConstantNode(SDValue Op) const {
-    return Op.getOpcode() == ISD::SPLAT_VECTOR;
+    return Op.getOpcode() == ISD::SPLAT_VECTOR ||
+           Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
 
   struct DAGCombinerInfo {
