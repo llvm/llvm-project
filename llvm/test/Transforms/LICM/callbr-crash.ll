@@ -35,3 +35,27 @@ for.end:                                          ; preds = %cond.true.i, %for.c
   %phi = phi i32 [ %asmresult1.i.i, %cond.true.i ], [ undef, %for.cond ]
   ret i32 %phi
 }
+
+declare void @use_i32(i32)
+
+define void @pr64215() {
+; CHECK-LABEL: @pr64215(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"()
+; CHECK-NEXT:    to label [[LOOP_PREHEADER:%.*]] []
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @use_i32(i32 [[ADD]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %x = callbr i32 asm sideeffect "", "=r"()
+  to label %loop []
+
+loop:
+  %add = add i32 %x, 1
+  call void @use_i32(i32 %add)
+  br label %loop
+}
