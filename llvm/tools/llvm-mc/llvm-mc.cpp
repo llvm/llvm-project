@@ -231,6 +231,12 @@ static cl::opt<CASBackendMode> MCCASBackendMode(
                clEnumValN(CASBackendMode::CASID, "mccas-casid",
                           "CASID file output")),
     cl::cat(MCCategory));
+
+static cl::opt<bool>
+    EmitCASIDFile("mccas-emit-casid-file",
+                  cl::desc("Emit a .casid file next to the generated .o file "
+                           "when mccas is enabled"),
+                  cl::cat(MCCategory));
 // END MCCAS
 
 enum ActionType {
@@ -518,6 +524,19 @@ int main(int argc, char **argv) {
   if (!Out)
     return 1;
 
+  std::unique_ptr<ToolOutputFile> CasIDOS;
+  std::string OutputPathCASIDFile;
+  StringRef OutputFile = StringRef(Out->outputFilename());
+  if (UseMCCASBackend && EmitCASIDFile &&
+      MCCASBackendMode != CASBackendMode::CASID && FileType == OFT_ObjectFile &&
+      OutputFile != "-") {
+    OutputPathCASIDFile = std::string(OutputFile);
+    OutputPathCASIDFile.append(".casid");
+    CasIDOS = GetOutputStream(OutputPathCASIDFile, sys::fs::OF_None);
+    if (!CasIDOS)
+      return 1;
+  }
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfFile.empty()) {
     if (FileType != OFT_ObjectFile) {
@@ -624,7 +643,8 @@ int main(int argc, char **argv) {
       };
       CASBackendWriter = MAB->createCASObjectWriter(
           *OS, TheTriple, *CAS, MCOptions, MCCASBackendMode,
-          CreateFromMcAssembler, SerializeObjectFile);
+          CreateFromMcAssembler, SerializeObjectFile,
+          CasIDOS ? &CasIDOS->os() : nullptr);
     }
     // END MCCAS
     Str.reset(TheTarget->createMCObjectStreamer(
@@ -668,6 +688,8 @@ int main(int argc, char **argv) {
   // Keep output if no errors.
   if (Res == 0) {
     Out->keep();
+    if (CasIDOS)
+      CasIDOS->keep();
     if (DwoOut)
       DwoOut->keep();
   }
