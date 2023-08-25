@@ -1200,6 +1200,10 @@ public:
   /// Find or create an LandingPadInfo for the specified MachineBasicBlock.
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);
 
+  /// Remap landing pad labels and remove any deleted landing pads.
+  void tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap = nullptr,
+                       bool TidyIfNoBeginLabels = true);
+
   /// Return a reference to the landing pad info for the current function.
   const std::vector<LandingPadInfo> &getLandingPads() const {
     return LandingPads;
@@ -1215,11 +1219,22 @@ public:
   /// entry.
   MCSymbol *addLandingPad(MachineBasicBlock *LandingPad);
 
+  /// Provide the catch typeinfo for a landing pad.
+  void addCatchTypeInfo(MachineBasicBlock *LandingPad,
+                        ArrayRef<const GlobalValue *> TyInfo);
+
+  /// Provide the filter typeinfo for a landing pad.
+  void addFilterTypeInfo(MachineBasicBlock *LandingPad,
+                         ArrayRef<const GlobalValue *> TyInfo);
+
+  /// Add a cleanup action for a landing pad.
+  void addCleanup(MachineBasicBlock *LandingPad);
+
   /// Return the type id for the specified typeinfo.  This is function wide.
   unsigned getTypeIDFor(const GlobalValue *TI);
 
   /// Return the id of the filter encoded by TyIds.  This is function wide.
-  int getFilterIDFor(ArrayRef<unsigned> TyIds);
+  int getFilterIDFor(std::vector<unsigned> &TyIds);
 
   /// Map the landing pad's EH symbol to the call site indexes.
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);
