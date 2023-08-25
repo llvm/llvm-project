@@ -1505,6 +1505,31 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (!isTypeLegal(Val))
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 
+  // Mask vector extract/insert is expanded via e8.
+  if (Val->getScalarSizeInBits() == 1) {
+    VectorType *WideTy =
+      VectorType::get(IntegerType::get(Val->getContext(), 8),
+                      cast<VectorType>(Val)->getElementCount());
+    if (Opcode == Instruction::ExtractElement) {
+      InstructionCost ExtendCost
+        = getCastInstrCost(Instruction::ZExt, WideTy, Val,
+                           TTI::CastContextHint::None, CostKind);
+      InstructionCost ExtractCost
+        = getVectorInstrCost(Opcode, WideTy, CostKind, Index, nullptr, nullptr);
+      return ExtendCost + ExtractCost;
+    }
+    InstructionCost ExtendCost
+      = getCastInstrCost(Instruction::ZExt, WideTy, Val,
+                         TTI::CastContextHint::None, CostKind);
+    InstructionCost InsertCost
+      = getVectorInstrCost(Opcode, WideTy, CostKind, Index, nullptr, nullptr);
+    InstructionCost TruncCost
+      = getCastInstrCost(Instruction::Trunc, Val, WideTy,
+                         TTI::CastContextHint::None, CostKind);
+    return ExtendCost + InsertCost + TruncCost;
+  }
+
+
   // In RVV, we could use vslidedown + vmv.x.s to extract element from vector
   // and vslideup + vmv.s.x to insert element to vector.
   unsigned BaseCost = 1;
@@ -1526,30 +1551,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
 
-  // Mask vector extract/insert element is different from normal case.
-  if (Val->getScalarSizeInBits() == 1) {
-    // For extractelement, we need the following instructions:
-    // vmv.v.i v8, 0
-    // vmerge.vim v8, v8, 1, v0
-    // vsetivli zero, 1, e8, m2, ta, mu (not count)
-    // vslidedown.vx v8, v8, a0
-    // vmv.x.s a0, v8
-
-    // For insertelement, we need the following instructions:
-    // vsetvli a2, zero, e8, m1, ta, mu (not count)
-    // vmv.s.x v8, a0
-    // vmv.v.i v9, 0
-    // vmerge.vim v9, v9, 1, v0
-    // addi a0, a1, 1
-    // vsetvli zero, a0, e8, m1, tu, mu (not count)
-    // vslideup.vx v9, v8, a1
-    // vsetvli a0, zero, e8, m1, ta, mu (not count)
-    // vand.vi v8, v9, 1
-    // vmsne.vi v0, v8, 0
-
-    // TODO: should we count these special vsetvlis?
-    BaseCost = Opcode == Instruction::InsertElement ? 5 : 3;
-  }
   // Extract i64 in the target that has XLEN=32 need more instruction.
   if (Val->getScalarType()->isIntegerTy() &&
       ST->getXLen() < Val->getScalarSizeInBits()) {
