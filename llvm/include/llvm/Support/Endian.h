@@ -22,13 +22,6 @@
 #include <type_traits>
 
 namespace llvm {
-
-enum class endianness {
-  big,
-  little,
-  native = llvm::sys::IsBigEndianHost ? big : little
-};
-
 namespace support {
 
 // TODO: Remove the following once we are done migrating to llvm::endianness,
