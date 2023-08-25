@@ -17,12 +17,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool> EnablePreLink("amdgpu-prelink",
   cl::desc("Enable pre-link mode optimizations"),
@@ -803,32 +805,19 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
          "fold_pow: encounter a wrong function call");
 
   Module *M = B.GetInsertBlock()->getModule();
-  ConstantFP *CF;
-  ConstantInt *CINT;
-  Type *eltType;
+  Type *eltType = FPOp->getType()->getScalarType();
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
-  ConstantAggregateZero *CZero = dyn_cast<ConstantAggregateZero>(opr1);
 
-  if (getVecSize(FInfo) == 1) {
-    eltType = opr0->getType();
-    CF = dyn_cast<ConstantFP>(opr1);
-    CINT = dyn_cast<ConstantInt>(opr1);
-  } else {
-    VectorType *VTy = dyn_cast<VectorType>(opr0->getType());
-    assert(VTy && "Oprand of vector function should be of vectortype");
-    eltType = VTy->getElementType();
-    ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1);
-
-    // Now, only Handle vector const whose elements have the same value.
-    CF = CDV ? dyn_cast_or_null<ConstantFP>(CDV->getSplatValue()) : nullptr;
-    CINT = CDV ? dyn_cast_or_null<ConstantInt>(CDV->getSplatValue()) : nullptr;
-  }
+  const APFloat *CF = nullptr;
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APFloatAllowUndef(CF)))
+    match(opr1, m_APIntAllowUndef(CINT));
 
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0) || CZero) {
+  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
     //  pow/powr/pown(x, 0) == 1
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
     Constant *cnval = ConstantFP::get(eltType, 1.0);
@@ -888,8 +877,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // Remember that ci_opr1 is set if opr1 is integral
   if (CF) {
     double dval = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                    ? (double)CF->getValueAPF().convertToFloat()
-                    : CF->getValueAPF().convertToDouble();
+                      ? (double)CF->convertToFloat()
+                      : CF->convertToDouble();
     int ival = (int)dval;
     if ((double)ival == dval) {
       ci_opr1 = ival;
@@ -947,12 +936,13 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   bool needcopysign = false;
   Constant *cnval = nullptr;
   if (getVecSize(FInfo) == 1) {
-    CF = dyn_cast<ConstantFP>(opr0);
+    CF = nullptr;
+    match(opr0, m_APFloatAllowUndef(CF));
 
     if (CF) {
       double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                   ? (double)CF->getValueAPF().convertToFloat()
-                   : CF->getValueAPF().convertToDouble();
+                     ? (double)CF->convertToFloat()
+                     : CF->convertToDouble();
 
       V = log2(std::abs(V));
       cnval = ConstantFP::get(eltType, V);
