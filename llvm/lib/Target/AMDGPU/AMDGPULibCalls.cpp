@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -694,7 +695,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
     }
-    case AMDGPULibFunc::EI_POW:
+    case AMDGPULibFunc::EI_POW: {
+      Module *M = Callee->getParent();
+      AMDGPULibFunc PowrInfo(AMDGPULibFunc::EI_POWR, FInfo);
+      FunctionCallee PowrFunc = getFunction(M, PowrInfo);
+
+      // pow(x, y) -> powr(x, y) for x >= -0.0
+      // TODO: Pass all arguments to cannotBeOrderedLessThanZero
+      if (PowrFunc && cannotBeOrderedLessThanZero(FPOp->getOperand(0),
+                                                  M->getDataLayout())) {
+        cast<CallInst>(FPOp)->setCalledFunction(PowrFunc);
+        return fold_pow(FPOp, B, PowrInfo) || true;
+      }
+
+      return fold_pow(FPOp, B, FInfo);
+    }
     case AMDGPULibFunc::EI_POWR:
     case AMDGPULibFunc::EI_POWN:
       return fold_pow(FPOp, B, FInfo);
