@@ -371,3 +371,11 @@ GUARD_CF_NOLONGJMP: -guard:cf,nolongjmp
 RUN: ld.lld -### foo.o -m i386pep --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 GUARD_LONGJMP_NO_CF: warning: parameter --guard-longjmp only takes effect when used with --guard-cf
+
+RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
+LTO_OPTS: -mllvm:-mcpu=x86-64 -mllvm:-emulated-tls
+
+Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
+
+RUN: ld.lld -### foo.o -m i386pep -plugin /usr/lib/gcc/x86_64-w64-mingw32/10-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/10-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM9d4fP.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
+RUN: ld.lld -### foo.o -m i386pep -plugin C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/liblto_plugin.dll -plugin-opt=C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/lto-wrapper.exe -plugin-opt=-fresolution=C:/msys64/tmp/cckbC7wB.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
