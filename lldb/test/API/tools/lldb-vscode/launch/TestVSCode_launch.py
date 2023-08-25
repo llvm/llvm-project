@@ -14,7 +14,6 @@ import os
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
-    @skipIfDarwin  # Flaky
     @skipIfRemote
     def test_default(self):
         """
@@ -423,10 +422,10 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfDarwin
     @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5540/steps/test/logs/stdio
+        archs=["arm", "aarch64"],
+        oslist=["linux"]
+    )
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
