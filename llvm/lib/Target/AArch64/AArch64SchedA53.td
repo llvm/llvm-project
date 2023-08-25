@@ -83,16 +83,16 @@ def : WriteRes<WriteLDHi, [A53UnitLdSt]> { let Latency = 4; }
 //               May model this more carefully in the future. The remaining
 //               A53WriteVLD# types represent the 1-5 cycle issues explicitly.
 def : WriteRes<WriteVLD, [A53UnitLdSt]> { let Latency = 6;
-                                          let ReleaseAtCycles = [3]; }
+                                          let ResourceCycles = [3]; }
 def A53WriteVLD1 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 4; }
 def A53WriteVLD2 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
+                                                  let ResourceCycles = [2]; }
 def A53WriteVLD3 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
+                                                  let ResourceCycles = [3]; }
 def A53WriteVLD4 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 7;
-                                                  let ReleaseAtCycles = [4]; }
+                                                  let ResourceCycles = [4]; }
 def A53WriteVLD5 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 8;
-                                                  let ReleaseAtCycles = [5]; }
+                                                  let ResourceCycles = [5]; }
 
 // Pre/Post Indexing - Performed as part of address generation which is already
 //                     accounted for in the WriteST* latencies below
@@ -106,12 +106,12 @@ def : WriteRes<WriteSTX, [A53UnitLdSt]> { let Latency = 4; }
 
 // Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
 def : WriteRes<WriteVST, [A53UnitLdSt]> { let Latency = 5;
-                                          let ReleaseAtCycles = [2];}
+                                          let ResourceCycles = [2];}
 def A53WriteVST1 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 4; }
 def A53WriteVST2 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
+                                                  let ResourceCycles = [2]; }
 def A53WriteVST3 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
+                                                  let ResourceCycles = [3]; }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
@@ -134,16 +134,16 @@ def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
 def : WriteRes<WriteFDiv, [A53UnitFPMDS]> { let Latency = 33;
-                                            let ReleaseAtCycles = [29]; }
+                                            let ResourceCycles = [29]; }
 def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10; }
 def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 18;
-                                                     let ReleaseAtCycles = [14]; }
+                                                     let ResourceCycles = [14]; }
 def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 33;
-                                                     let ReleaseAtCycles = [29]; }
+                                                     let ResourceCycles = [29]; }
 def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 17;
-                                                      let ReleaseAtCycles = [13]; }
+                                                      let ResourceCycles = [13]; }
 def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 32;
-                                                      let ReleaseAtCycles = [28]; }
+                                                      let ResourceCycles = [28]; }
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.

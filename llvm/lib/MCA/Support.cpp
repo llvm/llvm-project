@@ -21,7 +21,7 @@ namespace mca {
 
 #define DEBUG_TYPE "llvm-mca"
 
-ReleaseAtCycles &ReleaseAtCycles::operator+=(const ReleaseAtCycles &RHS) {
+ResourceCycles &ResourceCycles::operator+=(const ResourceCycles &RHS) {
   if (Denominator == RHS.Denominator)
     Numerator += RHS.Numerator;
   else {
@@ -92,18 +92,18 @@ double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
   // The number of available resource units affects the resource pressure
   // distribution, as well as how many blocks can be executed every cycle.
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    unsigned ReleaseAtCycles = ProcResourceUsage[I];
-    if (!ReleaseAtCycles)
+    unsigned ResourceCycles = ProcResourceUsage[I];
+    if (!ResourceCycles)
       continue;
 
     const MCProcResourceDesc &MCDesc = *SM.getProcResource(I);
-    double Throughput = static_cast<double>(ReleaseAtCycles) / MCDesc.NumUnits;
+    double Throughput = static_cast<double>(ResourceCycles) / MCDesc.NumUnits;
     Max = std::max(Max, Throughput);
   }
 
   // The block reciprocal throughput is computed as the MAX of:
   //  - (NumMicroOps / DispatchWidth)
-  //  - (NumUnits / ReleaseAtCycles)   for every consumed processor resource.
+  //  - (NumUnits / ResourceCycles)   for every consumed processor resource.
   return Max;
 }
 
