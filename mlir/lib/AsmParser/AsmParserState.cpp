@@ -290,7 +290,7 @@ void AsmParserState::addAttrAliasDefinition(StringRef name, SMRange location) {
 }
 
 void AsmParserState::addTypeAliasDefinition(StringRef name, SMRange location) {
-  auto [it, inserted] =
+  [[maybe_unused]] auto [it, inserted] =
       impl->typeAliasToIdx.try_emplace(name, impl->typeAliases.size());
   assert(inserted && "unexpected attribute alias redefinition");
   impl->typeAliases.push_back(
