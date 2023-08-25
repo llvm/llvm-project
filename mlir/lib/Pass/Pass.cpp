@@ -426,7 +426,7 @@ LogicalResult OpPassManager::initialize(MLIRContext *context,
 }
 
 llvm::hash_code OpPassManager::hash() {
-  llvm::hash_code hashCode;
+  llvm::hash_code hashCode{};
   for (Pass &pass : getPasses()) {
     // If this pass isn't an adaptor, directly hash it.
     auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
