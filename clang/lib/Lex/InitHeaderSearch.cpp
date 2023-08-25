@@ -232,7 +232,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
     case llvm::Triple::CloudABI:
-    case llvm::Triple::NaCl:
     case llvm::Triple::ELFIAMCU:
       break;
     case llvm::Triple::Win32:
@@ -298,7 +297,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   switch (os) {
   case llvm::Triple::CloudABI:
   case llvm::Triple::RTEMS:
-  case llvm::Triple::NaCl:
   case llvm::Triple::ELFIAMCU:
     break;
   default:
@@ -343,6 +341,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::AIX:
   case llvm::Triple::Emscripten:
   case llvm::Triple::FreeBSD:
+  case llvm::Triple::NaCl:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
   case llvm::Triple::PS4:
