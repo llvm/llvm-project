@@ -458,6 +458,16 @@ uint64_t __lseek(uint64_t fd, uint64_t pos, uint64_t whence) {
   return ret;
 }
 
+int __ftruncate(uint64_t fd, uint64_t length) {
+  int ret;
+  __asm__ __volatile__("movq $77, %%rax\n"
+                       "syscall\n"
+                       : "=a"(ret)
+                       : "D"(fd), "S"(length)
+                       : "cc", "rcx", "r11", "memory");
+  return ret;
+}
+
 int __close(uint64_t fd) {
   uint64_t ret;
   __asm__ __volatile__("movq $3, %%rax\n"
