@@ -36,7 +36,6 @@
 #include "ToolChains/MSVC.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
-#include "ToolChains/Myriad.h"
 #include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OHOS.h"
@@ -6325,10 +6324,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
       default:
-        if (Target.getVendor() == llvm::Triple::Myriad)
-          TC = std::make_unique<toolchains::MyriadToolChain>(*this, Target,
-                                                              Args);
-        else if (toolchains::BareMetal::handlesTarget(Target))
+        if (toolchains::BareMetal::handlesTarget(Target))
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = std::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
