@@ -228,6 +228,12 @@ add_header_library(
 )
 
 add_header_library(
+  triple_double
+  HDRS
+    triple_double.h
+)
+
+add_header_library(
   dyadic_float
   HDRS
     dyadic_float.h
