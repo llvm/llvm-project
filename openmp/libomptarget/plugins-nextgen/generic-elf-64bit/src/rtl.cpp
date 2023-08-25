@@ -131,6 +131,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Deinitialize the device, which is a no-op
   Error deinitImpl() override { return Plugin::success(); }
 
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override { return "generic-64bit"; }
+
   /// Construct the kernel for a specific image on the device.
   Expected<GenericKernelTy &>
   constructKernel(const __tgt_offload_entry &KernelEntry,
