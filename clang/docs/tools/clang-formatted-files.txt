@@ -402,7 +402,6 @@ clang/lib/Driver/ToolChains/AVR.cpp
 clang/lib/Driver/ToolChains/AVR.h
 clang/lib/Driver/ToolChains/CloudABI.cpp
 clang/lib/Driver/ToolChains/CommonArgs.h
-clang/lib/Driver/ToolChains/Contiki.cpp
 clang/lib/Driver/ToolChains/CrossWindows.h
 clang/lib/Driver/ToolChains/DragonFly.h
 clang/lib/Driver/ToolChains/FreeBSD.cpp
@@ -416,7 +415,6 @@ clang/lib/Driver/ToolChains/Hurd.cpp
 clang/lib/Driver/ToolChains/Hurd.h
 clang/lib/Driver/ToolChains/InterfaceStubs.cpp
 clang/lib/Driver/ToolChains/InterfaceStubs.h
-clang/lib/Driver/ToolChains/Minix.h
 clang/lib/Driver/ToolChains/MipsLinux.cpp
 clang/lib/Driver/ToolChains/MSP430.h
 clang/lib/Driver/ToolChains/PPCFreeBSD.cpp

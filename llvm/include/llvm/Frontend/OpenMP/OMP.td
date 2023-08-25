@@ -1979,6 +1979,15 @@ def OMP_BeginAssumes : Directive<"begin assumes"> {}
 def OMP_EndAssumes : Directive<"end assumes"> {}
 def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {}
 def OMP_EndDeclareVariant : Directive<"end declare variant"> {}
+def OMP_scope : Directive<"scope"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Private, 51>,
+    VersionedClause<OMPC_Reduction, 51>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait, 51>
+  ];
+}
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,

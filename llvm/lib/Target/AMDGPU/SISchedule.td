@@ -157,13 +157,13 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<Write4PassDGEMM,    4>;
   def : HWVALUWriteRes<Write8PassDGEMM,   16>;
 
-  let ResourceCycles = [2] in
+  let ReleaseAtCycles = [2] in
   def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
-  let ResourceCycles = [4] in
+  let ReleaseAtCycles = [4] in
   def : HWWriteRes<Write4PassMAI,  [HWXDL], 4>;
-  let ResourceCycles = [8] in
+  let ReleaseAtCycles = [8] in
   def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
-  let ResourceCycles = [16] in
+  let ReleaseAtCycles = [16] in
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
   } // End RetireOOO = 1
 

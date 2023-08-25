@@ -10325,7 +10325,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     return NewFD;
   }
 
-  if (getLangOpts().OpenCL) {
+  if (getLangOpts().OpenCL || getLangOpts().HLSL) {
+    // Neither OpenCL nor HLSL allow an address space qualifyer on a return
+    // type.
+    //
     // OpenCL v1.1 s6.5: Using an address space qualifier in a function return
     // type declaration will generate a compilation error.
     LangAS AddressSpace = NewFD->getReturnType().getAddressSpace();
@@ -10359,13 +10362,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                 NewFD->getBeginLoc()));
         }
       }
-    }
-    // HLSL does not support specifying an address space on a function return
-    // type.
-    LangAS AddressSpace = NewFD->getReturnType().getAddressSpace();
-    if (AddressSpace != LangAS::Default) {
-      Diag(NewFD->getLocation(), diag::err_return_value_with_address_space);
-      NewFD->setInvalidDecl();
     }
   }
 

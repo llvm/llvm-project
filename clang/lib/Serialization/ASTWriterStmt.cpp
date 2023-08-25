@@ -2308,6 +2308,12 @@ void ASTStmtWriter::VisitOMPSectionDirective(OMPSectionDirective *D) {
   Code = serialization::STMT_OMP_SECTION_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPScopeDirective(OMPScopeDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_SCOPE_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPSingleDirective(OMPSingleDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
