@@ -3,31 +3,25 @@
 //
 // Record performance data with no args. Run test with 2 args.
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
-int foo()
-{
-  return 0;
-}
+int foo() { return 0; }
 
 void bar(int a) {
   if (a > 2 && a % 2)
     throw new int();
 }
 
-void filter_only(){
-  foo();
-}
+void filter_only() { foo(); }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   unsigned r = 0;
 
   uint64_t limit = (argc >= 2 ? 10 : 5000);
   for (uint64_t i = 0; i < limit; ++i) {
     i += foo();
-    try  {
+    try {
       bar(argc);
       try {
         if (argc >= 2)
