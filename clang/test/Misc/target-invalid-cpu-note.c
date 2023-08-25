@@ -49,7 +49,7 @@
 
 // RUN: not %clang_cc1 -triple sparc--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix SPARC
 // SPARC: error: unknown target CPU 'not-a-cpu'
-// SPARC-NEXT: note: valid target CPU values are: v8, supersparc, sparclite, f934, hypersparc, sparclite86x, sparclet, tsc701, v9, ultrasparc, ultrasparc3, niagara, niagara2, niagara3, niagara4, ma2100, ma2150, ma2155, ma2450, ma2455, ma2x5x, ma2080, ma2085, ma2480, ma2485, ma2x8x, myriad2, myriad2.1, myriad2.2, myriad2.3, leon2, at697e, at697f, leon3, ut699, gr712rc, leon4, gr740{{$}}
+// SPARC-NEXT: note: valid target CPU values are: v8, supersparc, sparclite, f934, hypersparc, sparclite86x, sparclet, tsc701, v9, ultrasparc, ultrasparc3, niagara, niagara2, niagara3, niagara4, ma2100, ma2150, ma2155, ma2450, ma2455, ma2x5x, ma2080, ma2085, ma2480, ma2485, ma2x8x, leon2, at697e, at697f, leon3, ut699, gr712rc, leon4, gr740{{$}}
 
 // RUN: not %clang_cc1 -triple sparcv9--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix SPARCV9
 // SPARCV9: error: unknown target CPU 'not-a-cpu'
