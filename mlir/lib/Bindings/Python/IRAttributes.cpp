@@ -389,12 +389,10 @@ public:
         },
         py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued float point attribute associated to a f64 type");
-    c.def_property_readonly(
-        "value",
-        [](PyFloatAttribute &self) {
-          return mlirFloatAttrGetValueDouble(self);
-        },
-        "Returns the value of the float point attribute");
+    c.def_property_readonly("value", mlirFloatAttrGetValueDouble,
+                            "Returns the value of the float attribute");
+    c.def("__float__", mlirFloatAttrGetValueDouble,
+          "Converts the value of the float attribute to a Python float");
   }
 };
 
@@ -414,21 +412,24 @@ public:
         },
         py::arg("type"), py::arg("value"),
         "Gets an uniqued integer attribute associated to a type");
-    c.def_property_readonly(
-        "value",
-        [](PyIntegerAttribute &self) -> py::int_ {
-          MlirType type = mlirAttributeGetType(self);
-          if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
-            return mlirIntegerAttrGetValueInt(self);
-          if (mlirIntegerTypeIsSigned(type))
-            return mlirIntegerAttrGetValueSInt(self);
-          return mlirIntegerAttrGetValueUInt(self);
-        },
-        "Returns the value of the integer attribute");
+    c.def_property_readonly("value", toPyInt,
+                            "Returns the value of the integer attribute");
+    c.def("__int__", toPyInt,
+          "Converts the value of the integer attribute to a Python int");
     c.def_property_readonly_static("static_typeid",
                                    [](py::object & /*class*/) -> MlirTypeID {
                                      return mlirIntegerAttrGetTypeID();
                                    });
+  }
+
+private:
+  static py::int_ toPyInt(PyIntegerAttribute &self) {
+    MlirType type = mlirAttributeGetType(self);
+    if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+      return mlirIntegerAttrGetValueInt(self);
+    if (mlirIntegerTypeIsSigned(type))
+      return mlirIntegerAttrGetValueSInt(self);
+    return mlirIntegerAttrGetValueUInt(self);
   }
 };
 
@@ -448,10 +449,10 @@ public:
         },
         py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued bool attribute");
-    c.def_property_readonly(
-        "value",
-        [](PyBoolAttribute &self) { return mlirBoolAttrGetValue(self); },
-        "Returns the value of the bool attribute");
+    c.def_property_readonly("value", mlirBoolAttrGetValue,
+                            "Returns the value of the bool attribute");
+    c.def("__bool__", mlirBoolAttrGetValue,
+          "Converts the value of the bool attribute to a Python bool");
   }
 };
 
@@ -595,13 +596,8 @@ public:
         },
         py::arg("type"), py::arg("value"),
         "Gets a uniqued string attribute associated to a type");
-    c.def_property_readonly(
-        "value",
-        [](PyStringAttribute &self) {
-          MlirStringRef stringRef = mlirStringAttrGetValue(self);
-          return py::str(stringRef.data, stringRef.length);
-        },
-        "Returns the value of the string attribute");
+    c.def_property_readonly("value", toPyStr,
+                            "Returns the value of the string attribute");
     c.def_property_readonly(
         "value_bytes",
         [](PyStringAttribute &self) {
@@ -609,6 +605,14 @@ public:
           return py::bytes(stringRef.data, stringRef.length);
         },
         "Returns the value of the string attribute as `bytes`");
+    c.def("__str__", toPyStr,
+          "Converts the value of the string attribute to a Python str");
+  }
+
+private:
+  static py::str toPyStr(PyStringAttribute &self) {
+    MlirStringRef stringRef = mlirStringAttrGetValue(self);
+    return py::str(stringRef.data, stringRef.length);
   }
 };
 
