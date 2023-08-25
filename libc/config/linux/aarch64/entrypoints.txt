@@ -424,6 +424,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
+    libc.src.stdlib.abort
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
@@ -476,6 +477,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.time
 
     # unistd.h entrypoints
+    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.environ
     libc.src.unistd.execv
     libc.src.unistd.getopt
