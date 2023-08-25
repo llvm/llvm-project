@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstddef>
 
@@ -94,6 +95,32 @@ public:
     SmallVector<SMDefinition> arguments;
   };
 
+  /// This class represents the information for an attribute alias definition
+  /// within the input file.
+  struct AttributeAliasDefinition {
+    AttributeAliasDefinition(StringRef name, SMRange loc = {})
+        : name(name), definition(loc) {}
+
+    /// The name of the attribute alias.
+    StringRef name;
+
+    /// The source location for the alias.
+    SMDefinition definition;
+  };
+
+  /// This class represents the information for type definition within the input
+  /// file.
+  struct TypeAliasDefinition {
+    TypeAliasDefinition(StringRef name, SMRange loc)
+        : name(name), definition(loc) {}
+
+    /// The name of the attribute alias.
+    StringRef name;
+
+    /// The source location for the alias.
+    SMDefinition definition;
+  };
+
   AsmParserState();
   ~AsmParserState();
   AsmParserState &operator=(AsmParserState &&other);
@@ -154,10 +181,14 @@ public:
   /// Add a definition of the given entity.
   void addDefinition(Block *block, SMLoc location);
   void addDefinition(BlockArgument blockArg, SMLoc location);
+  void addAttrAliasDefinition(StringRef name, SMRange location);
+  void addTypeAliasDefinition(StringRef name, SMRange location);
 
   /// Add a source uses of the given value.
   void addUses(Value value, ArrayRef<SMLoc> locations);
   void addUses(Block *block, ArrayRef<SMLoc> locations);
+  void addAttrAliasUses(StringRef name, SMRange locations);
+  void addTypeAliasUses(StringRef name, SMRange locations);
 
   /// Add source uses for all the references nested under `refAttr`. The
   /// provided `locations` should match 1-1 with the number of references in
