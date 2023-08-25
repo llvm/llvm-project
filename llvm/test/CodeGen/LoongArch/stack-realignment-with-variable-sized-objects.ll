@@ -22,8 +22,7 @@ define void @caller(i32 %n) {
 ; LA32-NEXT:    bstrins.w $sp, $zero, 5, 0
 ; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    addi.w $a1, $s8, 0
