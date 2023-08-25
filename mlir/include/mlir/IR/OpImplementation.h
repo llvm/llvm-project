@@ -715,18 +715,20 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// This class represents a StringSwitch like class that is useful for parsing
-  /// expected keywords. On construction, it invokes `parseKeyword` and
-  /// processes each of the provided cases statements until a match is hit. The
-  /// provided `ResultT` must be assignable from `failure()`.
+  /// expected keywords. On construction, unless a non-empty keyword is
+  /// provided, it invokes `parseKeyword` and processes each of the provided
+  /// cases statements until a match is hit. The provided `ResultT` must be
+  /// assignable from `failure()`.
   template <typename ResultT = ParseResult>
   class KeywordSwitch {
   public:
-    KeywordSwitch(AsmParser &parser)
+    KeywordSwitch(AsmParser &parser, StringRef *keyword = nullptr)
         : parser(parser), loc(parser.getCurrentLocation()) {
-      if (failed(parser.parseKeywordOrCompletion(&keyword)))
+      if (keyword && !keyword->empty())
+        this->keyword = *keyword;
+      else if (failed(parser.parseKeywordOrCompletion(&this->keyword)))
         result = failure();
     }
-
     /// Case that uses the provided value when true.
     KeywordSwitch &Case(StringLiteral str, ResultT value) {
       return Case(str, [&](StringRef, SMLoc) { return std::move(value); });
