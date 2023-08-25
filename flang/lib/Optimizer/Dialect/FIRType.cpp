@@ -531,6 +531,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
       name << "ptr_";
       ty = ptrTy.getEleTy();
+    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
+      name << "llvmptr_";
+      ty = ptrTy.getEleTy();
     } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
       name << "heap_";
       ty = heapTy.getEleTy();
