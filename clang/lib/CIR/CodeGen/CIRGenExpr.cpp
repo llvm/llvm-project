@@ -135,8 +135,21 @@ static Address buildPointerWithAlignment(const Expr *E,
         if (BaseInfo)
           *BaseInfo = InnerBaseInfo;
 
-        if (isa<ExplicitCastExpr>(CE)) {
-          llvm_unreachable("NYI");
+        if (isa<ExplicitCastExpr>(CE)) {          
+          assert(!UnimplementedFeature::tbaa());          
+          LValueBaseInfo TargetTypeBaseInfo;
+
+          CharUnits Align = CGF.CGM.getNaturalPointeeTypeAlignment(
+              E->getType(), &TargetTypeBaseInfo);
+
+          // If the source l-value is opaque, honor the alignment of the
+          // casted-to type.
+          if (InnerBaseInfo.getAlignmentSource() != AlignmentSource::Decl) {
+            if (BaseInfo)
+              BaseInfo->mergeForCast(TargetTypeBaseInfo);
+            Addr = Address(Addr.getPointer(), Addr.getElementType(), Align,
+                           IsKnownNonNull);
+          }
         }
 
         if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast) &&
@@ -187,7 +200,7 @@ static Address buildPointerWithAlignment(const Expr *E,
       LValue LV = CGF.buildLValue(UO->getSubExpr());
       if (BaseInfo)
         *BaseInfo = LV.getBaseInfo();
-      assert(UnimplementedFeature::tbaa());
+      assert(!UnimplementedFeature::tbaa());
       return LV.getAddress();
     }
   }
