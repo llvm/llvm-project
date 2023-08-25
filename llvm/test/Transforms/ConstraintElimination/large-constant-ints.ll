@@ -283,16 +283,26 @@ else:
 }
 
 define i1 @mul_nsw_decomp(i128 %x) {
-    %val = mul nsw i128 %x, 9223372036854775808
-    %cmp = icmp sgt i128 %x, %val
-    br i1 %cmp, label %then, label %else
+; CHECK-LABEL: @mul_nsw_decomp(
+; CHECK-NEXT:    [[VAL:%.*]] = mul nsw i128 [[X:%.*]], 9223372036854775808
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i128 [[X]], [[VAL]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i128 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %val = mul nsw i128 %x, 9223372036854775808
+  %cmp = icmp sgt i128 %x, %val
+  br i1 %cmp, label %then, label %else
 
 then:
-    %cmp2 = icmp sgt i128 %x, 0
-    ret i1 %cmp2
+  %cmp2 = icmp sgt i128 %x, 0
+  ret i1 %cmp2
 
 else:
-    ret i1 false
+  ret i1 false
 }
 
 define i1 @add_nuw_decomp_recursive() {
