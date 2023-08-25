@@ -358,13 +358,6 @@ void Writer::layoutMemory() {
       memoryPtr = config->globalBase;
     }
   } else {
-    if (!config->globalBase && !config->relocatable && !config->isPic) {
-      // The default offset for static/global data, for when --global-base is
-      // not specified on the command line.  The precise value of 1024 is
-      // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
-      // emscripten used prior to wasm-ld).
-      config->globalBase = 1024;
-    }
     memoryPtr = config->globalBase;
   }
 
@@ -1685,7 +1678,6 @@ void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
   if (!config->isPic) {
-    config->tableBase = 1;
     if (WasmSym::definedTableBase)
       WasmSym::definedTableBase->setVA(config->tableBase);
     if (WasmSym::definedTableBase32)
