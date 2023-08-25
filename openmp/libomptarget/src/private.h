@@ -431,11 +431,13 @@ public:
   llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
 #define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                     \
   SourceInfo SI(IDENT);                                                        \
-  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation() + RegionTypeMsg)
+  std::string ProfileLocation = SI.getProfileLocation();                       \
+  std::string RTM = RegionTypeMsg;                                             \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, ProfileLocation + RTM)
 #else
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
-#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                                    \
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                                    
 
 #endif
