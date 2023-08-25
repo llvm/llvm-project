@@ -23126,6 +23126,46 @@ Examples:
       %t = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
+'``llvm.vp.is.fpclass.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f32(<vscale x 2 x float> <op>, i32 <test>, <vscale x 2 x i1> <mask>, i32 <vector_length>)
+      declare <2 x i1> @llvm.vp.is.fpclass.v2f16(<2 x half> <op>, i32 <test>, <2 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated llvm.is.fpclass :ref:`llvm.is.fpclass <llvm.is.fpclass>`
+
+Arguments:
+""""""""""
+
+The first operand is a floating-point vector, the result type is a vector of
+boolean with the same number of elements as the first argument.  The second
+operand specifies, which tests to perform :ref:`llvm.is.fpclass <llvm.is.fpclass>`.
+The third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.is.fpclass``' intrinsic performs llvm.is.fpclass (:ref:`llvm.is.fpclass <llvm.is.fpclass>`).
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <2 x i1> @llvm.vp.is.fpclass.v2f16(<2 x half> %x, i32 3, <2 x i1> %m, i32 %evl)
+      %t = call <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f16(<vscale x 2 x half> %x, i32 3, <vscale x 2 x i1> %m, i32 %evl)
 
 .. _int_mload_mstore:
 
