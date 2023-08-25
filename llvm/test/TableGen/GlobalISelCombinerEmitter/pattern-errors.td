@@ -133,7 +133,7 @@ def no_redef_in_apply_multidefroot : GICombineRule<
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: cannot use wip_match_opcode in combination with apply instruction patterns
 def instpat_with_wipmatch : GICombineRule<
-  (defs root:$a),
+  (defs root:$d),
   (match (wip_match_opcode COPY):$d),
   (apply (COPY $x, $b):$d)>;
 
