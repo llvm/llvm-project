@@ -2543,7 +2543,7 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
 
   // Register this alias with the parser state.
   if (state.asmState)
-    state.asmState->addAttrAliasDefinition(aliasName, location);
+    state.asmState->addAttrAliasDefinition(aliasName, location, attr);
   state.symbols.attributeAliasDefinitions[aliasName] = attr;
   return success();
 }
@@ -2575,7 +2575,7 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
 
   // Register this alias with the parser state.
   if (state.asmState)
-    state.asmState->addTypeAliasDefinition(aliasName, location);
+    state.asmState->addTypeAliasDefinition(aliasName, location, aliasedType);
   state.symbols.typeAliasDefinitions.try_emplace(aliasName, aliasedType);
   return success();
 }
