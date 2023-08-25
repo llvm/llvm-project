@@ -28,3 +28,9 @@ func.func @genx_special_regs() -> i32 {
   %11 = genx.grid.dim.z : i32
   llvm.return %0 : i32
 }
+
+func.func @genx.barrier() {
+  // CHECK: genx.barrier
+  genx.barrier
+  llvm.return
+}

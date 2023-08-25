@@ -17,4 +17,6 @@ include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/GPU/IR/GPUOps.td"
 include "mlir/Dialect/LLVMIR/GENXOps.td"
 
+def : Pat<(GPU_BarrierOp), (GENX_BarrierOp)>;
+
 #endif // MLIR_CONVERSION_GPUTOGENX_TD

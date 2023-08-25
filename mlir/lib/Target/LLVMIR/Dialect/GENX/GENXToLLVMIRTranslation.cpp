@@ -25,22 +25,19 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
-// Create a call to GENX Device function
-// Currently this routine will work only for calling GENX functions that
-// take a single int32 argument.
+// Create a call to SPIR device function.
 static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
-                                             StringRef fnName, int parameter) {
+                                             StringRef fnName,
+                                             llvm::Type *retType,
+                                             ArrayRef<llvm::Type *> argTypes,
+                                             ArrayRef<llvm::Value *> args) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::FunctionType *functionType = llvm::FunctionType::get(
-      llvm::Type::getInt64Ty(module->getContext()), // return type.
-      llvm::Type::getInt32Ty(module->getContext()), // parameter type.
-      false);                                       // no variadic arguments.
-  llvm::Function *fn = dyn_cast<llvm::Function>(
+  auto *functionType =
+      llvm::FunctionType::get(retType, argTypes, /*isVarArg*/ false);
+  auto *fn = dyn_cast<llvm::Function>(
       module->getOrInsertFunction(fnName, functionType).getCallee());
   fn->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-  llvm::Value *fnOp0 = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(module->getContext()), parameter);
-  return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
+  return builder.CreateCall(fn, args);
 }
 
 namespace {

@@ -29,3 +29,9 @@ llvm.func @genx_special_regs() -> i64 {
 
   llvm.return %1 : i64
 }
+
+llvm.func @genx.barrier() {
+  // CHECK: call void @_Z7barrierj(i32 3)
+  genx.barrier
+  llvm.return
+}

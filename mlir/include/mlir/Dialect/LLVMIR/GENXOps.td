@@ -75,33 +75,17 @@ class GENX_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<GENX_Dialect, mnemonic, traits> {
 }
 
-//===----------------------------------------------------------------------===//
-// GENX intrinsic operations
-//===----------------------------------------------------------------------===//
+class GENX_DeviceFunctionOp<string mnemonic, string fnName, 
+                            int arg, list<Trait> traits = []> 
+  : GENX_Op<mnemonic, !listconcat(traits, [Pure])>, 
+    Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
+  string llvmBuilder = ""
+    # "  llvm::Type *retType = builder.getInt64Ty();\n"
+    # "  llvm::Type *argType = builder.getInt32Ty();\n"
+    # "  llvm::Value *arg = llvm::ConstantInt::get(argType, " # arg # ");\n"
+    # "  $res = createDeviceFunctionCall(builder, \"" # fnName # "\",\n"
+    # "                             retType, { argType }, { arg });";
 
-class GENX_IntrOp<string mnem, list<Trait> traits,
-                  int numResults>
-  : LLVM_IntrOpBase<GENX_Dialect, mnem, "genx_" # !subst(".", "_", mnem),
-                    /*list<int> overloadedResults=*/[],
-                    /*list<int> overloadedOperands=*/[],
-                    traits, numResults>;
-
-//===----------------------------------------------------------------------===//
-// GENX special register op definitions
-//===----------------------------------------------------------------------===//
-
-class GENX_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
-  GENX_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
-  let arguments = (ins);
-  let assemblyFormat = "attr-dict `:` type($res)";
-}
-
-class GENX_DeviceFunctionOp<string mnemonic, string device_function,
-                            int parameter, list<Trait> traits = []> :
-  GENX_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
-  # device_function # "\", " # parameter # ");";
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
@@ -122,24 +106,42 @@ def GENX_BlockIdZOp : GENX_DeviceFunctionOp<"workgroup.id.z",
                         "_Z12get_group_idj", 2>;
 
 //===----------------------------------------------------------------------===//
-// Thread range and Block range
+// Block and Grid range
 
 def GENX_BlockDimXOp : GENX_DeviceFunctionOp<"workgroup.dim.x",
                         "_Z12get_local_sizej", 0>;
-
 def GENX_BlockDimYOp : GENX_DeviceFunctionOp<"workgroup.dim.y",
                         "_Z12get_local_sizej", 1>;
-
 def GENX_BlockDimZOp : GENX_DeviceFunctionOp<"workgroup.dim.z",
                         "_Z12get_local_sizej", 2>;
-
 def GENX_GridDimXOp : GENX_DeviceFunctionOp<"grid.dim.x",
                         "_Z12get_global_sizej", 0>;
-
 def GENX_GridDimYOp : GENX_DeviceFunctionOp<"grid.dim.y",
                         "_Z12get_global_sizej", 1>;
-
 def GENX_GridDimZOp : GENX_DeviceFunctionOp<"grid.dim.z",
                         "_Z12get_global_sizej", 2>;
+
+//===----------------------------------------------------------------------===//
+// Synchronization
+//===----------------------------------------------------------------------===//
+
+def GENX_BarrierOp : GENX_Op<"barrier"> {
+  let summary = "Workgroup barrier";
+
+  string baseDescription = [{
+    The `genx.barrier` operation performs a workgroup barrier and ensures all 
+    outstanding memory transaction using local or global memory are complete.
+  }];
+
+  string llvmBuilder = [{
+    llvm::Type *retType = builder.getVoidTy();
+    llvm::Type *argType = builder.getInt32Ty();
+    int memFence = 3; // local + global memory fence
+    llvm::Value *arg = llvm::ConstantInt::get(argType, memFence);
+    createDeviceFunctionCall(builder, "_Z7barrierj", retType, {argType}, {arg});
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
 
 #endif // GENXIR_OPS
