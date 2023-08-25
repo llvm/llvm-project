@@ -16,9 +16,9 @@ RUN:   --print-only=main 2>&1 | FileCheck %s
 ## All calls to printf() should be from exception handling code that was
 ## recorded as cold during the profile collection run. Check that the calls
 ## are placed after the split point.
-CHECK-NOT: callq printf
+CHECK-NOT: printf
 CHECK: HOT-COLD SPLIT POINT
-CHECK:     callq printf
+CHECK:     printf
 
 ## Verify the output still executes correctly when the exception path is being
 ## taken.
