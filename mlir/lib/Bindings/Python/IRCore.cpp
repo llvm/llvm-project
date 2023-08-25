@@ -1675,28 +1675,28 @@ py::object PyOpView::buildGeneric(
     } else {
       attributes = py::dict();
     }
-    if (attributes->contains("result_segment_sizes") ||
-        attributes->contains("operand_segment_sizes")) {
-      throw py::value_error("Manually setting a 'result_segment_sizes' or "
-                            "'operand_segment_sizes' attribute is unsupported. "
+    if (attributes->contains("resultSegmentSizes") ||
+        attributes->contains("operandSegmentSizes")) {
+      throw py::value_error("Manually setting a 'resultSegmentSizes' or "
+                            "'operandSegmentSizes' attribute is unsupported. "
                             "Use Operation.create for such low-level access.");
     }
 
-    // Add result_segment_sizes attribute.
+    // Add resultSegmentSizes attribute.
     if (!resultSegmentLengths.empty()) {
       MlirAttribute segmentLengthAttr =
           mlirDenseI32ArrayGet(context->get(), resultSegmentLengths.size(),
                                resultSegmentLengths.data());
-      (*attributes)["result_segment_sizes"] =
+      (*attributes)["resultSegmentSizes"] =
           PyAttribute(context, segmentLengthAttr);
     }
 
-    // Add operand_segment_sizes attribute.
+    // Add operandSegmentSizes attribute.
     if (!operandSegmentLengths.empty()) {
       MlirAttribute segmentLengthAttr =
           mlirDenseI32ArrayGet(context->get(), operandSegmentLengths.size(),
                                operandSegmentLengths.data());
-      (*attributes)["operand_segment_sizes"] =
+      (*attributes)["operandSegmentSizes"] =
           PyAttribute(context, segmentLengthAttr);
     }
   }
