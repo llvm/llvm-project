@@ -1,6 +1,5 @@
 /// For -fprofile-instr-generate and -fprofile-arcs, increment counters atomically
-/// if -fprofile-update={atomic,prefer-atomic} or -fsanitize=thread is specified.
-// RUN: %clang -### %s -c -target x86_64-linux -fsanitize=thread %s 2>&1 | FileCheck %s
+/// if -fprofile-update={atomic,prefer-atomic} is specified.
 // RUN: %clang -### %s -c -fprofile-update=atomic 2>&1 | FileCheck %s
 // RUN: %clang -### %s -c -fprofile-update=prefer-atomic 2>&1 | FileCheck %s
 
