@@ -779,7 +779,8 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   // If this variable location does not depend on any instructions or contains
   // any stack locations, produce it as a standard debug value instead.
   if (any_of(SD->getLocationOps(), IsInvalidOp) ||
-      all_of(SD->getLocationOps(), IsNonInstrRefOp)) {
+      all_of(SD->getLocationOps(), IsNonInstrRefOp) ||
+      Expr->isEntryValue()) {
     if (SD->isVariadic())
       return EmitDbgValueList(SD, VRBaseMap);
     return EmitDbgValueFromSingleOp(SD, VRBaseMap);
