@@ -19,6 +19,7 @@ add_clang_library(clangTidyCIRModule
   clangFrontend
   clangSerialization
   clangTidy
+  clangTidyUtils
   ${dialect_libs}
   MLIRCIR
   MLIRCIRTransforms
