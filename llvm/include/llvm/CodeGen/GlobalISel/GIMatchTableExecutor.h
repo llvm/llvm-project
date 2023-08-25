@@ -258,6 +258,13 @@ enum {
   GIM_CheckIsSameOperand,
   GIM_CheckIsSameOperandIgnoreCopies,
 
+  /// Check we can replace all uses of a register with another.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - NewInsnID
+  /// - NewOpIdx
+  GIM_CheckCanReplaceReg,
+
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
@@ -430,6 +437,20 @@ enum {
   /// - TempRegID - The temporary register ID to initialize.
   /// - Expected type
   GIR_MakeTempReg,
+
+  /// Replaces all references to a register from an instruction
+  /// with another register from another instruction.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - NewInsnID
+  /// - NewOpIdx
+  GIR_ReplaceReg,
+
+  /// Replaces all references to a register with a temporary register.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - TempRegIdx
+  GIR_ReplaceRegWithTempReg,
 
   /// A successful emission
   GIR_Done,

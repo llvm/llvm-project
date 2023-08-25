@@ -111,6 +111,42 @@ class GICombinePatFrag<dag outs, dag ins, list<dag> alts> {
 }
 
 //===----------------------------------------------------------------------===//
+// Pattern Builtins
+//===----------------------------------------------------------------------===//
+
+// "Magic" Builtin instructions for MIR patterns.
+// The definitions that implement
+class GIBuiltinInst;
+
+// Replace all references to a register with another one.
+//
+// Usage:
+//    (apply (GIReplaceReg $old, $new))
+//
+// Operands:
+// - $old (out) register defined by a matched instruction
+// - $new (in)  register
+//
+// Semantics:
+// - Can only appear in an 'apply' pattern.
+// - If both old/new are operands of matched instructions,
+//   "canReplaceReg" is checked before applying the rule.
+def GIReplaceReg : GIBuiltinInst;
+
+// Apply action that erases the match root.
+//
+// Usage:
+//    (apply (GIEraseRoot))
+//
+// Semantics:
+// - Can only appear as the only pattern of an 'apply' pattern list.
+// - The root cannot have any output operands.
+// - The root must be a CodeGenInstruction
+//
+// TODO: Allow using this directly, like (apply GIEraseRoot)
+def GIEraseRoot : GIBuiltinInst;
+
+//===----------------------------------------------------------------------===//
 
 def extending_load_matchdata : GIDefMatchData<"PreferredTuple">;
 def indexed_load_store_matchdata : GIDefMatchData<"IndexedLoadStoreMatchInfo">;
@@ -141,7 +177,7 @@ def idempotent_prop_frags : GICombinePatFrag<
 def idempotent_prop : GICombineRule<
    (defs root:$dst),
    (match (idempotent_prop_frags $dst, $src)),
-   (apply (COPY $dst, $src))>;
+   (apply (GIReplaceReg $dst, $src))>;
 
 
 def extending_loads : GICombineRule<
@@ -337,7 +373,7 @@ def select_undef_cmp: GICombineRule<
   (defs root:$dst),
   (match (G_IMPLICIT_DEF $undef),
          (G_SELECT $dst, $undef, $x, $y)),
-  (apply (COPY $dst, $y))
+  (apply (GIReplaceReg $dst, $y))
 >;
 
 // Fold (true ? x : y) -> x
@@ -384,14 +420,14 @@ def right_identity_zero_frags : GICombinePatFrag<
 def right_identity_zero: GICombineRule<
   (defs root:$dst),
   (match (right_identity_zero_frags $dst, $lhs)),
-  (apply (COPY $dst, $lhs))
+  (apply (GIReplaceReg $dst, $lhs))
 >;
 
 // Fold x op 1 -> x
 def right_identity_one: GICombineRule<
   (defs root:$dst),
   (match (G_MUL $dst, $x, 1)),
-  (apply (COPY $dst, $x))
+  (apply (GIReplaceReg $dst, $x))
 >;
 
 // Fold (x op x) - > x
@@ -405,7 +441,7 @@ def binop_same_val_frags : GICombinePatFrag<
 def binop_same_val: GICombineRule<
   (defs root:$dst),
   (match (binop_same_val_frags $dst, $src)),
-  (apply (COPY $dst, $src))
+  (apply (GIReplaceReg $dst, $src))
 >;
 
 // Fold (0 op x) - > 0
@@ -456,7 +492,7 @@ def div_rem_to_divrem : GICombineRule<
 def binop_right_to_zero: GICombineRule<
   (defs root:$dst),
   (match (G_MUL $dst, $lhs, 0:$zero)),
-  (apply (COPY $dst, $zero))
+  (apply (GIReplaceReg $dst, $zero))
 >;
 
 // Erase stores of undef values.
@@ -623,7 +659,7 @@ def fneg_fneg_fold: GICombineRule <
   (defs root:$dst),
   (match (G_FNEG $t, $src),
          (G_FNEG $dst, $t)),
-  (apply (COPY $dst, $src))
+  (apply (GIReplaceReg $dst, $src))
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
@@ -1033,7 +1069,7 @@ def add_sub_reg_frags : GICombinePatFrag<
 def add_sub_reg: GICombineRule <
   (defs root:$dst),
   (match (add_sub_reg_frags $dst, $src)),
-  (apply (COPY $dst, $src))>;
+  (apply (GIReplaceReg $dst, $src))>;
 
 def buildvector_identity_fold : GICombineRule<
   (defs root:$build_vector, register_matchinfo:$matchinfo),
