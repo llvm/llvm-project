@@ -1675,8 +1675,9 @@ define float @test_pow_afn_f32__y_3(float %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_3(float %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_3
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 3.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret float [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 3.0)
   ret float %pow
@@ -1695,8 +1696,9 @@ define float @test_pow_afn_f32__y_4(float %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_4(float %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_4
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 4.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret float [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 4.0)
   ret float %pow
@@ -1725,8 +1727,10 @@ define float @test_pow_afn_f32__y_5(float %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_5(float %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_5
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 5.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret float [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 5.0)
   ret float %pow
@@ -1745,8 +1749,11 @@ define float @test_pow_afn_f32__y_neg5(float %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_neg5(float %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_neg5
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float -5.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX21]], [[X]]
+; CHECK-NEXT:    [[__1POWPROD:%.*]] = fdiv nnan ninf afn float 1.000000e+00, [[__POWPROD]]
+; CHECK-NEXT:    ret float [[__1POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float -5.0)
   ret float %pow
@@ -1755,8 +1762,11 @@ define float @test_pow_afn_f32_nnan_ninf__y_neg5(float %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_10(float %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_10
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 1.000000e+01)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWX22:%.*]] = fmul nnan ninf afn float [[__POWX21]], [[__POWX21]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX22]]
+; CHECK-NEXT:    ret float [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 10.0)
   ret float %pow
@@ -1765,8 +1775,10 @@ define float @test_pow_afn_f32_nnan_ninf__y_10(float %x) {
 define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_poison(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_poison
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> [[X]], <2 x float> poison)
-; CHECK-NEXT:    ret <2 x float> [[POW]]
+; CHECK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
+; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x float> @_Z4log2Dv2_f(<2 x float> [[__FABS]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @_Z4exp2Dv2_f(<2 x float> poison)
+; CHECK-NEXT:    ret <2 x float> poison
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> poison)
   ret <2 x float> %pow
@@ -1775,8 +1787,9 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_poison(<2 x float> %x) {
 define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_3(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_3
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> [[X]], <2 x float> <float 3.000000e+00, float 3.000000e+00>)
-; CHECK-NEXT:    ret <2 x float> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x float> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x float> [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret <2 x float> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 3.0, float 3.0>)
   ret <2 x float> %pow
@@ -1785,8 +1798,9 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_3(<2 x float> %x) {
 define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_4(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_4
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> [[X]], <2 x float> <float 4.000000e+00, float 4.000000e+00>)
-; CHECK-NEXT:    ret <2 x float> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x float> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x float> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret <2 x float> [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 4.0, float 4.0>)
   ret <2 x float> %pow
@@ -1815,8 +1829,10 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_4_5_undef(<2 x float> %x) {
 define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_5(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_5
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> [[X]], <2 x float> <float 5.000000e+00, float 5.000000e+00>)
-; CHECK-NEXT:    ret <2 x float> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x float> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x float> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x float> [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret <2 x float> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 5.0, float 5.0>)
   ret <2 x float> %pow
@@ -1825,8 +1841,10 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf__y_5(<2 x float> %x) {
 define float @test_pow_afn_f32_nnan_ninf__y_5_known_positive(float nofpclass(ninf nsub nnorm) %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_5_known_positive
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 5.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret float [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 5.0)
   ret float %pow
@@ -1836,8 +1854,10 @@ define float @test_pow_afn_f32_nnan_ninf__y_5_known_positive(float nofpclass(nin
 define float @test_pow_afn_f32_nnan_ninf__y_5_known_positive_with_ninf_flag(float nofpclass(nsub nnorm) %x) {
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_5_known_positive_with_ninf_flag
 ; CHECK-SAME: (float nofpclass(nsub nnorm) [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float 5.000000e+00)
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn float [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn float [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret float [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float 5.0)
   ret float %pow
@@ -1856,8 +1876,9 @@ define double @test_pow_afn_f64__y_3(double %x) {
 define double @test_pow_afn_f64_nnan_ninf__y_3(double %x) {
 ; CHECK-LABEL: define double @test_pow_afn_f64_nnan_ninf__y_3
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn double @_Z3powdd(double [[X]], double 3.000000e+00)
-; CHECK-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn double [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret double [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double 3.0)
   ret double %pow
@@ -1876,8 +1897,9 @@ define double @test_pow_afn_f64__y_4(double %x) {
 define double @test_pow_afn_f64_nnan_ninf__y_4(double %x) {
 ; CHECK-LABEL: define double @test_pow_afn_f64_nnan_ninf__y_4
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn double @_Z3powdd(double [[X]], double 4.000000e+00)
-; CHECK-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn double [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret double [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double 4.0)
   ret double %pow
@@ -1906,8 +1928,10 @@ define double @test_pow_afn_f64__y_5(double %x) {
 define double @test_pow_afn_f64_nnan_ninf__y_5(double %x) {
 ; CHECK-LABEL: define double @test_pow_afn_f64_nnan_ninf__y_5
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn double @_Z3powdd(double [[X]], double 5.000000e+00)
-; CHECK-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn double [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn double [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret double [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double 5.0)
   ret double %pow
@@ -1926,8 +1950,11 @@ define double @test_pow_afn_f64__y_neg5(double %x) {
 define double @test_pow_afn_f64_nnan_ninf__y_neg5(double %x) {
 ; CHECK-LABEL: define double @test_pow_afn_f64_nnan_ninf__y_neg5
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn double @_Z3powdd(double [[X]], double -5.000000e+00)
-; CHECK-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn double [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn double [[__POWX21]], [[X]]
+; CHECK-NEXT:    [[__1POWPROD:%.*]] = fdiv nnan ninf afn double 1.000000e+00, [[__POWPROD]]
+; CHECK-NEXT:    ret double [[__1POWPROD]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double -5.0)
   ret double %pow
@@ -1936,8 +1963,11 @@ define double @test_pow_afn_f64_nnan_ninf__y_neg5(double %x) {
 define double @test_pow_afn_f64_nnan_ninf__y_10(double %x) {
 ; CHECK-LABEL: define double @test_pow_afn_f64_nnan_ninf__y_10
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn double @_Z3powdd(double [[X]], double 1.000000e+01)
-; CHECK-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn double [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWX22:%.*]] = fmul nnan ninf afn double [[__POWX21]], [[__POWX21]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn double [[__POWX2]], [[__POWX22]]
+; CHECK-NEXT:    ret double [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double 10.0)
   ret double %pow
@@ -1946,8 +1976,9 @@ define double @test_pow_afn_f64_nnan_ninf__y_10(double %x) {
 define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_3(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_3
 ; CHECK-SAME: (<2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x double> @_Z3powDv2_dS_(<2 x double> [[X]], <2 x double> <double 3.000000e+00, double 3.000000e+00>)
-; CHECK-NEXT:    ret <2 x double> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x double> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x double> [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret <2 x double> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x double> @_Z3powDv2_dS_(<2 x double> %x, <2 x double> <double 3.0, double 3.0>)
   ret <2 x double> %pow
@@ -1956,8 +1987,9 @@ define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_3(<2 x double> %x) {
 define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_4(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_4
 ; CHECK-SAME: (<2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x double> @_Z3powDv2_dS_(<2 x double> [[X]], <2 x double> <double 4.000000e+00, double 4.000000e+00>)
-; CHECK-NEXT:    ret <2 x double> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x double> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x double> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret <2 x double> [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf <2 x double> @_Z3powDv2_dS_(<2 x double> %x, <2 x double> <double 4.0, double 4.0>)
   ret <2 x double> %pow
@@ -1976,8 +2008,10 @@ define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_4_5(<2 x double> %x) {
 define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_5(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @test_pow_afn_v2f64_nnan_ninf__y_5
 ; CHECK-SAME: (<2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x double> @_Z3powDv2_dS_(<2 x double> [[X]], <2 x double> <double 5.000000e+00, double 5.000000e+00>)
-; CHECK-NEXT:    ret <2 x double> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x double> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x double> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x double> [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret <2 x double> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x double> @_Z3powDv2_dS_(<2 x double> %x, <2 x double> <double 5.0, double 5.0>)
   ret <2 x double> %pow
@@ -1996,8 +2030,9 @@ define half @test_pow_afn_f16__y_3(half %x) {
 define half @test_pow_afn_f16_nnan_ninf__y_3(half %x) {
 ; CHECK-LABEL: define half @test_pow_afn_f16_nnan_ninf__y_3
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn half @_Z3powDhDh(half [[X]], half 0xH4200)
-; CHECK-NEXT:    ret half [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn half [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret half [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half 3.0)
   ret half %pow
@@ -2016,8 +2051,9 @@ define half @test_pow_afn_f16__y_4(half %x) {
 define half @test_pow_afn_f16_nnan_ninf__y_4(half %x) {
 ; CHECK-LABEL: define half @test_pow_afn_f16_nnan_ninf__y_4
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn half @_Z3powDhDh(half [[X]], half 0xH4400)
-; CHECK-NEXT:    ret half [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn half [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret half [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half 4.0)
   ret half %pow
@@ -2046,8 +2082,10 @@ define half @test_pow_afn_f16__y_5(half %x) {
 define half @test_pow_afn_f16_nnan_ninf__y_5(half %x) {
 ; CHECK-LABEL: define half @test_pow_afn_f16_nnan_ninf__y_5
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn half @_Z3powDhDh(half [[X]], half 0xH4500)
-; CHECK-NEXT:    ret half [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn half [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn half [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret half [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half 5.0)
   ret half %pow
@@ -2066,8 +2104,11 @@ define half @test_pow_afn_f16__y_neg5(half %x) {
 define half @test_pow_afn_f16_nnan_ninf__y_neg5(half %x) {
 ; CHECK-LABEL: define half @test_pow_afn_f16_nnan_ninf__y_neg5
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn half @_Z3powDhDh(half [[X]], half 0xHC500)
-; CHECK-NEXT:    ret half [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn half [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn half [[__POWX21]], [[X]]
+; CHECK-NEXT:    [[__1POWPROD:%.*]] = fdiv nnan ninf afn half 0xH3C00, [[__POWPROD]]
+; CHECK-NEXT:    ret half [[__1POWPROD]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half -5.0)
   ret half %pow
@@ -2076,8 +2117,11 @@ define half @test_pow_afn_f16_nnan_ninf__y_neg5(half %x) {
 define half @test_pow_afn_f16_nnan_ninf__y_10(half %x) {
 ; CHECK-LABEL: define half @test_pow_afn_f16_nnan_ninf__y_10
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn half @_Z3powDhDh(half [[X]], half 0xH4900)
-; CHECK-NEXT:    ret half [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn half [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWX22:%.*]] = fmul nnan ninf afn half [[__POWX21]], [[__POWX21]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn half [[__POWX2]], [[__POWX22]]
+; CHECK-NEXT:    ret half [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half 10.0)
   ret half %pow
@@ -2086,8 +2130,9 @@ define half @test_pow_afn_f16_nnan_ninf__y_10(half %x) {
 define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_3(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_3
 ; CHECK-SAME: (<2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x half> @_Z3powDv2_DhS_(<2 x half> [[X]], <2 x half> <half 0xH4200, half 0xH4200>)
-; CHECK-NEXT:    ret <2 x half> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x half> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x half> [[__POWX2]], [[X]]
+; CHECK-NEXT:    ret <2 x half> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> <half 3.0, half 3.0>)
   ret <2 x half> %pow
@@ -2096,8 +2141,9 @@ define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_3(<2 x half> %x) {
 define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_4(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_4
 ; CHECK-SAME: (<2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x half> @_Z3powDv2_DhS_(<2 x half> [[X]], <2 x half> <half 0xH4400, half 0xH4400>)
-; CHECK-NEXT:    ret <2 x half> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x half> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x half> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    ret <2 x half> [[__POWX21]]
 ;
   %pow = tail call afn nnan ninf <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> <half 4.0, half 4.0>)
   ret <2 x half> %pow
@@ -2116,8 +2162,10 @@ define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_4_5(<2 x half> %x) {
 define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_5(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_pow_afn_v2f16_nnan_ninf__y_5
 ; CHECK-SAME: (<2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn <2 x half> @_Z3powDv2_DhS_(<2 x half> [[X]], <2 x half> <half 0xH4500, half 0xH4500>)
-; CHECK-NEXT:    ret <2 x half> [[POW]]
+; CHECK-NEXT:    [[__POWX2:%.*]] = fmul nnan ninf afn <2 x half> [[X]], [[X]]
+; CHECK-NEXT:    [[__POWX21:%.*]] = fmul nnan ninf afn <2 x half> [[__POWX2]], [[__POWX2]]
+; CHECK-NEXT:    [[__POWPROD:%.*]] = fmul nnan ninf afn <2 x half> [[__POWX21]], [[X]]
+; CHECK-NEXT:    ret <2 x half> [[__POWPROD]]
 ;
   %pow = tail call afn nnan ninf <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> <half 5.0, half 5.0>)
   ret <2 x half> %pow
