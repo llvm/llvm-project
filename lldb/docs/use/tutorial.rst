@@ -5,6 +5,9 @@ Here's a short precis of how to run lldb if you are familiar with the gdb
 command set. We will start with some details on lldb command structure and
 syntax to help orient you.
 
+.. contents::
+   :local:
+
 Command Structure
 -----------------
 

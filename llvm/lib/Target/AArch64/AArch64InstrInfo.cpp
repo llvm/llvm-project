@@ -8395,6 +8395,17 @@ describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
   return std::nullopt;
 }
 
+bool AArch64InstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
+  // Functions cannot be split to different sections on AArch64 if they have
+  // a red zone. This is because relaxing a cross-section branch may require
+  // incrementing the stack pointer to spill a register, which would overwrite
+  // the red zone.
+  if (MF.getInfo<AArch64FunctionInfo>()->hasRedZone().value_or(true))
+    return false;
+
+  return TargetInstrInfo::isFunctionSafeToSplit(MF);
+}
+
 std::optional<ParamLoadedValue>
 AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
                                       Register Reg) const {

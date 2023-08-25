@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-avoid-reference-coroutine-parameters %t
+// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-avoid-reference-coroutine-parameters %t --
 
 // NOLINTBEGIN
 namespace std {
@@ -81,4 +81,19 @@ void defines_a_lambda() {
 
   auto WithReferences2 = [](int&) -> Coro { co_return; };
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+}
+
+void coroInFunctionWithReference(int&) {
+  auto SampleCoro = [](int x) -> Coro { co_return; };
+}
+
+Coro lambdaWithReferenceInCoro() {
+  auto SampleLambda = [](int& x) {};
+  co_return;
+}
+
+using MyIntegerRef = int&;
+Coro coroWithReferenceBehindTypedef(MyIntegerRef ref) {
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  co_return;
 }

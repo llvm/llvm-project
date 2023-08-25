@@ -12,7 +12,6 @@ define void @phi_loop_1(i8 %x) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C_PHI:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[LOOP]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], 8
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
@@ -54,7 +53,6 @@ define void @phi_loop_2(i8 %x) {
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[LOOP_1_HEADER]] ], [ [[IV_NEXT:%.*]], [[LOOP_2]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], 8
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
@@ -104,7 +102,6 @@ define void @phi_loop_3(i8 %x, i1 %c) {
 ; CHECK-NEXT:    [[C_PHI:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], 8
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
@@ -145,7 +142,6 @@ define i1 @test_if_then_1(i8 %x) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[IF]] ], [ false, [[ENTRY:%.*]] ]
@@ -168,10 +164,9 @@ join:
 define i1 @test_if_then_2(i1 %c, i8 %x) {
 ; CHECK-LABEL: @test_if_then_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
@@ -228,7 +223,6 @@ define i1 @test_if_then_4(i1 %c.0, i8 %x) {
 ; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    br label [[JOIN]]

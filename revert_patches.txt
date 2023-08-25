@@ -38,6 +38,5 @@ Revert "[Attributor] Introduce AAIndirectCallInfo"
 
 Revert  "6acff5390d05 [X86] Support -march=gracemont"
   and  [Tests] Remove some and/or constant expressions in tests (NFC)
-Revert "[AsmPrinter][DebugInfo] Create EntryValue mode for DbgVariable"
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
