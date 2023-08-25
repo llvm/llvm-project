@@ -142,9 +142,9 @@ def M5WriteZ4 : SchedWriteRes<[]> { let Latency = 4;
 def M5WriteA1W : SchedWriteRes<[M5UnitAW]> { let Latency = 1; }
 def M5WriteA1X : SchedWriteRes<[M5UnitAX]> { let Latency = 1; }
 def M5WriteAAW : SchedWriteRes<[M5UnitAW]> { let Latency = 2;
-                                             let ResourceCycles = [2]; }
+                                             let ReleaseAtCycles = [2]; }
 def M5WriteAAX : SchedWriteRes<[M5UnitAX]> { let Latency = 2;
-                                             let ResourceCycles = [2]; }
+                                             let ReleaseAtCycles = [2]; }
 def M5WriteAB  : SchedWriteRes<[M5UnitAX,
                                 M5UnitC,
                                 M5UnitE]>  { let Latency = 2;
@@ -194,12 +194,12 @@ def M5WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M5WriteAC]>
 def M5WriteC1 : SchedWriteRes<[M5UnitC]> { let Latency = 1; }
 def M5WriteC2 : SchedWriteRes<[M5UnitC]> { let Latency = 2; }
 def M5WriteCA : SchedWriteRes<[M5UnitC]> { let Latency = 3;
-                                           let ResourceCycles = [2]; }
+                                           let ReleaseAtCycles = [2]; }
 
 def M5WriteD10 : SchedWriteRes<[M5UnitD]> { let Latency = 10;
-                                            let ResourceCycles = [10]; }
+                                            let ReleaseAtCycles = [10]; }
 def M5WriteD16 : SchedWriteRes<[M5UnitD]> { let Latency = 16;
-                                            let ResourceCycles = [16]; }
+                                            let ReleaseAtCycles = [16]; }
 
 def M5WriteF2 : SchedWriteRes<[M5UnitF]> { let Latency = 2; }
 
@@ -228,22 +228,22 @@ def M5WriteLFW : SchedWriteRes<[M5UnitAW,
                                 M5UnitAW,
                                 M5UnitL]>  { let Latency = 15;
                                              let NumMicroOps = 6;
-                                             let ResourceCycles = [1, 1, 1, 1, 15]; }
+                                             let ReleaseAtCycles = [1, 1, 1, 1, 15]; }
 def M5WriteLFX : SchedWriteRes<[M5UnitAX,
                                 M5UnitAX,
                                 M5UnitAX,
                                 M5UnitAX,
                                 M5UnitL]>  { let Latency = 15;
                                              let NumMicroOps = 6;
-                                             let ResourceCycles = [1, 1, 1, 1, 15]; }
+                                             let ReleaseAtCycles = [1, 1, 1, 1, 15]; }
 def M5WriteLGW : SchedWriteRes<[M5UnitAW,
                                 M5UnitL]>  { let Latency = 13;
                                              let NumMicroOps = 1;
-                                             let ResourceCycles = [1, 13]; }
+                                             let ReleaseAtCycles = [1, 13]; }
 def M5WriteLGX : SchedWriteRes<[M5UnitAX,
                                 M5UnitL]>  { let Latency = 13;
                                              let NumMicroOps = 1;
-                                             let ResourceCycles = [1, 13]; }
+                                             let ReleaseAtCycles = [1, 13]; }
 def M5WriteLH : SchedWriteRes<[]>        { let Latency = 6;
                                            let NumMicroOps = 0; }
 def M5WriteLX : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M5WriteL5]>,
@@ -282,12 +282,12 @@ def M5WriteNEONK   : SchedWriteRes<[M5UnitNSHF,
 def M5WriteNEONN   : SchedWriteRes<[M5UnitNMSC,
                                     M5UnitNMSC]>  { let Latency = 5;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [7, 7]; }
+                                                    let ReleaseAtCycles = [7, 7]; }
 def M5WriteNEONO   : SchedWriteRes<[M5UnitNMSC,
                                     M5UnitNMSC,
                                     M5UnitNMSC]>  { let Latency = 8;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [10, 10, 10]; }
+                                                    let ReleaseAtCycles = [10, 10, 10]; }
 def M5WriteNEONP   : SchedWriteRes<[M5UnitNSHF,
                                     M5UnitS0,
                                     M5UnitFCVT]>  { let Latency = 7;
@@ -297,19 +297,19 @@ def M5WriteNEONQ   : SchedWriteRes<[M5UnitNMSC,
                                                     let NumMicroOps = 1; }
 def M5WriteNEONU   : SchedWriteRes<[M5UnitFSQR,
                                     M5UnitFSQR]>  { let Latency = 7;
-                                                    let ResourceCycles = [4, 4]; }
+                                                    let ReleaseAtCycles = [4, 4]; }
 def M5WriteNEONV   : SchedWriteRes<[M5UnitFDIV,
                                     M5UnitFDIV]>  { let Latency = 7;
-                                                    let ResourceCycles = [6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6]; }
 def M5WriteNEONW   : SchedWriteRes<[M5UnitFDIV,
                                     M5UnitFDIV]>  { let Latency = 12;
-                                                    let ResourceCycles = [9, 9]; }
+                                                    let ReleaseAtCycles = [9, 9]; }
 def M5WriteNEONX   : SchedWriteRes<[M5UnitFSQR,
                                     M5UnitFSQR]>  { let Latency = 8;
-                                                    let ResourceCycles = [5, 5]; }
+                                                    let ReleaseAtCycles = [5, 5]; }
 def M5WriteNEONY   : SchedWriteRes<[M5UnitFSQR,
                                     M5UnitFSQR]>  { let Latency = 12;
-                                                    let ResourceCycles = [9, 9]; }
+                                                    let ReleaseAtCycles = [9, 9]; }
 def M5WriteNEONZ   : SchedWriteVariant<[SchedVar<ExynosQFormPred, [M5WriteNEONO]>,
                                         SchedVar<NoSchedPred,     [M5WriteNEONN]>]>;
 
@@ -330,24 +330,24 @@ def M5WriteFCVTC   : SchedWriteRes<[M5UnitFCVT,
                                                     let NumMicroOps = 1; }
 
 def M5WriteFDIV5   : SchedWriteRes<[M5UnitFDIV]>  { let Latency = 5;
-                                                    let ResourceCycles = [2]; }
+                                                    let ReleaseAtCycles = [2]; }
 def M5WriteFDIV7   : SchedWriteRes<[M5UnitFDIV]>  { let Latency = 7;
-                                                    let ResourceCycles = [4]; }
+                                                    let ReleaseAtCycles = [4]; }
 def M5WriteFDIV12  : SchedWriteRes<[M5UnitFDIV]>  { let Latency = 12;
-                                                    let ResourceCycles = [9]; }
+                                                    let ReleaseAtCycles = [9]; }
 
 def M5WriteFMAC3   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 3; }
 def M5WriteFMAC4   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 4; }
 def M5WriteFMAC5   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 5; }
 
 def M5WriteFSQR5   : SchedWriteRes<[M5UnitFSQR]>  { let Latency = 5;
-                                                    let ResourceCycles = [2]; }
+                                                    let ReleaseAtCycles = [2]; }
 def M5WriteFSQR7   : SchedWriteRes<[M5UnitFSQR]>  { let Latency = 7;
-                                                    let ResourceCycles = [4]; }
+                                                    let ReleaseAtCycles = [4]; }
 def M5WriteFSQR8   : SchedWriteRes<[M5UnitFSQR]>  { let Latency = 8;
-                                                    let ResourceCycles = [5]; }
+                                                    let ReleaseAtCycles = [5]; }
 def M5WriteFSQR12  : SchedWriteRes<[M5UnitFSQR]>  { let Latency = 12;
-                                                    let ResourceCycles = [9]; }
+                                                    let ReleaseAtCycles = [9]; }
 
 def M5WriteNALU1   : SchedWriteRes<[M5UnitNALU]>  { let Latency = 1; }
 def M5WriteNALU2   : SchedWriteRes<[M5UnitNALU]>  { let Latency = 2; }
@@ -396,16 +396,16 @@ def M5WriteVLDC    : SchedWriteRes<[M5UnitL,
 def M5WriteVLDD    : SchedWriteRes<[M5UnitL,
                                     M5UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [2, 1]; }
+                                                    let ReleaseAtCycles = [2, 1]; }
 def M5WriteVLDF    : SchedWriteRes<[M5UnitL,
                                     M5UnitL]>     { let Latency = 11;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [6, 5]; }
+                                                    let ReleaseAtCycles = [6, 5]; }
 def M5WriteVLDG    : SchedWriteRes<[M5UnitL,
                                     M5UnitNSHF,
                                     M5UnitNSHF]>  { let Latency = 7;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [2, 1, 1]; }
+                                                    let ReleaseAtCycles = [2, 1, 1]; }
 def M5WriteVLDI    : SchedWriteRes<[M5UnitL,
                                     M5UnitL,
                                     M5UnitL]>     { let Latency = 13;
@@ -439,7 +439,7 @@ def M5WriteVLDN    : SchedWriteRes<[M5UnitL,
                                     M5UnitL,
                                     M5UnitL]>     { let Latency = 15;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [2, 2, 2, 2]; }
+                                                    let ReleaseAtCycles = [2, 2, 2, 2]; }
 
 def M5WriteVST1    : SchedWriteRes<[M5UnitS,
                                     M5UnitFST]> { let Latency = 1;
@@ -501,7 +501,7 @@ def M5WriteVSTI    : SchedWriteRes<[M5UnitNSHF,
                                     M5UnitS,
                                     M5UnitFST]> { let Latency = 8;
                                                   let NumMicroOps = 5;
-                                                  let ResourceCycles = [1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1]; }
+                                                  let ReleaseAtCycles = [1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1]; }
 def M5WriteVSTJ    : SchedWriteRes<[M5UnitA,
                                     M5UnitS0,
                                     M5UnitFST]> { let Latency = 1;
@@ -517,7 +517,7 @@ def M5WriteVSTL    : SchedWriteRes<[M5UnitNSHF,
                                     M5UnitS,
                                     M5UnitFST]> { let Latency = 4;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [1, 1, 2, 1, 2, 1]; }
+                                                    let ReleaseAtCycles = [1, 1, 2, 1, 2, 1]; }
 def M5WriteVSTY   : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M5WriteVSTK]>,
                                        SchedVar<NoSchedPred,         [WriteVST]>]>;
 
