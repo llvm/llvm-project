@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder 'clang-c'  --cflags "-O3 -glldb" -- %s
+// RUN: %clang -O3 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 
 // 1. parama is escaped by esc(&parama) so it is not promoted by
 //    SROA/mem2reg.

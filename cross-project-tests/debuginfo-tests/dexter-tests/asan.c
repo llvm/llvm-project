@@ -3,10 +3,10 @@
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
 //
+// RUN: %clang --driver-mode=gcc -O0 -glldb -fblocks -arch x86_64 \
+// RUN:     -fsanitize=address %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang-c' --debugger 'lldb' \
-// RUN:     --cflags "--driver-mode=gcc -O0 -glldb -fblocks -arch x86_64 \
-// RUN:     -fsanitize=address" --ldflags="-fsanitize=address" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 
 struct S {
   int a[8];
