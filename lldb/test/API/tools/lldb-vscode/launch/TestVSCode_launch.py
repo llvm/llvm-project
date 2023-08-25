@@ -46,12 +46,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_disconnect()
 
         # Wait until the underlying lldb-vscode process dies.
-        # We need to do this because the popen.wait function in python2.7
-        # doesn't have a timeout argument.
-        for _ in range(10):
-            time.sleep(1)
-            if self.vscode.process.poll() is not None:
-                break
+        self.vscode.process.wait(timeout=10)
+
         # Check the return code
         self.assertEqual(self.vscode.process.poll(), 0)
 
