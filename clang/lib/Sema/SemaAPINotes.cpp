@@ -824,20 +824,19 @@ void Sema::ProcessAPINotes(Decl *D) {
         // Retrieve the context ID for the parent namespace of the decl.
         std::stack<NamespaceDecl *> NamespaceStack;
         {
-          auto CurrentNamespace = NamespaceContext;
-          while (CurrentNamespace) {
+          for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
+               CurrentNamespace =
+                   dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
             if (!CurrentNamespace->isInlineNamespace())
               NamespaceStack.push(CurrentNamespace);
-            CurrentNamespace =
-                dyn_cast<NamespaceDecl>(CurrentNamespace->getParent());
           }
         }
         std::optional<api_notes::ContextID> NamespaceID;
         while (!NamespaceStack.empty()) {
           auto CurrentNamespace = NamespaceStack.top();
           NamespaceStack.pop();
-          NamespaceID = Reader->lookupNamespaceID(NamespaceID,
-                                                  CurrentNamespace->getName());
+          NamespaceID = Reader->lookupNamespaceID(CurrentNamespace->getName(),
+                                                  NamespaceID);
           if (!NamespaceID)
             break;
         }
@@ -851,7 +850,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         auto Info =
-            Reader->lookupGlobalVariable(APINotesContext, VD->getName());
+            Reader->lookupGlobalVariable(VD->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, VD, Info);
       }
 
@@ -863,7 +862,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (FD->getDeclName().isIdentifier()) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           auto Info =
-              Reader->lookupGlobalFunction(APINotesContext, FD->getName());
+              Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
           ProcessVersionedAPINotes(*this, FD, Info);
         }
       }
@@ -918,7 +917,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
 
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        auto Info = Reader->lookupTag(APINotesContext, LookupName);
+        auto Info = Reader->lookupTag(LookupName, APINotesContext);
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
 
@@ -928,7 +927,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Typedefs
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        auto Info = Reader->lookupTypedef(APINotesContext, Typedef->getName());
+        auto Info = Reader->lookupTypedef(Typedef->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, Typedef, Info);
       }
 
