@@ -1,7 +1,8 @@
 // Purpose:
 //      Ensure that multiple overlapping \DexLimitSteps ranges do not interfere.
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: limit_steps_overlapping_ranges.cpp
 
 int main() {

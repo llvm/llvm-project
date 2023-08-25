@@ -4,7 +4,8 @@
 //
 // UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: expect_watch_value.cpp:
 
 unsigned long Factorial(int n) {

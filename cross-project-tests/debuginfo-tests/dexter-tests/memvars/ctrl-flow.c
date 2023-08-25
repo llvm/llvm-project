@@ -1,7 +1,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder clang-c  --cflags "-O2 -glldb" -- %s
+// RUN: %clang -O2 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 
 //// Check that we give good locations to a variable ('local') which is escaped
 //// down some control paths and not others. This example is handled well currently.

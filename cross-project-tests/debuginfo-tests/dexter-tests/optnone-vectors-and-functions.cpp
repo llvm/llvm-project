@@ -1,9 +1,9 @@
+// RUN: %clang++ -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-g -O2" -v -- %s
+// RUN:     --binary %t --debugger 'lldb' -v -- %s
+// RUN: %clang++ -O0 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-g -O0" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
@@ -77,12 +77,11 @@ T test2(T x, T y) {
 //   DexExpectWatchValue('tmp[1]', 8, on_line=ref('break_2'))
 //   DexExpectWatchValue('tmp[2]', 10, on_line=ref('break_2'))
 //   DexExpectWatchValue('tmp[3]', 12, on_line=ref('break_2'))
-// DexLimitSteps('i', 3, on_line=ref('break_3'))
+// DexLimitSteps('i', 3, from_line=ref('break_3'), to_line=ref('break_5'))
 //   DexExpectWatchValue('tmp[0]', 63, on_line=ref('break_3'))
 //   DexExpectWatchValue('tmp[1]', 94, on_line=ref('break_3'))
 //   DexExpectWatchValue('tmp[2]', 95, on_line=ref('break_3'))
 //   DexExpectWatchValue('tmp[3]', 120, on_line=ref('break_3'))
-// DexLimitSteps('i', 3, on_line=ref('break_5'))
 //   DexExpectWatchValue('tmp[0]', 15, on_line=ref('break_5'))
 
 template<typename T>
