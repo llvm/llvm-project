@@ -84,13 +84,13 @@ multi_grid_sync(__global struct mg_sync *s, uint members)
     }
 }
 
-void
+__attribute__((target("gws"))) void
 __ockl_gws_init(uint nwm1, uint rid)
 {
     __builtin_amdgcn_ds_gws_init(nwm1, rid);
 }
 
-void
+__attribute__((target("gws"))) void
 __ockl_gws_barrier(uint nwm1, uint rid)
 {
     __builtin_amdgcn_ds_gws_barrier(nwm1, rid);
