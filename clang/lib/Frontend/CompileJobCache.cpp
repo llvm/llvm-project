@@ -87,7 +87,8 @@ public:
                        UseCASBackend),
         ComputedJobNeedsReplay(WriteOutputAsCASID || UseCASBackend),
         MCOutputID(MCOutputID), CAS(std::move(DB)), Cache(std::move(Cache)) {
-    CASOutputs = llvm::makeIntrusiveRefCnt<llvm::cas::CASOutputBackend>(*CAS);
+    if (CAS)
+      CASOutputs = llvm::makeIntrusiveRefCnt<llvm::cas::CASOutputBackend>(*CAS);
   }
 
   Expected<std::optional<int>>
