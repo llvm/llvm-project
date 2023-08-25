@@ -48,8 +48,14 @@ What works
    * ``LIBCXX_ENABLE_FILESYSTEM``
    * ``LIBCXX_ENABLE_RANDOM_DEVICE``
    * ``LIBCXX_ENABLE_UNICODE``
+   * ``LIBCXX_ENABLE_EXCEPTIONS`` [#note-no-windows]_
 
  * A C++20 based extension
+
+.. note::
+
+   .. [#note-no-windows] This configuration will probably not work on Windows
+                         due to hard-coded compilation flags.
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
