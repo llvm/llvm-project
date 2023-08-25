@@ -117,6 +117,24 @@ public:
   int64_t InlineAsmOperandCount = 0;
   int64_t ArgumentOperandCount = 0;
   int64_t UnknownOperandCount = 0;
+
+  // Additional CFG Properties
+  int64_t CriticalEdgeCount = 0;
+  int64_t ControlFlowEdgeCount = 0;
+  int64_t UnconditionalBranchCount = 0;
+
+  // Call related instructions
+  int64_t IntrinsicCount = 0;
+  int64_t DirectCallCount = 0;
+  int64_t IndirectCallCount = 0;
+  int64_t CallReturnsIntegerCount = 0;
+  int64_t CallReturnsFloatCount = 0;
+  int64_t CallReturnsPointerCount = 0;
+  int64_t CallReturnsVectorIntCount = 0;
+  int64_t CallReturnsVectorFloatCount = 0;
+  int64_t CallReturnsVectorPointerCount = 0;
+  int64_t CallWithManyArgumentsCount = 0;
+  int64_t CallWithPointerArgumentCount = 0;
 };
 
 // Analysis pass
