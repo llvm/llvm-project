@@ -119,6 +119,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     mlir-capi-execution-engine-test
     mlir_c_runner_utils
     mlir_runner_utils
+    mlir_float16_utils
   )
 endif()
 
