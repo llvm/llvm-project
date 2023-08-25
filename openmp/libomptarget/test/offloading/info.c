@@ -22,7 +22,8 @@ int main() {
   int C[N];
   int val = 1;
 
-// INFO: info: Entering OpenMP data region at info.c:{{[0-9]+}}:{{[0-9]+}} with 3 arguments:
+// clang-format off
+// INFO: info: Entering OpenMP data region with being_mapper at info.c:{{[0-9]+}}:{{[0-9]+}} with 3 arguments:
 // INFO: info: alloc(A[0:64])[256]
 // INFO: info: tofrom(B[0:64])[256]
 // INFO: info: to(C[0:64])[256]
@@ -45,7 +46,7 @@ int main() {
 // INFO: info: {{.*}}             {{.*}}             256      1           0            C[0:64] at info.c:{{[0-9]+}}:{{[0-9]+}}
 // INFO: info: {{.*}}             {{.*}}             256      0           1            B[0:64] at info.c:{{[0-9]+}}:{{[0-9]+}}
 // INFO: info: {{.*}}             {{.*}}             256      1           0            A[0:64] at info.c:{{[0-9]+}}:{{[0-9]+}}
-// INFO: info: Exiting OpenMP data region at info.c:{{[0-9]+}}:{{[0-9]+}} with 3 arguments:
+// INFO: info: Exiting OpenMP data region with end_mapper at info.c:{{[0-9]+}}:{{[0-9]+}} with 3 arguments:
 // INFO: info: alloc(A[0:64])[256]
 // INFO: info: tofrom(B[0:64])[256]
 // INFO: info: to(C[0:64])[256]
@@ -56,6 +57,7 @@ int main() {
 // INFO: info: OpenMP Host-Device pointer mappings after block at info.c:[[#%u,]]:[[#%u,]]:
 // INFO: info: Host Ptr  Target Ptr Size (B) DynRefCount HoldRefCount Declaration
 // INFO: info: [[#%#x,]] [[#%#x,]]  4        INF         0            global at unknown:0:0
+// clang-format on
 #pragma omp target data map(alloc : A[0 : N])                                  \
     map(ompx_hold, tofrom : B[0 : N]) map(to : C[0 : N])
 #pragma omp target firstprivate(val)
