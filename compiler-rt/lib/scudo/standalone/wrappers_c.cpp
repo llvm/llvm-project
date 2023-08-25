@@ -12,6 +12,7 @@
 #if !SCUDO_ANDROID || !_BIONIC
 
 #include "allocator_config.h"
+#include "scudo/interface.h"
 #include "wrappers_c.h"
 #include "wrappers_c_checks.h"
 

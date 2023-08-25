@@ -424,7 +424,7 @@ static Decomposition decompose(Value *V,
       return MergeResults(Op0, Op1, IsSigned);
 
     ConstantInt *CI;
-    if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI)))) {
+    if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
       auto Result = decompose(Op0, Preconditions, IsSigned, DL);
       Result.mul(CI->getSExtValue());
       return Result;
