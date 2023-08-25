@@ -288,8 +288,7 @@ define <2 x float> @test_pown_v2f32__y_0_undef(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pown_v2f32__y_0_undef
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x float> @_Z4pownDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 0, i32 poison>)
-; CHECK-NEXT:    ret <2 x float> [[CALL]]
+; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
 ;
 entry:
   %call = tail call <2 x float> @_Z4pownDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 0, i32 poison>)
@@ -366,8 +365,7 @@ define <2 x float> @test_pown_v2f32__y_1_undef(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_pown_v2f32__y_1_undef
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x float> @_Z4pownDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 1, i32 poison>)
-; CHECK-NEXT:    ret <2 x float> [[CALL]]
+; CHECK-NEXT:    ret <2 x float> [[X]]
 ;
 entry:
   %call = tail call <2 x float> @_Z4pownDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 1, i32 poison>)
@@ -389,8 +387,7 @@ define <3 x float> @test_pown_v3f32__y_1_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_pown_v3f32__y_1_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> [[X]], <3 x i32> <i32 1, i32 1, i32 poison>)
-; CHECK-NEXT:    ret <3 x float> [[CALL]]
+; CHECK-NEXT:    ret <3 x float> [[X]]
 ;
 entry:
   %call = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> %x, <3 x i32> <i32 1, i32 1, i32 poison>)
@@ -470,8 +467,8 @@ define <3 x float> @test_pown_v3f32__y_2_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_pown_v3f32__y_2_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> [[X]], <3 x i32> <i32 2, i32 poison, i32 2>)
-; CHECK-NEXT:    ret <3 x float> [[CALL]]
+; CHECK-NEXT:    [[__POW2:%.*]] = fmul <3 x float> [[X]], [[X]]
+; CHECK-NEXT:    ret <3 x float> [[__POW2]]
 ;
 entry:
   %call = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> %x, <3 x i32> <i32 2, i32 poison, i32 2>)
@@ -554,8 +551,8 @@ define <3 x float> @test_pown_v3f32__y_neg1_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_pown_v3f32__y_neg1_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> [[X]], <3 x i32> <i32 -1, i32 -1, i32 poison>)
-; CHECK-NEXT:    ret <3 x float> [[CALL]]
+; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    ret <3 x float> [[__POWRECIP]]
 ;
 entry:
   %call = tail call <3 x float> @_Z4pownDv3_fDv3_i(<3 x float> %x, <3 x i32> <i32 -1, i32 -1, i32 poison>)
