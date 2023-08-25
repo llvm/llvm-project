@@ -1117,6 +1117,50 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   emitAlignment(Align(2));
 }
 
+std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+           codeview::JumpTableEntrySize>
+ARMAsmPrinter::getCodeViewJumpTableInfo(int JTI,
+                                        const MachineInstr *BranchInstr,
+                                        const MCSymbol *BranchLabel) const {
+  codeview::JumpTableEntrySize EntrySize;
+  const MCSymbol *BaseLabel;
+  uint64_t BaseOffset = 0;
+  switch (BranchInstr->getOpcode()) {
+  case ARM::BR_JTadd:
+  case ARM::BR_JTr:
+  case ARM::tBR_JTr:
+    // Word relative to the jump table address.
+    EntrySize = codeview::JumpTableEntrySize::UInt32;
+    BaseLabel = GetARMJTIPICJumpTableLabel(JTI);
+    break;
+  case ARM::tTBH_JT:
+  case ARM::t2TBH_JT:
+    // half-word shifted left, relative to *after* the branch instruction.
+    EntrySize = codeview::JumpTableEntrySize::UInt16ShiftLeft;
+    BranchLabel = GetCPISymbol(BranchInstr->getOperand(3).getImm());
+    BaseLabel = BranchLabel;
+    BaseOffset = 4;
+    break;
+  case ARM::tTBB_JT:
+  case ARM::t2TBB_JT:
+    // byte shifted left, relative to *after* the branch instruction.
+    EntrySize = codeview::JumpTableEntrySize::UInt8ShiftLeft;
+    BranchLabel = GetCPISymbol(BranchInstr->getOperand(3).getImm());
+    BaseLabel = BranchLabel;
+    BaseOffset = 4;
+    break;
+  case ARM::t2BR_JT:
+    // Direct jump.
+    BaseLabel = nullptr;
+    EntrySize = codeview::JumpTableEntrySize::Pointer;
+    break;
+  default:
+    llvm_unreachable("Unknown jump table instruction");
+  }
+
+  return std::make_tuple(BaseLabel, BaseOffset, BranchLabel, EntrySize);
+}
+
 void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   assert(MI->getFlag(MachineInstr::FrameSetup) &&
       "Only instruction which are involved into frame setup code are allowed");
