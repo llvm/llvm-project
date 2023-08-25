@@ -112,7 +112,7 @@ Exit:
 ; CHECK: .uleb128 [[PRE_G]]-[[START]]
 ; CHECK: .uleb128 [[POST_G]]-[[PRE_G]]
 ; CHECK: .uleb128 [[LANDING]]-[[START]]
-; CHECK: .byte 5
+; CHECK: .byte 7
 ; CHECK: .uleb128 [[POST_G]]-[[START]]
 ; CHECK: .uleb128 [[END]]-[[POST_G]]
 ; CHECK: .byte 0
@@ -120,10 +120,11 @@ Exit:
 ; CHECK: [[CST_END]]:
 ; CHECK: .byte 0
 ; CHECK: .byte 0
+; CHECK: .byte 0
+; CHECK: .byte 125
 ; CHECK: .byte 1
 ; CHECK: .byte 125
 ; CHECK: .byte 2
-; CHECK: .byte 125
 ; CHECK: .p2align 2
 ; CHECK: .long _ZTIi
 ; CHECK: .long _ZTId
