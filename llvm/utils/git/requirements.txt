@@ -4,8 +4,10 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.txt.in
 #
-certifi==2023.5.7
-    # via requests
+certifi==2023.7.22
+    # via
+    #   -r requirements.txt.in
+    #   requests
 cffi==1.15.1
     # via pynacl
 charset-normalizer==2.1.1
