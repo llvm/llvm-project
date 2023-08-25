@@ -869,8 +869,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else if (Val != "single")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
-  } else if (SanArgs.needsTsanRt()) {
-    CmdArgs.push_back("-fprofile-update=atomic");
   }
 
   int FunctionGroups = 1;
@@ -2955,7 +2953,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         // -ffp-model=precise sets PreciseFPModel to on and Val to
         // "precise". FPContract is set.
         ;
-      } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off")) {
+      } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off") ||
+                 Val.equals("fast-honor-pragmas")) {
         FPContract = Val;
         LastSeenFfpContractOption = Val;
       } else
@@ -5872,13 +5871,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
-    // This codegen pass is only available on x86-elf targets.
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
-      if (A->getOption().matches(options::OPT_fsplit_machine_functions))
+    if (!A->getOption().matches(options::OPT_fno_split_machine_functions)) {
+      // This codegen pass is only available on x86-elf targets.
+      if (Triple.isX86() && Triple.isOSBinFormatELF())
         A->render(Args, CmdArgs);
-    } else {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << TripleStr;
+      else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
     }
   }
 

@@ -4442,6 +4442,10 @@ struct CompoundAssignSubobjectHandler {
       return foundPointer(Subobj, SubobjType);
     case APValue::Vector:
       return foundVector(Subobj, SubobjType);
+    case APValue::Indeterminate:
+      Info.FFDiag(E, diag::note_constexpr_access_uninit)
+          << /*read of=*/0 << /*uninitialized object=*/1;
+      return false;
     default:
       // FIXME: can this happen?
       Info.FFDiag(E);
@@ -9357,7 +9361,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       APSInt N;
       if (!EvaluateInteger(E->getArg(2), N, Info))
         return false;
-      MaxLength = N.getExtValue();
+      MaxLength = N.getZExtValue();
     }
     // We cannot find the value if there are no candidates to match against.
     if (MaxLength == 0u)
@@ -12381,7 +12385,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       APSInt N;
       if (!EvaluateInteger(E->getArg(2), N, Info))
         return false;
-      MaxLength = N.getExtValue();
+      MaxLength = N.getZExtValue();
     }
 
     // Empty substrings compare equal by definition.

@@ -5303,11 +5303,10 @@ public:
                                           SelectionDAG &DAG) const;
 
   /// Expands target specific indirect branch for the case of JumpTable
-  /// expanasion.
-  virtual SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value, SDValue Addr,
-                                         SelectionDAG &DAG) const {
-    return DAG.getNode(ISD::BRIND, dl, MVT::Other, Value, Addr);
-  }
+  /// expansion.
+  virtual SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value,
+                                         SDValue Addr, int JTI,
+                                         SelectionDAG &DAG) const;
 
   // seteq(x, 0) -> truncate(srl(ctlz(zext(x)), log2(#bits)))
   // If we're comparing for equality to zero and isCtlzFast is true, expose the

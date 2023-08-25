@@ -931,7 +931,7 @@ func.func @fold_multiple_memory_space_cast(%arg : memref<?xf32>) -> memref<?xf32
 
 // -----
 
-// CHECK-lABEL: func @ub_negative_alloc_size
+// CHECK-LABEL: func private @ub_negative_alloc_size
 func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
   %idx1 = index.constant 1
   %c-2 = arith.constant -2 : index
@@ -939,4 +939,19 @@ func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
 // CHECK:   %[[ALLOC:.*]] = memref.alloc(%c-2) : memref<15x?x1xi1>
   %alloc = memref.alloc(%c15, %c-2, %idx1) : memref<?x?x?xi1>
   return %alloc : memref<?x?x?xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func @subview_rank_reduction(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<1x384x384xf32>, %[[arg1:.*]]: index
+func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
+    -> memref<?x?xf32, strided<[384, 1], offset: ?>> {
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[subview:.*]] = memref.subview %[[arg0]][0, %[[arg1]], %[[arg1]]] [1, 1, %[[arg1]]] [1, 1, 1] : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1], offset: ?>>
+  // CHECK: %[[cast:.*]] = memref.cast %[[subview]] : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+  %0 = memref.subview %arg0[0, %idx, %idx] [1, %c1, %idx] [1, 1, 1]
+      : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+  // CHECK: return %[[cast]]
+  return %0 : memref<?x?xf32, strided<[384, 1], offset: ?>>
 }

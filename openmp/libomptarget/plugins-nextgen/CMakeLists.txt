@@ -49,13 +49,16 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
         PRIVATE
         elf_common
         MemoryManager
-        OMPT
         PluginInterface
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
 
       NO_INSTALL_RPATH
     )
+
+    if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+      target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE OMPT)
+    endif()
 
     if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
       target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE

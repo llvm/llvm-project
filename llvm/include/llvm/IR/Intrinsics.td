@@ -2180,6 +2180,14 @@ def int_experimental_vp_splice:
              llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
+def int_vp_is_fpclass:
+      DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                              [ llvm_anyvector_ty,
+                                llvm_i32_ty,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
 def int_masked_load:

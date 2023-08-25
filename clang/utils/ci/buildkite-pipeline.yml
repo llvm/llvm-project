@@ -31,7 +31,7 @@ steps:
 
   - wait
 
-  - label: "Building clang"
+  - label: "Building and testing clang"
     commands:
       - "clang/utils/ci/run-buildbot build-clang"
     agents:

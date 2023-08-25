@@ -145,7 +145,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-fuchsia
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-kfreebsd
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-minix
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-solaris
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-win32-cygnus
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-win32-gnu

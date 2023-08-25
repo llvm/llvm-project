@@ -326,6 +326,8 @@ public:
     OMPTargetGlobalVarEntryEnter = 0x2,
     /// Mark the entry as having no declare target entry kind.
     OMPTargetGlobalVarEntryNone = 0x3,
+    /// Mark the entry as a declare target indirect global.
+    OMPTargetGlobalVarEntryIndirect = 0x4,
   };
 
   /// Kind of device clause for declare target variables
@@ -349,6 +351,7 @@ public:
     /// Type of the global variable.
     int64_t VarSize;
     GlobalValue::LinkageTypes Linkage;
+    const std::string VarName;
 
   public:
     OffloadEntryInfoDeviceGlobalVar()
@@ -359,13 +362,15 @@ public:
     explicit OffloadEntryInfoDeviceGlobalVar(unsigned Order, Constant *Addr,
                                              int64_t VarSize,
                                              OMPTargetGlobalVarEntryKind Flags,
-                                             GlobalValue::LinkageTypes Linkage)
+                                             GlobalValue::LinkageTypes Linkage,
+                                             const std::string &VarName)
         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags),
-          VarSize(VarSize), Linkage(Linkage) {
+          VarSize(VarSize), Linkage(Linkage), VarName(VarName) {
       setAddress(Addr);
     }
 
     int64_t getVarSize() const { return VarSize; }
+    StringRef getVarName() const { return VarName; }
     void setVarSize(int64_t Size) { VarSize = Size; }
     GlobalValue::LinkageTypes getLinkage() const { return Linkage; }
     void setLinkage(GlobalValue::LinkageTypes LT) { Linkage = LT; }
@@ -1734,7 +1739,8 @@ public:
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
   void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
-                          int32_t Flags, GlobalValue::LinkageTypes);
+                          int32_t Flags, GlobalValue::LinkageTypes,
+                          StringRef Name = "");
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.

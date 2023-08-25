@@ -2896,7 +2896,6 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     = getBranchOpcode(static_cast<BranchPredicate>(Cond[0].getImm()));
 
   if (!FBB) {
-    Cond[1].isUndef();
     MachineInstr *CondBr =
       BuildMI(&MBB, DL, get(Opcode))
       .addMBB(TBB);

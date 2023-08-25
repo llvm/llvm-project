@@ -420,21 +420,21 @@ vmsge.vx v8, v4, a0, v0.t
 # CHECK-UNKNOWN: 57 24 80 6e <unknown>
 
 vmsgeu.vx v0, v4, a0, v0.t, v2
-# CHECK-INST: vmsltu.vx v2, v4, a0, v0.t
+# CHECK-INST: vmsltu.vx v2, v4, a0
 # CHECK-INST: vmandn.mm v0, v0, v2
-# CHECK-ENCODING: [0x57,0x41,0x45,0x68]
+# CHECK-ENCODING: [0x57,0x41,0x45,0x6a]
 # CHECK-ENCODING: [0x57,0x20,0x01,0x62]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
-# CHECK-UNKNOWN: 57 41 45 68 <unknown>
+# CHECK-UNKNOWN: 57 41 45 6a <unknown>
 # CHECK-UNKNOWN: 57 20 01 62 <unknown>
 
 vmsge.vx v0, v4, a0, v0.t, v2
-# CHECK-INST: vmslt.vx v2, v4, a0, v0.t
+# CHECK-INST: vmslt.vx v2, v4, a0
 # CHECK-INST: vmandn.mm v0, v0, v2
-# CHECK-ENCODING: [0x57,0x41,0x45,0x6c]
+# CHECK-ENCODING: [0x57,0x41,0x45,0x6e]
 # CHECK-ENCODING: [0x57,0x20,0x01,0x62]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
-# CHECK-UNKNOWN: 57 41 45 6c <unknown>
+# CHECK-UNKNOWN: 57 41 45 6e <unknown>
 # CHECK-UNKNOWN: 57 20 01 62 <unknown>
 
 vmsgeu.vx v9, v4, a0, v0.t, v2
