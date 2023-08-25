@@ -8899,6 +8899,8 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
         UnpackageCmdArgs.push_back(
             Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
 
+        UnpackageCmdArgs.push_back("--allow-missing-packages");
+
         C.addCommand(std::make_unique<Command>(
             JA, *this, ResponseFileSupport::AtFileCurCP(), UnpackageExec,
             UnpackageCmdArgs, Inputs,

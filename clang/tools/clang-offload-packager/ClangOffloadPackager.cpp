@@ -56,6 +56,11 @@ static cl::opt<bool>
                   cl::desc("Write extracted files to a static archive"),
                   cl::cat(ClangOffloadPackagerCategory));
 
+static cl::opt<bool> AllowMissingPackages(
+    "allow-missing-packages",
+    cl::desc("Create empty files if packages are missing when unpackaging.\n"),
+    cl::init(false), cl::cat(ClangOffloadPackagerCategory));
+
 /// Path of the current binary.
 static const char *PackagerExecutable;
 
@@ -142,6 +147,7 @@ static Error bundleImages() {
 static Error unbundleImages() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFile);
+
   if (std::error_code EC = BufferOrErr.getError())
     return createFileError(InputFile, EC);
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrErr);
@@ -178,8 +184,13 @@ static Error unbundleImages() {
         Extracted.push_back(Binary);
     }
 
-    if (Extracted.empty())
+    if (Extracted.empty()) {
+      if (AllowMissingPackages)
+        if (Error E = writeFile(Args["file"], StringRef()))
+          return E;
+
       continue;
+    }
 
     if (CreateArchive) {
       if (!Args.count("file"))
