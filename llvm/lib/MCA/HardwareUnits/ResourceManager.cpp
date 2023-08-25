@@ -346,7 +346,7 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
 
 void ResourceManager::issueInstruction(
     const InstrDesc &Desc,
-    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes) {
+    SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes) {
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {
@@ -359,8 +359,8 @@ void ResourceManager::issueInstruction(
       ResourceRef Pipe = selectPipe(R.first);
       use(Pipe);
       BusyResources[Pipe] += CS.size();
-      Pipes.emplace_back(std::pair<ResourceRef, ResourceCycles>(
-          Pipe, ResourceCycles(CS.size())));
+      Pipes.emplace_back(std::pair<ResourceRef, ReleaseAtCycles>(
+          Pipe, ReleaseAtCycles(CS.size())));
     } else {
       assert((llvm::popcount(R.first) > 1) && "Expected a group!");
       // Mark this group as reserved.
