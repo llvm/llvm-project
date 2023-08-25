@@ -14,8 +14,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
