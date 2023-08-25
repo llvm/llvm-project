@@ -52,9 +52,10 @@ MachOCASWriter::MachOCASWriter(
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,
-    std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack)
+    std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack,
+    raw_pwrite_stream *CasIDOS)
     : Target(TT), CAS(CAS), Mode(Mode), ResultCallBack(ResultCallBack), OS(OS),
-      InternalOS(InternalBuffer),
+      CasIDOS(CasIDOS), InternalOS(InternalBuffer),
       MOW(std::move(MOTW), InternalOS, IsLittleEndian),
       CreateFromMcAssembler(CreateFromMcAssembler),
       SerializeObjectFile(SerializeObjectFile) {
@@ -114,6 +115,9 @@ uint64_t MachOCASWriter::writeObject(MCAssembler &Asm,
   }
   }
 
+  if (CasIDOS)
+    writeCASIDBuffer(CASObj.getID(), *CasIDOS);
+
   return OS.tell() - StartOffset;
 }
 
@@ -127,8 +131,9 @@ std::unique_ptr<MCObjectWriter> llvm::createMachOCASWriter(
         CreateFromMcAssembler,
     std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
         SerializeObjectFile,
-    std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack) {
-  return std::make_unique<MachOCASWriter>(std::move(MOTW), TT, CAS, Mode, OS,
-                                          IsLittleEndian, CreateFromMcAssembler,
-                                          SerializeObjectFile, ResultCallBack);
+    std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack,
+    raw_pwrite_stream *CasIDOS) {
+  return std::make_unique<MachOCASWriter>(
+      std::move(MOTW), TT, CAS, Mode, OS, IsLittleEndian, CreateFromMcAssembler,
+      SerializeObjectFile, ResultCallBack, CasIDOS);
 }

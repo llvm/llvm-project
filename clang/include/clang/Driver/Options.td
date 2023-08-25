@@ -7099,6 +7099,11 @@ defm cas_backend : BoolFOption<"cas-backend",
     PosFlag<SetTrue, [], "Enable using CASBackend for object file output">,
     NegFlag<SetFalse>>;
 
+defm cas_emit_casid_file : BoolFOption<"cas-emit-casid-file",
+    CodeGenOpts<"EmitCASIDFile">, DefaultFalse,
+    PosFlag<SetTrue, [], "Emit .casid file next to object file when using cas backend">,
+    NegFlag<SetFalse>>;
+
 def fcas_backend_mode : Joined<["-"], "fcas-backend-mode=">,
     Group<f_Group>, MetaVarName<"<native|casid|verify>">,
     HelpText<"CASBackendMode for output kind">,

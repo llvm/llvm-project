@@ -516,6 +516,9 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// Whether to use CASID backend.
 CODEGENOPT(UseCASBackend, 1, 0)
 
+/// Whether to emit a .casid File.
+CODEGENOPT(EmitCASIDFile, 1, 0)
+
 /// The CASObjectFormat used when CAS output is used.
 ENUM_CODEGENOPT(CASObjMode, llvm::CASBackendMode,
                 2, llvm::CASBackendMode::Native)
