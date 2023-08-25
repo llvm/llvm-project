@@ -1,6 +1,9 @@
 Caveats
 =======
 
+.. contents::
+   :local:
+
 .. _python_caveat:
 
 Python

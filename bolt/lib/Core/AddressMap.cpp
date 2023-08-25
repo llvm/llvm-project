@@ -52,7 +52,8 @@ AddressMap AddressMap::parse(StringRef Buffer, const BinaryContext &BC) {
   while (Cursor && !DE.eof(Cursor)) {
     const auto Input = DE.getAddress(Cursor);
     const auto Output = DE.getAddress(Cursor);
-    Parsed.Map.insert({Input, Output});
+    if (!Parsed.Map.count(Input))
+      Parsed.Map.insert({Input, Output});
   }
 
   assert(Cursor && "Error reading address map section");

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -142,21 +143,9 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   if (!UseProfileData && !SplitAllEHCode)
     return false;
 
-  // TODO: We don't split functions where a section attribute has been set
-  // since the split part may not be placed in a contiguous region. It may also
-  // be more beneficial to augment the linker to ensure contiguous layout of
-  // split functions within the same section as specified by the attribute.
-  if (MF.getFunction().hasSection() ||
-      MF.getFunction().hasFnAttribute("implicit-section-name"))
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  if (!TII.isFunctionSafeToSplit(MF))
     return false;
-
-  // We don't want to proceed further for cold functions
-  // or functions of unknown hotness. Lukewarm functions have no prefix.
-  std::optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
-  if (SectionPrefix &&
-      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown")) {
-    return false;
-  }
 
   // Renumbering blocks here preserves the order of the blocks as
   // sortBasicBlocksAndUpdateBranches uses the numeric identifier to sort

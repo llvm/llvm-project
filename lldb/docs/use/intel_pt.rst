@@ -1,6 +1,9 @@
 Tracing with Intel Processor Trace
 ==================================
 
+.. contents::
+  :local:
+
 Intel PT is a technology available in modern Intel CPUs that allows efficient
 tracing of all the instructions executed by a process.
 LLDB can collect traces and dump them using its symbolication stack.

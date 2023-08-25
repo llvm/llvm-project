@@ -245,10 +245,7 @@ public:
   /// The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;
 
-  /// Absolute offset of the start of the input-files block.
-  uint64_t InputFilesOffsetBase = 0;
-
-  /// Relative offsets for all of the input file entries in the AST file.
+  /// Offsets for all of the input file entries in the AST file.
   const llvm::support::unaligned_uint64_t *InputFileOffsets = nullptr;
 
   /// The input files that have been loaded from this AST file.

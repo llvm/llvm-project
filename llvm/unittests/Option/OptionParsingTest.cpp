@@ -238,6 +238,23 @@ TYPED_TEST(OptTableTest, IgnoreCase) {
   EXPECT_TRUE(AL.hasArg(OPT_B));
 }
 
+TYPED_TEST(OptTableTest, InputArgListSelfAssign) {
+  TypeParam T;
+  unsigned MAI, MAC;
+  InputArgList AL = T.ParseArgs(Args, MAI, MAC,
+                                /*FlagsToInclude=*/0,
+                                /*FlagsToExclude=*/OptFlag3);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_C));
+  EXPECT_FALSE(AL.hasArg(OPT_SLASH_C));
+
+  AL = std::move(AL);
+
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_C));
+  EXPECT_FALSE(AL.hasArg(OPT_SLASH_C));
+}
+
 TYPED_TEST(OptTableTest, DoNotIgnoreCase) {
   TypeParam T;
   unsigned MAI, MAC;
