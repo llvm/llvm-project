@@ -3571,6 +3571,13 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
       return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
     }
   }
+
+  // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
+  if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
+      isa<ConstantSDNode>(Hi.getOperand(1)) &&
+      Hi.getConstantOperandVal(1) == 31)
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Lo, VL);
+
   // If the hi bits of the splat are undefined, then it's fine to just splat Lo
   // even if it might be sign extended.
   if (Hi.isUndef())
@@ -6870,43 +6877,19 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
   SDValue Lo = Op.getOperand(0);
   SDValue Hi = Op.getOperand(1);
 
-  if (VecVT.isFixedLengthVector()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    SDLoc DL(Op);
-    auto VL = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).second;
+  MVT ContainerVT = VecVT;
+  if (VecVT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
 
-    SDValue Res =
-        splatPartsI64WithVL(DL, ContainerVT, SDValue(), Lo, Hi, VL, DAG);
-    return convertFromScalableVector(VecVT, Res, DAG, Subtarget);
-  }
+  auto VL = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).second;
 
-  if (isa<ConstantSDNode>(Lo) && isa<ConstantSDNode>(Hi)) {
-    int32_t LoC = cast<ConstantSDNode>(Lo)->getSExtValue();
-    int32_t HiC = cast<ConstantSDNode>(Hi)->getSExtValue();
-    // If Hi constant is all the same sign bit as Lo, lower this as a custom
-    // node in order to try and match RVV vector/scalar instructions.
-    if ((LoC >> 31) == HiC)
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT),
-                         Lo, DAG.getRegister(RISCV::X0, MVT::i32));
-  }
+  SDValue Res =
+      splatPartsI64WithVL(DL, ContainerVT, SDValue(), Lo, Hi, VL, DAG);
 
-  // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
-  if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
-      isa<ConstantSDNode>(Hi.getOperand(1)) &&
-      Hi.getConstantOperandVal(1) == 31)
-    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT), Lo,
-                       DAG.getRegister(RISCV::X0, MVT::i32));
+  if (VecVT.isFixedLengthVector())
+    Res = convertFromScalableVector(VecVT, Res, DAG, Subtarget);
 
-  // If the hi bits of the splat are undefined, then it's fine to just splat Lo
-  // even if it might be sign extended.
-  if (Hi.isUndef())
-    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT), Lo,
-                       DAG.getRegister(RISCV::X0, MVT::i32));
-
-  // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
-  return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT,
-                     DAG.getUNDEF(VecVT), Lo, Hi,
-                     DAG.getRegister(RISCV::X0, MVT::i32));
+  return Res;
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
