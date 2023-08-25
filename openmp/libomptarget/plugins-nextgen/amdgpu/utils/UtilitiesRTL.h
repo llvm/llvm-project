@@ -178,7 +178,7 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
 
 // Check target image for XNACK mode (XNACK+, XNACK-ANY, XNACK-)
 [[nodiscard]] XnackBuildMode
-extractXnackModeFromBinary(__tgt_device_image *TgtImage) {
+extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   assert((TgtImage != nullptr) && "TgtImage is nullptr.");
   u_int16_t EFlags = elf_get_eflags(TgtImage);
 

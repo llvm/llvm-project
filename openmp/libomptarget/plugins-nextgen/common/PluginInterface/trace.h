@@ -310,15 +310,15 @@ bool __tgt_rtl_has_apu_device() {
 }
 #define __tgt_rtl_has_apu_device(...) __tgt_rtl_is_apu_system_impl(__VA_ARGS__)
 
-static bool __tgt_rtl_has_gfx90a_device_impl();
-bool __tgt_rtl_has_gfx90a_device() {
+static bool __tgt_rtl_has_USM_capable_dGPU_impl();
+bool __tgt_rtl_has_USM_capable_dGPU() {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_has_gfx90a_device_impl();
+  bool r = __tgt_rtl_has_USM_capable_dGPU_impl();
   t.res(r);
   return r;
 }
-#define __tgt_rtl_has_gfx90a_device(...)                                       \
-  __tgt_rtl_has_gfx90a_device_impl(__VA_ARGS__)
+#define __tgt_rtl_has_USM_capable_dGPU(...)                                   \
+  __tgt_rtl_has_USM_capable_dGPU_impl(__VA_ARGS__)
 
 static bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl();
 bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
@@ -329,6 +329,16 @@ bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
 }
 #define __tgt_rtl_are_allocations_for_maps_on_apus_disabled(...)               \
   __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_requested_prepopulate_gpu_page_table_impl();
+bool __tgt_rtl_requested_prepopulate_gpu_page_table() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_requested_prepopulate_gpu_page_table_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_requested_prepopulate_gpu_page_table(...)                    \
+  __tgt_rtl_requested_prepopulate_gpu_page_table_impl(__VA_ARGS__)
 
 static bool __tgt_rtl_is_fine_grained_memory_enabled_impl();
 bool __tgt_rtl_is_fine_grained_memory_enabled() {
@@ -428,6 +438,22 @@ int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId,
 }
 #define __tgt_rtl_query_coarse_grain_mem_region(...)                           \
   __tgt_rtl_query_coarse_grain_mem_region_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_prepopulate_page_table_impl(int32_t DeviceId,
+                                                     void *ptr, int64_t size);
+int32_t __tgt_rtl_prepopulate_page_table(int32_t DeviceId, void *ptr,
+                                         int64_t size) {
+  auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
+  int32_t r = __tgt_rtl_prepopulate_page_table_impl(DeviceId, ptr, size);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_prepopulate_page_table(...)                                  \
+  __tgt_rtl_prepopulate_page_table_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId,
+                                                            const void *ptr,
+                                                            int64_t size);
 
 // static int32_t __tgt_rtl_enable_access_to_all_agents_impl(const void *ptr,
 //                                                          int32_t device_id);

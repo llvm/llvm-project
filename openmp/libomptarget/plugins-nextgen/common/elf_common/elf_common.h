@@ -25,6 +25,6 @@ EXTERN int32_t elf_check_machine(__tgt_device_image *Image, uint16_t TargetId);
 EXTERN int32_t elf_is_dynamic(__tgt_device_image *Image);
 
 /// Return eflags
-EXTERN u_int16_t elf_get_eflags(__tgt_device_image *Image);
+EXTERN u_int16_t elf_get_eflags(const __tgt_device_image *Image);
 
 #endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_ELF_COMMON_ELF_COMMON_H

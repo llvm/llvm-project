@@ -87,7 +87,7 @@ int32_t elf_is_dynamic(__tgt_device_image *Image) {
                         CheckDynType);
 }
 
-u_int16_t elf_get_eflags(__tgt_device_image *Image) {
+u_int16_t elf_get_eflags(const __tgt_device_image *Image) {
   auto extractElfFlags = [](const ELFObjectFileBase *Object) {
     const ELF64LEObjectFile *ELFFile = dyn_cast<ELF64LEObjectFile>(Object);
     return ELFFile->getELFFile().getHeader().e_flags;

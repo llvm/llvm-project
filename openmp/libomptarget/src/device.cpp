@@ -281,7 +281,8 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (((RTL->are_allocations_for_maps_on_apus_disabled()) ||
+  } else if (((RTL->requested_prepopulate_gpu_page_table()) ||
+              (RTL->are_allocations_for_maps_on_apus_disabled()) ||
               (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
     // If unified shared memory is active, implicitly mapped variables that
@@ -295,10 +296,16 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
       // This is not done for APUs.
-      if (!(RTL->has_apu_device() || RTL->has_gfx90a_device()) &&
+      if (!(RTL->has_apu_device() || RTL->has_USM_capable_dGPU()) &&
           RTL->is_fine_grained_memory_enabled() && HstPtrBegin &&
           RTL->set_coarse_grain_mem_region) {
         RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
+      }
+
+      if (RTL->has_apu_device() &&
+          RTL->requested_prepopulate_gpu_page_table() &&
+          RTL->prepopulate_page_table) {
+        RTL->prepopulate_page_table(DeviceID, HstPtrBegin, Size);
       }
 
       if (!RTL->is_no_maps_check()) {

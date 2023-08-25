@@ -37,8 +37,8 @@ int32_t __tgt_rtl_number_of_devices(void);
 // Return if the system is equipped with an APU
 bool __tgt_rtl_has_apu_device(void);
 
-// Returns true, if the system is equipped with an GFX90a
-bool __tgt_rtl_has_gfx90a_device(void);
+// Returns true, if the system is equipped with a dGPU which supports USM.
+bool __tgt_rtl_has_USM_capable_dGPU(void);
 
 bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled(void);
 

@@ -37,8 +37,9 @@ struct RTLInfoTy {
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef bool(has_apu_device_ty)();
-  typedef bool(has_gfx90a_device_ty)();
+  typedef bool(has_USM_capable_dGPU_ty)();
   typedef bool(are_allocations_for_maps_on_apus_disabled_ty)();
+  typedef bool(requested_prepopulate_gpu_page_table_ty)();
   typedef bool(is_no_maps_check_ty)();
   typedef bool(is_fine_grained_memory_enabled_ty)();
   typedef int32_t(init_device_ty)(int32_t);
@@ -74,6 +75,7 @@ struct RTLInfoTy {
   typedef int32_t(sync_event_ty)(int32_t, void *);
   typedef int32_t(destroy_event_ty)(int32_t, void *);
   typedef int(set_coarse_grain_mem_region_ty)(int32_t, void *, int64_t);
+  typedef int(prepopulate_page_table_ty)(int32_t, void *, int64_t);
   typedef int32_t(query_coarse_grain_mem_region_ty)(int32_t, void *, int64_t);
   typedef int32_t(enable_access_to_all_agents_ty)(void *, int32_t);
   typedef int32_t(release_async_info_ty)(int32_t, __tgt_async_info *);
@@ -108,9 +110,11 @@ struct RTLInfoTy {
   is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   has_apu_device_ty *has_apu_device = nullptr;
-  has_gfx90a_device_ty *has_gfx90a_device = nullptr;
+  has_USM_capable_dGPU_ty *has_USM_capable_dGPU = nullptr;
   are_allocations_for_maps_on_apus_disabled_ty
       *are_allocations_for_maps_on_apus_disabled = nullptr;
+  requested_prepopulate_gpu_page_table_ty
+      *requested_prepopulate_gpu_page_table = nullptr;
   is_no_maps_check_ty *is_no_maps_check = nullptr;
   is_fine_grained_memory_enabled_ty *is_fine_grained_memory_enabled = nullptr;
   init_device_ty *init_device = nullptr;
@@ -146,6 +150,7 @@ struct RTLInfoTy {
   data_lock_ty *data_lock = nullptr;
   data_unlock_ty *data_unlock = nullptr;
   set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
+  prepopulate_page_table_ty *prepopulate_page_table = nullptr;
   query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
   enable_access_to_all_agents_ty *enable_access_to_all_agents = nullptr;
   data_notify_mapped_ty *data_notify_mapped = nullptr;

@@ -266,6 +266,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
   *((void **)&RTL.query_coarse_grain_mem_region) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
+  *((void **)&RTL.prepopulate_page_table) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_prepopulate_page_table");
   *((void **)&RTL.enable_access_to_all_agents) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
   *((void **)&RTL.release_async_info) =
@@ -284,11 +286,14 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
   *((void **)&RTL.has_apu_device) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_has_apu_device");
-  *((void **)&RTL.has_gfx90a_device) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_gfx90a_device");
+  *((void **)&RTL.has_USM_capable_dGPU) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_USM_capable_dGPU");
   *((void **)&RTL.are_allocations_for_maps_on_apus_disabled) =
       DynLibrary->getAddressOfSymbol(
           "__tgt_rtl_are_allocations_for_maps_on_apus_disabled");
+  *((void **)&RTL.requested_prepopulate_gpu_page_table) =
+      DynLibrary->getAddressOfSymbol(
+          "__tgt_rtl_requested_prepopulate_gpu_page_table");
   *((void **)&RTL.is_no_maps_check) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_no_maps_check");
   *((void **)&RTL.is_fine_grained_memory_enabled) =

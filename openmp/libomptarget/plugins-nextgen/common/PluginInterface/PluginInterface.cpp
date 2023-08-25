@@ -817,24 +817,25 @@ Error GenericDeviceTy::registerGlobalOffloadEntry(
   // not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we can
   // also use globals directly from the host.
   bool EnableHostGlobals = false;
-  auto *APUMaps = getenv("OMPX_APU_MAPS");
-  auto *HSAXnack = getenv("HSA_XNACK");
-  if (APUMaps && HSAXnack)
-    EnableHostGlobals = std::stoi(APUMaps) > 0 && std::stoi(HSAXnack) > 0;
+  bool IsZeroCopyOnAPU = Plugin::get().AreAllocationsForMapsOnApusDisabled();
+  BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
+
+  if (IsZeroCopyOnAPU && HSAXnack.get())
+    EnableHostGlobals = true;
 
   // Check if we are on a system that has an APU or on a non-APU system
   // where unified shared memory can be enabled:
-  bool IsAPUSystem =
-      Plugin::get().hasAPUDevice() || Plugin::get().hasGfx90aDevice();
+  bool IsUsmSystem =
+      Plugin::get().hasAPUDevice() || Plugin::get().hasDGpuWithUsmSupport();
 
   // Fail if there is a mismatch between the user request and the system
   // architecture:
-  if (EnableHostGlobals && !IsAPUSystem)
+  if (EnableHostGlobals && !IsUsmSystem)
     return Plugin::error("OMPX_APU_MAPS and HSA_XNACK enabled on system that"
                          " does not support unified shared memory");
 
   if (Plugin.getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
-      (IsAPUSystem && EnableHostGlobals)) {
+      (IsUsmSystem && EnableHostGlobals)) {
     // If unified memory is present any target link or to variables
     // can access host addresses directly. There is no longer a
     // need for device copies.
@@ -1326,6 +1327,13 @@ uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
   return queryCoarseGrainMemoryImpl(ptr, size);
 }
 
+Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
+  assert(ptr != nullptr);
+  assert(size > 0);
+
+  return prepopulatePageTableImpl(ptr, size);
+}
+
 Error GenericDeviceTy::printInfo() {
   InfoQueueTy InfoQueue;
 
@@ -1555,10 +1563,16 @@ int __tgt_rtl_number_of_team_procs(int DeviceId) {
 
 bool __tgt_rtl_has_apu_device() { return Plugin::get().hasAPUDevice(); }
 
-bool __tgt_rtl_has_gfx90a_device() { return Plugin::get().hasGfx90aDevice(); }
+bool __tgt_rtl_has_USM_capable_dGPU() {
+  return Plugin::get().hasDGpuWithUsmSupport();
+}
 
 bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
   return Plugin::get().AreAllocationsForMapsOnApusDisabled();
+}
+
+bool __tgt_rtl_requested_prepopulate_gpu_page_table() {
+  return Plugin::get().requestedPrepopulateGPUPageTable();
 }
 
 bool __tgt_rtl_is_no_maps_check() { return Plugin::get().IsNoMapsCheck(); }
@@ -1613,8 +1627,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
            DeviceId, toString(std::move(Err)).data());
     return nullptr;
   }
-
-  Plugin::get().checkAndAdjustUsmModeForTargetImage(TgtImage);
 
   __tgt_target_table *Table = *TableOrErr;
   assert(Table != nullptr && "Invalid table");
@@ -1948,6 +1960,27 @@ int __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr,
 
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
   Plugin::get().setDeviceIdStartIndex(DeviceIdOffset);
+
+  return OFFLOAD_SUCCESS;
+}
+
+// Request GPU driver to add all pages underlying memory [ptr,ptr+size[ to the
+// \arg DeviceId page table
+// \arg DeviceId is the ID of the device for which the memory should be switched
+// to coarse grain mode. \arg ptr is the base pointer of the region to be
+// registered as coarse grain \arg size is the size of the memory region to be
+// registered as coarse grain
+int __tgt_rtl_prepopulate_page_table(int32_t DeviceId, void *ptr,
+                                     int64_t size) {
+
+  auto Err = Plugin::get().getDevice(DeviceId).prepopulatePageTable(ptr, size);
+
+  if (Err) {
+    REPORT("Failure prepopulating GPU page table (ptr: %p, "
+           "size: %ld)\n",
+           ptr, size);
+    return OFFLOAD_FAIL;
+  }
 
   return OFFLOAD_SUCCESS;
 }
