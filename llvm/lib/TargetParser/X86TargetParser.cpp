@@ -725,13 +725,11 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
-      std::numeric_limits<unsigned>::max() // Need to consume last comma.
   };
-  std::array<unsigned, std::size(Priorities) - 1> HelperList;
+  std::array<unsigned, std::size(Priorities)> HelperList;
   std::iota(HelperList.begin(), HelperList.end(), 0);
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
-                             std::begin(Priorities),
-                             std::prev(std::end(Priorities))) &&
+                             std::begin(Priorities), std::end(Priorities)) &&
          "Priorities don't form consecutive range!");
 #endif
 
