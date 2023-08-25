@@ -393,7 +393,7 @@ private:
   }
   static bool isTrivalIdxCond(LoopCondKind k) { return !isAffineIdxCond(k); }
 
-  /// Whether the affine index expression is not fully reduced.
+  /// Whether the affine index expression is fully reduced.
   static bool isAffineIdxUnRedCond(LoopCondKind k) {
     return isAffineIdxCond(k) && static_cast<uint8_t>(k) & kAffineIdxCondUnRed;
   }
@@ -405,7 +405,7 @@ private:
   // E.g., to iterate over sparse tensor slice, we need to check whether the
   // current cooridnate is on the slice (e.g., due to stride) or not.
   static bool isCondWithExtraCheck(LoopCondKind k) {
-    return isSparseCond(k) && isSliceCond(k);
+    return isSparseCond(k) && (isSliceCond(k) || isAffineIdxUnRedCond(k));
   }
 
   static LoopCondKind makeLoopCondKind(bool isSparse, bool isSlice,

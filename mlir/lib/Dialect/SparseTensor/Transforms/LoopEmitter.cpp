@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -35,6 +36,8 @@ using namespace mlir::sparse_tensor;
 #define ANDI(lhs, rhs) (builder.create<arith::AndIOp>(loc, (lhs), (rhs)))
 #define SUBI(lhs, rhs) (builder.create<arith::SubIOp>(loc, (lhs), (rhs)))
 #define MULI(lhs, rhs) (builder.create<arith::MulIOp>(loc, (lhs), (rhs)))
+#define REMUI(lhs, rhs) (builder.create<arith::RemUIOp>(loc, (lhs), (rhs)))
+#define DIVUI(lhs, rhs) (builder.create<arith::DivUIOp>(loc, (lhs), (rhs)))
 #define SELECT(c, l, r) (builder.create<arith::SelectOp>(loc, (c), (l), (r)))
 
 //===----------------------------------------------------------------------===//
@@ -117,8 +120,8 @@ static std::pair<Value, Value> fromSliceCrd(OpBuilder &builder, Location loc,
                                             Level lvl) {
   // sliceCrd = (tensorCrd - offset) / stride
   crd = SUBI(crd, offset);
-  Value rem = builder.create<arith::RemUIOp>(loc, crd, stride);
-  crd = builder.create<arith::DivUIOp>(loc, crd, stride);
+  Value rem = REMUI(crd, stride);
+  crd = DIVUI(crd, stride);
   return std::make_pair(crd, rem);
 }
 
@@ -725,6 +728,7 @@ Value LoopEmitter::genWhileLoopConditions(OpBuilder &builder, Location loc,
   }
   case LoopCondKind::SparseAffineCond: {
     assert(ivs.size() == 1);
+
     Value crdHi; // loop upper bound
     {
       OpBuilder::InsertionGuard guard(builder);
@@ -732,9 +736,9 @@ Value LoopEmitter::genWhileLoopConditions(OpBuilder &builder, Location loc,
       // crdHi is a loop invariant, hosit the computation outside the loop.
       if (llvm::isa_and_nonnull<scf::WhileOp>(loop))
         builder.setInsertionPoint(loop);
-      auto [size, stride] = sliceMeta[tid][lvl].back();
+      auto [remSz, stride] = sliceMeta[tid][lvl].back();
       assert(stride == 1 && "Not yet implemented");
-      crdHi = ADDI(getMostRecentSliceOnLvl(tid, lvl).offset, size);
+      crdHi = ADDI(getMostRecentSliceOnLvl(tid, lvl).offset, remSz);
     }
     assert(crdHi);
     return genSparseReducedAffineCond(builder, loc,
@@ -792,18 +796,33 @@ std::optional<Value> LoopEmitter::genWhileLoopBody(OpBuilder &builder,
     return std::nullopt;
   }
   case LoopCondKind::SparseAffineUnRedCond: {
+    unsigned depth = sliceStack[tid].back().depth;
+    unsigned curStride = sliceMeta[tid][lvl][depth - 1].second;
     assert(ivs.size() == 3);
-    // Coord is the relative offset related to its parents.
-    // Update c = absOffset[lvl][depth] - absOffset[lvl][depth - 1]
-    assert(sliceStack[tid].back().depth == 1 && "TODO: not yet implement");
+
     // Updates the current slice info
     SliceInfo &sliceInfo = sliceStack[tid].back();
     sliceInfo.isNonEmpty = ivs[0];
     sliceInfo.minCrd = ivs[1];
     sliceInfo.offset = ivs[2];
-    coords[tid][lvl] = sliceInfo.offset;
+
+    // Crd (the value we used to coiterate) is the relative offset related to
+    // its parents, we can use the absolute offset here because when depth = 1,
+    // absOffset[lvl][depth - 1] always equals zero.
+    // TODO: Update crd =absOffset[lvl][depth] - absOffset[lvl][depth - 1]
+    assert(depth == 1 && "TODO: not yet implement");
+    Value crd = sliceInfo.offset;
+
+    Value onStride = constantI1(builder, loc, true);
+    if (curStride != 1) {
+      Value strideVal = C_IDX(curStride);
+      Value rem = REMUI(crd, strideVal);
+      crd = DIVUI(crd, strideVal);
+      onStride = CMPI(eq, rem, C_IDX(0));
+    }
+    coords[tid][lvl] = crd;
     // No extra check is needed before accessing the tensor level.
-    return std::nullopt;
+    return onStride;
   }
   default:
     llvm_unreachable("Unhandled LoopCondKind");
@@ -814,11 +833,44 @@ std::optional<Value> LoopEmitter::genWhileLoopBody(OpBuilder &builder,
 ValueRange LoopEmitter::genCheckedValue(OpBuilder &builder, Location loc,
                                         Value pred, ValueRange curArgs,
                                         TensorLvlCond cond) {
-  // Currently only sparse slice condition need extra check.
-  assert(isSliceCond(cond.second) && isSparseCond(cond.second));
-  assert(curArgs.size() == 1);
-  Value nextPos = ADDI(curArgs.front(), C_IDX(1));
-  return SELECT(pred, curArgs.front(), nextPos)->getResults();
+  assert(isSparseCond(cond.second));
+  auto [tid, lvl] = unpackTensorLevel(cond.first);
+  if (isAffineIdxUnRedCond(cond.second)) {
+    unsigned depth = sliceStack[tid].back().depth;
+    unsigned curStride = sliceMeta[tid][lvl][depth - 1].second;
+    if (curStride == 1)
+      return curArgs;
+    // Build
+    // if (onStride) {
+    //    yield curSlice
+    // } else {
+    //    yield nxSlice.
+    //}
+    assert(curArgs.size() == 3);
+    auto ifOp = builder.create<scf::IfOp>(loc, curArgs.getTypes(), pred, true);
+    {
+      OpBuilder::InsertionGuard guard(builder);
+      // If not all slices are legit, yield the updated value.
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+      YIELD(curArgs);
+      // If not all slices are legit, yield the updated value.
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      auto [nonEmpty, minCrd, offset] =
+          genSliceNextInduction(builder, loc, tid, lvl);
+      SmallVector<Value> nxSlice{nonEmpty, minCrd, offset};
+      YIELD(nxSlice);
+    }
+    // If all slices are legit, start the user generated code.
+    return ifOp.getResults();
+  } else {
+    // Currently only sparse slice condition need extra check.
+    assert(isSliceCond(cond.second) && isSparseCond(cond.second));
+    assert(curArgs.size() == 1);
+    Value nextPos = ADDI(curArgs.front(), C_IDX(1));
+    return SELECT(pred, curArgs.front(), nextPos)->getResults();
+  }
+  llvm_unreachable("unhandled case");
 }
 
 std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
@@ -1877,9 +1929,6 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
                                           TensorId tid, Level lvl) {
   Value c0 = C_IDX(0), c1 = C_IDX(1), c2 = C_IDX(2);
   unsigned depth = levelReducedDep[tid][lvl];
-  // TODO: handle case when the current slice stride is not one.
-  assert(sliceMeta[tid][lvl][depth].second == 1 && "Not yet implemented");
-
   // The remaining slice size after reduction.
   Value remSz = sliceMeta[tid][lvl][depth + 1].first;
   // Dense slice begin is trivial
@@ -2251,8 +2300,6 @@ LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
 
   // FIXME: compute relative offset.
   assert(info.depth - 1 == 0);
-  Value nextRelOffset = nextAbsOffset;
-  nextRelOffset = SELECT(nextNonEmpty, nextRelOffset, c0);
   return std::make_tuple(nextNonEmpty, nextMinCrd, nextAbsOffset);
 }
 
