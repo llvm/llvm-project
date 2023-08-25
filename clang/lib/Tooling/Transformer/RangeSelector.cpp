@@ -232,9 +232,11 @@ RangeSelector transformer::name(std::string ID) {
     if (const auto *T = Node.get<TypeLoc>()) {
       TypeLoc Loc = *T;
       auto ET = Loc.getAs<ElaboratedTypeLoc>();
-      if (!ET.isNull()) {
+      if (!ET.isNull())
         Loc = ET.getNamedTypeLoc();
-      }
+      if (auto SpecLoc = Loc.getAs<TemplateSpecializationTypeLoc>();
+          !SpecLoc.isNull())
+        return CharSourceRange::getTokenRange(SpecLoc.getTemplateNameLoc());
       return CharSourceRange::getTokenRange(Loc.getSourceRange());
     }
     return typeError(ID, Node.getNodeKind(),
