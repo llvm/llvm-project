@@ -4,27 +4,26 @@
 define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
 ; LA64-NEXT:    andi $a1, $a1, 255
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    andi $a2, $a2, 255
-; LA64-NEXT:    sll.w $a2, $a2, $a0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
 ; LA64-NEXT:    ori $a4, $zero, 255
-; LA64-NEXT:    sll.w $a0, $a4, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    addi.w $a3, $a3, 0
 ; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a4, $a3, 0
-; LA64-NEXT:    and $a5, $a4, $a0
+; LA64-NEXT:    ll.w $a4, $a0, 0
+; LA64-NEXT:    and $a5, $a4, $a3
 ; LA64-NEXT:    bne $a5, $a1, .LBB0_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a5, $a4, $a0
+; LA64-NEXT:    andn $a5, $a4, $a3
 ; LA64-NEXT:    or $a5, $a5, $a2
-; LA64-NEXT:    sc.w $a5, $a3, 0
+; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB0_1
 ; LA64-NEXT:    b .LBB0_4
 ; LA64-NEXT:  .LBB0_3:
@@ -38,28 +37,27 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    sll.w $a2, $a2, $a0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
-; LA64-NEXT:    sll.w $a0, $a4, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    addi.w $a3, $a3, 0
 ; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a4, $a3, 0
-; LA64-NEXT:    and $a5, $a4, $a0
+; LA64-NEXT:    ll.w $a4, $a0, 0
+; LA64-NEXT:    and $a5, $a4, $a3
 ; LA64-NEXT:    bne $a5, $a1, .LBB1_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a5, $a4, $a0
+; LA64-NEXT:    andn $a5, $a4, $a3
 ; LA64-NEXT:    or $a5, $a5, $a2
-; LA64-NEXT:    sc.w $a5, $a3, 0
+; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB1_1
 ; LA64-NEXT:    b .LBB1_4
 ; LA64-NEXT:  .LBB1_3:
@@ -113,33 +111,32 @@ define void @cmpxchg_i64_acquire_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 define i8 @cmpxchg_i8_acquire_acquire_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire_reti8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
+; LA64-NEXT:    slli.d $a3, $a0, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
-; LA64-NEXT:    sll.w $a4, $a4, $a0
-; LA64-NEXT:    addi.w $a4, $a4, 0
+; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a2, $a2, 255
-; LA64-NEXT:    sll.w $a2, $a2, $a0
+; LA64-NEXT:    addi.w $a4, $a4, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
 ; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    andi $a1, $a1, 255
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a5, $a3, 0
+; LA64-NEXT:    ll.w $a5, $a0, 0
 ; LA64-NEXT:    and $a6, $a5, $a4
 ; LA64-NEXT:    bne $a6, $a1, .LBB4_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB4_1 Depth=1
 ; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    andn $a6, $a5, $a4
 ; LA64-NEXT:    or $a6, $a6, $a2
-; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB4_1
 ; LA64-NEXT:    b .LBB4_4
 ; LA64-NEXT:  .LBB4_3:
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB4_4:
-; LA64-NEXT:    srl.w $a0, $a5, $a0
+; LA64-NEXT:    srl.w $a0, $a5, $a3
 ; LA64-NEXT:    ret
   %tmp = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire acquire
   %res = extractvalue { i8, i1 } %tmp, 0
@@ -149,34 +146,33 @@ define i8 @cmpxchg_i8_acquire_acquire_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind
 define i16 @cmpxchg_i16_acquire_acquire_reti16(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire_reti16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
-; LA64-NEXT:    lu12i.w $a4, 15
-; LA64-NEXT:    ori $a4, $a4, 4095
-; LA64-NEXT:    sll.w $a4, $a4, $a0
-; LA64-NEXT:    addi.w $a4, $a4, 0
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
+; LA64-NEXT:    slli.d $a4, $a0, 3
+; LA64-NEXT:    sll.w $a3, $a3, $a4
 ; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    sll.w $a2, $a2, $a0
+; LA64-NEXT:    addi.w $a3, $a3, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a4
 ; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    sll.w $a1, $a1, $a4
 ; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a5, $a3, 0
-; LA64-NEXT:    and $a6, $a5, $a4
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a3
 ; LA64-NEXT:    bne $a6, $a1, .LBB5_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB5_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a6, $a5, $a4
+; LA64-NEXT:    andn $a6, $a5, $a3
 ; LA64-NEXT:    or $a6, $a6, $a2
-; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB5_1
 ; LA64-NEXT:    b .LBB5_4
 ; LA64-NEXT:  .LBB5_3:
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB5_4:
-; LA64-NEXT:    srl.w $a0, $a5, $a0
+; LA64-NEXT:    srl.w $a0, $a5, $a4
 ; LA64-NEXT:    ret
   %tmp = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire acquire
   %res = extractvalue { i16, i1 } %tmp, 0
@@ -230,27 +226,26 @@ define i64 @cmpxchg_i64_acquire_acquire_reti64(ptr %ptr, i64 %cmp, i64 %val) nou
 define i1 @cmpxchg_i8_acquire_acquire_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
-; LA64-NEXT:    ori $a4, $zero, 255
-; LA64-NEXT:    sll.w $a4, $a4, $a0
 ; LA64-NEXT:    andi $a1, $a1, 255
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    ori $a4, $zero, 255
+; LA64-NEXT:    sll.w $a4, $a4, $a3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    andi $a2, $a2, 255
-; LA64-NEXT:    sll.w $a0, $a2, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
+; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
-; LA64-NEXT:    addi.w $a2, $a4, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    addi.w $a3, $a4, 0
 ; LA64-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a5, $a3, 0
-; LA64-NEXT:    and $a6, $a5, $a2
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a3
 ; LA64-NEXT:    bne $a6, $a1, .LBB8_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB8_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a6, $a5, $a2
-; LA64-NEXT:    or $a6, $a6, $a0
-; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    andn $a6, $a5, $a3
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB8_1
 ; LA64-NEXT:    b .LBB8_4
 ; LA64-NEXT:  .LBB8_3:
@@ -269,34 +264,33 @@ define i1 @cmpxchg_i8_acquire_acquire_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind
 define i1 @cmpxchg_i16_acquire_acquire_reti1(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a3, $zero, -4
-; LA64-NEXT:    and $a3, $a0, $a3
-; LA64-NEXT:    slli.d $a0, $a0, 3
-; LA64-NEXT:    lu12i.w $a4, 15
-; LA64-NEXT:    ori $a4, $a4, 4095
-; LA64-NEXT:    sll.w $a4, $a4, $a0
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    sll.w $a1, $a1, $a0
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
+; LA64-NEXT:    slli.d $a4, $a0, 3
+; LA64-NEXT:    sll.w $a3, $a3, $a4
+; LA64-NEXT:    sll.w $a1, $a1, $a4
 ; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
-; LA64-NEXT:    sll.w $a0, $a2, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a4
+; LA64-NEXT:    addi.w $a2, $a2, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
-; LA64-NEXT:    addi.w $a2, $a4, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    addi.w $a4, $a3, 0
 ; LA64-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a5, $a3, 0
-; LA64-NEXT:    and $a6, $a5, $a2
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a4
 ; LA64-NEXT:    bne $a6, $a1, .LBB9_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB9_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a6, $a5, $a2
-; LA64-NEXT:    or $a6, $a6, $a0
-; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    andn $a6, $a5, $a4
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB9_1
 ; LA64-NEXT:    b .LBB9_4
 ; LA64-NEXT:  .LBB9_3:
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB9_4:
-; LA64-NEXT:    and $a0, $a5, $a4
+; LA64-NEXT:    and $a0, $a5, $a3
 ; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    sltui $a0, $a0, 1
