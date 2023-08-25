@@ -21,6 +21,10 @@
 // RUN: %clang -### -ffast-math -ffp-contract=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s
 
+// RUN: %clang -### -ffast-math -ffp-contract=fast-honor-pragmas -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST-HONOR %s
+// CHECK-FPC-FAST-HONOR:     "-ffp-contract=fast-honor-pragmas"
+
 // RUN: %clang -### -ffp-contract=fast -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s
 // RUN: %clang -### -ffp-contract=on -ffast-math -c %s 2>&1 \
