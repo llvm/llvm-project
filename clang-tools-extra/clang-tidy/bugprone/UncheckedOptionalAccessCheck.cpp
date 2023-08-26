@@ -22,7 +22,6 @@ namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
-using dataflow::UncheckedOptionalAccessModelOptions;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
