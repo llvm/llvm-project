@@ -89,10 +89,6 @@ public:
   void emitJumpTableTBInst(const MachineInstr *MI, unsigned OffsetWidth);
   void emitInstruction(const MachineInstr *MI) override;
   bool runOnMachineFunction(MachineFunction &F) override;
-  std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
-             codeview::JumpTableEntrySize>
-  getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
-                           const MCSymbol *BranchLabel) const override;
 
   void emitConstantPool() override {
     // we emit constant pools customly!
