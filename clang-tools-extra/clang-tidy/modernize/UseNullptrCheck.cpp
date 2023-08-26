@@ -467,7 +467,6 @@ private:
     llvm_unreachable("findContainingAncestor");
   }
 
-private:
   SourceManager &SM;
   ASTContext &Context;
   ArrayRef<StringRef> NullMacros;
