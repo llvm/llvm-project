@@ -342,10 +342,10 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
 namespace clang::tidy {
 
 const llvm::StringMap<tooling::Replacements> *
-getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
+getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix) {
   if (!Diagnostic.Message.Fix.empty())
     return &Diagnostic.Message.Fix;
-  if (!GetFixFromNotes)
+  if (!AnyFix)
     return nullptr;
   const llvm::StringMap<tooling::Replacements> *Result = nullptr;
   for (const auto &Note : Diagnostic.Notes) {
