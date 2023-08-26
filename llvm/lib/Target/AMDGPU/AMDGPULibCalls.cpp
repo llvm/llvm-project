@@ -612,6 +612,24 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
     return isKnownNeverInfinity(I, DL);
+  case Instruction::Call: {
+    const CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+      return (FMF.noInfs() && FMF.noNaNs()) ||
+             isKnownNeverInfOrNaN(I, DL, nullptr);
+    default:
+      break;
+    }
+
+    break;
+  }
   default:
     break;
   }
