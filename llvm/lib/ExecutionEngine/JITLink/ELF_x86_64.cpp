@@ -242,8 +242,10 @@ public:
                       std::unique_ptr<LinkGraph> G,
                       PassConfiguration PassConfig)
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
-    getPassConfig().PostAllocationPasses.push_back(
-        [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+
+    if (shouldAddDefaultTargetPasses(G->getTargetTriple()))
+      getPassConfig().PostAllocationPasses.push_back(
+          [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
   }
 
 private:
