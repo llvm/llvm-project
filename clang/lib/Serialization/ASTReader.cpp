@@ -6531,8 +6531,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
     // Read the final state.
     assert(Idx < Record.size() &&
            "Invalid data, missing final pragma diagnostic state");
-    SourceLocation CurStateLoc =
-        ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
+    SourceLocation CurStateLoc = ReadSourceLocation(F, Record[Idx++]);
     auto *CurState = ReadDiagState(*FirstState, false);
 
     if (!F.isModule()) {
