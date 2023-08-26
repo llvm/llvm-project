@@ -4,7 +4,7 @@ set(LLVM_TARGET_DEFINITIONS XCore.td)
 
 tablegen(LLVM XCoreGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM XCoreGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel -warn-on-unused-entities)
+tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
