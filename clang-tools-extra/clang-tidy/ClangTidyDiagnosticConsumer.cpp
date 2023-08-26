@@ -481,7 +481,7 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
 
   // Forward the details.
   auto Builder = ExternalDiagEngine->Report(Info.getLocation(), ExternalID);
-  for (auto Hint : Info.getFixItHints())
+  for (const FixItHint &Hint : Info.getFixItHints())
     Builder << Hint;
   for (auto Range : Info.getRanges())
     Builder << Range;
