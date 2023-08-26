@@ -2415,7 +2415,9 @@ void SampleProfileMatcher::runOnFunction(const Function &F) {
   findProfileAnchors(*FSFlattened, ProfileAnchors);
 
   // Detect profile mismatch for profile staleness metrics report.
-  if (ReportProfileStaleness || PersistProfileStaleness) {
+  // Skip reporting the metrics for imported functions.
+  if (!GlobalValue::isAvailableExternallyLinkage(F.getLinkage()) &&
+      (ReportProfileStaleness || PersistProfileStaleness)) {
     // Use top-level nested FS for counting profile mismatch metrics since
     // currently once a callsite is mismatched, all its children profiles are
     // dropped.
