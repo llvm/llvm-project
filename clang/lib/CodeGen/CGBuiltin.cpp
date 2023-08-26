@@ -13325,9 +13325,7 @@ Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
 }
 
 Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
-  uint64_t Mask = llvm::X86::getCpuSupportsMask(FeatureStrs);
-  std::array<uint32_t, 4> FeatureMask{Lo_32(Mask), Hi_32(Mask), 0, 0};
-  return EmitX86CpuSupports(FeatureMask);
+  return EmitX86CpuSupports(llvm::X86::getCpuSupportsMask(FeatureStrs));
 }
 
 llvm::Value *
