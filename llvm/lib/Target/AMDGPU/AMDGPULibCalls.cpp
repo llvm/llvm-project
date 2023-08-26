@@ -969,12 +969,19 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
+  // If we should use the generic intrinsic instead of emitting a libcall
+  const bool ShouldUseIntrinsic = eltType->isFloatTy() || eltType->isHalfTy();
+
   // powr ---> exp2(y * log2(x))
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
-  FunctionCallee ExpExpr =
-      getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
-  if (!ExpExpr)
-    return false;
+  FunctionCallee ExpExpr;
+  if (ShouldUseIntrinsic)
+    ExpExpr = Intrinsic::getDeclaration(M, Intrinsic::exp2, {FPOp->getType()});
+  else {
+    ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
+    if (!ExpExpr)
+      return false;
+  }
 
   bool needlog = false;
   bool needabs = false;
@@ -1043,10 +1050,16 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     nval = cnval ? cnval : opr0;
   }
   if (needlog) {
-    FunctionCallee LogExpr =
-        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
-    if (!LogExpr)
-      return false;
+    FunctionCallee LogExpr;
+    if (ShouldUseIntrinsic) {
+      LogExpr =
+          Intrinsic::getDeclaration(M, Intrinsic::log2, {FPOp->getType()});
+    } else {
+      LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
+      if (!LogExpr)
+        return false;
+    }
+
     nval = CreateCallEx(B,LogExpr, nval, "__log2");
   }
 
