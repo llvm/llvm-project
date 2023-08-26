@@ -2683,24 +2683,12 @@ llvm::Value *CodeGenFunction::FormX86ResolverCondition(
 
   if (!RO.Conditions.Architecture.empty()) {
     StringRef Arch = RO.Conditions.Architecture;
-    std::array<uint32_t, 4> Mask{};
-    // If arch= specifies an x86-64 micro-architecture level, test a special
-    // feature named FEATURE_X86_64_*, otherwise we use __builtin_cpu_is.
-    if (Arch.consume_front("x86-64")) {
-      if (Arch.empty()) // FEATURE_X86_64_BASELINE 95=2*32+31
-        Mask[2] = 1u << 31;
-      else if (Arch == "-v2") // FEATURE_X86_64_V2 96==3*32+0
-        Mask[3] = 1u << 0;
-      else if (Arch == "-v3") // FEATURE_X86_64_V3 97==3*32+1
-        Mask[3] = 1u << 1;
-      else if (Arch == "-v4") // FEATURE_X86_64_V3 98==3*32+2
-        Mask[3] = 1u << 2;
-      else
-        llvm_unreachable("invalid x86-64 micro-architecture level");
-      Condition = EmitX86CpuSupports(Mask);
-    } else {
+    // If arch= specifies an x86-64 micro-architecture level, test the feature
+    // with __builtin_cpu_supports, otherwise use __builtin_cpu_is.
+    if (Arch.starts_with("x86-64"))
+      Condition = EmitX86CpuSupports({Arch});
+    else
       Condition = EmitX86CpuIs(Arch);
-    }
   }
 
   if (!RO.Conditions.Features.empty()) {
