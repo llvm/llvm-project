@@ -24,7 +24,7 @@ void StructPackAlignCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 CharUnits
-StructPackAlignCheck::computeRecommendedAlignment(CharUnits MinByteSize) {
+StructPackAlignCheck::computeRecommendedAlignment(CharUnits MinByteSize) const {
   CharUnits NewAlign = CharUnits::fromQuantity(1);
   if (!MinByteSize.isPowerOfTwo()) {
     int MSB = (int)MinByteSize.getQuantity();

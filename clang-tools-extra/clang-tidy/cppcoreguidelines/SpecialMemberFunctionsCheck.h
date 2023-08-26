@@ -47,7 +47,7 @@ public:
     SpecialMemberFunctionKind FunctionKind;
     bool IsDeleted;
 
-    bool operator==(const SpecialMemberFunctionData &Other) {
+    bool operator==(const SpecialMemberFunctionData &Other) const {
       return (Other.FunctionKind == FunctionKind) &&
              (Other.IsDeleted == IsDeleted);
     }
