@@ -14,7 +14,10 @@
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -46,6 +49,9 @@ namespace llvm {
 
 class AMDGPULibCalls {
 private:
+  const TargetLibraryInfo *TLInfo = nullptr;
+  AssumptionCache *AC = nullptr;
+  DominatorTree *DT = nullptr;
 
   typedef llvm::AMDGPULibFunc FuncInfo;
 
@@ -135,7 +141,7 @@ public:
 
   bool fold(CallInst *CI);
 
-  void initFunction(const Function &F);
+  void initFunction(Function &F, FunctionAnalysisManager &FAM);
   void initNativeFuncs();
 
   // Replace a normal math function call with that native version
@@ -420,8 +426,11 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
   return isUnsafeMath(FPOp);
 }
 
-void AMDGPULibCalls::initFunction(const Function &F) {
+void AMDGPULibCalls::initFunction(Function &F, FunctionAnalysisManager &FAM) {
   UnsafeFPMath = F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+  AC = &FAM.getResult<AssumptionAnalysis>(F);
+  TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
+  DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
 }
 
 bool AMDGPULibCalls::useNativeFunc(const StringRef F) const {
@@ -699,12 +708,14 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       Module *M = Callee->getParent();
       AMDGPULibFunc PowrInfo(AMDGPULibFunc::EI_POWR, FInfo);
       FunctionCallee PowrFunc = getFunction(M, PowrInfo);
+      CallInst *Call = cast<CallInst>(FPOp);
 
       // pow(x, y) -> powr(x, y) for x >= -0.0
-      // TODO: Pass all arguments to cannotBeOrderedLessThanZero
-      if (PowrFunc && cannotBeOrderedLessThanZero(FPOp->getOperand(0),
-                                                  M->getDataLayout())) {
-        cast<CallInst>(FPOp)->setCalledFunction(PowrFunc);
+      // TODO: Account for flags on current call
+      if (PowrFunc &&
+          cannotBeOrderedLessThanZero(FPOp->getOperand(0), M->getDataLayout(),
+                                      TLInfo, 0, AC, Call, DT)) {
+        Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
       }
 
@@ -1601,7 +1612,7 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
   AMDGPULibCalls Simplifier;
   Simplifier.initNativeFuncs();
-  Simplifier.initFunction(F);
+  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
 
@@ -1630,7 +1641,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
 
   AMDGPULibCalls Simplifier;
   Simplifier.initNativeFuncs();
-  Simplifier.initFunction(F);
+  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
   for (auto &BB : F) {
