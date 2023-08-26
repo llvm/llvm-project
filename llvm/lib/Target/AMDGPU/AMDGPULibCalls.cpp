@@ -549,6 +549,29 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   return true;
 }
 
+static bool isKnownIntegral(const Value *V) {
+  if (isa<UndefValue>(V))
+    return true;
+
+  if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
+    return CF->getValueAPF().isInteger();
+
+  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
+    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
+      Constant *ConstElt = CDV->getElementAsConstant(i);
+      if (isa<UndefValue>(ConstElt))
+        continue;
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+      if (!CFP || !CFP->getValue().isInteger())
+        return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 // This function returns false if no change; return true otherwise.
 bool AMDGPULibCalls::fold(CallInst *CI) {
   Function *Callee = CI->getCalledFunction();
@@ -972,25 +995,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
-    if (getVecSize(FInfo) == 1) {
-      if (const ConstantFP *CF = dyn_cast<ConstantFP>(opr1)) {
-        double y = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                   ? (double)CF->getValueAPF().convertToFloat()
-                   : CF->getValueAPF().convertToDouble();
-        if (y != (double)(int64_t)y)
-          return false;
-      } else
-        return false;
-    } else {
-      if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1)) {
-        for (int i=0; i < getVecSize(FInfo); ++i) {
-          double y = CDV->getElementAsAPFloat(i).convertToDouble();
-          if (y != (double)(int64_t)y)
-            return false;
-        }
-      } else
-        return false;
-    }
+    if (!isKnownIntegral(opr1))
+      return false;
   }
 
   Value *nval;
