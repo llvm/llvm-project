@@ -12,7 +12,8 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
-using namespace clang;
+
+namespace clang::tidy::bugprone {
 
 namespace {
 
@@ -49,10 +50,6 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
 }
 
 } // namespace
-
-namespace clang {
-namespace tidy {
-namespace bugprone {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
@@ -157,6 +154,4 @@ void MultipleNewInOneExpressionCheck::check(
         << NewExpr1->getSourceRange() << NewExpr2->getSourceRange();
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
