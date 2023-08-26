@@ -349,7 +349,7 @@ setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
   }
 }
 
-typedef std::vector<std::pair<std::string, bool>> CheckersList;
+using CheckersList = std::vector<std::pair<std::string, bool>>;
 
 static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
                                                    bool IncludeExperimental) {
