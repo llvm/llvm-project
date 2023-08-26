@@ -204,11 +204,13 @@ export namespace std {
       using std::ranges::views::drop_while;
     } // namespace views
 
+#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::ranges::join_view;
 
     namespace views {
       using std::ranges::views::join;
     } // namespace views
+#endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #if 0
     using std::ranges::join_with_view;
 
