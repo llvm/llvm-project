@@ -608,6 +608,9 @@ template <> struct MappingTraits<Typedef> {
 } // namespace llvm
 
 namespace {
+struct Namespace;
+typedef std::vector<Namespace> NamespacesSeq;
+
 struct TopLevelItems {
   ClassesSeq Classes;
   ClassesSeq Protocols;
@@ -616,6 +619,7 @@ struct TopLevelItems {
   EnumConstantsSeq EnumConstants;
   TagsSeq Tags;
   TypedefsSeq Typedefs;
+  NamespacesSeq Namespaces;
 };
 } // namespace
 
@@ -629,7 +633,36 @@ static void mapTopLevelItems(IO &IO, TopLevelItems &TLI) {
   IO.mapOptional("Enumerators", TLI.EnumConstants);
   IO.mapOptional("Tags", TLI.Tags);
   IO.mapOptional("Typedefs", TLI.Typedefs);
+  IO.mapOptional("Namespaces", TLI.Namespaces);
 }
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Namespace {
+  StringRef Name;
+  AvailabilityItem Availability;
+  StringRef SwiftName;
+  std::optional<bool> SwiftPrivate;
+  TopLevelItems Items;
+};
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(Namespace)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Namespace> {
+  static void mapping(IO &IO, Namespace &T) {
+    IO.mapRequired("Name", T.Name);
+    IO.mapOptional("Availability", T.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", T.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", T.SwiftPrivate);
+    IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
+    mapTopLevelItems(IO, T.Items);
+  }
+};
 } // namespace yaml
 } // namespace llvm
 
@@ -886,7 +919,8 @@ namespace {
                             mInfo, swiftVersion);
     }
 
-    void convertContext(const Class &cl, bool isClass,
+    void convertContext(std::optional<ContextID> parentContextID,
+                        const Class &cl, ContextKind contextKind,
                         VersionTuple swiftVersion) {
       // Write the class.
       ObjCContextInfo cInfo;
@@ -901,8 +935,8 @@ namespace {
       if (cl.SwiftObjCMembers)
         cInfo.setSwiftObjCMembers(*cl.SwiftObjCMembers);
 
-      ContextID clID = Writer->addObjCContext(cl.Name, isClass, cInfo,
-                                              swiftVersion);
+      ContextID clID = Writer->addObjCContext(parentContextID, cl.Name,
+                                              contextKind, cInfo, swiftVersion);
 
       // Write all methods.
       llvm::StringMap<std::pair<bool, bool>> knownMethods;
@@ -963,8 +997,29 @@ namespace {
       }
     }
 
-    void convertTopLevelItems(const TopLevelItems &items,
+    void convertNamespaceContext(std::optional<ContextID> parentContextID,
+                                 const Namespace &ns,
+                                 VersionTuple swiftVersion) {
+      // Write the namespace.
+      ObjCContextInfo cInfo;
+
+      if (convertCommon(ns, cInfo, ns.Name))
+        return;
+
+      ContextID clID =
+          Writer->addObjCContext(parentContextID, ns.Name,
+                                 ContextKind::Namespace, cInfo, swiftVersion);
+
+      convertTopLevelItems(Context(clID, ContextKind::Namespace), ns.Items,
+                           swiftVersion);
+    }
+
+    void convertTopLevelItems(std::optional<Context> context,
+                              const TopLevelItems &items,
                               VersionTuple swiftVersion) {
+      std::optional<ContextID> contextID =
+          context ? std::optional(context->id) : std::nullopt;
+
       // Write all classes.
       llvm::StringSet<> knownClasses;
       for (const auto &cl : items.Classes) {
@@ -974,7 +1029,7 @@ namespace {
           continue;
         }
 
-        convertContext(cl, /*isClass*/ true, swiftVersion);
+        convertContext(contextID, cl, ContextKind::ObjCClass, swiftVersion);
       }
 
       // Write all protocols.
@@ -986,7 +1041,19 @@ namespace {
           continue;
         }
 
-        convertContext(pr, /*isClass*/ false, swiftVersion);
+        convertContext(contextID, pr, ContextKind::ObjCProtocol, swiftVersion);
+      }
+
+      // Write all namespaces.
+      llvm::StringSet<> knownNamespaces;
+      for (const auto &ns : items.Namespaces) {
+        // Check for duplicate namespace definitions.
+        if (!knownNamespaces.insert(ns.Name).second) {
+          emitError("multiple definitions of namespace '" + ns.Name + "'");
+          continue;
+        }
+
+        convertNamespaceContext(contextID, ns, swiftVersion);
       }
 
       // Write all global variables.
@@ -1006,7 +1073,7 @@ namespace {
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
         info.setType(std::string(global.Type));
-        Writer->addGlobalVariable(global.Name, info, swiftVersion);
+        Writer->addGlobalVariable(context, global.Name, info, swiftVersion);
       }
 
       // Write all global functions.
@@ -1029,7 +1096,7 @@ namespace {
                            info, function.Name);
         info.ResultType = std::string(function.ResultType);
         info.setRetainCountConvention(function.RetainCountConvention);
-        Writer->addGlobalFunction(function.Name, info, swiftVersion);
+        Writer->addGlobalFunction(context, function.Name, info, swiftVersion);
       }
 
       // Write all enumerators.
@@ -1097,7 +1164,7 @@ namespace {
           tagInfo.setFlagEnum(t.FlagEnum);          
         }
 
-        Writer->addTag(t.Name, tagInfo, swiftVersion);
+        Writer->addTag(context, t.Name, tagInfo, swiftVersion);
       }
 
       // Write all typedefs.
@@ -1114,7 +1181,7 @@ namespace {
           continue;
         typedefInfo.SwiftWrapper = t.SwiftType;
 
-        Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
+        Writer->addTypedef(context, t.Name, typedefInfo, swiftVersion);
       }
     }
 
@@ -1125,7 +1192,8 @@ namespace {
       Writer = &writer;
 
       // Write the top-level items.
-      convertTopLevelItems(TheModule.TopLevel, VersionTuple());
+      convertTopLevelItems(/* context */ std::nullopt, TheModule.TopLevel,
+                           VersionTuple());
 
       if (TheModule.SwiftInferImportAsMember) {
         ModuleOptions opts;
@@ -1135,7 +1203,8 @@ namespace {
 
       // Convert the versioned information.
       for (const auto &versioned : TheModule.SwiftVersions) {
-        convertTopLevelItems(versioned.Items, versioned.Version);
+        convertTopLevelItems(/* context */ std::nullopt, versioned.Items,
+                             versioned.Version);
       }
 
       if (!ErrorOccured)
