@@ -1607,6 +1607,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
   IFHAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
   unsigned IFHAbbrevCode = Stream.EmitAbbrev(std::move(IFHAbbrev));
 
+  uint64_t InputFilesOffsetBase = Stream.GetCurrentBitNo();
+
   // Get all ContentCache objects for files.
   std::vector<InputFileEntry> UserFiles;
   std::vector<InputFileEntry> SystemFiles;
@@ -1670,7 +1672,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
       continue; // already recorded this file.
 
     // Record this entry's offset.
-    InputFileOffsets.push_back(Stream.GetCurrentBitNo());
+    InputFileOffsets.push_back(Stream.GetCurrentBitNo() - InputFilesOffsetBase);
 
     InputFileID = InputFileOffsets.size();
 
