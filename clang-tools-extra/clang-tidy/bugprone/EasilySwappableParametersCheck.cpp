@@ -518,9 +518,9 @@ struct Mix {
 };
 
 // NOLINTNEXTLINE(misc-redundant-expression): Seems to be a bogus warning.
-static_assert(std::is_trivially_copyable<Mix>::value &&
-                  std::is_trivially_move_constructible<Mix>::value &&
-                  std::is_trivially_move_assignable<Mix>::value,
+static_assert(std::is_trivially_copyable_v<Mix> &&
+                  std::is_trivially_move_constructible_v<Mix> &&
+                  std::is_trivially_move_assignable_v<Mix>,
               "Keep frequently used data simple!");
 
 struct MixableParameterRange {
