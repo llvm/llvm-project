@@ -62,7 +62,7 @@ public:
 private:
   void checkForMissingMembers(
       const ClassDefId &ID,
-      llvm::ArrayRef<SpecialMemberFunctionData> DefinedSpecialMembers);
+      llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers);
 
   const bool AllowMissingMoveFunctions;
   const bool AllowSoleDefaultDtor;
