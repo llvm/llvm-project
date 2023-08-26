@@ -44,14 +44,14 @@ for header in public_headers:
 #include <{header}>
 """)
 
-# TODO: Remove the UNSUPPORTED{BLOCKLIT}: modules-build once issues with this test have been figured out.
+# TODO: Remove the UNSUPPORTED{BLOCKLIT}: clang-modules-build once issues with this test have been figured out.
 print(f"""\
 //--- __std_clang_module.compile.pass.mm
-// UNSUPPORTED{BLOCKLIT}: modules-build
+// UNSUPPORTED{BLOCKLIT}: clang-modules-build
 
 // RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
-// REQUIRES{BLOCKLIT}: modules-build
+// REQUIRES{BLOCKLIT}: clang-modules-build
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED{BLOCKLIT}: gcc
