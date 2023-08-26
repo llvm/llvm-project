@@ -27,12 +27,12 @@ std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   }
   // Now replace the " with '.
   auto OpenPos = Result.find_first_of('"');
-  if (OpenPos == Result.npos)
+  if (OpenPos == std::string::npos)
     return std::nullopt;
   Result[OpenPos] = '\'';
 
   auto ClosePos = Result.find_last_of('"');
-  if (ClosePos == Result.npos)
+  if (ClosePos == std::string::npos)
     return std::nullopt;
   Result[ClosePos] = '\'';
 
