@@ -1,0 +1,45 @@
+//===-- RISCVGIsel.td - RISCV GlobalISel Patterns ----------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file contains patterns that are relevant to GlobalISel, including
+/// GIComplexOperandMatcher definitions for equivalent SelectionDAG
+/// ComplexPatterns.
+//
+//===----------------------------------------------------------------------===//
+
+include "RISCV.td"
+
+// FIXME: This is labelled as handling 's32', however the ComplexPattern it
+// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
+// parameter appears to be ignored so this pattern works for both, however we
+// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
+// here.
+def s32ShiftMaskGI :
+    GIComplexOperandMatcher<s32, "selectS32ShiftMask">,
+    GIComplexPatternEquiv<shiftMaskXLen>;
+
+let Predicates = [IsRV64] in {
+def : Pat<(i32 (add GPR:$rs1, GPR:$rs2)), (ADDW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sub GPR:$rs1, GPR:$rs2)), (SUBW GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
+}
+
+let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
+def : Pat<(i32 (mul GPR:$rs1, GPR:$rs2)), (MULW GPR:$rs1, GPR:$rs2)>;
+}
+
+let Predicates = [HasStdExtM, IsRV64] in {
+def : Pat<(i32 (sdiv GPR:$rs1, GPR:$rs2)), (DIVW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (srem GPR:$rs1, GPR:$rs2)), (REMW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (udiv GPR:$rs1, GPR:$rs2)), (DIVUW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (urem GPR:$rs1, GPR:$rs2)), (REMUW GPR:$rs1, GPR:$rs2)>;
+}
