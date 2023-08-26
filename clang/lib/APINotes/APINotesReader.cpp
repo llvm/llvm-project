@@ -66,10 +66,6 @@ namespace {
       return key;
     }
 
-    hash_value_type ComputeHash(internal_key_type key) {
-      return static_cast<size_t>(llvm::hash_value(key));
-    }
-
     static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {
       return lhs == rhs;
     }
@@ -187,8 +183,7 @@ namespace {
   /// Used to deserialize the on-disk Objective-C class table.
   class ObjCContextIDTableInfo {
   public:
-    // identifier ID, is-protocol
-    using internal_key_type = std::pair<unsigned, char>;
+    using internal_key_type = ContextTableKey;
     using external_key_type = internal_key_type;
     using data_type = unsigned;
     using hash_value_type = size_t;
@@ -203,7 +198,7 @@ namespace {
     }
 
     hash_value_type ComputeHash(internal_key_type key) {
-      return static_cast<size_t>(llvm::hash_value(key));
+      return static_cast<size_t>(key.hashValue());
     }
     
     static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {
@@ -218,10 +213,11 @@ namespace {
     }
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
-      auto nameID
-        = endian::readNext<uint32_t, little, unaligned>(data);
-      auto isProtocol = endian::readNext<uint8_t, little, unaligned>(data);
-      return { nameID, isProtocol };
+      auto parentContextID =
+          endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
+      return {parentContextID, contextKind, nameID};
     }
     
     static data_type ReadData(internal_key_type key, const uint8_t *data,
@@ -240,7 +236,11 @@ namespace {
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
       return endian::readNext<uint32_t, little, unaligned>(data);
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     static ObjCContextInfo readUnversioned(internal_key_type key,
                                            const uint8_t *&data) {
       ObjCContextInfo info;
@@ -293,7 +293,11 @@ namespace {
       char isInstance = endian::readNext<uint8_t, little, unaligned>(data);
       return std::make_tuple(classID, nameID, isInstance);
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     static ObjCPropertyInfo readUnversioned(internal_key_type key,
                                             const uint8_t *&data) {
       ObjCPropertyInfo info;
@@ -365,7 +369,11 @@ namespace {
       auto isInstance = endian::readNext<uint8_t, little, unaligned>(data);
       return internal_key_type{ classID, selectorID, isInstance };
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     static ObjCMethodInfo readUnversioned(internal_key_type key,
                                           const uint8_t *&data) {
       ObjCMethodInfo info;
@@ -431,12 +439,18 @@ namespace {
 
   /// Used to deserialize the on-disk global variable table.
   class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo, unsigned,
-                                GlobalVariableInfo> {
+      : public VersionedTableInfo<GlobalVariableTableInfo, ContextTableKey,
+                                  GlobalVariableInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
+    }
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(key.hashValue());
     }
 
     static GlobalVariableInfo readUnversioned(internal_key_type key,
@@ -449,14 +463,20 @@ namespace {
 
   /// Used to deserialize the on-disk global function table.
   class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, unsigned,
-                                GlobalFunctionInfo> {
+      : public VersionedTableInfo<GlobalFunctionTableInfo, ContextTableKey,
+                                  GlobalFunctionInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(key.hashValue());
+    }
+
     static GlobalFunctionInfo readUnversioned(internal_key_type key,
                                               const uint8_t *&data) {
       GlobalFunctionInfo info;
@@ -474,7 +494,11 @@ namespace {
       auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
       return nameID;
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
     static EnumConstantInfo readUnversioned(internal_key_type key,
                                             const uint8_t *&data) {
       EnumConstantInfo info;
@@ -485,13 +509,19 @@ namespace {
 
   /// Used to deserialize the on-disk tag table.
   class TagTableInfo
-    : public VersionedTableInfo<TagTableInfo, unsigned, TagInfo> {
+      : public VersionedTableInfo<TagTableInfo, ContextTableKey, TagInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
     }
-    
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(key.hashValue());
+    }
+
     static TagInfo readUnversioned(internal_key_type key,
                                    const uint8_t *&data) {
       TagInfo info;
@@ -513,11 +543,17 @@ namespace {
 
   /// Used to deserialize the on-disk typedef table.
   class TypedefTableInfo
-    : public VersionedTableInfo<TypedefTableInfo, unsigned, TypedefInfo> {
+      : public VersionedTableInfo<TypedefTableInfo, ContextTableKey, TypedefInfo> {
   public:
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto contextID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto contextKind = endian::readNext<uint8_t, little, unaligned>(data);
       auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
-      return nameID;
+      return {contextID, contextKind, nameID};
+    }
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(key.hashValue());
     }
 
     static TypedefInfo readUnversioned(internal_key_type key,
@@ -1822,7 +1858,10 @@ auto APINotesReader::lookupObjCClassID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  auto knownID = Impl.ObjCContextIDTable->find({*classID, '\0'});
+  // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
+  // context.
+  auto knownID = Impl.ObjCContextIDTable->find(
+      ContextTableKey(-1, (uint8_t)ContextKind::ObjCClass, *classID));
   if (knownID == Impl.ObjCContextIDTable->end())
     return std::nullopt;
 
@@ -1854,7 +1893,10 @@ auto APINotesReader::lookupObjCProtocolID(StringRef name)
   if (!classID)
     return std::nullopt;
 
-  auto knownID = Impl.ObjCContextIDTable->find({*classID, '\1'});
+  // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
+  // context.
+  auto knownID = Impl.ObjCContextIDTable->find(
+      ContextTableKey(-1, (uint8_t)ContextKind::ObjCProtocol, *classID));
   if (knownID == Impl.ObjCContextIDTable->end())
     return std::nullopt;
 
@@ -1919,8 +1961,8 @@ auto APINotesReader::lookupObjCMethod(
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupGlobalVariable(
-                                          StringRef name)
+auto APINotesReader::lookupGlobalVariable(StringRef name,
+                                          std::optional<Context> context)
     -> VersionedInfo<GlobalVariableInfo> {
   if (!Impl.GlobalVariableTable)
     return std::nullopt;
@@ -1929,14 +1971,17 @@ auto APINotesReader::lookupGlobalVariable(
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.GlobalVariableTable->find(*nameID);
+  ContextTableKey key(context, *nameID);
+
+  auto known = Impl.GlobalVariableTable->find(key);
   if (known == Impl.GlobalVariableTable->end())
     return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupGlobalFunction(StringRef name)
+auto APINotesReader::lookupGlobalFunction(StringRef name,
+                                          std::optional<Context> context)
     -> VersionedInfo<GlobalFunctionInfo> {
   if (!Impl.GlobalFunctionTable)
     return std::nullopt;
@@ -1945,7 +1990,9 @@ auto APINotesReader::lookupGlobalFunction(StringRef name)
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.GlobalFunctionTable->find(*nameID);
+  ContextTableKey key(context, *nameID);
+
+  auto known = Impl.GlobalFunctionTable->find(key);
   if (known == Impl.GlobalFunctionTable->end())
     return std::nullopt;
 
@@ -1968,7 +2015,8 @@ auto APINotesReader::lookupEnumConstant(StringRef name)
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
+auto APINotesReader::lookupTag(StringRef name, std::optional<Context> context)
+    -> VersionedInfo<TagInfo> {
   if (!Impl.TagTable)
     return std::nullopt;
 
@@ -1976,14 +2024,17 @@ auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.TagTable->find(*nameID);
+  ContextTableKey key(context, *nameID);
+
+  auto known = Impl.TagTable->find(key);
   if (known == Impl.TagTable->end())
     return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
 
-auto APINotesReader::lookupTypedef(StringRef name)
+auto APINotesReader::lookupTypedef(StringRef name,
+                                   std::optional<Context> context)
     -> VersionedInfo<TypedefInfo> {
   if (!Impl.TypedefTable)
     return std::nullopt;
@@ -1992,9 +2043,31 @@ auto APINotesReader::lookupTypedef(StringRef name)
   if (!nameID)
     return std::nullopt;
 
-  auto known = Impl.TypedefTable->find(*nameID);
+  ContextTableKey key(context, *nameID);
+
+  auto known = Impl.TypedefTable->find(key);
   if (known == Impl.TypedefTable->end())
     return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
+}
+
+auto APINotesReader::lookupNamespaceID(
+    StringRef name, std::optional<ContextID> parentNamespaceID)
+    -> std::optional<ContextID> {
+  if (!Impl.ObjCContextIDTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> namespaceID = Impl.getIdentifier(name);
+  if (!namespaceID)
+    return std::nullopt;
+
+  uint32_t rawParentNamespaceID =
+      parentNamespaceID ? parentNamespaceID->Value : -1;
+  auto knownID = Impl.ObjCContextIDTable->find(
+      {rawParentNamespaceID, (char)ContextKind::Namespace, *namespaceID});
+  if (knownID == Impl.ObjCContextIDTable->end())
+    return std::nullopt;
+
+  return ContextID(*knownID);
 }
