@@ -1952,13 +1952,12 @@ struct FormattedConversionSequence {
   /// The formatted sequence is trivial if it is "Ty1 -> Ty2", but Ty1 and
   /// Ty2 are the types that are shown in the code. A trivial diagnostic
   /// does not need to be printed.
-  bool Trivial;
+  bool Trivial = true;
 
   FormattedConversionSequence(const PrintingPolicy &PP,
                               StringRef StartTypeAsDiagnosed,
                               const model::ConversionSequence &Conv,
                               StringRef DestinationTypeAsDiagnosed) {
-    Trivial = true;
     llvm::raw_string_ostream OS{DiagnosticText};
 
     // Print the type name as it is printed in other places in the diagnostic.
