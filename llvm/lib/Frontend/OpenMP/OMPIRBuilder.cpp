@@ -4174,8 +4174,10 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
   if (NumTeams > 0)
     OutlinedFn->addFnAttr("omp_target_num_teams", std::to_string(NumTeams));
 
+#if FIX_NUM_THREADS_ISSUE
   if (NumThreads == -1 && Config.isGPU())
     NumThreads = getGridValue(OutlinedFn).GV_Default_WG_Size;
+#endif
 
   if (NumThreads > 0) {
     if (OutlinedFn->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
