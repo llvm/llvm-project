@@ -201,13 +201,14 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
       return false;
   }
 
+  assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller) {
     // Certain builtin functions are declared as func-name(...), so the
     // parameters are checked in Sema and only available through the CallExpr.
     // The interp::Function we create for them has 0 parameters, so we need to
     // remove them from the stack by checking the CallExpr.
-    if (S.Current && S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
+    if (S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
       popBuiltinArgs(S, PC);
     else
       S.Current->popArgs();

@@ -493,7 +493,8 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %shr = lshr i32 %mul, 27
 // %idxprom = zext i32 %shr to i64
 // %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz1.table, i64 0,
-// i64 %idxprom %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+//     i64 %idxprom
+// %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // CASE 2:
 // %sub = sub i32 0, %x
@@ -501,8 +502,9 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %mul = mul i32 %and, 72416175
 // %shr = lshr i32 %mul, 26
 // %idxprom = zext i32 %shr to i64
-// %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table, i64
-// 0, i64 %idxprom %0 = load i16, i16* %arrayidx, align 2, !tbaa !8
+// %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table,
+//     i64 0, i64 %idxprom
+// %0 = load i16, i16* %arrayidx, align 2, !tbaa !8
 //
 // CASE 3:
 // %sub = sub i32 0, %x
@@ -510,16 +512,18 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // %mul = mul i32 %and, 81224991
 // %shr = lshr i32 %mul, 27
 // %idxprom = zext i32 %shr to i64
-// %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table, i64
-// 0, i64 %idxprom %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+// %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table,
+//     i64 0, i64 %idxprom
+// %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
 //
 // CASE 4:
 // %sub = sub i64 0, %x
 // %and = and i64 %sub, %x
 // %mul = mul i64 %and, 283881067100198605
 // %shr = lshr i64 %mul, 58
-// %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @table, i64 0, i64
-// %shr %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+// %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @table, i64 0,
+//     i64 %shr
+// %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // All this can be lowered to @llvm.cttz.i32/64 intrinsic.
 static bool tryToRecognizeTableBasedCttz(Instruction &I) {
