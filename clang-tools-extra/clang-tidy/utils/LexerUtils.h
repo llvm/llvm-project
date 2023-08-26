@@ -46,16 +46,16 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
                                         const LangOptions &LangOpts,
                                         TokenKind TK, TokenKinds... TKs) {
   if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
+    return {};
   while (true) {
     SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
-      return SourceLocation();
+      return {};
 
     Token T;
     // Returning 'true' is used to signal failure to retrieve the token.
     if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return SourceLocation();
+      return {};
 
     if (T.isOneOf(TK, TKs...))
       return T.getLocation();
@@ -74,7 +74,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
         Lexer::findNextToken(Start, SM, LangOpts);
 
     if (!CurrentToken)
-      return SourceLocation();
+      return {};
 
     Token PotentialMatch = *CurrentToken;
     if (PotentialMatch.isOneOf(TK, TKs...))
@@ -84,7 +84,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
     // the loop, otherwise we will get infinite loop (findNextToken will return
     // eof on eof).
     if (PotentialMatch.is(tok::eof))
-      return SourceLocation();
+      return {};
     Start = PotentialMatch.getLastLoc();
   }
 }
