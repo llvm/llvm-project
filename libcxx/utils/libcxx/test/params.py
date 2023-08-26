@@ -132,7 +132,7 @@ DEFAULT_PARAMETERS = [
         "`clang` for Clang modules",
         default=lambda cfg: next(s for s in _allModules if getModuleFlag(cfg, s)),
         actions=lambda enable_modules: [
-            AddFeature("modules-build"),
+            AddFeature("clang-modules-build"),
             AddCompileFlag("-fmodules"),
             AddCompileFlag("-fcxx-modules"), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
             # Note: We use a custom modules cache path to make sure that we don't reuse
