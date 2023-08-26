@@ -50,7 +50,7 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
   llvm::raw_string_ostream Stream(Replacement);
 
   auto AppendName = [&](llvm::StringRef Name) {
-    if (Replacement.size() != 0) {
+    if (!Replacement.empty()) {
       Stream << ", ";
     }
     if (Lambda->getCaptureDefault() == LCD_ByRef && Name != "this") {
@@ -68,7 +68,7 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
       AppendName("this");
     }
   }
-  if (Replacement.size() &&
+  if (!Replacement.empty() &&
       Lambda->explicit_capture_begin() != Lambda->explicit_capture_end()) {
     // Add back separator if we are adding explicit capture variables.
     Stream << ", ";
