@@ -159,27 +159,27 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
                                            const ASTContext *Context) {
   // Skip macros.
   if (S->getBeginLoc().isMacroID())
-    return SourceLocation();
+    return {};
 
   SourceLocation CondEndLoc = S->getCond()->getEndLoc();
   if (const DeclStmt *CondVar = S->getConditionVariableDeclStmt())
     CondEndLoc = CondVar->getEndLoc();
 
   if (!CondEndLoc.isValid()) {
-    return SourceLocation();
+    return {};
   }
 
   SourceLocation PastCondEndLoc =
       Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, Context->getLangOpts());
   if (PastCondEndLoc.isInvalid())
-    return SourceLocation();
+    return {};
   SourceLocation RParenLoc =
       forwardSkipWhitespaceAndComments(PastCondEndLoc, SM, Context);
   if (RParenLoc.isInvalid())
-    return SourceLocation();
+    return {};
   tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, Context);
   if (TokKind != tok::r_paren)
-    return SourceLocation();
+    return {};
   return RParenLoc;
 }
 
