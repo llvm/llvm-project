@@ -2550,8 +2550,19 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 ; CHECK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc
 ; CHECK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call nnan ninf afn float @_Z3powff(float [[X]], float [[Y]])
-; CHECK-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
+; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %y = call float @llvm.trunc.f32(float %y.arg)
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y)
@@ -2562,7 +2573,8 @@ define float @test_pow_afn_f32__y_known_integral_trunc(float %x, float nofpclass
 ; CHECK-LABEL: define float @test_pow_afn_f32__y_known_integral_trunc
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call afn float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call afn float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.trunc.f32(float %y.arg)
@@ -2574,7 +2586,8 @@ define float @test_pow_f32__y_known_integral_floor(float %x, float nofpclass(inf
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_floor
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.floor.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.floor.f32(float %y.arg)
@@ -2586,7 +2599,8 @@ define float @test_pow_f32__y_known_integral_ceil(float %x, float nofpclass(inf 
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_ceil
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.floor.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.floor.f32(float %y.arg)
@@ -2598,7 +2612,8 @@ define float @test_pow_f32__y_known_integral_trunc(float %x, float nofpclass(inf
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_trunc
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.trunc.f32(float %y.arg)
@@ -2610,7 +2625,8 @@ define float @test_pow_f32__y_known_integral_rint(float %x, float nofpclass(inf 
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_rint
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.rint.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.rint.f32(float %y.arg)
@@ -2622,7 +2638,8 @@ define float @test_pow_f32__y_known_integral_nearbyint(float %x, float nofpclass
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_nearbyint
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.nearbyint.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.nearbyint.f32(float %y.arg)
@@ -2634,7 +2651,8 @@ define float @test_pow_f32__y_known_integral_round(float %x, float nofpclass(inf
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_round
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.round.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.round.f32(float %y.arg)
@@ -2646,7 +2664,8 @@ define float @test_pow_f32__y_known_integral_roundeven(float %x, float nofpclass
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_roundeven
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.roundeven.f32(float [[Y_ARG]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %y = call float @llvm.roundeven.f32(float %y.arg)
