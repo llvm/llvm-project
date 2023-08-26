@@ -32,24 +32,24 @@ enum LoopFixerKind {
 };
 
 /// A map used to walk the AST in reverse: maps child Stmt to parent Stmt.
-typedef llvm::DenseMap<const clang::Stmt *, const clang::Stmt *> StmtParentMap;
+using StmtParentMap = llvm::DenseMap<const clang::Stmt *, const clang::Stmt *>;
 
 /// A map used to walk the AST in reverse:
 ///  maps VarDecl to the to parent DeclStmt.
-typedef llvm::DenseMap<const clang::VarDecl *, const clang::DeclStmt *>
-    DeclParentMap;
+using DeclParentMap =
+    llvm::DenseMap<const clang::VarDecl *, const clang::DeclStmt *>;
 
 /// A map used to track which variables have been removed by a refactoring pass.
 /// It maps the parent ForStmt to the removed index variable's VarDecl.
-typedef llvm::DenseMap<const clang::ForStmt *, const clang::VarDecl *>
-    ReplacedVarsMap;
+using ReplacedVarsMap =
+    llvm::DenseMap<const clang::ForStmt *, const clang::VarDecl *>;
 
 /// A map used to remember the variable names generated in a Stmt
-typedef llvm::DenseMap<const clang::Stmt *, std::string>
-    StmtGeneratedVarNameMap;
+using StmtGeneratedVarNameMap =
+    llvm::DenseMap<const clang::Stmt *, std::string>;
 
 /// A vector used to store the AST subtrees of an Expr.
-typedef llvm::SmallVector<const clang::Expr *, 16> ComponentVector;
+using ComponentVector = llvm::SmallVector<const clang::Expr *, 16>;
 
 /// Class used build the reverse AST properties needed to detect
 /// name conflicts and free variables.
@@ -270,7 +270,7 @@ private:
 };
 
 // The main computational result of ForLoopIndexVisitor.
-typedef llvm::SmallVector<Usage, 8> UsageResult;
+using UsageResult = llvm::SmallVector<Usage, 8>;
 
 // General functions used by ForLoopIndexUseVisitor and LoopConvertCheck.
 const Expr *digThroughConstructorsConversions(const Expr *E);
@@ -339,7 +339,7 @@ public:
 
 private:
   /// Typedef used in CRTP functions.
-  typedef RecursiveASTVisitor<ForLoopIndexUseVisitor> VisitorBase;
+  using VisitorBase = RecursiveASTVisitor<ForLoopIndexUseVisitor>;
   friend class RecursiveASTVisitor<ForLoopIndexUseVisitor>;
 
   /// Overriden methods for RecursiveASTVisitor's traversal.
