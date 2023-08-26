@@ -68,7 +68,7 @@ else:
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
-// UNSUPPORTED{BLOCKLIT}: modules-build
+// UNSUPPORTED{BLOCKLIT}: clang-modules-build
 
 // This test uses --trace-includes, which is not supported by GCC.
 // UNSUPPORTED{BLOCKLIT}: gcc
