@@ -880,9 +880,8 @@ TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
       swift_name =
           ExtractSwiftName(reader->lookupObjCProtocolInfo(default_name));
     else if (llvm::isa<clang::TagDecl>(clang_decl))
-      // FIXME: this should pass the correct context instead of nullopt.
-      swift_name =
-          ExtractSwiftName(reader->lookupTag(std::nullopt, default_name));
+      // FIXME: this should pass the correct context.
+      swift_name = ExtractSwiftName(reader->lookupTag(default_name));
     else {
       assert(false && "unhandled clang decl kind");
     }
