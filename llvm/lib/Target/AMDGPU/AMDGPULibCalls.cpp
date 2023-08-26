@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -166,6 +167,15 @@ static CallInst *CreateCallEx2(IRB &B, FunctionCallee Callee, Value *Arg1,
   if (Function *F = dyn_cast<Function>(Callee.getCallee()))
     R->setCallingConv(F->getCallingConv());
   return R;
+}
+
+static FunctionType *getPownType(FunctionType *FT) {
+  Type *PowNExpTy = Type::getInt32Ty(FT->getContext());
+  if (VectorType *VecTy = dyn_cast<VectorType>(FT->getReturnType()))
+    PowNExpTy = VectorType::get(PowNExpTy, VecTy->getElementCount());
+
+  return FunctionType::get(FT->getReturnType(),
+                           {FT->getParamType(0), PowNExpTy}, false);
 }
 
 //  Data structures for table-driven optimizations.
@@ -736,6 +746,27 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
                                       TLInfo, 0, AC, Call, DT)) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
+      }
+
+      // pow(x, y) -> pown(x, y) for known integral y
+      if (isKnownIntegral(FPOp->getOperand(1), M->getDataLayout(),
+                          FPOp->getFastMathFlags())) {
+        FunctionType *PownType = getPownType(CI->getFunctionType());
+        AMDGPULibFunc PownInfo(AMDGPULibFunc::EI_POWN, PownType, true);
+        FunctionCallee PownFunc = getFunction(M, PownInfo);
+        if (PownFunc) {
+          // TODO: If the incoming integral value is an sitofp/uitofp, it won't
+          // fold out without a known range. We can probably take the source
+          // value directly.
+          Value *CastedArg =
+              B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
+          // Have to drop any nofpclass attributes on the original call site.
+          Call->removeParamAttrs(
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+          Call->setCalledFunction(PownFunc);
+          Call->setArgOperand(1, CastedArg);
+          return fold_pow(FPOp, B, PownInfo) || true;
+        }
       }
 
       return fold_pow(FPOp, B, FInfo);
