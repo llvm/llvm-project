@@ -111,22 +111,13 @@ private:
   // increasing order of creation.
   MapId2Buf Id2BufferMap;
 
-  // Trace record metadata
-  struct TraceRecordMd {
-    BufPtr BufAddr;   // Enclosing buffer
-    TRStatus TRState; // Status of a trace record
-    TraceRecordMd(BufPtr buf) : BufAddr{buf}, TRState{TR_init} {}
-    TraceRecordMd() = delete;
-    TraceRecordMd(const TraceRecordMd &) = delete;
-    TraceRecordMd &operator=(const TraceRecordMd &) = delete;
+  // Trace record. We currently support OMPT data type only. The state
+  // (TRStatus type) is maintained inline in the trace record. The
+  // tool is expected to access only the OMPT record.
+  struct TraceRecord {
+    ompt_record_ompt_t TR;
+    TRStatus TRState;
   };
-
-  using BufMdPtr = std::shared_ptr<TraceRecordMd>;
-  using UMapPtr2BufState = std::unordered_map<void *, BufMdPtr>;
-
-  // A hashmap from cursor -> metadata containing the trace record
-  // status and the containing buffer
-  UMapPtr2BufState Cursor2BufMdMap;
 
   /*
    * A buffer is flushed when it fills up or when the tool invokes
@@ -214,9 +205,10 @@ private:
   // TODO Separate out the helper thread into its own class
   std::vector<std::thread> CompletionThreads;
 
-  // Called when a buffer may be flushed. setComplete should be called without
-  // holding any lock
-  void setComplete(void *cursor);
+  /// Called when a buffer \p Buf may be flushed with \p Cursor as the
+  /// last allocated trace record in the buffer.
+  /// setComplete should be called without holding any lock.
+  void setComplete(void *Cursor, BufPtr Buf);
 
   // Called to dispatch buffer-completion callbacks for the trace records in
   // this buffer
@@ -238,6 +230,9 @@ private:
     LastCursors.erase(cursor);
   }
 
+  // Given a trace record pointer, initialize its metadata
+  void initTraceRecordMetaData(void *Rec);
+
   // Reserve a candidate buffer for flushing, preventing other helper threads
   // from accessing it
   FlushInfo findAndReserveFlushedBuf(uint64_t id);
@@ -253,10 +248,6 @@ private:
 
   // Get the next trace record
   void *getNextTR(void *tr);
-
-  // Get the size of a trace record
-  // We support only ompt records today
-  size_t getTRSize() { return sizeof(ompt_record_ompt_t); }
 
   // Given a buffer, return the latest cursor
   void *getBufferCursor(BufPtr);
@@ -357,16 +348,21 @@ public:
   // Assign a cursor for a new trace record
   void *assignCursor(ompt_callbacks_t type);
 
-  // Get the status of a trace record
-  TRStatus getTRStatus(void *tr);
+  // Get the size of a trace record
+  size_t getTRSize() { return sizeof(TraceRecord); }
 
-  // Set the status of a trace record
-  void setTRStatus(void *tr, TRStatus);
+  // Get the status of a trace record. This function does not acquire
+  // a lock. If locking is required, the caller must hold a lock.
+  TRStatus getTRStatus(void *Rec);
+
+  // Set the status of a trace record. This function does not acquire
+  // a lock. If locking is required, the caller must hold a lock.
+  void setTRStatus(void *Rec, TRStatus);
 
   // Is this a last cursor of a buffer completion callback?
-  bool isLastCursor(void *cursor) {
+  bool isLastCursor(void *Cursor) {
     std::unique_lock<std::mutex> lck(LastCursorMutex);
-    return LastCursors.find(cursor) != LastCursors.end();
+    return LastCursors.find(Cursor) != LastCursors.end();
   }
 
   // Called for flushing outstanding buffers

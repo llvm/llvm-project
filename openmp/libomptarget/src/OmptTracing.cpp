@@ -358,7 +358,7 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *device,
   // TODO In debug mode, assert that the metadata points to the
   // input parameter buffer
 
-  size_t sz = sizeof(ompt_record_ompt_t);
+  size_t sz = ompt_trace_record_buffer_mgr.getTRSize();
   *next = (ompt_buffer_cursor_t)(curr_rec + sz);
   DP("Advanced buffer pointer by %lu bytes to %p\n", sz, curr_rec + sz);
   return true;

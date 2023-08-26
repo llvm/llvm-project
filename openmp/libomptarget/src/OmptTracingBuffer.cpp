@@ -47,6 +47,7 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
   // changed by maintaining thread local info
   size_t rec_size = getTRSize();
   void *to_be_flushed_cursor = nullptr;
+  BufPtr to_be_flushed_buf = nullptr;
   std::unique_lock<std::mutex> lck(BufferMgrMutex);
   if (!Id2BufferMap.empty()) {
     // Try to assign a trace record from the last allocated buffer
@@ -57,13 +58,15 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
              (char *)buf->Cursor + rec_size);
       buf->Cursor = (char *)buf->Start + buf->TotalBytes - buf->RemainingBytes;
       buf->RemainingBytes -= rec_size;
-      assert(Cursor2BufMdMap.find(buf->Cursor) == Cursor2BufMdMap.end());
-      Cursor2BufMdMap[buf->Cursor] = std::make_shared<TraceRecordMd>(buf);
+
+      initTraceRecordMetaData(buf->Cursor);
+
       DP("Assigned %lu bytes at %p in existing buffer %p\n", rec_size,
          buf->Cursor, buf->Start);
       return buf->Cursor;
     } else {
       to_be_flushed_cursor = buf->Cursor;
+      to_be_flushed_buf = buf;
       buf->isFull = true; // no space for any more trace records
     }
   }
@@ -79,12 +82,11 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
 
   uint64_t new_buf_id = get_and_inc_buf_id();
   auto new_buf = std::make_shared<Buffer>(
-      new_buf_id, buffer /* start */, buffer /* cursor */, total_bytes,
-      total_bytes - rec_size, /* remaining bytes */
-      false /* is full? */);
-  auto buf_md_ptr = std::make_shared<TraceRecordMd>(new_buf);
-  assert(Cursor2BufMdMap.find(new_buf->Cursor) == Cursor2BufMdMap.end());
-  Cursor2BufMdMap[new_buf->Cursor] = buf_md_ptr;
+      new_buf_id, /*Start=*/buffer, /*Cursor=*/buffer, total_bytes,
+      /*RemainingBytes=*/total_bytes - rec_size,
+      /*isFull=*/false);
+
+  initTraceRecordMetaData(new_buf->Cursor);
 
   assert(Id2BufferMap.find(new_buf_id) == Id2BufferMap.end());
   Id2BufferMap[new_buf_id] = new_buf;
@@ -93,7 +95,7 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
 
   // Schedule this buffer for flushing till this cursor
   if (to_be_flushed_cursor)
-    setComplete(to_be_flushed_cursor);
+    setComplete(to_be_flushed_cursor, to_be_flushed_buf);
 
   DP("Assigned %lu bytes at %p in new buffer with id %lu\n", rec_size, buffer,
      new_buf_id);
@@ -109,13 +111,13 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
  * called without holding any lock.
  * Note lock order: buf_lock -> flush_lock
  */
-void OmptTracingBufferMgr::setComplete(void *cursor) {
+void OmptTracingBufferMgr::setComplete(void *cursor, BufPtr Buf) {
   std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  auto buf_itr = Cursor2BufMdMap.find(cursor);
+
   // Between calling setComplete and this check, a flush-all may have
   // delivered this buffer to the tool and deleted it. So the buffer
   // may not exist.
-  if (buf_itr == Cursor2BufMdMap.end())
+  if (Id2BufferMap.find(Buf->Id) == Id2BufferMap.end())
     return;
 
   // Cannot assert that the state of the cursor is ready since a
@@ -123,14 +125,12 @@ void OmptTracingBufferMgr::setComplete(void *cursor) {
   // remains in init state when the range of trace records is
   // determined for dispatching the buffer-completion callback, it
   // will not be included.
-  BufPtr buf = buf_itr->second->BufAddr;
-
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
   uint64_t flush_id;
-  auto flush_itr = FlushBufPtr2IdMap.find(buf);
+  auto flush_itr = FlushBufPtr2IdMap.find(Buf);
   if (flush_itr == FlushBufPtr2IdMap.end()) {
     // This buffer has not been flushed yet
-    addNewFlushEntry(buf, cursor);
+    addNewFlushEntry(Buf, cursor);
   } else {
     // This buffer has been flushed before
     flush_id = flush_itr->second;
@@ -362,24 +362,23 @@ void OmptTracingBufferMgr::dispatchBufferOwnedCallback(
   }
 }
 
-void OmptTracingBufferMgr::setTRStatus(void *rec, TRStatus status) {
-  std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  auto itr = Cursor2BufMdMap.find(rec);
-  assert(itr != Cursor2BufMdMap.end());
-  itr->second->TRState = status;
+void OmptTracingBufferMgr::initTraceRecordMetaData(void *Rec) {
+  TraceRecord *TR = static_cast<TraceRecord *>(Rec);
+  TR->TRState = TR_init;
 }
 
-OmptTracingBufferMgr::TRStatus OmptTracingBufferMgr::getTRStatus(void *rec) {
-  std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  auto itr = Cursor2BufMdMap.find(rec);
-  assert(itr != Cursor2BufMdMap.end());
-  return itr->second->TRState;
+void OmptTracingBufferMgr::setTRStatus(void *Rec, TRStatus Status) {
+  static_cast<TraceRecord *>(Rec)->TRState = Status;
 }
 
-void *OmptTracingBufferMgr::getNextTR(void *rec) {
+OmptTracingBufferMgr::TRStatus OmptTracingBufferMgr::getTRStatus(void *Rec) {
+  return static_cast<TraceRecord *>(Rec)->TRState;
+}
+
+void *OmptTracingBufferMgr::getNextTR(void *Rec) {
   size_t rec_size = getTRSize();
   // warning: no overflow check done
-  return (char *)rec + rec_size;
+  return (char *)Rec + rec_size;
 }
 
 bool OmptTracingBufferMgr::isBufferFull(const FlushInfo &flush_info) {
@@ -482,19 +481,6 @@ void OmptTracingBufferMgr::destroyFlushedBuf(const FlushInfo &flush_info) {
   BufPtr buf = flush_info.FlushBuf;
 
   std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  // Mapping info for all cursors in this buffer must be erased. This
-  // can be done since only fully populated buffers are destroyed.
-  char *curr_cursor = (char *)flush_info.FlushBuf->Start;
-  size_t total_valid_bytes = (buf->TotalBytes / getTRSize()) * getTRSize();
-  char *end_cursor = curr_cursor + total_valid_bytes;
-  while (curr_cursor != end_cursor) {
-    auto buf_itr = Cursor2BufMdMap.find(curr_cursor);
-    assert(buf_itr != Cursor2BufMdMap.end() &&
-           "Cursor not found in buffer metadata map");
-    assert(buf_itr->second->BufAddr == buf);
-    Cursor2BufMdMap.erase(buf_itr);
-    curr_cursor += getTRSize();
-  }
   Id2BufferMap.erase(buf->Id);
 
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
