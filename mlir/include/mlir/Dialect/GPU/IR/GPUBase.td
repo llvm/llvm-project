@@ -57,6 +57,7 @@ def GPU_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
