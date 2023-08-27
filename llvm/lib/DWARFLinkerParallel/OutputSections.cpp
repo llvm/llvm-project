@@ -125,8 +125,6 @@ void SectionDescriptor::setSizesForSectionCreatedByAsmPrinter() {
       }
     }
   }
-
-  return;
 }
 
 void SectionDescriptor::emitIntVal(uint64_t Val, unsigned Size) {
