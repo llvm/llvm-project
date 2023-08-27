@@ -869,9 +869,8 @@ TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
     // The order is significant since some of these decl kinds are also
     // TagDecls.
     if (llvm::isa<clang::TypedefNameDecl>(clang_decl))
-      // FIXME: this should pass the correct context instead of nullopt.
-      swift_name =
-          ExtractSwiftName(reader->lookupTypedef(std::nullopt, default_name));
+      // FIXME: this should pass the correct context.
+      swift_name = ExtractSwiftName(reader->lookupTypedef(default_name));
     else if (llvm::isa<clang::EnumConstantDecl>(clang_decl))
       swift_name = ExtractSwiftName(reader->lookupEnumConstant(default_name));
     else if (llvm::isa<clang::ObjCInterfaceDecl>(clang_decl))
