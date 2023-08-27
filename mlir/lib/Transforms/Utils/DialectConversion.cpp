@@ -2935,12 +2935,9 @@ LogicalResult TypeConverter::convertType(Type t,
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
   size_t currentCount = results.size();
-  conversionCallStack.push_back(t);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([this]() { conversionCallStack.pop_back(); });
+
   for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (std::optional<LogicalResult> result =
-            converter(t, results, conversionCallStack)) {
+    if (std::optional<LogicalResult> result = converter(t, results)) {
       if (!succeeded(*result)) {
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();

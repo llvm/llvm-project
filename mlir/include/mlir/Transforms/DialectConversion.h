@@ -307,7 +307,7 @@ private:
   /// types is empty, the type is removed and any usages of the existing value
   /// are expected to be removed during conversion.
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
-      Type, SmallVectorImpl<Type> &, ArrayRef<Type>)>;
+      Type, SmallVectorImpl<Type> &)>;
 
   /// The signature of the callback used to materialize a conversion.
   using MaterializationCallbackFn = std::function<std::optional<Value>(
@@ -330,44 +330,30 @@ private:
   template <typename T, typename FnT>
   std::enable_if_t<std::is_invocable_v<FnT, T>, ConversionCallbackFn>
   wrapCallback(FnT &&callback) const {
-    return wrapCallback<T>(
-        [callback = std::forward<FnT>(callback)](
-            T type, SmallVectorImpl<Type> &results, ArrayRef<Type>) {
-          if (std::optional<Type> resultOpt = callback(type)) {
-            bool wasSuccess = static_cast<bool>(*resultOpt);
-            if (wasSuccess)
-              results.push_back(*resultOpt);
-            return std::optional<LogicalResult>(success(wasSuccess));
-          }
-          return std::optional<LogicalResult>();
-        });
-  }
-  /// With callback of form: `std::optional<LogicalResult>(
-  ///     T, SmallVectorImpl<Type> &)`.
-  template <typename T, typename FnT>
-  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
-                   ConversionCallbackFn>
-  wrapCallback(FnT &&callback) const {
-    return wrapCallback<T>(
-        [callback = std::forward<FnT>(callback)](
-            T type, SmallVectorImpl<Type> &results, ArrayRef<Type>) {
-          return callback(type, results);
-        });
+    return wrapCallback<T>([callback = std::forward<FnT>(callback)](
+                               T type, SmallVectorImpl<Type> &results) {
+      if (std::optional<Type> resultOpt = callback(type)) {
+        bool wasSuccess = static_cast<bool>(*resultOpt);
+        if (wasSuccess)
+          results.push_back(*resultOpt);
+        return std::optional<LogicalResult>(success(wasSuccess));
+      }
+      return std::optional<LogicalResult>();
+    });
   }
   /// With callback of form: `std::optional<LogicalResult>(
   ///     T, SmallVectorImpl<Type> &, ArrayRef<Type>)`.
   template <typename T, typename FnT>
-  std::enable_if_t<
-      std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &, ArrayRef<Type>>,
-      ConversionCallbackFn>
+  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
+                   ConversionCallbackFn>
   wrapCallback(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
-               Type type, SmallVectorImpl<Type> &results,
-               ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
+               Type type,
+               SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
       T derivedType = dyn_cast<T>(type);
       if (!derivedType)
         return std::nullopt;
-      return callback(derivedType, results, callStack);
+      return callback(derivedType, results);
     };
   }
 
@@ -435,10 +421,6 @@ private:
   mutable DenseMap<Type, Type> cachedDirectConversions;
   /// This cache stores the successful 1->N conversions, where N != 1.
   mutable DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
-
-  /// Stores the types that are being converted in the case when convertType
-  /// is being called recursively to convert nested types.
-  mutable SmallVector<Type, 2> conversionCallStack;
 };
 
 //===----------------------------------------------------------------------===//
