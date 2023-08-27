@@ -613,8 +613,8 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   const auto *LHS = Op->getLHS()->IgnoreParenImpCasts();
   const auto *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
-  const CXXBoolLiteralExpr *Bool;
-  const Expr *Other;
+  const CXXBoolLiteralExpr *Bool = nullptr;
+  const Expr *Other = nullptr;
   if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)) != nullptr)
     Other = RHS;
   else if ((Bool = dyn_cast<CXXBoolLiteralExpr>(RHS)) != nullptr)
