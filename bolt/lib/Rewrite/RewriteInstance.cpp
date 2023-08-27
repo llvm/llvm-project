@@ -1844,8 +1844,9 @@ void RewriteInstance::adjustCommandLineOptions() {
     exit(1);
   }
 
-  if (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
-      !opts::HotText.getNumOccurrences()) {
+  if (opts::Instrument ||
+      (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
+       !opts::HotText.getNumOccurrences())) {
     opts::HotText = true;
   } else if (opts::HotText && !BC->HasRelocations) {
     errs() << "BOLT-WARNING: hot text is disabled in non-relocation mode\n";

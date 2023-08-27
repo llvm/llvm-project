@@ -165,6 +165,20 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
+// Get the difference between runtime addrress of .text section and
+// static address in section header table. Can be extracted from arbitrary
+// pc value recorded at runtime to get the corresponding static address, which
+// in turn can be used to search for indirect call description. Needed because
+// indirect call descriptions are read-only non-relocatable data.
+uint64_t getTextBaseAddress() {
+  uint64_t DynAddr;
+  uint64_t StaticAddr;
+  __asm__ volatile("leaq __hot_end(%%rip), %0\n\t"
+                   "movabsq $__hot_end, %1\n\t"
+                   : "=r"(DynAddr), "=r"(StaticAddr));
+  return DynAddr - StaticAddr;
+}
+
 constexpr uint32_t BufSize = 10240;
 
 #define _STRINGIFY(x) #x
