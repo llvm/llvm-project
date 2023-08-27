@@ -38,14 +38,14 @@ int main(int argc, char *argv[]) {
     }
 
     llvm::StringRef From = Values[0].trim();
-    llvm::UTF32 CodePoint;
+    llvm::UTF32 CodePoint = 0;
     From.getAsInteger(16, CodePoint);
 
     SmallVector<llvm::UTF32> To;
     SmallVector<StringRef> ToN;
     Values[1].split(ToN, ' ', -1, false);
     for (StringRef To_ : ToN) {
-      llvm::UTF32 ToCodePoint;
+      llvm::UTF32 ToCodePoint = 0;
       To_.trim().getAsInteger(16, ToCodePoint);
       To.push_back(ToCodePoint);
     }

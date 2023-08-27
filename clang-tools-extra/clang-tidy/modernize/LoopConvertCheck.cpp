@@ -962,8 +962,8 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   Confidence ConfidenceLevel(Confidence::CL_Safe);
   ASTContext *Context = Result.Context;
 
-  const ForStmt *Loop;
-  LoopFixerKind FixerKind;
+  const ForStmt *Loop = nullptr;
+  LoopFixerKind FixerKind{};
   RangeDescriptor Descriptor;
 
   if ((Loop = Nodes.getNodeAs<ForStmt>(LoopNameArray))) {

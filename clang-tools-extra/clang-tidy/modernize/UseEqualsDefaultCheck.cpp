@@ -310,7 +310,7 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
                   bodyEmpty(Result.Context, Body);
 
   std::vector<FixItHint> RemoveInitializers;
-  unsigned MemberType;
+  unsigned MemberType = 0;
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(SpecialFunctionDecl)) {
     if (Ctor->getNumParams() == 0) {
       MemberType = 0;
