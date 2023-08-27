@@ -228,7 +228,7 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
-  DiagnosticsEngine *DiagEngine;
+  DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 
   std::string CurrentFile;
@@ -248,13 +248,13 @@ private:
 
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 
-  bool Profile;
+  bool Profile = false;
   std::string ProfilePrefix;
 
   bool AllowEnablingAnalyzerAlphaCheckers;
   bool EnableModuleHeadersParsing;
 
-  bool SelfContainedDiags;
+  bool SelfContainedDiags = false;
 
   NoLintDirectiveHandler NoLintHandler;
   llvm::StringSet<> *OptionsCollector = nullptr;
@@ -313,9 +313,9 @@ private:
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
-  bool LastErrorRelatesToUserCode;
-  bool LastErrorPassesLineFilter;
-  bool LastErrorWasIgnored;
+  bool LastErrorRelatesToUserCode = false;
+  bool LastErrorPassesLineFilter = false;
+  bool LastErrorWasIgnored = false;
 };
 
 } // end namespace tidy

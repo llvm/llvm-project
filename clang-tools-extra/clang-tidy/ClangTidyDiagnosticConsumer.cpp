@@ -162,11 +162,10 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
 ClangTidyContext::ClangTidyContext(
     std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
     bool AllowEnablingAnalyzerAlphaCheckers, bool EnableModuleHeadersParsing)
-    : DiagEngine(nullptr), OptionsProvider(std::move(OptionsProvider)),
-      Profile(false),
+    : OptionsProvider(std::move(OptionsProvider)),
+
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
-      EnableModuleHeadersParsing(EnableModuleHeadersParsing),
-      SelfContainedDiags(false) {
+      EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use empty string for the file name in this case.
   setCurrentFile("");
@@ -313,8 +312,7 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
       RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       GetFixesFromNotes(GetFixesFromNotes),
-      EnableNolintBlocks(EnableNolintBlocks), LastErrorRelatesToUserCode(false),
-      LastErrorPassesLineFilter(false), LastErrorWasIgnored(false) {}
+      EnableNolintBlocks(EnableNolintBlocks) {}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
