@@ -43,6 +43,9 @@ protected:
   using AllocResult = Expected<std::unique_ptr<InFlightAlloc>>;
   using FinalizeResult = Expected<JITLinkMemoryManager::FinalizedAlloc>;
 
+  // Returns a reference to the graph being linked.
+  LinkGraph &getGraph() { return *G; }
+
   // Returns true if the context says that the linker should add default
   // passes. This can be used by JITLinkerBase implementations when deciding
   // whether they should add default passes.
