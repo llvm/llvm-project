@@ -1,15 +1,14 @@
-; RUN: opt -passes=canon < %s
+; RUN: opt -passes=canon -preserve-order=true < %s
+; RUN: opt -passes=canon -preserve-order=false < %s
 
-; XFAIL: *
-; FIXME: Infinite loop in name instructions
-
-define void @test(ptr) {
+define void @test(ptr, i32) {
 bb:
+  %a = add i32 %1, 1
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i32 [ undef, %bb ], [ %tmp87, %bb1 ]
-  %tmp2 = phi i32 [ undef, %bb ], [ %tmp86, %bb1 ]
+  %tmp = phi i32 [ %a, %bb ], [ %tmp87, %bb1 ]
+  %tmp2 = phi i32 [ %a, %bb ], [ %tmp86, %bb1 ]
   %tmp3 = mul i32 %tmp, undef
   %tmp4 = xor i32 %tmp3, -1
   %tmp5 = add i32 %tmp, %tmp4
