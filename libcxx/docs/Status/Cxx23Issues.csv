@@ -10,7 +10,7 @@
 "`3432 <https://wg21.link/LWG3432>`__","Missing requirement for ``comparison_category``","November 2020","|Complete|","16.0","|spaceship|"
 "`3447 <https://wg21.link/LWG3447>`__","Deduction guides for ``take_view`` and ``drop_view`` have different constraints","November 2020","|Complete|","14.0","|ranges|"
 "`3450 <https://wg21.link/LWG3450>`__","The const overloads of ``take_while_view::begin/end`` are underconstrained","November 2020","|Complete|","16.0","|ranges|"
-"`3464 <https://wg21.link/LWG3464>`__","``istream::gcount()`` can overflow","November 2020","|Complete|","18.0"
+"`3464 <https://wg21.link/LWG3464>`__","``istream::gcount()`` can overflow","November 2020","",""
 "`2731 <https://wg21.link/LWG2731>`__","Existence of ``lock_guard<MutexTypes...>::mutex_type`` typedef unclear","November 2020","|Complete|","5.0"
 "`2743 <https://wg21.link/LWG2743>`__","P0083R3 ``node_handle`` private members missing ""exposition only"" comment","November 2020","|Nothing To Do|",""
 "`2820 <https://wg21.link/LWG2820>`__","Clarify ``<cstdint>`` macros","November 2020","|Nothing To Do|",""
