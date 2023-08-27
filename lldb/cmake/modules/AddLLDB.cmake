@@ -224,10 +224,17 @@ function(add_properties_for_swift_modules target reldir)
     set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
 
     if (SWIFT_SWIFT_PARSER)
-      set_property(TARGET ${target}
-        APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
-      set_property(TARGET ${target}
-        APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
+      if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+        set_property(TARGET ${target}
+          APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
+        set_property(TARGET ${target}
+          APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
+      elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
+        set_property(TARGET ${target}
+          APPEND PROPERTY BUILD_RPATH "$ORIGIN/${build_reldir}lib/swift/host")
+        set_property(TARGET ${target}
+          APPEND PROPERTY INSTALL_RPATH "$ORIGIN/${reldir}lib/swift/host")
+      endif()
     endif()
   endif()
 endfunction()
