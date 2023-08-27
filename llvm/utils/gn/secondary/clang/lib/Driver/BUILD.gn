@@ -48,7 +48,6 @@ static_library("Driver") {
     "ToolChains/AMDGPU.cpp",
     "ToolChains/AMDGPUOpenMP.cpp",
     "ToolChains/AVR.cpp",
-    "ToolChains/Ananas.cpp",
     "ToolChains/Arch/AArch64.cpp",
     "ToolChains/Arch/ARM.cpp",
     "ToolChains/Arch/CSKY.cpp",
