@@ -80,7 +80,9 @@ int main(int argc, const char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
 
   if (OptHostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder().create();
+    auto J = llvm::orc::LLJITBuilder()
+               .setEnableDebuggerSupport(true)
+               .create();
     if (J)
       llvm::outs() << "true\n";
     else {
