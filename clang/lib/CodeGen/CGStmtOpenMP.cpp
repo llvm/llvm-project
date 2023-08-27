@@ -5143,6 +5143,15 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
 
     Action.Enter(CGF);
     OMPLexicalScope LexScope(CGF, S, OMPD_task, /*EmitPreInitStmt=*/false);
+    auto *TL = S.getSingleClause<OMPThreadLimitClause>();
+    if (CGF.CGM.getLangOpts().OpenMP >= 51 &&
+        needsTaskBasedThreadLimit(S.getDirectiveKind()) && TL) {
+      // Emit __kmpc_set_thread_limit() to set the thread_limit for the task
+      // enclosing this target region. This will indirectly set the thread_limit
+      // for every applicable construct within target region.
+      CGF.CGM.getOpenMPRuntime().emitThreadLimitClause(
+          CGF, TL->getThreadLimit(), S.getBeginLoc());
+    }
     BodyGen(CGF);
   };
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(

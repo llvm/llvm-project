@@ -2111,6 +2111,7 @@ typedef struct kmp_internal_control {
   int nproc; /* internal control for #threads for next parallel region (per
                 thread) */
   int thread_limit; /* internal control for thread-limit-var */
+  int task_thread_limit; /* internal control for thread-limit-var of a task*/
   int max_active_levels; /* internal control for max_active_levels */
   kmp_r_sched_t
       sched; /* internal control for runtime schedule {sched,chunk} pair */
@@ -3340,6 +3341,7 @@ extern int __kmp_sys_max_nth; /* system-imposed maximum number of threads */
 extern int __kmp_max_nth;
 // maximum total number of concurrently-existing threads in a contention group
 extern int __kmp_cg_max_nth;
+extern int __kmp_task_max_nth; // max threads used in a task
 extern int __kmp_teams_max_nth; // max threads used in a teams construct
 extern int __kmp_threads_capacity; /* capacity of the arrays __kmp_threads and
                                       __kmp_root */
@@ -4297,6 +4299,8 @@ KMP_EXPORT void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
 KMP_EXPORT void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
                                       kmp_int32 num_teams,
                                       kmp_int32 num_threads);
+KMP_EXPORT void __kmpc_set_thread_limit(ident_t *loc, kmp_int32 global_tid,
+                                        kmp_int32 thread_limit);
 /* Function for OpenMP 5.1 num_teams clause */
 KMP_EXPORT void __kmpc_push_num_teams_51(ident_t *loc, kmp_int32 global_tid,
                                          kmp_int32 num_teams_lb,
