@@ -381,8 +381,7 @@ static const char *getInitializer(QualType QT, bool UseAssignment) {
   if (QT->isPointerType())
     return " = nullptr";
 
-  const BuiltinType *BT =
-      dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
+  const auto *BT = dyn_cast<BuiltinType>(QT.getCanonicalType().getTypePtr());
   if (!BT)
     return DefaultInitializer;
 
