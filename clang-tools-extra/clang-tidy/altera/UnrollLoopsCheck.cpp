@@ -171,7 +171,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
   const Stmt *Initializer = ForLoop->getInit();
   const Expr *Conditional = ForLoop->getCond();
   const Expr *Increment = ForLoop->getInc();
-  int InitValue;
+  int InitValue = 0;
   // If the loop variable value isn't known, we can't know the loop bounds.
   if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer)) {
     if (const auto *VariableDecl =
@@ -183,12 +183,12 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
     }
   }
 
-  int EndValue;
+  int EndValue = 0;
   const auto *BinaryOp = cast<BinaryOperator>(Conditional);
   if (!extractValue(EndValue, BinaryOp, Context))
     return true;
 
-  double Iterations;
+  double Iterations = 0.0;
 
   // If increment is unary and not one of ++, --, we can't know the loop bounds.
   if (const auto *Op = dyn_cast<UnaryOperator>(Increment)) {
