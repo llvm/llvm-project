@@ -231,7 +231,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
-    case llvm::Triple::CloudABI:
     case llvm::Triple::ELFIAMCU:
       break;
     case llvm::Triple::Win32:
@@ -271,13 +270,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   switch (os) {
-  case llvm::Triple::CloudABI: {
-    // <sysroot>/<triple>/include
-    SmallString<128> P = StringRef(HSOpts.ResourceDir);
-    llvm::sys::path::append(P, "../../..", triple.str(), "include");
-    AddPath(P, System, false);
-    break;
-  }
   case llvm::Triple::RTEMS:
     break;
   case llvm::Triple::Win32:
@@ -295,7 +287,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   switch (os) {
-  case llvm::Triple::CloudABI:
   case llvm::Triple::RTEMS:
   case llvm::Triple::ELFIAMCU:
     break;
