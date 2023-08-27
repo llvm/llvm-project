@@ -37,9 +37,8 @@ static SourceLocation findDefaultCaptureEnd(const LambdaExpr *Lambda,
         SourceLocation AddressofLoc = utils::lexer::findPreviousTokenKind(
             Capture.getLocation(), SourceMgr, Context.getLangOpts(), tok::amp);
         return AddressofLoc;
-      } else {
-        return Capture.getLocation();
       }
+      return Capture.getLocation();
     }
   }
   return Lambda->getIntroducerRange().getEnd();
