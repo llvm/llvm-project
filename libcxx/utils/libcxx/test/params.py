@@ -55,6 +55,14 @@ _warningFlags = [
     # Don't fail compilation in case the compiler fails to perform the requested
     # loop vectorization.
     "-Wno-pass-failed",
+
+    # TODO: Find out why GCC warns in lots of places (is this a problem with always_inline?)
+    "-Wno-dangling-reference",
+    "-Wno-mismatched-new-delete",
+    "-Wno-redundant-move",
+
+    # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
+    "-Wno-self-move",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]

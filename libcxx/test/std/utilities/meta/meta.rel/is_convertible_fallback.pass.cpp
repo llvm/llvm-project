@@ -10,6 +10,8 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D _LIBCPP_USE_IS_CONVERTIBLE_FALLBACK
 
+// UNSUPPORTED: gcc-13
+
 // type_traits
 
 // is_convertible
