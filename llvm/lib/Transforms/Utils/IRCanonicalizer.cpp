@@ -57,6 +57,7 @@ public:
 private:
   // Random constant for hashing, so the state isn't zero.
   const uint64_t MagicHashConstant = 0x6acaa36bef8325c5ULL;
+  DenseSet<const Instruction *> NamedInstructions;
 
   /// \name Naming.
   /// @{
@@ -175,6 +176,9 @@ void IRCanonicalizer::nameBasicBlocks(Function &F) {
 ///
 /// \param I Instruction to be renamed.
 void IRCanonicalizer::nameInstruction(Instruction *I) {
+  if (NamedInstructions.contains(I))
+    return;
+  NamedInstructions.insert(I); 
   // Determine the type of instruction to name.
   if (isInitialInstruction(I)) {
     // This is an initial instruction.
