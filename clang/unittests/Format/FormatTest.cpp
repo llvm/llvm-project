@@ -6169,7 +6169,7 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                            "#  define C 0\n"
                            "#endif";
     EXPECT_EQ(Expected, format(ToFormat, Style));
-    verifyFormat(Expected, Style);
+    verifyNoChange(Expected, Style);
   }
   // Keep block quotes aligned.
   {
@@ -6219,7 +6219,7 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                            "   // Code. Not aligned with #\n"
                            "#define C 0\n";
     EXPECT_EQ(Expected, format(ToFormat, Style));
-    verifyFormat(Expected, Style);
+    verifyNoChange(Expected, Style);
   }
   // Test AfterHash with tabs.
   {
@@ -6306,7 +6306,7 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                            "#endif\n"
                            "}";
     EXPECT_EQ(Expected, format(ToFormat, Style));
-    verifyFormat(Expected, Style);
+    verifyNoChange(Expected, Style);
   }
   {
     const char *Expected = "void f() {\n"
@@ -24190,11 +24190,11 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
 
   // Don't use the helpers here, since 'mess up' will change the whitespace
   // and these are all whitespace sensitive by definition
-  verifyFormat("FOO(String-ized&Messy+But(: :Still)=Intentional);", Style);
+  verifyNoChange("FOO(String-ized&Messy+But(: :Still)=Intentional);", Style);
   EXPECT_EQ(
       "FOO(String-ized&Messy+But\\(: :Still)=Intentional);",
       format("FOO(String-ized&Messy+But\\(: :Still)=Intentional);", Style));
-  verifyFormat("FOO(String-ized&Messy+But,: :Still=Intentional);", Style);
+  verifyNoChange("FOO(String-ized&Messy+But,: :Still=Intentional);", Style);
   EXPECT_EQ("FOO(String-ized&Messy+But,: :\n"
             "       Still=Intentional);",
             format("FOO(String-ized&Messy+But,: :\n"
@@ -24208,7 +24208,7 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
                    Style));
 
   Style.ColumnLimit = 21;
-  verifyFormat("FOO(String-ized&Messy+But: :Still=Intentional);", Style);
+  verifyNoChange("FOO(String-ized&Messy+But: :Still=Intentional);", Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
