@@ -649,7 +649,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
     const EnumConstantDecl *ECD) const {
-  const EnumDecl *ED = cast<EnumDecl>(ECD->getDeclContext());
+  const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
   if (std::string::npos != Name.find("enum")) {
