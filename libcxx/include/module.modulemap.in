@@ -16,7 +16,6 @@ module std_atomic [system] {
   export *
 }
 module std_barrier [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "barrier"
   export *
 }
@@ -37,7 +36,6 @@ module std_chrono [system] {
   export *
 }
 module std_codecvt [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "codecvt"
   export *
 }
@@ -78,7 +76,6 @@ module std_expected [system] {
   export *
 }
 module std_filesystem [system] {
-  @requires_LIBCXX_ENABLE_FILESYSTEM@
   header "filesystem"
   export *
 }
@@ -91,8 +88,6 @@ module std_forward_list [system] {
   export *
 }
 module std_fstream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
-  @requires_LIBCXX_ENABLE_FILESYSTEM@
   header "fstream"
   export *
 }
@@ -101,7 +96,6 @@ module std_functional [system] {
   export *
 }
 module std_future [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "future"
   export *
 }
@@ -110,12 +104,10 @@ module std_initializer_list [system] {
   export *
 }
 module std_iomanip [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "iomanip"
   export *
 }
 module std_ios [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "ios"
   export *
 }
@@ -124,12 +116,10 @@ module std_iosfwd [system] {
   export *
 }
 module std_iostream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "iostream"
   export *
 }
 module std_istream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "istream"
   export *
 }
@@ -138,7 +128,6 @@ module std_iterator [system] {
   export *
 }
 module std_latch [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "latch"
   export *
 }
@@ -151,7 +140,6 @@ module std_list [system] {
   export *
 }
 module std_locale [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "locale"
   export *
 }
@@ -192,7 +180,6 @@ module std_optional [system] {
   export *
 }
 module std_ostream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "ostream"
   export *
 }
@@ -217,7 +204,6 @@ module std_ratio [system] {
   export *
 }
 module std_regex [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "regex"
   export *
 }
@@ -226,7 +212,6 @@ module std_scoped_allocator [system] {
   export *
 }
 module std_semaphore [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "semaphore"
   export *
 }
@@ -235,7 +220,6 @@ module std_set [system] {
   export *
 }
 module std_shared_mutex [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "shared_mutex"
   export std_version
 }
@@ -250,7 +234,6 @@ module std_span [system] {
   export std_private_span_span_fwd
 }
 module std_sstream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "sstream"
   export *
 }
@@ -263,12 +246,10 @@ module std_stdexcept [system] {
   export *
 }
 module std_stop_token {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "stop_token"
   export *
 }
 module std_streambuf [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "streambuf"
   export *
 }
@@ -281,7 +262,6 @@ module std_string_view [system] {
   export *
 }
 module std_strstream [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "strstream"
   export *
 }
@@ -290,7 +270,6 @@ module std_system_error [system] {
   export *
 }
 module std_thread [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
   header "thread"
   export *
 }
@@ -377,7 +356,6 @@ module std_climits [system] {
   export *
 }
 module std_clocale [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "clocale"
   export *
 }
@@ -435,12 +413,10 @@ module std_cuchar [system] {
   export *
 }
 module std_cwchar [system] {
-  @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
   header "cwchar"
   export *
 }
 module std_cwctype [system] {
-  @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
   header "cwctype"
   export *
 }
@@ -477,7 +453,6 @@ module std_limits_h [system] {
   export *
 }
 module std_locale_h [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "locale.h"
   export *
 }
@@ -493,8 +468,6 @@ module std_setjmp_h [system] {
 // FIXME: <stdalign.h> is missing.
 // <stdarg.h> provided by compiler.
 module std_stdatomic_h [system] {
-  @requires_LIBCXX_ENABLE_THREADS@
-  requires cplusplus23
   header "stdatomic.h"
   export *
 }
@@ -536,21 +509,17 @@ module std_uchar_h [system] {
 }
 // <time.h> provided by C library.
 module std_wchar_h [system] {
-  @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
   // <wchar.h>'s __need_* macros require textual inclusion.
   textual header "wchar.h"
   export *
 }
 module std_wctype_h [system] {
-  @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
   header "wctype.h"
   export *
 }
 
 // Experimental C++ standard library interfaces
 module std_experimental [system] {
-  requires cplusplus11
-
   module deque {
     header "experimental/deque"
     export *
@@ -657,7 +626,6 @@ module std_private_hash_table        [system] {
   export *
 }
 module std_private_locale            [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "__locale"
   export *
 }
@@ -1196,7 +1164,6 @@ module std_private_chrono_duration               [system] {
 }
 module std_private_chrono_file_clock             [system] { header "__chrono/file_clock.h" }
 module std_private_chrono_formatter              [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "__chrono/formatter.h"
 }
 module std_private_chrono_hh_mm_ss               [system] { header "__chrono/hh_mm_ss.h" }
@@ -1210,11 +1177,9 @@ module std_private_chrono_month                  [system] { header "__chrono/mon
 module std_private_chrono_month_weekday          [system] { header "__chrono/month_weekday.h" }
 module std_private_chrono_monthday               [system] { header "__chrono/monthday.h" }
 module std_private_chrono_ostream                [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "__chrono/ostream.h"
 }
 module std_private_chrono_parser_std_format_spec [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "__chrono/parser_std_format_spec.h"
 }
 module std_private_chrono_statically_widen       [system] { header "__chrono/statically_widen.h" }
@@ -1699,7 +1664,6 @@ module std_private_ranges_filter_view                [system] {
 module std_private_ranges_from_range                 [system] { header "__ranges/from_range.h" }
 module std_private_ranges_iota_view                  [system] { header "__ranges/iota_view.h" }
 module std_private_ranges_istream_view               [system] {
-  @requires_LIBCXX_ENABLE_LOCALIZATION@
   header "__ranges/istream_view.h"
 }
 module std_private_ranges_join_view                  [system] {
