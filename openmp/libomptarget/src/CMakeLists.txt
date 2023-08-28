@@ -36,10 +36,13 @@ add_llvm_library(omptarget
   LINK_LIBS
   PUBLIC
   omp
-  PRIVATE
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports"
-  #  NO_INSTALL_RPATH
-  )
+)
+target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
+
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  target_link_libraries(omptarget PRIVATE
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+endif()
 
 # Don't override an externally defined RPATH
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
@@ -58,19 +61,10 @@ endif()
 
 find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} ${LLVM_BINARY_DIR} PATH_SUFFIXES lib REQUIRED)
 
-target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
-
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
   "-Wl,--no-allow-shlib-undefined")
-
-target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
-
-if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget PRIVATE
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
-endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
