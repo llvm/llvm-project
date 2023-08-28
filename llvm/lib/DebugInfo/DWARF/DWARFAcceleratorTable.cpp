@@ -970,6 +970,43 @@ DWARFDebugNames::getCUNameIndex(uint64_t CUOffset) {
   return CUToNameIndex.lookup(CUOffset);
 }
 
+static bool isObjCSelector(StringRef Name) {
+  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
+         (Name[1] == '[');
+}
+
+std::optional<ObjCSelectorNames> llvm::getObjCNamesIfSelector(StringRef Name) {
+  if (!isObjCSelector(Name))
+    return std::nullopt;
+  // "-[Atom setMass:]"
+  StringRef ClassNameStart(Name.drop_front(2));
+  size_t FirstSpace = ClassNameStart.find(' ');
+  if (FirstSpace == StringRef::npos)
+    return std::nullopt;
+
+  StringRef SelectorStart = ClassNameStart.drop_front(FirstSpace + 1);
+  if (!SelectorStart.size())
+    return std::nullopt;
+
+  ObjCSelectorNames Ans;
+  Ans.ClassName = ClassNameStart.take_front(FirstSpace);
+  Ans.Selector = SelectorStart.drop_back(); // drop ']';
+
+  // "-[Class(Category) selector :withArg ...]"
+  if (Ans.ClassName.back() == ')') {
+    size_t OpenParens = Ans.ClassName.find('(');
+    if (OpenParens != StringRef::npos) {
+      Ans.ClassNameNoCategory = Ans.ClassName.take_front(OpenParens);
+
+      Ans.MethodNameNoCategory = Name.take_front(OpenParens + 2);
+      // FIXME: The missing space here may be a bug, but dsymutil-classic also
+      // does it this way.
+      append_range(*Ans.MethodNameNoCategory, SelectorStart);
+    }
+  }
+  return Ans;
+}
+
 std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   // We are looking for template parameters to strip from Name. e.g.
   //
