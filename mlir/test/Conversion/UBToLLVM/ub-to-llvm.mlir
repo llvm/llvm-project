@@ -12,5 +12,7 @@ func.func @check_poison() {
   %1 = ub.poison : i16
 // CHECK: {{.*}} = llvm.mlir.poison : f64
   %2 = ub.poison : f64
+// CHECK: {{.*}} = llvm.mlir.poison : !llvm.ptr
+  %3 = ub.poison : !llvm.ptr
   return
 }
