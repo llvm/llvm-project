@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://9651605
-// rdar://12958191
 
 @interface Foo
 @property (getter=getVal) int val __attribute__((unavailable));

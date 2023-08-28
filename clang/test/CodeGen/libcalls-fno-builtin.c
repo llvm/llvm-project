@@ -10,8 +10,6 @@
 // RUN: %clang_cc1 -S -O3 -fno-builtin -o - %s | FileCheck --check-prefix=ASM %s
 // RUN: %clang_cc1 -S -O3 -fno-builtin-ceil -o - %s | FileCheck --check-prefix=ASM-INDIV %s
 
-// rdar://10551066
-
 typedef __SIZE_TYPE__ size_t;
 typedef struct FILE FILE;
 

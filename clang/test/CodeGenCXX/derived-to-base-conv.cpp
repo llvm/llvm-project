@@ -72,7 +72,6 @@ void test1(Derived bb) {
 
 // Don't crash after devirtualizing a derived-to-base conversion
 // to an empty base allocated at offset zero.
-// rdar://problem/11993704
 class Test2a {};
 class Test2b final : public virtual Test2a {};
 void test2(Test2b &x) {
