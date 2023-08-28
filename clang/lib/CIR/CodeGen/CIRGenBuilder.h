@@ -602,6 +602,13 @@ public:
         global.getLoc(), getPointerTo(global.getSymType()), global.getName());
   }
 
+  /// Create a pointer to a record member.
+  mlir::Value createGetMember(mlir::Location loc, mlir::Type result,
+                              mlir::Value base, llvm::StringRef name,
+                              unsigned index) {
+    return create<mlir::cir::GetMemberOp>(loc, result, base, name, index);
+  }
+
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment.
   cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,

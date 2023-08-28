@@ -72,13 +72,13 @@ static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   // For most cases fieldName is the same as field->getName() but for lambdas,
   // which do not currently carry the name, so it can be passed down from the
   // CaptureStmt.
-  auto sea = CGF.getBuilder().create<mlir::cir::StructElementAddr>(
+  auto memberAddr = CGF.getBuilder().createGetMember(
       loc, fieldPtr, Base.getPointer(), fieldName, fieldIndex);
 
   // TODO: We could get the alignment from the CIRGenRecordLayout, but given the
   // member name based lookup of the member here we probably shouldn't be. We'll
   // have to consider this later.
-  auto addr = Address(sea->getResult(0), CharUnits::One());
+  auto addr = Address(memberAddr, CharUnits::One());
   return addr;
 }
 
@@ -356,8 +356,7 @@ static CIRGenCallee buildDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     auto Fn = cast<mlir::cir::FuncOp>(CGF.CurFn);
-    if (Fn.getName() != FDInlineName &&
-        onlyHasInlineBuiltinDeclaration(FD)) {
+    if (Fn.getName() != FDInlineName && onlyHasInlineBuiltinDeclaration(FD)) {
       assert(0 && "NYI");
     }
 
