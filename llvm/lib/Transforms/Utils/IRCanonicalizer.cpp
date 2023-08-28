@@ -176,6 +176,9 @@ void IRCanonicalizer::nameBasicBlocks(Function &F) {
 ///
 /// \param I Instruction to be renamed.
 void IRCanonicalizer::nameInstruction(Instruction *I) {
+  //ensure instructions are not renamed. This is done
+  //to prevent situation where instructions are used
+  //before their definition (in phi nodes)
   if (NamedInstructions.contains(I))
     return;
   NamedInstructions.insert(I); 
