@@ -112,14 +112,14 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
   uint32_t first = 0;
 
   // Computing Scan within each Team (Intra-Team Scan)
-  ompx::synchronize::threadsAligned();
+  ompx::synchronize::threadsAligned(ompx::atomic::seq_cst);
 
   for(int offset = 1; offset < _NT; offset <<= 1) {
     if(omp_thread_num >= offset) 
       (*_rf)(&val, storage[first + k - offset]);   // val += storage[first + k - offset];
     first = total_num_threads - first;
     storage[first + k] = val;
-    ompx::synchronize::threadsAligned();    
+    ompx::synchronize::threadsAligned(ompx::atomic::seq_cst);
   }
 
   // The offset value which is required to access the computed team-wise scan 
@@ -139,7 +139,7 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
   // This sync is needed because all threads of the last team which reaches
   // this part of code need to know that they are in the last team by 
   // reading the shared volatile value `td`.
-  ompx::synchronize::threadsAligned();
+  ompx::synchronize::threadsAligned(ompx::atomic::seq_cst);
 
   // If td counter reaches NumTeams-1, this is the last team. Threads of the
   // last team enter here.
@@ -162,14 +162,14 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
     first = 0;
     
     // Computing Scan across teams (Cross-Team Scan)
-    ompx::synchronize::threadsAligned();
+    ompx::synchronize::threadsAligned(ompx::atomic::seq_cst);
 
     for(int offset = 1; offset < ceiledNumTeams; offset <<= 1) {
       if(omp_thread_num >= offset) 
         (*_rf)(&val, partial_sums[first + omp_thread_num - offset]); // val += partial_sums[first + omp_thread_num - offset]
       first = ceiledNumTeams - first;
       partial_sums[first + omp_thread_num] = val;
-      ompx::synchronize::threadsAligned();    
+      ompx::synchronize::threadsAligned(ompx::atomic::seq_cst);
     }
 
     // updating the `team_vals` to hold the cross-team scanned result 

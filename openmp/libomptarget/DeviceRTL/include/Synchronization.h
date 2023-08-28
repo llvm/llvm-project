@@ -16,53 +16,6 @@
 
 namespace ompx {
 
-namespace synchronize {
-
-/// Initialize the synchronization machinery. Must be called by all threads.
-void init(bool IsSPMD);
-
-/// Synchronize all threads in a warp identified by \p Mask.
-void warp(LaneMaskTy Mask);
-
-/// Synchronize all threads in a block.
-void threads();
-
-#pragma omp declare target
-
-/// Flags used by master and workers to synchronize in generic state machine.
-extern bool volatile omptarget_workers_done;
-#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
-
-extern bool volatile omptarget_master_ready;
-#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
-
-#pragma omp end declare target
-
-/// Synchronize workers with master at the beginning of a parallel region
-/// in generic mode.
-void workersStartBarrier();
-
-/// Synchronize workers with master at the end of a parallel region
-/// in generic mode.
-void workersDoneBarrier();
-
-/// Synchronizing threads is allowed even if they all hit different instances of
-/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
-/// restrictive in that it requires all threads to hit the same instance. The
-/// noinline is removed by the openmp-opt pass and helps to preserve the
-/// information till then.
-///{
-#pragma omp begin assumes ext_aligned_barrier
-
-/// Synchronize all threads in a block, they are are reaching the same
-/// instruction (hence all threads in the block are "aligned").
-__attribute__((noinline)) void threadsAligned();
-
-#pragma omp end assumes
-///}
-
-} // namespace synchronize
-
 namespace atomic {
 
 enum OrderingTy {
@@ -135,17 +88,60 @@ ATOMIC_FP_OP(double)
 #undef ATOMIC_INT_OP
 #undef ATOMIC_FP_OP
 
-//#define ATOMIC_CAS_LOOP_ADD(TY)		\
-//  void atomicCASLoopAdd(TY *addr, TY val);
-
-// ATOMIC_CAS_LOOP_ADD(float);
-// ATOMIC_CAS_LOOP_ADD(double);
-
-//#undef ATOMIC_CAS_LOOP_ADD
-
 ///}
 
 } // namespace atomic
+
+namespace synchronize {
+
+#pragma omp declare target
+
+/// Flags used by master and workers to synchronize in generic state machine.
+extern bool volatile omptarget_workers_done;
+#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
+
+extern bool volatile omptarget_master_ready;
+#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
+
+#pragma omp end declare target
+
+/// Synchronize workers with master at the beginning of a parallel region
+/// in generic mode.
+void workersStartBarrier();
+
+/// Synchronize workers with master at the end of a parallel region
+/// in generic mode.
+void workersDoneBarrier();
+
+/// Initialize the synchronization machinery. Must be called by all threads.
+void init(bool IsSPMD);
+
+/// Synchronize all threads in a warp identified by \p Mask.
+void warp(LaneMaskTy Mask);
+
+/// Synchronize all threads in a block and perform a fence before and after the
+/// barrier according to \p Ordering. Note that the fence might be part of the
+/// barrier.
+void threads(atomic::OrderingTy Ordering);
+
+/// Synchronizing threads is allowed even if they all hit different instances of
+/// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
+/// restrictive in that it requires all threads to hit the same instance. The
+/// noinline is removed by the openmp-opt pass and helps to preserve the
+/// information till then.
+///{
+#pragma omp begin assumes ext_aligned_barrier
+
+/// Synchronize all threads in a block, they are reaching the same instruction
+/// (hence all threads in the block are "aligned"). Also perform a fence before
+/// and after the barrier according to \p Ordering. Note that the
+/// fence might be part of the barrier if the target offers this.
+__attribute__((noinline)) void threadsAligned(atomic::OrderingTy Ordering);
+
+#pragma omp end assumes
+///}
+
+} // namespace synchronize
 
 namespace fence {
 

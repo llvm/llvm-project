@@ -75,7 +75,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
     synchronize::omptarget_workers_done = false;
     synchronize::omptarget_master_ready = false;
   }
-  synchronize::threadsAligned();
+  synchronize::threadsAligned(atomic::seq_cst);
 #endif
 
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
@@ -84,7 +84,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true, KernelEnvironment);
-    synchronize::threadsAligned();
+    synchronize::threadsAligned(atomic::relaxed);
   } else {
     inititializeRuntime(/* IsSPMD */ false, KernelEnvironment);
     // No need to wait since only the main threads will execute user
@@ -150,7 +150,7 @@ void __kmpc_target_deinit() {
   // make sure workers cannot continue before the initial thread
   // has reset the Fn pointer for termination
   synchronize::omptarget_master_ready = true;
-  synchronize::threads();
+  synchronize::threads(atomic::seq_cst);
 }
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
@@ -173,7 +173,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
     if (NThreadsICV != 0 && NThreadsICV < NumThreads)
       NumThreads = NThreadsICV;
 
-    synchronize::threadsAligned();
+    synchronize::threadsAligned(atomic::seq_cst);
     if (TId == 0) {
       // Note that the order here is important. `icv::Level` has to be updated
       // last or the other updates will cause a thread specific state to be
@@ -182,7 +182,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
       icv::ActiveLevel = 1u;
       icv::Level = 1u;
     }
-    synchronize::threadsAligned();
+    synchronize::threadsAligned(atomic::seq_cst);
   }
   return res;
 }
@@ -190,7 +190,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
 void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
                              int8_t RequiresFullRuntime) {
   uint32_t TId = mapping::getThreadIdInBlock();
-  synchronize::threadsAligned();
+  synchronize::threadsAligned(atomic::seq_cst);
 
   if (TId == 0) {
     // Reverse order of deinitialization
@@ -201,7 +201,7 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
   // Synchronize all threads to make sure every thread exits the scope above;
   // otherwise the following assertions and the assumption in
   // __kmpc_target_deinit may not hold.
-  synchronize::threadsAligned();
+  synchronize::threadsAligned(atomic::seq_cst);
   __kmpc_target_deinit();
 }
 

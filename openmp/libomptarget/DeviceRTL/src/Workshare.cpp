@@ -464,7 +464,8 @@ static DynamicScheduleTracker *pushDST() {
     if (tid == 0)
       ThreadDSTPtrPtr = static_cast<int64_t>((int64_t)memory::allocGlobal(
           sizeof(int64_t) * mapping::getNumberOfThreadsInBlock(), "array of threadDSTPtr "));
-    synchronize::threads(); // so that all threads no longer see the zero
+    synchronize::threads(
+        atomic::seq_cst); // so that all threads no longer see the zero
     DynamicScheduleTracker **ThreadDSTPtrAry =
         (DynamicScheduleTracker **)ThreadDSTPtrPtr;
     ThreadDSTPtrAry[tid] = nullptr;
