@@ -31,11 +31,23 @@ steps:
 
   - wait
 
-  - label: "Building and testing clang"
+  - label: "Building and testing clang (Linux)"
     commands:
       - "clang/utils/ci/run-buildbot build-clang"
     agents:
       queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Building and testing clang (Windows)"
+    commands:
+      - "C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64"
+      - "bash clang/utils/ci/run-buildbot build-clang-windows"
+    agents:
+      queue: "windows"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
