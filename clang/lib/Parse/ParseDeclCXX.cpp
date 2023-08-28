@@ -4715,9 +4715,9 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   ArgsVector ArgExprs;
-  if (Tok.is(tok::string_literal)) {
+  if (isTokenStringLiteral()) {
     // Easy case: uuid("...") -- quoted string.
-    ExprResult StringResult = ParseStringLiteralExpression();
+    ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
     if (StringResult.isInvalid())
       return;
     ArgExprs.push_back(StringResult.get());
@@ -4772,7 +4772,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
     Toks[0].setLiteralData(StrBuffer.data());
     Toks[0].setLength(StrBuffer.size());
     StringLiteral *UuidString =
-        cast<StringLiteral>(Actions.ActOnStringLiteral(Toks, nullptr).get());
+        cast<StringLiteral>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());
     ArgExprs.push_back(UuidString);
   }
 
