@@ -31,6 +31,8 @@ struct DeviceEnvironmentTy {
   uint32_t DeviceNum;
   uint32_t DynamicMemSize;
   uint64_t ClockFrequency;
+  uintptr_t IndirectCallTable;
+  uint64_t IndirectCallTableSize;
 };
 
 // NOTE: Please don't change the order of those members as their indices are
