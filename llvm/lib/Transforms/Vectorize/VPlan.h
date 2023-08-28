@@ -1148,6 +1148,32 @@ public:
   }
 };
 
+// VPSWARRecipe is a recipe for producing a SIMD-within-a-register (SWAR)
+// operation for its ingredient. The operation works on values that are packed
+// into scalar registers. This recipe covers the following cases:
+// 1. Bitwise operations (and, or, xor)
+// 2. Shifts (shl, lshr) with constant second operand
+// 3. Add/Sub operations.
+class VPSWARRecipe : public VPRecipeBase, public VPValue {
+public:
+  template <typename IterT>
+  VPSWARRecipe(Instruction &I, iterator_range<IterT> Operands)
+      : VPRecipeBase(VPRecipeBase::VPSWARSC, Operands), VPValue(this, &I) {}
+
+  ~VPSWARRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPSWARSC)
+
+  /// Generate the SWAR operation.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
@@ -1927,6 +1953,52 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+};
+
+// A recipe for SWAR (SIMD-wthin-a-register) load/store operations.
+class VPSWARMemoryInstructionRecipe : public VPRecipeBase {
+  Instruction &Ingredient;
+
+public:
+  VPSWARMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr)
+      : VPRecipeBase(VPSWARMemoryInstructionSC, {Addr}), Ingredient(Load) {
+    new VPValue(this, &Load);
+  }
+
+  VPSWARMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
+                                VPValue *StoredValue)
+      : VPRecipeBase(VPSWARMemoryInstructionSC, {Addr, StoredValue}),
+        Ingredient(Store) {}
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPDef *D) {
+    return D->getVPDefID() == VPRecipeBase::VPSWARMemoryInstructionSC;
+  }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getAddr() const {
+    return getOperand(0); // Address is the 1st, mandatory operand.
+  }
+
+  /// Returns true if this recipe is a store.
+  bool isStore() const { return isa<StoreInst>(Ingredient); }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getStoredValue() const {
+    assert(isStore() && "Stored value only available for store instructions");
+    return getOperand(1); // Stored value is the 2nd, mandatory operand.
+  }
+
+  /// Generate the SWAR load/store.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  Instruction &getIngredient() const { return Ingredient; }
 };
 
 /// A Recipe for widening load/store operations.

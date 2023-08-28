@@ -50,6 +50,7 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
+  friend class VPSWARMemoryInstructionRecipe;
   friend class VPWidenMemoryInstructionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
@@ -342,6 +343,8 @@ public:
     VPInterleaveSC,
     VPReductionSC,
     VPReplicateSC,
+    VPSWARSC,
+    VPSWARMemoryInstructionSC,
     VPScalarIVStepsSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,

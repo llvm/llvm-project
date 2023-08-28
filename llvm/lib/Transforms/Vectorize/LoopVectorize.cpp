@@ -172,6 +172,10 @@ STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
 
+static cl::opt<bool> EnableSWARVectorization(
+    "enable-swar-vectorization", cl::init(false), cl::Hidden,
+    cl::desc("Enable SWAR (SIMD within a register) vectorization"));
+
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
@@ -1203,10 +1207,10 @@ public:
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI)
+                             InterleavedAccessInfo &IAI, bool UseSWAR)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI) {}
+        Hints(Hints), InterleaveInfo(IAI), UseSWAR(UseSWAR) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -1712,6 +1716,9 @@ private:
   /// of elements.
   ElementCount getMaxLegalScalableVF(unsigned MaxSafeElements);
 
+  /// Calculate cost of SWAR instruction.
+  InstructionCost getSWARInstructionCost(Instruction *I, unsigned VF);
+
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
   VectorizationCostTy getInstructionCost(Instruction *I, ElementCount VF);
@@ -1921,6 +1928,9 @@ public:
 
   /// All element types found in the loop.
   SmallPtrSet<Type *, 16> ElementTypesInLoop;
+
+  /// Use SWAR vectorization mode.
+  const bool UseSWAR;
 };
 } // end namespace llvm
 
@@ -5071,9 +5081,11 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
     ElementCount MaxSafeVF, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
-  const TypeSize WidestRegister = TTI.getRegisterBitWidth(
+  const TargetTransformInfo::RegisterKind RegKind =
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
-                           : TargetTransformInfo::RGK_FixedWidthVector);
+      : UseSWAR            ? TargetTransformInfo::RGK_Scalar
+                           : TargetTransformInfo::RGK_FixedWidthVector;
+  const TypeSize WidestRegister = TTI.getRegisterBitWidth(RegKind);
 
   // Convenience function to return the minimum of two ElementCounts.
   auto MinVF = [](const ElementCount &LHS, const ElementCount &RHS) {
@@ -5128,9 +5140,6 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
         FoldTailByMasking ? MaxVectorElementCount.isScalable() : false);
   }
 
-  TargetTransformInfo::RegisterKind RegKind =
-      ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
-                           : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
   if (MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
                             TTI.shouldMaximizeVectorBandwidth(RegKind))) {
@@ -6684,6 +6693,65 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   return getWideningCost(I, VF);
 }
 
+InstructionCost
+LoopVectorizationCostModel::getSWARInstructionCost(Instruction *I,
+                                                   unsigned VF) {
+  uint64_t RegSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
+  auto *RegType = IntegerType::get(I->getModule()->getContext(), RegSize);
+  auto GetMultiplier = [&](IntegerType *Ty) -> uint64_t {
+    return divideCeil(Ty->getBitWidth() * VF, RegSize);
+  };
+  if (isa<LoadInst, StoreInst>(I)) {
+    if (getWideningDecision(I, ElementCount::getFixed(VF)) !=
+        LoopVectorizationCostModel::CM_Widen)
+      return InstructionCost::getInvalid();
+    auto *ValTy = dyn_cast<IntegerType>(getLoadStoreType(I));
+    if (!ValTy)
+      return InstructionCost::getInvalid();
+    const auto &DL = I->getModule()->getDataLayout();
+    const Align Alignment = DL.getPrefTypeAlign(RegType);
+    unsigned AddressSpace =
+        getLoadStorePointerOperand(I)->getType()->getPointerAddressSpace();
+    return GetMultiplier(ValTy) * TTI.getMemoryOpCost(I->getOpcode(), RegType,
+                                                      Alignment, AddressSpace);
+  }
+  auto *ValTy = dyn_cast<IntegerType>(I->getType());
+  if (!ValTy)
+    return InstructionCost::getInvalid();
+  if (auto *PN = dyn_cast<PHINode>(I))
+    if (Legal->isReductionVariable(PN))
+      return TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
+  auto Multiplier = GetMultiplier(ValTy);
+  if (I->isBitwiseLogicOp())
+    return Multiplier * TTI.getArithmeticInstrCost(I->getOpcode(), RegType);
+  switch (I->getOpcode()) {
+  case Instruction::Shl:
+  case Instruction::LShr:
+    // Shl: (LHS << ShiftAmnt) & Mask
+    // LShr: (LHS >> ShiftAmnt) & Mask
+    if (!isa<ConstantInt>(I->getOperand(1)))
+      return InstructionCost::getInvalid();
+    return Multiplier * (TTI.getArithmeticInstrCost(I->getOpcode(), RegType) +
+                         TTI.getArithmeticInstrCost(Instruction::And, RegType));
+  case Instruction::Add:
+    // Add: ((LHS & ~Mask) + (RHS & ~Mask)) ^ ((LHS ^  RHS) & Mask)
+    return Multiplier *
+           (TTI.getArithmeticInstrCost(Instruction::Add, RegType) +
+            2 * TTI.getArithmeticInstrCost(Instruction::Xor, RegType) +
+            3 * TTI.getArithmeticInstrCost(Instruction::And, RegType));
+  case Instruction::Sub:
+    // Sub: ((LHS |  Mask) - (RHS & ~Mask)) ^ ((LHS ^ ~RHS) & Mask)
+    return Multiplier *
+           (TTI.getArithmeticInstrCost(Instruction::Sub, RegType) +
+            TTI.getArithmeticInstrCost(Instruction::Or, RegType) +
+            2 * TTI.getArithmeticInstrCost(Instruction::And, RegType) +
+            3 * TTI.getArithmeticInstrCost(Instruction::Xor, RegType));
+  default:
+    return InstructionCost::getInvalid();
+  }
+}
+
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
@@ -6704,6 +6772,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
           (getInstructionCost(I, ElementCount::getFixed(1)).first *
            VF.getKnownMinValue()),
           false);
+  }
+
+  if (UseSWAR && VF.isVector()) {
+    assert(!VF.isScalable() && "Scalable VF not supported");
+    if (!I->isTerminator())
+      return VectorizationCostTy(getSWARInstructionCost(I, VF.getFixedValue()),
+                                 true);
   }
 
   Type *VectorTy;
@@ -8208,6 +8283,23 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
   return BlockMaskCache[BB] = BlockMask;
 }
 
+VPRecipeBase *VPRecipeBuilder::tryToSWARMemory(Instruction *I,
+                                               ArrayRef<VPValue *> Operands,
+                                               VFRange &Range) {
+  if (Legal->isMaskRequired(I))
+    return nullptr;
+  if (CM.getWideningDecision(I, Range.Start) !=
+      LoopVectorizationCostModel::CM_Widen)
+    return nullptr;
+  if (!isa<IntegerType>(getLoadStoreType(I)))
+    return nullptr;
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return new VPSWARMemoryInstructionRecipe(*LI, Operands[0]);
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return new VPSWARMemoryInstructionRecipe(*SI, Operands[1], Operands[0]);
+  llvm_unreachable("Unhandled instruction!");
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
                                                 ArrayRef<VPValue *> Operands,
                                                 VFRange &Range,
@@ -8474,6 +8566,25 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
+VPRecipeBase *VPRecipeBuilder::tryToSWAR(Instruction *I,
+                                         ArrayRef<VPValue *> Operands) {
+  switch (I->getOpcode()) {
+  case Instruction::Shl:
+  case Instruction::LShr:
+    if (!isa<ConstantInt>(I->getOperand(1)))
+      return nullptr;
+    [[fallthrough]];
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Add:
+  case Instruction::Sub:
+    return new VPSWARRecipe(*I, make_range(Operands.begin(), Operands.end()));
+  default:
+    return nullptr;
+  }
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
                                           ArrayRef<VPValue *> Operands,
                                           VPBasicBlock *VPBB, VPlanPtr &Plan) {
@@ -8656,7 +8767,9 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
     return toVPRecipeResult(tryToWidenCall(CI, Operands, Range, Plan));
 
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
-    return toVPRecipeResult(tryToWidenMemory(Instr, Operands, Range, Plan));
+    return toVPRecipeResult(
+        CM.UseSWAR ? tryToSWARMemory(Instr, Operands, Range)
+                   : tryToWidenMemory(Instr, Operands, Range, Plan));
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8675,7 +8788,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
         new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(), CI));
   }
 
-  return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));
+  return toVPRecipeResult(CM.UseSWAR ? tryToSWAR(Instr, Operands)
+                                     : tryToWiden(Instr, Operands, VPBB, Plan));
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -9117,7 +9231,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                  "must be a select recipe");
           IndexOfFirstOperand = 1;
         } else {
-          assert((MinVF.isScalar() || isa<VPWidenRecipe>(CurrentLink)) &&
+          assert((MinVF.isScalar() || CM.UseSWAR ||
+                  isa<VPWidenRecipe>(CurrentLink)) &&
                  "Expected to replace a VPWidenSC");
           IndexOfFirstOperand = 0;
         }
@@ -9454,6 +9569,49 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
+static Type *getSWARType(Type *ScalarTy, ElementCount VF) {
+  assert(isa<IntegerType>(ScalarTy));
+  unsigned ScalarBitWidth = cast<IntegerType>(ScalarTy)->getBitWidth();
+  assert(!VF.isScalable() && "Scalable VF not supported");
+  return IntegerType::get(ScalarTy->getContext(),
+                          ScalarBitWidth * VF.getFixedValue());
+}
+
+void VPSWARMemoryInstructionRecipe::execute(VPTransformState &State) {
+  auto VF = State.VF;
+  Value *Ptr = State.get(getAddr(), VPIteration(0, 0));
+  bool InBounds = false;
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
+    InBounds = GEP->isInBounds();
+  Type *ScalarTy = getLoadStoreType(&Ingredient);
+  Type *SWARTy = getSWARType(ScalarTy, VF);
+  Type *VecTy = VectorType::get(ScalarTy, VF);
+  const auto &DL = Ingredient.getModule()->getDataLayout();
+  const Align Alignment = DL.getPrefTypeAlign(SWARTy);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(Ingredient.getDebugLoc());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *GEP = Builder.CreateGEP(ScalarTy, Ptr,
+                                   Builder.getInt32(VF.getFixedValue() * Part),
+                                   Ptr->getName() + ".swar", InBounds);
+    Value *SWARPtr = Builder.CreateBitCast(
+        GEP, SWARTy->getPointerTo(Ptr->getType()->getPointerAddressSpace()));
+    Instruction *Res = nullptr;
+    if (isa<LoadInst>(Ingredient)) {
+      Res = Builder.CreateAlignedLoad(SWARTy, SWARPtr, Alignment,
+                                      Ingredient.getName() + ".swar");
+      State.set(getVPSingleValue(), Builder.CreateBitCast(Res, VecTy), Part);
+    } else if (isa<StoreInst>(Ingredient))
+      Res = Builder.CreateAlignedStore(
+          Builder.CreateBitCast(State.get(getStoredValue(), Part), SWARTy),
+          SWARPtr, Alignment);
+    else
+      llvm_unreachable("Unhandled instruction!");
+    State.addMetadata(Res, &Ingredient);
+  }
+}
+
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
 
@@ -9643,7 +9801,7 @@ static bool processLoopInVPlanNativePath(
     TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
     OptimizationRemarkEmitter *ORE, BlockFrequencyInfo *BFI,
     ProfileSummaryInfo *PSI, LoopVectorizeHints &Hints,
-    LoopVectorizationRequirements &Requirements) {
+    LoopVectorizationRequirements &Requirements, bool UseSWAR) {
 
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     LLVM_DEBUG(dbgs() << "LV: cannot compute the outer-loop trip count\n");
@@ -9657,7 +9815,7 @@ static bool processLoopInVPlanNativePath(
       getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI);
+                                &Hints, IAI, UseSWAR);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -9841,6 +9999,45 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   return true;
 }
 
+static const SCEVPredicate *getAlignPredicate(ScalarEvolution *SE,
+                                              const DataLayout &DL,
+                                              const SCEV *Start,
+                                              Align Alignment) {
+  Type *IntTy = DL.getIntPtrType(Start->getType());
+  const SCEV *Rem = SE->getURemExpr(SE->getPtrToIntExpr(Start, IntTy),
+                                    SE->getConstant(IntTy, Alignment.value()));
+  if (Rem->isZero())
+    return nullptr;
+  return SE->getEqualPredicate(Rem, SE->getZero(IntTy));
+}
+
+static void generateAlignChecks(PredicatedScalarEvolution &PSE,
+                                const VPlan &Plan, ElementCount VF) {
+  ScalarEvolution *SE = PSE.getSE();
+  const DataLayout &DL = SE->getDataLayout();
+  MapVector<const SCEV *, Align> Checks;
+  for (const auto *VPBlock : vp_depth_first_shallow(Plan.getEntry()))
+    for (const auto &Recipe : *VPBlock->getEntryBasicBlock()) {
+      auto *SWARRecipe = dyn_cast<VPSWARMemoryInstructionRecipe>(&Recipe);
+      if (!SWARRecipe)
+        continue;
+      auto &MemInst = SWARRecipe->getIngredient();
+      const SCEVAddRecExpr *PtrSCEV =
+          PSE.getAsAddRec(getLoadStorePointerOperand(&MemInst));
+      assert(PtrSCEV && "Consecutive Ptr expected");
+      const SCEV *Start = PtrSCEV->getStart();
+      Type *SWARTy = getSWARType(getLoadStoreType(&MemInst), VF);
+      Align Alignment = DL.getPrefTypeAlign(SWARTy);
+      if (auto It = Checks.find(Start); It != Checks.end())
+        It->second = std::max(It->second, Alignment);
+      else
+        Checks.insert({Start, Alignment});
+    }
+  for (auto [Start, Alignment] : Checks)
+    if (auto *Predicate = getAlignPredicate(SE, DL, Start, Alignment))
+      PSE.addPredicate(*Predicate);
+}
+
 LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
     : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced ||
                                !EnableLoopInterleaving),
@@ -9905,9 +10102,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // even evaluating whether vectorization is profitable. Since we cannot modify
   // the incoming IR, we need to build VPlan upfront in the vectorization
   // pipeline.
+  bool UseSWAR =
+      !TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true)) &&
+      EnableSWARVectorization;
   if (!L->isInnermost())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
-                                        ORE, BFI, PSI, Hints, Requirements);
+                                        ORE, BFI, PSI, Hints, Requirements,
+                                        UseSWAR);
 
   assert(L->isInnermost() && "Inner loop expected.");
 
@@ -10001,7 +10202,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI);
+                                F, &Hints, IAI, UseSWAR);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);
@@ -10026,8 +10227,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
-    if (VF.Width.isVector() || SelectedIC > 1)
+    if (VF.Width.isVector() || SelectedIC > 1) {
+      if (UseSWAR)
+        generateAlignChecks(PSE, LVP.getBestPlanFor(VF.Width), VF.Width);
       Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+    }
 
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
@@ -10299,12 +10503,14 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
-  // 2. interleaving won't help ILP.
+  // 2. SWAR vectorization is disabled, and
+  // 3. interleaving won't help ILP.
   //
-  // The second condition is necessary because, even if the target has no
+  // The last condition is necessary because, even if the target has no
   // vector registers, loop vectorization may still enable scalar
   // interleaving.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true)) &&
+      !EnableSWARVectorization &&
       TTI->getMaxInterleaveFactor(ElementCount::getFixed(1)) < 2)
     return LoopVectorizeResult(false, false);
 

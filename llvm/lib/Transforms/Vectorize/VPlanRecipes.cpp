@@ -43,6 +43,9 @@ extern cl::opt<bool> EnableVPlanNativePath;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPSWARMemoryInstructionSC: {
+    return cast<VPSWARMemoryInstructionRecipe>(this)->isStore();
+  }
   case VPWidenMemoryInstructionSC: {
     return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
   }
@@ -56,6 +59,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return false;
   case VPBlendSC:
   case VPReductionSC:
+  case VPSWARSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -77,6 +81,9 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
+  case VPSWARMemoryInstructionSC: {
+    return !cast<VPSWARMemoryInstructionRecipe>(this)->isStore();
+  }
   case VPWidenMemoryInstructionSC: {
     return !cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
   }
@@ -90,6 +97,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return false;
   case VPBlendSC:
   case VPReductionSC:
+  case VPSWARSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -130,6 +138,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
         ->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionSC:
+  case VPSWARSC:
   case VPScalarIVStepsSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -146,6 +155,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
            "underlying instruction has side-effects");
     return false;
   }
+  case VPSWARMemoryInstructionSC:
+    assert(cast<VPSWARMemoryInstructionRecipe>(this)
+                   ->getIngredient()
+                   .mayHaveSideEffects() == mayWriteToMemory() &&
+           "mayHaveSideffects result for ingredient differs from this "
+           "implementation");
+    return mayWriteToMemory();
   case VPWidenMemoryInstructionSC:
     assert(cast<VPWidenMemoryInstructionRecipe>(this)
                    ->getIngredient()
@@ -493,6 +509,112 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << ", !dbg ";
     DL.print(O);
   }
+}
+#endif
+
+static Value *SWARBinOp(IRBuilderBase &B, BinaryOperator *BinOp, Value *LHS,
+                        Value *RHS, unsigned ScalarBitWidth,
+                        unsigned SWARBitWidth) {
+  auto Opc = BinOp->getOpcode();
+  Twine Name = BinOp->getName() + ".swar";
+  switch (Opc) {
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+    return B.CreateBinOp(Opc, LHS, RHS, Name);
+  case Instruction::Shl:
+  case Instruction::LShr: {
+    // Shl: (LHS << ShiftAmnt) & Mask
+    // LShr: (LHS >> ShiftAmnt) & Mask
+    // Mask: splat of scalar all-ones value shifted on ShiftAmnt, e.g. for
+    // bytewise operations:
+    // Shl on 2: 0xfcfcfcfcfcfcfcfc
+    // LShr on 3: 0x1f1f1f1f1f1f1f1f
+    assert(isa<ConstantExpr>(RHS));
+    Value *ShiftAmntSplat = cast<ConstantExpr>(RHS)->getOperand(0);
+    assert(isa<Constant>(ShiftAmntSplat));
+    unsigned ShiftAmnt =
+        cast<Constant>(ShiftAmntSplat)->getUniqueInteger().getLimitedValue();
+    auto Mask = APInt::getAllOnes(ScalarBitWidth);
+    if (Opc == Instruction::Shl)
+      Mask = Mask.shl(ShiftAmnt);
+    else
+      Mask = Mask.lshr(ShiftAmnt);
+    Value *Res = Opc == Instruction::Shl ? B.CreateShl(LHS, ShiftAmnt, Name)
+                                         : B.CreateLShr(LHS, ShiftAmnt, Name);
+    return B.CreateAnd(Res, B.getInt(APInt::getSplat(SWARBitWidth, Mask)));
+  }
+  case Instruction::Add:
+  case Instruction::Sub: {
+    // Add: ((LHS & ~Mask) + (RHS & ~Mask)) ^ ((LHS ^  RHS) & Mask)
+    // Sub: ((LHS |  Mask) - (RHS & ~Mask)) ^ ((LHS ^ ~RHS) & Mask)
+    // Mask: MSB set in each element, e.g. for bytewise math in 64-bit register:
+    // Mask = 0x8080808080808080
+    auto MaskVal =
+        APInt::getSplat(SWARBitWidth, APInt::getSignMask(ScalarBitWidth));
+    Value *Mask = B.getInt(MaskVal);
+    Value *InvMask = B.CreateNot(Mask);
+    Value *Res = Opc == Instruction::Add
+                     ? B.CreateAdd(B.CreateAnd(LHS, InvMask),
+                                   B.CreateAnd(RHS, InvMask), Name)
+                     : B.CreateSub(B.CreateOr(LHS, Mask),
+                                   B.CreateAnd(RHS, InvMask), Name);
+    return B.CreateXor(
+        Res,
+        B.CreateAnd(
+            B.CreateXor(LHS, Opc == Instruction::Add ? RHS : B.CreateNot(RHS)),
+            Mask));
+  }
+  default:
+    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << *BinOp);
+    llvm_unreachable("Unhandled instruction!");
+  }
+}
+
+void VPSWARRecipe::execute(VPTransformState &State) {
+  assert(isa<BinaryOperator>(getUnderlyingValue()));
+  auto *BinOp = cast<BinaryOperator>(getUnderlyingValue());
+  Type *ScalarTy = BinOp->getType();
+  assert(isa<IntegerType>(ScalarTy));
+  unsigned ScalarBitWidth = cast<IntegerType>(ScalarTy)->getBitWidth();
+  assert(!State.VF.isScalable() && "Scalable VF not supported");
+  unsigned VF = State.VF.getFixedValue();
+  Type *SWARTy = IntegerType::get(ScalarTy->getContext(), ScalarBitWidth * VF);
+  Type *VecTy = FixedVectorType::get(ScalarTy, VF);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(BinOp->getDebugLoc());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *LHS = Builder.CreateBitCast(State.get(getOperand(0), Part), SWARTy);
+    Value *RHS = Builder.CreateBitCast(State.get(getOperand(1), Part), SWARTy);
+    Value *Res = SWARBinOp(Builder, BinOp, LHS, RHS, ScalarBitWidth,
+                           ScalarBitWidth * VF);
+    State.set(this, Builder.CreateBitCast(Res, VecTy), Part);
+    State.addMetadata(Res, BinOp);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSWARRecipe::print(raw_ostream &O, const Twine &Indent,
+                         VPSlotTracker &SlotTracker) const {
+  O << Indent << "SWAR ";
+  printAsOperand(O, SlotTracker);
+  const Instruction *UI = getUnderlyingInstr();
+  O << " = " << UI->getOpcodeName() << " ";
+  printOperands(O, SlotTracker);
+}
+
+void VPSWARMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                          VPSlotTracker &SlotTracker) const {
+  O << Indent << "SWAR ";
+
+  if (!isStore()) {
+    getVPSingleValue()->printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+  O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
+
+  printOperands(O, SlotTracker);
 }
 #endif
 

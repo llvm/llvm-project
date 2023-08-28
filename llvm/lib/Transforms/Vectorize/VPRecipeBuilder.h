@@ -103,6 +103,10 @@ class VPRecipeBuilder {
   VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                            VPBasicBlock *VPBB, VPlanPtr &Plan);
 
+  VPRecipeBase *tryToSWARMemory(Instruction *I, ArrayRef<VPValue *> Operands,
+                                VFRange &Range);
+  VPRecipeBase *tryToSWAR(Instruction *I, ArrayRef<VPValue *> Operands);
+
   /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
   VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
 
