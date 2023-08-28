@@ -3537,8 +3537,6 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           std::tie(Base, BaseOffset, Branch, EntrySize) =
               Asm->getCodeViewJumpTableInfo(JumpTableIndex, &BranchMI, Branch);
           break;
-        default:
-          llvm_unreachable("Unknown JumpTableEntryKind");
         }
 
         CurFn->JumpTables.push_back(
