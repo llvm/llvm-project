@@ -1,9 +1,9 @@
-; RUN: llc < %s -verify-machineinstrs | FileCheck %s --check-prefixes CHECK,NORMAL
-; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs | FileCheck %s --check-prefixes CHECK,NORMAL
-; RUN: llc < %s -verify-machineinstrs --trap-unreachable | FileCheck %s --check-prefixes CHECK,NORMAL
-; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs --trap-unreachable | FileCheck %s --check-prefixes CHECK,NORMAL
-; RUN: llc < %s -verify-machineinstrs --trap-unreachable --no-trap-after-noreturn | FileCheck %s --check-prefixes CHECK,NTANR
-; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs --trap-unreachable --no-trap-after-noreturn | FileCheck %s --check-prefixes CHECK,FNTANR
+; RUN: llc < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs --trap-unreachable | FileCheck %s
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs --trap-unreachable | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs --trap-unreachable --no-trap-after-noreturn | FileCheck %s
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs --trap-unreachable --no-trap-after-noreturn | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -37,25 +37,12 @@ define void @dtrap_ret_void() {
 
 ; Test that LLVM trap followed by LLVM unreachable becomes exactly one wasm unreachable.
 define void @trap_unreach() {
-; NORMAL-LABEL: trap_unreach:
-; NORMAL:         .functype trap_unreach () -> ()
-; NORMAL-NEXT:  # %bb.0:
-; NORMAL-NEXT:    unreachable
-; NORMAL-NEXT:    unreachable
-; NORMAL-NEXT:    end_function
-;
-; NTANR-LABEL: trap_unreach:
-; NTANR:         .functype trap_unreach () -> ()
-; NTANR-NEXT:  # %bb.0:
-; NTANR-NEXT:    unreachable
-; NTANR-NEXT:    end_function
-;
-; FNTANR-LABEL: trap_unreach:
-; FNTANR:         .functype trap_unreach () -> ()
-; FNTANR-NEXT:  # %bb.0:
-; FNTANR-NEXT:    unreachable
-; FNTANR-NEXT:    unreachable
-; FNTANR-NEXT:    end_function
+; CHECK-LABEL: trap_unreach:
+; CHECK:         .functype trap_unreach () -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    end_function
   call void @llvm.trap()
   unreachable
 }
@@ -83,25 +70,12 @@ define i32 @missing_ret_unreach() {
 ; This is similar to the above test, but ensures wasm unreachable is emitted even
 ; after a noreturn call.
 define i32 @missing_ret_noreturn_unreach() {
-; NORMAL-LABEL: missing_ret_noreturn_unreach:
-; NORMAL:         .functype missing_ret_noreturn_unreach () -> (i32)
-; NORMAL-NEXT:  # %bb.0:
-; NORMAL-NEXT:    call ext_never_return
-; NORMAL-NEXT:    unreachable
-; NORMAL-NEXT:    end_function
-;
-; NTANR-LABEL: missing_ret_noreturn_unreach:
-; NTANR:         .functype missing_ret_noreturn_unreach () -> (i32)
-; NTANR-NEXT:  # %bb.0:
-; NTANR-NEXT:    call ext_never_return
-; NTANR-NEXT:    end_function
-;
-; FNTANR-LABEL: missing_ret_noreturn_unreach:
-; FNTANR:         .functype missing_ret_noreturn_unreach () -> (i32)
-; FNTANR-NEXT:  # %bb.0:
-; FNTANR-NEXT:    call ext_never_return
-; FNTANR-NEXT:    unreachable
-; FNTANR-NEXT:    end_function
+; CHECK-LABEL: missing_ret_noreturn_unreach:
+; CHECK:         .functype missing_ret_noreturn_unreach () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    call ext_never_return
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    end_function
   call void @ext_never_return()
   unreachable
 }
@@ -133,25 +107,12 @@ define i32 @i32_sig_match_unreach() {
 }
 
 define void @void_sig_match_noreturn_unreach() {
-; NORMAL-LABEL: void_sig_match_noreturn_unreach:
-; NORMAL:         .functype void_sig_match_noreturn_unreach () -> ()
-; NORMAL-NEXT:  # %bb.0:
-; NORMAL-NEXT:    call ext_never_return
-; NORMAL-NEXT:    unreachable
-; NORMAL-NEXT:    end_function
-;
-; NTANR-LABEL: void_sig_match_noreturn_unreach:
-; NTANR:         .functype void_sig_match_noreturn_unreach () -> ()
-; NTANR-NEXT:  # %bb.0:
-; NTANR-NEXT:    call ext_never_return
-; NTANR-NEXT:    end_function
-;
-; FNTANR-LABEL: void_sig_match_noreturn_unreach:
-; FNTANR:         .functype void_sig_match_noreturn_unreach () -> ()
-; FNTANR-NEXT:  # %bb.0:
-; FNTANR-NEXT:    call ext_never_return
-; FNTANR-NEXT:    unreachable
-; FNTANR-NEXT:    end_function
+; CHECK-LABEL: void_sig_match_noreturn_unreach:
+; CHECK:         .functype void_sig_match_noreturn_unreach () -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    call ext_never_return
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    end_function
   call void @ext_never_return()
   unreachable
 }
