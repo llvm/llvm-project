@@ -1861,6 +1861,10 @@ struct DSEState {
     if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
         Func != LibFunc_malloc)
       return false;
+    // Gracefully handle malloc with unexpected memory attributes.
+    auto *MallocDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(Malloc));
+    if (!MallocDef)
+      return false;
 
     auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
       // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
@@ -1894,11 +1898,9 @@ struct DSEState {
     if (!Calloc)
       return false;
     MemorySSAUpdater Updater(&MSSA);
-    auto *LastDef =
-      cast<MemoryDef>(Updater.getMemorySSA()->getMemoryAccess(Malloc));
     auto *NewAccess =
       Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
-                                      LastDef);
+                                      MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
     Updater.removeMemoryAccess(Malloc);
