@@ -6488,6 +6488,7 @@ public:
     return #ID;
 #include "clang/Basic/Builtins.def"
     }
+    llvm_unreachable("not an atomic operator?");
   }
   unsigned getNumSubExprs() const { return NumSubExprs; }
 
