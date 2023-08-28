@@ -23,7 +23,7 @@ struct String {
 
   // Get address of `this->size`
 
-  // CHECK:   %3 = "cir.struct_element_addr"(%2) <{member_index = 0 : index, member_name = "size"}>
+  // CHECK:   %3 = cir.get_member %2[0] {name = "size"}
 
   // Get address of `s`
 
@@ -31,7 +31,7 @@ struct String {
 
   // Get the address of s.size
 
-  // CHECK:   %5 = "cir.struct_element_addr"(%4) <{member_index = 0 : index, member_name = "size"}>
+  // CHECK:   %5 = cir.get_member %4[0] {name = "size"}
 
   // Load value from s.size and store in this->size
 
@@ -53,9 +53,9 @@ struct String {
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_22StringView22>
   // CHECK:   %3 = cir.load deref %0 : cir.ptr <!cir.ptr<!ty_22StringView22>>
   // CHECK:   %4 = cir.load %1 : cir.ptr <!cir.ptr<!ty_22StringView22>>
-  // CHECK:   %5 = "cir.struct_element_addr"(%4) <{member_index = 0 : index, member_name = "size"}>
+  // CHECK:   %5 = cir.get_member %4[0] {name = "size"}
   // CHECK:   %6 = cir.load %5 : cir.ptr <!s64i>, !s64i
-  // CHECK:   %7 = "cir.struct_element_addr"(%3) <{member_index = 0 : index, member_name = "size"}>
+  // CHECK:   %7 = cir.get_member %3[0] {name = "size"}
   // CHECK:   cir.store %6, %7 : !s64i, cir.ptr <!s64i>
   // CHECK:   cir.store %3, %2 : !cir.ptr<!ty_22StringView22>
   // CHECK:   %8 = cir.load %2 : cir.ptr <!cir.ptr<!ty_22StringView22>>

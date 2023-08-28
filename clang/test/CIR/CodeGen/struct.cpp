@@ -98,14 +98,14 @@ void m() { Adv C; }
 // CHECK:     %0 = cir.alloca !cir.ptr<!ty_22Adv22>, cir.ptr <!cir.ptr<!ty_22Adv22>>, ["this", init] {alignment = 8 : i64}
 // CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_22Adv22>, cir.ptr <!cir.ptr<!ty_22Adv22>>
 // CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22Adv22>>, !cir.ptr<!ty_22Adv22>
-// CHECK:     %2 = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "x"}> : (!cir.ptr<!ty_22Adv22>) -> !cir.ptr<!ty_22Mandalore22>
-// CHECK:     %3 = "cir.struct_element_addr"(%2) <{member_index = 0 : index, member_name = "w"}> : (!cir.ptr<!ty_22Mandalore22>) -> !cir.ptr<!u32i>
+// CHECK:     %2 = cir.get_member %1[0] {name = "x"} : !cir.ptr<!ty_22Adv22> -> !cir.ptr<!ty_22Mandalore22>
+// CHECK:     %3 = cir.get_member %2[0] {name = "w"} : !cir.ptr<!ty_22Mandalore22> -> !cir.ptr<!u32i>
 // CHECK:     %4 = cir.const(#cir.int<1000024001> : !u32i) : !u32i
 // CHECK:     cir.store %4, %3 : !u32i, cir.ptr <!u32i>
-// CHECK:     %5 = "cir.struct_element_addr"(%2) <{member_index = 1 : index, member_name = "n"}> : (!cir.ptr<!ty_22Mandalore22>) -> !cir.ptr<!cir.ptr<!void>>
+// CHECK:     %5 = cir.get_member %2[1] {name = "n"} : !cir.ptr<!ty_22Mandalore22> -> !cir.ptr<!cir.ptr<!void>>
 // CHECK:     %6 = cir.const(#cir.null : !cir.ptr<!void>) : !cir.ptr<!void>
 // CHECK:     cir.store %6, %5 : !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>
-// CHECK:     %7 = "cir.struct_element_addr"(%2) <{member_index = 2 : index, member_name = "d"}> : (!cir.ptr<!ty_22Mandalore22>) -> !cir.ptr<!s32i>
+// CHECK:     %7 = cir.get_member %2[2] {name = "d"} : !cir.ptr<!ty_22Mandalore22> -> !cir.ptr<!s32i>
 // CHECK:     %8 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK:     cir.store %8, %7 : !s32i, cir.ptr <!s32i>
 // CHECK:     cir.return
@@ -164,4 +164,4 @@ void ppp() { Entry x; }
 
 // CHECK: cir.func linkonce_odr @_ZN5EntryC2Ev(%arg0: !cir.ptr<!ty_22Entry22>
 
-// CHECK: = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "procAddr"}> : (!cir.ptr<!ty_22Entry22>) -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>>
+// CHECK: cir.get_member %1[0] {name = "procAddr"} : !cir.ptr<!ty_22Entry22> -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>>

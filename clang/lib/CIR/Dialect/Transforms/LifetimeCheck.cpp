@@ -477,12 +477,12 @@ static std::string getVarNameFromValue(mlir::Value v) {
 
   if (auto allocaOp = dyn_cast<AllocaOp>(srcOp))
     return allocaOp.getName().str();
-  if (auto getElemOp = dyn_cast<StructElementAddr>(srcOp)) {
-    auto parent = dyn_cast<AllocaOp>(getElemOp.getStructAddr().getDefiningOp());
+  if (auto getElemOp = dyn_cast<GetMemberOp>(srcOp)) {
+    auto parent = dyn_cast<AllocaOp>(getElemOp.getAddr().getDefiningOp());
     if (parent) {
       llvm::SmallString<128> finalName;
       llvm::raw_svector_ostream Out(finalName);
-      Out << parent.getName() << "." << getElemOp.getMemberName();
+      Out << parent.getName() << "." << getElemOp.getName();
       return Out.str().str();
     }
   }
@@ -1048,12 +1048,12 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
     // Go through uses of the alloca via `cir.struct_element_addr`, and
     // track only the fields that are actually used.
     std::for_each(addr.use_begin(), addr.use_end(), [&](mlir::OpOperand &use) {
-      auto op = dyn_cast<mlir::cir::StructElementAddr>(use.getOwner());
+      auto op = dyn_cast<mlir::cir::GetMemberOp>(use.getOwner());
       if (!op)
         return;
 
       auto eltAddr = op.getResult();
-      // If nothing is using this StructElementAddr, don't bother since
+      // If nothing is using this GetMemberOp, don't bother since
       // it could lead to even more noisy outcomes.
       if (eltAddr.use_empty())
         return;
@@ -1063,7 +1063,7 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
 
       // Classify exploded types. Keep alloca original location.
       classifyAndInitTypeCategories(eltAddr, eltTy, loc, ++nestLevel);
-      fieldVals[op.getMemberIndex().getZExtValue()] = eltAddr;
+      fieldVals[op.getIndex()] = eltAddr;
     });
 
     // In case this aggregate gets initialized at once, the fields need
@@ -1135,7 +1135,7 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
 mlir::Value LifetimeCheckPass::getLambdaFromMemberAccess(mlir::Value addr) {
   auto op = addr.getDefiningOp();
   // FIXME: we likely want to consider more indirections here...
-  if (!isa<mlir::cir::StructElementAddr>(op))
+  if (!isa<mlir::cir::GetMemberOp>(op))
     return nullptr;
   auto allocaOp =
       dyn_cast<mlir::cir::AllocaOp>(op->getOperand(0).getDefiningOp());
@@ -1443,7 +1443,7 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
     D << "returned lambda captures local variable";
   else if (derefStyle == DerefStyle::CallParam ||
            derefStyle == DerefStyle::IndirectCallParam) {
-    bool isAgg = isa_and_nonnull<StructElementAddr>(addr.getDefiningOp());
+    bool isAgg = isa_and_nonnull<GetMemberOp>(addr.getDefiningOp());
     D << "passing ";
     if (!isAgg)
       D << "invalid pointer";

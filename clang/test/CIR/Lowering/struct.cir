@@ -15,9 +15,9 @@ module {
     %1 = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>, ["x"] {alignment = 4 : i64}
     // CHECK: %[[#ARRSIZE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#STRUCT:]] = llvm.alloca %[[#ARRSIZE]] x !llvm.struct<"struct.S", (i8, i32)>
-    %3 = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "c"}> : (!cir.ptr<!ty_22S22>) -> !cir.ptr<!u8i>
+    %3 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u8i>
     // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 0] : (!llvm.ptr) -> !llvm.ptr
-    %5 = "cir.struct_element_addr"(%1) <{member_index = 1 : index, member_name = "i"}> : (!cir.ptr<!ty_22S22>) -> !cir.ptr<!s32i>
+    %5 = cir.get_member %1[1] {name = "i"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!s32i>
     // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 1] : (!llvm.ptr) -> !llvm.ptr
     cir.return
   }

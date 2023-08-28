@@ -61,11 +61,11 @@ void init(unsigned numImages) {
 // CHECK:         %13 = cir.alloca !ty_22triple22, cir.ptr <!ty_22triple22>, ["ref.tmp0"] {alignment = 8 : i64}
 // CHECK:         %14 = cir.const(#cir.zero : !ty_22triple22) : !ty_22triple22
 // CHECK:         cir.store %14, %13 : !ty_22triple22, cir.ptr <!ty_22triple22>
-// CHECK:         %15 = "cir.struct_element_addr"(%13) <{member_index = 0 : index, member_name = "type"}> : (!cir.ptr<!ty_22triple22>) -> !cir.ptr<!u32i>
+// CHECK:         %15 = cir.get_member %13[0] {name = "type"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>
 // CHECK:         %16 = cir.const(#cir.int<1000024002> : !u32i) : !u32i
 // CHECK:         cir.store %16, %15 : !u32i, cir.ptr <!u32i>
-// CHECK:         %17 = "cir.struct_element_addr"(%13) <{member_index = 1 : index, member_name = "next"}> : (!cir.ptr<!ty_22triple22>) -> !cir.ptr<!cir.ptr<!void>>
-// CHECK:         %18 = "cir.struct_element_addr"(%13) <{member_index = 2 : index, member_name = "image"}> : (!cir.ptr<!ty_22triple22>) -> !cir.ptr<!u32i>
+// CHECK:         %17 = cir.get_member %13[1] {name = "next"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!cir.ptr<!void>>
+// CHECK:         %18 = cir.get_member %13[2] {name = "image"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>
 // CHECK:         %19 = cir.load %7 : cir.ptr <!cir.ptr<!ty_22triple22>>, !cir.ptr<!ty_22triple22>
 // CHECK:         %20 = cir.call @_ZN6tripleaSEOS_(%19, %13) : (!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>) -> !cir.ptr<!ty_22triple22>
 // CHECK:       }

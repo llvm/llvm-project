@@ -2241,6 +2241,28 @@ LogicalResult MemCpyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult GetMemberOp::verify() {
+
+  const auto recordTy = getAddrTy().getPointee().dyn_cast<StructType>();
+  if (!recordTy)
+    return emitError() << "expected pointer to a record type";
+
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+
+  // FIXME(cir): Member type check is disabled for classes and incomplete types
+  // as the codegen for these still need to be patched.
+  if (!recordTy.isClass() && !recordTy.getBody() &&
+      recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+    return emitError() << "member type mismatch";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
