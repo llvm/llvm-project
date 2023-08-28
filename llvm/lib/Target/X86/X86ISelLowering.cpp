@@ -55962,8 +55962,9 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   return true;
 }
 
-SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
+SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                   SDValue Value, SDValue Addr,
+                                                  int JTI,
                                                   SelectionDAG &DAG) const {
   const Module *M = DAG.getMachineFunction().getMMI().getModule();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
@@ -55972,10 +55973,11 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
     // notrack prefix to the indirect branch.
     // In order to do that we create NT_BRIND SDNode.
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
-    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Value, Addr);
+    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
+    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, JTInfo, Addr);
   }
 
-  return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
+  return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
 
 TargetLowering::AndOrSETCCFoldKind
