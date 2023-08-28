@@ -8,6 +8,7 @@
 
 #include "CacheLauncherMode.h"
 #include "clang/Basic/DiagnosticCAS.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
@@ -41,7 +42,10 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
       llvm::remove_if(CheckArgs, [](StringRef Arg) { return Arg == "-###"; }),
       CheckArgs.end());
   CreateInvocationOptions Opts;
-  Opts.Diags = Diags;
+  // Ignore diagnostic parsing diagnostics; if they are real issues they will be
+  // seen when compiling. Just fallback to disabling caching here.
+  Opts.Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions,
+                                                   new IgnoringDiagConsumer);
   // This enables picking the first invocation in a multi-arch build.
   Opts.RecoverOnError = true;
   std::shared_ptr<CompilerInvocation> CInvok =

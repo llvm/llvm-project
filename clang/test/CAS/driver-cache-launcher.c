@@ -114,3 +114,17 @@
 
 // RUN: not %clang-cache 2>&1 | FileCheck %s -check-prefix=NOCOMMAND
 // NOCOMMAND: error: missing compiler command for clang-cache
+
+// Link-only job should not attempt to cache.
+// RUN: touch %t.o
+// RUN: %clang-cache %clang -target arm64-apple-macosx12 %t.o -o %t -Wl,-ObjC -### 2>&1 | FileCheck %s -check-prefix=STATIC_LINK
+// STATIC_LINK-NOT: warning:
+// STATIC_LINK-NOT: "-cc1depscan"
+// STATIC_LINK: "{{[^"]*}}ld"
+
+// Unused option warning should only be emitted once.
+// RUN: touch %t.o
+// RUN: %clang-cache %clang -target arm64-apple-macosx12 -fsyntax-only %s -Wl,-ObjC 2>&1 | FileCheck %s -check-prefix=UNUSED_OPT
+// UNUSED_OPT-NOT: warning:
+// UNUSED_OPT: warning: -Wl,-ObjC: 'linker' input unused
+// UNUSED_OPT-NOT: warning:
