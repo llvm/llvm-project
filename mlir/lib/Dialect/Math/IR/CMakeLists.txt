@@ -12,4 +12,5 @@ add_mlir_dialect_library(MLIRMathDialect
   MLIRArithDialect
   MLIRDialect
   MLIRIR
+  MLIRUBDialect
   )
