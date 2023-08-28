@@ -334,7 +334,6 @@ public:
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
     bool InSuspendBlock = false;
-    bool MayCoroHandleEscape = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -346,10 +345,6 @@ public:
 
   bool inSuspendBlock() const {
     return isCoroutine() && CurCoro.InSuspendBlock;
-  }
-
-  bool mayCoroHandleEscape() const {
-    return isCoroutine() && CurCoro.MayCoroHandleEscape;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
