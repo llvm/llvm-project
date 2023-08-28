@@ -1,15 +1,35 @@
 ; Test remark output for stack-frame-layout
 
+; ensure basic output works
+; RUN: llc -mcpu=corei7 -O1 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s
+
+; check additional slots are displayed when stack is not optimized
+; RUN: llc -mcpu=corei7 -O0 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s --check-prefix=NO_COLORING
+
 ; check more complex cases
 ; RUN: llc %s -pass-remarks-analysis=stack-frame-layout -o /dev/null --march=x86 -mcpu=i386 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=DEBUG
 
 ; check output without debug info
 ; RUN: opt %s -passes=strip -S | llc  -pass-remarks-analysis=stack-frame-layout -o /dev/null --march=x86 -mcpu=i386 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=STRIPPED
 
-target triple = "i386-unknown-linux-gnu"
+target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 declare i32 @printf(ptr, ...)
+
+; CHECK: Function: stackSizeWarning
+; CHECK: Offset: [SP-88], Type: Variable, Align: 16, Size: 80
+; CHECK:    buffer @ frame-diags.c:30
+; NO_COLORING: Offset: [SP-168], Type: Variable, Align: 16, Size: 80
+; CHECK:    buffer2 @ frame-diags.c:33
+define void @stackSizeWarning() {
+entry:
+  %buffer = alloca [80 x i8], align 16
+  %buffer2 = alloca [80 x i8], align 16
+  call void @llvm.dbg.declare(metadata ptr %buffer, metadata !25, metadata !DIExpression()), !dbg !39
+  call void @llvm.dbg.declare(metadata ptr %buffer2, metadata !31, metadata !DIExpression()), !dbg !40
+  ret void
+}
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
@@ -188,7 +208,7 @@ entry:
 }
 
 ; uselistorder directives
-uselistorder ptr @llvm.dbg.declare, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 16 }
+uselistorder ptr @llvm.dbg.declare, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 18 }
 
 attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 attributes #1 = { "frame-pointer"="all" }
@@ -202,19 +222,19 @@ attributes #2 = { ssp "stack-protector-buffer-size"="5" "frame-pointer"="all" }
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !4, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "dot.c", directory: "")
 !4 = !{!5, !6, !10, !13}
-!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 32)
-!6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 32)
-!7 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Array", file: !3, line: 3, size: 64, elements: !8)
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
+!7 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Array", file: !3, line: 3, size: 128, elements: !8)
 !8 = !{!9, !12}
-!9 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !7, file: !3, line: 4, baseType: !10, size: 32)
-!10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 32)
+!9 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !7, file: !3, line: 4, baseType: !10, size: 64)
+!10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!12 = !DIDerivedType(tag: DW_TAG_member, name: "size", scope: !7, file: !3, line: 5, baseType: !11, size: 32, offset: 32)
-!13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 32)
-!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Result", file: !3, line: 8, size: 64, elements: !15)
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "size", scope: !7, file: !3, line: 5, baseType: !11, size: 32, offset: 64)
+!13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 64)
+!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Result", file: !3, line: 8, size: 128, elements: !15)
 !15 = !{!16, !17}
-!16 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !14, file: !3, line: 9, baseType: !6, size: 32)
-!17 = !DIDerivedType(tag: DW_TAG_member, name: "sum", scope: !14, file: !3, line: 10, baseType: !11, size: 32, offset: 32)
+!16 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !14, file: !3, line: 9, baseType: !6, size: 64)
+!17 = !DIDerivedType(tag: DW_TAG_member, name: "sum", scope: !14, file: !3, line: 10, baseType: !11, size: 32, offset: 64)
 !18 = !{i32 7, !"Dwarf Version", i32 5}
 !19 = !{i32 2, !"Debug Info Version", i32 3}
 !20 = !{i32 1, !"wchar_size", i32 4}
