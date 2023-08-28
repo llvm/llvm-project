@@ -99,3 +99,13 @@ v_fmamk_f16 v4, v2, 3, v6 row_share:1
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1210-ERR-NEXT:{{^}}v_fmamk_f16 v4, v2, 3, v6 row_share:1
 // GFX1210-ERR-NEXT:{{^}}                          ^
+
+v_mul_u64 v[2:3], v[4:5], v[6:7] row_share:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_mul_u64 v[2:3], v[4:5], v[6:7] row_share:1
+// GFX1210-ERR-NEXT:{{^}}                                 ^
+
+v_mul_i64 v[2:3], v[4:5], v[6:7] row_share:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_mul_i64 v[2:3], v[4:5], v[6:7] row_share:1
+// GFX1210-ERR-NEXT:{{^}}                                 ^

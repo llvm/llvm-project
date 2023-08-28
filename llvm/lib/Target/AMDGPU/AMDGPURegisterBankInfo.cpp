@@ -2527,9 +2527,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
 
     // Special case for s_mul_u64. There is not a vector equivalent of
-    // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
-    // multiplications.
-    if (Opc == AMDGPU::G_MUL && DstTy == S64 &&
+    // s_mul_u64 on most targets. Hence, we have to break down s_mul_u64
+    // into 32-bit vector multiplications.
+    if (!Subtarget.hasVectorMulU64() && Opc == AMDGPU::G_MUL && DstTy == S64 &&
         DstBank == &AMDGPU::VGPRRegBank) {
       applyMappingSMULU64(OpdMapper);
       return;
