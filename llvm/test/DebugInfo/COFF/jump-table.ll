@@ -1,3 +1,6 @@
+; REQUIRES: arm-registered-target
+; REQUIRES: aarch64-registered-target
+; REQUIRES: x86-registered-target
 ; RUN: llc -mtriple=i686-windows < %s | FileCheck %s --check-prefixes=CHECK,I686,NOTA32
 ; RUN: llc -mtriple=x86_64-windows < %s | FileCheck %s --check-prefixes=CHECK,X64,NOTA32
 ; RUN: llc -mtriple=aarch64-windows < %s | FileCheck %s --check-prefixes=CHECK,A64,NOTA32
