@@ -34,7 +34,7 @@ struct {
   int x;
   int y[2][2];
 } nestedTwoDim = {1, {{2, 3}, {4, 5}}};
-// CHECK: cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22struct2Eanon22
+// CHECK: cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22anon22
 
 // TODO: test tentatives with internal linkage.
 

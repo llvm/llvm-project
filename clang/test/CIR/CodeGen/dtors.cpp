@@ -37,17 +37,17 @@ public:
 };
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
 
 // Class B
-// CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B" {![[ClassA]]}>
+// CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {![[ClassA]]}>
 
 // CHECK: cir.func @_Z4bluev()
-// CHECK:   %0 = cir.alloca !ty_22class2EPSEvent22, cir.ptr <!ty_22class2EPSEvent22>, ["p", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !ty_22PSEvent22, cir.ptr <!ty_22PSEvent22>, ["p", init] {alignment = 8 : i64}
 // CHECK:   %1 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 5>>
 // CHECK:   %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!s8i x 5>>), !cir.ptr<!s8i>
-// CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22class2EPSEvent22>, !s32i, !cir.ptr<!s8i>) -> ()
+// CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22PSEvent22>, !s32i, !cir.ptr<!s8i>) -> ()
 // CHECK:   cir.return
 // CHECK: }
 

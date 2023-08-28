@@ -13,6 +13,8 @@
 #include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
 
+#include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -168,7 +170,7 @@ public:
     if (!structTy)
       structTy = getType<mlir::cir::StructType>(
           members, mlir::StringAttr::get(getContext()),
-          /*body=*/true, packed,
+          /*body=*/true, packed, mlir::cir::StructType::Struct,
           /*ast=*/std::nullopt);
 
     // Return zero or anonymous constant struct.
@@ -384,16 +386,36 @@ public:
     return getStructTy(members, "", body, packed, ast);
   }
 
+  /// Get a CIR record kind from a AST declaration tag.
+  mlir::cir::StructType::RecordKind
+  getRecordKind(const clang::TagTypeKind kind) {
+    switch (kind) {
+    case clang::TagTypeKind::Struct:
+      return mlir::cir::StructType::Struct;
+    case clang::TagTypeKind::Union:
+      return mlir::cir::StructType::Union;
+    case clang::TagTypeKind::Class:
+      return mlir::cir::StructType::Class;
+    case clang::TagTypeKind::Interface:
+      llvm_unreachable("interface records are NYI");
+    case clang::TagTypeKind::Enum:
+      llvm_unreachable("enum records are NYI");
+    }
+  }
+
   /// Get a CIR named struct type.
   mlir::cir::StructType getStructTy(llvm::ArrayRef<mlir::Type> members,
                                     llvm::StringRef name, bool body,
                                     bool packed, const clang::RecordDecl *ast) {
     const auto nameAttr = getStringAttr(name);
     std::optional<mlir::cir::ASTRecordDeclAttr> astAttr = std::nullopt;
-    if (ast)
+    auto kind = mlir::cir::StructType::RecordKind::Struct;
+    if (ast) {
       astAttr = getAttr<mlir::cir::ASTRecordDeclAttr>(ast);
+      kind = getRecordKind(ast->getTagKind());
+    }
     return mlir::cir::StructType::get(getContext(), members, nameAttr, body,
-                                      packed, astAttr);
+                                      packed, kind, astAttr);
   }
 
   //

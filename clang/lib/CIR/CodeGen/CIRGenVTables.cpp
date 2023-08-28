@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/Support/Format.h"

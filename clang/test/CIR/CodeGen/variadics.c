@@ -12,7 +12,7 @@ typedef __builtin_va_list va_list;
 #define va_arg(ap, type)    __builtin_va_arg(ap, type)
 #define va_copy(dst, src)   __builtin_va_copy(dst, src)
 
-// CHECK: [[VALISTTYPE:!.+va_list.*]] = !cir.struct<"struct{{.*}}__va_list
+// CHECK: [[VALISTTYPE:!.+va_list.*]] = !cir.struct<struct "{{.*}}__va_list
 
 int average(int count, ...) {
 // CHECK: cir.func @{{.*}}average{{.*}}(%arg0: !s32i loc({{.+}}), ...) -> !s32i

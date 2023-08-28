@@ -18,16 +18,16 @@ public:
 };
 
 // Type info B.
-// CHECK: ![[TypeInfoB:ty_.*]] = !cir.struct<"" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+// CHECK: ![[TypeInfoB:ty_.*]] = !cir.struct<struct "" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
 
 // vtable for A type
-// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<"" {!cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 5>}>
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
 
 // Class B
-// CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B" {![[ClassA]]}>
+// CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {![[ClassA]]}>
 
 // B ctor => @B::B()
 // Calls @A::A() and initialize __vptr with address of B's vtable.
