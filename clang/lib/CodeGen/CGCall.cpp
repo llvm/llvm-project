@@ -5548,7 +5548,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Then it is much easier to perform the safety analysis in the middle end.
   // If it is safe to inline the call to awaitSuspend, we can replace it in the
   // CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
-  if (inSuspendBlock() && mayCoroHandleEscape())
+  //
+  // If the `await_suspend()` function is marked as `always_inline` explicitly,
+  // we should give the user the right to control the codegen.
+  if (inSuspendBlock() && mayCoroHandleEscape() &&
+      !TargetDecl->hasAttr<AlwaysInlineAttr>())
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
 
   // Disable inlining inside SEH __try blocks.
