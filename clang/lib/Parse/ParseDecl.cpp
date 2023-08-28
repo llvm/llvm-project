@@ -1316,31 +1316,19 @@ void Parser::ParseAvailabilityAttribute(
     }
     ConsumeToken();
     if (Keyword == Ident_message || Keyword == Ident_replacement) {
-      if (Tok.isNot(tok::string_literal)) {
+      if (!isTokenStringLiteral()) {
         Diag(Tok, diag::err_expected_string_literal)
           << /*Source='availability attribute'*/2;
         SkipUntil(tok::r_paren, StopAtSemi);
         return;
       }
-      if (Keyword == Ident_message)
-        MessageExpr = ParseStringLiteralExpression();
-      else
-        ReplacementExpr = ParseStringLiteralExpression();
-      // Also reject wide string literals.
-      if (StringLiteral *MessageStringLiteral =
-              cast_or_null<StringLiteral>(MessageExpr.get())) {
-        if (!MessageStringLiteral->isOrdinary()) {
-          Diag(MessageStringLiteral->getSourceRange().getBegin(),
-               diag::err_expected_string_literal)
-            << /*Source='availability attribute'*/ 2;
-          SkipUntil(tok::r_paren, StopAtSemi);
-          return;
-        }
-      }
-      if (Keyword == Ident_message)
+      if (Keyword == Ident_message) {
+        MessageExpr = ParseUnevaluatedStringLiteralExpression();
         break;
-      else
+      } else {
+        ReplacementExpr = ParseUnevaluatedStringLiteralExpression();
         continue;
+      }
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1508,7 +1496,7 @@ void Parser::ParseExternalSourceSymbolAttribute(
     else
       HasDefinedIn = true;
 
-    if (Tok.isNot(tok::string_literal)) {
+    if (!isTokenStringLiteral()) {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='external_source_symbol attribute'*/ 3
           << /*language | source container | USR*/ (
@@ -1522,27 +1510,27 @@ void Parser::ParseExternalSourceSymbolAttribute(
       if (HadLanguage) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      Language = ParseStringLiteralExpression();
+      Language = ParseUnevaluatedStringLiteralExpression();
     } else if (Keyword == Ident_USR) {
       if (HadUSR) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      USR = ParseStringLiteralExpression();
+      USR = ParseUnevaluatedStringLiteralExpression();
     } else {
       assert(Keyword == Ident_defined_in && "Invalid clause keyword!");
       if (HadDefinedIn) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      DefinedInExpr = ParseStringLiteralExpression();
+      DefinedInExpr = ParseUnevaluatedStringLiteralExpression();
     }
   } while (TryConsumeToken(tok::comma));
 
