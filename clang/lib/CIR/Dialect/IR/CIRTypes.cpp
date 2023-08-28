@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -93,6 +94,15 @@ void BoolType::print(mlir::AsmPrinter &printer) const {}
 //===----------------------------------------------------------------------===//
 // StructType Definitions
 //===----------------------------------------------------------------------===//
+
+/// Return the largest member of in the type.
+///
+/// Recurses into union members never returning a union as the largest member.
+Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
+  if (!largestMember)
+    computeSizeAndAlignment(dataLayout);
+  return largestMember;
+}
 
 Type StructType::parse(mlir::AsmParser &parser) {
   const auto loc = parser.getCurrentLocation();
@@ -278,7 +288,7 @@ void StructType::computeSizeAndAlignment(
     const ::mlir::DataLayout &dataLayout) const {
   assert(!isOpaque() && "Cannot get layout of opaque structs");
   // Do not recompute.
-  if (size || align || padded)
+  if (size || align || padded || largestMember)
     return;
 
   // This is a similar algorithm to LLVM's StructLayout.
@@ -287,10 +297,24 @@ void StructType::computeSizeAndAlignment(
   [[maybe_unused]] bool isPadded = false;
   unsigned numElements = getNumElements();
   auto members = getMembers();
+  unsigned largestMemberSize = 0;
 
   // Loop over each of the elements, placing them in memory.
   for (unsigned i = 0, e = numElements; i != e; ++i) {
     auto ty = members[i];
+
+    // Found a nested union: recurse into it to fetch its largest member.
+    auto structMember = ty.dyn_cast<StructType>();
+    if (structMember && structMember.isUnion()) {
+      auto candidate = structMember.getLargestMember(dataLayout);
+      if (dataLayout.getTypeSize(candidate) > largestMemberSize) {
+        largestMember = candidate;
+        largestMemberSize = dataLayout.getTypeSize(largestMember);
+      }
+    } else if (dataLayout.getTypeSize(ty) > largestMemberSize) {
+      largestMember = ty;
+      largestMemberSize = dataLayout.getTypeSize(largestMember);
+    }
 
     // This matches LLVM since it uses the ABI instead of preferred alignment.
     const llvm::Align tyAlign =
@@ -310,6 +334,14 @@ void StructType::computeSizeAndAlignment(
 
     // Consume space for this data item
     structSize += dataLayout.getTypeSize(ty);
+  }
+
+  // For unions, the size and aligment is that of the largest element.
+  if (isUnion()) {
+    size = largestMemberSize;
+    align = structAlignment.value();
+    padded = false;
+    return;
   }
 
   // Add padding to the end of the struct so that it could be put in an array

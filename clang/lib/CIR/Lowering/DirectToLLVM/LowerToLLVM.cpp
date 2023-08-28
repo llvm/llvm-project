@@ -54,10 +54,12 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
@@ -1306,8 +1308,8 @@ public:
           sourceSymbol.getSymName());
       llvm::SmallVector<mlir::LLVM::GEPArg> offset{0};
       auto gepOp = rewriter.create<mlir::LLVM::GEPOp>(
-          loc, llvmType, sourceSymbol.getType(),
-          addressOfOp.getResult(), offset);
+          loc, llvmType, sourceSymbol.getType(), addressOfOp.getResult(),
+          offset);
       rewriter.create<mlir::LLVM::ReturnOp>(loc, gepOp.getResult());
       return mlir::success();
     } else if (isa<mlir::cir::ZeroAttr, mlir::cir::NullAttr>(init.value())) {
@@ -1721,14 +1723,30 @@ public:
   matchAndRewrite(mlir::cir::GetMemberOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto llResTy = getTypeConverter()->convertType(op.getType());
-    // Since the base address is a pointer to structs, the first offset is
-    // always zero. The second offset tell us which member it will access.
-    llvm::SmallVector<mlir::LLVM::GEPArg> offset{0, op.getIndex()};
-    const auto elementTy = getTypeConverter()->convertType(
-        op.getAddr().getType().getPointee());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-        op, llResTy, elementTy, adaptor.getAddr(), offset);
-    return mlir::success();
+    const auto structTy =
+        op.getAddrTy().getPointee().cast<mlir::cir::StructType>();
+    assert(structTy && "expected struct type");
+
+    switch (structTy.getKind()) {
+    case mlir::cir::StructType::Struct: {
+      // Since the base address is a pointer to an aggregate, the first offset
+      // is always zero. The second offset tell us which member it will access.
+      llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+      const auto elementTy = getTypeConverter()->convertType(structTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
+                                                     adaptor.getAddr(), offset);
+      return mlir::success();
+    }
+    case mlir::cir::StructType::Union:
+      // Union members share the address space, so we just need a bitcast to
+      // conform to type-checking.
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(op, llResTy,
+                                                         adaptor.getAddr());
+      return mlir::success();
+    default:
+      return op.emitError()
+             << "struct kind '" << structTy.getKind() << "' is NYI";
+    }
   }
 };
 
@@ -1789,7 +1807,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
 }
 
 namespace {
-void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
+void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
+                          mlir::DataLayout &dataLayout) {
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
     return mlir::LLVM::LLVMPointerType::get(&converter.getContext());
   });
@@ -1814,9 +1833,24 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
     return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
   converter.addConversion([&](mlir::cir::StructType type) -> mlir::Type {
+    // FIXME(cir): create separate unions, struct, and classes types.
+    // Convert struct members.
     llvm::SmallVector<mlir::Type> llvmMembers;
-    for (auto ty : type.getMembers())
-      llvmMembers.push_back(converter.convertType(ty));
+    switch (type.getKind()) {
+    case mlir::cir::StructType::Class:
+      // TODO(cir): This should be properly validated.
+    case mlir::cir::StructType::Struct:
+      for (auto ty : type.getMembers())
+        llvmMembers.push_back(converter.convertType(ty));
+      break;
+    // Unions are lowered as only the largest member.
+    case mlir::cir::StructType::Union: {
+      auto largestMember = type.getLargestMember(dataLayout);
+      if (largestMember)
+        llvmMembers.push_back(converter.convertType(largestMember));
+      break;
+    }
+    }
 
     // Struct has a name: lower as an identified struct.
     mlir::LLVM::LLVMStructType llvmStruct;
@@ -1847,7 +1881,7 @@ static void buildCtorList(mlir::ModuleOp module) {
         assert(attr.isa<mlir::cir::GlobalCtorAttr>() &&
                "must be a GlobalCtorAttr");
         if (auto ctorAttr = attr.cast<mlir::cir::GlobalCtorAttr>()) {
-           // default priority is 65536
+          // default priority is 65536
           int priority = 65536;
           if (ctorAttr.getPriority())
             priority = *ctorAttr.getPriority();
@@ -1885,15 +1919,15 @@ static void buildCtorList(mlir::ModuleOp module) {
   newGlobalOp.getRegion().push_back(new mlir::Block());
   builder.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
 
-  mlir::Value result = builder.create<mlir::LLVM::UndefOp>(
-      loc, CtorStructArrayTy);
+  mlir::Value result =
+      builder.create<mlir::LLVM::UndefOp>(loc, CtorStructArrayTy);
 
   for (uint64_t I = 0; I < globalCtors.size(); I++) {
     auto fn = globalCtors[I];
     mlir::Value structInit =
         builder.create<mlir::LLVM::UndefOp>(loc, CtorStructTy);
-    mlir::Value initPriority =
-        builder.create<mlir::LLVM::ConstantOp>(loc, CtorStructFields[0], fn.second);
+    mlir::Value initPriority = builder.create<mlir::LLVM::ConstantOp>(
+        loc, CtorStructFields[0], fn.second);
     mlir::Value initFuncAddr = builder.create<mlir::LLVM::AddressOfOp>(
         loc, CtorStructFields[1], fn.first);
     mlir::Value initAssociate =
@@ -1914,9 +1948,9 @@ static void buildCtorList(mlir::ModuleOp module) {
 
 void ConvertCIRToLLVMPass::runOnOperation() {
   auto module = getOperation();
-
+  mlir::DataLayout dataLayout(module);
   mlir::LLVMTypeConverter converter(&getContext());
-  prepareTypeConverter(converter);
+  prepareTypeConverter(converter, dataLayout);
 
   mlir::RewritePatternSet patterns(&getContext());
 

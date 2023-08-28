@@ -128,6 +128,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     // for the struct size and alignment.
     mutable std::optional<unsigned> size{}, align{};
     mutable std::optional<bool> padded{};
+    mutable mlir::Type largestMember{};
     void computeSizeAndAlignment(const ::mlir::DataLayout &dataLayout) const;
   public:
     void dropAst();
@@ -141,11 +142,14 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
       case RecordKind::Class:
         return "class." + name;
       case RecordKind::Union:
-        return "union "+ name;
+        return "union." + name;
       case RecordKind::Struct:
         return "struct." + name;
       }
     }
+
+    /// Return the member with the largest bit-length.
+    mlir::Type getLargestMember(const ::mlir::DataLayout &dataLayout) const;
 
     /// Return whether this is a class declaration.
     bool isClass() const { return getKind() == RecordKind::Class; }
