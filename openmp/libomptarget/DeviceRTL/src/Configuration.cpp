@@ -50,6 +50,15 @@ uint64_t config::getClockFrequency() {
   return __omp_rtl_device_environment.ClockFrequency;
 }
 
+void *config::getIndirectCallTablePtr() {
+  return reinterpret_cast<void *>(
+      __omp_rtl_device_environment.IndirectCallTable);
+}
+
+uint64_t config::getIndirectCallTableSize() {
+  return __omp_rtl_device_environment.IndirectCallTableSize;
+}
+
 bool config::isDebugMode(config::DebugKind Kind) {
   return config::getDebugKind() & Kind;
 }

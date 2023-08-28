@@ -6,7 +6,6 @@ struct Y g;
 void f(struct X);
 struct X foo(void);
 
-// <rdar://problem/10463337>
 struct X test1(void) {
   // CHECK: @test1
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i1 false)
@@ -25,7 +24,6 @@ void test3(struct X a) {
   g.y = a;
 }
 
-// <rdar://problem/10530444>
 void test4(void) {
   // CHECK: @test4
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i1 false)
@@ -39,7 +37,6 @@ int test5(void) {
   return g.y.x[0];
 }
 
-// <rdar://problem/11220251>
 void test6(void) {
   // CHECK: @test6
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), ptr align 4 %{{.*}}, i64 24, i1 false)

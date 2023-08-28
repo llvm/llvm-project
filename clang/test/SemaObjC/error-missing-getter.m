@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://8155806
 
 @interface Subclass 
 {
@@ -16,8 +15,6 @@ int func (int arg, Subclass *x) {
     int i = x.setterOnly + 1;  // expected-error {{no getter method for read from property}}
     return x.setterOnly + 1;   // expected-error {{no getter method for read from property}}
 }
-
-// <rdar://problem/12765391>
 
 @interface TestClass 
 + (void) setSetterOnly : (int) arg;

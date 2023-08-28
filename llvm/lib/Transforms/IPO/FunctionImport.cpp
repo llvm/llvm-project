@@ -482,7 +482,7 @@ static void computeImportForFunction(
         continue;
       }
 
-      FunctionImporter::ImportFailureReason Reason;
+      FunctionImporter::ImportFailureReason Reason{};
       CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
                                    Summary.modulePath(), Reason);
       if (!CalleeSummary) {

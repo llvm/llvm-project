@@ -432,6 +432,7 @@ struct BufferDeallocationSimplificationPass
                  SplitDeallocWhenNotAliasingAnyOther,
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
                                                                 aliasAnalysis);
+    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))

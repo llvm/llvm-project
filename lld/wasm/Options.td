@@ -191,7 +191,7 @@ def growable_table: FF<"growable-table">,
   HelpText<"Remove maximum size from function table, allowing table to grow">;
 
 def global_base: JJ<"global-base=">,
-  HelpText<"Where to start to place global data">;
+  HelpText<"Memory offset at which to place global data (Defaults to 1024)">;
 
 def import_memory: FF<"import-memory">,
   HelpText<"Import the module's memory from the default module of \"env\" with the name \"memory\".">;
@@ -223,6 +223,9 @@ def no_entry: FF<"no-entry">,
 
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
+
+def table_base: JJ<"table-base=">,
+  HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
 
 defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",

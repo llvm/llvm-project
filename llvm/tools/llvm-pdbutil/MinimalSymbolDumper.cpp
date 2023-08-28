@@ -358,23 +358,6 @@ static std::string formatGaps(uint32_t IndentLevel,
   return typesetItemList(GapStrs, 7, IndentLevel, ", ");
 }
 
-static std::string formatJumpTableEntrySize(JumpTableEntrySize EntrySize) {
-  switch (EntrySize) {
-    RETURN_CASE(JumpTableEntrySize, Int8, "int8");
-    RETURN_CASE(JumpTableEntrySize, UInt8, "uin8");
-    RETURN_CASE(JumpTableEntrySize, Int16, "int16");
-    RETURN_CASE(JumpTableEntrySize, UInt16, "uint16");
-    RETURN_CASE(JumpTableEntrySize, Int32, "int32");
-    RETURN_CASE(JumpTableEntrySize, UInt32, "uint32");
-    RETURN_CASE(JumpTableEntrySize, Pointer, "pointer");
-    RETURN_CASE(JumpTableEntrySize, UInt8ShiftLeft, "uint8shl");
-    RETURN_CASE(JumpTableEntrySize, UInt16ShiftLeft, "uint16shl");
-    RETURN_CASE(JumpTableEntrySize, Int8ShiftLeft, "int8shl");
-    RETURN_CASE(JumpTableEntrySize, Int16ShiftLeft, "int16shl");
-  }
-  return formatUnknownEnum(EntrySize);
-}
-
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
   return visitSymbolBegin(Record, 0);
 }
@@ -920,19 +903,5 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine("addr = {0}", formatSegmentOffset(Annot.Segment, Annot.CodeOffset));
   P.formatLine("strings = {0}", typesetStringList(P.getIndentLevel() + 9 + 2,
                                                    Annot.Strings));
-  return Error::success();
-}
-
-Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
-                                            JumpTableSym &JumpTable) {
-  AutoIndent Indent(P, 7);
-  P.formatLine(
-      "base = {0}, switchtype = {1}, branch = {2}, table = {3}, entriescount = "
-      "{4}",
-      formatSegmentOffset(JumpTable.BaseSegment, JumpTable.BaseOffset),
-      formatJumpTableEntrySize(JumpTable.SwitchType),
-      formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
-      formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
-      JumpTable.EntriesCount);
   return Error::success();
 }

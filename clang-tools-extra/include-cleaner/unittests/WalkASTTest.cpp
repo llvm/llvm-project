@@ -50,7 +50,7 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
-  Inputs.ExtraArgs.push_back("-std=c++17");
+  Inputs.ExtraArgs.push_back("-std=c++20");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -114,7 +114,7 @@ TEST(WalkAST, DeclRef) {
   testWalk("int $explicit^x;", "int y = ^x;");
   testWalk("int $explicit^foo();", "int y = ^foo();");
   testWalk("namespace ns { int $explicit^x; }", "int y = ns::^x;");
-  testWalk("struct $implicit^S { static int x; };", "int y = S::^x;");
+  testWalk("struct S { static int x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int $explicit^x; int x;", "int y = ^x;");
   // Return type of `foo` isn't used.
@@ -309,6 +309,14 @@ TEST(WalkAST, Alias) {
     namespace ns { using ::$explicit^Foo; }
     template<> struct ns::Foo<int> {};)cpp",
            "ns::^Foo<int> x;");
+  testWalk(R"cpp(
+    namespace ns { enum class foo { bar }; }
+    using ns::foo;)cpp",
+           "auto x = foo::^bar;");
+  testWalk(R"cpp(
+    namespace ns { enum foo { bar }; }
+    using ns::foo::$explicit^bar;)cpp",
+           "auto x = ^bar;");
 }
 
 TEST(WalkAST, Using) {
@@ -338,6 +346,8 @@ TEST(WalkAST, Using) {
     }
     using ns::$explicit^Y;)cpp",
            "^Y<int> x;");
+  testWalk("namespace ns { enum E {A}; } using enum ns::$explicit^E;",
+           "auto x = ^A;");
 }
 
 TEST(WalkAST, Namespaces) {
@@ -399,10 +409,10 @@ TEST(WalkAST, NestedTypes) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
-  testWalk("struct B { static int f; }; struct $implicit^S : B {};",
+  testWalk("struct S { static int f; };", "void foo() { S::^f; }");
+  testWalk("struct B { static int f; }; struct S : B {};",
            "void foo() { S::^f; }");
-  testWalk("struct B { static void f(); }; struct $implicit^S : B {};",
+  testWalk("struct B { static void f(); }; struct S : B {};",
            "void foo() { S::^f; }");
   testWalk("struct B { static void f(); }; ",
            "struct S : B { void foo() { ^f(); } };");

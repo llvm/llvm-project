@@ -8,11 +8,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
 ; RUN: llc < %s -mtriple=x86_64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-X86
 
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
-; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -mfs-allow-unsupported-triple -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll

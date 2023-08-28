@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -50,6 +51,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstdint>
+#include <memory>
 
 #ifdef EXPENSIVE_CHECKS
 #include "llvm/IR/Verifier.h"
@@ -92,6 +94,13 @@ static cl::opt<unsigned>
     SetFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
+
+static cl::opt<unsigned>
+    MaxSpecializationPerCB("attributor-max-specializations-per-call-base",
+                           cl::Hidden,
+                           cl::desc("Maximal number of callees specialized for "
+                                    "a call base"),
+                           cl::init(UINT32_MAX));
 
 static cl::opt<unsigned, true> MaxInitializationChainLengthX(
     "attributor-max-initialization-chain-length", cl::Hidden,
@@ -3738,6 +3747,25 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
+
+  /// Tracking callback for specialization of indirect calls.
+  DenseMap<CallBase *, std::unique_ptr<SmallPtrSet<Function *, 8>>>
+      IndirectCalleeTrackingMap;
+  if (MaxSpecializationPerCB.getNumOccurrences()) {
+    AC.IndirectCalleeSpecializationCallback = [&](Attributor &, CallBase &CB,
+                                                  Function &Callee) {
+      if (MaxSpecializationPerCB == 0)
+        return false;
+      auto &Set = IndirectCalleeTrackingMap[&CB];
+      if (!Set)
+        Set = std::make_unique<SmallPtrSet<Function *, 8>>();
+      if (Set->size() >= MaxSpecializationPerCB)
+        return Set->contains(&Callee);
+      Set->insert(&Callee);
+      return true;
+    };
+  }
+
   Attributor A(Functions, InfoCache, AC);
 
   // Create shallow wrappers for all functions that are not IPO amendable

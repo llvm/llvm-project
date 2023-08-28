@@ -47,7 +47,7 @@ OptionEnumMapping<
            "Camel_Snake_Case"},
           {readability::IdentifierNamingCheck::CT_CamelSnakeBack,
            "camel_Snake_Back"}};
-  return llvm::ArrayRef(Mapping);
+  return {Mapping};
 }
 
 template <>
@@ -62,7 +62,7 @@ struct OptionEnumMapping<
         {HungarianPrefixType::HPT_On, "On"},
         {HungarianPrefixType::HPT_LowerCase, "LowerCase"},
         {HungarianPrefixType::HPT_CamelCase, "CamelCase"}};
-    return llvm::ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -649,7 +649,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
     const EnumConstantDecl *ECD) const {
-  const EnumDecl *ED = cast<EnumDecl>(ECD->getDeclContext());
+  const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
   if (std::string::npos != Name.find("enum")) {
@@ -672,13 +672,13 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
       if (!Splitter.match(Substr, &Groups))
         break;
 
-      if (Groups[2].size() > 0) {
+      if (!Groups[2].empty()) {
         Words.push_back(Groups[1]);
         Substr = Substr.substr(Groups[0].size());
-      } else if (Groups[3].size() > 0) {
+      } else if (!Groups[3].empty()) {
         Words.push_back(Groups[3]);
         Substr = Substr.substr(Groups[0].size() - Groups[4].size());
-      } else if (Groups[5].size() > 0) {
+      } else if (!Groups[5].empty()) {
         Words.push_back(Groups[5]);
         Substr = Substr.substr(Groups[0].size() - Groups[6].size());
       }
@@ -913,13 +913,13 @@ std::string IdentifierNamingCheck::fixupWithCase(
       if (!Splitter.match(Substr, &Groups))
         break;
 
-      if (Groups[2].size() > 0) {
+      if (!Groups[2].empty()) {
         Words.push_back(Groups[1]);
         Substr = Substr.substr(Groups[0].size());
-      } else if (Groups[3].size() > 0) {
+      } else if (!Groups[3].empty()) {
         Words.push_back(Groups[3]);
         Substr = Substr.substr(Groups[0].size() - Groups[4].size());
-      } else if (Groups[5].size() > 0) {
+      } else if (!Groups[5].empty()) {
         Words.push_back(Groups[5]);
         Substr = Substr.substr(Groups[0].size() - Groups[6].size());
       }

@@ -27,7 +27,7 @@ using namespace ento;
 namespace {
 
 class UndefBranchChecker : public Checker<check::BranchCondition> {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
 
   struct FindUndefExpr {
     ProgramStateRef St;
@@ -71,8 +71,8 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
     ExplodedNode *N = Ctx.generateErrorNode();
     if (N) {
       if (!BT)
-        BT.reset(new BuiltinBug(
-            this, "Branch condition evaluates to a garbage value"));
+        BT.reset(
+            new BugType(this, "Branch condition evaluates to a garbage value"));
 
       // What's going on here: we want to highlight the subexpression of the
       // condition that is the most likely source of the "uninitialized

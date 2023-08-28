@@ -1,7 +1,5 @@
 // RUN: not %clang_cc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
-// <rdar://problem/9221993>
-
 // We only care to check whether the compiler crashes; the actual
 // diagnostics are uninteresting.
 // CHECK: 8 errors generated.

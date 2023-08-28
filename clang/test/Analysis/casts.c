@@ -72,7 +72,7 @@ void pr6013_6035_test(void *p) {
   (void) foo;
 }
 
-// PR12511 and radar://11215362 - Test that we support SymCastExpr, which represents symbolic int to float cast.
+// PR12511 - Test that we support SymCastExpr, which represents symbolic int to float cast.
 char ttt(int intSeconds) {
   double seconds = intSeconds;
   if (seconds)
