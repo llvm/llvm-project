@@ -96,6 +96,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # time.h entrypoints
+    libc.src.time.clock
+
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_reset
     libc.src.gpu.rpc_host_call

@@ -34,3 +34,9 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }
+
+def TimeAPI : PublicAPI<"time.h"> {
+  let Types = [
+    "clock_t",
+  ];
+}
