@@ -28,6 +28,18 @@ STRING_EXTENSION_OUTSIDE(SBModule)
 %extend lldb::SBModule {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
         def __len__(self):
             '''Return the number of symbols in a lldb.SBModule object.'''
             return self.GetNumSymbols()
