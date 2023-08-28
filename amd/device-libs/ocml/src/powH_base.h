@@ -33,7 +33,7 @@ MATH_MANGLE(pow)(half x, half y)
     float p = compute_expylnx_f16(ax, y);
 
     bool is_odd_y = is_odd_integer(y);
-    half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
+    half ret = BUILTIN_COPYSIGN_F16((half)p, is_odd_y ? x : 1.0f);
 
     // Now all the edge cases
     if (x < 0.0h && !is_integer(y))
