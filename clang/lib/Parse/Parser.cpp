@@ -923,16 +923,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
                                          /*IsInstanceMethod=*/std::nullopt,
                                          /*ReturnType=*/nullptr);
     }
-
-    Sema::ParserCompletionContext PCC;
-    if (CurParsedObjCImpl) {
-      PCC = Sema::PCC_ObjCImplementation;
-    } else if (PP.isIncrementalProcessingEnabled()) {
-      PCC = Sema::PCC_TopLevelOrExpression;
-    } else {
-      PCC = Sema::PCC_Namespace;
-    };
-    Actions.CodeCompleteOrdinaryName(getCurScope(), PCC);
+    Actions.CodeCompleteOrdinaryName(
+        getCurScope(),
+        CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
     return nullptr;
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
