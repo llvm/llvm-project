@@ -528,7 +528,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    x86::getX86TargetFeatures(D, Triple, Args, Features);
+    x86::getX86TargetFeatures(D, Triple, Args, Features, ForAS);
     break;
   case llvm::Triple::hexagon:
     hexagon::getHexagonTargetFeatures(D, Triple, Args, Features);
