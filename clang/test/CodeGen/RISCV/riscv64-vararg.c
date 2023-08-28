@@ -71,7 +71,7 @@ int f_va_callee(int, ...);
 // CHECK-NEXT:    [[TMP1:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL1]], align 8
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[COERCE_DIVE]], align 16
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL6]], i64 32, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL6]], i64 32, i8 0)
 // CHECK-NEXT:    [[CALL:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i64 [[TMP0]], [2 x i64] [[TMP1]], i128 [[TMP2]], ptr noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    [[CALL11:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, fp128 noundef 0xL00000000000000004001400000000000, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
 // CHECK-NEXT:    [[A13:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
@@ -255,16 +255,16 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[ARGP_CUR1:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT2:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR1]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT2]], ptr [[VA]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[TS]], ptr align 8 [[ARGP_CUR1]], i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[TS]], ptr align 8 [[ARGP_CUR1]], i64 8, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR3:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT4:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR3]], i64 16
 // CHECK-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SS]], ptr align 8 [[ARGP_CUR3]], i64 16, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SS]], ptr align 8 [[ARGP_CUR3]], i64 16, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR5:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT6:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR5]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT6]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR5]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[LS]], ptr align 8 [[TMP1]], i64 32, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[LS]], ptr align 8 [[TMP1]], i64 32, i8 0)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[TS]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2

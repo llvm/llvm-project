@@ -160,7 +160,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP6]], ptr [[_TMP2]], align 8, !dbg [[DBG70]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[_TMP2]], align 8, !dbg [[DBG70]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[B3]], metadata [[META71:![0-9]+]], metadata !DIExpression()), !dbg [[DBG60]]
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B3]], ptr align 4 [[TMP4]], i64 400, i1 false), !dbg [[DBG70]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B3]], ptr align 4 [[TMP4]], i64 400, i8 0), !dbg [[DBG70]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[F]], metadata [[META72:![0-9]+]], metadata !DIExpression()), !dbg [[DBG75:![0-9]+]]
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr [[TMP2]], i64 0, i64 1, !dbg [[DBG76:![0-9]+]]
 // CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[ARRAYIDX]], i64 0, i64 1, !dbg [[DBG76]]

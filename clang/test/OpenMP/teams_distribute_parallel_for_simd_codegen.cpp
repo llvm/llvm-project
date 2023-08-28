@@ -1826,7 +1826,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // CHECK9-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
 // CHECK9-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP1]], 4
-// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 32, i1 false)
+// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 32, i8 0)
 // CHECK9-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK9-NEXT:    store i64 [[TMP1]], ptr [[TMP8]], align 8
 // CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -2202,7 +2202,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP6:%.*]] = mul nuw i32 [[TMP0]], 4
 // CHECK11-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
-// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes, i32 32, i1 false)
+// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes, i32 32, i8 0)
 // CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[TMP8]], align 4
 // CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -3413,7 +3413,7 @@ int main (int argc, char **argv) {
 // CHECK25-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // CHECK25-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
 // CHECK25-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP1]], 4
-// CHECK25-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 32, i1 false)
+// CHECK25-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 32, i8 0)
 // CHECK25-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK25-NEXT:    store i64 [[TMP1]], ptr [[TMP8]], align 8
 // CHECK25-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -4052,7 +4052,7 @@ int main (int argc, char **argv) {
 // CHECK27-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_CASTED]], align 4
 // CHECK27-NEXT:    [[TMP6:%.*]] = mul nuw i32 [[TMP0]], 4
 // CHECK27-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
-// CHECK27-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes, i32 32, i1 false)
+// CHECK27-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes, i32 32, i8 0)
 // CHECK27-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK27-NEXT:    store i32 [[TMP0]], ptr [[TMP8]], align 4
 // CHECK27-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0

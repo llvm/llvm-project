@@ -61,7 +61,7 @@ int f_va_callee(int, ...);
 // CHECK-NEXT:    [[TMP1:%.*]] = load [2 x i32], ptr [[DOTCOMPOUNDLITERAL1]], align 4
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[COERCE_DIVE]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BYVAL_TEMP]], ptr align 4 [[DOTCOMPOUNDLITERAL6]], i32 16, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BYVAL_TEMP]], ptr align 4 [[DOTCOMPOUNDLITERAL6]], i32 16, i8 0)
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 (i32, ...) @f_va_callee(i32 noundef 1, i32 noundef 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i32 [[TMP0]], [2 x i32] [[TMP1]], i64 [[TMP2]], ptr noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
@@ -207,16 +207,16 @@ double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[ARGP_CUR3:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT4:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR3]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS]], ptr align 4 [[ARGP_CUR3]], i32 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS]], ptr align 4 [[ARGP_CUR3]], i32 4, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR5:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT6:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR5]], i32 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT6]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SS]], ptr align 4 [[ARGP_CUR5]], i32 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SS]], ptr align 4 [[ARGP_CUR5]], i32 8, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR7:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT8:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR7]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT8]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGP_CUR7]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[TMP3]], i32 16, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[TMP3]], i32 16, i8 0)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP4]] to fp128

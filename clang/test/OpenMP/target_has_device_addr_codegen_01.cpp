@@ -174,7 +174,7 @@ int main() {
 // CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
 // CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 40, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 40, i8 0)
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[THIS1]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0

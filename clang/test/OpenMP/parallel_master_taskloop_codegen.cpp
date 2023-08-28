@@ -410,7 +410,7 @@ struct S {
 // CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_3:%.*]], ptr [[TMP19]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP20]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP22]], ptr align 8 [[AGG_CAPTURED]], i64 16, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP22]], ptr align 8 [[AGG_CAPTURED]], i64 16, i8 0)
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR__ADDR]], align 1
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP23]] to i1
 // CHECK1-NEXT:    [[TMP24:%.*]] = sext i1 [[TOBOOL]] to i32
@@ -807,7 +807,7 @@ struct S {
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_7:%.*]], ptr [[TMP13]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP14]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP16]], ptr align 8 [[AGG_CAPTURED]], i64 16, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP16]], ptr align 8 [[AGG_CAPTURED]], i64 16, i8 0)
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP14]], i32 0, i32 5
 // CHECK1-NEXT:    store i64 0, ptr [[TMP17]], align 8
 // CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP14]], i32 0, i32 6

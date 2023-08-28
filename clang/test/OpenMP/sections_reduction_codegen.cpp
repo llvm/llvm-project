@@ -195,7 +195,7 @@ int main() {
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[T_VAR]], align 4
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i8 0)
 // CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
@@ -318,13 +318,13 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP4]], i64 0, i64 0
 // CHECK1-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP5]], i64 0, i64 0
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[VAR3]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[VAR3]], i64 4, i8 0)
 // CHECK1-NEXT:    [[TMP16:%.*]] = load float, ptr [[T_VAR15]], align 4
 // CHECK1-NEXT:    [[CONV7:%.*]] = fptosi float [[TMP16]] to i32
 // CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP4]], i64 0, i64 1
 // CHECK1-NEXT:    store i32 [[CONV7]], ptr [[ARRAYIDX8]], align 4
 // CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP5]], i64 0, i64 1
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX9]], ptr align 4 [[VAR14]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX9]], ptr align 4 [[VAR14]], i64 4, i8 0)
 // CHECK1-NEXT:    br label [[DOTOMP_SECTIONS_EXIT]]
 // CHECK1:       .omp.sections.exit:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -354,7 +354,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP23]], [[TMP24]]
 // CHECK1-NEXT:    store float [[ADD]], ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIfEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL]], i64 4, i8 0)
 // CHECK1-NEXT:    [[CALL10:%.*]] = call noundef float @_ZN1SIfEcvfEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]])
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[CALL10]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -366,7 +366,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP25:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[TOBOOL12]], [[LAND_RHS]] ]
 // CHECK1-NEXT:    [[CONV13:%.*]] = uitofp i1 [[TMP25]] to float
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]], float noundef [[CONV13]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP3]], align 4
 // CHECK1-NEXT:    [[TMP27:%.*]] = load float, ptr [[T_VAR15]], align 4
@@ -388,7 +388,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP31:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP30]] monotonic, align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[CALL15:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIfEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL15]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL15]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[CALL17:%.*]] = call noundef float @_ZN1SIfEcvfEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]])
@@ -402,7 +402,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP32:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE2]] ], [ [[TOBOOL21]], [[LAND_RHS19]] ]
 // CHECK1-NEXT:    [[CONV23:%.*]] = uitofp i1 [[TMP32]] to float
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP16]], float noundef [[CONV23]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP16]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP16]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[TMP33:%.*]] = load float, ptr [[T_VAR15]], align 4
@@ -471,7 +471,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP20]], [[TMP21]]
 // CHECK1-NEXT:    store float [[ADD]], ptr [[TMP7]], align 4
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIfEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP11]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP9]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP11]], ptr align 4 [[CALL]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP11]], ptr align 4 [[CALL]], i64 4, i8 0)
 // CHECK1-NEXT:    [[CALL2:%.*]] = call noundef float @_ZN1SIfEcvfEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP15]])
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[CALL2]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -483,7 +483,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP22:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TOBOOL4]], [[LAND_RHS]] ]
 // CHECK1-NEXT:    [[CONV:%.*]] = uitofp i1 [[TMP22]] to float
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]], float noundef [[CONV]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP15]], ptr align 4 [[REF_TMP]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP15]], ptr align 4 [[REF_TMP]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP23:%.*]] = load float, ptr [[TMP19]], align 4
 // CHECK1-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP17]], align 4
@@ -545,7 +545,7 @@ int main() {
 // CHECK1-NEXT:    [[VAR1:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK1-NEXT:    store i32 0, ptr [[T_VAR]], align 4
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i8 0)
 // CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
@@ -707,7 +707,7 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_SECTIONS_EXIT]]
 // CHECK1:       .omp.sections.case6:
 // CHECK1-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[TMP5]], i64 0, i64 0
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[VAR3]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[VAR3]], i64 4, i8 0)
 // CHECK1-NEXT:    br label [[DOTOMP_SECTIONS_EXIT]]
 // CHECK1:       .omp.sections.exit:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -737,7 +737,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP22]], [[TMP23]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIiEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL]], i64 4, i8 0)
 // CHECK1-NEXT:    [[CALL8:%.*]] = call noundef i32 @_ZN1SIiEcviEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]])
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[CALL8]], 0
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -749,7 +749,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP24:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE1]] ], [ [[TOBOOL10]], [[LAND_RHS]] ]
 // CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TMP24]] to i32
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]], i32 noundef [[CONV]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[T_VAR15]], align 4
@@ -771,7 +771,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP30:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP29]] monotonic, align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[CALL12:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIiEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL12]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[CALL12]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[CALL14:%.*]] = call noundef i32 @_ZN1SIiEcviEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]])
@@ -785,7 +785,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP31:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE2]] ], [ [[TOBOOL18]], [[LAND_RHS16]] ]
 // CHECK1-NEXT:    [[CONV20:%.*]] = zext i1 [[TMP31]] to i32
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]], i32 noundef [[CONV20]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP13]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP2]], ptr align 4 [[REF_TMP13]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]]) #[[ATTR4]]
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[TMP32:%.*]] = load i32, ptr [[T_VAR15]], align 4
@@ -828,7 +828,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP20]], [[TMP21]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[TMP7]], align 4
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIiEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP11]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP9]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP11]], ptr align 4 [[CALL]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP11]], ptr align 4 [[CALL]], i64 4, i8 0)
 // CHECK1-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZN1SIiEcviEv(ptr noundef nonnull align 4 dereferenceable(4) [[TMP15]])
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[CALL2]], 0
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -840,7 +840,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP22:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TOBOOL4]], [[LAND_RHS]] ]
 // CHECK1-NEXT:    [[CONV:%.*]] = zext i1 [[TMP22]] to i32
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]], i32 noundef [[CONV]])
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP15]], ptr align 4 [[REF_TMP]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP15]], ptr align 4 [[REF_TMP]], i64 4, i8 0)
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP19]], align 4
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP17]], align 4

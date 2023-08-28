@@ -68,7 +68,7 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    [[CONV2:%.*]] = sext i32 [[TMP12]] to i64
 // CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[CONV2]], 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 24, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes, i64 24, i8 0)
 // CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP14]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -144,7 +144,7 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
 // CHECK-NEXT:    [[TMP53:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    [[CONV7:%.*]] = sext i32 [[TMP53]] to i64
 // CHECK-NEXT:    [[TMP54:%.*]] = mul nuw i64 [[CONV7]], 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES11]], ptr align 8 @.offload_sizes.1, i64 24, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES11]], ptr align 8 @.offload_sizes.1, i64 24, i8 0)
 // CHECK-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK-NEXT:    store i64 [[TMP44]], ptr [[TMP55]], align 8
 // CHECK-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0

@@ -477,7 +477,7 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:    store i64 [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[Y1]], ptr [[Y_ADDR2]], align 8
 // CHECK17-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK17-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A3]], ptr align 4 [[TMP0]], i64 8, i1 false)
+// CHECK17-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A3]], ptr align 4 [[TMP0]], i64 8, i8 0)
 // CHECK17-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_master(ptr @[[GLOB1]], i32 [[TMP2]])

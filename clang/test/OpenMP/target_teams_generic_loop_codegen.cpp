@@ -1583,7 +1583,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
 // IR-GPU-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i8 0)
 // IR-GPU-NEXT:    br label [[IFCONT6:%.*]]
 // IR-GPU:       else5:
 // IR-GPU-NEXT:    br label [[IFCONT6]]
@@ -1728,7 +1728,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
 // IR-GPU-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i8 0)
 // IR-GPU-NEXT:    br label [[IFCONT6:%.*]]
 // IR-GPU:       else5:
 // IR-GPU-NEXT:    br label [[IFCONT6]]
@@ -1816,7 +1816,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[TMP8]], ptr align 4 [[TMP7]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[TMP8]], ptr align 4 [[TMP7]], i64 400, i8 0)
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -1864,7 +1864,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 128 [[TMP8]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 128 [[TMP8]], i64 400, i8 0)
 // IR-GPU-NEXT:    ret void
 //
 //

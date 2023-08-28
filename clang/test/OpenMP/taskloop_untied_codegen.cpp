@@ -12,7 +12,7 @@
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 3
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP4]], ptr align 4 [[WORK]], i64 400, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP4]], ptr align 4 [[WORK]], i64 400, i8 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP2]], i32 0, i32 2
 // CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP1]])

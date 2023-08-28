@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP44]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP45]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP47:%.*]] = load ptr, ptr [[TMP46]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP47]], ptr align 8 [[AGG_CAPTURED]], i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP47]], ptr align 8 [[AGG_CAPTURED]], i64 8, i8 0)
 // CHECK1-NEXT:    [[TMP48:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP44]])
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP49:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
@@ -493,7 +493,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP12]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP13]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP14]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP15]], ptr align 8 [[AGG_CAPTURED]], i64 40, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP15]], ptr align 8 [[AGG_CAPTURED]], i64 40, i8 0)
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP12]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP16]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP3]], align 8

@@ -352,7 +352,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP85:%.*]] = ptrtoint ptr [[C14]] to i64
 // CHECK-NEXT:    [[TMP86:%.*]] = sub i64 [[TMP84]], [[TMP85]]
 // CHECK-NEXT:    [[TMP87:%.*]] = sdiv exact i64 [[TMP86]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES21]], ptr align 8 @.offload_sizes.4, i64 24, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES21]], ptr align 8 @.offload_sizes.4, i64 24, i8 0)
 // CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS18]], i32 0, i32 0
 // CHECK-NEXT:    store i64 [[TMP75]], ptr [[TMP88]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS19]], i32 0, i32 0
