@@ -7478,10 +7478,6 @@ StmtResult
 TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
                                               bool IsStmtExpr) {
   Sema::CompoundScopeRAII CompoundScope(getSema());
-  Sema::FPFeaturesStateRAII FPSave(getSema());
-  if (S->hasStoredFPFeatures())
-    getSema().resetFPOptions(
-        S->getStoredFPFeatures().applyOverrides(getSema().getLangOpts()));
 
   const Stmt *ExprResult = S->getStmtExprResult();
   bool SubStmtInvalid = false;
