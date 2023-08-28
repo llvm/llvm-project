@@ -95,14 +95,29 @@ void BoolType::print(mlir::AsmPrinter &printer) const {}
 //===----------------------------------------------------------------------===//
 
 Type StructType::parse(mlir::AsmParser &parser) {
+  const auto loc = parser.getCurrentLocation();
   llvm::SmallVector<mlir::Type> members;
   mlir::StringAttr id;
   bool body = false;
   bool packed = false;
   mlir::cir::ASTRecordDeclAttr ast = nullptr;
+  RecordKind kind;
 
   if (parser.parseLess())
     return {};
+
+  // TODO(cir): in the future we should probably separate types for different
+  // source language declarations such as cir.class, cir.union, and cir.struct
+  if (parser.parseOptionalKeyword("struct").succeeded())
+    kind = RecordKind::Struct;
+  else if (parser.parseOptionalKeyword("union").succeeded())
+    kind = RecordKind::Union;
+  else if (parser.parseOptionalKeyword("class").succeeded())
+    kind = RecordKind::Class;
+  else {
+    parser.emitError(loc, "unknown struct type");
+    return {};
+  }
 
   if (parser.parseAttribute(id))
     return {};
@@ -130,12 +145,26 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  return StructType::get(parser.getContext(), members, id, body, packed,
+  return StructType::get(parser.getContext(), members, id, body, packed, kind,
                          std::nullopt);
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
-  printer << '<' << getTypeName() << " ";
+  printer << '<';
+
+  switch (getKind()) {
+  case RecordKind::Struct:
+    printer << "struct ";
+    break;
+  case RecordKind::Union:
+    printer << "union ";
+    break;
+  case RecordKind::Class:
+    printer << "class ";
+    break;
+  }
+
+  printer << getTypeName() << " ";
 
   if (getPacked())
     printer << "packed ";

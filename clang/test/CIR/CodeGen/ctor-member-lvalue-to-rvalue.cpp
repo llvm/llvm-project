@@ -6,8 +6,8 @@ struct String {
   long size;
   String(const String &s) : size{s.size} {}
 // CHECK: cir.func linkonce_odr @_ZN6StringC2ERKS_
-// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22struct2EString22>, cir.ptr <!cir.ptr<!ty_22struct2EString22>>, ["this", init] {alignment = 8 : i64}
-// CHECK:     %1 = cir.alloca !cir.ptr<!ty_22struct2EString22>, cir.ptr <!cir.ptr<!ty_22struct2EString22>>, ["s", init] {alignment = 8 : i64}
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22String22>, cir.ptr <!cir.ptr<!ty_22String22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:     %1 = cir.alloca !cir.ptr<!ty_22String22>, cir.ptr <!cir.ptr<!ty_22String22>>, ["s", init] {alignment = 8 : i64}
 // CHECK:     cir.store %arg0, %0
 // CHECK:     cir.store %arg1, %1
 // CHECK:     %2 = cir.load %0
@@ -28,10 +28,10 @@ void foo() {
   // FIXME: s1 shouldn't be uninitialized.
 
   //  cir.func @_Z3foov() {
-  //   %0 = cir.alloca !ty_22struct2EString22, cir.ptr <!ty_22struct2EString22>, ["s"] {alignment = 8 : i64}
-  //   %1 = cir.alloca !ty_22struct2EString22, cir.ptr <!ty_22struct2EString22>, ["s1"] {alignment = 8 : i64}
-  //   cir.call @_ZN6StringC2Ev(%0) : (!cir.ptr<!ty_22struct2EString22>) -> ()
-  //   cir.call @_ZN6StringC2ERKS_(%1, %0) : (!cir.ptr<!ty_22struct2EString22>, !cir.ptr<!ty_22struct2EString22>) -> ()
+  //   %0 = cir.alloca !ty_22String22, cir.ptr <!ty_22String22>, ["s"] {alignment = 8 : i64}
+  //   %1 = cir.alloca !ty_22String22, cir.ptr <!ty_22String22>, ["s1"] {alignment = 8 : i64}
+  //   cir.call @_ZN6StringC2Ev(%0) : (!cir.ptr<!ty_22String22>) -> ()
+  //   cir.call @_ZN6StringC2ERKS_(%1, %0) : (!cir.ptr<!ty_22String22>, !cir.ptr<!ty_22String22>) -> ()
   //   cir.return
   // }
 }

@@ -110,12 +110,19 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     "mlir::StringAttr":$typeName,
     "bool":$body,
     "bool":$packed,
+    "mlir::cir::StructType::RecordKind":$kind,
     "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
   );
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
+    enum RecordKind : uint32_t {
+      Class,
+      Union,
+      Struct
+    };
+
   private:
     // All these support lazily computation and storage
     // for the struct size and alignment.
@@ -127,6 +134,27 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     size_t getNumElements() const { return getMembers().size(); }
     bool isOpaque() const { return !getBody(); }
     bool isPadded(const ::mlir::DataLayout &dataLayout) const;
+
+    std::string getPrefixedName() {
+      const auto name = getTypeName().getValue().str();
+      switch (getKind()) {
+      case RecordKind::Class:
+        return "class." + name;
+      case RecordKind::Union:
+        return "union "+ name;
+      case RecordKind::Struct:
+        return "struct." + name;
+      }
+    }
+
+    /// Return whether this is a class declaration.
+    bool isClass() const { return getKind() == RecordKind::Class; }
+
+    /// Return whether this is a union declaration.
+    bool isUnion() const { return getKind() == RecordKind::Union; }
+
+    /// Return whether this is a struct declaration.
+    bool isStruct() const { return getKind() == RecordKind::Struct; }
   }];
 
   let extraClassDefinition = [{

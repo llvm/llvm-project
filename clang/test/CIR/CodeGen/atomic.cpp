@@ -7,4 +7,4 @@ typedef struct _a {
 
 void m() { at y; }
 
-// CHECK: !ty_22struct2E_a22 = !cir.struct<"struct._a" {!s32i}>
+// CHECK: !ty_22_a22 = !cir.struct<struct "_a" {!s32i}>

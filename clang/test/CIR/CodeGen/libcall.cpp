@@ -59,5 +59,5 @@ void t(const char* fmt, ...) {
 
 // CHECK: %10 = cir.load %1 : cir.ptr <!u64i>, !u64i
 // CHECK: %11 = cir.load %3 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-// CHECK: %12 = cir.load %4 : cir.ptr <!cir.ptr<!ty_22struct2E__va_list_tag22>>, !cir.ptr<!ty_22struct2E__va_list_tag22>
+// CHECK: %12 = cir.load %4 : cir.ptr <!cir.ptr<!ty_22__va_list_tag22>>, !cir.ptr<!ty_22__va_list_tag22>
 // CHECK: %13 = cir.call @__vsnprintf_chk(%6, %8, %9, %10, %11, %12)

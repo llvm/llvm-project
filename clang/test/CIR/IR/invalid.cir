@@ -309,7 +309,7 @@ module {
 
   cir.global external @type_info_B = #cir.typeinfo<{ // expected-error {{element at index 0 has type '!cir.ptr<!cir.int<u, 8>>' but return type for this element is '!cir.ptr<!cir.int<u, 32>>'}}
     #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<!u8i>}>
-    : !cir.struct<"" {!cir.ptr<!u32i>}>
+    : !cir.struct<struct "" {!cir.ptr<!u32i>}>
 } // expected-error {{'cir.global' expected constant attribute to match type}}
 
 // -----

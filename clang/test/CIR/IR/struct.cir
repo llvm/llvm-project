@@ -1,21 +1,22 @@
-// RUN: cir-opt %s | cir-opt | FileCheck %s
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
 
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
-!ty_2222 = !cir.struct<"" {!cir.array<!cir.ptr<!u8i> x 5>}>
-!ty_22221 = !cir.struct<"" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!ty_22class2EA22 = !cir.struct<"class.A" incomplete #cir.recdecl.ast>
-// CHECK: !ty_22i22 = !cir.struct<"i" incomplete>
-// CHECK: !ty_22S22 = !cir.struct<"S" {!u8i, !u16i, !u32i}>
-!ty_22struct2ES22 = !cir.struct<"struct.S" {!s32i, !s32i}>
+!ty_2222 = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 5>}>
+!ty_22221 = !cir.struct<struct "" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+!ty_22A22 = !cir.struct<class "A" incomplete #cir.recdecl.ast>
+!ty_22i22 = !cir.struct<union "i" incomplete>
+!ty_22S22 = !cir.struct<struct "S" {!u8i, !u16i, !u32i}>
+!ty_22S122 = !cir.struct<struct "S1" {!s32i, !s32i}>
 
 module  {
   cir.func @structs() {
-    %0 = cir.alloca !cir.ptr<!cir.struct<"S" {!u8i, !u16i, !u32i}>>, cir.ptr <!cir.ptr<!cir.struct<"S" {!u8i, !u16i, !u32i}>>>, ["s", init]
-    %1 = cir.alloca !cir.ptr<!cir.struct<"i" incomplete>>, cir.ptr <!cir.ptr<!cir.struct<"i" incomplete>>>, ["i", init]
+    %0 = cir.alloca !cir.ptr<!cir.struct<struct "S" {!u8i, !u16i, !u32i}>>, cir.ptr <!cir.ptr<!cir.struct<struct "S" {!u8i, !u16i, !u32i}>>>, ["s", init]
+    %1 = cir.alloca !cir.ptr<!cir.struct<union "i" incomplete>>, cir.ptr <!cir.ptr<!cir.struct<union "i" incomplete>>>, ["i", init]
     cir.return
   }
 
@@ -24,8 +25,8 @@ module  {
 // CHECK:     %1 = cir.alloca !cir.ptr<!ty_22i22>, cir.ptr <!cir.ptr<!ty_22i22>>, ["i", init]
 
   cir.func @shouldSuccessfullyParseConstStructAttrs() {
-    %0 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22struct2ES22) : !ty_22struct2ES22
-    // CHECK: cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22struct2ES22) : !ty_22struct2ES22
+    %0 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122) : !ty_22S122
+    // CHECK: cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122) : !ty_22S122
     cir.return
   }
 }

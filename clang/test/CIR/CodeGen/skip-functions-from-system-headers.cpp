@@ -15,4 +15,4 @@ void test() {
 // CHECK-NOT: cir.func linkonce_odr @_ZN6StringC1EPKc
 
 // CHECK: cir.func @_Z4testv()
-// CHECK:   cir.call @_ZN6StringC1Ev(%0) : (!cir.ptr<!ty_22class2EString22>) -> ()
+// CHECK:   cir.call @_ZN6StringC1Ev(%0) : (!cir.ptr<!ty_22String22>) -> ()

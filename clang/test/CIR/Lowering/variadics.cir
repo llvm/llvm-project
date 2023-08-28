@@ -5,30 +5,30 @@
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 
-!ty_22struct2E__va_list_tag22 = !cir.struct<"struct.__va_list_tag" {!u32i, !u32i, !cir.ptr<!u8i>, !cir.ptr<!u8i>} #cir.recdecl.ast>
+!ty_22__va_list_tag22 = !cir.struct<struct "__va_list_tag" {!u32i, !u32i, !cir.ptr<!u8i>, !cir.ptr<!u8i>} #cir.recdecl.ast>
 
 module {
   cir.func @average(%arg0: !s32i, ...) -> !s32i {
     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["count", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
-    %2 = cir.alloca !cir.array<!ty_22struct2E__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22struct2E__va_list_tag22 x 1>>, ["args"] {alignment = 16 : i64}
-    %3 = cir.alloca !cir.array<!ty_22struct2E__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22struct2E__va_list_tag22 x 1>>, ["args_copy"] {alignment = 16 : i64}
+    %2 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22__va_list_tag22 x 1>>, ["args"] {alignment = 16 : i64}
+    %3 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22__va_list_tag22 x 1>>, ["args_copy"] {alignment = 16 : i64}
     cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
-    %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22struct2E__va_list_tag22 x 1>>), !cir.ptr<!ty_22struct2E__va_list_tag22>
-    cir.va.start %4 : !cir.ptr<!ty_22struct2E__va_list_tag22>
+    %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
+    cir.va.start %4 : !cir.ptr<!ty_22__va_list_tag22>
     //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vastart %{{[0-9]+}} : !llvm.ptr
-    %5 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!ty_22struct2E__va_list_tag22 x 1>>), !cir.ptr<!ty_22struct2E__va_list_tag22>
-    %6 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22struct2E__va_list_tag22 x 1>>), !cir.ptr<!ty_22struct2E__va_list_tag22>
-    cir.va.copy %6 to %5 : !cir.ptr<!ty_22struct2E__va_list_tag22>, !cir.ptr<!ty_22struct2E__va_list_tag22>
+    %5 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
+    %6 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
+    cir.va.copy %6 to %5 : !cir.ptr<!ty_22__va_list_tag22>, !cir.ptr<!ty_22__va_list_tag22>
     //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vacopy %13 to %{{[0-9]+}} : !llvm.ptr, !llvm.ptr
-    %7 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22struct2E__va_list_tag22 x 1>>), !cir.ptr<!ty_22struct2E__va_list_tag22>
-    cir.va.end %7 : !cir.ptr<!ty_22struct2E__va_list_tag22>
+    %7 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
+    cir.va.end %7 : !cir.ptr<!ty_22__va_list_tag22>
     //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vaend %{{[0-9]+}} : !llvm.ptr
