@@ -33,6 +33,8 @@
  *
  *******************************************************************************/
 
-void kernel source1(__global int *j) {
-  *j += 2;
+#include "include-nested.h"
+
+void kernel nested2(__global int *j) {
+  *j = FOO;
 }

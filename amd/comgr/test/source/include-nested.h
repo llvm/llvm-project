@@ -31,8 +31,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
  * THE SOFTWARE.
  *
- *******************************************************************************/
+ ******************************************************************************/
 
-void kernel source1(__global int *j) {
-  *j += 2;
-}
+#define FOO 1
+
+void kernel nested1(__global int *j);
+void kernel nested2(__global int *j);

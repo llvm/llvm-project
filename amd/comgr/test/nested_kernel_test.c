@@ -35,15 +35,11 @@
 
 #include "amd_comgr.h"
 #include "common.h"
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <chrono>
-#include <thread>
-#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int compile_min(int index) {
-
+int main(int argc, char *argv[]) {
   char *BufSource1, *BufSource2, *BufInclude;
   size_t SizeSource1, SizeSource2, SizeInclude;
   amd_comgr_data_t DataSource1, DataSource2, DataInclude;
@@ -56,9 +52,9 @@ int compile_min(int index) {
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
-  SizeSource1 = setBuf(TEST_OBJ_DIR "/source1.cl", &BufSource1);
-  SizeSource2 = setBuf(TEST_OBJ_DIR "/source2.cl", &BufSource2);
-  SizeInclude = setBuf(TEST_OBJ_DIR "/include-macro.h", &BufInclude);
+  SizeSource1 = setBuf(TEST_OBJ_DIR "/nested-kernel1.cl", &BufSource1);
+  SizeSource2 = setBuf(TEST_OBJ_DIR "/nested-kernel2.cl", &BufSource2);
+  SizeInclude = setBuf(TEST_OBJ_DIR "/include-nested.h", &BufInclude);
 
   Status = amd_comgr_create_data_set(&DataSetIn);
   checkError(Status, "amd_comgr_create_data_set");
@@ -67,7 +63,7 @@ int compile_min(int index) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataSource1, SizeSource1, BufSource1);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSource1, "source1.cl");
+  Status = amd_comgr_set_data_name(DataSource1, "nested-kernel1.cl");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetIn, DataSource1);
   checkError(Status, "amd_comgr_data_set_add");
@@ -76,7 +72,7 @@ int compile_min(int index) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataSource2, SizeSource2, BufSource2);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSource2, "source2.cl");
+  Status = amd_comgr_set_data_name(DataSource2, "nested-kernel2.cl");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetIn, DataSource2);
   checkError(Status, "amd_comgr_data_set_add");
@@ -85,7 +81,7 @@ int compile_min(int index) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataInclude, SizeInclude, BufInclude);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataInclude, "include-macro.h");
+  Status = amd_comgr_set_data_name(DataInclude, "include-nested.h");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetIn, DataInclude);
   checkError(Status, "amd_comgr_data_set_add");
@@ -96,7 +92,7 @@ int compile_min(int index) {
                                               AMD_COMGR_LANGUAGE_OPENCL_1_2);
   checkError(Status, "amd_comgr_action_info_set_language");
   Status = amd_comgr_action_info_set_isa_name(DataAction,
-                                              "amdgcn-amd-amdhsa--gfx900");
+                                              "amdgcn-amd-amdhsa--gfx803");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
   Status = amd_comgr_action_info_set_option_list(DataAction, CodeGenOptions,
                                                  CodeGenOptionsCount);
@@ -198,18 +194,4 @@ int compile_min(int index) {
   free(BufSource1);
   free(BufSource2);
   free(BufInclude);
-
-  return 0;
-}
-
-int main(int argc, char *argv[]) {
-
-  std::vector<std::thread> compile_threads;
-
-  for (int i = 0; i < 30; i++)
-    compile_threads.push_back(std::thread (compile_min, i));
-
-  for (int i = 0; i < compile_threads.size(); i++)
-    compile_threads[i].join();
-
 }

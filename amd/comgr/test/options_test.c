@@ -197,7 +197,7 @@ void testFlatSplitting() {
   amd_comgr_status_t Status;
 
   SizeSource = setBuf(TEST_OBJ_DIR "/source1.cl", &BufSource);
-  SizeInclude = setBuf(TEST_OBJ_DIR "/include-a.h", &BufInclude);
+  SizeInclude = setBuf(TEST_OBJ_DIR "/include-macro.h", &BufInclude);
 
   Status = amd_comgr_create_data_set(&DataSetIn);
   checkError(Status, "amd_comgr_create_data_set");
@@ -215,7 +215,7 @@ void testFlatSplitting() {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataInclude, SizeInclude, BufInclude);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataInclude, "include-a.h");
+  Status = amd_comgr_set_data_name(DataInclude, "include-macro.h");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetIn, DataInclude);
   checkError(Status, "amd_comgr_data_set_add");

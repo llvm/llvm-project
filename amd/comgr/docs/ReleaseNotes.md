@@ -126,6 +126,8 @@ output for Comgr actions. This can help us debug issues more quickly in cases
 where reporters provide Comgr logs.
 - Fix multiple bugs with mangled names test
 - Update default arch for test binaries from gfx830 to gfx900
+- Refactor nested kernel behavior into new test, as this behavior is less common
+and shouldn't be featured in the baseline tests
 
 New Targets
 -----------
