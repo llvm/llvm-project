@@ -32,8 +32,15 @@ struct ProcInfo {
 };
 
 struct FeatureInfo {
-  StringLiteral Name;
+  StringLiteral NameWithPlus;
   FeatureBitset ImpliedFeatures;
+
+  StringRef getName(bool WithPlus = false) const {
+    assert(NameWithPlus[0] == '+' && "Expected string to start with '+'");
+    if (WithPlus)
+      return NameWithPlus;
+    return NameWithPlus.drop_front();
+  }
 };
 
 } // end anonymous namespace
@@ -603,18 +610,13 @@ constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
 constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
-#define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},
-#include "llvm/TargetParser/X86TargetParser.def"
-};
-
-constexpr FeatureInfo FeatureInfos_WithPLUS[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
                                   SmallVectorImpl<StringRef> &EnabledFeatures,
-                                  bool IfNeedPlus) {
+                                  bool NeedPlus) {
   auto I = llvm::find_if(Processors,
                          [&](const ProcInfo &P) { return P.Name == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
@@ -627,11 +629,8 @@ void llvm::X86::getFeaturesForCPU(StringRef CPU,
 
   // Add the string version of all set bits.
   for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (Bits[i] && !FeatureInfos[i].Name.empty() &&
-        !FeatureInfos_WithPLUS[i].Name.empty()){
-      EnabledFeatures.push_back(IfNeedPlus ? FeatureInfos_WithPLUS[i].Name
-                                           : FeatureInfos[i].Name);
-    }
+    if (Bits[i] && !FeatureInfos[i].getName(NeedPlus).empty())
+      EnabledFeatures.push_back(FeatureInfos[i].getName(NeedPlus));
 }
 
 // For each feature that is (transitively) implied by this feature, set it.
@@ -668,8 +667,9 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
 void llvm::X86::updateImpliedFeatures(
     StringRef Feature, bool Enabled,
     StringMap<bool> &Features) {
-  auto I = llvm::find_if(
-      FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
+  auto I = llvm::find_if(FeatureInfos, [&](const FeatureInfo &FI) {
+    return FI.getName() == Feature;
+  });
   if (I == std::end(FeatureInfos)) {
     // FIXME: This shouldn't happen, but may not have all features in the table
     // yet.
@@ -685,8 +685,8 @@ void llvm::X86::updateImpliedFeatures(
 
   // Update the map entry for all implied features.
   for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (ImpliedBits[i] && !FeatureInfos[i].Name.empty())
-      Features[FeatureInfos[i].Name] = Enabled;
+    if (ImpliedBits[i] && !FeatureInfos[i].getName().empty())
+      Features[FeatureInfos[i].getName()] = Enabled;
 }
 
 char llvm::X86::getCPUDispatchMangling(StringRef CPU) {
