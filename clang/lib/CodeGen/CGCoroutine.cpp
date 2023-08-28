@@ -201,6 +201,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CGF.CurCoro.InSuspendBlock = true;
   auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
   CGF.CurCoro.InSuspendBlock = false;
+
   if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
     // Veto suspension if requested by bool returning await_suspend.
     BasicBlock *RealSuspendBlock =

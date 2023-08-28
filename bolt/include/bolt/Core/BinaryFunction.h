@@ -1191,7 +1191,7 @@ public:
 
     if (!Islands->FunctionConstantIslandLabel) {
       Islands->FunctionConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_const_island");
+          BC.Ctx->getOrCreateSymbol("func_const_island@" + getOneName());
     }
     return Islands->FunctionConstantIslandLabel;
   }
@@ -1201,7 +1201,7 @@ public:
 
     if (!Islands->FunctionColdConstantIslandLabel) {
       Islands->FunctionColdConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_cold_const_island");
+          BC.Ctx->getOrCreateSymbol("func_cold_const_island@" + getOneName());
     }
     return Islands->FunctionColdConstantIslandLabel;
   }
@@ -1221,7 +1221,7 @@ public:
   }
 
   /// Update output values of the function based on the final \p Layout.
-  void updateOutputValues(const MCAsmLayout &Layout);
+  void updateOutputValues(const BOLTLinker &Linker);
 
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
