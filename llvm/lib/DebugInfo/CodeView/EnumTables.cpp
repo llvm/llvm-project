@@ -434,6 +434,20 @@ static const EnumEntry<uint16_t> LabelTypeEnum[] = {
     CV_ENUM_CLASS_ENT(LabelType, Far),
 };
 
+static const EnumEntry<uint16_t> JumpTableEntrySizeNames[] = {
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt32),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Pointer),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, UInt16ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int8ShiftLeft),
+    CV_ENUM_CLASS_ENT(JumpTableEntrySize, Int16ShiftLeft),
+};
+
 namespace llvm {
 namespace codeview {
 
@@ -557,6 +571,10 @@ ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum() {
 
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum() {
   return ArrayRef(LabelTypeEnum);
+}
+
+ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames() {
+  return ArrayRef(JumpTableEntrySizeNames);
 }
 
 } // end namespace codeview

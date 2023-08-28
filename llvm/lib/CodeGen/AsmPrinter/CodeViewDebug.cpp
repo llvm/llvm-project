@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -1243,6 +1244,8 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     if (SP != nullptr)
       emitDebugInfoForUDTs(LocalUDTs);
 
+    emitDebugInfoForJumpTables(FI);
+
     // We're done with this function.
     emitEndSymbolRecord(SymbolKind::S_PROC_ID_END);
   }
@@ -1578,6 +1581,11 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
       }
     }
   }
+
+  // Mark branches that may potentially be using jump tables with labels.
+  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+                 llvm::Triple::ArchType::thumb;
+  discoverJumpTableBranches(MF, isThumb);
 }
 
 static bool shouldEmitUdt(const DIType *T) {
@@ -3083,6 +3091,10 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
     }
   }
 
+  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+                 llvm::Triple::ArchType::thumb;
+  collectDebugInfoForJumpTables(MF, isThumb);
+
   CurFn->Annotations = MF->getCodeViewAnnotations();
 
   CurFn->End = Asm->getFunctionEnd();
@@ -3440,5 +3452,128 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
                           : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
     APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
     emitConstantSymbolRecord(DIGV->getType(), Value, QualifiedName);
+  }
+}
+
+void forEachJumpTableBranch(
+    const MachineFunction *MF, bool isThumb,
+    const std::function<void(const MachineJumpTableInfo &, const MachineInstr &,
+                             int64_t)> &Callback) {
+  auto JTI = MF->getJumpTableInfo();
+  if (JTI && !JTI->isEmpty()) {
+    for (const auto &MBB : *MF) {
+      // Search for indirect branches...
+      const auto LastMI = MBB.getFirstTerminator();
+      if (LastMI != MBB.end() && LastMI->isIndirectBranch()) {
+        bool foundJTI = false;
+        if (isThumb) {
+          // ... that directly use jump table operands.
+          // NOTE: ARM uses pattern matching to lower its BR_JT SDNode to
+          // machine instructions, hence inserting a JUMP_TABLE_DEBUG_INFO node
+          // interferes with this process *but* the resulting pseudo-instruction
+          // uses a Jump Table operand, so extract the jump table index directly
+          // from that.
+          for (const auto &MO : LastMI->operands()) {
+            if (MO.isJTI()) {
+              foundJTI = true;
+              Callback(*JTI, *LastMI, MO.getIndex());
+              break;
+            }
+          }
+        } else {
+          // ... that have jump table debug info.
+          // NOTE: The debug info is inserted as a JUMP_TABLE_DEBUG_INFO node
+          // when lowering the BR_JT SDNode to an indirect branch.
+          for (auto I = MBB.instr_rbegin(), E = MBB.instr_rend(); I != E; ++I) {
+            if (I->isJumpTableDebugInfo()) {
+              foundJTI = true;
+              Callback(*JTI, *LastMI, I->getOperand(0).getImm());
+              break;
+            }
+          }
+        }
+        assert(foundJTI);
+      }
+    }
+  }
+}
+
+void CodeViewDebug::discoverJumpTableBranches(const MachineFunction *MF,
+                                              bool isThumb) {
+  forEachJumpTableBranch(
+      MF, isThumb,
+      [this](const MachineJumpTableInfo &, const MachineInstr &BranchMI,
+             int64_t) { requestLabelBeforeInsn(&BranchMI); });
+}
+
+void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
+                                                  bool isThumb) {
+  forEachJumpTableBranch(
+      MF, isThumb,
+      [this, MF](const MachineJumpTableInfo &JTI, const MachineInstr &BranchMI,
+                 int64_t JumpTableIndex) {
+        // For label-difference jump tables, find the base expression.
+        // Otherwise the jump table uses an absolute address (so no base
+        // is required).
+        const MCSymbol *Base;
+        uint64_t BaseOffset = 0;
+        const MCSymbol *Branch = getLabelBeforeInsn(&BranchMI);
+        JumpTableEntrySize EntrySize;
+        switch (JTI.getEntryKind()) {
+        case MachineJumpTableInfo::EK_Custom32:
+        case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+        case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+          llvm_unreachable(
+              "EK_Custom32, EK_GPRel32BlockAddress, and "
+              "EK_GPRel64BlockAddress should never be emitted for COFF");
+        case MachineJumpTableInfo::EK_BlockAddress:
+          // Each entry is an absolute address.
+          EntrySize = JumpTableEntrySize::Pointer;
+          Base = nullptr;
+          break;
+        case MachineJumpTableInfo::EK_Inline:
+        case MachineJumpTableInfo::EK_LabelDifference32:
+          // Ask the AsmPrinter.
+          std::tie(Base, BaseOffset, Branch, EntrySize) =
+              Asm->getCodeViewJumpTableInfo(JumpTableIndex, &BranchMI, Branch);
+          break;
+        default:
+          llvm_unreachable("Unknown JumpTableEntryKind");
+        }
+
+        CurFn->JumpTables.push_back(
+            {EntrySize, Base, BaseOffset, Branch,
+             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
+             JTI.getJumpTables()[JumpTableIndex].MBBs.size()});
+      });
+}
+
+void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
+  for (auto JumpTable : FI.JumpTables) {
+    MCSymbol *JumpTableEnd = beginSymbolRecord(SymbolKind::S_ARMSWITCHTABLE);
+    if (JumpTable.Base) {
+      OS.AddComment("Base offset");
+      OS.emitCOFFSecRel32(JumpTable.Base, JumpTable.BaseOffset);
+      OS.AddComment("Base section index");
+      OS.emitCOFFSectionIndex(JumpTable.Base);
+    } else {
+      OS.AddComment("Base offset");
+      OS.emitInt32(0);
+      OS.AddComment("Base section index");
+      OS.emitInt16(0);
+    }
+    OS.AddComment("Switch type");
+    OS.emitInt16(static_cast<uint16_t>(JumpTable.EntrySize));
+    OS.AddComment("Branch offset");
+    OS.emitCOFFSecRel32(JumpTable.Branch, /*Offset=*/0);
+    OS.AddComment("Table offset");
+    OS.emitCOFFSecRel32(JumpTable.Table, /*Offset=*/0);
+    OS.AddComment("Branch section index");
+    OS.emitCOFFSectionIndex(JumpTable.Branch);
+    OS.AddComment("Table section index");
+    OS.emitCOFFSectionIndex(JumpTable.Table);
+    OS.AddComment("Entries count");
+    OS.emitInt32(JumpTable.TableSize);
+    endSymbolRecord(JumpTableEnd);
   }
 }
