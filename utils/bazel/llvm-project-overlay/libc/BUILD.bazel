@@ -833,6 +833,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fputil_triple_double",
+    hdrs = ["src/__support/FPUtil/triple_double.h"],
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_dyadic_float",
     hdrs = ["src/__support/FPUtil/dyadic_float.h"],
     deps = [
@@ -1106,6 +1115,7 @@ libc_support_library(
     srcs = ["src/math/generic/common_constants.cpp"],
     hdrs = ["src/math/generic/common_constants.h"],
     deps = [
+        ":__support_fputil_triple_double",
         ":__support_number_pair",
         ":libc_root",
     ],
