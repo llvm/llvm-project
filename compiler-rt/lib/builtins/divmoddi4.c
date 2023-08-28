@@ -18,8 +18,8 @@ COMPILER_RT_ABI di_int __divmoddi4(di_int a, di_int b, di_int *rem) {
   const int bits_in_dword_m1 = (int)(sizeof(di_int) * CHAR_BIT) - 1;
   di_int s_a = a >> bits_in_dword_m1;                   // s_a = a < 0 ? -1 : 0
   di_int s_b = b >> bits_in_dword_m1;                   // s_b = b < 0 ? -1 : 0
-  a = (a ^ s_a) - s_a;                                  // negate if s_a == -1
-  b = (b ^ s_b) - s_b;                                  // negate if s_b == -1
+  a = (du_int)(a ^ s_a) - s_a;                          // negate if s_a == -1
+  b = (du_int)(b ^ s_b) - s_b;                          // negate if s_b == -1
   s_b ^= s_a;                                           // sign of quotient
   du_int r;
   di_int q = (__udivmoddi4(a, b, &r) ^ s_b) - s_b;      // negate if s_b == -1
