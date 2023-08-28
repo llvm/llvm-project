@@ -190,7 +190,7 @@ private:
   void mapAllocatableSections(BOLTLinker::SectionMapper MapSection);
 
   /// Update output object's values based on the final \p Layout.
-  void updateOutputValues(const MCAsmLayout &Layout);
+  void updateOutputValues(const BOLTLinker &Linker);
 
   /// Rewrite back all functions (hopefully optimized) that fit in the original
   /// memory footprint for that function. If the function is now larger and does
