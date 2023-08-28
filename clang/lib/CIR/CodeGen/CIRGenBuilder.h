@@ -27,10 +27,12 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 namespace cir {
@@ -185,11 +187,10 @@ public:
       assert(ta && "expected typed attribute member");
       members.push_back(ta.getType());
     }
-    auto *ctx = arrayAttr.getContext();
+
     if (!ty)
-      ty = mlir::cir::StructType::get(ctx, members, mlir::StringAttr::get(ctx),
-                                      /*body=*/true, packed,
-                                      /*ast=*/std::nullopt);
+      ty = getAnonStructTy(members, /*body=*/true, packed);
+
     auto sTy = ty.dyn_cast<mlir::cir::StructType>();
     assert(sTy && "expected struct type");
     return mlir::cir::ConstStructAttr::get(sTy, arrayAttr);
@@ -374,6 +375,25 @@ public:
     if (AddrSpace)
       llvm_unreachable("address space is NYI");
     return typeCache.VoidPtrTy;
+  }
+
+  /// Get a CIR anonymous struct type.
+  mlir::cir::StructType
+  getAnonStructTy(llvm::ArrayRef<mlir::Type> members, bool body,
+                  bool packed = false, const clang::RecordDecl *ast = nullptr) {
+    return getStructTy(members, "", body, packed, ast);
+  }
+
+  /// Get a CIR named struct type.
+  mlir::cir::StructType getStructTy(llvm::ArrayRef<mlir::Type> members,
+                                    llvm::StringRef name, bool body,
+                                    bool packed, const clang::RecordDecl *ast) {
+    const auto nameAttr = getStringAttr(name);
+    std::optional<mlir::cir::ASTRecordDeclAttr> astAttr = std::nullopt;
+    if (ast)
+      astAttr = getAttr<mlir::cir::ASTRecordDeclAttr>(ast);
+    return mlir::cir::StructType::get(getContext(), members, nameAttr, body,
+                                      packed, astAttr);
   }
 
   //
