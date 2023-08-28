@@ -100,7 +100,6 @@ enum enum2 {
   VALUE // expected-error{{redefinition of enumerator 'VALUE'}}
 };
 
-// rdar://44774672
 #ifdef CPP
 enum BigEnumerators : long {
   e1,

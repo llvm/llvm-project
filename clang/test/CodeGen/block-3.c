@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -fblocks -triple x86_64-apple-darwin10 
-// rdar://10001085
 
 int main(void) {
   ^{
@@ -8,7 +7,6 @@ int main(void) {
 }
 
 // PR13229
-// rdar://11777609
 typedef struct {} Z;
 
 typedef int (^B)(Z);

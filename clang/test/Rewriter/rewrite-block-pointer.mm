@@ -2,9 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Wno-address-of-temporary -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
 // RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc %s -o %t-modern-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Wno-address-of-temporary -D"SEL=void*" -D"__declspec(X)=" %t-modern-rw.cpp
-// radar 7638400
 
-// rdar://11375908
 typedef unsigned long size_t;
 
 typedef void * id;
@@ -21,7 +19,6 @@ static void enumerateIt(void (^block)(id, id, char *)) {
 }
 @end
 
-// radar 7651312
 void apply(void (^block)(int));
 
 static void x(int (^cmp)(int, int)) {
@@ -34,13 +31,11 @@ static void y(int (^cmp)(int, int)) {
     });
 }
 
-// radar 7659483
 void *_Block_copy(const void *aBlock);
 void x(void (^block)(void)) {
         block = ((__typeof(block))_Block_copy((const void *)(block)));
 }
 
-// radar 7682763
 @interface Y {
 @private
     id _private;
@@ -63,7 +58,6 @@ typedef void (^void_block_t)(void);
 
 @end
 
-// rdar: //8608902
 @protocol CoreDAVAccountInfoProvider;
 @protocol CodeProvider;
 typedef void (^BDVDiscoveryCompletionHandler)(int success, id<CoreDAVAccountInfoProvider> discoveredInfo);

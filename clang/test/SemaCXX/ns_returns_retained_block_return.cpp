@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fblocks -fobjc-arc -fsyntax-only -verify %s
 // expected-no-diagnostics
-// rdar://17259812
 
 typedef void (^BT) ();
 

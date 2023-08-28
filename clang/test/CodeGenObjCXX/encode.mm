@@ -53,7 +53,6 @@ class Int3 { int x, y, z; };
 }
 @end
 
-// rdar: // 8519948
 typedef float HGVec4f __attribute__ ((vector_size(16)));
 
 @interface RedBalloonHGXFormWrapper {
@@ -64,7 +63,6 @@ typedef float HGVec4f __attribute__ ((vector_size(16)));
 @implementation RedBalloonHGXFormWrapper
 @end
 
-// rdar://9357400
 namespace rdar9357400 {
   template<int Dim1 = -1, int Dim2 = -1> struct fixed {
       template<int D> struct rebind { typedef fixed<D> other; };
@@ -98,7 +96,6 @@ namespace rdar9357400 {
   extern const char gg[] = @encode(vector4f);
 }
 
-// rdar://9624314
 namespace rdar9624314 {
   struct B2 { int x; };
   struct B3 {};
@@ -195,7 +192,6 @@ struct CefBrowserImpl2 : public CefBrowser2 {};
 // CHECK: @g7 ={{.*}} constant [26 x i8] c"{CefBrowserImpl2=^^?^^?i}\00"
 extern const char g7[] = @encode(CefBrowserImpl2);
 
-// <rdar://problem/11324167>
 struct Empty {};
 
 struct X : Empty { 
