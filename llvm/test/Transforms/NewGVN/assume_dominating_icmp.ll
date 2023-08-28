@@ -23,7 +23,9 @@ define dso_local i32 @main(i1 %cond, i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP2]], [[NOT]]
 ; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[OR]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL7_NOT]], label [[IF_END10:%.*]], label [[WHILE_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    [[TOBOOL9_NOT:%.*]] = icmp eq i32 [[F_0]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL7_NOT]], [[TOBOOL9_NOT]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END10:%.*]], label [[WHILE_COND_PREHEADER:%.*]]
 ; CHECK:       while.cond.preheader:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       if.end10:
