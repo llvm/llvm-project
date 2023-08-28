@@ -16013,6 +16013,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       // been leftover. This ensures that these temporaries won't be picked up
       // for deletion in some later function.
       if (hasUncompilableErrorOccurred() ||
+          hasAnyUnrecoverableErrorsInThisFunction() ||
           getDiagnostics().getSuppressAllDiagnostics()) {
         DiscardCleanupsInEvaluationContext();
       }
