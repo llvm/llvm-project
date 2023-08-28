@@ -35,15 +35,15 @@ MATH_MANGLE(pow)(double x, double y)
     double ax = BUILTIN_ABS_F64(x);
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
-    double ay = BUILTIN_ABS_F64(y);
-    bool is_odd_y = is_odd_integer(ay);
+    bool is_odd_y = is_odd_integer(y);
 
     double ret = BUILTIN_COPYSIGN_F64(expylnx, is_odd_y ? x : 1.0);
 
     // Now all the edge cases
-    if (x < 0.0 && !is_integer(ay))
+    if (x < 0.0 && !is_integer(y))
         ret = QNAN_F64;
 
+    double ay = BUILTIN_ABS_F64(y);
     if (BUILTIN_ISINF_F64(ay)) {
         // FIXME: Missing backend optimization to save on
         // materialization cost of mixed sign constant infinities.

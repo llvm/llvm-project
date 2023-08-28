@@ -32,14 +32,14 @@ MATH_MANGLE(pow)(half x, half y)
     half ax = BUILTIN_ABS_F16(x);
     float p = compute_expylnx_f16(ax, y);
 
-    half ay = BUILTIN_ABS_F16(y);
-    bool is_odd_y = is_odd_integer(ay);
+    bool is_odd_y = is_odd_integer(y);
     half ret = BUILTIN_COPYSIGN_F16((half)p, (is_odd_y & (x < 0.0h)) ? -1.0f : 1.0f);
 
     // Now all the edge cases
-    if (x < 0.0h && !is_integer(ay))
+    if (x < 0.0h && !is_integer(y))
         ret = QNAN_F16;
 
+    half ay = BUILTIN_ABS_F16(y);
     if (BUILTIN_ISINF_F16(ay)) {
         // FIXME: Missing backend optimization to save on
         // materialization cost of mixed sign constant infinities.
