@@ -102,7 +102,7 @@ namespace {
 
 // Default filename used for profile generation.
 std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate ? "default_%m.proflite" : "default_%m.profraw";
+  return DebugInfoCorrelate ? "default_%p.proflite" : "default_%m.profraw";
 }
 
 class EmitAssemblyHelper {
