@@ -59,6 +59,7 @@ macro(test_fuzzer stdlib)
 
     string(TOUPPER ${arch} ARCH_UPPER_CASE)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}${STDLIB_CAPITALIZED}${OS_NAME}Config)
+    set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${stdlib_name}-${OS_NAME}")
 
     # LIT-based libFuzzer tests.
     configure_lit_site_cfg(
