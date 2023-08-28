@@ -458,8 +458,9 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  createOptionalValue(State.Env.getResultObjectLocation(*E),
-                      State.Env.getBoolLiteralValue(true), State.Env);
+  State.Env.setValue(
+      *E, createOptionalValue(State.Env.getResultObjectLocation(*E),
+                              State.Env.getBoolLiteralValue(true), State.Env));
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -543,7 +544,10 @@ void transferCallReturningOptional(const CallExpr *E,
     }
   }
 
-  createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
+  RecordValue &Val =
+      createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
+  if (E->isPRValue())
+    State.Env.setValue(*E, Val);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
