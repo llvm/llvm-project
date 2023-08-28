@@ -212,16 +212,10 @@ public:
   /// a specific pointer width.
   class ReflectionContextInterface {
   public:
-    /// Return a 32-bit reflection context.
+    /// Return a reflection context.
     static std::unique_ptr<ReflectionContextInterface>
-    CreateReflectionContext32(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
-        SwiftMetadataCache *swift_metadata_cache);
-
-    /// Return a 64-bit reflection context.
-    static std::unique_ptr<ReflectionContextInterface>
-    CreateReflectionContext64(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+    CreateReflectionContext(uint8_t pointer_size,
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool objc_interop,
         SwiftMetadataCache *swift_metadata_cache);
 
     virtual ~ReflectionContextInterface();

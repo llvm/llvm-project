@@ -386,37 +386,36 @@ public:
 } // namespace
 
 std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
-SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext32(
-    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
-    SwiftMetadataCache *swift_metadata_cache) {
+SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext(
+    uint8_t ptr_size, std::shared_ptr<swift::remote::MemoryReader> reader,
+    bool ObjCInterop, SwiftMetadataCache *swift_metadata_cache) {
   using ReflectionContext32ObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>>;
   using ReflectionContext32NoObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::NoObjCInterop<swift::RuntimeTarget<4>>>>>;
-  if (ObjCInterop)
-    return std::make_unique<ReflectionContext32ObjCInterop>(
-        reader, swift_metadata_cache);
-  return std::make_unique<ReflectionContext32NoObjCInterop>(
-      reader, swift_metadata_cache);
-}
-
-std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
-SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext64(
-    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
-    SwiftMetadataCache *swift_metadata_cache) {
   using ReflectionContext64ObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::WithObjCInterop<swift::RuntimeTarget<8>>>>>;
   using ReflectionContext64NoObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::NoObjCInterop<swift::RuntimeTarget<8>>>>>;
-  if (ObjCInterop)
-    return std::make_unique<ReflectionContext64ObjCInterop>(
+  if (ptr_size == 4) {
+    if (ObjCInterop)
+      return std::make_unique<ReflectionContext32ObjCInterop>(
+          reader, swift_metadata_cache);
+    return std::make_unique<ReflectionContext32NoObjCInterop>(
         reader, swift_metadata_cache);
-  return std::make_unique<ReflectionContext64NoObjCInterop>(
-      reader, swift_metadata_cache);
+  }
+  if (ptr_size == 8) {
+    if (ObjCInterop)
+      return std::make_unique<ReflectionContext64ObjCInterop>(
+          reader, swift_metadata_cache);
+    return std::make_unique<ReflectionContext64NoObjCInterop>(
+        reader, swift_metadata_cache);
+  }
+  return {};
 }
 
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::

@@ -517,23 +517,16 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
       objc_interop ? "with Objective-C interopability" : "Swift only";
 
   auto &triple = exe_module->GetArchitecture().GetTriple();
-  auto byte_size = m_process.GetAddressByteSize();
-  if (byte_size == 8) {
-    LLDB_LOGF(log, "Initializing a 64-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else if (byte_size == 4) {
-    LLDB_LOGF(log,
-              "Initializing a 32-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else {
-    LLDB_LOGF(log,
-              "Could not initialize reflection context for \"%s\"",
-              triple.str().c_str());
-  }
+  uint32_t ptr_size = m_process.GetAddressByteSize();
+  LLDB_LOG(log, "Initializing a {0}-bit reflection context ({1}) for \"{2}\"",
+           ptr_size * 8, triple.str(), objc_interop_msg);
+  if (ptr_size == 4 || ptr_size == 8)
+    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext(
+        ptr_size, this->GetMemoryReader(), objc_interop,
+        GetSwiftMetadataCache());
+  if (!m_reflection_ctx)
+    LLDB_LOG(log, "Could not initialize reflection context for \"{0}\"",
+             triple.str());
   // We set m_initialized_reflection_ctx to true here because
   // AddModuleToReflectionContext can potentially call into SetupReflection
   // again (which will early exit). This is safe to do since every other thread
