@@ -80,7 +80,7 @@ configure_file("source/source1.s" "source/source1.s" COPYONLY)
 configure_file("source/shared.cl" "source/shared.cl" COPYONLY)
 configure_file("source/source1.hip" "source/source1.hip" COPYONLY)
 configure_file("source/source2.hip" "source/source2.hip" COPYONLY)
-configure_file("source/name-expression.hip" "source/name_expression.hip" COPYONLY)
+configure_file("source/name-expression.hip" "source/name-expression.hip" COPYONLY)
 
 configure_file("source/square.hip" "source/square.hip" COPYONLY)
 configure_file("source/double.hip" "source/double.hip" COPYONLY)

@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
-  SizeSource = setBuf(TEST_OBJ_DIR "/name_expression.hip", &BufSource);
+  SizeSource = setBuf(TEST_OBJ_DIR "/name-expression.hip", &BufSource);
 
   Status = amd_comgr_create_data_set(&DataSetIn);
   checkError(Status, "amd_comgr_create_data_set");
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataSource, SizeSource, BufSource);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSource, "name_expression.hip");
+  Status = amd_comgr_set_data_name(DataSource, "name-expression.hip");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetIn, DataSource);
   checkError(Status, "amd_comgr_data_set_add");
