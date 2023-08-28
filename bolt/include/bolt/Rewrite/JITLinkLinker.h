@@ -17,7 +17,6 @@
 #include "bolt/Rewrite/ExecutableFileMemoryManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 
-#include <map>
 #include <memory>
 #include <vector>
 
@@ -35,7 +34,7 @@ private:
   std::unique_ptr<ExecutableFileMemoryManager> MM;
   jitlink::JITLinkDylib Dylib{"main"};
   std::vector<ExecutableFileMemoryManager::FinalizedAlloc> Allocs;
-  std::map<std::string, uint64_t> Symtab;
+  StringMap<SymbolInfo> Symtab;
 
 public:
   JITLinkLinker(BinaryContext &BC,
@@ -43,7 +42,7 @@ public:
   ~JITLinkLinker();
 
   void loadObject(MemoryBufferRef Obj, SectionsMapper MapSections) override;
-  std::optional<uint64_t> lookupSymbol(StringRef Name) const override;
+  std::optional<SymbolInfo> lookupSymbolInfo(StringRef Name) const override;
 
   static SmallVector<jitlink::Block *, 2>
   orderedBlocks(const jitlink::Section &Section);

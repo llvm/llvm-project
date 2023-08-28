@@ -20,7 +20,6 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/Utils.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -475,9 +474,6 @@ void MachORewriteInstance::emitAndLink() {
       object::ObjectFile::createObjectFile(ObjectMemBuffer->getMemBufferRef()),
       "error creating in-memory object");
   assert(Obj && "createObjectFile cannot return nullptr");
-
-  MCAsmLayout FinalLayout(
-      static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
 
   auto EFMM = std::make_unique<ExecutableFileMemoryManager>(*BC);
   EFMM->setNewSecPrefix(getNewSecPrefix());
