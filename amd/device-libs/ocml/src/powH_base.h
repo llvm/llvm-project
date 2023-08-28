@@ -29,6 +29,11 @@ static bool is_odd_integer(half ay) {
 CONSTATTR half
 MATH_MANGLE(pow)(half x, half y)
 {
+    if (x == 1.0h)
+        y = 1.0h;
+    if (y == 0.0h)
+        x = 1.0h;
+
     half ax = BUILTIN_ABS_F16(x);
     float p = compute_expylnx_f16(ax, y);
 
@@ -54,9 +59,6 @@ MATH_MANGLE(pow)(half x, half y)
 
     if (BUILTIN_ISUNORDERED_F16(x, y))
         ret = QNAN_F16;
-
-    if (x == 1.0h || y == 0.0h)
-        ret = 1.0h;
 
     return ret;
 }

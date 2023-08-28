@@ -32,6 +32,11 @@ static bool is_odd_integer(double ay) {
 CONSTATTR double
 MATH_MANGLE(pow)(double x, double y)
 {
+    if (x == 1.0)
+        y = 1.0;
+    if (y == 0.0)
+        x = 1.0;
+
     double ax = BUILTIN_ABS_F64(x);
     double expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
@@ -57,9 +62,6 @@ MATH_MANGLE(pow)(double x, double y)
 
     if (BUILTIN_ISUNORDERED_F64(x, y))
         ret = QNAN_F64;
-
-    if (x == 1.0 || y == 0.0)
-        ret = 1.0;
 
     return ret;
 }

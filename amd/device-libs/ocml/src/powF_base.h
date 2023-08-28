@@ -68,6 +68,11 @@ static bool is_odd_integer(float ay) {
 CONSTATTR float
 MATH_MANGLE(pow)(float x, float y)
 {
+    if (x == 1.0f)
+        y = 1.0f;
+    if (y == 0.0f)
+        x = 1.0f;
+
     float ax = BUILTIN_ABS_F32(x);
     float expylnx = compute_expylnx_float(ax, y);
 
@@ -94,8 +99,6 @@ MATH_MANGLE(pow)(float x, float y)
     if (BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
 
-    if (x == 1.0f || y == 0.0f)
-        ret = 1.0f;
     return ret;
 }
 
