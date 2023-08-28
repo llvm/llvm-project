@@ -1098,13 +1098,22 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     if (isDenseCond(loopCondKind) && isAffineIdxCond(loopCondKind)) {
       bool unReduc = isAffineIdxUnRedCond(loopCondKind);
       assert(unReduc == !depFullyReduced(tid, lvl));
-      auto [size, stride] = sliceMeta[tid][lvl][sliceStack[tid].back().depth];
-      assert(stride == 1 && "Not yet implemented");
-      hi = size;
+      unsigned depth = sliceStack[tid].back().depth;
+      assert(depth >= 1);
+      // The *next* slice size after reducing the current index variable.
+      auto [nxSz, nxStride] = sliceMeta[tid][lvl][depth];
+      // The *current* stride to reduce the current index variable.
+      // E.g., for 2 * i, stride = 2.
+      unsigned stride = sliceMeta[tid][lvl][depth - 1].second;
+      hi = nxSz;
       if (unReduc) {
         // Adjust for loop hi for dense slice-driven loop.
         hi = SUBI(lvlSizes[tid][lvl], hi);
         hi = ADDI(hi, C_IDX(1));
+        hi = DIVUI(hi, C_IDX(stride));
+      } else {
+        // TODO: dialuted convolution.
+        assert(nxStride == 1 && "Not yet implemented.");
       }
     }
     std::tie(l, iv) = emitForLoopOverTensorAtLvl(builder, loc, tid, lvl, lo, hi,
@@ -1277,8 +1286,11 @@ void LoopEmitter::enterTensorsAtDenseLvls(
       // slice is strided.
       if (unReduc) {
         assert(*info.slicedOnLvl == lvl);
+        unsigned depth = sliceStack[tid].back().depth;
+        assert(depth >= 1);
+        unsigned stride = sliceMeta[tid][lvl][depth - 1].second;
         // Update the slice information as we enter the new loop.
-        info.minCrd = info.offset = iv;
+        info.minCrd = info.offset = MULI(iv, C_IDX(stride));
         info.isNonEmpty = constantI1(builder, loc, true);
         levelReducedDep[tid][lvl]++;
       } else {
