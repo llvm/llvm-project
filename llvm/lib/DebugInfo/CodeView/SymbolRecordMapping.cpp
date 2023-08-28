@@ -483,19 +483,6 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
-Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
-                                            JumpTableSym &JumpTable) {
-  error(IO.mapInteger(JumpTable.BaseOffset));
-  error(IO.mapInteger(JumpTable.BaseSegment));
-  error(IO.mapEnum(JumpTable.SwitchType));
-  error(IO.mapInteger(JumpTable.BranchOffset));
-  error(IO.mapInteger(JumpTable.TableOffset));
-  error(IO.mapInteger(JumpTable.BranchSegment));
-  error(IO.mapInteger(JumpTable.TableSegment));
-  error(IO.mapInteger(JumpTable.EntriesCount));
-  return Error::success();
-}
-
 RegisterId codeview::decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
                                        CPUType CPU) {
   assert(unsigned(EncodedReg) < 4);

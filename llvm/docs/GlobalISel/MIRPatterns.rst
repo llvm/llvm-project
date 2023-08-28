@@ -63,7 +63,7 @@ Semantics:
     other patterns in that rule/alternative can simply use ``$x``
     (``i32:$x`` is redundant).
 
-* A nammed operand's behavior depends on whether the name has been seen before.
+* A named operand's behavior depends on whether the name has been seen before.
 
   * For match patterns, reusing an operand name checks that the operands
     are identical (see example 2 below).

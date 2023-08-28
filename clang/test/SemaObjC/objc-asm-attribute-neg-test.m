@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://16462586
 
 __attribute__((objc_runtime_name)) // expected-error {{'objc_runtime_name' attribute takes one argument}}
 @interface BInterface

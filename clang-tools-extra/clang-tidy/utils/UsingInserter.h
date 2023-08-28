@@ -37,7 +37,7 @@ public:
                                llvm::StringRef QualifiedName);
 
 private:
-  typedef std::pair<const FunctionDecl *, std::string> NameInFunction;
+  using NameInFunction = std::pair<const FunctionDecl *, std::string>;
   const SourceManager &SourceMgr;
   std::set<NameInFunction> AddedUsing;
 };

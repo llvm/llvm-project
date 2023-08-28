@@ -10,7 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <math.h>
+#include <cmath>
 
 using namespace clang::ast_matchers;
 
@@ -24,13 +24,13 @@ void StructPackAlignCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 CharUnits
-StructPackAlignCheck::computeRecommendedAlignment(CharUnits MinByteSize) {
+StructPackAlignCheck::computeRecommendedAlignment(CharUnits MinByteSize) const {
   CharUnits NewAlign = CharUnits::fromQuantity(1);
   if (!MinByteSize.isPowerOfTwo()) {
-    int MSB = (int)MinByteSize.getQuantity();
+    CharUnits::QuantityType MSB = MinByteSize.getQuantity();
     for (; MSB > 0; MSB /= 2) {
-      NewAlign = NewAlign.alignTo(
-          CharUnits::fromQuantity(((int)NewAlign.getQuantity()) * 2));
+      NewAlign =
+          NewAlign.alignTo(CharUnits::fromQuantity(NewAlign.getQuantity() * 2));
       // Abort if the computed alignment meets the maximum configured alignment.
       if (NewAlign.getQuantity() >= MaxConfiguredAlignment)
         break;
@@ -110,7 +110,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   FixItHint FixIt;
-  AlignedAttr *Attribute = Struct->getAttr<AlignedAttr>();
+  auto *Attribute = Struct->getAttr<AlignedAttr>();
   std::string NewAlignQuantity = std::to_string((int)NewAlign.getQuantity());
   if (Attribute) {
     FixIt = FixItHint::CreateReplacement(

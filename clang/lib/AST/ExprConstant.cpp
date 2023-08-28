@@ -7653,7 +7653,8 @@ public:
   }
 
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-    if (APValue *Value = Info.CurrentCall->getCurrentTemporary(E))
+    if (APValue *Value = Info.CurrentCall->getCurrentTemporary(E);
+        Value && !Value->isAbsent())
       return DerivedSuccess(*Value, E);
 
     const Expr *Source = E->getSourceExpr();
@@ -12665,9 +12666,9 @@ namespace {
 class DataRecursiveIntBinOpEvaluator {
   struct EvalResult {
     APValue Val;
-    bool Failed;
+    bool Failed = false;
 
-    EvalResult() : Failed(false) { }
+    EvalResult() = default;
 
     void swap(EvalResult &RHS) {
       Val.swap(RHS.Val);

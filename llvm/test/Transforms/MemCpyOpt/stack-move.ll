@@ -612,6 +612,52 @@ bb2:
 
 }
 
+; Test for BasicBlock and Instruction mixed dominator finding.
+define void @multi_bb_dom_test1(i1 %b) {
+; CHECK-LABEL: define void @multi_bb_dom_test1
+; CHECK-SAME: (i1 [[B:%.*]]) {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    br i1 [[B]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 40, i32 50, i32 60 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[DEST]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    ret void
+; CHECK:       unr:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    br label [[BB2]]
+;
+  %src = alloca %struct.Foo, align 4
+  %dest = alloca %struct.Foo, align 4
+  br i1 %b, label %bb0, label %bb1
+
+bb0:
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  br label %bb2
+
+bb1:
+  store %struct.Foo { i32 40, i32 50, i32 60 }, ptr %src
+  br label %bb2
+
+bb2:
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %dest)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false); 1
+  %1 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+
+  ret void
+
+unr:
+  %2 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  br label %bb2
+}
+
 ; Test for BasicBlock and Instruction mixed post-dominator finding.
 define void @multi_bb_pdom_test0(i1 %b) {
 ; CHECK-LABEL: define void @multi_bb_pdom_test0

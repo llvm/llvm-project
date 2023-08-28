@@ -1646,6 +1646,76 @@ def : Pat<(OneI32ResultOp),
               (replaceWithValue $results__2),
               ConstantAttr<I32Attr, "2">)>;
 
+// Variadic structured matching
+def MixedVOperandOp4 : TEST_Op<"mixed_variadic_in4"> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    I32:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def MixedVOperandOp5 : TEST_Op<"mixed_variadic_in5"> {
+  let arguments = (ins
+    I32:$input1,
+    I32:$input2,
+    I32:$input3,
+    I32Attr:$attr1,
+    StrAttr:$pattern_name
+  );
+}
+
+// Helper op to test variadic recursive pattern matching
+def MixedVOperandInOutI32Op : TEST_Op<"mixed_variadic_in_out_i32"> {
+  let arguments = (ins
+    I32:$input
+  );
+  let results = (outs
+    I32:$output
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp4 (variadic $input1a, $input1b), $input2,
+                    ConstantAttr<I32Attr, "0">:$attr1),
+  (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchVariadic">)>;
+
+def : Pat<
+  (MixedVOperandOp4 (variadic (MixedVOperandInOutI32Op $input1a),
+                              (MixedVOperandInOutI32Op $input1b)),
+                    $input2, ConstantAttr<I32Attr, "1">:$attr1),
+  (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchVariadicSubDag">)>;
+
+def : Pat<
+  (MixedVOperandOp4 (variadic $input1, $input1), $input2,
+                    ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp5 $input1, $input1, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchVariadicSameSymbol">)>;
+
+def MixedVOperandOp6 : TEST_Op<"mixed_variadic_in6",
+                               [SameVariadicOperandSize]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Variadic<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp6 (variadic:$input1 $input1a, $input1b),
+                    (variadic:$input2 $input2a, $input2b),
+                    ConstantAttr<I32Attr, "1">:$attr1),
+  (MixedVOperandOp6 $input2, $input1, ConstantAttr<I32Attr, "-1">)>;
+
+def : Pat<
+  (MixedVOperandOp6 (variadic $input1a, $input1b),
+                    (variadic $input2a, $input2b),
+                    ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
 

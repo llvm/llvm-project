@@ -1845,13 +1845,6 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
   return SDValue(N, 0);
 }
 
-SDValue SelectionDAG::getJumpTableDebugInfo(int JTI, SDValue Chain,
-                                            const SDLoc &DL) {
-  EVT PTy = getTargetLoweringInfo().getPointerTy(getDataLayout());
-  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Glue, Chain,
-                 getTargetConstant(static_cast<uint64_t>(JTI), DL, PTy, true));
-}
-
 SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
                                       MaybeAlign Alignment, int Offset,
                                       bool isTarget, unsigned TargetFlags) {
@@ -3083,6 +3076,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // Implicitly truncate the bits to match the official semantics of
     // SPLAT_VECTOR.
     Known = computeKnownBits(SrcOp, Depth + 1).trunc(BitWidth);
+    break;
+  }
+  case ISD::SPLAT_VECTOR_PARTS: {
+    unsigned ScalarSize = Op.getOperand(0).getScalarValueSizeInBits();
+    assert(ScalarSize * Op.getNumOperands() == BitWidth &&
+           "Expected SPLAT_VECTOR_PARTS scalars to cover element width");
+    for (auto [I, SrcOp] : enumerate(Op->ops())) {
+      Known.insertBits(computeKnownBits(SrcOp, Depth + 1), ScalarSize * I);
+    }
     break;
   }
   case ISD::BUILD_VECTOR:

@@ -196,7 +196,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *SS = Result.Nodes.getNodeAs<SwitchStmt>("switch")) {
-    const CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(SS->getBody());
+    const auto *Body = dyn_cast_or_null<CompoundStmt>(SS->getBody());
 
     // Code like
     //   switch (x) case 0: case 1: foobar();

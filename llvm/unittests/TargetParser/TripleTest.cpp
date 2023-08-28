@@ -319,12 +319,6 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
-  T = Triple("x86_64-unknown-ananas");
-  EXPECT_EQ(Triple::x86_64, T.getArch());
-  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
-  EXPECT_EQ(Triple::Ananas, T.getOS());
-  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
-
   T = Triple("x86_64-unknown-cloudabi");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());

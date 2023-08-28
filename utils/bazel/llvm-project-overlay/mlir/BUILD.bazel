@@ -7162,6 +7162,7 @@ cc_library(
         ":Support",
         ":Transforms",
         "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 

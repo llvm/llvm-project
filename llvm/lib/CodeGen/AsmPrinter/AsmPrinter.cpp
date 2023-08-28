@@ -1726,10 +1726,6 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::MEMBARRIER:
         OutStreamer->emitRawComment("MEMBARRIER");
         break;
-      case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
-        // This instruction is only used to note jump table debug info, it's
-        // purely meta information.
-        break;
       default:
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {
@@ -4169,19 +4165,4 @@ dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
 unsigned int AsmPrinter::getUnitLengthFieldByteSize() const {
   return dwarf::getUnitLengthFieldByteSize(
       OutStreamer->getContext().getDwarfFormat());
-}
-
-std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
-           codeview::JumpTableEntrySize>
-AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
-                                     const MCSymbol *BranchLabel) const {
-  const auto TLI = MF->getSubtarget().getTargetLowering();
-  const auto BaseExpr =
-      TLI->getPICJumpTableRelocBaseExpr(MF, JTI, MMI->getContext());
-  const auto Base = &cast<MCSymbolRefExpr>(BaseExpr)->getSymbol();
-
-  // By default, for the architectures that support CodeView,
-  // EK_LabelDifference32 is implemented as an Int32 from the base address.
-  return std::make_tuple(Base, 0, BranchLabel,
-                         codeview::JumpTableEntrySize::Int32);
 }

@@ -303,6 +303,10 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *Entry = Img->EntriesBegin;
          Entry != Img->EntriesEnd; ++Entry) {
+      // Globals are not callable and use a different set of flags.
+      if (Entry->size != 0)
+        continue;
+
       if (Entry->flags & OMP_DECLARE_TARGET_CTOR) {
         DP("Adding ctor " DPxMOD " to the pending list.\n",
            DPxPTR(Entry->addr));

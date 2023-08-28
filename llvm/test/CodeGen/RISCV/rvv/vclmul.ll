@@ -38,7 +38,7 @@ define <vscale x 1 x i64> @intrinsic_vclmul_mask_vv_nxv1i64_nxv1i64(<vscale x 1 
 ; CHECK-LABEL: intrinsic_vclmul_mask_vv_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; CHECK-NEXT:    vclmul.vv v8, v9, v10
+; CHECK-NEXT:    vclmul.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vclmul.mask.nxv1i64.nxv1i64(
@@ -85,7 +85,7 @@ define <vscale x 2 x i64> @intrinsic_vclmul_mask_vv_nxv2i64_nxv2i64(<vscale x 2 
 ; CHECK-LABEL: intrinsic_vclmul_mask_vv_nxv2i64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
-; CHECK-NEXT:    vclmul.vv v8, v10, v12
+; CHECK-NEXT:    vclmul.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vclmul.mask.nxv2i64.nxv2i64(
@@ -132,7 +132,7 @@ define <vscale x 4 x i64> @intrinsic_vclmul_mask_vv_nxv4i64_nxv4i64(<vscale x 4 
 ; CHECK-LABEL: intrinsic_vclmul_mask_vv_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
-; CHECK-NEXT:    vclmul.vv v8, v12, v16
+; CHECK-NEXT:    vclmul.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vclmul.mask.nxv4i64.nxv4i64(
@@ -180,7 +180,7 @@ define <vscale x 8 x i64> @intrinsic_vclmul_mask_vv_nxv8i64_nxv8i64(<vscale x 8 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
-; CHECK-NEXT:    vclmul.vv v8, v16, v24
+; CHECK-NEXT:    vclmul.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vclmul.mask.nxv8i64.nxv8i64(
@@ -244,14 +244,14 @@ define <vscale x 1 x i64> @intrinsic_vclmul_mask_vx_nxv1i64_i64(<vscale x 1 x i6
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vclmul.vv v8, v9, v10
+; RV32-NEXT:    vclmul.vv v8, v9, v10, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: intrinsic_vclmul_mask_vx_nxv1i64_i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
-; RV64-NEXT:    vclmul.vx v8, v9, a0
+; RV64-NEXT:    vclmul.vx v8, v9, a0, v0.t
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vclmul.mask.nxv1i64.i64(
@@ -315,14 +315,14 @@ define <vscale x 2 x i64> @intrinsic_vclmul_mask_vx_nxv2i64_i64(<vscale x 2 x i6
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
-; RV32-NEXT:    vclmul.vv v8, v10, v12
+; RV32-NEXT:    vclmul.vv v8, v10, v12, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: intrinsic_vclmul_mask_vx_nxv2i64_i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
-; RV64-NEXT:    vclmul.vx v8, v10, a0
+; RV64-NEXT:    vclmul.vx v8, v10, a0, v0.t
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vclmul.mask.nxv2i64.i64(
@@ -386,14 +386,14 @@ define <vscale x 4 x i64> @intrinsic_vclmul_mask_vx_nxv4i64_i64(<vscale x 4 x i6
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
-; RV32-NEXT:    vclmul.vv v8, v12, v16
+; RV32-NEXT:    vclmul.vv v8, v12, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: intrinsic_vclmul_mask_vx_nxv4i64_i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
-; RV64-NEXT:    vclmul.vx v8, v12, a0
+; RV64-NEXT:    vclmul.vx v8, v12, a0, v0.t
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vclmul.mask.nxv4i64.i64(
@@ -457,14 +457,14 @@ define <vscale x 8 x i64> @intrinsic_vclmul_mask_vx_nxv8i64_i64(<vscale x 8 x i6
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
-; RV32-NEXT:    vclmul.vv v8, v16, v24
+; RV32-NEXT:    vclmul.vv v8, v16, v24, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: intrinsic_vclmul_mask_vx_nxv8i64_i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
-; RV64-NEXT:    vclmul.vx v8, v16, a0
+; RV64-NEXT:    vclmul.vx v8, v16, a0, v0.t
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vclmul.mask.nxv8i64.i64(

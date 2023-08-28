@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-objc-root-class -verify %s
-// rdar: //7824372
 
 @interface A // expected-note {{class started here}}
 -(void) im0; // expected-note {{method 'im0' declared here}}

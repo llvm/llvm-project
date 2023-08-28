@@ -11,13 +11,13 @@
 //.
 // HOST: @[[VAR:.+]] = global i8 0, align 1
 // HOST: @[[FOO_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[FOO_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_foo_l[0-9]+]]\00"
-// HOST: @.omp_offloading.entry.[[FOO_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_Z3foov, ptr @[[FOO_ENTRY_NAME]], i64 8, i32 4, i32 0 }, section "omp_offloading_entries", align 1
+// HOST: @.omp_offloading.entry.[[FOO_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_Z3foov, ptr @[[FOO_ENTRY_NAME]], i64 8, i32 8, i32 0 }, section "omp_offloading_entries", align 1
 // HOST: @[[BAZ_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[BAZ_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_baz_l[0-9]+]]\00"
-// HOST: @.omp_offloading.entry.[[BAZ_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_Z3bazv, ptr @[[BAZ_ENTRY_NAME]], i64 8, i32 4, i32 0 }, section "omp_offloading_entries", align 1
+// HOST: @.omp_offloading.entry.[[BAZ_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_Z3bazv, ptr @[[BAZ_ENTRY_NAME]], i64 8, i32 8, i32 0 }, section "omp_offloading_entries", align 1
 // HOST: @[[VAR_ENTRY_NAME:.+]] = internal unnamed_addr constant [4 x i8] c"var\00"
 // HOST: @.omp_offloading.entry.var = weak constant %struct.__tgt_offload_entry { ptr @[[VAR]], ptr @[[VAR_ENTRY_NAME]], i64 1, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // HOST: @[[BAR_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[BAR_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_bar_l[0-9]+]]\00"
-// HOST: @.omp_offloading.entry.[[BAR_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_ZL3barv, ptr @[[BAR_ENTRY_NAME]], i64 8, i32 4, i32 0 }, section "omp_offloading_entries", align 1
+// HOST: @.omp_offloading.entry.[[BAR_NAME]] = weak constant %struct.__tgt_offload_entry { ptr @_ZL3barv, ptr @[[BAR_ENTRY_NAME]], i64 8, i32 8, i32 0 }, section "omp_offloading_entries", align 1
 //.
 // DEVICE: @[[FOO_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_foo_l[0-9]+]] = protected addrspace(1) constant ptr @_Z3foov
 // DEVICE: @[[BAZ_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_baz_l[0-9]+]] = protected addrspace(1) constant ptr @_Z3bazv
@@ -44,8 +44,8 @@ char var = 0;
 
 #endif
 //.
-// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[FOO_NAME]]", i32 4, i32 0}
-// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[BAZ_NAME]]", i32 4, i32 1}
+// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[FOO_NAME]]", i32 8, i32 0}
+// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[BAZ_NAME]]", i32 8, i32 1}
 // HOST-DAG: !{{[0-9]+}} = !{i32 1, !"var", i32 0, i32 2}
-// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[BAR_NAME]]", i32 4, i32 3}
+// HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[BAR_NAME]]", i32 8, i32 3}
 //.

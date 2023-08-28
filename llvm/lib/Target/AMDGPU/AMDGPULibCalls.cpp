@@ -14,8 +14,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -952,9 +950,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
       SmallVector<double, 0> DVal;
       for (int i=0; i < getVecSize(FInfo); ++i) {
-        double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
+        double V = CDV->getElementAsAPFloat(i).convertToDouble();
         if (V < 0.0) needcopysign = true;
         V = log2(std::abs(V));
         DVal.push_back(V);
@@ -988,9 +984,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     } else {
       if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1)) {
         for (int i=0; i < getVecSize(FInfo); ++i) {
-          double y = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
+          double y = CDV->getElementAsAPFloat(i).convertToDouble();
           if (y != (double)(int64_t)y)
             return false;
         }
@@ -1023,14 +1017,14 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needcopysign) {
     Value *opr_n;
     Type* rTy = opr0->getType();
-    Type* nTyS = eltType->isDoubleTy() ? B.getInt64Ty() : B.getInt32Ty();
+    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
     Type *nTy = nTyS;
     if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
       nTy = FixedVectorType::get(nTyS, vTy);
     unsigned size = nTy->getScalarSizeInBits();
     opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->isIntegerTy())
-      opr_n = B.CreateZExtOrBitCast(opr_n, nTy, "__ytou");
+      opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
 

@@ -11,7 +11,6 @@
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AMDGPUOpenMP.h"
 #include "ToolChains/AVR.h"
-#include "ToolChains/Ananas.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/BareMetal.h"
 #include "ToolChains/CSKYToolChain.h"
@@ -6158,9 +6157,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Haiku:
       TC = std::make_unique<toolchains::Haiku>(*this, Target, Args);
-      break;
-    case llvm::Triple::Ananas:
-      TC = std::make_unique<toolchains::Ananas>(*this, Target, Args);
       break;
     case llvm::Triple::CloudABI:
       TC = std::make_unique<toolchains::CloudABI>(*this, Target, Args);
