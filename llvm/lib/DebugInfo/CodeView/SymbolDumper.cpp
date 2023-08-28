@@ -643,20 +643,6 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
-Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
-                                           JumpTableSym &JumpTable) {
-  W.printHex("BaseOffset", JumpTable.BaseOffset);
-  W.printNumber("BaseSegment", JumpTable.BaseSegment);
-  W.printEnum("SwitchType", static_cast<uint16_t>(JumpTable.SwitchType),
-              getJumpTableEntrySizeNames());
-  W.printHex("BranchOffset", JumpTable.BranchOffset);
-  W.printHex("TableOffset", JumpTable.TableOffset);
-  W.printNumber("BranchSegment", JumpTable.BranchSegment);
-  W.printNumber("TableSegment", JumpTable.TableSegment);
-  W.printNumber("EntriesCount", JumpTable.EntriesCount);
-  return Error::success();
-}
-
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
   W.printNumber("Length", CVR.length());
   return Error::success();
