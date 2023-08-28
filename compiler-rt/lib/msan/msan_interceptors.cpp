@@ -464,6 +464,25 @@ INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
 
+#if SANITIZER_GLIBC
+INTERCEPTORS_STRTO(double, __isoc23_strtod, char)
+INTERCEPTORS_STRTO(float, __isoc23_strtof, char)
+INTERCEPTORS_STRTO(long double, __isoc23_strtold, char)
+INTERCEPTORS_STRTO_BASE(long, __isoc23_strtol, char)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_strtoll, char)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_strtoul, char)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_strtoull, char)
+INTERCEPTORS_STRTO_BASE(u64, __isoc23_strtouq, char)
+
+INTERCEPTORS_STRTO(double, __isoc23_wcstod, wchar_t)
+INTERCEPTORS_STRTO(float, __isoc23_wcstof, wchar_t)
+INTERCEPTORS_STRTO(long double, __isoc23_wcstold, wchar_t)
+INTERCEPTORS_STRTO_BASE(long, __isoc23_wcstol, wchar_t)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_wcstoll, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_wcstoul, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_wcstoull, wchar_t)
+#endif
+
 #if SANITIZER_NETBSD
 #define INTERCEPT_STRTO(func) \
   INTERCEPT_FUNCTION(func); \
@@ -1748,6 +1767,24 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(wcstoul);
   INTERCEPT_STRTO(wcstoll);
   INTERCEPT_STRTO(wcstoull);
+#ifdef SANITIZER_GLIBC
+  INTERCEPT_STRTO(__isoc23_strtod);
+  INTERCEPT_STRTO(__isoc23_strtof);
+  INTERCEPT_STRTO(__isoc23_strtold);
+  INTERCEPT_STRTO(__isoc23_strtol);
+  INTERCEPT_STRTO(__isoc23_strtoul);
+  INTERCEPT_STRTO(__isoc23_strtoll);
+  INTERCEPT_STRTO(__isoc23_strtoull);
+  INTERCEPT_STRTO(__isoc23_strtouq);
+  INTERCEPT_STRTO(__isoc23_wcstod);
+  INTERCEPT_STRTO(__isoc23_wcstof);
+  INTERCEPT_STRTO(__isoc23_wcstold);
+  INTERCEPT_STRTO(__isoc23_wcstol);
+  INTERCEPT_STRTO(__isoc23_wcstoul);
+  INTERCEPT_STRTO(__isoc23_wcstoll);
+  INTERCEPT_STRTO(__isoc23_wcstoull);
+#endif
+
 #ifdef SANITIZER_NLDBL_VERSION
   INTERCEPT_FUNCTION_VER(vswprintf, SANITIZER_NLDBL_VERSION);
   INTERCEPT_FUNCTION_VER(swprintf, SANITIZER_NLDBL_VERSION);
