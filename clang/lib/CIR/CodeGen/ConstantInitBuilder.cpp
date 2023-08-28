@@ -277,19 +277,6 @@ static mlir::cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
                                                mlir::cir::ArrayType arrayTy) {
   return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
 }
-static mlir::Attribute getAnonConstStruct(mlir::ArrayAttr arrayAttr,
-                                          bool packed = false) {
-  assert(!packed && "NYI");
-  llvm::SmallVector<mlir::Type, 4> members;
-  for (auto &f : arrayAttr) {
-    auto ta = f.dyn_cast<mlir::TypedAttr>();
-    assert(ta && "expected typed attribute member");
-    members.push_back(ta.getType());
-  }
-  auto sTy = mlir::cir::StructType::get(arrayAttr.getContext(), members, "",
-                                        /*body=*/true);
-  return mlir::cir::ConstStructAttr::get(sTy, arrayAttr);
-}
 
 mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
   markFinished();
@@ -323,8 +310,6 @@ ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *ctx,
 
   if (ty == nullptr && elts.empty()) {
     llvm_unreachable("NYI");
-    // ty = mlir::cir::StructType::get(Builder.CGM.getLLVMContext(), {},
-    // Packed);
   }
 
   mlir::Attribute constant;
@@ -333,8 +318,8 @@ ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *ctx,
     // assert(ty->isPacked() == Packed);
     // constant = llvm::ConstantStruct::get(ty, elts);
   } else {
-    assert(!Packed && "NYI");
-    constant = getAnonConstStruct(mlir::ArrayAttr::get(ctx, elts), Packed);
+    const auto members = mlir::ArrayAttr::get(ctx, elts);
+    constant = Builder.CGM.getBuilder().getAnonConstStruct(members, Packed);
   }
 
   buffer.erase(buffer.begin() + Begin, buffer.end());
