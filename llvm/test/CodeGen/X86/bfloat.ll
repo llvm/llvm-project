@@ -1325,8 +1325,8 @@ define <4 x float> @pr64460_1(<4 x bfloat> %a) {
 ;
 ; F16-LABEL: pr64460_1:
 ; F16:       # %bb.0:
-; F16-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; F16-NEXT:    vpslld $8, %xmm0, %xmm0
+; F16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; F16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; F16-NEXT:    retq
   %b = fpext <4 x bfloat> %a to <4 x float>
   ret <4 x float> %b
@@ -1375,7 +1375,7 @@ define <8 x float> @pr64460_2(<8 x bfloat> %a) {
 ; F16-LABEL: pr64460_2:
 ; F16:       # %bb.0:
 ; F16-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; F16-NEXT:    vpslld $8, %ymm0, %ymm0
+; F16-NEXT:    vpslld $16, %ymm0, %ymm0
 ; F16-NEXT:    retq
   %b = fpext <8 x bfloat> %a to <8 x float>
   ret <8 x float> %b
@@ -1459,7 +1459,7 @@ define <16 x float> @pr64460_3(<16 x bfloat> %a) {
 ; F16-LABEL: pr64460_3:
 ; F16:       # %bb.0:
 ; F16-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; F16-NEXT:    vpslld $8, %zmm0, %zmm0
+; F16-NEXT:    vpslld $16, %zmm0, %zmm0
 ; F16-NEXT:    retq
   %b = fpext <16 x bfloat> %a to <16 x float>
   ret <16 x float> %b
@@ -1514,7 +1514,7 @@ define <8 x double> @pr64460_4(<8 x bfloat> %a) {
 ; F16-LABEL: pr64460_4:
 ; F16:       # %bb.0:
 ; F16-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; F16-NEXT:    vpslld $8, %ymm0, %ymm0
+; F16-NEXT:    vpslld $16, %ymm0, %ymm0
 ; F16-NEXT:    vcvtps2pd %ymm0, %zmm0
 ; F16-NEXT:    retq
   %b = fpext <8 x bfloat> %a to <8 x double>

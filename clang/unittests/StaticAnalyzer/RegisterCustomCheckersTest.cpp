@@ -89,8 +89,8 @@ TEST(RegisterCustomCheckers, CheckLocationIncDec) {
 
 class CheckerRegistrationOrderPrinter
     : public Checker<check::PreStmt<DeclStmt>> {
-  std::unique_ptr<BuiltinBug> BT =
-      std::make_unique<BuiltinBug>(this, "Registration order");
+  std::unique_ptr<BugType> BT =
+      std::make_unique<BugType>(this, "Registration order");
 
 public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
@@ -125,8 +125,7 @@ void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
 
 #define UNITTEST_CHECKER(CHECKER_NAME, DIAG_MSG)                               \
   class CHECKER_NAME : public Checker<check::PreStmt<DeclStmt>> {              \
-    std::unique_ptr<BuiltinBug> BT =                                           \
-        std::make_unique<BuiltinBug>(this, DIAG_MSG);                          \
+    std::unique_ptr<BugType> BT = std::make_unique<BugType>(this, DIAG_MSG);   \
                                                                                \
   public:                                                                      \
     void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {}          \

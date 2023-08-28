@@ -21198,7 +21198,7 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
     MVT NVT = SVT.changeVectorElementType(MVT::i32);
     In = DAG.getBitcast(SVT.changeTypeToInteger(), In);
     In = DAG.getNode(ISD::ZERO_EXTEND, DL, NVT, In);
-    In = DAG.getNode(ISD::SHL, DL, NVT, In, DAG.getConstant(8, DL, NVT));
+    In = DAG.getNode(ISD::SHL, DL, NVT, In, DAG.getConstant(16, DL, NVT));
     return DAG.getBitcast(VT, In);
   }
 
