@@ -19,7 +19,6 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
-#include "swift/Demangling/Demangle.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
