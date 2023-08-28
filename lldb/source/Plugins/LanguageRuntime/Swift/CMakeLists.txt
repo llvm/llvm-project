@@ -3,6 +3,7 @@ add_lldb_library(lldbPluginSwiftLanguageRuntime PLUGIN
   SwiftLanguageRuntime.cpp
   SwiftLanguageRuntimeDynamicTypeResolution.cpp
   SwiftLanguageRuntimeNames.cpp
+  SwiftLanguageRuntimeRemoteAST.cpp
   SwiftMetadataCache.cpp
 
   LINK_LIBS

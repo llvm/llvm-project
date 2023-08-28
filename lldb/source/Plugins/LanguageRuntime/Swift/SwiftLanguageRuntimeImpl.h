@@ -35,6 +35,10 @@ class SwiftLanguageRuntimeImpl {
 
 public:
   SwiftLanguageRuntimeImpl(Process &process);
+  SwiftLanguageRuntimeImpl(const SwiftLanguageRuntimeImpl &) = delete;
+  const SwiftLanguageRuntimeImpl &
+  operator=(const SwiftLanguageRuntimeImpl &) = delete;
+
   static lldb::BreakpointPreconditionSP
   GetBreakpointExceptionPrecondition(lldb::LanguageType language,
                                      bool throw_bp);
@@ -152,6 +156,10 @@ public:
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          TypeSystemSwiftTypeRef &ts,
                                          ConstString mangled_name);
+
+  /// Like \p BindGenericTypeParameters but for RemoteAST.
+  CompilerType BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
+                                                  CompilerType base_type);
 
   /// \see SwiftLanguageRuntime::BindGenericTypeParameters().
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
@@ -314,13 +322,22 @@ protected:
                                       TypeAndOrName &class_type_or_name,
                                       Address &address,
                                       Value::ValueType &value_type);
-
+#ifndef NDEBUG
+  ConstString GetDynamicTypeName_ClassRemoteAST(ValueObject &in_value,
+                                                lldb::addr_t instance_ptr);
+#endif
   bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
                                          CompilerType protocol_type,
                                          lldb::DynamicValueType use_dynamic,
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
-
+#ifndef NDEBUG
+  llvm::Optional<std::pair<CompilerType, Address>>
+  GetDynamicTypeAndAddress_ProtocolRemoteAST(ValueObject &in_value,
+                                             CompilerType protocol_type,
+                                             bool use_local_buffer,
+                                             lldb::addr_t existential_address);
+#endif
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                       CompilerType &bound_type,
                                       lldb::DynamicValueType use_dynamic,
@@ -478,9 +495,12 @@ private:
   /// Swift native NSError isa.
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
-  SwiftLanguageRuntimeImpl(const SwiftLanguageRuntimeImpl &) = delete;
-  const SwiftLanguageRuntimeImpl &
-  operator=(const SwiftLanguageRuntimeImpl &) = delete;
+#ifndef NDEBUG
+  /// Assert helper to determine if the scratch SwiftASTContext is locked.
+  static bool IsScratchContextLocked(Target &target);
+  /// Assert helper to determine if the scratch SwiftASTContext is locked.
+  static bool IsScratchContextLocked(lldb::TargetSP target);
+#endif
 };
 
 } // namespace lldb_private
