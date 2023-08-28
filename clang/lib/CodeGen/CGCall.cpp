@@ -2375,7 +2375,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // gcc specifies that 'pure' functions cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
     } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
-      FuncAttrs.addMemoryAttr(llvm::MemoryEffects::argMemOnly());
+      FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
     if (TargetDecl->hasAttr<RestrictAttr>())
