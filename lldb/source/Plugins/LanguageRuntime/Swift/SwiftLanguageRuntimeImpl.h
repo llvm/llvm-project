@@ -237,7 +237,8 @@ public:
                 swift::remote::TypeInfoProvider *provider) = 0;
     virtual swift::remote::MemoryReader &getReader() = 0;
     virtual bool
-    ForEachSuperClassType(LLDBTypeInfoProvider *tip, lldb::addr_t pointer,
+    ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                          lldb::addr_t pointer,
                           std::function<bool(SuperClassType)> fn) = 0;
     virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
                                      swift::remote::RemoteAddress>>
