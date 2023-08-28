@@ -104,7 +104,6 @@ void test2_c(void) {
 
 
 void testMessaging(void) {
-  // <rdar://problem/12119814>
   [[^(void){} copy] release];
 }
 
@@ -116,7 +115,7 @@ void testMessaging(void) {
 - (void)test {
   // At one point this crashed because we created a path note at a
   // PreStmtPurgeDeadSymbols point but only knew how to deal with PostStmt
-  // points. <rdar://problem/12687586>
+  // points.
 
   extern dispatch_queue_t queue;
 
@@ -172,7 +171,6 @@ void blockCapturesItselfInTheLoop(int x, int m) {
 
 // Blocks that called the function they were contained in that also have
 // static locals caused crashes.
-// rdar://problem/21698099
 void takeNonnullBlock(void (^)(void)) __attribute__((nonnull));
 void takeNonnullIntBlock(int (^)(void)) __attribute__((nonnull));
 
