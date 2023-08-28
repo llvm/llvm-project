@@ -19,6 +19,7 @@
 #include "Debug.h"
 #include "Environment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
@@ -378,7 +379,13 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
 
   /// Initialize the plugin and return the number of devices.
-  Expected<int32_t> initImpl() override { return NUM_DEVICES; }
+  Expected<int32_t> initImpl() override {
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
+
+    return NUM_DEVICES;
+  }
 
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }
