@@ -20,6 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
 class TestMCDisasmInstanceRISCV : public testing::Test {
 public:
   static void SetUpTestCase();
@@ -39,6 +40,7 @@ void TestMCDisasmInstanceRISCV::SetUpTestCase() {
 void TestMCDisasmInstanceRISCV::TearDownTestCase() {
   DisassemblerLLVMC::Terminate();
 }
+} // namespace
 
 TEST_F(TestMCDisasmInstanceRISCV, TestRISCV32Instruction) {
   ArchSpec arch("riscv32-*-linux");
