@@ -168,8 +168,9 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
     return {matchEnableIfSpecialization(
                 LastTemplateParam->getTypeSourceInfo()->getTypeLoc()),
             LastTemplateParam};
-  } else if (const auto *LastTemplateParam =
-                 dyn_cast<TemplateTypeParmDecl>(LastParam)) {
+  }
+  if (const auto *LastTemplateParam =
+          dyn_cast<TemplateTypeParmDecl>(LastParam)) {
     if (LastTemplateParam->hasDefaultArgument() &&
         LastTemplateParam->getIdentifier() == nullptr) {
       return {matchEnableIfSpecialization(
@@ -199,14 +200,13 @@ getConditionRange(ASTContext &Context,
   const SourceManager &SM = Context.getSourceManager();
   if (EnableIf.getNumArgs() > 1) {
     TemplateArgumentLoc NextArg = EnableIf.getArgLoc(1);
-    return SourceRange(
-        EnableIf.getLAngleLoc().getLocWithOffset(1),
-        utils::lexer::findPreviousTokenKind(NextArg.getSourceRange().getBegin(),
-                                            SM, LangOpts, tok::comma));
+    return {EnableIf.getLAngleLoc().getLocWithOffset(1),
+            utils::lexer::findPreviousTokenKind(
+                NextArg.getSourceRange().getBegin(), SM, LangOpts, tok::comma)};
   }
 
-  return SourceRange(EnableIf.getLAngleLoc().getLocWithOffset(1),
-                     getRAngleFileLoc(SM, EnableIf));
+  return {EnableIf.getLAngleLoc().getLocWithOffset(1),
+          getRAngleFileLoc(SM, EnableIf)};
 }
 
 static SourceRange getTypeRange(ASTContext &Context,
@@ -214,11 +214,10 @@ static SourceRange getTypeRange(ASTContext &Context,
   TemplateArgumentLoc Arg = EnableIf.getArgLoc(1);
   const LangOptions &LangOpts = Context.getLangOpts();
   const SourceManager &SM = Context.getSourceManager();
-  return SourceRange(
-      utils::lexer::findPreviousTokenKind(Arg.getSourceRange().getBegin(), SM,
-                                          LangOpts, tok::comma)
-          .getLocWithOffset(1),
-      getRAngleFileLoc(SM, EnableIf));
+  return {utils::lexer::findPreviousTokenKind(Arg.getSourceRange().getBegin(),
+                                              SM, LangOpts, tok::comma)
+              .getLocWithOffset(1),
+          getRAngleFileLoc(SM, EnableIf)};
 }
 
 // Returns the original source text of the second argument of a call to
@@ -353,7 +352,7 @@ static std::vector<FixItHint> handleReturnType(const FunctionDecl *Function,
 
   SmallVector<const Expr *, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
-  if (ExistingConstraints.size() > 0) {
+  if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
     // consider subsumption?
     return {};
@@ -401,7 +400,7 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
 
   SmallVector<const Expr *, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
-  if (ExistingConstraints.size() > 0) {
+  if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
     // consider subsumption?
     return {};

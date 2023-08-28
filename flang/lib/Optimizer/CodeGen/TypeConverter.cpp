@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -81,11 +82,10 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
   });
   addConversion(
       [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
-  addConversion([&](fir::RecordType derived,
-                    llvm::SmallVectorImpl<mlir::Type> &results,
-                    llvm::ArrayRef<mlir::Type> callStack) {
-    return convertRecordType(derived, results, callStack);
-  });
+  addConversion(
+      [&](fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
+        return convertRecordType(derived, results);
+      });
   addConversion(
       [&](fir::RealType real) { return convertRealType(real.getFKind()); });
   addConversion(
@@ -167,14 +167,19 @@ mlir::Type LLVMTypeConverter::indexType() const {
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
 std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
-    fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results,
-    llvm::ArrayRef<mlir::Type> callStack) const {
+    fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = derived.getName();
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
-  if (llvm::count(callStack, derived) > 1) {
+
+  auto &callStack = getCurrentThreadRecursiveStack();
+  if (llvm::count(callStack, derived)) {
     results.push_back(st);
     return mlir::success();
   }
+  callStack.push_back(derived);
+  auto popConversionCallStack =
+      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
+
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {
     // Prevent fir.box from degenerating to a pointer to a descriptor in the

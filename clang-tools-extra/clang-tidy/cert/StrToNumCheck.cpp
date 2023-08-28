@@ -178,7 +178,7 @@ StringRef classifyReplacement(ConversionKind K) {
 void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("expr");
   const FunctionDecl *FuncDecl = nullptr;
-  ConversionKind Conversion;
+  ConversionKind Conversion = ConversionKind::None;
 
   if (const auto *ConverterFunc =
           Result.Nodes.getNodeAs<FunctionDecl>("converter")) {

@@ -2543,7 +2543,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
     for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
       MachineBasicBlock *MBB = OrderToBB[I];
       const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
-      if (TransferFunc.find(L) != TransferFunc.end())
+      if (TransferFunc.contains(L))
         DefBlocks.insert(MBB);
     }
 

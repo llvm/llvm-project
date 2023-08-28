@@ -376,9 +376,9 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   /// BreakContinueStack - Keep counts of breaks and continues inside loops.
   struct BreakContinue {
-    uint64_t BreakCount;
-    uint64_t ContinueCount;
-    BreakContinue() : BreakCount(0), ContinueCount(0) {}
+    uint64_t BreakCount = 0;
+    uint64_t ContinueCount = 0;
+    BreakContinue() = default;
   };
   SmallVector<BreakContinue, 8> BreakContinueStack;
 

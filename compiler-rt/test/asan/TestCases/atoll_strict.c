@@ -10,9 +10,6 @@
 // RUN: %env_asan_opts=strict_string_checks=false %run %t test3 2>&1
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test3 2>&1 | FileCheck %s --check-prefix=CHECK3
 
-// FIXME: Needs Windows interceptor.
-// XFAIL: target={{.*windows-(msvc.*|gnu)}}
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

@@ -888,9 +888,12 @@ public:
       break;
 
     // %g style conversion switches between %f or %e style dynamically.
-    // %f always takes less space, so default to it.
+    // %g removes trailing zeros, and does not print decimal point if there are
+    // no digits that follow it. Thus %g can print a single digit.
     case analyze_format_string::ConversionSpecifier::gArg:
     case analyze_format_string::ConversionSpecifier::GArg:
+      Size += 1;
+      break;
 
     // Floating point number in the form '[+]ddd.ddd'.
     case analyze_format_string::ConversionSpecifier::fArg:
@@ -1031,6 +1034,23 @@ private:
 };
 
 } // namespace
+
+static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
+                                       StringRef &FormatStrRef, size_t &StrLen,
+                                       ASTContext &Context) {
+  if (const auto *Format = dyn_cast<StringLiteral>(FormatExpr);
+      Format && (Format->isOrdinary() || Format->isUTF8())) {
+    FormatStrRef = Format->getString();
+    const ConstantArrayType *T =
+        Context.getAsConstantArrayType(Format->getType());
+    assert(T && "String literal not of constant array type!");
+    size_t TypeSize = T->getSize().getZExtValue();
+    // In case there's a null byte somewhere.
+    StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, FormatStrRef.find(0));
+    return true;
+  }
+  return false;
+}
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
@@ -1183,11 +1203,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     const auto *FormatExpr =
         TheCall->getArg(FormatIndex)->IgnoreParenImpCasts();
 
-    const auto *Format = dyn_cast<StringLiteral>(FormatExpr);
-    if (!Format)
-      return;
-
-    if (!Format->isOrdinary() && !Format->isUTF8())
+    StringRef FormatStrRef;
+    size_t StrLen;
+    if (!ProcessFormatStringLiteral(FormatExpr, FormatStrRef, StrLen, Context))
       return;
 
     auto Diagnose = [&](unsigned ArgIndex, unsigned DestSize,
@@ -1200,21 +1218,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                         << DestSize << SourceSize);
     };
 
-    StringRef FormatStrRef = Format->getString();
     auto ShiftedComputeSizeArgument = [&](unsigned Index) {
       return ComputeSizeArgument(Index + DataIndex);
     };
     ScanfDiagnosticFormatHandler H(ShiftedComputeSizeArgument, Diagnose);
     const char *FormatBytes = FormatStrRef.data();
-    const ConstantArrayType *T =
-        Context.getAsConstantArrayType(Format->getType());
-    assert(T && "String literal not of constant array type!");
-    size_t TypeSize = T->getSize().getZExtValue();
-
-    // In case there's a null byte somewhere.
-    size_t StrLen =
-        std::min(std::max(TypeSize, size_t(1)) - 1, FormatStrRef.find(0));
-
     analyze_format_string::ParseScanfString(H, FormatBytes,
                                             FormatBytes + StrLen, getLangOpts(),
                                             Context.getTargetInfo());
@@ -1230,22 +1238,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     size_t FormatIndex = BuiltinID == Builtin::BIsprintf ? 1 : 3;
     auto *FormatExpr = TheCall->getArg(FormatIndex)->IgnoreParenImpCasts();
 
-    if (auto *Format = dyn_cast<StringLiteral>(FormatExpr)) {
-
-      if (!Format->isOrdinary() && !Format->isUTF8())
-        return;
-
-      StringRef FormatStrRef = Format->getString();
+    StringRef FormatStrRef;
+    size_t StrLen;
+    if (ProcessFormatStringLiteral(FormatExpr, FormatStrRef, StrLen, Context)) {
       EstimateSizeFormatHandler H(FormatStrRef);
       const char *FormatBytes = FormatStrRef.data();
-      const ConstantArrayType *T =
-          Context.getAsConstantArrayType(Format->getType());
-      assert(T && "String literal not of constant array type!");
-      size_t TypeSize = T->getSize().getZExtValue();
-
-      // In case there's a null byte somewhere.
-      size_t StrLen =
-          std::min(std::max(TypeSize, size_t(1)) - 1, FormatStrRef.find(0));
       if (!analyze_format_string::ParsePrintfString(
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
               Context.getTargetInfo(), false)) {
@@ -1326,8 +1323,28 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin_vsnprintf: {
     DiagID = diag::warn_fortify_source_size_mismatch;
     SourceSize = ComputeExplicitObjectSizeArgument(1);
+    const auto *FormatExpr = TheCall->getArg(2)->IgnoreParenImpCasts();
+    StringRef FormatStrRef;
+    size_t StrLen;
+    if (SourceSize &&
+        ProcessFormatStringLiteral(FormatExpr, FormatStrRef, StrLen, Context)) {
+      EstimateSizeFormatHandler H(FormatStrRef);
+      const char *FormatBytes = FormatStrRef.data();
+      if (!analyze_format_string::ParsePrintfString(
+              H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
+              Context.getTargetInfo(), /*isFreeBSDKPrintf=*/false)) {
+        llvm::APSInt FormatSize =
+            llvm::APSInt::getUnsigned(H.getSizeLowerBound())
+                .extOrTrunc(SizeTypeWidth);
+        if (FormatSize > *SourceSize && *SourceSize != 0) {
+          DiagID = diag::warn_fortify_source_format_truncation;
+          DestinationSize = SourceSize;
+          SourceSize = FormatSize;
+          break;
+        }
+      }
+    }
     DestinationSize = ComputeSizeArgument(0);
-    break;
   }
   }
 

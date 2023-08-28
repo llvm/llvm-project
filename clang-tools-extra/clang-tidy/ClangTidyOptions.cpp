@@ -83,13 +83,13 @@ struct NOptionMap {
 };
 
 template <>
-void yamlize(IO &IO, ClangTidyOptions::OptionMap &Options, bool,
+void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
   if (IO.outputting()) {
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
-    SortedOptions.reserve(Options.size());
-    for (auto &Key : Options) {
+    SortedOptions.reserve(Val.size());
+    for (auto &Key : Val) {
       SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
     }
     std::sort(SortedOptions.begin(), SortedOptions.end());
@@ -107,16 +107,16 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Options, bool,
   } else {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
-    Input &I = reinterpret_cast<Input &>(IO);
+    auto &I = reinterpret_cast<Input &>(IO);
     if (isa<SequenceNode>(I.getCurrentNode())) {
-      MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(
-          IO, Options);
+      MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
+                                                                          Val);
       EmptyContext Ctx;
       yamlize(IO, NOpts->Options, true, Ctx);
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
       for (StringRef Key : IO.keys()) {
-        IO.mapRequired(Key.data(), Options[Key].Value);
+        IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();
     } else {
@@ -130,18 +130,17 @@ struct ChecksVariant {
   std::optional<std::vector<std::string>> AsVector;
 };
 
-template <>
-void yamlize(IO &IO, ChecksVariant &Checks, bool, EmptyContext &Ctx) {
+template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
-    Input &I = reinterpret_cast<Input &>(IO);
+    auto &I = reinterpret_cast<Input &>(IO);
     if (isa<ScalarNode, BlockScalarNode>(I.getCurrentNode())) {
-      Checks.AsString = std::string();
-      yamlize(IO, *Checks.AsString, true, Ctx);
+      Val.AsString = std::string();
+      yamlize(IO, *Val.AsString, true, Ctx);
     } else if (isa<SequenceNode>(I.getCurrentNode())) {
-      Checks.AsVector = std::vector<std::string>();
-      yamlize(IO, *Checks.AsVector, true, Ctx);
+      Val.AsVector = std::vector<std::string>();
+      yamlize(IO, *Val.AsVector, true, Ctx);
     } else {
       IO.setError("expected string or sequence");
     }

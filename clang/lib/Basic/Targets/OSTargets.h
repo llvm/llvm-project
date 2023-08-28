@@ -50,20 +50,6 @@ public:
   using OSTargetInfo<Target>::OSTargetInfo;
 };
 
-// Ananas target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY AnanasTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // Ananas defines
-    Builder.defineMacro("__Ananas__");
-  }
-
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                       const llvm::Triple &Triple, StringRef &PlatformName,
                       VersionTuple &PlatformMinVersion);

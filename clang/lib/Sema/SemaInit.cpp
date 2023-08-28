@@ -5672,8 +5672,6 @@ static void TryOrBuildParenListInitialization(
            diag::warn_cxx17_compat_aggregate_init_paren_list)
         << Kind.getLocation() << SR << ResultType;
   }
-
-  return;
 }
 
 /// Attempt a user-defined conversion between two types (C++ [dcl.init]),
