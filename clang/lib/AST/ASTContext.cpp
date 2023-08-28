@@ -11688,6 +11688,14 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   if (FD->isMSExternInline())
     return GVA_StrongODR;
 
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+      isa<CXXConstructorDecl>(FD) &&
+      cast<CXXConstructorDecl>(FD)->isInheritingConstructor())
+    // Our approach to inheriting constructors is fundamentally different from
+    // that used by the MS ABI, so keep our inheriting constructor thunks
+    // internal rather than trying to pick an unambiguous mangling for them.
+    return GVA_Internal;
+
   return GVA_DiscardableODR;
 }
 
