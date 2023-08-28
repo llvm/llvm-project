@@ -75,11 +75,11 @@ public:
 
   // Overloads accepting ObjectFile does not support COFF currently
   Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,
-                                     object::SectionedAddress ModuleOffset);
+                                     object::SectionedAddress ModuleOffset,bool nearest=false);
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                     object::SectionedAddress ModuleOffset);
+                                     object::SectionedAddress ModuleOffset,bool nearest=false);
   Expected<DILineInfo> symbolizeCode(ArrayRef<uint8_t> BuildID,
-                                     object::SectionedAddress ModuleOffset);
+                                     object::SectionedAddress ModuleOffset,bool nearest=false);
   Expected<DIInliningInfo>
   symbolizeInlinedCode(const ObjectFile &Obj,
                        object::SectionedAddress ModuleOffset);
@@ -134,7 +134,7 @@ private:
   template <typename T>
   Expected<DILineInfo>
   symbolizeCodeCommon(const T &ModuleSpecifier,
-                      object::SectionedAddress ModuleOffset);
+                      object::SectionedAddress ModuleOffset,bool nearest=false);
   template <typename T>
   Expected<DIInliningInfo>
   symbolizeInlinedCodeCommon(const T &ModuleSpecifier,

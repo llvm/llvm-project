@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/BTF/BTFContext.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -24,6 +25,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
@@ -52,7 +54,7 @@ LLVMSymbolizer::~LLVMSymbolizer() = default;
 template <typename T>
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
-                                    object::SectionedAddress ModuleOffset) {
+                                    object::SectionedAddress ModuleOffset,bool nearest) {
 
   auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
   if (!InfoOrErr)
@@ -70,9 +72,22 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
   if (Opts.RelativeAddresses)
     ModuleOffset.Address += Info->getModulePreferredBase();
 
-  DILineInfo LineInfo = Info->symbolizeCode(
+	DILineInfo LineInfo;
+	if (!nearest)
+  LineInfo = Info->symbolizeCode(
       ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
       Opts.UseSymbolTable);
+	else {
+		object::SectionedAddress PrevModuleOffset = ModuleOffset;
+		while(LineInfo.Line==0){
+			LineInfo = Info->symbolizeCode(ModuleOffset,DILineInfoSpecifier(Opts.PathStyle,Opts.PrintFunctions),Opts.UseSymbolTable);
+			if(LineInfo.Line!=0)break;
+			ModuleOffset.Address++;
+			--PrevModuleOffset.Address;
+			LineInfo = Info->symbolizeCode(PrevModuleOffset, DILineInfoSpecifier(Opts.PathStyle,Opts.PrintFunctions),Opts.UseSymbolTable);
+		}
+	}
+
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
   return LineInfo;
@@ -80,20 +95,20 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
-                              object::SectionedAddress ModuleOffset) {
-  return symbolizeCodeCommon(Obj, ModuleOffset);
+                              object::SectionedAddress ModuleOffset,bool nearest) {
+  return symbolizeCodeCommon(Obj, ModuleOffset,nearest);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
-                              object::SectionedAddress ModuleOffset) {
-  return symbolizeCodeCommon(ModuleName, ModuleOffset);
+                              object::SectionedAddress ModuleOffset,bool nearest) {
+  return symbolizeCodeCommon(ModuleName, ModuleOffset,nearest);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(ArrayRef<uint8_t> BuildID,
-                              object::SectionedAddress ModuleOffset) {
-  return symbolizeCodeCommon(BuildID, ModuleOffset);
+                              object::SectionedAddress ModuleOffset,bool nearest) {
+  return symbolizeCodeCommon(BuildID, ModuleOffset,nearest);
 }
 
 template <typename T>
