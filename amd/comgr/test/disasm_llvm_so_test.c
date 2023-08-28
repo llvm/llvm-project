@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_create_action_info(&DataAction);
     checkError(Status, "amd_comgr_create_action_info");
     Status = amd_comgr_action_info_set_isa_name(DataAction,
-                                                "amdgcn-amd-amdhsa--gfx803");
+                                                "amdgcn-amd-amdhsa--gfx900");
     checkError(Status, "amd_comgr_action_info_set_isa_name");
 
     // Do disassembly action

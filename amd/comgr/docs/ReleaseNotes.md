@@ -125,6 +125,7 @@ unbundling.
 output for Comgr actions. This can help us debug issues more quickly in cases
 where reporters provide Comgr logs.
 - Fix multiple bugs with mangled names test
+- Update default arch for test binaries from gfx830 to gfx900
 
 New Targets
 -----------

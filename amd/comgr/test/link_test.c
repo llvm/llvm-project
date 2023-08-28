@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
   Status = amd_comgr_create_action_info(&DataAction);
   checkError(Status, "amd_comgr_create_action_info");
-  amd_comgr_action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx803");
+  amd_comgr_action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_language");
 
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE,

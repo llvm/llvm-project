@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
                                               AMD_COMGR_LANGUAGE_OPENCL_1_2);
   checkError(Status, "amd_comgr_action_info_set_language");
   Status = amd_comgr_action_info_set_isa_name(DataAction,
-                                              "amdgcn-amd-amdhsa--gfx803");
+                                              "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
 
   Status = amd_comgr_create_data_set(&DataSetPreproc);

@@ -49,7 +49,7 @@ const char *ExpectedOut = "\n"
                           "\tv_mov_b32_e32 v2, 42                             "
                           "          // 000000000008: 7E0402AA \n"
                           "\ts_waitcnt lgkmcnt(0)                             "
-                          "          // 00000000000C: BF8C007F \n"
+                          "          // 00000000000C: BF8CC07F \n"
                           "\tv_mov_b32_e32 v0, s0                             "
                           "          // 000000000010: 7E000200 \n"
                           "\tv_mov_b32_e32 v1, s1                             "
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_create_action_info(&DataAction);
   checkError(Status, "amd_comgr_create_action_info");
   Status = amd_comgr_action_info_set_isa_name(DataAction,
-                                              "amdgcn-amd-amdhsa--gfx803");
+                                              "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
   Status = amd_comgr_action_info_set_logging(DataAction, true);
   checkError(Status, "amd_comgr_action_info_set_logging");

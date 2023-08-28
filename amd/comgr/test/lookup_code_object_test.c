@@ -169,7 +169,7 @@ void sharedObjectTest(amd_comgr_data_kind_t Kind) {
       {"amdgcn-amd-amdhsa--gfx700", 0, 0}};
 
   amd_comgr_code_object_info_t QueryList2[1] = {
-      {"amdgcn-amd-amdhsa--gfx803", 0, 0}};
+      {"amdgcn-amd-amdhsa--gfx900", 0, 0}};
 
   Status = amd_comgr_lookup_code_object(DataObject, QueryList1, 1);
   checkError(Status, "amd_comgr_lookup_code_object");

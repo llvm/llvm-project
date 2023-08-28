@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     printf("Test action assemble\n");
     Status = amd_comgr_create_action_info(&DataAction);
     checkError(Status, "amd_comgr_create_action_info");
-    amd_comgr_action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx803");
+    amd_comgr_action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx900");
     checkError(Status, "amd_comgr_action_info_set_language");
     Status = amd_comgr_action_info_set_option_list(DataAction, NULL, 0);
     checkError(Status, "amd_comgr_action_info_set_option_list");
