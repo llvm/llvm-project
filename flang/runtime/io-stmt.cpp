@@ -1347,13 +1347,16 @@ bool InquireUnconnectedFileState::Inquire(
     str = "UNKNONN";
     break;
   case HashInquiryKeyword("READ"):
-    str = MayRead(path_.get()) ? "YES" : "NO";
+    str =
+        IsExtant(path_.get()) ? MayRead(path_.get()) ? "YES" : "NO" : "UNKNOWN";
     break;
   case HashInquiryKeyword("READWRITE"):
-    str = MayReadAndWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayReadAndWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("WRITE"):
-    str = MayWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();

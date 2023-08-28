@@ -6,10 +6,11 @@ Test lldb settings command.
 import json
 import os
 import re
+
 import lldb
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 
 class SettingsCommandTestCase(TestBase):
@@ -777,7 +778,7 @@ class SettingsCommandTestCase(TestBase):
         # Change a single boolean value.
         self.runCmd("settings set auto-confirm true")
         # Change a single integer value.
-        self.runCmd("settings set tab-size 2")
+        self.runCmd("settings set tab-size 4")
 
         # Clear everything.
         self.runCmd("settings clear --all")
@@ -792,7 +793,7 @@ class SettingsCommandTestCase(TestBase):
             patterns=["^target.run-args \(arguments\) =\s*$"],
         )
         self.expect("settings show auto-confirm", substrs=["false"])
-        self.expect("settings show tab-size", substrs=["4"])
+        self.expect("settings show tab-size", substrs=["2"])
 
         # Check that the command fails if we combine '--all' option with any arguments.
         self.expect(
@@ -931,13 +932,13 @@ class SettingsCommandTestCase(TestBase):
 
         # Test basic values and embedding special JSON escaping characters.
         self.runCmd("settings set auto-confirm true")
-        self.runCmd("settings set tab-size 2")
+        self.runCmd("settings set tab-size 4")
         arg_value = 'hello "world"'
         self.runCmd("settings set target.arg0 %s" % arg_value)
 
         settings_json = self.get_setting_json()
         self.assertEqual(settings_json["auto-confirm"], True)
-        self.assertEqual(settings_json["tab-size"], 2)
+        self.assertEqual(settings_json["tab-size"], 4)
         self.assertEqual(settings_json["target"]["arg0"], arg_value)
 
         settings_data = self.get_setting_json("target.arg0")
