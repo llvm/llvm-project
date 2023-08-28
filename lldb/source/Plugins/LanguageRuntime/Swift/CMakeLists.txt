@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginSwiftLanguageRuntime PLUGIN
   LLDBMemoryReader.cpp
+  ReflectionContext.cpp
   SwiftLanguageRuntime.cpp
   SwiftLanguageRuntimeDynamicTypeResolution.cpp
   SwiftLanguageRuntimeNames.cpp
