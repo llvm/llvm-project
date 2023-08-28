@@ -124,6 +124,7 @@ unbundling.
 - Add git branch and commit hash for Comgr, and commit hash for LLVM to log
 output for Comgr actions. This can help us debug issues more quickly in cases
 where reporters provide Comgr logs.
+- Fix multiple bugs with mangled names test
 
 New Targets
 -----------
