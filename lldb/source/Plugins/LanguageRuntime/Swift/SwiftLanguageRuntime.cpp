@@ -44,8 +44,6 @@
 #include "lldb/Utility/Timer.h"
 
 #include "swift/AST/ASTMangler.h"
-#include "swift/AST/Decl.h"
-#include "swift/AST/Module.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteAST/RemoteAST.h"

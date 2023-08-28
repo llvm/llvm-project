@@ -31,14 +31,10 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
-#include "swift/AST/Decl.h"
-#include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteInspection/TypeRefBuilder.h"
-#include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
-#include "swift/Runtime/Metadata.h"
 #include "swift/Strings.h"
 
 #include <sstream>
