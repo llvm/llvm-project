@@ -3493,6 +3493,7 @@ void forEachJumpTableBranch(
           }
         }
         assert(foundJTI);
+        (void)foundJTI;
       }
     }
   }

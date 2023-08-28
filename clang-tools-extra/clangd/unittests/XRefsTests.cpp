@@ -1009,7 +1009,17 @@ TEST(LocateSymbol, All) {
         void play(Dog *dog) {
           [dog ho^wl];
         }
-      )objc"};
+      )objc",
+      R"cpp(
+        struct PointerIntPairInfo {
+          static void *getPointer(void *Value);
+        };
+
+        template <typename Info = PointerIntPairInfo> struct PointerIntPair {
+          void *Value;
+          void *getPointer() const { return Info::get^Pointer(Value); }
+        };
+    )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     std::optional<Range> WantDecl;
