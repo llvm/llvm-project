@@ -75,8 +75,8 @@ void C3::Layer::Initialize() {
   }
 }
 
-// CHECK: !ty_22class2EC23A3ALayer22 = !cir.struct<"class.C2::Layer", !ty_22class2EC13A3ALayer22, !cir.ptr<!ty_22class2EC222>
-// CHECK: !ty_22struct2EC33A3ALayer22 = !cir.struct<"struct.C3::Layer", !ty_22class2EC23A3ALayer22
+// CHECK: !ty_22class2EC23A3ALayer22 = !cir.struct<"class.C2::Layer" {!ty_22class2EC13A3ALayer22, !cir.ptr<!ty_22class2EC222>
+// CHECK: !ty_22struct2EC33A3ALayer22 = !cir.struct<"struct.C3::Layer" {!ty_22class2EC23A3ALayer22
 
 // CHECK: cir.func @_ZN2C35Layer10InitializeEv
 

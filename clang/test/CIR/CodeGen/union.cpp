@@ -12,12 +12,12 @@ void m() {
   yolm3 q3;
 }
 
-// CHECK: !ty_22struct2Eanon22 = !cir.struct<"struct.anon", !cir.bool, !s32i, #cir.recdecl.ast>
-// CHECK: !ty_22struct2Eyolo22 = !cir.struct<"struct.yolo", !s32i, #cir.recdecl.ast>
-// CHECK: !ty_22struct2Eanon221 = !cir.struct<"struct.anon", !cir.ptr<!s32i>, !s32i, #cir.recdecl.ast>
+// CHECK: !ty_22struct2Eanon22 = !cir.struct<"struct.anon" {!cir.bool, !s32i} #cir.recdecl.ast>
+// CHECK: !ty_22struct2Eyolo22 = !cir.struct<"struct.yolo" {!s32i} #cir.recdecl.ast>
+// CHECK: !ty_22struct2Eanon221 = !cir.struct<"struct.anon" {!cir.ptr<!s32i>, !s32i} #cir.recdecl.ast>
 
-// CHECK: !ty_22union2Eyolm22 = !cir.struct<"union.yolm", !ty_22struct2Eyolo22>
-// CHECK: !ty_22union2Eyolm222 = !cir.struct<"union.yolm2", !ty_22struct2Eanon221>
+// CHECK: !ty_22union2Eyolm22 = !cir.struct<"union.yolm" {!ty_22struct2Eyolo22}>
+// CHECK: !ty_22union2Eyolm222 = !cir.struct<"union.yolm2" {!ty_22struct2Eanon221}>
 
 // CHECK:   cir.func @_Z1mv()
 // CHECK:   cir.alloca !ty_22union2Eyolm22, cir.ptr <!ty_22union2Eyolm22>, ["q"] {alignment = 4 : i64}

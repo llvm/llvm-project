@@ -26,13 +26,13 @@ void baz() {
 struct incomplete;
 void yoyo(incomplete *i) {}
 
-//      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete", incomplete
-//      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i>
+//      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete" incomplete
+//      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar" {!s32i, !s8i}>
 
-//      CHECK: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", !s32i, !s8i, !ty_22struct2EBar22>
-//      CHECK: !ty_22struct2EMandalore22 = !cir.struct<"struct.Mandalore", !u32i, !cir.ptr<!void>, !s32i, #cir.recdecl.ast>
-//      CHECK: !ty_22class2EAdv22 = !cir.struct<"class.Adv", !ty_22struct2EMandalore22>
-//      CHECK: !ty_22struct2EEntry22 = !cir.struct<"struct.Entry", !cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>>
+//      CHECK: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo" {!s32i, !s8i, !ty_22struct2EBar22}>
+//      CHECK: !ty_22struct2EMandalore22 = !cir.struct<"struct.Mandalore" {!u32i, !cir.ptr<!void>, !s32i} #cir.recdecl.ast>
+//      CHECK: !ty_22class2EAdv22 = !cir.struct<"class.Adv" {!ty_22struct2EMandalore22}>
+//      CHECK: !ty_22struct2EEntry22 = !cir.struct<"struct.Entry" {!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>}>
 
 //      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!ty_22struct2EBar22>
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!ty_22struct2EBar22>, cir.ptr <!cir.ptr<!ty_22struct2EBar22>>, ["this", init] {alignment = 8 : i64}

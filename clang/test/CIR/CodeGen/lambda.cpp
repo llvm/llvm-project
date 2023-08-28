@@ -6,7 +6,7 @@ void fn() {
   a();
 }
 
-//      CHECK: !ty_22class2Eanon22 = !cir.struct<"class.anon", !u8i>
+//      CHECK: !ty_22class2Eanon22 = !cir.struct<"class.anon" {!u8i}>
 //  CHECK-DAG: module
 
 //      CHECK: cir.func lambda internal private @_ZZ2fnvENK3$_0clEv

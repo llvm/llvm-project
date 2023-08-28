@@ -126,13 +126,13 @@ co_invoke_fn co_invoke;
 
 }} // namespace folly::coro
 
-// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", !u8i>
-// CHECK: ![[IntTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", !u8i>
-// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", !u8i>
-// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", !u8i>
-// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", !u8i>
-// CHECK: ![[StdString:ty_.*]] = !cir.struct<"struct.std::string", !u8i
-// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always", !u8i>
+// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task" {!u8i}>
+// CHECK: ![[IntTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task" {!u8i}>
+// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type" {!u8i}>
+// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle" {!u8i}>
+// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle" {!u8i}>
+// CHECK: ![[StdString:ty_.*]] = !cir.struct<"struct.std::string" {!u8i}
+// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always" {!u8i}>
 
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22struct2Efolly3A3Acoro3A3Aco_invoke_fn22
