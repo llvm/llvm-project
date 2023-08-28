@@ -6,20 +6,72 @@ typedef union { yolo y; struct { int lifecnt; }; } yolm;
 typedef union { yolo y; struct { int *lifecnt; int genpad; }; } yolm2;
 typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
+// CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!s16i, f32} #cir.recdecl.ast>
+// CHECK-DAG: !ty_22anon221 = !cir.struct<struct "anon" {!cir.bool, !s32i} #cir.recdecl.ast>
+// CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.recdecl.ast>
+// CHECK-DAG: !ty_22anon222 = !cir.struct<struct "anon" {!cir.ptr<!s32i>, !s32i} #cir.recdecl.ast>
+
+// CHECK-DAG: !ty_22yolm22 = !cir.struct<union "yolm" {!ty_22yolo22, !ty_22anon22}>
+// CHECK-DAG: !ty_22yolm322 = !cir.struct<union "yolm3" {!ty_22yolo22, !ty_22anon221}>
+// CHECK-DAG: !ty_22yolm222 = !cir.struct<union "yolm2" {!ty_22yolo22, !ty_22anon222}>
+
+// Should generate a union type with all members preserved.
+union U {
+  bool b;
+  short s;
+  int i;
+  float f;
+  double d;
+};
+// CHECK-DAG: !ty_22U22 = !cir.struct<union "U" {!cir.bool, !s16i, !s32i, f32, f64}>
+
+// Should generate unions with complex members.
+union U2 {
+  bool b;
+  struct Dummy {
+    short s;
+    float f;
+  } s;
+} u2;
+// CHECK-DAG: !cir.struct<union "U2" {!cir.bool, !ty_22U23A3ADummy22} #cir.recdecl.ast>
+
+// Should genereate unions without padding.
+union U3 {
+  short b;
+  U u;
+} u3;
+// CHECK-DAG: !ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U22} #cir.recdecl.ast>
+
 void m() {
   yolm q;
   yolm2 q2;
   yolm3 q3;
 }
 
-// CHECK: !ty_22anon22 = !cir.struct<struct "anon" {!cir.bool, !s32i} #cir.recdecl.ast>
-// CHECK: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.recdecl.ast>
-// CHECK: !ty_22anon221 = !cir.struct<struct "anon" {!cir.ptr<!s32i>, !s32i} #cir.recdecl.ast>
-
-// CHECK: !ty_22yolm22 = !cir.struct<union "yolm" {!ty_22yolo22}>
-// CHECK: !ty_22yolm222 = !cir.struct<union "yolm2" {!ty_22anon221}>
-
 // CHECK:   cir.func @_Z1mv()
 // CHECK:   cir.alloca !ty_22yolm22, cir.ptr <!ty_22yolm22>, ["q"] {alignment = 4 : i64}
 // CHECK:   cir.alloca !ty_22yolm222, cir.ptr <!ty_22yolm222>, ["q2"] {alignment = 8 : i64}
 // CHECK:   cir.alloca !ty_22yolm322, cir.ptr <!ty_22yolm322>, ["q3"] {alignment = 4 : i64}
+
+void shouldGenerateUnionAccess(union U u) {
+  u.b = true;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[0] {name = "b"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.bool>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.bool, cir.ptr <!cir.bool>
+  u.b;
+  // CHECK: cir.get_member %0[0] {name = "b"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.bool>
+  u.i = 1;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!s32i>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !s32i, cir.ptr <!s32i>
+  u.i;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!s32i>
+  u.f = 0.1F;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f32>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : f32, cir.ptr <f32>
+  u.f;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f32>
+  u.d = 0.1;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f64>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : f64, cir.ptr <f64>
+  u.d;
+  // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<f64>
+}

@@ -234,7 +234,14 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
 
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
-    // For unions, there is no pointer adjustment.
+    // NOTE(cir): the element to be loaded/stored need to type-match the
+    // source/destination, so we emit a GetMemberOp here.
+    llvm::StringRef fieldName = field->getName();
+    unsigned fieldIndex = field->getFieldIndex();
+    if (CGM.LambdaFieldToName.count(field))
+      fieldName = CGM.LambdaFieldToName[field];
+    addr = buildAddrOfFieldStorage(*this, addr, field, fieldName, fieldIndex);
+
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add

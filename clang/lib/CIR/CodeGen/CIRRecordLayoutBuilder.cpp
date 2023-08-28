@@ -324,16 +324,20 @@ void CIRRecordLowering::lowerUnion() {
         (getAlignment(FieldType) == getAlignment(StorageType) &&
          getSize(FieldType) > getSize(StorageType)))
       StorageType = FieldType;
+
+    // NOTE(cir): Track all union member's types, not just the largest one. It
+    // allows for proper type-checking and retain more info for analisys.
+    fieldTypes.push_back(FieldType);
   }
   // If we have no storage type just pad to the appropriate size and return.
   if (!StorageType)
-    return appendPaddingBytes(LayoutSize);
+    llvm_unreachable("no-storage union NYI");
   // If our storage size was bigger than our required size (can happen in the
   // case of packed bitfields on Itanium) then just use an I8 array.
   if (LayoutSize < getSize(StorageType))
     StorageType = getByteArrayType(LayoutSize);
-  fieldTypes.push_back(StorageType);
-  appendPaddingBytes(LayoutSize - getSize(StorageType));
+  // NOTE(cir): Defer padding calculations to the lowering process.
+  // appendPaddingBytes(LayoutSize - getSize(StorageType));
   // Set packed if we need it.
   if (LayoutSize % getAlignment(StorageType))
     isPacked = true;
