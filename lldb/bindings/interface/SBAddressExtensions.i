@@ -7,6 +7,12 @@ STRING_EXTENSION_OUTSIDE(SBAddress)
     %pythoncode%{
     def __eq__(self, other):
       return not self.__ne__(other)
+
+    def __len__(self):
+        pass
+
+    def __iter__(self):
+        pass
     %}
 
     %pythoncode %{
