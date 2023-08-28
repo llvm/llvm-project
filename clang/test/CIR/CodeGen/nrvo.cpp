@@ -9,7 +9,7 @@ std::vector<const char*> test_nrvo() {
   return result;
 }
 
-// CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector", !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>>
+// CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector" {!cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>}>
 
 // CHECK: cir.func @_Z9test_nrvov() -> !ty_22class2Estd3A3Avector22
 // CHECK:   %0 = cir.alloca !ty_22class2Estd3A3Avector22, cir.ptr <!ty_22class2Estd3A3Avector22>, ["__retval", init] {alignment = 8 : i64}

@@ -4,11 +4,11 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!ty_22struct2ES22 = !cir.struct<"struct.S", !u8i, !s32i>
-!ty_22struct2ES2A22 = !cir.struct<"struct.S2A", !s32i, #cir.recdecl.ast>
-!ty_22struct2ES122 = !cir.struct<"struct.S1", !s32i, f32, !cir.ptr<!s32i>, #cir.recdecl.ast>
-!ty_22struct2ES222 = !cir.struct<"struct.S2", !ty_22struct2ES2A22, #cir.recdecl.ast>
-!ty_22struct2ES322 = !cir.struct<"struct.S3", !s32i, #cir.recdecl.ast>
+!ty_22struct2ES22 = !cir.struct<"struct.S" {!u8i, !s32i}>
+!ty_22struct2ES2A22 = !cir.struct<"struct.S2A" {!s32i} #cir.recdecl.ast>
+!ty_22struct2ES122 = !cir.struct<"struct.S1" {!s32i, f32, !cir.ptr<!s32i>} #cir.recdecl.ast>
+!ty_22struct2ES222 = !cir.struct<"struct.S2" {!ty_22struct2ES2A22} #cir.recdecl.ast>
+!ty_22struct2ES322 = !cir.struct<"struct.S3" {!s32i} #cir.recdecl.ast>
 
 module {
   cir.func @test() {

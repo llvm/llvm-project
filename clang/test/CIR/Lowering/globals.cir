@@ -10,8 +10,8 @@
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
 !u8i = !cir.int<u, 8>
-!ty_22struct2EA22 = !cir.struct<"struct.A", !s32i, !cir.array<!cir.array<!s32i x 2> x 2>, #cir.recdecl.ast>
-!ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i, #cir.recdecl.ast>
+!ty_22struct2EA22 = !cir.struct<"struct.A" {!s32i, !cir.array<!cir.array<!s32i x 2> x 2>} #cir.recdecl.ast>
+!ty_22struct2EBar22 = !cir.struct<"struct.Bar" {!s32i, !s8i} #cir.recdecl.ast>
 
 module {
   cir.global external @a = #cir.int<3> : !s32i

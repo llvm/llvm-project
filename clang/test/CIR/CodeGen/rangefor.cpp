@@ -21,9 +21,9 @@ void init(unsigned numImages) {
   }
 }
 
-// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple", !u32i, !cir.ptr<!void>, !u32i>
-// CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector", !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>>
-// CHECK: !ty_22struct2E__vector_iterator22 = !cir.struct<"struct.__vector_iterator", !cir.ptr<!ty_22struct2Etriple22>>
+// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple" {!u32i, !cir.ptr<!void>, !u32i}>
+// CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector" {!cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>}>
+// CHECK: !ty_22struct2E__vector_iterator22 = !cir.struct<"struct.__vector_iterator" {!cir.ptr<!ty_22struct2Etriple22>}>
 
 // CHECK: cir.func @_Z4initj(%arg0: !u32i
 // CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["numImages", init] {alignment = 4 : i64}

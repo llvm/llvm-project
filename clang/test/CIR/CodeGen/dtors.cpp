@@ -37,10 +37,10 @@ public:
 };
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
 
 // Class B
-// CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
+// CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B" {![[ClassA]]}>
 
 // CHECK: cir.func @_Z4bluev()
 // CHECK:   %0 = cir.alloca !ty_22class2EPSEvent22, cir.ptr <!ty_22class2EPSEvent22>, ["p", init] {alignment = 8 : i64}

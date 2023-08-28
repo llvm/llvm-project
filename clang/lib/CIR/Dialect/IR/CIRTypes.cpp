@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Support/LogicalResult.h"
@@ -22,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
@@ -87,72 +90,69 @@ Type BoolType::parse(mlir::AsmParser &parser) {
 
 void BoolType::print(mlir::AsmPrinter &printer) const {}
 
+//===----------------------------------------------------------------------===//
+// StructType Definitions
+//===----------------------------------------------------------------------===//
+
 Type StructType::parse(mlir::AsmParser &parser) {
+  llvm::SmallVector<mlir::Type> members;
+  mlir::StringAttr id;
+  bool body = false;
+  bool packed = false;
+  mlir::cir::ASTRecordDeclAttr ast = nullptr;
+
   if (parser.parseLess())
-    return Type();
-  std::string typeName;
-  if (parser.parseString(&typeName))
-    return Type();
+    return {};
 
-  llvm::SmallVector<Type> members;
-  bool parsedBody = false;
+  if (parser.parseAttribute(id))
+    return {};
 
-  auto parseASTAttribute = [&](Attribute &attr) {
-    auto optAttr = parser.parseOptionalAttribute(attr);
-    if (optAttr.has_value()) {
-      if (failed(*optAttr))
-        return false;
-      if (attr.isa<ASTFunctionDeclAttr>() || attr.isa<ASTRecordDeclAttr>() ||
-          attr.isa<ASTVarDeclAttr>())
-        return true;
-      parser.emitError(parser.getCurrentLocation(),
-                       "Unknown cir.struct attribute");
-      return false;
-    }
-    return false;
-  };
+  if (parser.parseOptionalKeyword("packed").succeeded())
+    packed = true;
 
-  while (mlir::succeeded(parser.parseOptionalComma())) {
-    if (mlir::succeeded(parser.parseOptionalKeyword("incomplete")))
-      continue;
+  if (parser.parseOptionalKeyword("incomplete").failed()) {
+    body = true;
+    const auto delim = AsmParser::Delimiter::Braces;
+    auto result = parser.parseCommaSeparatedList(delim, [&]() -> ParseResult {
+      mlir::Type ty;
+      if (parser.parseType(ty))
+        return mlir::failure();
+      members.push_back(ty);
+      return mlir::success();
+    });
 
-    parsedBody = true;
-    Type nextMember;
-    auto optTy = parser.parseOptionalType(nextMember);
-    if (optTy.has_value()) {
-      if (failed(*optTy))
-        return Type();
-      members.push_back(nextMember);
-      continue;
-    }
-
-    // Maybe it's an AST attribute: always last member, break.
-    Attribute astAttr;
-    if (parseASTAttribute(astAttr))
-      break;
+    if (result.failed())
+      return {};
   }
 
+  parser.parseOptionalAttribute(ast);
+
   if (parser.parseGreater())
-    return Type();
-  auto sTy = get(parser.getContext(), members, typeName, parsedBody);
-  return sTy;
+    return {};
+
+  return StructType::get(parser.getContext(), members, id, body, packed,
+                         std::nullopt);
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
-  printer << '<' << getTypeName();
+  printer << '<' << getTypeName() << " ";
+
+  if (getPacked())
+    printer << "packed ";
+
   if (!getBody()) {
-    printer << ", incomplete";
+    printer << "incomplete";
   } else {
-    auto members = getMembers();
-    if (!members.empty()) {
-      printer << ", ";
-      llvm::interleaveComma(getMembers(), printer);
-    }
+    printer << "{";
+    llvm::interleaveComma(getMembers(), printer);
+    printer << "}";
   }
-  if (getAst()) {
-    printer << ", ";
-    printer.printAttributeWithoutType(*getAst());
+
+  if (getAst().has_value()) {
+    printer << " ";
+    printer.printAttribute(getAst().value());
   }
+
   printer << '>';
 }
 

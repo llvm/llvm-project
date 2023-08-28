@@ -113,18 +113,6 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
   );
 
-  let builders = [
-    TypeBuilder<(ins
-      "ArrayRef<mlir::Type>":$members, "StringRef":$typeName,
-      "bool":$body
-    ), [{
-      auto id = mlir::StringAttr::get(context, typeName);
-      auto sTy = StructType::get(context, members, id, body,
-                                 /*packed=*/false, std::nullopt);
-      return sTy;
-    }]>
-  ];
-
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
