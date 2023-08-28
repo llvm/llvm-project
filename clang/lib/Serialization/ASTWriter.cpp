@@ -1148,13 +1148,9 @@ ASTFileSignature ASTWriter::backpatchSignature() {
   // For implicit modules, write the hash of the PCM as its signature.
 
   auto BackpatchSignatureAt = [&](const ASTFileSignature &S, uint64_t BitNo) {
-    using WordT = unsigned;
-    std::array<WordT, sizeof(ASTFileSignature) / sizeof(WordT)> Words;
-    static_assert(sizeof(Words) == sizeof(S));
-    std::memcpy(Words.data(), S.data(), sizeof(ASTFileSignature));
-    for (WordT Word : Words) {
-      Stream.BackpatchWord(BitNo, Word);
-      BitNo += sizeof(WordT) * 8;
+    for (uint8_t Byte : S) {
+      Stream.BackpatchByte(BitNo, Byte);
+      BitNo += 8;
     }
   };
 
