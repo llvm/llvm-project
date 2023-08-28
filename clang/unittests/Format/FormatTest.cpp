@@ -16541,7 +16541,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16566,7 +16566,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();
@@ -26239,18 +26239,18 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Never);
 
-  constexpr StringRef Code("[[nodiscard]] inline int f(int &i);\n"
-                           "[[foo([[]])]] [[nodiscard]]\n"
-                           "int g(int &i);\n"
-                           "[[nodiscard]]\n"
-                           "inline int f(int &i) {\n"
-                           "  i = 1;\n"
-                           "  return 0;\n"
-                           "}\n"
-                           "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
-                           "  i = 0;\n"
-                           "  return 1;\n"
-                           "}");
+  const StringRef Code("[[nodiscard]] inline int f(int &i);\n"
+                       "[[foo([[]])]] [[nodiscard]]\n"
+                       "int g(int &i);\n"
+                       "[[nodiscard]]\n"
+                       "inline int f(int &i) {\n"
+                       "  i = 1;\n"
+                       "  return 0;\n"
+                       "}\n"
+                       "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
+                       "  i = 0;\n"
+                       "  return 1;\n"
+                       "}");
 
   verifyFormat("[[nodiscard]] inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]] int g(int &i);\n"
@@ -26263,9 +26263,6 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "  return 1;\n"
                "}",
                Code, Style);
-
-  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
-  verifyNoChange(Code, Style);
 
   Style.BreakAfterAttributes = FormatStyle::ABS_Always;
   verifyFormat("[[nodiscard]]\n"
@@ -26284,73 +26281,8 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "}",
                Code, Style);
 
-  constexpr StringRef CtorDtorCode("struct Foo {\n"
-                                   "  [[deprecated]] Foo();\n"
-                                   "  [[deprecated]] Foo() {}\n"
-                                   "  [[deprecated]] ~Foo();\n"
-                                   "  [[deprecated]] ~Foo() {}\n"
-                                   "  [[deprecated]] void f();\n"
-                                   "  [[deprecated]] void f() {}\n"
-                                   "};\n"
-                                   "[[deprecated]] Bar::Bar() {}\n"
-                                   "[[deprecated]] Bar::~Bar() {}\n"
-                                   "[[deprecated]] void g() {}");
-  verifyFormat("struct Foo {\n"
-               "  [[deprecated]]\n"
-               "  Foo();\n"
-               "  [[deprecated]]\n"
-               "  Foo() {}\n"
-               "  [[deprecated]]\n"
-               "  ~Foo();\n"
-               "  [[deprecated]]\n"
-               "  ~Foo() {}\n"
-               "  [[deprecated]]\n"
-               "  void f();\n"
-               "  [[deprecated]]\n"
-               "  void f() {}\n"
-               "};\n"
-               "[[deprecated]]\n"
-               "Bar::Bar() {}\n"
-               "[[deprecated]]\n"
-               "Bar::~Bar() {}\n"
-               "[[deprecated]]\n"
-               "void g() {}",
-               CtorDtorCode, Style);
-
-  Style.BreakBeforeBraces = FormatStyle::BS_Linux;
-  verifyFormat("struct Foo {\n"
-               "  [[deprecated]]\n"
-               "  Foo();\n"
-               "  [[deprecated]]\n"
-               "  Foo()\n"
-               "  {\n"
-               "  }\n"
-               "  [[deprecated]]\n"
-               "  ~Foo();\n"
-               "  [[deprecated]]\n"
-               "  ~Foo()\n"
-               "  {\n"
-               "  }\n"
-               "  [[deprecated]]\n"
-               "  void f();\n"
-               "  [[deprecated]]\n"
-               "  void f()\n"
-               "  {\n"
-               "  }\n"
-               "};\n"
-               "[[deprecated]]\n"
-               "Bar::Bar()\n"
-               "{\n"
-               "}\n"
-               "[[deprecated]]\n"
-               "Bar::~Bar()\n"
-               "{\n"
-               "}\n"
-               "[[deprecated]]\n"
-               "void g()\n"
-               "{\n"
-               "}",
-               CtorDtorCode, Style);
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+  verifyNoChange(Code, Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {
