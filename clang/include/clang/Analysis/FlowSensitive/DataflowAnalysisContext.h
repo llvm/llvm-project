@@ -103,39 +103,6 @@ public:
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
 
-  /// Assigns `Loc` as the storage location of `D`.
-  ///
-  /// Requirements:
-  ///
-  ///  `D` must not be assigned a storage location.
-  void setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-    assert(!DeclToLoc.contains(&D));
-    DeclToLoc[&D] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `D` or null if `D` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const ValueDecl &D) const {
-    return DeclToLoc.lookup(&D);
-  }
-
-  /// Assigns `Loc` as the storage location of `E`.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be assigned a storage location.
-  void setStorageLocation(const Expr &E, StorageLocation &Loc) {
-    const Expr &CanonE = ignoreCFGOmittedNodes(E);
-    assert(!ExprToLoc.contains(&CanonE));
-    ExprToLoc[&CanonE] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `E` or null if `E` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const Expr &E) const {
-    return ExprToLoc.lookup(&ignoreCFGOmittedNodes(E));
-  }
-
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
