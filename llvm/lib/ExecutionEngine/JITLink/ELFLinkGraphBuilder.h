@@ -374,14 +374,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       }
     }
 
-    if (GraphSec->getMemProt() != Prot) {
-      std::string ErrMsg;
-      raw_string_ostream(ErrMsg)
-          << "In " << G->getName() << ", section " << *Name
-          << " is present more than once with different permissions: "
-          << GraphSec->getMemProt() << " vs " << Prot;
-      return make_error<JITLinkError>(std::move(ErrMsg));
-    }
+    GraphSec->setMemProt(GraphSec->getMemProt() | Prot);
 
     Block *B = nullptr;
     if (Sec.sh_type != ELF::SHT_NOBITS) {
