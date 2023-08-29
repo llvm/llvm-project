@@ -526,6 +526,7 @@ class PadOp:
         super().__init__(
             pdl_operation_type,
             pdl_operation_type,
+            pdl_operation_type,
             target,
             padding_values=padding_values,
             padding_dimensions=padding_dimensions,
