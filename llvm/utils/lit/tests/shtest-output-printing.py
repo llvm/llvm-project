@@ -9,9 +9,6 @@
 
 # CHECK: FAIL: shtest-output-printing :: basic.txt
 # CHECK-NEXT: *** TEST 'shtest-output-printing :: basic.txt' FAILED ***
-# CHECK-NEXT: Script:
-# CHECK-NEXT: --
-# CHECK:      --
 # CHECK-NEXT: Exit Code: 1
 #
 # CHECK:      Command Output
