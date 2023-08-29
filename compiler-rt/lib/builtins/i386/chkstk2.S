@@ -14,7 +14,7 @@
 .text
 .balign 4
 DEFINE_COMPILERRT_FUNCTION(_alloca) // _chkstk and _alloca are the same function
-DEFINE_COMPILERRT_FUNCTION(__chkstk)
+DEFINE_COMPILERRT_FUNCTION(_chkstk)
         push   %ecx
         cmp    $0x1000,%eax
         lea    8(%esp),%ecx     // esp before calling this routine -> ecx
@@ -35,7 +35,7 @@ DEFINE_COMPILERRT_FUNCTION(__chkstk)
         push   (%eax)           // push return address onto the stack
         sub    %esp,%eax        // restore the original value in eax
         ret
-END_COMPILERRT_FUNCTION(__chkstk)
+END_COMPILERRT_FUNCTION(_chkstk)
 END_COMPILERRT_FUNCTION(_alloca)
 
 #endif // __i386__
