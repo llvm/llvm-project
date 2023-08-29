@@ -39,6 +39,7 @@
 ! HELP-NEXT: -fhonor-nans            Specify that floating-point optimizations are not allowed that assume arguments and results are not NANs.
 ! HELP-NEXT: -fimplicit-none         No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-NEXT: -fintegrated-as         Enable the integrated assembler
 ! HELP-NEXT: -fintrinsic-modules-path <dir>
 ! HELP-NEXT:                         Specify where to find the compiled intrinsic modules
 ! HELP-NEXT: -flarge-sizes           Use INTEGER(KIND=8) for the result type in size-related intrinsics

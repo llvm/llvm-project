@@ -36,9 +36,9 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
 
     auto loc = op.getLoc();
-    auto sourceType = cast<MemRefType>(adaptor.getBase().getType());
+    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     Type oldElementType = op.getType().getElementType();
-    Type newElementType = sourceType.getElementType();
+    Type newElementType = convertedType.getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = newElementType.getIntOrFloatBitWidth();
 
@@ -81,16 +81,73 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    auto srcElementType = sourceType.getElementType();
-    auto numElements =
-        static_cast<int>(std::ceil(static_cast<double>(origElements) / scale));
+    auto numElements = (origElements + scale - 1) / scale;
     auto newLoad = rewriter.create<vector::LoadOp>(
-        loc, VectorType::get(numElements, srcElementType), adaptor.getBase(),
+        loc, VectorType::get(numElements, newElementType), adaptor.getBase(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
 
-    numElements *= scale;
-    auto castType = VectorType::get(numElements, oldElementType);
-    auto bitCast = rewriter.create<vector::BitCastOp>(loc, castType, newLoad);
+    auto bitCast =
+        rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
+
+    rewriter.replaceOp(op, bitCast->getResult(0));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertVectorTransferRead
+//===----------------------------------------------------------------------===//
+
+struct ConvertVectorTransferRead final
+    : OpConversionPattern<vector::TransferReadOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto convertedType = cast<MemRefType>(adaptor.getSource().getType());
+    Type oldElementType = op.getType().getElementType();
+    Type newElementType = convertedType.getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = newElementType.getIntOrFloatBitWidth();
+
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+    int scale = dstBits / srcBits;
+
+    auto origElements = op.getVectorType().getNumElements();
+    if (origElements % scale != 0)
+      return failure();
+
+    auto newPadding = rewriter.create<arith::ExtUIOp>(loc, newElementType,
+                                                      adaptor.getPadding());
+
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getSource());
+
+    OpFoldResult linearizedIndices;
+    std::tie(std::ignore, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(),
+            getAsOpFoldResult(adaptor.getIndices()));
+
+    auto numElements = (origElements + scale - 1) / scale;
+    auto newReadType = VectorType::get(numElements, newElementType);
+
+    auto newRead = rewriter.create<vector::TransferReadOp>(
+        loc, newReadType, adaptor.getSource(),
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
+        newPadding);
+
+    auto bitCast =
+        rewriter.create<vector::BitCastOp>(loc, op.getType(), newRead);
 
     rewriter.replaceOp(op, bitCast->getResult(0));
     return success();
@@ -107,5 +164,6 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
     RewritePatternSet &patterns) {
 
   // Populate `vector.*` conversion patterns.
-  patterns.add<ConvertVectorLoad>(typeConverter, patterns.getContext());
+  patterns.add<ConvertVectorLoad, ConvertVectorTransferRead>(
+      typeConverter, patterns.getContext());
 }

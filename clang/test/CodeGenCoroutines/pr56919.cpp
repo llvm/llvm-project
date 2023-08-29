@@ -111,15 +111,12 @@ Task<void> Bar() { co_await Baz(); }
 
 // CHECK: _Z3Quxv.destroy:{{.*}}
 // CHECK-NEXT: #
-// CHECK-NEXT: movl	$40, %esi
-// CHECK-NEXT: jmp	_ZdlPvm@PLT
+// CHECK-NEXT: jmp	_ZdlPv
 
 // CHECK: _Z3Bazv.destroy:{{.*}}
 // CHECK-NEXT: #
-// CHECK-NEXT: movl	$80, %esi
-// CHECK-NEXT: jmp	_ZdlPvm
+// CHECK-NEXT: jmp	_ZdlPv
 
 // CHECK: _Z3Barv.destroy:{{.*}}
 // CHECK-NEXT: #
-// CHECK-NEXT: movl	$120, %esi
-// CHECK-NEXT: jmp	_ZdlPvm
+// CHECK-NEXT: jmp	_ZdlPv

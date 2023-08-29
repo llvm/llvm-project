@@ -1,12 +1,12 @@
 // No PCH:
-// RUN: %clang_cc1 -pedantic -std=c++1z -include %s -verify %s
+// RUN: %clang_cc1 -pedantic -fsized-deallocation -std=c++1z -include %s -verify %s
 //
 // With PCH:
-// RUN: %clang_cc1 -pedantic -std=c++1z -emit-pch %s -o %t
-// RUN: %clang_cc1 -pedantic -std=c++1z -include-pch %t -verify %s
+// RUN: %clang_cc1 -pedantic -fsized-deallocation -std=c++1z -emit-pch %s -o %t
+// RUN: %clang_cc1 -pedantic -fsized-deallocation -std=c++1z -include-pch %t -verify %s
 
-// RUN: %clang_cc1 -pedantic -std=c++1z -emit-pch -fpch-instantiate-templates %s -o %t
-// RUN: %clang_cc1 -pedantic -std=c++1z -include-pch %t -verify %s
+// RUN: %clang_cc1 -pedantic -fsized-deallocation -std=c++1z -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -pedantic -fsized-deallocation -std=c++1z -include-pch %t -verify %s
 
 // expected-no-diagnostics
 

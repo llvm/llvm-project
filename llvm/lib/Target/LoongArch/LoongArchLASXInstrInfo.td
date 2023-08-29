@@ -1545,10 +1545,10 @@ foreach Inst = ["XVEXTH_Q_D", "XVEXTH_QU_DU", "XVMSKLTZ_D",
 // Pat<(Intrinsic timm:$imm)
 //     (LAInst timm:$imm)>;
 def : Pat<(int_loongarch_lasx_xvldi timm:$imm),
-          (XVLDI (to_valide_timm timm:$imm))>;
+          (XVLDI (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVREPLI_B", "XVREPLI_H", "XVREPLI_W", "XVREPLI_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret timm:$imm),
-            (!cast<LAInst>("Pseudo"#Inst) (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>("Pseudo"#Inst) (to_valid_timm timm:$imm))>;
 
 // vty: v32i8/v16i16/v8i32/v4i64
 // Pat<(Intrinsic vty:$xj, timm:$imm)
@@ -1558,25 +1558,25 @@ foreach Inst = ["XVSAT_B", "XVSAT_BU", "XVNORI_B", "XVROTRI_B", "XVSLLWIL_H_B",
                 "XVSEQI_B", "XVSLEI_B", "XVSLEI_BU", "XVSLTI_B", "XVSLTI_BU",
                 "XVREPL128VEI_B", "XVBSLL_V", "XVBSRL_V", "XVSHUF4I_B"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v32i8 LASX256:$xj), timm:$imm),
-            (!cast<LAInst>(Inst) LASX256:$xj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LASX256:$xj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSAT_H", "XVSAT_HU", "XVROTRI_H", "XVSLLWIL_W_H",
                 "XVSLLWIL_WU_HU", "XVSRLRI_H", "XVSRARI_H",
                 "XVSEQI_H", "XVSLEI_H", "XVSLEI_HU", "XVSLTI_H", "XVSLTI_HU",
                 "XVREPL128VEI_H", "XVSHUF4I_H"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v16i16 LASX256:$xj), timm:$imm),
-            (!cast<LAInst>(Inst) LASX256:$xj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LASX256:$xj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSAT_W", "XVSAT_WU", "XVROTRI_W", "XVSLLWIL_D_W",
                 "XVSLLWIL_DU_WU", "XVSRLRI_W", "XVSRARI_W",
                 "XVSEQI_W", "XVSLEI_W", "XVSLEI_WU", "XVSLTI_W", "XVSLTI_WU",
                 "XVREPL128VEI_W", "XVSHUF4I_W", "XVPICKVE_W"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v8i32 LASX256:$xj), timm:$imm),
-            (!cast<LAInst>(Inst) LASX256:$xj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LASX256:$xj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSAT_D", "XVSAT_DU", "XVROTRI_D", "XVSRLRI_D", "XVSRARI_D",
                 "XVSEQI_D", "XVSLEI_D", "XVSLEI_DU", "XVSLTI_D", "XVSLTI_DU",
                 "XVPICKVE2GR_D", "XVPICKVE2GR_DU",
                 "XVREPL128VEI_D", "XVPERMI_D", "XVPICKVE_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4i64 LASX256:$xj), timm:$imm),
-            (!cast<LAInst>(Inst) LASX256:$xj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LASX256:$xj, (to_valid_timm timm:$imm))>;
 
 // vty: v32i8/v16i16/v8i32/v4i64
 // Pat<(Intrinsic vty:$xd, vty:$xj, timm:$imm)
@@ -1588,7 +1588,7 @@ foreach Inst = ["XVSRLNI_B_H", "XVSRANI_B_H", "XVSRLRNI_B_H", "XVSRARNI_B_H",
   def : Pat<(deriveLASXIntrinsic<Inst>.ret
                (v32i8 LASX256:$xd), (v32i8 LASX256:$xj), timm:$imm),
             (!cast<LAInst>(Inst) LASX256:$xd, LASX256:$xj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSRLNI_H_W", "XVSRANI_H_W", "XVSRLRNI_H_W", "XVSRARNI_H_W",
                 "XVSSRLNI_H_W", "XVSSRANI_H_W", "XVSSRLNI_HU_W", "XVSSRANI_HU_W",
                 "XVSSRLRNI_H_W", "XVSSRARNI_H_W", "XVSSRLRNI_HU_W", "XVSSRARNI_HU_W",
@@ -1596,7 +1596,7 @@ foreach Inst = ["XVSRLNI_H_W", "XVSRANI_H_W", "XVSRLRNI_H_W", "XVSRARNI_H_W",
   def : Pat<(deriveLASXIntrinsic<Inst>.ret
                (v16i16 LASX256:$xd), (v16i16 LASX256:$xj), timm:$imm),
             (!cast<LAInst>(Inst) LASX256:$xd, LASX256:$xj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSRLNI_W_D", "XVSRANI_W_D", "XVSRLRNI_W_D", "XVSRARNI_W_D",
                 "XVSSRLNI_W_D", "XVSSRANI_W_D", "XVSSRLNI_WU_D", "XVSSRANI_WU_D",
                 "XVSSRLRNI_W_D", "XVSSRARNI_W_D", "XVSSRLRNI_WU_D", "XVSSRARNI_WU_D",
@@ -1604,7 +1604,7 @@ foreach Inst = ["XVSRLNI_W_D", "XVSRANI_W_D", "XVSRLRNI_W_D", "XVSRARNI_W_D",
   def : Pat<(deriveLASXIntrinsic<Inst>.ret
                (v8i32 LASX256:$xd), (v8i32 LASX256:$xj), timm:$imm),
             (!cast<LAInst>(Inst) LASX256:$xd, LASX256:$xj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["XVSRLNI_D_Q", "XVSRANI_D_Q", "XVSRLRNI_D_Q", "XVSRARNI_D_Q",
                 "XVSSRLNI_D_Q", "XVSSRANI_D_Q", "XVSSRLNI_DU_Q", "XVSSRANI_DU_Q",
                 "XVSSRLRNI_D_Q", "XVSSRARNI_D_Q", "XVSSRLRNI_DU_Q", "XVSSRARNI_DU_Q",
@@ -1612,7 +1612,7 @@ foreach Inst = ["XVSRLNI_D_Q", "XVSRANI_D_Q", "XVSRLRNI_D_Q", "XVSRARNI_D_Q",
   def : Pat<(deriveLASXIntrinsic<Inst>.ret
                (v4i64 LASX256:$xd), (v4i64 LASX256:$xj), timm:$imm),
             (!cast<LAInst>(Inst) LASX256:$xd, LASX256:$xj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 
 // vty: v32i8/v16i16/v8i32/v4i64
 // Pat<(Intrinsic vty:$xd, vty:$xj, vty:$xk),
@@ -1693,42 +1693,42 @@ foreach Inst = ["XVFLOGB_D", "XVFCLASS_D", "XVFSQRT_D", "XVFRECIP_D", "XVFRSQRT_
             (!cast<LAInst>(Inst) LASX256:$xj)>;
 
 def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
-          (XVPICKVE_W v8f32:$xj, (to_valide_timm timm:$imm))>;
+          (XVPICKVE_W v8f32:$xj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvpickve_d_f v4f64:$xj, timm:$imm),
-          (XVPICKVE_D v4f64:$xj, (to_valide_timm timm:$imm))>;
+          (XVPICKVE_D v4f64:$xj, (to_valid_timm timm:$imm))>;
 
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
-          (XVLD GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVLD GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldx GPR:$rj, GPR:$rk),
           (XVLDX GPR:$rj, GPR:$rk)>;
 
 def : Pat<(int_loongarch_lasx_xvldrepl_b GPR:$rj, timm:$imm),
-          (XVLDREPL_B GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVLDREPL_B GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldrepl_h GPR:$rj, timm:$imm),
-          (XVLDREPL_H GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVLDREPL_H GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldrepl_w GPR:$rj, timm:$imm),
-          (XVLDREPL_W GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVLDREPL_W GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldrepl_d GPR:$rj, timm:$imm),
-          (XVLDREPL_D GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVLDREPL_D GPR:$rj, (to_valid_timm timm:$imm))>;
 
 // store
 def : Pat<(int_loongarch_lasx_xvst LASX256:$xd, GPR:$rj, timm:$imm),
-          (XVST LASX256:$xd, GPR:$rj, (to_valide_timm timm:$imm))>;
+          (XVST LASX256:$xd, GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvstx LASX256:$xd, GPR:$rj, GPR:$rk),
           (XVSTX LASX256:$xd, GPR:$rj, GPR:$rk)>;
 
 def : Pat<(int_loongarch_lasx_xvstelm_b v32i8:$xd, GPR:$rj, timm:$imm, timm:$idx),
-          (XVSTELM_B v32i8:$xd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (XVSTELM_B v32i8:$xd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lasx_xvstelm_h v16i16:$xd, GPR:$rj, timm:$imm, timm:$idx),
-          (XVSTELM_H v16i16:$xd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (XVSTELM_H v16i16:$xd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lasx_xvstelm_w v8i32:$xd, GPR:$rj, timm:$imm, timm:$idx),
-          (XVSTELM_W v8i32:$xd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (XVSTELM_W v8i32:$xd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx),
-          (XVSTELM_D v4i64:$xd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (XVSTELM_D v4i64:$xd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 
 } // Predicates = [HasExtLASX]

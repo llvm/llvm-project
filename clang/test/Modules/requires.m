@@ -35,4 +35,6 @@
 @import DependsOnModule.C11; // expected-note {{module imported here}}
 // expected-error@DependsOnModule.framework/module.map:64 {{module 'DependsOnModule.C17' requires feature 'c17'}}
 @import DependsOnModule.C17; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:67 {{module 'DependsOnModule.C23' requires feature 'c23'}}
+@import DependsOnModule.C23; // expected-note {{module imported here}}
 #endif

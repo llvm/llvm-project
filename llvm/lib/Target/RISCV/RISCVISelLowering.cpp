@@ -3559,18 +3559,29 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     if ((LoC >> 31) == HiC)
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Lo, VL);
 
-    // If vl is equal to VLMAX and Hi constant is equal to Lo, we could use
-    // vmv.v.x whose EEW = 32 to lower it.
-    if (LoC == HiC && (isAllOnesConstant(VL) ||
-                       (isa<RegisterSDNode>(VL) &&
-                        cast<RegisterSDNode>(VL)->getReg() == RISCV::X0))) {
-      MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
-      // TODO: if vl <= min(VLMAX), we can also do this. But we could not
-      // access the subtarget here now.
-      auto InterVec = DAG.getNode(
-          RISCVISD::VMV_V_X_VL, DL, InterVT, DAG.getUNDEF(InterVT), Lo,
-                                  DAG.getRegister(RISCV::X0, MVT::i32));
-      return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
+    // If vl is equal to VLMAX or fits in 4 bits and Hi constant is equal to Lo,
+    // we could use vmv.v.x whose EEW = 32 to lower it. This allows us to use
+    // vlmax vsetvli or vsetivli to change the VL.
+    // FIXME: Support larger constants?
+    // FIXME: Support non-constant VLs by saturating?
+    if (LoC == HiC) {
+      SDValue NewVL;
+      if (isAllOnesConstant(VL) ||
+          (isa<RegisterSDNode>(VL) &&
+           cast<RegisterSDNode>(VL)->getReg() == RISCV::X0))
+        NewVL = DAG.getRegister(RISCV::X0, MVT::i32);
+      else if (isa<ConstantSDNode>(VL) &&
+               isUInt<4>(cast<ConstantSDNode>(VL)->getZExtValue()))
+        NewVL = DAG.getNode(ISD::ADD, DL, VL.getValueType(), VL, VL);
+
+      if (NewVL) {
+        MVT InterVT =
+            MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+        auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT,
+                                    DAG.getUNDEF(InterVT), Lo,
+                                    DAG.getRegister(RISCV::X0, MVT::i32));
+        return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
+      }
     }
   }
 

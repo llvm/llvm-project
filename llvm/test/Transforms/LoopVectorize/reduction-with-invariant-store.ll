@@ -25,8 +25,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[GEP_DST:%.*]], align 4
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 define void @reduc_store(ptr %dst, ptr readonly %src) {
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
@@ -221,8 +220,7 @@ for.end:
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP36:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP34]])
 ; CHECK-NEXT:    store i32 [[TMP36]], ptr [[GEP_DST:%.*]], align 4
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 500, 500
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
@@ -491,8 +489,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[DST:%.*]], align 8
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 363, 360
-; CHECK-NEXT:    br i1 [[CMP_N]], label %exit, label %scalar.ph
+; CHECK-NEXT:    br i1 false, label %exit, label %scalar.ph
 ; CHECK:       scalar.ph:
 ;
 entry:

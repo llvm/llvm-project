@@ -1,4 +1,4 @@
-! Tests for the `-fno-integrated-as` flag.
+! Tests for the `-f(no-)integrated-as` flag.
 
 ! UNSUPPORTED: system-windows
 
@@ -11,10 +11,11 @@
 ! CHECK-SAME: "-o" "[[assembly_file:.*]].s"
 ! CHECK-NEXT: "-o" "{{.*}}.o" "[[assembly_file:.*]].s"
 
-!-----------------------------
-! Without `-fno-integrated-as`
-!-----------------------------
+!----------------------------------------------------------------
+! Without `-fno-integrated-as` / With `-fintegrated-as` (default)
+!----------------------------------------------------------------
 ! Verify that there _is no_ separate line with an assembler invocation
+! RUN: %flang -c -fintegrated-as %s -### 2>&1 | FileCheck %s -check-prefix=DEFAULT
 ! RUN: %flang -c %s -### 2>&1 | FileCheck %s -check-prefix=DEFAULT
 ! DEFAULT-LABEL: "-fc1"
-! DEFAULT-SAME: "-o" "{{.*}}.o" "{{.*}}fno-integrated-as.f90"
+! DEFAULT-SAME: "-o" "{{.*}}.o" "{{.*}}fintegrated-as.f90"

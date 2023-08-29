@@ -1646,4 +1646,13 @@ bool CouldBeDataPointerValuedFunction(const Symbol *original) {
   return false;
 }
 
+std::string GetModuleOrSubmoduleName(const Symbol &symbol) {
+  const auto &details{symbol.get<ModuleDetails>()};
+  std::string result{symbol.name().ToString()};
+  if (details.ancestor() && details.ancestor()->symbol()) {
+    result = details.ancestor()->symbol()->name().ToString() + ':' + result;
+  }
+  return result;
+}
+
 } // namespace Fortran::semantics
