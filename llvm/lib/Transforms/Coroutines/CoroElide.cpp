@@ -227,7 +227,7 @@ bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
     PotentiallyEscaped |= EscapingBBs.count(BB);
 
     if (TIs.count(BB)) {
-      if (!BB->getTerminator()->isExceptionalTerminator() || PotentiallyEscaped)
+      if (isa<ReturnInst>(BB->getTerminator()) || PotentiallyEscaped)
         return true;
 
       // If the function ends with the exceptional terminator, the memory used

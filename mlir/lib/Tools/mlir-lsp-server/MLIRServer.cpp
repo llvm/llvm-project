@@ -287,6 +287,12 @@ struct MLIRDocument {
   buildHoverForBlockArgument(SMRange hoverRange, BlockArgument arg,
                              const AsmParserState::BlockDefinition &block);
 
+  lsp::Hover buildHoverForAttributeAlias(
+      SMRange hoverRange, const AsmParserState::AttributeAliasDefinition &attr);
+  lsp::Hover
+  buildHoverForTypeAlias(SMRange hoverRange,
+                         const AsmParserState::TypeAliasDefinition &type);
+
   //===--------------------------------------------------------------------===//
   // Document Symbols
   //===--------------------------------------------------------------------===//
@@ -404,6 +410,18 @@ void MLIRDocument::getLocationsOf(const lsp::URIForFile &uri,
       if (containsPosition(arg))
         return;
   }
+
+  // Check all alias definitions.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (containsPosition(attr.definition))
+      return;
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (containsPosition(type.definition))
+      return;
+  }
 }
 
 void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
@@ -449,6 +467,18 @@ void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
     for (const AsmParserState::SMDefinition &arg : block.arguments)
       if (isDefOrUse(arg, posLoc))
         return appendSMDef(arg);
+  }
+
+  // Check all alias definitions.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (isDefOrUse(attr.definition, posLoc))
+      return appendSMDef(attr.definition);
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (isDefOrUse(type.definition, posLoc))
+      return appendSMDef(type.definition);
   }
 }
 
@@ -501,6 +531,19 @@ MLIRDocument::findHover(const lsp::URIForFile &uri,
           hoverRange, block.block->getArgument(arg.index()), block);
     }
   }
+
+  // Check to see if the hover is over an alias.
+  for (const AsmParserState::AttributeAliasDefinition &attr :
+       asmState.getAttributeAliasDefs()) {
+    if (isDefOrUse(attr.definition, posLoc, &hoverRange))
+      return buildHoverForAttributeAlias(hoverRange, attr);
+  }
+  for (const AsmParserState::TypeAliasDefinition &type :
+       asmState.getTypeAliasDefs()) {
+    if (isDefOrUse(type.definition, posLoc, &hoverRange))
+      return buildHoverForTypeAlias(hoverRange, type);
+  }
+
   return std::nullopt;
 }
 
@@ -605,6 +648,28 @@ lsp::Hover MLIRDocument::buildHoverForBlockArgument(
   printDefBlockName(os, block);
   os << "\n\nArgument #" << arg.getArgNumber() << "\n\n"
      << "Type: `" << arg.getType() << "`\n\n";
+
+  return hover;
+}
+
+lsp::Hover MLIRDocument::buildHoverForAttributeAlias(
+    SMRange hoverRange, const AsmParserState::AttributeAliasDefinition &attr) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  llvm::raw_string_ostream os(hover.contents.value);
+
+  os << "Attribute Alias: \"" << attr.name << "\n\n";
+  os << "Value: ```mlir\n" << attr.value << "\n```\n\n";
+
+  return hover;
+}
+
+lsp::Hover MLIRDocument::buildHoverForTypeAlias(
+    SMRange hoverRange, const AsmParserState::TypeAliasDefinition &type) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  llvm::raw_string_ostream os(hover.contents.value);
+
+  os << "Type Alias: \"" << type.name << "\n\n";
+  os << "Value: ```mlir\n" << type.value << "\n```\n\n";
 
   return hover;
 }

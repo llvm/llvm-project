@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_COMMON_CONSTANTS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_COMMON_CONSTANTS_H
 
+#include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/number_pair.h"
 
 namespace __llvm_libc {
@@ -64,6 +65,12 @@ extern const double EXP_M1[195];
 // > display = hexadecimal;
 // > for i from 0 to 127 do { D(exp(i / 128)); };
 extern const double EXP_M2[128];
+
+// Lookup table for 2^(k * 2^-6) with k = 0..63.
+extern const fputil::TripleDouble EXP2_MID1[64];
+
+// Lookup table for 2^(k * 2^-12) with k = 0..63.
+extern const fputil::TripleDouble EXP2_MID2[64];
 
 } // namespace __llvm_libc
 

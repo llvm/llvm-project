@@ -141,7 +141,7 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   std::optional<llvm::MemoryBufferRef> Buffer =
       SM.getBufferOrNone(SM.getFileID(AssertLoc));
   if (!Buffer)
-    return SourceLocation();
+    return {};
 
   const char *BufferPos = SM.getCharacterData(AssertLoc);
 
@@ -152,7 +152,7 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   //        assert                          first left parenthesis
   if (Lexer.LexFromRawLexer(Token) || Lexer.LexFromRawLexer(Token) ||
       !Token.is(tok::l_paren))
-    return SourceLocation();
+    return {};
 
   unsigned int ParenCount = 1;
   while (ParenCount && !Lexer.LexFromRawLexer(Token)) {

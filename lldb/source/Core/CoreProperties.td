@@ -173,8 +173,8 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will print the values of variables declared in an expression. Currently only supported in the REPL (default: true).">;
   def TabSize: Property<"tab-size", "UInt64">,
     Global,
-    DefaultUnsignedValue<4>,
-    Desc<"The tab size to use when indenting code in multi-line input mode (default: 4).">;
+    DefaultUnsignedValue<2>,
+    Desc<"The tab size to use when indenting code in multi-line input mode (default: 2).">;
   def EscapeNonPrintables: Property<"escape-non-printables", "Boolean">,
     Global,
     DefaultTrue,

@@ -50,7 +50,8 @@ int f() {
 
   // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeD1Ev(
   // CHECK: %[[Mem:.+]] = call ptr @llvm.coro.free(
-  // CHECK: call void @_ZdlPv(ptr noundef %[[Mem]])
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
 
   // Initialize retval from Gro and destroy Gro
   // Note this also tests delaying initialization when Gro and function return

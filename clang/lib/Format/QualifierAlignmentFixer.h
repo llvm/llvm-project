@@ -1,5 +1,4 @@
-//===--- LeftRightQualifierAlignmentFixer.h ------------------------------*- C++
-//-*-===//
+//===--- QualifierAlignmentFixer.h -------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares LeftRightQualifierAlignmentFixer, a TokenAnalyzer that
+/// This file declares QualifierAlignmentFixer, a TokenAnalyzer that
 /// enforces either east or west const depending on the style.
 ///
 //===----------------------------------------------------------------------===//

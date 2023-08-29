@@ -2617,41 +2617,14 @@ bool NewGVN::OpIsSafeForPHIOfOps(Value *V, const BasicBlock *PHIBlock,
     }
 
     auto *OrigI = cast<Instruction>(I);
-    
-    if (MemoryAccess *OriginalAccess = getMemoryAccess(OrigI)) {
-      SmallVector<MemoryAccess *, 4> MemAccessWorkList;
-      MemAccessWorkList.push_back(
-          MSSAWalker->getClobberingMemoryAccess(OriginalAccess));
-
-      // We only want memory defs/phis that might alias with the original
-      // access, so if we can, pass the location to the walker.
-      MemoryLocation Loc =
-          MemoryLocation::getOrNone(OrigI).value_or(MemoryLocation());
-      while (!MemAccessWorkList.empty()) {
-        auto *MemAccess = MemAccessWorkList.pop_back_val();
-        if (MSSA->isLiveOnEntryDef(MemAccess))
-          continue;
-
-        // Phi block is dominated - safe.
-        if (DT->properlyDominates(MemAccess->getBlock(), PHIBlock)) {
-          OpSafeForPHIOfOps.insert({I, true});
-          continue;
-        }
-
-        // Clobbering MemoryPhi - unsafe.
-        // Note : Only checking memory phis allows us to skip redundant stores
-        if (isa<MemoryPhi>(MemAccess) &&
-            MemAccess ==
-                MSSAWalker->getClobberingMemoryAccess(MemAccess, Loc)) {
-          OpSafeForPHIOfOps.insert({I, false});
-          return false;
-        }
-
-        // Add potential clobber of the original access.
-        MemAccessWorkList.push_back(MSSAWalker->getClobberingMemoryAccess(
-            cast<MemoryUseOrDef>(MemAccess)));
-      }
-    }
+    // When we hit an instruction that reads memory (load, call, etc), we must
+    // consider any store that may happen in the loop. For now, we assume the
+    // worst: there is a store in the loop that alias with this read.
+    // The case where the load is outside the loop is already covered by the
+    // dominator check above.
+    // TODO: relax this condition
+    if (OrigI->mayReadFromMemory())
+      return false;
 
     // Check the operands of the current instruction.
     for (auto *Op : OrigI->operand_values()) {

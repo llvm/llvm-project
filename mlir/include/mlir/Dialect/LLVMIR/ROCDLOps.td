@@ -108,6 +108,35 @@ class ROCDL_MbcntOp<string mnemonic> :
 def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
 def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
 
+def ROCDL_DsSwizzleOp : 
+ROCDL_Op<"ds_swizzle">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$src,
+               I32:$offset)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_swizzle, {$src, $offset});
+  }];
+  let assemblyFormat = [{
+    $src `,` $offset  attr-dict `:` `(` type($src) `,` type($offset) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_DsBpermuteOp : 
+ROCDL_Op<"ds_bpermute">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$index,
+               I32:$src)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_bpermute, {$index, $src});
+  }];
+  let assemblyFormat = [{
+    $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
+   }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 

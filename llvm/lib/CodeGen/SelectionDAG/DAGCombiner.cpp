@@ -6042,67 +6042,6 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static bool arebothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
-                                   SelectionDAG &DAG) {
-  return DAG.isKnownNeverSNaN(Operand2) && DAG.isKnownNeverSNaN(Operand1);
-}
-
-static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
-                                  SelectionDAG &DAG) {
-  return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
-}
-
-static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
-                                     ISD::CondCode CC, unsigned OrAndOpcode,
-                                     SelectionDAG &DAG) {
-  // The optimization cannot be applied for all the predicates because
-  // of the way FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle
-  // NaNs. For FMINNUM_IEEE/FMAXNUM_IEEE, the optimization cannot be
-  // applied at all if one of the operands is a signaling NaN.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT OpVT = Operand1.getValueType();
-  // It is safe to use FMINNUM_IEEE/FMAXNUM_IEEE if all the operands
-  // are non NaN values.
-  if (((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::OR)) ||
-      ((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::AND)))
-    return arebothOperandsNotNan(Operand1, Operand2, DAG) ? ISD::FMINNUM_IEEE
-                                                          : ISD::DELETED_NODE;
-  else if (((CC == ISD::SETGT || CC == ISD::SETGE) &&
-            (OrAndOpcode == ISD::OR)) ||
-           ((CC == ISD::SETLT || CC == ISD::SETLE) &&
-            (OrAndOpcode == ISD::AND)))
-    return arebothOperandsNotNan(Operand1, Operand2, DAG) ? ISD::FMAXNUM_IEEE
-                                                          : ISD::DELETED_NODE;
-  // Both FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle quiet
-  // NaNs in the same way. But, FMINNUM/FMAXNUM and FMINNUM_IEEE/
-  // FMAXNUM_IEEE handle signaling NaNs differently. If we cannot prove
-  // that there are not any sNaNs, then the optimization is not valid
-  // for FMINNUM_IEEE/FMAXNUM_IEEE. In the presence of sNaNs, we apply
-  // the optimization using FMINNUM/FMAXNUM for the following cases. If
-  // we can prove that we do not have any sNaNs, then we can do the
-  // optimization using FMINNUM_IEEE/FMAXNUM_IEEE for the following
-  // cases.
-  else if (((CC == ISD::SETOLT || CC == ISD::SETOLE) &&
-            (OrAndOpcode == ISD::OR)) ||
-           ((CC == ISD::SETUGT || CC == ISD::SETUGE) &&
-            (OrAndOpcode == ISD::AND)))
-    return TLI.isOperationLegalOrCustom(ISD::FMINNUM, OpVT)
-               ? ISD::FMINNUM
-               : arebothOperandsNotSNan(Operand1, Operand2, DAG)
-                     ? ISD::FMINNUM_IEEE
-                     : ISD::DELETED_NODE;
-  else if (((CC == ISD::SETOGT || CC == ISD::SETOGE) &&
-            (OrAndOpcode == ISD::OR)) ||
-           ((CC == ISD::SETULT || CC == ISD::SETULE) &&
-            (OrAndOpcode == ISD::AND)))
-    return TLI.isOperationLegalOrCustom(ISD::FMAXNUM, OpVT)
-               ? ISD::FMAXNUM
-               : arebothOperandsNotSNan(Operand1, Operand2, DAG)
-                     ? ISD::FMAXNUM_IEEE
-                     : ISD::DELETED_NODE;
-  return ISD::DELETED_NODE;
-}
-
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
   assert(
@@ -6144,20 +6083,12 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   // The optimization does not work for `==` or `!=` .
   // The two comparisons should have either the same predicate or the
   // predicate of one of the comparisons is the opposite of the other one.
-  if (((OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
-        TLI.isOperationLegal(ISD::SMAX, OpVT) &&
-        TLI.isOperationLegal(ISD::UMIN, OpVT) &&
-        TLI.isOperationLegal(ISD::SMIN, OpVT)) ||
-       (OpVT.isFloatingPoint() &&
-        ((TLI.isOperationLegalOrCustom(ISD::FMAXNUM, OpVT) &&
-          TLI.isOperationLegalOrCustom(ISD::FMINNUM, OpVT)) ||
-         (TLI.isOperationLegal(ISD::FMAXNUM_IEEE, OpVT) &&
-          TLI.isOperationLegal(ISD::FMINNUM_IEEE, OpVT))))) &&
-      !ISD::isIntEqualitySetCC(CCL) && !ISD::isFPEqualitySetCC(CCL) &&
-      CCL != ISD::SETFALSE && CCL != ISD::SETO && CCL != ISD::SETUO &&
-      CCL != ISD::SETTRUE &&
-      (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR))) {
-
+  if (OpVT.isInteger() && !ISD::isIntEqualitySetCC(CCL) &&
+      (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR)) &&
+      TLI.isOperationLegal(ISD::UMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::SMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::UMIN, OpVT) &&
+      TLI.isOperationLegal(ISD::SMIN, OpVT)) {
     SDValue CommonValue, Operand1, Operand2;
     ISD::CondCode CC = ISD::SETCC_INVALID;
     if (CCL == CCR) {
@@ -6195,25 +6126,19 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       CC = ISD::SETCC_INVALID;
 
     if (CC != ISD::SETCC_INVALID) {
-      unsigned NewOpcode = ISD::DELETED_NODE;
+      unsigned NewOpcode;
       bool IsSigned = isSignedIntSetCC(CC);
-      if (OpVT.isInteger()) {
-        bool IsLess = (CC == ISD::SETLE || CC == ISD::SETULE ||
-                       CC == ISD::SETLT || CC == ISD::SETULT);
-        bool IsOr = (LogicOp->getOpcode() == ISD::OR);
-        if (IsLess == IsOr)
-          NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
-        else
-          NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
-      } else if (OpVT.isFloatingPoint())
-        NewOpcode = getMinMaxOpcodeForFP(Operand1, Operand2, CC,
-                                         LogicOp->getOpcode(), DAG);
+      bool IsLess = (CC == ISD::SETLE || CC == ISD::SETULE ||
+                     CC == ISD::SETLT || CC == ISD::SETULT);
+      bool IsOr = (LogicOp->getOpcode() == ISD::OR);
+      if (IsLess == IsOr)
+        NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
+      else
+        NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
 
-      if (NewOpcode != ISD::DELETED_NODE) {
-        SDValue MinMaxValue =
-            DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
-        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
-      }
+      SDValue MinMaxValue =
+          DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
+      return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
     }
   }
 

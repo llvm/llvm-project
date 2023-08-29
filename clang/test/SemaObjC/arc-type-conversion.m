@@ -91,7 +91,6 @@ void ownership_transfer_in_cast(void *vp, Block *pblk) {
   (void)(Block*)lv; // expected-error {{cast of an Objective-C pointer to '__strong Block *'}}
 }
 
-// <rdar://problem/10486347>
 void conversion_in_conditional(id a, void* b) {
   id c = 1 ? a : b; // expected-error {{operands to conditional of types 'id' and 'void *' are incompatible in ARC mode}}
   id d = 1 ? b : a; // expected-error {{operands to conditional of types 'void *' and 'id' are incompatible in ARC mode}}

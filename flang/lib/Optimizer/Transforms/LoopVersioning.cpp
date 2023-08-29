@@ -141,6 +141,14 @@ void LoopVersioningPass::runOnOperation() {
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
   for (auto &arg : args) {
+    // Optional arguments must be checked for IsPresent before
+    // looking for the bounds. They are unsupported for the time being.
+    if (func.getArgAttrOfType<mlir::UnitAttr>(arg.getArgNumber(),
+                                              fir::getOptionalAttrName())) {
+      LLVM_DEBUG(llvm::dbgs() << "OPTIONAL is not supported\n");
+      continue;
+    }
+
     if (auto seqTy = getAsSequenceType(&arg)) {
       unsigned rank = seqTy.getDimension();
       if (rank > 0 &&

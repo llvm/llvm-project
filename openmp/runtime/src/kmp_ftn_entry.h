@@ -807,6 +807,10 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_LIMIT)(void) {
 
   gtid = __kmp_entry_gtid();
   thread = __kmp_threads[gtid];
+  // If thread_limit for the target task is defined, return that instead of the
+  // regular task thread_limit
+  if (int thread_limit = thread->th.th_current_task->td_icvs.task_thread_limit)
+    return thread_limit;
   return thread->th.th_current_task->td_icvs.thread_limit;
 #endif
 }

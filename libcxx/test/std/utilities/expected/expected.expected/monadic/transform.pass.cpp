@@ -106,7 +106,7 @@ static_assert(!has_transform<const std::expected<int, std::unique_ptr<int>>&&, i
 constexpr void test_val_types() {
   // Test & overload
   {
-    // Without &qualifier on F'soperator()
+    // Without & qualifier on F's operator()
     {
       std::expected<int, int> e(0);
       std::same_as<std::expected<int, int>> decltype(auto) val = e.transform(LVal{});

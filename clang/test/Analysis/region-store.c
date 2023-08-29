@@ -8,7 +8,6 @@ void clang_analyzer_eval(int);
 void clang_analyzer_dump(int*);
 
 // Testing core functionality of the region store.
-// radar://10127782
 int compoundLiteralTest(void) {
     int index = 0;
     for (index = 0; index < 2; index++) {

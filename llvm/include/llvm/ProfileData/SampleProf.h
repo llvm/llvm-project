@@ -1412,7 +1412,7 @@ public:
 /// Note: when populating container, make sure to assign the SampleContext to
 /// the mapped value immediately because the key no longer holds it.
 class SampleProfileMap
-    : public HashKeyMap<DenseMap, SampleContext, FunctionSamples> {
+    : public HashKeyMap<std::unordered_map, SampleContext, FunctionSamples> {
 public:
   // Convenience method because this is being used in many places. Set the
   // FunctionSamples' context if its newly inserted.
@@ -1424,12 +1424,12 @@ public:
   }
 
   iterator find(const SampleContext &Ctx) {
-    return HashKeyMap<llvm::DenseMap, SampleContext, FunctionSamples>::find(
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::find(
         Ctx);
   }
 
   const_iterator find(const SampleContext &Ctx) const {
-    return HashKeyMap<llvm::DenseMap, SampleContext, FunctionSamples>::find(
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::find(
         Ctx);
   }
 
@@ -1449,8 +1449,8 @@ public:
   }
 
   size_t erase(const SampleContext &Ctx) {
-    return HashKeyMap<llvm::DenseMap, SampleContext, FunctionSamples>::erase(
-        Ctx);
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::
+        erase(Ctx);
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }

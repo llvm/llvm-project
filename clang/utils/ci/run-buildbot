@@ -81,17 +81,19 @@ build-clang)
     # network I/O.
     cmake                                                                      \
         -S llvm                                                                \
-        -B build                                                               \
+        -B ${BUILD_DIR}                                                        \
         -G Ninja                                                               \
         -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"                                 \
         -DCMAKE_BUILD_TYPE=Release                                             \
         -DCMAKE_INSTALL_PREFIX=install                                         \
         -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
 
-    ninja -C build install-clang install-clang-resource-headers
+    ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
     ccache -s
     tar -cJvf install.tar.xz install/
     buildkite-agent artifact upload --debug install.tar.xz
+
+    ninja -C ${BUILD_DIR} check-clang
 ;;
 generic-cxx03)
     buildkite-agent artifact download install.tar.xz .

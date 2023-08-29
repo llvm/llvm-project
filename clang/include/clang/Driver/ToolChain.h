@@ -29,6 +29,7 @@
 #include <cassert>
 #include <climits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -500,8 +501,8 @@ public:
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
 
-  // Returns target specific runtime paths.
-  path_list getRuntimePaths() const;
+  // Returns the target specific runtime path if it exists.
+  std::optional<std::string> getRuntimePath() const;
 
   // Returns target specific standard library paths.
   path_list getStdlibPaths() const;

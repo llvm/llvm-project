@@ -105,8 +105,6 @@ long lrint(double __a);
 long lrintf(float __a);
 long lround(double __a);
 long lroundf(float __a);
-int max(int __a, int __b);
-int min(int __a, int __b);
 double modf(double __a, double *__b);
 float modff(float __a, float *__b);
 double nearbyint(double __a);

@@ -2,7 +2,6 @@
 // RUN: FileCheck --input-file=%t-64.layout %s
 // RUN: %clang_cc1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -triple i386-apple-darwin -print-ivar-layout -emit-llvm -o /dev/null  %s > %t-32.layout
 // RUN: FileCheck --input-file=%t-32.layout %s
-// rdar://12184410
 
 void x(id y) {}
 void y(int a) {}
@@ -95,7 +94,6 @@ void f(void) {
     };
 }
 
-// rdar://12752901
 @class NSString;
 extern void NSLog(NSString *format, ...);
 typedef void (^dispatch_block_t)(void);

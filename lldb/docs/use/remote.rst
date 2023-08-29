@@ -23,9 +23,6 @@ communicating with it over the loopback interface. In the case of local
 debugging this whole process is transparent to the user. The platform binary is
 not used in this case, since no file transfers are needed.
 
-.. contents::
-   :local:
-
 Preparation for Remote Debugging
 ---------------------------------
 

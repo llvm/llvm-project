@@ -65,15 +65,9 @@ define void @strided_store_zero_start(i64 %n, ptr %p) {
 define void @strided_store_offset_start(i64 %n, ptr %p) {
 ; RV32-LABEL: strided_store_offset_start:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vadd.vv v8, v9, v8
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vadd.vx v8, v8, a0
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    li a0, 48
@@ -82,7 +76,6 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsoxei32.v v9, (a0), v8
-; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: strided_store_offset_start:

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://9636091
 
 @interface I
 @property (nonatomic, retain) id newName __attribute__((ns_returns_not_retained)) ;

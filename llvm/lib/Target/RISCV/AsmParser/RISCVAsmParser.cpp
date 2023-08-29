@@ -3203,7 +3203,7 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(1))
                             .addOperand(Inst.getOperand(2))
                             .addOperand(Inst.getOperand(3))
-                            .addOperand(Inst.getOperand(4)));
+                            .addReg(RISCV::NoRegister));
     emitToStreamer(Out, MCInstBuilder(RISCV::VMANDN_MM)
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(0))
@@ -3212,8 +3212,8 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     // masked va >= x, any vd
     //
     // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
-    // expansion: vmslt{u}.vx vt, va, x; vmandn.mm vt, v0, vt; vmandn.mm vd,
-    // vd, v0; vmor.mm vd, vt, vd
+    // expansion: vmslt{u}.vx vt, va, x; vmandn.mm vt, v0, vt;
+    //            vmandn.mm vd, vd, v0;  vmor.mm vd, vt, vd
     assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
            "The temporary vector register should not be V0.");
     emitToStreamer(Out, MCInstBuilder(Opcode)

@@ -272,9 +272,9 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     return Builder.CreateNot(A, Name);
   }
   case VPInstruction::ICmpULE: {
-    Value *IV = State.get(getOperand(0), Part);
-    Value *TC = State.get(getOperand(1), Part);
-    return Builder.CreateICmpULE(IV, TC, Name);
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateICmpULE(A, B, Name);
   }
   case Instruction::Select: {
     Value *Cond = State.get(getOperand(0), Part);

@@ -344,7 +344,7 @@ def testDenseArrayGetItem():
         print(f"{len(attr)}: {attr[0]}, {attr[1]}")
 
     with Context():
-        # CHECK: 2: 0, 1
+        # CHECK: 2: False, True
         print_item("array<i1: false, true>")
         # CHECK: 2: 2, 3
         print_item("array<i8: 2, 3>")
@@ -358,6 +358,13 @@ def testDenseArrayGetItem():
         print_item("array<f32: 1.0, 2.0>")
         # CHECK: 2: 3.{{0+}}, 4.{{0+}}
         print_item("array<f64: 3.0, 4.0>")
+
+        class MyBool:
+            def __bool__(self):
+                return True
+
+        # CHECK: myboolarray: array<i1: true>
+        print("myboolarray:", DenseBoolArrayAttr.get([MyBool()]))
 
 
 # CHECK-LABEL: TEST: testDenseIntAttrGetItem

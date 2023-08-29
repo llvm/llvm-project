@@ -32,8 +32,6 @@ void uses_not_introduced_struct(struct not_yet_introduced_struct *); // \
 __attribute__((availability(macosx,strict,introduced=10.6)))
 void uses_not_introduced_struct_same_availability(struct not_yet_introduced_struct *);
 
-// rdar://10535640
-
 enum {
     foo __attribute__((availability(macosx,introduced=8.0,deprecated=9.0)))
 };

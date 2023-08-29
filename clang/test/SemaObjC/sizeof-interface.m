@@ -2,10 +2,8 @@
 
 @class I0; // expected-note 2{{forward declaration of class here}}
 
-// rdar://6811884
 int g0 = sizeof(I0); // expected-error{{invalid application of 'sizeof' to an incomplete type 'I0'}}
 
-// rdar://6821047
 void *g3(I0 *P) {
   P = P+5;        // expected-error {{arithmetic on a pointer to an incomplete type 'I0'}}
 
@@ -49,7 +47,6 @@ typedef struct { @defs(I1); } I1_defs; // expected-error {{use of @defs is not s
 // create is tied to whether we have seen synthesized properties. Ugh.
 // int g3[ sizeof(I1) == 0 ? 1 : -1];
 
-// rdar://6821047
 int bar(I0 *P) {
   P = P+5;  // expected-error {{arithmetic on pointer to interface 'I0', which is not a constant size for this architecture and platform}}
   P = 5+P;  // expected-error {{arithmetic on pointer to interface 'I0', which is not a constant size for this architecture and platform}}

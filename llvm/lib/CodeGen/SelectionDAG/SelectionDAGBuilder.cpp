@@ -7975,6 +7975,16 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     }
     break;
   }
+  case ISD::VP_IS_FPCLASS: {
+    const DataLayout DLayout = DAG.getDataLayout();
+    EVT DestVT = TLI.getValueType(DLayout, VPIntrin.getType());
+    auto Constant = cast<ConstantSDNode>(OpValues[1])->getZExtValue();
+    SDValue Check = DAG.getTargetConstant(Constant, DL, MVT::i32);
+    SDValue V = DAG.getNode(ISD::VP_IS_FPCLASS, DL, DestVT,
+                            {OpValues[0], Check, OpValues[2], OpValues[3]});
+    setValue(&VPIntrin, V);
+    return;
+  }
   case ISD::VP_INTTOPTR: {
     SDValue N = OpValues[0];
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), VPIntrin.getType());

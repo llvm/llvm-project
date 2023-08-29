@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple=i686-apple-darwin9 -verify
-// rdar://13973577
 
 struct foo {
   int big[128];

@@ -115,7 +115,7 @@ def M3WriteZ1 : SchedWriteRes<[]> { let Latency = 1;
 
 def M3WriteA1 : SchedWriteRes<[M3UnitALU]> { let Latency = 1; }
 def M3WriteAA : SchedWriteRes<[M3UnitALU]> { let Latency = 2;
-                                             let ResourceCycles = [2]; }
+                                             let ReleaseAtCycles = [2]; }
 def M3WriteAB : SchedWriteRes<[M3UnitALU,
                                M3UnitC]>   { let Latency = 1;
                                              let NumMicroOps = 2; }
@@ -207,13 +207,13 @@ def : SchedAlias<WriteImm, M3WriteA1>;
 // Divide and multiply instructions.
 def : WriteRes<WriteID32, [M3UnitC,
                            M3UnitD]>  { let Latency = 12;
-                                        let ResourceCycles = [1, 12]; }
+                                        let ReleaseAtCycles = [1, 12]; }
 def : WriteRes<WriteID64, [M3UnitC,
                            M3UnitD]>  { let Latency = 21;
-                                        let ResourceCycles = [1, 21]; }
+                                        let ReleaseAtCycles = [1, 21]; }
 def : WriteRes<WriteIM32, [M3UnitC]>  { let Latency = 3; }
 def : WriteRes<WriteIM64, [M3UnitC]>  { let Latency = 4;
-                                        let ResourceCycles = [2]; }
+                                        let ReleaseAtCycles = [2]; }
 
 // Miscellaneous instructions.
 def : SchedAlias<WriteExtr, M3WriteAY>;
@@ -238,7 +238,7 @@ def : SchedAlias<WriteSTIdx, M3WriteSB>;
 def : WriteRes<WriteF,    [M3UnitFADD]>  { let Latency = 2; }
 def : WriteRes<WriteFCmp, [M3UnitNMSC]>  { let Latency = 2; }
 def : WriteRes<WriteFDiv, [M3UnitFDIV]>  { let Latency = 12;
-                                           let ResourceCycles = [12]; }
+                                           let ReleaseAtCycles = [12]; }
 def : WriteRes<WriteFMul, [M3UnitFMAC]>  { let Latency = 4; }
 
 // FP miscellaneous instructions.
@@ -302,19 +302,19 @@ def M3WriteNEONI   : SchedWriteRes<[M3UnitNSHF,
 def M3WriteNEONV   : SchedWriteRes<[M3UnitFDIV0,
                                     M3UnitFDIV1]>  { let Latency = 7;
                                                      let NumMicroOps = 2;
-                                                     let ResourceCycles = [8, 8]; }
+                                                     let ReleaseAtCycles = [8, 8]; }
 def M3WriteNEONW   : SchedWriteRes<[M3UnitFDIV0,
                                     M3UnitFDIV1]>  { let Latency = 12;
                                                      let NumMicroOps = 2;
-                                                     let ResourceCycles = [13, 13]; }
+                                                     let ReleaseAtCycles = [13, 13]; }
 def M3WriteNEONX   : SchedWriteRes<[M3UnitFSQR,
                                     M3UnitFSQR]>  { let Latency = 18;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [19, 19]; }
+                                                    let ReleaseAtCycles = [19, 19]; }
 def M3WriteNEONY   : SchedWriteRes<[M3UnitFSQR,
                                     M3UnitFSQR]>  { let Latency = 25;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [26, 26]; }
+                                                    let ReleaseAtCycles = [26, 26]; }
 def M3WriteNEONZ   : SchedWriteRes<[M3UnitNMSC,
                                     M3UnitNMSC]>  { let Latency = 5;
                                                     let NumMicroOps = 2; }
@@ -325,16 +325,16 @@ def M3WriteFCVT3A  : SchedWriteRes<[M3UnitFCVT0]> { let Latency = 3; }
 def M3WriteFCVT4A  : SchedWriteRes<[M3UnitFCVT0]> { let Latency = 4; }
 def M3WriteFCVT4   : SchedWriteRes<[M3UnitFCVT]>  { let Latency = 4; }
 def M3WriteFDIV10  : SchedWriteRes<[M3UnitFDIV]>  { let Latency = 7;
-                                                    let ResourceCycles = [8]; }
+                                                    let ReleaseAtCycles = [8]; }
 def M3WriteFDIV12  : SchedWriteRes<[M3UnitFDIV]>  { let Latency = 12;
-                                                    let ResourceCycles = [13]; }
+                                                    let ReleaseAtCycles = [13]; }
 def M3WriteFMAC3   : SchedWriteRes<[M3UnitFMAC]>  { let Latency = 3; }
 def M3WriteFMAC4   : SchedWriteRes<[M3UnitFMAC]>  { let Latency = 4; }
 def M3WriteFMAC5   : SchedWriteRes<[M3UnitFMAC]>  { let Latency = 5; }
 def M3WriteFSQR17  : SchedWriteRes<[M3UnitFSQR]>  { let Latency = 18;
-                                                    let ResourceCycles = [19]; }
+                                                    let ReleaseAtCycles = [19]; }
 def M3WriteFSQR25  : SchedWriteRes<[M3UnitFSQR]>  { let Latency = 25;
-                                                    let ResourceCycles = [26]; }
+                                                    let ReleaseAtCycles = [26]; }
 def M3WriteNALU1   : SchedWriteRes<[M3UnitNALU]>  { let Latency = 1; }
 def M3WriteNCRY1A  : SchedWriteRes<[M3UnitNCRY0]> { let Latency = 1; }
 def M3WriteNCRY3A  : SchedWriteRes<[M3UnitNCRY0]> { let Latency = 3; }
@@ -363,50 +363,50 @@ def M3WriteVLDC    : SchedWriteRes<[M3UnitL,
 def M3WriteVLDD    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU]>  { let Latency = 7;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [2, 1]; }
+                                                    let ReleaseAtCycles = [2, 1]; }
 def M3WriteVLDE    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU]>  { let Latency = 6;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [2, 1]; }
+                                                    let ReleaseAtCycles = [2, 1]; }
 def M3WriteVLDF    : SchedWriteRes<[M3UnitL,
                                     M3UnitL]>     { let Latency = 10;
                                                     let NumMicroOps = 2;
-                                                    let ResourceCycles = [5, 5]; }
+                                                    let ReleaseAtCycles = [5, 5]; }
 def M3WriteVLDG    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU]>  { let Latency = 7;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [2, 1, 1]; }
+                                                    let ReleaseAtCycles = [2, 1, 1]; }
 def M3WriteVLDH    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU]>  { let Latency = 6;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [2, 1, 1]; }
+                                                    let ReleaseAtCycles = [2, 1, 1]; }
 def M3WriteVLDI    : SchedWriteRes<[M3UnitL,
                                     M3UnitL,
                                     M3UnitL]>     { let Latency = 12;
                                                     let NumMicroOps = 3;
-                                                    let ResourceCycles = [6, 6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6, 6]; }
 def M3WriteVLDJ    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU,
                                     M3UnitNALU]>  { let Latency = 7;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [2, 1, 1, 1]; }
+                                                    let ReleaseAtCycles = [2, 1, 1, 1]; }
 def M3WriteVLDK    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU,
                                     M3UnitNALU,
                                     M3UnitNALU]>  { let Latency = 9;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [4, 1, 1, 1, 1]; }
+                                                    let ReleaseAtCycles = [4, 1, 1, 1, 1]; }
 def M3WriteVLDL    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU,
                                     M3UnitL,
                                     M3UnitNALU]>  { let Latency = 6;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [6, 1, 1, 6, 1]; }
+                                                    let ReleaseAtCycles = [6, 1, 1, 6, 1]; }
 def M3WriteVLDM    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU,
@@ -414,13 +414,13 @@ def M3WriteVLDM    : SchedWriteRes<[M3UnitL,
                                     M3UnitNALU,
                                     M3UnitNALU]>  { let Latency = 7;
                                                     let NumMicroOps = 6;
-                                                    let ResourceCycles = [6, 1, 1, 6, 1, 1]; }
+                                                    let ReleaseAtCycles = [6, 1, 1, 6, 1, 1]; }
 def M3WriteVLDN    : SchedWriteRes<[M3UnitL,
                                     M3UnitL,
                                     M3UnitL,
                                     M3UnitL]>     { let Latency = 14;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [6, 6, 6, 6]; }
+                                                    let ReleaseAtCycles = [6, 6, 6, 6]; }
 def M3WriteVSTA    : WriteSequence<[WriteVST], 2>;
 def M3WriteVSTB    : WriteSequence<[WriteVST], 3>;
 def M3WriteVSTC    : WriteSequence<[WriteVST], 4>;
@@ -429,7 +429,7 @@ def M3WriteVSTD    : SchedWriteRes<[M3UnitS,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 7;
                                                     let NumMicroOps = 4;
-                                                    let ResourceCycles = [1, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 1, 3]; }
 def M3WriteVSTE    : SchedWriteRes<[M3UnitS,
                                     M3UnitFST,
                                     M3UnitS,
@@ -437,7 +437,7 @@ def M3WriteVSTE    : SchedWriteRes<[M3UnitS,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 8;
                                                     let NumMicroOps = 6;
-                                                    let ResourceCycles = [1, 3, 1, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 1, 3, 1, 3]; }
 def M3WriteVSTF    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitFST,
                                     M3UnitFST,
@@ -446,7 +446,7 @@ def M3WriteVSTF    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 15;
                                                     let NumMicroOps = 7;
-                                                    let ResourceCycles = [1, 3, 3, 1, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 3, 1, 3, 1, 3]; }
 def M3WriteVSTG    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitFST,
                                     M3UnitFST,
@@ -457,14 +457,14 @@ def M3WriteVSTG    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 16;
                                                     let NumMicroOps = 9;
-                                                    let ResourceCycles = [1, 3, 3, 1, 3, 1, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 3, 1, 3, 1, 3, 1, 3]; }
 def M3WriteVSTH    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitFST,
                                     M3UnitFST,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 14;
                                                     let NumMicroOps = 5;
-                                                    let ResourceCycles = [1, 3, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 3, 1, 3]; }
 def M3WriteVSTI    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitFST,
                                     M3UnitFST,
@@ -475,7 +475,7 @@ def M3WriteVSTI    : SchedWriteRes<[M3UnitNALU,
                                     M3UnitS,
                                     M3UnitFST]>   { let Latency = 17;
                                                     let NumMicroOps = 9;
-                                                    let ResourceCycles = [1, 3, 3, 1, 3, 1, 3, 1, 3]; }
+                                                    let ReleaseAtCycles = [1, 3, 3, 1, 3, 1, 3, 1, 3]; }
 
 // Special cases.
 def M3WriteAES     : SchedWriteRes<[M3UnitNCRY]>  { let Latency = 1; }
