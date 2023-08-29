@@ -1203,11 +1203,12 @@ code. This issue is expected to be rectified soon.
 </table>
 
 <p>
-<span id="n3778">(7): The user must supply definitions of the sized deallocation
-  functions, either by providing them explicitly or by using a C++ standard library
-  that does. <code>libstdc++</code> added these functions in version 5.0, and
-  <code>libc++</code> added them in version 3.7. The user can also use the
-  <code>-fno-sized-deallocation</code> option to disable sized deallocation.
+<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
+if the user passes the <code>-fsized-deallocation</code> flag. The user must
+supply definitions of the sized deallocation functions, either by providing them
+explicitly or by using a C++ standard library that does. <code>libstdc++</code>
+added these functions in version 5.0, and <code>libc++</code> added them in
+version 3.7.
 </span>
 </p>
 </details>
