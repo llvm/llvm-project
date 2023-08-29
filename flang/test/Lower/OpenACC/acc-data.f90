@@ -188,9 +188,5 @@ subroutine acc_data
 ! CHECK:   acc.terminator
 ! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
 
-  !$acc data
-  !$acc end data
-! CHECK-NOT: acc.data
-
 end subroutine acc_data
 

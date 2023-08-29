@@ -331,7 +331,7 @@ protected:
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
 
-  void CheckRequireAtLeastOneOf(bool warnInsteadOfError = false);
+  void CheckRequireAtLeastOneOf();
 
   void CheckAllowed(C clause);
 
@@ -422,7 +422,7 @@ DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
 // directive.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckRequireAtLeastOneOf(bool warnInsteadOfError) {
+    ClauseEnumSize>::CheckRequireAtLeastOneOf() {
   if (GetContext().requiredClauses.empty())
     return;
   for (auto cl : GetContext().actualClauses) {
@@ -430,16 +430,10 @@ void DirectiveStructureChecker<D, C, PC,
       return;
   }
   // No clause matched in the actual clauses list
-  if (warnInsteadOfError)
-    context_.Say(GetContext().directiveSource,
-        "At least one of %s clause should appear on the %s directive"_port_en_US,
-        ClauseSetToString(GetContext().requiredClauses),
-        ContextDirectiveAsFortran());
-  else
-    context_.Say(GetContext().directiveSource,
-        "At least one of %s clause must appear on the %s directive"_err_en_US,
-        ClauseSetToString(GetContext().requiredClauses),
-        ContextDirectiveAsFortran());
+  context_.Say(GetContext().directiveSource,
+      "At least one of %s clause must appear on the %s directive"_err_en_US,
+      ClauseSetToString(GetContext().requiredClauses),
+      ContextDirectiveAsFortran());
 }
 
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
