@@ -15,6 +15,7 @@ on:
       - 'clang/unitests/Format/**'
       - 'clang/tools/clang-format/**'
       - 'llvm/utils/git/**'
+      - '*/foo'
 
 permissions:
   pull-requests: write

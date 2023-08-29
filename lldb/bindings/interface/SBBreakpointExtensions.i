@@ -44,6 +44,15 @@ STRING_EXTENSION_OUTSIDE(SBBreakpoint)
             object.'''
             return self.GetNumLocations()
 
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
         locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
         location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
         id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')

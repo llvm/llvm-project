@@ -8408,6 +8408,14 @@ bool AArch64InstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
 
 bool AArch64InstrInfo::isMBBSafeToSplitToCold(
     const MachineBasicBlock &MBB) const {
+  // Asm Goto blocks can contain conditional branches to goto labels, which can
+  // get moved out of range of the branch instruction.
+  auto isAsmGoto = [](const MachineInstr &MI) {
+    return MI.getOpcode() == AArch64::INLINEASM_BR;
+  };
+  if (llvm::any_of(MBB, isAsmGoto) || MBB.isInlineAsmBrIndirectTarget())
+    return false;
+
   // Because jump tables are label-relative instead of table-relative, they all
   // must be in the same section or relocation fixup handling will fail.
 
