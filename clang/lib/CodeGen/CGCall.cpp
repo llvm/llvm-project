@@ -2006,7 +2006,7 @@ static void getTrivialDefaultFunctionAttributes(
 /// though we had emitted it ourselves. We remove any attributes on F that
 /// conflict with the attributes we add here.
 static void mergeDefaultFunctionDefinitionAttributes(
-    llvm::Function &F, const CodeGenOptions CodeGenOpts,
+    llvm::Function &F, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, const TargetOptions &TargetOpts,
     bool WillInternalize) {
 

@@ -531,28 +531,28 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ;
 ; AVX1-LABEL: truncstore_v8i64_v8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372036854841343,9223372036854841343]
-; AVX1-NEXT:    # xmm6 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [65535,65535]
-; AVX1-NEXT:    # xmm7 = mem[0,0]
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm7, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm1, %xmm7, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [9223372036854841343,9223372036854841343]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm6, %xmm7
+; AVX1-NEXT:    vpcmpgtq %xmm7, %xmm5, %xmm7
+; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm8
+; AVX1-NEXT:    vpcmpgtq %xmm8, %xmm5, %xmm8
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm9
+; AVX1-NEXT:    vpxor %xmm3, %xmm9, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [65535,65535]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm9, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm8, %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm7, %xmm6, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -1003,28 +1003,28 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ;
 ; AVX1-LABEL: truncstore_v8i64_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372036854776063,9223372036854776063]
-; AVX1-NEXT:    # xmm6 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255]
-; AVX1-NEXT:    # xmm7 = mem[0,0]
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm7, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm1, %xmm7, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [9223372036854776063,9223372036854776063]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm6, %xmm7
+; AVX1-NEXT:    vpcmpgtq %xmm7, %xmm5, %xmm7
+; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm8
+; AVX1-NEXT:    vpcmpgtq %xmm8, %xmm5, %xmm8
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm9
+; AVX1-NEXT:    vpxor %xmm3, %xmm9, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [255,255]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm9, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm8, %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm7, %xmm6, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
@@ -1578,19 +1578,19 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-LABEL: truncstore_v4i64_v4i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372036854841343,9223372036854841343]
-; AVX1-NEXT:    # xmm6 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [65535,65535]
-; AVX1-NEXT:    # xmm7 = mem[0,0]
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm7, %xmm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [9223372036854841343,9223372036854841343]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm6, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [65535,65535]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm6, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
@@ -1860,19 +1860,19 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-LABEL: truncstore_v4i64_v4i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372036854776063,9223372036854776063]
-; AVX1-NEXT:    # xmm6 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255]
-; AVX1-NEXT:    # xmm7 = mem[0,0]
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm7, %xmm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [9223372036854776063,9223372036854776063]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm6, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [255,255]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm6, %xmm5, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0

@@ -54334,10 +54334,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     // concat_vectors(extract_subvector(broadcast(x)),
     //                extract_subvector(broadcast(x))) -> broadcast(x)
+    // concat_vectors(extract_subvector(subv_broadcast(x)),
+    //                extract_subvector(subv_broadcast(x))) -> subv_broadcast(x)
     if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         Op0.getOperand(0).getValueType() == VT) {
-      if (Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST ||
-          Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST_LOAD)
+      SDValue SrcVec = Op0.getOperand(0);
+      if (SrcVec.getOpcode() == X86ISD::VBROADCAST ||
+          SrcVec.getOpcode() == X86ISD::VBROADCAST_LOAD)
+        return Op0.getOperand(0);
+      if (SrcVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+          Op0.getValueType() == cast<MemSDNode>(SrcVec)->getMemoryVT())
         return Op0.getOperand(0);
     }
   }
@@ -54378,15 +54384,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
+      bool AllConstants = true;
+      bool AllSubVectors = true;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         SDValue Sub = SubOps[I].getOperand(Op);
         unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-        if (Sub.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-            Sub.getOperand(0).getValueType() != VT ||
-            Sub.getConstantOperandAPInt(1) != (I * NumSubElts))
-          return false;
+        SDValue BC = peekThroughBitcasts(Sub);
+        AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
+                        ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
+        AllSubVectors &= Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+                         Sub.getOperand(0).getValueType() == VT &&
+                         Sub.getConstantOperandAPInt(1) == (I * NumSubElts);
       }
-      return true;
+      return AllConstants || AllSubVectors;
     };
 
     switch (Op0.getOpcode()) {
@@ -54656,6 +54666,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(SrcVT, Ops, 0),
                            ConcatSubOperand(SrcVT, Ops, 1));
+      }
+      break;
+    case X86ISD::PCMPEQ:
+    case X86ISD::PCMPGT:
+      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256() &&
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1));
       }
       break;
     case ISD::CTPOP:
