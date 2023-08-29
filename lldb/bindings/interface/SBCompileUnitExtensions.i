@@ -3,15 +3,6 @@ STRING_EXTENSION_OUTSIDE(SBCompileUnit)
 %extend lldb::SBCompileUnit {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all line entries in a lldb.SBCompileUnit object.'''
             return lldb_iter(self, 'GetNumLineEntries', 'GetLineEntryAtIndex')
