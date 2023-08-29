@@ -931,17 +931,17 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange
-RegionIfOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
-  assert(index && *index < 2 && "invalid region index");
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
+         "invalid region index");
   return getOperands();
 }
 
 void RegionIfOp::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
-  if (index.has_value()) {
-    if (index.value() < 2)
+  if (!point.isParent()) {
+    if (point != getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));
@@ -964,11 +964,11 @@ void RegionIfOp::getRegionInvocationBounds(
 // AnyCondOp
 //===----------------------------------------------------------------------===//
 
-void AnyCondOp::getSuccessorRegions(std::optional<unsigned> index,
+void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op branches into the only region, and the region branches back
   // to the parent op.
-  if (!index)
+  if (point.isParent())
     regions.emplace_back(&getRegion());
   else
     regions.emplace_back(getResults());
@@ -985,17 +985,16 @@ void AnyCondOp::getRegionInvocationBounds(
 //===----------------------------------------------------------------------===//
 
 void LoopBlockOp::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   regions.emplace_back(&getBody(), getBody().getArguments());
-  if (!index)
+  if (point.isParent())
     return;
 
   regions.emplace_back((*this)->getResults());
 }
 
-OperandRange
-LoopBlockOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
-  assert(index == 0);
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(point == getBody());
   return getInitMutable();
 }
 
@@ -1003,10 +1002,9 @@ LoopBlockOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
 // LoopBlockTerminatorOp
 //===----------------------------------------------------------------------===//
 
-MutableOperandRange LoopBlockTerminatorOp::getMutableSuccessorOperands(
-    std::optional<unsigned> index) {
-  assert(!index || index == 0);
-  if (!index)
+MutableOperandRange
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  if (point.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1313,12 +1311,11 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 }
 
 void TestStoreWithARegion::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!index) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
-  } else {
+  else
     regions.emplace_back();
-  }
 }
 
 LogicalResult
