@@ -47,7 +47,6 @@ uint64_t lprofGetLoadModuleSignature(void) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_check_compatibility(const char *ProfileData,
                                        uint64_t ProfileSize) {
-  /* Check profile header only for now  */
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   SrcDataStart =
@@ -102,13 +101,6 @@ static uintptr_t signextIfWin64(void *V) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
-  if (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) {
-    PROF_ERR(
-        "%s\n",
-        "Debug info correlation does not support profile merging at runtime. "
-        "Instead, merge raw profiles using the llvm-profdata tool.");
-    return 1;
-  }
   if (__llvm_profile_get_version() & VARIANT_MASK_TEMPORAL_PROF) {
     PROF_ERR("%s\n",
              "Temporal profiles do not support profile merging at runtime. "
@@ -118,7 +110,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
-  char *SrcCountersStart;
+  char *SrcCountersStart, *DstCounter;
+  const char *SrcCountersEnd, *SrcCounter;
   const char *SrcNameStart;
   const char *SrcValueProfDataStart, *SrcValueProfData;
   uintptr_t CountersDelta = Header->CountersDelta;
@@ -128,13 +121,31 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
                               Header->BinaryIdsSize);
   SrcDataEnd = SrcDataStart + Header->NumData;
   SrcCountersStart = (char *)SrcDataEnd;
-  SrcNameStart = SrcCountersStart +
-                 Header->NumCounters * __llvm_profile_counter_entry_size();
+  SrcCountersEnd = SrcCountersStart +
+                   Header->NumCounters * __llvm_profile_counter_entry_size();
+  SrcNameStart = SrcCountersEnd;
   SrcValueProfDataStart =
       SrcNameStart + Header->NamesSize +
       __llvm_profile_get_num_padding_bytes(Header->NamesSize);
   if (SrcNameStart < SrcCountersStart)
     return 1;
+
+  // Merge counters by iterating the entire counter section when debug info
+  // correlation is enabled.
+  if (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) {
+    for (SrcCounter = SrcCountersStart,
+        DstCounter = __llvm_profile_begin_counters();
+         SrcCounter < SrcCountersEnd;) {
+      if (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) {
+        *DstCounter &= *SrcCounter;
+      } else {
+        *(uint64_t *)DstCounter += *(uint64_t *)SrcCounter;
+      }
+      SrcCounter += __llvm_profile_counter_entry_size();
+      DstCounter += __llvm_profile_counter_entry_size();
+    }
+    return 0;
+  }
 
   for (SrcData = SrcDataStart,
       DstData = (__llvm_profile_data *)__llvm_profile_begin_data(),

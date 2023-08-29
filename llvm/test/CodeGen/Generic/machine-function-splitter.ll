@@ -8,11 +8,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
 ; RUN: llc < %s -mtriple=x86_64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-X86
 
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-allow-unsupported-triple -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
-; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -mfs-allow-unsupported-triple -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll
@@ -517,6 +517,91 @@ define i32 @foo17(i1 zeroext %0, i32 %a, i32 %b) nounwind !prof !14 !section_pre
   ret i32 %tmp2
 }
 
+define i32 @foo18(i32 %in) !prof !14 !section_prefix !15 {
+;; Check that a cold block targeted by a jump table is not split
+;; on AArch64.
+; MFS-DEFAULTS-LABEL:        foo18
+; MFS-DEFAULTS:              .section        .text.split.foo18
+; MFS-DEFAULTS-NEXT:         foo18.cold:
+; MFS-DEFAULTS-SAME:           %common.ret
+; MFS-DEFAULTS-X86-DAG:        jmp     qux
+; MFS-DEFAULTS-X86-DAG:        jmp     bam
+; MFS-DEFAULTS-AARCH64-NOT:    b       bar
+; MFS-DEFAULTS-AARCH64-NOT:    b       baz
+; MFS-DEFAULTS-AARCH64-NOT:    b       qux
+; MFS-DEFAULTS-AARCH64-NOT:    b       bam
+
+  switch i32 %in, label %common.ret [
+    i32 0, label %hot1
+    i32 1, label %hot2
+    i32 2, label %cold1
+    i32 3, label %cold2
+  ], !prof !28
+
+common.ret:                                       ; preds = %0
+  ret i32 0
+
+hot1:                                             ; preds = %0
+  %1 = tail call i32 @bar()
+  ret i32 %1
+
+hot2:                                             ; preds = %0
+  %2 = tail call i32 @baz()
+  ret i32 %2
+
+cold1:                                            ; preds = %0
+  %3 = tail call i32 @bam()
+  ret i32 %3
+
+cold2:                                            ; preds = %0
+  %4 = tail call i32 @qux()
+  ret i32 %4
+}
+
+define i32 @foo19(i32 %in) !prof !14 !section_prefix !15 {
+;; Check that a cold block that contains a jump table dispatch is
+;; not split on AArch64.
+; MFS-DEFAULTS-LABEL:        foo19
+; MFS-DEFAULTS:              .section        .text.split.foo19
+; MFS-DEFAULTS-NEXT:         foo19.cold:
+; MFS-DEFAULTS-X86:            .LJTI18_0
+; MFS-DEFAULTS-AARCH64-NOT:    .LJTI18_0
+; MFS-DEFAULTS:              .section        .rodata
+; MFS-DEFAULTS:                .LJTI18_0
+  %cmp = icmp sgt i32 %in, 3
+  br i1 %cmp, label %hot, label %cold_switch, !prof !17
+
+hot:                                              ; preds = %0
+ret i32 1
+
+cold_switch:                                      ; preds = %0
+  switch i32 %in, label %common.ret [
+    i32 0, label %hot1
+    i32 1, label %hot2
+    i32 2, label %cold1
+    i32 3, label %cold2
+  ], !prof !28
+
+common.ret:                                       ; preds = %0
+  ret i32 0
+
+hot1:                                             ; preds = %0
+  %1 = tail call i32 @bar()
+  ret i32 %1
+
+hot2:                                             ; preds = %0
+  %2 = tail call i32 @baz()
+  ret i32 %2
+
+cold1:                                            ; preds = %0
+  %3 = tail call i32 @bam()
+  ret i32 %3
+
+cold2:                                            ; preds = %0
+  %4 = tail call i32 @qux()
+  ret i32 %4
+}
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()
@@ -557,3 +642,4 @@ attributes #0 = { "implicit-section-name"="nosplit" }
 !25 = !{!"branch_weights", i32 0, i32 7000}
 !26 = !{!"branch_weights", i32 1000, i32 6000}
 !27 = !{!"function_entry_count", i64 10000}
+!28 = !{!"branch_weights", i32 0, i32 4000, i32 4000, i32 0, i32 0}

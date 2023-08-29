@@ -7162,6 +7162,7 @@ cc_library(
         ":Support",
         ":Transforms",
         "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 
@@ -11160,6 +11161,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":SideEffectInterfaces",
+        ":UBDialect",
         ":VectorInterfaces",
         "//llvm:Support",
     ],

@@ -360,9 +360,8 @@ function(create_object_library fq_target_name)
     target_include_directories(
       ${fq_target_name}
       PRIVATE
-        ${LIBC_BUILD_DIR}/include
         ${LIBC_SOURCE_DIR}
-        ${LIBC_BUILD_DIR}
+        ${LIBC_INCLUDE_DIR}
     )
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()

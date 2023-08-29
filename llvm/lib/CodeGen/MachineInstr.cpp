@@ -1263,8 +1263,7 @@ bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
   }
 
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      mayRaiseFPException() || hasUnmodeledSideEffects() ||
-      isJumpTableDebugInfo())
+      mayRaiseFPException() || hasUnmodeledSideEffects())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the

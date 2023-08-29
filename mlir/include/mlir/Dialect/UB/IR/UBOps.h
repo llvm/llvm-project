@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_UB_IR_OPS_H
 #define MLIR_DIALECT_UB_IR_OPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"

@@ -17,10 +17,10 @@ transform.sequence failures(propagate) {
 
   %matmul_l1, %loops_l1 = transform.structured.tile_to_scf_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0 = transform.structured.pad %matmul_l1 {
+  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
   // In this case, the pad op is actually empty: we only tile the first dimension
   // and it does not have an impact on the RHS operand.
@@ -49,10 +49,10 @@ transform.sequence failures(propagate) {
 
   %matmul_l1, %loops_l1 = transform.structured.tile_to_scf_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0 = transform.structured.pad %matmul_l1 {
+  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
   %pad = transform.get_producer_of_operand %matmul_padded[2]
     : (!transform.any_op) -> !transform.any_op
@@ -87,10 +87,10 @@ transform.sequence failures(propagate) {
 
   %matmul_l1, %loops_l1 = transform.structured.tile_to_scf_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0 = transform.structured.pad %matmul_l1 {
+  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
   %pad = transform.get_producer_of_operand %matmul_padded[0]
     : (!transform.any_op) -> !transform.any_op
@@ -125,10 +125,10 @@ transform.sequence failures(propagate) {
 
   %matmul_l1, %loops_l1 = transform.structured.tile_to_scf_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0 = transform.structured.pad %matmul_l1 {
+  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
   %pad = transform.get_producer_of_operand %matmul_padded[0]
     : (!transform.any_op) -> !transform.any_op
@@ -161,10 +161,10 @@ transform.sequence failures(propagate) {
 
   %matmul_l1, %loops_l1:2 = transform.structured.tile_to_scf_for %matmul [5, 0, 7] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0 = transform.structured.pad %matmul_l1 {
+  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
   %pad = transform.get_producer_of_operand %matmul_padded[2]
     : (!transform.any_op) -> !transform.any_op

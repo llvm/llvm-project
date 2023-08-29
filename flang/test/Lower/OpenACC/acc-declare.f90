@@ -278,6 +278,24 @@ module acc_declare
 ! CHECK: acc.copyout accPtr(%[[CREATE]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) to varPtr(%[[ARG1]] : !fir.ref<!fir.array<100xi32>>) {name = "b"}
 ! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) to varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
 
+  subroutine acc_declare_array_section(a)
+    integer :: a(:)
+    !$acc declare copy(a(1:10))
+
+    do i = 1, 100
+      a(i) = i
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_array_section(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %arg0 {acc.declare = #acc.declare<dataClause =  acc_copy>} : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {dataClause = #acc<data_clause acc_copy>, name = "a(1:10)"}
+! CHECK: acc.declare dataOperands(%4 : !fir.ref<!fir.array<?xi32>>) {
+! CHECK:   acc.terminator
+! CHECK: }
+! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) to varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_copy>, name = "a(1:10)"}
+
 end module
 
 module acc_declare_allocatable_test

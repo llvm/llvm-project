@@ -2014,7 +2014,7 @@ static void getTrivialDefaultFunctionAttributes(
 /// though we had emitted it ourselves. We remove any attributes on F that
 /// conflict with the attributes we add here.
 static void mergeDefaultFunctionDefinitionAttributes(
-    llvm::Function &F, const CodeGenOptions CodeGenOpts,
+    llvm::Function &F, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, const TargetOptions &TargetOpts,
     bool WillInternalize) {
 
@@ -2383,7 +2383,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // gcc specifies that 'pure' functions cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
     } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
-      FuncAttrs.addMemoryAttr(llvm::MemoryEffects::argMemOnly());
+      FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
     if (TargetDecl->hasAttr<RestrictAttr>())
@@ -5539,30 +5539,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
   }
-
-  // The await_suspend call performed by co_await is essentially asynchronous
-  // to the execution of the coroutine. Inlining it normally into an unsplit
-  // coroutine can cause miscompilation because the coroutine CFG misrepresents
-  // the true control flow of the program: things that happen in the
-  // await_suspend are not guaranteed to happen prior to the resumption of the
-  // coroutine, and things that happen after the resumption of the coroutine
-  // (including its exit and the potential deallocation of the coroutine frame)
-  // are not guaranteed to happen only after the end of await_suspend.
-  //
-  // The short-term solution to this problem is to mark the call as uninlinable.
-  // But we don't want to do this if the call is known to be trivial, which is
-  // very common.
-  //
-  // The long-term solution may introduce patterns like:
-  //
-  //  call @llvm.coro.await_suspend(ptr %awaiter, ptr %handle,
-  //                                ptr @awaitSuspendFn)
-  //
-  // Then it is much easier to perform the safety analysis in the middle end.
-  // If it is safe to inline the call to awaitSuspend, we can replace it in the
-  // CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
-  if (inSuspendBlock() && mayCoroHandleEscape())
-    Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
 
   // Disable inlining inside SEH __try blocks.
   if (isSEHTryScope()) {

@@ -102,8 +102,6 @@ set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS
   -shared-libasan)
 
 set(ASAN_UNITTEST_INSTRUMENTED_LIBS)
-# NDK r10 requires -latomic almost always.
-append_list_if(ANDROID atomic ASAN_UNITTEST_INSTRUMENTED_LIBS)
 
 set(ASAN_UNITTEST_NOINST_LINK_FLAGS ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
 if(NOT APPLE)
@@ -117,8 +115,6 @@ endif()
 # TODO(eugenis): move all -l flags above to _LIBS?
 set(ASAN_UNITTEST_NOINST_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_UNITTEST_NOINST_LIBS)
-# NDK r10 requires -latomic almost always.
-append_list_if(ANDROID atomic ASAN_UNITTEST_NOINST_LIBS)
 
 # Main AddressSanitizer unit tests.
 add_custom_target(AsanUnitTests)

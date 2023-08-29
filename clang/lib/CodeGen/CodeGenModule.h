@@ -215,16 +215,14 @@ struct ObjCEntrypoints {
 
 /// This class records statistics on instrumentation based profiling.
 class InstrProfStats {
-  uint32_t VisitedInMainFile;
-  uint32_t MissingInMainFile;
-  uint32_t Visited;
-  uint32_t Missing;
-  uint32_t Mismatched;
+  uint32_t VisitedInMainFile = 0;
+  uint32_t MissingInMainFile = 0;
+  uint32_t Visited = 0;
+  uint32_t Missing = 0;
+  uint32_t Mismatched = 0;
 
 public:
-  InstrProfStats()
-      : VisitedInMainFile(0), MissingInMainFile(0), Visited(0), Missing(0),
-        Mismatched(0) {}
+  InstrProfStats() = default;
   /// Record that we've visited a function and whether or not that function was
   /// in the main source file.
   void addVisited(bool MainFile) {
@@ -1626,6 +1624,11 @@ public:
   void handleAMDGPUWavesPerEUAttr(llvm::Function *F,
                                   const AMDGPUWavesPerEUAttr *A);
 
+  llvm::Constant *
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
+                        const VarDecl *D,
+                        ForDefinition_t IsForDefinition = NotForDefinition);
+
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
@@ -1647,11 +1650,6 @@ private:
   // is responsible for performing such mangled name updates.
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD,
                                StringRef &CurName);
-
-  llvm::Constant *
-  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
-                        const VarDecl *D,
-                        ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder,

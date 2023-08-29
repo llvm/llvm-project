@@ -15,8 +15,8 @@ what a section, symbol, and relocation are you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
-JITLink is a library for :ref:`jit_linking`. It was built to support the ORC JIT
-APIs and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
+JITLink is a library for :ref:`jit_linking`. It was built to support the :doc:`ORC JIT
+APIs<ORCv2>` and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
 developed with the aim of supporting the full set of features provided by each
 object format; including static initializers, exception handling, thread local
 variables, and language runtime registration. Supporting these features enables

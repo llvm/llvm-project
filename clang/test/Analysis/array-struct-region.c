@@ -57,7 +57,7 @@ void struct_as_array(void) {
 }
 
 
-// PR13264 / <rdar://problem/11802440>
+// PR13264
 struct point { int x; int y; };
 struct circle { struct point o; int r; };
 struct circle get_circle(void) {

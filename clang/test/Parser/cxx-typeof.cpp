@@ -8,7 +8,7 @@ static void test() {
   typeof pi[x] y; 
 }
 
-// Part of rdar://problem/8347416;  from the gcc test suite.
+// From the gcc test suite.
 struct S {
   int i;
   __typeof(S::i) foo();

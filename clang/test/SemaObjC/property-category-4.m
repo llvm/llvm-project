@@ -16,8 +16,6 @@
 @dynamic d_selectedObjects; // expected-error {{property declared in category 'CAT' cannot be implemented in class implementation}}
 @end
 
-
-// rdar://13713098
 // Test1
 @interface NSArray 
 - (int)count;

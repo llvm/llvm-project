@@ -323,12 +323,12 @@ func.func @dealloc_always_false_condition(%arg0: memref<2xi32>, %arg1: memref<2x
 
 // -----
 
-func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>, %arg1: i1, %arg2: i1, %arg3: memref<2xi32>) {
+func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>, %arg1: i1, %arg2: i1, %arg3: memref<2xi32>) -> memref<2xi32> {
   %alloc = memref.alloc() : memref<2xi32>
   %base0, %size0, %stride0, %offset0 = memref.extract_strided_metadata %alloc : memref<2xi32> -> memref<i32>, index, index, index
   %base1, %size1, %stride1, %offset1 = memref.extract_strided_metadata %arg3 : memref<2xi32> -> memref<i32>, index, index, index
   bufferization.dealloc (%base0, %arg0, %base1 : memref<i32>, memref<2xi32>, memref<i32>) if (%arg1, %arg2, %arg2)
-  return
+  return %alloc : memref<2xi32>
 }
 
 // CHECK-LABEL: func @dealloc_base_memref_extract_of_alloc
@@ -337,3 +337,17 @@ func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>, %arg1: i1,
 //  CHECK-NEXT: [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[ARG3]] :
 //  CHECK-NEXT: bufferization.dealloc ([[ALLOC]], [[ARG0]], [[BASE]] : memref<2xi32>, memref<2xi32>, memref<i32>) if ([[ARG1]], [[ARG2]], [[ARG2]])
 //  CHECK-NEXT: return
+
+// -----
+
+func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>) {
+  %true = arith.constant true
+  %alloc = memref.alloc() : memref<2xi32>
+  bufferization.dealloc (%alloc, %arg0 : memref<2xi32>, memref<2xi32>) if (%true, %true)
+  return
+}
+
+// CHECK-LABEL: func @dealloc_base_memref_extract_of_alloc
+//  CHECK-SAME:([[ARG0:%.+]]: memref<2xi32>)
+//   CHECK-NOT: memref.alloc(
+//       CHECK: bufferization.dealloc ([[ARG0]] : memref<2xi32>) if (%true

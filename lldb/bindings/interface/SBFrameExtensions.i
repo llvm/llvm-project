@@ -3,6 +3,24 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
 %extend lldb::SBFrame {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
+        def __len__(self):
+            pass
+
+        def __iter__(self):
+            pass
+
         def get_all_variables(self):
             return self.GetVariables(True,True,True,True)
 

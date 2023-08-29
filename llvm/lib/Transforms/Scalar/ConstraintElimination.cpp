@@ -84,31 +84,46 @@ static Instruction *getContextInstForUse(Use &U) {
 
 namespace {
 /// Represents either
-///  * a condition that holds on entry to a block (=conditional fact)
+///  * a condition that holds on entry to a block (=condition fact)
 ///  * an assume (=assume fact)
 ///  * a use of a compare instruction to simplify.
 /// It also tracks the Dominator DFS in and out numbers for each entry.
 struct FactOrCheck {
+  enum class EntryTy {
+    ConditionFact, /// A condition that holds on entry to a block.
+    InstFact,      /// A fact that holds after Inst executed (e.g. an assume or
+                   /// min/mix intrinsic.
+    InstCheck,     /// An instruction to simplify (e.g. an overflow math
+                   /// intrinsics).
+    UseCheck       /// An use of a compare instruction to simplify.
+  };
+
   union {
     Instruction *Inst;
     Use *U;
   };
+
   unsigned NumIn;
   unsigned NumOut;
-  bool HasInst;
+  EntryTy Ty;
   bool Not;
 
-  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool Not)
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst, bool Not)
       : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        HasInst(true), Not(Not) {}
+        Ty(Ty), Not(Not) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
       : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        HasInst(false), Not(false) {}
+        Ty(EntryTy::UseCheck), Not(false) {}
 
-  static FactOrCheck getFact(DomTreeNode *DTN, Instruction *Inst,
-                             bool Not = false) {
-    return FactOrCheck(DTN, Inst, Not);
+  static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpInst *Inst,
+                                      bool Not = false) {
+    return FactOrCheck(EntryTy::ConditionFact, DTN, Inst, Not);
+  }
+
+  static FactOrCheck getInstFact(DomTreeNode *DTN, Instruction *Inst,
+                                 bool Not = false) {
+    return FactOrCheck(EntryTy::InstFact, DTN, Inst, Not);
   }
 
   static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
@@ -116,27 +131,28 @@ struct FactOrCheck {
   }
 
   static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
-    return FactOrCheck(DTN, CI, false);
+    return FactOrCheck(EntryTy::InstCheck, DTN, CI, false);
   }
 
   bool isCheck() const {
-    return !HasInst ||
-           match(Inst, m_Intrinsic<Intrinsic::ssub_with_overflow>());
+    return Ty == EntryTy::InstCheck || Ty == EntryTy::UseCheck;
   }
 
   Instruction *getContextInst() const {
-    if (HasInst)
-      return Inst;
-    return getContextInstForUse(*U);
+    if (Ty == EntryTy::UseCheck)
+      return getContextInstForUse(*U);
+    return Inst;
   }
+
   Instruction *getInstructionToSimplify() const {
     assert(isCheck());
-    if (HasInst)
+    if (Ty == EntryTy::InstCheck)
       return Inst;
     // The use may have been simplified to a constant already.
     return dyn_cast<Instruction>(*U);
   }
-  bool isConditionFact() const { return !isCheck() && isa<CmpInst>(Inst); }
+
+  bool isConditionFact() const { return Ty == EntryTy::ConditionFact; }
 };
 
 /// Keep state required to build worklist.
@@ -785,7 +801,7 @@ void State::addInfoFor(BasicBlock &BB) {
     }
 
     if (isa<MinMaxIntrinsic>(&I)) {
-      WorkList.push_back(FactOrCheck::getFact(DT.getNode(&BB), &I));
+      WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       continue;
     }
 
@@ -796,11 +812,11 @@ void State::addInfoFor(BasicBlock &BB) {
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
         // holds on entry to BB.
-        WorkList.emplace_back(FactOrCheck::getFact(DT.getNode(I.getParent()),
-                                                   cast<Instruction>(Cond)));
+        WorkList.emplace_back(FactOrCheck::getConditionFact(
+            DT.getNode(I.getParent()), cast<CmpInst>(Cond)));
       } else {
         WorkList.emplace_back(
-            FactOrCheck::getFact(DT.getNode(I.getParent()), &I));
+            FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
       }
     }
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
@@ -838,7 +854,7 @@ void State::addInfoFor(BasicBlock &BB) {
         Value *Cur = CondWorkList.pop_back_val();
         if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
           WorkList.emplace_back(
-              FactOrCheck::getFact(DT.getNode(Successor), Cmp, IsOr));
+              FactOrCheck::getConditionFact(DT.getNode(Successor), Cmp, IsOr));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -861,10 +877,10 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
     WorkList.emplace_back(
-        FactOrCheck::getFact(DT.getNode(Br->getSuccessor(0)), CmpI));
+        FactOrCheck::getConditionFact(DT.getNode(Br->getSuccessor(0)), CmpI));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
-    WorkList.emplace_back(
-        FactOrCheck::getFact(DT.getNode(Br->getSuccessor(1)), CmpI, true));
+    WorkList.emplace_back(FactOrCheck::getConditionFact(
+        DT.getNode(Br->getSuccessor(1)), CmpI, true));
 }
 
 namespace {

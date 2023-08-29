@@ -135,8 +135,12 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   Operation *newOp = builder.create(state);
   for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
     Region &newRegion = newOp->getRegion(index);
-    IRMapping mapping;
-    region.cloneInto(&newRegion, mapping);
+    // Move all blocks of `region` into `newRegion`.
+    Block *temp = new Block();
+    newRegion.push_back(temp);
+    while (!region.empty())
+      region.front().moveBefore(temp);
+    temp->erase();
   }
 
   unsigned indexOfNextNewCallOpResultToReplace = 0;

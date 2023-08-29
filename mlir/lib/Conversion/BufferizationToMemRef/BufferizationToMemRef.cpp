@@ -409,6 +409,11 @@ public:
     if (adaptor.getMemrefs().size() == 1)
       return rewriteOneMemrefMultipleRetainCase(op, adaptor, rewriter);
 
+    if (!deallocHelperFunc)
+      return op->emitError(
+          "library function required for generic lowering, but cannot be "
+          "automatically inserted when operating on functions");
+
     return rewriteGeneralCase(op, adaptor, rewriter);
   }
 
@@ -620,21 +625,29 @@ struct BufferizationToMemRefPass
   BufferizationToMemRefPass() = default;
 
   void runOnOperation() override {
-    ModuleOp module = cast<ModuleOp>(getOperation());
-    OpBuilder builder =
-        OpBuilder::atBlockBegin(&module.getBodyRegion().front());
-    SymbolTable symbolTable(module);
+    if (!isa<ModuleOp, FunctionOpInterface>(getOperation())) {
+      emitError(getOperation()->getLoc(),
+                "root operation must be a builtin.module or a function");
+      signalPassFailure();
+      return;
+    }
 
-    // Build dealloc helper function if there are deallocs.
     func::FuncOp helperFuncOp;
-    getOperation()->walk([&](bufferization::DeallocOp deallocOp) {
-      if (deallocOp.getMemrefs().size() > 1) {
-        helperFuncOp = DeallocOpConversion::buildDeallocationHelperFunction(
-            builder, getOperation()->getLoc(), symbolTable);
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
+    if (auto module = dyn_cast<ModuleOp>(getOperation())) {
+      OpBuilder builder =
+          OpBuilder::atBlockBegin(&module.getBodyRegion().front());
+      SymbolTable symbolTable(module);
+
+      // Build dealloc helper function if there are deallocs.
+      getOperation()->walk([&](bufferization::DeallocOp deallocOp) {
+        if (deallocOp.getMemrefs().size() > 1) {
+          helperFuncOp = DeallocOpConversion::buildDeallocationHelperFunction(
+              builder, getOperation()->getLoc(), symbolTable);
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+    }
 
     RewritePatternSet patterns(&getContext());
     patterns.add<CloneOpConversion>(patterns.getContext());
@@ -652,7 +665,6 @@ struct BufferizationToMemRefPass
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createBufferizationToMemRefPass() {
+std::unique_ptr<Pass> mlir::createBufferizationToMemRefPass() {
   return std::make_unique<BufferizationToMemRefPass>();
 }

@@ -20,6 +20,12 @@ int main(void) {
   (void)__builtin_cpu_is("x86-64-v2"); // expected-error {{invalid cpu name for builtin}}
   (void)__builtin_cpu_is("x86-64-v3"); // expected-error {{invalid cpu name for builtin}}
   (void)__builtin_cpu_is("x86-64-v4"); // expected-error {{invalid cpu name for builtin}}
+
+  (void)__builtin_cpu_supports("x86-64");
+  (void)__builtin_cpu_supports("x86-64-v2");
+  (void)__builtin_cpu_supports("x86-64-v3");
+  (void)__builtin_cpu_supports("x86-64-v4");
+  (void)__builtin_cpu_supports("x86-64-v5"); // expected-error {{invalid cpu feature string for builtin}}
 #else
   if (__builtin_cpu_supports("vsx")) // expected-error {{use of unknown builtin}}
     a("vsx");

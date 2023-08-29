@@ -52,7 +52,7 @@ define void @_Z3fooii(i32, i32) {
   ret void
 }
 
-; CHECK-LABEL: define {{.*}}@_Z3fooii.cold.1
+; CHECK-LABEL: define internal {{.*}}@_Z3fooii.cold.1
 ; CHECK: call void @_Z10sideeffecti(i32 0)
 
 declare void @_Z10sideeffecti(i32)

@@ -30,7 +30,6 @@ void f11(void) __attribute__((availability(macosx,message=u"b"))); // expected-e
 
 void f12(void) __attribute__((availability(macosx,message="a" u"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
 
-// rdar://10095131
 enum E{
     gorf __attribute__((availability(macosx,introduced=8.5, message = 10.0))), // expected-error {{expected string literal for optional message in 'availability' attribute}}
     garf __attribute__((availability(macosx,introduced=8.5, message))), // expected-error {{expected '=' after 'message'}}

@@ -3632,9 +3632,6 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
   auto JumpTableInst = MIB.buildInstr(AArch64::JumpTableDest32,
                                       {TargetReg, ScratchReg}, {JTAddr, Index})
                            .addJumpTableIndex(JTI);
-  // Save the jump table info.
-  MIB.buildInstr(TargetOpcode::JUMP_TABLE_DEBUG_INFO, {},
-                 {static_cast<int64_t>(JTI)});
   // Build the indirect branch.
   MIB.buildInstr(AArch64::BR, {}, {TargetReg});
   I.eraseFromParent();

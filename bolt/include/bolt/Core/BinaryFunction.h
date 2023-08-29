@@ -1191,7 +1191,7 @@ public:
 
     if (!Islands->FunctionConstantIslandLabel) {
       Islands->FunctionConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_const_island");
+          BC.Ctx->getOrCreateSymbol("func_const_island@" + getOneName());
     }
     return Islands->FunctionConstantIslandLabel;
   }
@@ -1201,7 +1201,7 @@ public:
 
     if (!Islands->FunctionColdConstantIslandLabel) {
       Islands->FunctionColdConstantIslandLabel =
-          BC.Ctx->createNamedTempSymbol("func_cold_const_island");
+          BC.Ctx->getOrCreateSymbol("func_cold_const_island@" + getOneName());
     }
     return Islands->FunctionColdConstantIslandLabel;
   }
@@ -1221,7 +1221,7 @@ public:
   }
 
   /// Update output values of the function based on the final \p Layout.
-  void updateOutputValues(const MCAsmLayout &Layout);
+  void updateOutputValues(const BOLTLinker &Linker);
 
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
@@ -1767,7 +1767,7 @@ public:
 
   /// Returns if this function is a parent of \p Other function.
   bool isParentOf(const BinaryFunction &Other) const {
-    return llvm::is_contained(Fragments, &Other);
+    return Fragments.contains(&Other);
   }
 
   /// Return the child fragment form parent function

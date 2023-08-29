@@ -14,7 +14,7 @@ settings show tab-size
 
 settings set -f tab-size
 settings show tab-size
-# CHECK: tab-size (unsigned) = 4
+# CHECK: tab-size (unsigned) = 2
 
 settings set tab-size
 # CHECK: error: 'settings set' takes more arguments

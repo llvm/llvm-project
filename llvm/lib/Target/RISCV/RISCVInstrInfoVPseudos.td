@@ -2258,10 +2258,10 @@ multiclass VPseudoBinaryV_VI_RM<Operand ImmType = simm5, LMULInfo m, string Cons
   defm _VI : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
-multiclass VPseudoVALU_MM {
+multiclass VPseudoVALU_MM<bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    let VLMul = m.value in {
+    let VLMul = m.value, isCommutable = Commutable in {
       def "_MM_" # mx : VPseudoBinaryNoMask<VR, VR, VR, "">,
                         SchedBinary<"WriteVMALUV", "ReadVMALUV", "ReadVMALUV", mx>;
     }
@@ -2379,7 +2379,9 @@ multiclass VPseudoBinaryV_WI_RM<LMULInfo m> {
 // vector register is v0.
 // For vadc and vsbc, CarryIn == 1 and CarryOut == 0
 multiclass VPseudoBinaryV_VM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
-                             string Constraint = ""> {
+                             string Constraint = "",
+                             bit Commutable = 0> {
+  let isCommutable = Commutable in
   def "_VV" # !if(CarryIn, "M", "") # "_" # m.MX :
     VPseudoBinaryCarryIn<!if(CarryOut, VR,
                          !if(!and(CarryIn, !not(CarryOut)),
@@ -3051,7 +3053,8 @@ multiclass VPseudoVCALU_VM_XM {
 multiclass VPseudoVCALUM_VM_XM_IM<string Constraint> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=Constraint>,
+    defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=Constraint,
+                                Commutable=1>,
               SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx, forceMasked=1,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=1, Constraint=Constraint>,
@@ -3078,7 +3081,8 @@ multiclass VPseudoVCALUM_VM_XM<string Constraint> {
 multiclass VPseudoVCALUM_V_X_I<string Constraint> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=Constraint>,
+    defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=Constraint,
+                                Commutable=1>,
               SchedBinary<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV", mx,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_XM<m, CarryOut=1, CarryIn=0, Constraint=Constraint>,
@@ -6611,14 +6615,14 @@ defm PseudoVFWREDOSUM  : VPseudoVFWRED_VS_RM;
 // 15.1 Vector Mask-Register Logical Instructions
 //===----------------------------------------------------------------------===//
 
-defm PseudoVMAND: VPseudoVALU_MM;
-defm PseudoVMNAND: VPseudoVALU_MM;
+defm PseudoVMAND: VPseudoVALU_MM<Commutable=1>;
+defm PseudoVMNAND: VPseudoVALU_MM<Commutable=1>;
 defm PseudoVMANDN: VPseudoVALU_MM;
-defm PseudoVMXOR: VPseudoVALU_MM;
-defm PseudoVMOR: VPseudoVALU_MM;
-defm PseudoVMNOR: VPseudoVALU_MM;
+defm PseudoVMXOR: VPseudoVALU_MM<Commutable=1>;
+defm PseudoVMOR: VPseudoVALU_MM<Commutable=1>;
+defm PseudoVMNOR: VPseudoVALU_MM<Commutable=1>;
 defm PseudoVMORN: VPseudoVALU_MM;
-defm PseudoVMXNOR: VPseudoVALU_MM;
+defm PseudoVMXNOR: VPseudoVALU_MM<Commutable=1>;
 
 // Pseudo instructions
 defm PseudoVMCLR : VPseudoNullaryPseudoM<"VMXOR">;

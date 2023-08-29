@@ -961,7 +961,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
           "{}">:$transpose_paddings,
          DefaultValuedAttr<StrAttr, "::mlir::bufferization::CopyTensorOp::getOperationName()">:$copy_back_op);
   let results = (outs TransformHandleTypeInterface:$padded,
-                      TransformHandleTypeInterface:$pad);
+                      TransformHandleTypeInterface:$pad,
+                      TransformHandleTypeInterface:$copy);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";

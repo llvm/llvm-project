@@ -651,14 +651,17 @@ private:
   // function being analyzed is only a function and not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
 
-  // Maps from program declarations and statements to storage locations that are
+  // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
   // include only storage locations that are in scope for a particular basic
   // block.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
+  // Maps from prvalue expressions and storage locations to the values that
+  // are assigned to them.
   // We preserve insertion order so that join/widen process values in
   // deterministic sequence. This in turn produces deterministic SAT formulas.
+  llvm::MapVector<const Expr *, Value *> ExprToVal;
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
 
   Atom FlowConditionToken;

@@ -18,6 +18,7 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -2582,6 +2583,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
+  Sema::CUDATargetContextRAII X(Actions, Sema::CTCK_InitGlobalVar, ThisDecl);
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {

@@ -43,6 +43,7 @@
 ! CHECK-NEXT: -fhonor-nans            Specify that floating-point optimizations are not allowed that assume arguments and results are not NANs.
 ! CHECK-NEXT: -fimplicit-none         No implicit typing allowed unless overridden by IMPLICIT statements
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
+! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
 ! CHECK-NEXT: -flang-experimental-hlfir
@@ -74,7 +75,7 @@
 ! CHECK-NEXT: -fopenmp-targets=<value>
 ! CHECK-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! CHECK-NEXT: -fopenmp-version=<value>
-! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! CHECK-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -foptimization-record-file=<file>
 ! CHECK-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.

@@ -328,8 +328,6 @@ private:
   void Select_STACKMAP(SDNode *N);
   void Select_PATCHPOINT(SDNode *N);
 
-  void Select_JUMP_TABLE_DEBUG_INFO(SDNode *N);
-
 private:
   void DoInstructionSelection();
   SDNode *MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
