@@ -727,6 +727,28 @@ inline bool operator==(const TypedefInfo &LHS, const TypedefInfo &RHS) {
 inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
+
+/// Opaque context ID used to refer to an Objective-C class or protocol or a C++
+/// namespace.
+class ContextID {
+public:
+  unsigned Value;
+
+  explicit ContextID(unsigned value) : Value(value) {}
+};
+
+enum class ContextKind : uint8_t {
+  ObjCClass = 0,
+  ObjCProtocol = 1,
+  Namespace = 2,
+};
+
+struct Context {
+  ContextID id;
+  ContextKind kind;
+
+  Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
+};
 } // namespace api_notes
 } // namespace clang
 
