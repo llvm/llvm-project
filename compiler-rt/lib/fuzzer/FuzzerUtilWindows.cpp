@@ -234,8 +234,8 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?  
-  // to UTF-8 then SetThreadDescription ? 
+  // TODO ?
+  // to UTF-8 then SetThreadDescription ?
 }
 
 } // namespace fuzzer

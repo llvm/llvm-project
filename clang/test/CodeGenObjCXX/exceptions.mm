@@ -18,7 +18,6 @@ namespace test0 {
   }
 }
 
-// rdar://12605907
 @interface NSException
   + new;
 @end

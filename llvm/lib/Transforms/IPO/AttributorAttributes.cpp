@@ -10336,7 +10336,6 @@ struct AANoFPClassImpl : AANoFPClass {
     A.getAttrs(getIRPosition(), {Attribute::NoFPClass}, Attrs, false);
     for (const auto &Attr : Attrs) {
       addKnownBits(Attr.getNoFPClass());
-      return;
     }
 
     const DataLayout &DL = A.getDataLayout();

@@ -49,7 +49,6 @@ namespace test2 {
   }
 }
 
-// rdar://problem/8913519
 namespace test3 {
   struct A {
     int x;

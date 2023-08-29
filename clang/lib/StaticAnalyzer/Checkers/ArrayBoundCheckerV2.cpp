@@ -32,7 +32,7 @@ using namespace taint;
 namespace {
 class ArrayBoundCheckerV2 :
     public Checker<check::Location> {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
   mutable std::unique_ptr<BugType> TaintBT;
 
   enum OOB_Kind { OOB_Precedes, OOB_Excedes };
@@ -258,7 +258,7 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
     return;
 
   if (!BT)
-    BT.reset(new BuiltinBug(this, "Out-of-bound access"));
+    BT.reset(new BugType(this, "Out-of-bound access"));
 
   // FIXME: This diagnostics are preliminary.  We should get far better
   // diagnostics for explaining buffer overruns.

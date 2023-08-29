@@ -20,9 +20,8 @@
 // CHECK: <4 x double> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
-// <rdar://problem/7964854> [i386] clang misaligns long double in structures
-// when passed byval
-// <rdar://problem/8431367> clang misaligns parameters on stack
+// [i386] clang misaligns long double in structures when passed byval
+// clang misaligns parameters on stack
 typedef int __attribute__((vector_size (8))) t56_v2i;
 typedef double __attribute__((vector_size (8))) t56_v1d;
 typedef int __attribute__((vector_size (16))) t56_v4i;

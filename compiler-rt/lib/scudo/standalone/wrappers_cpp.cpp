@@ -12,6 +12,8 @@
 #if !SCUDO_ANDROID || !_BIONIC
 
 #include "allocator_config.h"
+#include "internal_defs.h"
+#include "platform.h"
 #include "scudo/interface.h"
 #include "wrappers_c.h"
 
@@ -23,13 +25,14 @@ enum class align_val_t : size_t {};
 } // namespace std
 
 static void reportAllocation(void *ptr, size_t size) {
-  if (__scudo_allocate_hook && ptr)
-    __scudo_allocate_hook(ptr, size);
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_allocate_hook && ptr)
+      __scudo_allocate_hook(ptr, size);
 }
-
 static void reportDeallocation(void *ptr) {
-  if (__scudo_deallocate_hook)
-    __scudo_deallocate_hook(ptr);
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(ptr);
 }
 
 INTERFACE WEAK void *operator new(size_t size) {

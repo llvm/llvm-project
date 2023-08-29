@@ -8406,6 +8406,36 @@ bool AArch64InstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   return TargetInstrInfo::isFunctionSafeToSplit(MF);
 }
 
+bool AArch64InstrInfo::isMBBSafeToSplitToCold(
+    const MachineBasicBlock &MBB) const {
+  // Because jump tables are label-relative instead of table-relative, they all
+  // must be in the same section or relocation fixup handling will fail.
+
+  // Check if MBB is a jump table target
+  const MachineJumpTableInfo *MJTI = MBB.getParent()->getJumpTableInfo();
+  auto containsMBB = [&MBB](const MachineJumpTableEntry &JTE) {
+    return llvm::is_contained(JTE.MBBs, &MBB);
+  };
+  if (MJTI != nullptr && llvm::any_of(MJTI->getJumpTables(), containsMBB))
+    return false;
+
+  // Check if MBB contains a jump table lookup
+  for (const MachineInstr &MI : MBB) {
+    switch (MI.getOpcode()) {
+    case TargetOpcode::G_BRJT:
+    case AArch64::JumpTableDest32:
+    case AArch64::JumpTableDest16:
+    case AArch64::JumpTableDest8:
+      return false;
+    default:
+      continue;
+    }
+  }
+
+  // MBB isn't a special case, so it's safe to be split to the cold section.
+  return true;
+}
+
 std::optional<ParamLoadedValue>
 AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
                                       Register Reg) const {

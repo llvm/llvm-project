@@ -2099,8 +2099,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
 void BugType::anchor() {}
 
-void BuiltinBug::anchor() {}
-
 //===----------------------------------------------------------------------===//
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//

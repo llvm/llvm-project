@@ -950,9 +950,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
       SmallVector<double, 0> DVal;
       for (int i=0; i < getVecSize(FInfo); ++i) {
-        double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
+        double V = CDV->getElementAsAPFloat(i).convertToDouble();
         if (V < 0.0) needcopysign = true;
         V = log2(std::abs(V));
         DVal.push_back(V);
@@ -986,9 +984,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     } else {
       if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr1)) {
         for (int i=0; i < getVecSize(FInfo); ++i) {
-          double y = (getArgType(FInfo) == AMDGPULibFunc::F32)
-                     ? (double)CDV->getElementAsFloat(i)
-                     : CDV->getElementAsDouble(i);
+          double y = CDV->getElementAsAPFloat(i).convertToDouble();
           if (y != (double)(int64_t)y)
             return false;
         }
