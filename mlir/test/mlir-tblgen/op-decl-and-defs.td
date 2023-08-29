@@ -12,6 +12,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
+  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
