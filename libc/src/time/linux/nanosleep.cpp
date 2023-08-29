@@ -1,4 +1,4 @@
-//===-- Implementation of nanosleep function ------------------------------===//
+//===-- Linux implementation of nanosleep function ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,6 @@
 
 namespace __llvm_libc {
 
-// TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
 #if SYS_nanosleep

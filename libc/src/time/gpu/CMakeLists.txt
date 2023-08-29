@@ -17,3 +17,15 @@ add_entrypoint_object(
     libc.src.__support.GPU.utils
     .time_utils
 )
+
+add_entrypoint_object(
+  nanosleep
+  SRCS
+    nanosleep.cpp
+  HDRS
+    ../nanosleep.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.GPU.utils
+    .time_utils
+)
