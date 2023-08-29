@@ -645,13 +645,12 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
   return object::SectionedAddress{VirtualAddress};
 }
 
-Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
-  if (FunctionProfileData.empty())
-    return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
-
-  if (Iter == FunctionProfileData.end())
-    return make_error<InstrProfError>(instrprof_error::eof);
-
+Error RawMemProfReader::readNextRecord(
+    GuidMemProfRecordPair &GuidRecord,
+    std::function<const Frame(const FrameId)> Callback) {
+  // Create a new callback for the RawMemProfRecord iterator so that we can
+  // provide the symbol name if the reader was initialized with KeepSymbolName =
+  // true. This is useful for debugging and testing.
   auto IdToFrameCallback = [this](const FrameId Id) {
     Frame F = this->idToFrame(Id);
     if (!this->KeepSymbolName)
@@ -661,11 +660,7 @@ Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
     F.SymbolName = Iter->getSecond();
     return F;
   };
-
-  const IndexedMemProfRecord &IndexedRecord = Iter->second;
-  GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, IdToFrameCallback)};
-  Iter++;
-  return Error::success();
+  return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
 }
 } // namespace memprof
 } // namespace llvm
