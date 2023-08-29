@@ -743,6 +743,42 @@ bb2:
 
 }
 
+; Test for existing unreachable cycle
+define void @multi_bb_pdom_test2(i1 %b) {
+; CHECK-LABEL: define void @multi_bb_pdom_test2
+; CHECK-SAME: (i1 [[B:%.*]]) {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[DEST]])
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    ret void
+; CHECK:       unr1:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    br label [[UNR2:%.*]]
+; CHECK:       unr2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    br label [[UNR1:%.*]]
+;
+  %src = alloca %struct.Foo, align 4
+  %dest = alloca %struct.Foo, align 4
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false); 1
+  %1 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  ret void
+
+unr1:
+  %2 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  br label %unr2
+
+unr2:
+  %3 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  br label %unr1
+
+}
+
 ; TODO: merge allocas for multi basicblock loop case.
 define void @multi_bb_loop(i32 %n) {
 ; CHECK-LABEL: define void @multi_bb_loop

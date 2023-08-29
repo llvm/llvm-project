@@ -1767,7 +1767,7 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(wcstoul);
   INTERCEPT_STRTO(wcstoll);
   INTERCEPT_STRTO(wcstoull);
-#ifdef SANITIZER_GLIBC
+#if SANITIZER_GLIBC
   INTERCEPT_STRTO(__isoc23_strtod);
   INTERCEPT_STRTO(__isoc23_strtof);
   INTERCEPT_STRTO(__isoc23_strtold);

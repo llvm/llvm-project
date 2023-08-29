@@ -11359,6 +11359,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, DAG, Subtarget);
 
+#if 0//<<<<<<< HEAD
+  if (VT.getVectorElementType() == MVT::bf16 &&
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
+    return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
+
+#endif//>>>>>>> 23fef2cc673a
   if (SDValue VectorConstant = materializeVectorConstant(Op, DAG, Subtarget))
     return VectorConstant;
 
