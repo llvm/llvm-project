@@ -31,8 +31,8 @@
 #  CHECK-NEXT: # error: command failed with exit status: 1
 #  CHECK-NEXT: # executed command: true
 #  CHECK-NEXT: # RUN: at line 4
-#  CHECK-NEXT: not {{.*}}/python{{.*}} {{.*}}/write-a-lot.py &> [[FILE:.*]]
-#  CHECK-NEXT: # executed command: not {{.*}}/python{{.*}} {{.*}}/write-a-lot.py
+#  CHECK-NEXT: not {{.*}}python{{.*}} {{.*}}write-a-lot.py &> [[FILE:.*]]
+#  CHECK-NEXT: # executed command: not {{.*}}python{{.*}} {{.*}}write-a-lot.py{{.*}}
 #  CHECK-NEXT: # .---redirected output from '[[FILE]]'
 #  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
 #  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
