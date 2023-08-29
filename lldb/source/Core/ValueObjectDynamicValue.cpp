@@ -22,10 +22,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#endif // LLDB_ENABLE_SWIFT
-
 #include <cstring>
 #include <optional>
 namespace lldb_private {
@@ -456,7 +452,7 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
 
   if (!scratch_ctx || !cached_ctx)
     return true;
-  return cached_ctx.GetSharedPointer().get() != scratch_ctx->get();
+  return (void*)cached_ctx.GetSharedPointer().get() != (void*)scratch_ctx->get();
 #else // !LLDB_ENABLE_SWIFT
   return false;
 #endif // LLDB_ENABLE_SWIFT
