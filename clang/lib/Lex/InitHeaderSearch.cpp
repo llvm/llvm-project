@@ -341,17 +341,19 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::AIX:
   case llvm::Triple::Emscripten:
   case llvm::Triple::FreeBSD:
+  case llvm::Triple::Fuchsia:
+  case llvm::Triple::Haiku:
+  case llvm::Triple::Hurd:
+  case llvm::Triple::Linux:
+  case llvm::Triple::LiteOS:
   case llvm::Triple::NaCl:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
   case llvm::Triple::PS4:
   case llvm::Triple::PS5:
-  case llvm::Triple::Fuchsia:
-  case llvm::Triple::Haiku:
-  case llvm::Triple::Hurd:
-  case llvm::Triple::Linux:
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
+  case llvm::Triple::ZOS:
     return false;
 
   case llvm::Triple::Win32:
