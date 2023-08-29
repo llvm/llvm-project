@@ -6400,10 +6400,11 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   default:
     break;
   case AMDGPU::S_ADD_U64_PSEUDO:
+    NewOpcode = AMDGPU::V_ADD_U64_PSEUDO;
+    break;
   case AMDGPU::S_SUB_U64_PSEUDO:
-    splitScalar64BitAddSub(Worklist, Inst, MDT);
-    Inst.eraseFromParent();
-    return;
+    NewOpcode = AMDGPU::V_SUB_U64_PSEUDO;
+    break;
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32: {
     // FIXME: The u32 versions currently selected use the carry.
