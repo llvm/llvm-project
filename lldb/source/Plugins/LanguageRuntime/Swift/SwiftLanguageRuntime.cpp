@@ -44,8 +44,6 @@
 #include "lldb/Utility/Timer.h"
 
 #include "swift/AST/ASTMangler.h"
-#include "swift/AST/Decl.h"
-#include "swift/AST/Module.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteAST/RemoteAST.h"
@@ -525,22 +523,16 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
       objc_interop ? "with Objective-C interopability" : "Swift only";
 
   auto &triple = exe_module->GetArchitecture().GetTriple();
-  if (triple.isArch64Bit()) {
-    LLDB_LOGF(log, "Initializing a 64-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else if (triple.isArch32Bit()) {
-    LLDB_LOGF(log,
-              "Initializing a 32-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else {
-    LLDB_LOGF(log,
-              "Could not initialize reflection context for \"%s\"",
-              triple.str().c_str());
-  }
+  uint32_t ptr_size = m_process.GetAddressByteSize();
+  LLDB_LOG(log, "Initializing a {0}-bit reflection context ({1}) for \"{2}\"",
+           ptr_size * 8, triple.str(), objc_interop_msg);
+  if (ptr_size == 4 || ptr_size == 8)
+    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext(
+        ptr_size, this->GetMemoryReader(), objc_interop,
+        GetSwiftMetadataCache());
+  if (!m_reflection_ctx)
+    LLDB_LOG(log, "Could not initialize reflection context for \"{0}\"",
+             triple.str());
   // We set m_initialized_reflection_ctx to true here because
   // AddModuleToReflectionContext can potentially call into SetupReflection
   // again (which will early exit). This is safe to do since every other thread
@@ -685,7 +677,7 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
   if (!obj_file_format)
     return false;
 
-  auto reflection_info_id = m_reflection_ctx->addImage(
+  auto reflection_info_id = m_reflection_ctx->AddImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
         auto section_name = obj_file_format->getSectionName(section_kind);
@@ -850,7 +842,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     return {};
   };
 
-  return m_reflection_ctx->addImage(
+  return m_reflection_ctx->AddImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
         auto pair = find_section_with_kind(segment, section_kind);
@@ -909,7 +901,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
     const uint8_t *file_data = extractor.GetDataStart();
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
-    info_id = m_reflection_ctx->readELF(
+    info_id = m_reflection_ctx->ReadELF(
         swift::remote::RemoteAddress(load_ptr),
         llvm::Optional<llvm::sys::MemoryBlock>(file_buffer),
         likely_module_names);
@@ -917,10 +909,10 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
              obj_file->GetPluginName().equals("mach-o")) {
     info_id = AddObjectFileToReflectionContext(module_sp, likely_module_names);
     if (!info_id)
-      info_id = m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+      info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
                                  likely_module_names);
   } else {
-    info_id = m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+    info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
                                likely_module_names);
   }
 
