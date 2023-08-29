@@ -43,13 +43,21 @@
 # CHECK-EMPTY:
 #  CHECK-NEXT: Command Output (stdout):
 #  CHECK-NEXT: --
-#  CHECK-NEXT: $ ":" "RUN: at line 1"
-#  CHECK-NEXT: $ "printf"
-#  CHECK-NEXT: # command output:
-#  CHECK-NEXT: line 1: failed test output on stdout
-#  CHECK-NEXT: line 2: failed test output on stdout
-#  CHECK-NEXT: $ ":" "RUN: at line 2"
-#  CHECK-NEXT: $ "false"
+#  CHECK-NEXT: # RUN: at line 1
+#  CHECK-NEXT: printf "line 1: failed test output on stdout\nline 2: failed test output on stdout"
+#  CHECK-NEXT: executed command: printf 'line 1: failed test output on stdout\nline 2: failed test output on stdout'
+#  CHECK-NEXT: # .---command stdout------------
+#  CHECK-NEXT: # | line 1: failed test output on stdout
+#  CHECK-NEXT: # | line 2: failed test output on stdout
+#  CHECK-NEXT: # `-----------------------------
+#  CHECK-NEXT: # RUN: at line 2
+#  CHECK-NEXT: false
+#  CHECK-NEXT: # executed command: false
+#  CHECK-NEXT: # note: command had no output on stdout or stderr
+#  CHECK-NEXT: # error: command failed with exit status: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
+
 
 # CHECK: UNRESOLVED: shtest-format :: no-test-line.txt
 # CHECK: PASS: shtest-format :: pass.txt
@@ -73,8 +81,11 @@
 # CHECK-EMPTY:
 #  CHECK-NEXT: Command Output (stdout):
 #  CHECK-NEXT: --
-#  CHECK-NEXT: $ ":" "RUN: at line 1"
-#  CHECK-NEXT: $ "true"
+#  CHECK-NEXT: # RUN: at line 1
+#  CHECK-NEXT: true
+#  CHECK-NEXT: # executed command: true
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
 
 # CHECK: Failed Tests (4)
 # CHECK: shtest-format :: external_shell/fail.txt
