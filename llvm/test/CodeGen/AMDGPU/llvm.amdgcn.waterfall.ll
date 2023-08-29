@@ -3948,6 +3948,191 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop_rsrc_
   ret {<4 x float> , <4 x float>} %insert1
 }
 
+define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
+; PRE-GFX10-LABEL: test_waterfall_multi_end_struct:
+; PRE-GFX10:       ; %bb.0:
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v9, v4
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v8, v3
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v7, v2
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v6, v1
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v10, v0
+; PRE-GFX10-NEXT:    s_mov_b64 s[0:1], exec
+; PRE-GFX10-NEXT:  .LBB22_1: ; =>This Inner Loop Header: Depth=1
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s2, v10
+; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
+; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s4, v6
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s5, v7
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s6, v8
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s7, v9
+; PRE-GFX10-NEXT:    ; implicit-def: $vgpr10
+; PRE-GFX10-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
+; PRE-GFX10-NEXT:    s_nop 4
+; PRE-GFX10-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
+; PRE-GFX10-NEXT:    ; implicit-def: $vgpr5
+; PRE-GFX10-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; PRE-GFX10-NEXT:    s_cbranch_execnz .LBB22_1
+; PRE-GFX10-NEXT:  ; %bb.2:
+; PRE-GFX10-NEXT:    s_mov_b64 exec, s[0:1]
+; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
+; PRE-GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_end_struct:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    v_mov_b32_e32 v9, v4
+; GFX10-32-NEXT:    v_mov_b32_e32 v8, v3
+; GFX10-32-NEXT:    v_mov_b32_e32 v7, v2
+; GFX10-32-NEXT:    v_mov_b32_e32 v6, v1
+; GFX10-32-NEXT:    v_mov_b32_e32 v10, v0
+; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-32-NEXT:  .LBB22_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v10
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v10
+; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-32-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX10-32-NEXT:    ; implicit-def: $vgpr10
+; GFX10-32-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
+; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
+; GFX10-32-NEXT:    ; implicit-def: $vgpr5
+; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX10-32-NEXT:    s_cbranch_execnz .LBB22_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_end_struct:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    v_mov_b32_e32 v9, v4
+; GFX10-64-NEXT:    v_mov_b32_e32 v8, v3
+; GFX10-64-NEXT:    v_mov_b32_e32 v7, v2
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, v1
+; GFX10-64-NEXT:    v_mov_b32_e32 v10, v0
+; GFX10-64-NEXT:    s_mov_b64 s[0:1], exec
+; GFX10-64-NEXT:  .LBB22_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v10
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; GFX10-64-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-64-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX10-64-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX10-64-NEXT:    ; implicit-def: $vgpr10
+; GFX10-64-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
+; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
+; GFX10-64-NEXT:    ; implicit-def: $vgpr5
+; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; GFX10-64-NEXT:    s_cbranch_execnz .LBB22_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    ; return to shader part epilog
+;
+; GFX1150-LABEL: test_waterfall_multi_end_struct:
+; GFX1150:       ; %bb.0:
+; GFX1150-NEXT:    v_mov_b32_e32 v9, v4
+; GFX1150-NEXT:    v_mov_b32_e32 v8, v3
+; GFX1150-NEXT:    v_mov_b32_e32 v7, v2
+; GFX1150-NEXT:    v_mov_b32_e32 v6, v1
+; GFX1150-NEXT:    v_mov_b32_e32 v10, v0
+; GFX1150-NEXT:    s_mov_b64 s[0:1], exec
+; GFX1150-NEXT:  .LBB22_1: ; =>This Inner Loop Header: Depth=1
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    v_readfirstlane_b32 s2, v10
+; GFX1150-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; GFX1150-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX1150-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1150-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1150-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1150-NEXT:    ; implicit-def: $vgpr10
+; GFX1150-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
+; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
+; GFX1150-NEXT:    ; implicit-def: $vgpr5
+; GFX1150-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; GFX1150-NEXT:    s_cbranch_execnz .LBB22_1
+; GFX1150-NEXT:  ; %bb.2:
+; GFX1150-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
+; GFX1150-NEXT:    ; return to shader part epilog
+              i32 %idx, <4 x i32> %s_idx, i32 %v_inp) #1 {
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx)
+  %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok, <4 x i32> %s_idx)
+  %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
+  %payl = extractvalue { <4 x float>, i32 } %val, 0
+  %tfe = extractvalue { <4 x float>, i32 } %val, 1
+  %r0 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok, <4 x float> %payl)
+  %r1 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok, i32 %tfe)
+  %r1.float = bitcast i32 %r1 to float
+
+  %insert = insertvalue { <4 x float>, float } undef, <4 x float> %r0, 0
+  %insert1 = insertvalue { <4 x float>, float } %insert, float %r1.float, 1
+  ret {<4 x float> , float} %insert1
+}
+
+define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct_uniform(
+; PRE-GFX10-LABEL: test_waterfall_multi_end_struct_uniform:
+; PRE-GFX10:       ; %bb.0:
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s1, v1
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s2, v2
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s3, v3
+; PRE-GFX10-NEXT:    s_nop 4
+; PRE-GFX10-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
+; PRE-GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-32-LABEL: test_waterfall_multi_end_struct_uniform:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX10-32-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    ; return to shader part epilog
+;
+; GFX10-64-LABEL: test_waterfall_multi_end_struct_uniform:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX10-64-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    ; return to shader part epilog
+;
+; GFX1150-LABEL: test_waterfall_multi_end_struct_uniform:
+; GFX1150:       ; %bb.0:
+; GFX1150-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1150-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1150-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1150-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
+; GFX1150-NEXT:    ; return to shader part epilog
+              i32 inreg %idx, <4 x i32> %s_idx, i32 %v_inp) #1 {
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %idx)
+  %widx0 = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok, <4 x i32> %s_idx)
+  %val = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %widx0, i32 %v_inp, i32 0, i32 0, i32 0)
+  %payl = extractvalue { <4 x float>, i32 } %val, 0
+  %tfe = extractvalue { <4 x float>, i32 } %val, 1
+  %r0 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok, <4 x float> %payl)
+  %r1 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok, i32 %tfe)
+  %r1.float = bitcast i32 %r1 to float
+
+  %insert = insertvalue { <4 x float>, float } undef, <4 x float> %r0, 0
+  %insert1 = insertvalue { <4 x float>, float } %insert, float %r1.float, 1
+  ret {<4 x float> , float} %insert1
+}
+
+
 declare i32 @llvm.amdgcn.waterfall.begin.i32(i32, i32) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v2i32(i32, <2 x i32>) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v4i32(i32, <4 x i32>) #6
@@ -3972,6 +4157,7 @@ declare float @llvm.amdgcn.buffer.load.ushort(<4 x i32>, i32, i32, i1, i1) #4
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #4
 declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #4
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i1) #2
+declare { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32>, i32, i32, i32, i32) #4
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i1) #2
 declare void @llvm.amdgcn.buffer.store.short(float, <4 x i32>, i32, i32, i1, i1) #5
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #5
