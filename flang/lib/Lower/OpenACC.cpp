@@ -1937,9 +1937,6 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
-  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent)
-    return;
-
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
       builder, currentLocation, operands, operandSegments);
 
