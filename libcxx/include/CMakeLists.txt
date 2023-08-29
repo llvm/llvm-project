@@ -698,7 +698,6 @@ set(files
   __tuple/tuple_like_ext.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __typeinfo/typeinfo.h
   __type_traits/add_const.h
   __type_traits/add_cv.h
   __type_traits/add_lvalue_reference.h
@@ -836,6 +835,7 @@ set(files
   __type_traits/underlying_type.h
   __type_traits/unwrap_ref.h
   __type_traits/void_t.h
+  __typeinfo/typeinfo.h
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h
