@@ -36,6 +36,8 @@ if (OPENMP_STANDALONE_BUILD)
     "C compiler to use for testing OpenMP runtime libraries.")
   set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
     "C++ compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_TEST_Fortran_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING
+    "FORTRAN compiler to use for testing OpenMP runtime libraries.")
   set(OPENMP_LLVM_TOOLS_DIR "" CACHE PATH "Path to LLVM tools for testing.")
 
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -52,6 +54,11 @@ else()
   else()
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
     set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
+  endif()
+
+  find_program(OPENMP_TEST_Fortran_COMPILER flang-new PATHS LLVM_RUNTIME_OUTPUT_INTDIR)
+  if (NOT OPENMP_TEST_Fortran_COMPILER)
+    unset(OPENMP_TEST_Fortran_COMPILER CACHE)
   endif()
 
   # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
