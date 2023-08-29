@@ -39,6 +39,8 @@ public:
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
   bool IsILP32;
 };
 
@@ -457,6 +459,12 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   llvm_unreachable("Unimplemented fixup -> relocation");
+}
+
+bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                     const MCSymbol &,
+                                                     unsigned) const {
+  return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
 }
 
 MCSectionELF *
