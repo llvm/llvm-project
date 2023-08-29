@@ -1767,7 +1767,7 @@ public:
 
   /// Returns if this function is a parent of \p Other function.
   bool isParentOf(const BinaryFunction &Other) const {
-    return llvm::is_contained(Fragments, &Other);
+    return Fragments.contains(&Other);
   }
 
   /// Return the child fragment form parent function
