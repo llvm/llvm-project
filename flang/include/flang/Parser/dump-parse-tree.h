@@ -105,6 +105,7 @@ public:
   NODE(parser, AccTileExpr)
   NODE(parser, AccTileExprList)
   NODE(parser, AccLoopDirective)
+  NODE(parser, AccEndLoop)
   NODE(parser, AccWaitArgument)
   static std::string GetNodeName(const llvm::acc::Directive &x) {
     return llvm::Twine(
