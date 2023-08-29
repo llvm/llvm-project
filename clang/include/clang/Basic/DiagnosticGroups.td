@@ -1292,9 +1292,10 @@ def OpenMPTarget : DiagGroup<"openmp-target", [OpenMPMapping]>;
 def OpenMPPre51Compat : DiagGroup<"pre-openmp-51-compat">;
 def OpenMP51Ext : DiagGroup<"openmp-51-extensions">;
 def OpenMPExtensions : DiagGroup<"openmp-extensions">;
+def OpenMPTargetException : DiagGroup<"openmp-target-exception">;
 def OpenMP : DiagGroup<"openmp", [
     SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget,
-    OpenMPMapping, OpenMP51Ext, OpenMPExtensions
+    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException
   ]>;
 
 // Backend warnings.

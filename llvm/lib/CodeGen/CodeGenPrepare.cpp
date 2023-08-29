@@ -268,6 +268,11 @@ static cl::opt<unsigned>
     MaxAddressUsersToScan("cgp-max-address-users-to-scan", cl::init(100),
                           cl::Hidden,
                           cl::desc("Max number of address users to look at"));
+
+static cl::opt<bool>
+    DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
+                      cl::desc("Disable elimination of dead PHI nodes."));
+
 namespace {
 
 enum ExtType {
@@ -878,8 +883,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   // as we remove them.
   // Note that this intentionally skips the entry block.
   SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
+  for (auto &Block : llvm::drop_begin(F)) {
+    // Delete phi nodes that could block deleting other empty blocks.
+    if (!DisableDeletePHIs)
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
     Blocks.push_back(&Block);
+  }
 
   for (auto &Block : Blocks) {
     BasicBlock *BB = cast_or_null<BasicBlock>(Block);

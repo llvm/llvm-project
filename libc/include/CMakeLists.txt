@@ -540,7 +540,7 @@ foreach(target IN LISTS all_install_header_targets)
     message(FATAL_ERROR "Installable header file '${target}' does not have the "
                         "HEADER_FILE_PATH property set.")
   endif()
-  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_BINARY_DIR} ${header_file})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${header_file})
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
   install(FILES ${header_file}
           DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
@@ -554,7 +554,7 @@ foreach(target IN LISTS all_install_header_targets)
       continue()
     endif()
     get_clang_resource_dir(resource_dir SUBDIR include)
-    file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_BINARY_DIR} ${decls_file})
+    file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${decls_file})
     get_filename_component(nested_dir ${relative_path} DIRECTORY)
     set(install_dir
         ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
