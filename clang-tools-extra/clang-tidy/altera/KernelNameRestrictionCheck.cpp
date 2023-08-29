@@ -35,9 +35,9 @@ public:
   void EndOfMainFile() override;
 
 private:
-  /// Returns true if the name of the file with path FilePath is 'kernel.cl',
+  /// Returns true if the name of the file with path FileName is 'kernel.cl',
   /// 'verilog.cl', or 'vhdl.cl'. The file name check is case insensitive.
-  bool fileNameIsRestricted(StringRef FilePath);
+  bool fileNameIsRestricted(StringRef FileName);
 
   struct IncludeDirective {
     SourceLocation Loc; // Location in the include directive.
