@@ -81,7 +81,7 @@ private:
   static DefaultableMemberKind
   getDefaultableMemberKind(const FunctionDecl *FuncDecl);
 
-  llvm::DenseMap<const FunctionDecl *, State> FunctionCache{32u};
+  llvm::DenseMap<const FunctionDecl *, State> FunctionCache{32U};
 };
 
 } // namespace clang::tidy::utils

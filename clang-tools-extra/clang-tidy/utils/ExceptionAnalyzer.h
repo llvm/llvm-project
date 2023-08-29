@@ -141,7 +141,7 @@ private:
 
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
-  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32u};
+  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
 };
 
 } // namespace clang::tidy::utils
