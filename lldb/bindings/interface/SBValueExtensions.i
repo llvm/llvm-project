@@ -37,9 +37,6 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                 children.append(accessor[idx])
             return children
 
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
         def __int__(self):
             pass
 
