@@ -659,9 +659,6 @@ Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
 
 Value *
 X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
-  if (Subtarget.getTargetTriple().isOSContiki())
-    return getDefaultSafeStackPointerLocation(IRB, false);
-
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
