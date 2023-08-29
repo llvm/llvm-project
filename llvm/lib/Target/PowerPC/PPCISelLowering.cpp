@@ -132,6 +132,10 @@ cl::opt<bool> DisableAutoPairedVecSt(
     cl::desc("disable automatically generated 32byte paired vector stores"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> PPCMinimumJumpTableEntries(
+    "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on PPC"));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -1431,6 +1435,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setHasMultipleConditionRegisters();
     setJumpIsExpensive();
   }
+
+  // TODO: The default entry number is set to 64. This stops most jump table
+  // generation on PPC. But it is good for current PPC HWs because the indirect
+  // branch instruction mtctr to the jump table may lead to bad branch predict.
+  // Re-evaluate this value on future HWs that can do better with mtctr.
+  setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
 
