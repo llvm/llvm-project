@@ -85,6 +85,8 @@ define i32 @musttailCall(i32 %0) {
 declare i32 @retI32()
 declare void @takeI32(i32)
 declare float @retFloatTakeFloat(float)
+; This callee is always filtered out because of the noundef argument
+declare float @retFloatTakeFloatFloatNoundef(float, float noundef)
 declare void @void()
 
 define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
@@ -153,6 +155,69 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
   %fp2 = select i1 %c2, ptr @retFloatTakeFloat, ptr @void
+  %fp = select i1 %c, ptr %fp1, ptr %fp2
+  %call = call i32 %fp(i32 42)
+  ret i32 %call
+}
+
+define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
+; UNLIM-LABEL: @non_matching_fp1_noundef(
+; UNLIM-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; UNLIM-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
+; UNLIM-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; UNLIM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
+; UNLIM-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; UNLIM:       2:
+; UNLIM-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
+; UNLIM-NEXT:    br label [[TMP9:%.*]]
+; UNLIM:       3:
+; UNLIM-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
+; UNLIM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; UNLIM:       5:
+; UNLIM-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
+; UNLIM-NEXT:    br label [[TMP9]]
+; UNLIM:       6:
+; UNLIM-NEXT:    br i1 true, label [[TMP7:%.*]], label [[TMP8:%.*]]
+; UNLIM:       7:
+; UNLIM-NEXT:    [[CALL3:%.*]] = call i32 @void(i32 42)
+; UNLIM-NEXT:    br label [[TMP9]]
+; UNLIM:       8:
+; UNLIM-NEXT:    unreachable
+; UNLIM:       9:
+; UNLIM-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP7]] ]
+; UNLIM-NEXT:    ret i32 [[CALL_PHI]]
+;
+; LIMI2-LABEL: @non_matching_fp1_noundef(
+; LIMI2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; LIMI2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
+; LIMI2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; LIMI2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
+; LIMI2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; LIMI2:       2:
+; LIMI2-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
+; LIMI2-NEXT:    br label [[TMP7:%.*]]
+; LIMI2:       3:
+; LIMI2-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
+; LIMI2-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; LIMI2:       5:
+; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
+; LIMI2-NEXT:    br label [[TMP7]]
+; LIMI2:       6:
+; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees !1
+; LIMI2-NEXT:    br label [[TMP7]]
+; LIMI2:       7:
+; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP6]] ]
+; LIMI2-NEXT:    ret i32 [[CALL_PHI]]
+;
+; LIMI0-LABEL: @non_matching_fp1_noundef(
+; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
+; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !2
+; LIMI0-NEXT:    ret i32 [[CALL]]
+;
+  %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
+  %fp2 = select i1 %c2, ptr @retFloatTakeFloatFloatNoundef, ptr @void
   %fp = select i1 %c, ptr %fp1, ptr %fp2
   %call = call i32 %fp(i32 42)
   ret i32 %call
@@ -298,12 +363,12 @@ define void @undef_in_callees() {
 ;
 ; LIMI2-LABEL: @undef_in_callees(
 ; LIMI2-NEXT:  cond.end.i:
-; LIMI2-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !3
+; LIMI2-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !4
 ; LIMI2-NEXT:    ret void
 ;
 ; LIMI0-LABEL: @undef_in_callees(
 ; LIMI0-NEXT:  cond.end.i:
-; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !4
+; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !5
 ; LIMI0-NEXT:    ret void
 ;
 cond.end.i:
@@ -347,15 +412,17 @@ cond.end.i:
 ; UNLIM: [[META2:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;.
 ; LIMI2: [[META0:![0-9]+]] = !{ptr @void, ptr @retFloatTakeFloat}
-; LIMI2: [[META1:![0-9]+]] = !{!2}
-; LIMI2: [[META2:![0-9]+]] = !{i64 0, i1 false}
-; LIMI2: [[META3:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI2: [[META1:![0-9]+]] = !{ptr @void}
+; LIMI2: [[META2:![0-9]+]] = !{!3}
+; LIMI2: [[META3:![0-9]+]] = !{i64 0, i1 false}
+; LIMI2: [[META4:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;.
 ; LIMI0: [[META0:![0-9]+]] = !{ptr @func3, ptr @func4}
 ; LIMI0: [[META1:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
-; LIMI0: [[META2:![0-9]+]] = !{!3}
-; LIMI0: [[META3:![0-9]+]] = !{i64 0, i1 false}
-; LIMI0: [[META4:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI0: [[META2:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; LIMI0: [[META3:![0-9]+]] = !{!4}
+; LIMI0: [[META4:![0-9]+]] = !{i64 0, i1 false}
+; LIMI0: [[META5:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT: {{.*}}
