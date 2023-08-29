@@ -372,8 +372,15 @@ RUN: ld.lld -### foo.o -m i386pep --guard-longjmp 2>&1 | FileCheck -check-prefix
 RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 GUARD_LONGJMP_NO_CF: warning: parameter --guard-longjmp only takes effect when used with --guard-cf
 
-RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
-LTO_OPTS: -mllvm:-mcpu=x86-64 -mllvm:-emulated-tls
+RUN: ld.lld -### foo.o -m i386pep --threads 3 --thinlto-jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
+RUN: ld.lld -### foo.o -m i386pep --threads 3 -plugin-opt=jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
+THREADS: -threads:3 {{.*}} -opt:lldltojobs=4
+
+RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls -plugin-opt=thinlto -plugin-opt=O2 -plugin-opt=dwo_dir=foo -plugin-opt=cs-profile-generate -plugin-opt=cs-profile-path=bar 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
+LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate -lto-cs-profile-file:bar -mllvm:-emulated-tls
+
+RUN: ld.lld -### foo.o -m i386pep --lto-O2 --lto-CGO1 --lto-cs-profile-generate --lto-cs-profile-file=foo 2>&1 | FileCheck -check-prefix=LTO_OPTS2 %s
+LTO_OPTS2:-opt:lldlto=2 -opt:lldltocgo=1 -lto-cs-profile-generate -lto-cs-profile-file:foo
 
 Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
 

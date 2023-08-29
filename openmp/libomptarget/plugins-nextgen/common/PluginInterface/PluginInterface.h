@@ -363,7 +363,7 @@ private:
   virtual uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                                 uint32_t BlockLimitClause[3],
                                 uint64_t LoopTripCount,
-                                uint32_t NumThreads) const;
+                                uint32_t &NumThreads) const;
 
   /// The kernel name.
   const char *Name;

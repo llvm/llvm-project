@@ -35,9 +35,9 @@ RedundantStringCStrCheck::RedundantStringCStrCheck(StringRef Name,
       StringParameterFunctions(utils::options::parseStringList(
           Options.get("StringParameterFunctions", ""))) {
   if (getLangOpts().CPlusPlus20)
-    StringParameterFunctions.push_back("::std::format");
+    StringParameterFunctions.emplace_back("::std::format");
   if (getLangOpts().CPlusPlus23)
-    StringParameterFunctions.push_back("::std::print");
+    StringParameterFunctions.emplace_back("::std::print");
 }
 
 void RedundantStringCStrCheck::registerMatchers(

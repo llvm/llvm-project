@@ -46,7 +46,7 @@ class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
   mutable std::unique_ptr<BuiltinBug> BT;
   mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
-  mutable const IdentifierInfo *II_vfork;
+  mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);
 
@@ -58,7 +58,7 @@ class VforkChecker : public Checker<check::PreCall, check::PostCall,
                  const char *Details = nullptr) const;
 
 public:
-  VforkChecker() : II_vfork(nullptr) {}
+  VforkChecker() = default;
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;

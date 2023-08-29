@@ -1368,10 +1368,6 @@ public:
     return false;
   }
 
-  bool isJumpTableDebugInfo() const {
-    return getOpcode() == TargetOpcode::JUMP_TABLE_DEBUG_INFO;
-  }
-
   bool isPHI() const {
     return getOpcode() == TargetOpcode::PHI ||
            getOpcode() == TargetOpcode::G_PHI;

@@ -282,6 +282,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-align:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_heap))
     add("-heap:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_threads))
+    add("-threads:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -420,6 +422,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_O))
+    add("-opt:lldlto=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_CGO))
+    add("-opt:lldltocgo=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_dwo_dir_eq))
+    add("-dwodir:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_lto_cs_profile_generate))
+    add("-lto-cs-profile-generate");
+  if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
+    add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));

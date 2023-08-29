@@ -846,7 +846,8 @@ void thread_limit_target(int TargetTL, int TeamsTL) {
 // OMP51: store {{.*}} [[TL]], {{.*}} [[CEA:%.*]]
 // OMP51: load {{.*}} [[CEA]]
 // OMP51: [[CE:%.*]] = load {{.*}} [[CEA]]
-// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 -1, i32 [[CE]],
+// OMP51: call ptr @__kmpc_omp_task_alloc({{.*@.omp_task_entry.*}})
+// OMP51: call i32 [[OMP_TASK_ENTRY]]
 
 #pragma omp target thread_limit(TargetTL)
 #pragma omp teams
@@ -854,8 +855,8 @@ void thread_limit_target(int TargetTL, int TeamsTL) {
 // OMP51: [[TL:%.*]] = load {{.*}} %TargetTL.addr
 // OMP51: store {{.*}} [[TL]], {{.*}} [[CEA:%.*]]
 // OMP51: load {{.*}} [[CEA]]
-// OMP51: [[CE:%.*]] = load {{.*}} [[CEA]]
-// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 [[CE]],
+// OMP51: call ptr @__kmpc_omp_task_alloc({{.*@.omp_task_entry.*}})
+// OMP51: call i32 [[OMP_TASK_ENTRY]]
 
 #pragma omp target
 #pragma omp teams thread_limit(TeamsTL)
@@ -869,10 +870,25 @@ void thread_limit_target(int TargetTL, int TeamsTL) {
 {}
 // OMP51: load {{.*}} %TeamsTL.addr
 // OMP51: [[TeamsL:%.*]] = load {{.*}} %TeamsTL.addr
-// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 [[TeamsL]],
+// OMP51: call ptr @__kmpc_omp_task_alloc({{.*@.omp_task_entry.*}})
+// OMP51: call i32 [[OMP_TASK_ENTRY]]
 
 }
 #endif
+// Check that the offloading functions are called after setting thread_limit in the task entry functions
+
+// OMP51: define internal {{.*}}i32 [[OMP_TASK_ENTRY:@.+]](i32 {{.*}}%0, ptr noalias noundef %1)
+// OMP51: call void @__kmpc_set_thread_limit(ptr @{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 -1,
+
+// OMP51: define internal {{.*}}i32 [[OMP_TASK_ENTRY:@.+]](i32 {{.*}}%0, ptr noalias noundef %1)
+// OMP51: call void @__kmpc_set_thread_limit(ptr @{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0,
+
+// OMP51: define internal {{.*}}i32 [[OMP_TASK_ENTRY:@.+]](i32 {{.*}}%0, ptr noalias noundef %1)
+// OMP51: call void @__kmpc_set_thread_limit(ptr @{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0,
+
 
 // CHECK:     define internal void @.omp_offloading.requires_reg()
 // CHECK:     call void @__tgt_register_requires(i64 1)

@@ -36,6 +36,13 @@ __interceptor_pthread_setspecific w
 __interceptor_read w
 __interceptor_realpath w
 __isinf U
+__isoc23_sscanf U
+__isoc23_strtol U
+__isoc23_strtoll U
+__isoc23_strtoll_l U
+__isoc23_strtoull U
+__isoc23_strtoull_l U
+__isoc23_vsscanf U
 __isoc99_sscanf U
 __isoc99_vsscanf U
 __lshrdi3 U

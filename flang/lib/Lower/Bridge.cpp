@@ -501,10 +501,7 @@ public:
   lookupLabel(Fortran::lower::pft::Label label) override final {
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
         *getEval().getOwningProcedure();
-    auto iter = owningProc.labelEvaluationMap.find(label);
-    if (iter == owningProc.labelEvaluationMap.end())
-      return nullptr;
-    return iter->second;
+    return owningProc.labelEvaluationMap.lookup(label);
   }
 
   fir::ExtendedValue
