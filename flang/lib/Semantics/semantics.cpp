@@ -355,17 +355,54 @@ void SemanticsContext::CheckError(const Symbol &symbol) {
   }
 }
 
+bool SemanticsContext::ScopeIndexComparator::operator()(
+    parser::CharBlock x, parser::CharBlock y) const {
+  return x.begin() < y.begin() ||
+      (x.begin() == y.begin() && x.size() > y.size());
+}
+
+auto SemanticsContext::SearchScopeIndex(parser::CharBlock source)
+    -> ScopeIndex::iterator {
+  if (!scopeIndex_.empty()) {
+    auto iter{scopeIndex_.upper_bound(source)};
+    auto begin{scopeIndex_.begin()};
+    do {
+      --iter;
+      if (iter->first.Contains(source)) {
+        return iter;
+      }
+    } while (iter != begin);
+  }
+  return scopeIndex_.end();
+}
+
 const Scope &SemanticsContext::FindScope(parser::CharBlock source) const {
   return const_cast<SemanticsContext *>(this)->FindScope(source);
 }
 
 Scope &SemanticsContext::FindScope(parser::CharBlock source) {
-  if (auto *scope{globalScope_.FindScope(source)}) {
-    return *scope;
+  if (auto iter{SearchScopeIndex(source)}; iter != scopeIndex_.end()) {
+    return iter->second;
   } else {
     common::die(
         "SemanticsContext::FindScope(): invalid source location for '%s'",
         source.ToString().c_str());
+  }
+}
+
+void SemanticsContext::UpdateScopeIndex(
+    Scope &scope, parser::CharBlock newSource) {
+  if (scope.sourceRange().empty()) {
+    scopeIndex_.emplace(newSource, scope);
+  } else if (!scope.sourceRange().Contains(newSource)) {
+    auto iter{SearchScopeIndex(scope.sourceRange())};
+    CHECK(iter != scopeIndex_.end());
+    while (&iter->second != &scope) {
+      CHECK(iter != scopeIndex_.begin());
+      --iter;
+    }
+    scopeIndex_.erase(iter);
+    scopeIndex_.emplace(newSource, scope);
   }
 }
 
