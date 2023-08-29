@@ -634,66 +634,61 @@ define <8 x i32> @widen_ctlz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm5
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm7 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX2-NEXT:    vpand %xmm7, %xmm5, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm1, %xmm8
-; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm6
-; AVX2-NEXT:    vpand %xmm7, %xmm6, %xmm6
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm9
-; AVX2-NEXT:    vpsrlw $4, %xmm2, %xmm6
-; AVX2-NEXT:    vpand %xmm7, %xmm6, %xmm6
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm6 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm6, %xmm5, %xmm5
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm1, %xmm7
+; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm8
+; AVX2-NEXT:    vpand %xmm6, %xmm8, %xmm8
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm8, %xmm8
+; AVX2-NEXT:    vpsrlw $4, %xmm2, %xmm9
+; AVX2-NEXT:    vpand %xmm6, %xmm9, %xmm9
 ; AVX2-NEXT:    vpsrlw $4, %xmm3, %xmm10
-; AVX2-NEXT:    vpand %xmm7, %xmm10, %xmm7
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm7, %xmm10
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm11
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm12 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; AVX2-NEXT:    # ymm12 = mem[0,1,0,1]
-; AVX2-NEXT:    vinserti128 $1, %xmm12, %ymm12, %ymm7
-; AVX2-NEXT:    vinserti128 $1, %xmm10, %ymm9, %ymm9
-; AVX2-NEXT:    vpshufb %ymm11, %ymm7, %ymm10
-; AVX2-NEXT:    vpand %ymm9, %ymm10, %ymm9
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm10
-; AVX2-NEXT:    vpsrlw $4, %ymm11, %ymm11
-; AVX2-NEXT:    vinserti128 $1, %xmm10, %ymm8, %ymm8
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm10 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX2-NEXT:    vpand %ymm10, %ymm11, %ymm11
-; AVX2-NEXT:    vpshufb %ymm11, %ymm12, %ymm12
-; AVX2-NEXT:    vpaddb %ymm12, %ymm9, %ymm12
-; AVX2-NEXT:    vpshufb %ymm11, %ymm7, %ymm11
-; AVX2-NEXT:    vpaddb %ymm11, %ymm9, %ymm9
+; AVX2-NEXT:    vpand %xmm6, %xmm10, %xmm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm6
+; AVX2-NEXT:    vinserti128 $1, %xmm6, %ymm8, %ymm6
+; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm8
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm10 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-NEXT:    vpshufb %ymm8, %ymm10, %ymm11
+; AVX2-NEXT:    vpand %ymm6, %ymm11, %ymm6
+; AVX2-NEXT:    vpsrlw $4, %ymm8, %ymm8
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm11 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %ymm11, %ymm8, %ymm8
+; AVX2-NEXT:    vpshufb %ymm8, %ymm10, %ymm8
+; AVX2-NEXT:    vpaddb %ymm6, %ymm8, %ymm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm8
+; AVX2-NEXT:    vinserti128 $1, %xmm8, %ymm7, %ymm7
+; AVX2-NEXT:    vpsrlw $8, %ymm7, %ymm7
+; AVX2-NEXT:    vpand %ymm7, %ymm6, %ymm7
+; AVX2-NEXT:    vpsrlw $8, %ymm6, %ymm6
+; AVX2-NEXT:    vpaddw %ymm7, %ymm6, %ymm6
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrlw $8, %ymm8, %ymm8
-; AVX2-NEXT:    vpand %ymm8, %ymm12, %ymm11
 ; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $8, %ymm9, %ymm3
-; AVX2-NEXT:    vpaddw %ymm3, %ymm11, %ymm11
+; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm3
 ; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
-; AVX2-NEXT:    vpand %ymm1, %ymm11, %ymm1
-; AVX2-NEXT:    vpand %ymm8, %ymm9, %ymm8
-; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm9
-; AVX2-NEXT:    vpaddw %ymm3, %ymm8, %ymm3
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm8
+; AVX2-NEXT:    vpand %ymm1, %ymm6, %ymm1
+; AVX2-NEXT:    vpsrld $16, %ymm6, %ymm6
+; AVX2-NEXT:    vpaddd %ymm1, %ymm6, %ymm1
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm6
 ; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm5, %xmm5
-; AVX2-NEXT:    vpsrld $16, %ymm3, %ymm3
-; AVX2-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm2, %xmm3
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm9, %xmm7
+; AVX2-NEXT:    vinserti128 $1, %xmm7, %ymm5, %ymm5
+; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm2, %xmm7
 ; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm2, %xmm4
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm2
-; AVX2-NEXT:    vpshufb %ymm0, %ymm7, %ymm5
-; AVX2-NEXT:    vpand %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vpshufb %ymm0, %ymm10, %ymm2
+; AVX2-NEXT:    vpand %ymm5, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm0, %ymm10, %ymm0
-; AVX2-NEXT:    vpshufb %ymm0, %ymm7, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm11, %ymm0
+; AVX2-NEXT:    vpshufb %ymm0, %ymm10, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm8, %ymm2
+; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm6, %ymm2
 ; AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm9, %ymm2
+; AVX2-NEXT:    vinserti128 $1, %xmm7, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsrld $16, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
@@ -1015,66 +1010,61 @@ define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm5
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm7 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX2-NEXT:    vpand %xmm7, %xmm5, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm1, %xmm8
-; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm6
-; AVX2-NEXT:    vpand %xmm7, %xmm6, %xmm6
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm9
-; AVX2-NEXT:    vpsrlw $4, %xmm2, %xmm6
-; AVX2-NEXT:    vpand %xmm7, %xmm6, %xmm6
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm6 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm6, %xmm5, %xmm5
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm1, %xmm7
+; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm8
+; AVX2-NEXT:    vpand %xmm6, %xmm8, %xmm8
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm8, %xmm8
+; AVX2-NEXT:    vpsrlw $4, %xmm2, %xmm9
+; AVX2-NEXT:    vpand %xmm6, %xmm9, %xmm9
 ; AVX2-NEXT:    vpsrlw $4, %xmm3, %xmm10
-; AVX2-NEXT:    vpand %xmm7, %xmm10, %xmm7
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm7, %xmm10
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm11
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm12 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; AVX2-NEXT:    # ymm12 = mem[0,1,0,1]
-; AVX2-NEXT:    vinserti128 $1, %xmm12, %ymm12, %ymm7
-; AVX2-NEXT:    vinserti128 $1, %xmm10, %ymm9, %ymm9
-; AVX2-NEXT:    vpshufb %ymm11, %ymm7, %ymm10
-; AVX2-NEXT:    vpand %ymm9, %ymm10, %ymm9
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm10
-; AVX2-NEXT:    vpsrlw $4, %ymm11, %ymm11
-; AVX2-NEXT:    vinserti128 $1, %xmm10, %ymm8, %ymm8
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm10 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX2-NEXT:    vpand %ymm10, %ymm11, %ymm11
-; AVX2-NEXT:    vpshufb %ymm11, %ymm12, %ymm12
-; AVX2-NEXT:    vpaddb %ymm12, %ymm9, %ymm12
-; AVX2-NEXT:    vpshufb %ymm11, %ymm7, %ymm11
-; AVX2-NEXT:    vpaddb %ymm11, %ymm9, %ymm9
+; AVX2-NEXT:    vpand %xmm6, %xmm10, %xmm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm6
+; AVX2-NEXT:    vinserti128 $1, %xmm6, %ymm8, %ymm6
+; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm8
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm10 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-NEXT:    vpshufb %ymm8, %ymm10, %ymm11
+; AVX2-NEXT:    vpand %ymm6, %ymm11, %ymm6
+; AVX2-NEXT:    vpsrlw $4, %ymm8, %ymm8
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm11 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %ymm11, %ymm8, %ymm8
+; AVX2-NEXT:    vpshufb %ymm8, %ymm10, %ymm8
+; AVX2-NEXT:    vpaddb %ymm6, %ymm8, %ymm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm8
+; AVX2-NEXT:    vinserti128 $1, %xmm8, %ymm7, %ymm7
+; AVX2-NEXT:    vpsrlw $8, %ymm7, %ymm7
+; AVX2-NEXT:    vpand %ymm7, %ymm6, %ymm7
+; AVX2-NEXT:    vpsrlw $8, %ymm6, %ymm6
+; AVX2-NEXT:    vpaddw %ymm7, %ymm6, %ymm6
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrlw $8, %ymm8, %ymm8
-; AVX2-NEXT:    vpand %ymm8, %ymm12, %ymm11
 ; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $8, %ymm9, %ymm3
-; AVX2-NEXT:    vpaddw %ymm3, %ymm11, %ymm11
+; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm3
 ; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
-; AVX2-NEXT:    vpand %ymm1, %ymm11, %ymm1
-; AVX2-NEXT:    vpand %ymm8, %ymm9, %ymm8
-; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm9
-; AVX2-NEXT:    vpaddw %ymm3, %ymm8, %ymm3
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm8
+; AVX2-NEXT:    vpand %ymm1, %ymm6, %ymm1
+; AVX2-NEXT:    vpsrld $16, %ymm6, %ymm6
+; AVX2-NEXT:    vpaddd %ymm1, %ymm6, %ymm1
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm6
 ; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm5, %xmm5
-; AVX2-NEXT:    vpsrld $16, %ymm3, %ymm3
-; AVX2-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm2, %xmm3
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm6, %xmm6
+; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm9, %xmm7
+; AVX2-NEXT:    vinserti128 $1, %xmm7, %ymm5, %ymm5
+; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm2, %xmm7
 ; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm2, %xmm4
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm2
-; AVX2-NEXT:    vpshufb %ymm0, %ymm7, %ymm5
-; AVX2-NEXT:    vpand %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vpshufb %ymm0, %ymm10, %ymm2
+; AVX2-NEXT:    vpand %ymm5, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm0, %ymm10, %ymm0
-; AVX2-NEXT:    vpshufb %ymm0, %ymm7, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm11, %ymm0
+; AVX2-NEXT:    vpshufb %ymm0, %ymm10, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm8, %ymm2
+; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm6, %ymm2
 ; AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm9, %ymm2
+; AVX2-NEXT:    vinserti128 $1, %xmm7, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsrld $16, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
