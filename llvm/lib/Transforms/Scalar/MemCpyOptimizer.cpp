@@ -1115,7 +1115,12 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
                                                   BatchAAResults &BAA) {
   // We can only transforms memcpy's where the dest of one is the source of the
   // other.
-  if (M->getSource() != MDep->getDest() || MDep->isVolatile())
+  if (M->getSource() != MDep->getDest())
+    return false;
+  // If the dependence is volatile, we can't short-circuit it. FIXME: Perhaps
+  // we can. Iff our src is non-volatile, its dst is non-volatile and the copies
+  // are the same size. Then we can replace it.
+  if (MDep->isVolatile())
     return false;
 
   // If dep instruction is reading from our current input, then it is a noop
@@ -1176,18 +1181,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   if (UseMemMove)
     NewM = Builder.CreateMemMove(M->getRawDest(), M->getDestAlign(),
                                  MDep->getRawSource(), MDep->getSourceAlign(),
-                                 M->getLength(), M->isVolatile());
+                                 M->getLength(), M->getVolatility());
   else if (isa<MemCpyInlineInst>(M)) {
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(
         M->getRawDest(), M->getDestAlign(), MDep->getRawSource(),
-        MDep->getSourceAlign(), M->getLength(), M->isVolatile());
+        MDep->getSourceAlign(), M->getLength(), M->getVolatility());
   } else
     NewM = Builder.CreateMemCpy(M->getRawDest(), M->getDestAlign(),
                                 MDep->getRawSource(), MDep->getSourceAlign(),
-                                M->getLength(), M->isVolatile());
+                                M->getLength(), M->getVolatility());
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M)));

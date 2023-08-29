@@ -128,13 +128,13 @@ private:
                      // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
-                    Align SrcAlign, bool IsVolatile,
+                    Align SrcAlign, MemTransferVolatility Volatile,
                     bool MemcpyStrSrc = false) {
     MemOp Op;
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
     Op.DstAlign = DstAlign;
-    Op.AllowOverlap = !IsVolatile;
+    Op.AllowOverlap = !Volatile.isAnyVolatile();
     Op.IsMemset = false;
     Op.ZeroMemset = false;
     Op.MemcpyStrSrc = MemcpyStrSrc;

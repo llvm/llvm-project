@@ -349,7 +349,7 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       if (!collectUsersRecursive(*Inst))
         return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
-      if (MI->isVolatile())
+      if (MI->isAnyVolatile())
         return false;
       Worklist.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
@@ -431,7 +431,7 @@ void PointerReplacer::replace(Instruction *I) {
     auto *NewI = IC.Builder.CreateMemTransferInst(
         MemCpy->getIntrinsicID(), MemCpy->getRawDest(), MemCpy->getDestAlign(),
         SrcV, MemCpy->getSourceAlign(), MemCpy->getLength(),
-        MemCpy->isVolatile());
+        MemCpy->getVolatility());
     AAMDNodes AAMD = MemCpy->getAAMetadata();
     if (AAMD)
       NewI->setAAMetadata(AAMD);

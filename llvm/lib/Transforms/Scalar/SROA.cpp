@@ -1094,7 +1094,7 @@ private:
     // source and dest.
     if (*U == II.getRawDest() && *U == II.getRawSource()) {
       // For non-volatile transfers this is a no-op.
-      if (!II.isVolatile())
+      if (!II.isAnyVolatile())
         return markAsDead(II);
 
       return insertUse(II, Offset, Size, /*IsSplittable=*/false);
@@ -1112,7 +1112,7 @@ private:
 
       // Check if the begin offsets match and this is a non-volatile transfer.
       // In that case, we can completely elide the transfer.
-      if (!II.isVolatile() && PrevP.beginOffset() == RawOffset) {
+      if (!II.isAnyVolatile() && PrevP.beginOffset() == RawOffset) {
         PrevP.kill();
         return markAsDead(II);
       }
@@ -3235,7 +3235,7 @@ private:
         SrcAlign = SliceAlign;
       }
       CallInst *New = IRB.CreateMemCpy(DestPtr, DestAlign, SrcPtr, SrcAlign,
-                                       Size, II.isVolatile());
+                                       Size, II.getVolatility());
       if (AATags)
         New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
@@ -3288,11 +3288,11 @@ private:
     Value *DstPtr;
 
     if (IsDest) {
-      DstPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
+      DstPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isDstVolatile());
       SrcPtr = AdjPtr;
     } else {
       DstPtr = AdjPtr;
-      SrcPtr = getPtrToNewAI(II.getSourceAddressSpace(), II.isVolatile());
+      SrcPtr = getPtrToNewAI(II.getSourceAddressSpace(), II.isSrcVolatile());
     }
 
     Value *Src;
@@ -3308,7 +3308,7 @@ private:
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
       LoadInst *Load = IRB.CreateAlignedLoad(OtherTy, SrcPtr, SrcAlign,
-                                             II.isVolatile(), "copyload");
+                                             II.isSrcVolatile(), "copyload");
       Load->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                               LLVMContext::MD_access_group});
       if (AATags)
@@ -3330,7 +3330,7 @@ private:
     }
 
     StoreInst *Store = cast<StoreInst>(
-        IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isVolatile()));
+        IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isDstVolatile()));
     Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
@@ -3349,7 +3349,7 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
-    return !II.isVolatile();
+    return !II.isAnyVolatile();
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {

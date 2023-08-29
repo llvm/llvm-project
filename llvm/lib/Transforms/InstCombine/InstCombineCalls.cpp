@@ -221,8 +221,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   if (auto *MT = dyn_cast<MemTransferInst>(MI)) {
     // non-atomics can be volatile
-    L->setVolatile(MT->isVolatile());
-    S->setVolatile(MT->isVolatile());
+    L->setVolatile(MT->isSrcVolatile());
+    S->setVolatile(MT->isDstVolatile());
   }
   if (isa<AtomicMemTransferInst>(MI)) {
     // atomics have to be unordered
@@ -1452,6 +1452,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // No other transformations apply to volatile transfers.
+    // FIXME: Is this true when we can distinguish src and dst volatility?
     if (auto *M = dyn_cast<MemIntrinsic>(MI))
       if (M->isVolatile())
         return nullptr;

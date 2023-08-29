@@ -1058,20 +1058,18 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
       MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
       B.CreateMemCpyInline(Dest, MTI->getDestAlign(), Src,
                            MTI->getSourceAlign(), MTI->getLength(),
-                           false, // isVolatile
-                           TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+                           MTI->getVolatility(), TBAA, TBAAStruct, ScopeMD,
+                           NoAliasMD);
     } else if (isa<MemCpyInst>(MTI)) {
       MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
       B.CreateMemCpy(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
-                     MTI->getLength(),
-                     false, // isVolatile
-                     TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+                     MTI->getLength(), MTI->getVolatility(), TBAA, TBAAStruct,
+                     ScopeMD, NoAliasMD);
     } else {
       assert(isa<MemMoveInst>(MTI));
       B.CreateMemMove(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
-                      MTI->getLength(),
-                      false, // isVolatile
-                      TBAA, ScopeMD, NoAliasMD);
+                      MTI->getLength(), MTI->getVolatility(), TBAA, ScopeMD,
+                      NoAliasMD);
     }
   } else
     llvm_unreachable("unhandled MemIntrinsic");

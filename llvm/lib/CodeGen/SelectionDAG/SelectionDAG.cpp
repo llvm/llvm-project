@@ -7404,13 +7404,11 @@ static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
-static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
-                                       SDValue Chain, SDValue Dst, SDValue Src,
-                                       uint64_t Size, Align Alignment,
-                                       bool isVol, bool AlwaysInline,
-                                       MachinePointerInfo DstPtrInfo,
-                                       MachinePointerInfo SrcPtrInfo,
-                                       const AAMDNodes &AAInfo, AAResults *AA) {
+static SDValue getMemcpyLoadsAndStores(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    uint64_t Size, Align Alignment, MemTransferVolatility Vol,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo, AAResults *AA) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -7437,14 +7435,15 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   assert(SrcAlign && "SrcAlign must be set");
   ConstantDataArraySlice Slice;
   // If marked as volatile, perform a copy even when marked as constant.
-  bool CopyFromConstant = !isVol && isMemSrcFromConstant(Src, Slice);
+  bool CopyFromConstant =
+      !Vol.isDstVolatile() && isMemSrcFromConstant(Src, Slice);
   bool isZeroConstant = CopyFromConstant && Slice.Array == nullptr;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemcpy(OptSize);
   const MemOp Op = isZeroConstant
                        ? MemOp::Set(Size, DstAlignCanChange, Alignment,
-                                    /*IsZeroMemset*/ true, isVol)
+                                    /*IsZeroMemset*/ true, Vol.isDstVolatile())
                        : MemOp::Copy(Size, DstAlignCanChange, Alignment,
-                                     *SrcAlign, isVol, CopyFromConstant);
+                                     *SrcAlign, Vol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
           MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
           SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
@@ -7479,8 +7478,12 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       AA && SrcVal &&
       AA->pointsToConstantMemory(MemoryLocation(SrcVal, Size, AAInfo));
 
-  MachineMemOperand::Flags MMOFlags =
-      isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
+  MachineMemOperand::Flags DstMMOFlags = Vol.isDstVolatile()
+                                             ? MachineMemOperand::MOVolatile
+                                             : MachineMemOperand::MONone;
+  MachineMemOperand::Flags SrcMMOFlags = Vol.isSrcVolatile()
+                                             ? MachineMemOperand::MOVolatile
+                                             : MachineMemOperand::MONone;
   SmallVector<SDValue, 16> OutLoadChains;
   SmallVector<SDValue, 16> OutStoreChains;
   SmallVector<SDValue, 32> OutChains;
@@ -7521,7 +7524,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
         Store = DAG.getStore(
             Chain, dl, Value,
             DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
-            DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+            DstPtrInfo.getWithOffset(DstOff), Alignment, DstMMOFlags,
+            NewAAInfo);
         OutChains.push_back(Store);
       }
     }
@@ -7536,8 +7540,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       assert(NVT.bitsGE(VT));
 
       bool isDereferenceable =
-        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
-      MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+          SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
       if (isDereferenceable)
         SrcMMOFlags |= MachineMemOperand::MODereferenceable;
       if (isConstant)
@@ -7553,7 +7556,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       Store = DAG.getTruncStore(
           Chain, dl, Value,
           DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
-          DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
+          DstPtrInfo.getWithOffset(DstOff), VT, Alignment, DstMMOFlags,
+          NewAAInfo);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -7607,13 +7611,11 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
 
-static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
-                                        SDValue Chain, SDValue Dst, SDValue Src,
-                                        uint64_t Size, Align Alignment,
-                                        bool isVol, bool AlwaysInline,
-                                        MachinePointerInfo DstPtrInfo,
-                                        MachinePointerInfo SrcPtrInfo,
-                                        const AAMDNodes &AAInfo) {
+static SDValue getMemmoveLoadsAndStores(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    uint64_t Size, Align Alignment, MemTransferVolatility Vol,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo) {
   // Turn a memmove of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -7640,7 +7642,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   if (!TLI.findOptimalMemOpLowering(
           MemOps, Limit,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
-                      /*IsVolatile*/ true),
+                      /*Vol*/ {true, true}),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes()))
     return SDValue();
@@ -7669,8 +7671,12 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   AAMDNodes NewAAInfo = AAInfo;
   NewAAInfo.TBAA = NewAAInfo.TBAAStruct = nullptr;
 
-  MachineMemOperand::Flags MMOFlags =
-      isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
+  MachineMemOperand::Flags DstMMOFlags = Vol.isDstVolatile()
+                                             ? MachineMemOperand::MOVolatile
+                                             : MachineMemOperand::MONone;
+  MachineMemOperand::Flags SrcMMOFlags = Vol.isSrcVolatile()
+                                             ? MachineMemOperand::MOVolatile
+                                             : MachineMemOperand::MONone;
   uint64_t SrcOff = 0, DstOff = 0;
   SmallVector<SDValue, 8> LoadValues;
   SmallVector<SDValue, 8> LoadChains;
@@ -7682,8 +7688,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     SDValue Value;
 
     bool isDereferenceable =
-      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
-    MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
 
@@ -7705,7 +7710,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     Store = DAG.getStore(
         Chain, dl, LoadValues[i],
         DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
-        DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+        DstPtrInfo.getWithOffset(DstOff), Alignment, DstMMOFlags, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VTSize;
   }
