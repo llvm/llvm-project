@@ -137,11 +137,3 @@ set(SCUDO_CXX_UNIT_TEST_SOURCES
 add_scudo_unittest(ScudoCxxUnitTest
   SOURCES ${SCUDO_CXX_UNIT_TEST_SOURCES}
   ADDITIONAL_RTOBJECTS RTScudoStandaloneCWrappers RTScudoStandaloneCxxWrappers)
-
-set(SCUDO_HOOKS_UNIT_TEST_SOURCES
-  scudo_hooks_test.cpp
-  scudo_unit_test_main.cpp
-  )
-
-add_scudo_unittest(ScudoHooksUnitTest
-  SOURCES ${SCUDO_HOOKS_UNIT_TEST_SOURCES})

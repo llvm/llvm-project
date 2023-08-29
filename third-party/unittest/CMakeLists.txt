@@ -77,8 +77,8 @@ endif ()
 target_include_directories(llvm_gtest
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googletest/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googlemock/include>
-         $<INSTALL_INTERFACE:include/llvm-gtest/>
-         $<INSTALL_INTERFACE:include/llvm-gmock/>
+         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/>
+         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/>
   PRIVATE googletest googlemock
   )
 
@@ -86,9 +86,9 @@ add_subdirectory(UnitTestMain)
 
 if (LLVM_INSTALL_GTEST)
   install(TARGETS llvm_gtest llvm_gtest_main LLVMTestingSupport LLVMTestingAnnotations
-	  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT llvm_gtest)
-  install(DIRECTORY googletest/include/gtest/ DESTINATION include/llvm-gtest/gtest/ COMPONENT llvm_gtest)
-  install(DIRECTORY googlemock/include/gmock/ DESTINATION include/llvm-gmock/gmock/ COMPONENT llvm_gtest)
+	  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}" COMPONENT llvm_gtest)
+  install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT llvm_gtest)
+  install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT llvm_gtest)
 endif()
 
 # When LLVM_LINK_LLVM_DYLIB is enabled, libLLVM.so is added to the interface

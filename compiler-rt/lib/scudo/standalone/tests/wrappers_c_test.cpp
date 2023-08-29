@@ -37,6 +37,16 @@
 #define HAVE_VALLOC 1
 #endif
 
+struct AllocContext {
+  void *Ptr;
+  size_t Size;
+};
+struct DeallocContext {
+  void *Ptr;
+};
+static AllocContext AC;
+static DeallocContext DC;
+
 extern "C" {
 void malloc_enable(void);
 void malloc_disable(void);
@@ -45,6 +55,15 @@ int malloc_iterate(uintptr_t base, size_t size,
                    void *arg);
 void *valloc(size_t size);
 void *pvalloc(size_t size);
+
+__attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
+                                                                  size_t Size) {
+  AC.Ptr = Ptr;
+  AC.Size = Size;
+}
+__attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
+  DC.Ptr = Ptr;
+}
 }
 
 // Note that every C allocation function in the test binary will be fulfilled
@@ -64,6 +83,8 @@ TEST(ScudoWrappersCDeathTest, Malloc) {
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size, malloc_usable_size(P));
   EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % FIRST_32_SECOND_64(8U, 16U), 0U);
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(Size, AC.Size);
 
   // An update to this warning in Clang now triggers in this line, but it's ok
   // because the check is expecting a bad pointer and should fail.
@@ -78,6 +99,7 @@ TEST(ScudoWrappersCDeathTest, Malloc) {
 #endif
 
   free(P);
+  EXPECT_EQ(P, DC.Ptr);
   EXPECT_DEATH(free(P), "");
 
   P = malloc(0U);
@@ -93,9 +115,12 @@ TEST(ScudoWrappersCTest, Calloc) {
   void *P = calloc(1U, Size);
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(Size, AC.Size);
   for (size_t I = 0; I < Size; I++)
     EXPECT_EQ((reinterpret_cast<uint8_t *>(P))[I], 0U);
   free(P);
+  EXPECT_EQ(P, DC.Ptr);
 
   P = calloc(1U, 0U);
   EXPECT_NE(P, nullptr);
@@ -146,14 +171,20 @@ TEST(ScudoWrappersCTest, Memalign) {
     EXPECT_NE(P, nullptr);
     EXPECT_LE(Size, malloc_usable_size(P));
     EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+    EXPECT_EQ(P, AC.Ptr);
+    EXPECT_EQ(Size, AC.Size);
     free(P);
+    EXPECT_EQ(P, DC.Ptr);
 
     P = nullptr;
     EXPECT_EQ(posix_memalign(&P, Alignment, Size), 0);
     EXPECT_NE(P, nullptr);
     EXPECT_LE(Size, malloc_usable_size(P));
     EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+    EXPECT_EQ(P, AC.Ptr);
+    EXPECT_EQ(Size, AC.Size);
     free(P);
+    EXPECT_EQ(P, DC.Ptr);
   }
 
   EXPECT_EQ(memalign(4096U, SIZE_MAX), nullptr);
@@ -165,7 +196,10 @@ TEST(ScudoWrappersCTest, Memalign) {
     for (size_t Alignment = 0U; Alignment <= 128U; Alignment++) {
       P = memalign(Alignment, 1024U);
       EXPECT_NE(P, nullptr);
+      EXPECT_EQ(P, AC.Ptr);
+      EXPECT_EQ(Size, AC.Size);
       free(P);
+      EXPECT_EQ(P, DC.Ptr);
     }
   }
 }
@@ -176,7 +210,10 @@ TEST(ScudoWrappersCTest, AlignedAlloc) {
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Alignment * 4U, malloc_usable_size(P));
   EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(Alignment * 4U, AC.Size);
   free(P);
+  EXPECT_EQ(P, DC.Ptr);
 
   errno = 0;
   P = aligned_alloc(Alignment, Size);
@@ -186,31 +223,52 @@ TEST(ScudoWrappersCTest, AlignedAlloc) {
 
 TEST(ScudoWrappersCDeathTest, Realloc) {
   // realloc(nullptr, N) is malloc(N)
-  void *P = realloc(nullptr, 0U);
+  void *P = realloc(nullptr, Size);
   EXPECT_NE(P, nullptr);
+  EXPECT_EQ(P, AC.Ptr);
+  EXPECT_EQ(Size, AC.Size);
   free(P);
+  EXPECT_EQ(P, DC.Ptr);
 
   P = malloc(Size);
   EXPECT_NE(P, nullptr);
   // realloc(P, 0U) is free(P) and returns nullptr
   EXPECT_EQ(realloc(P, 0U), nullptr);
+  EXPECT_EQ(P, DC.Ptr);
 
   P = malloc(Size);
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size, malloc_usable_size(P));
   memset(P, 0x42, Size);
 
+  AC.Ptr = reinterpret_cast<void *>(0xdeadbeef);
+  void *OldP = P;
   P = realloc(P, Size * 2U);
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size * 2U, malloc_usable_size(P));
   for (size_t I = 0; I < Size; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
+  if (OldP == P) {
+    EXPECT_EQ(AC.Ptr, reinterpret_cast<void *>(0xdeadbeef));
+  } else {
+    EXPECT_EQ(P, AC.Ptr);
+    EXPECT_EQ(Size * 2U, AC.Size);
+    EXPECT_EQ(OldP, DC.Ptr);
+  }
 
+  AC.Ptr = reinterpret_cast<void *>(0xdeadbeef);
+  OldP = P;
   P = realloc(P, Size / 2U);
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size / 2U, malloc_usable_size(P));
   for (size_t I = 0; I < Size / 2U; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
+  if (OldP == P) {
+    EXPECT_EQ(AC.Ptr, reinterpret_cast<void *>(0xdeadbeef));
+  } else {
+    EXPECT_EQ(P, AC.Ptr);
+    EXPECT_EQ(Size / 2U, AC.Size);
+  }
   free(P);
 
   EXPECT_DEATH(P = realloc(P, Size), "");
@@ -273,7 +331,11 @@ TEST(ScudoWrappersCTest, OtherAlloc) {
   EXPECT_NE(P, nullptr);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(P) & (PageSize - 1), 0U);
   EXPECT_LE(PageSize, malloc_usable_size(P));
+  EXPECT_EQ(P, AC.Ptr);
+  // Size will be rounded up to PageSize.
+  EXPECT_EQ(PageSize, AC.Size);
   free(P);
+  EXPECT_EQ(P, DC.Ptr);
 
   EXPECT_EQ(pvalloc(SIZE_MAX), nullptr);
 

@@ -202,6 +202,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
   to ignore predefined expression (e.g., ``__func__``, ...).
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-constant-array-index
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index>` check
+  to perform checks on derived classes of  ``std::array``.
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.

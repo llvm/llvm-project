@@ -90,6 +90,7 @@
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
+! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! HELP-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! HELP-NEXT: -mllvm=<arg>            Alias for -mllvm

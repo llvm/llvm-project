@@ -280,6 +280,19 @@ else:
   ret i1 false
 }
 
+define i1 @mul_nsw_decomp(i128 %x) {
+    %val = mul nsw i128 %x, 9223372036854775808
+    %cmp = icmp sgt i128 %x, %val
+    br i1 %cmp, label %then, label %else
+
+then:
+    %cmp2 = icmp sgt i128 %x, 0
+    ret i1 %cmp2
+
+else:
+    ret i1 false
+}
+
 define i1 @add_nuw_decomp_recursive() {
 ; CHECK-LABEL: @add_nuw_decomp_recursive(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 -9223372036854775808, 10
