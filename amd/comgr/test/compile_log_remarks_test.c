@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
   // For this test to pass when redirecting logs to stdout,
   // we need to temporarily undo the redirect
   if (getenv("AMD_COMGR_REDIRECT_LOGS") &&
-      !strcmp("stdout", getenv("AMD_COMGR_REDIRECT_LOGS")))
+      ( !strcmp("stdout", getenv("AMD_COMGR_REDIRECT_LOGS")) ||
+        !strcmp("stderr", getenv("AMD_COMGR_REDIRECT_LOGS")) ))
       unsetenv("AMD_COMGR_REDIRECT_LOGS");
 
   amd_comgr_data_t DataCl;
