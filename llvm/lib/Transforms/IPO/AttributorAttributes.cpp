@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -10229,7 +10230,8 @@ struct AANoUndefFloating : public AANoUndefImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoUndefImpl::initialize(A);
-    if (!getState().isAtFixpoint())
+    if (!getState().isAtFixpoint() && getAnchorScope() &&
+        !getAnchorScope()->isDeclaration())
       if (Instruction *CtxI = getCtxI())
         followUsesInMBEC(*this, A, getState(), *CtxI);
   }
@@ -12090,6 +12092,36 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       AssumedCalleesNow.set_union(PotentialCallees);
     }
 
+    // Try to find a reason for \p Fn not to be a potential callee. If none was
+    // found, add it to the assumed callees set.
+    auto CheckPotentialCallee = [&](Function &Fn) {
+      if (!PotentialCallees.empty() && !PotentialCallees.count(&Fn))
+        return false;
+
+      auto &CachedResult = FilterResults[&Fn];
+      if (CachedResult.has_value())
+        return CachedResult.value();
+
+      int NumFnArgs = Fn.arg_size();
+      int NumCBArgs = CB->arg_size();
+
+      // Check if any excess argument (which we fill up with poison) is known to
+      // be UB on undef.
+      for (int I = NumCBArgs; I < NumFnArgs; ++I) {
+        bool IsKnown = false;
+        if (AA::hasAssumedIRAttr<Attribute::NoUndef>(
+                A, this, IRPosition::argument(*Fn.getArg(I)),
+                DepClassTy::OPTIONAL, IsKnown)) {
+          if (IsKnown)
+            CachedResult = false;
+          return false;
+        }
+      }
+
+      CachedResult = true;
+      return true;
+    };
+
     // Check simplification result, prune known UB callees, also restrict it to
     // the !callees set, if present.
     for (auto &VAC : Values) {
@@ -12100,7 +12132,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         continue;
       // TODO: Check for known UB, e.g., poison + noundef.
       if (auto *VACFn = dyn_cast<Function>(VAC.getValue())) {
-        if (PotentialCallees.empty() || PotentialCallees.count(VACFn))
+        if (CheckPotentialCallee(*VACFn))
           AssumedCalleesNow.insert(VACFn);
         continue;
       }
@@ -12115,11 +12147,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!AllCalleesKnownNow && AssumedCalleesNow.empty())
       return indicatePessimisticFixpoint();
 
-    if (AssumedCalleesNow == AssumedCalles &&
+    if (AssumedCalleesNow == AssumedCallees &&
         AllCalleesKnown == AllCalleesKnownNow)
       return ChangeStatus::UNCHANGED;
 
-    std::swap(AssumedCalles, AssumedCalleesNow);
+    std::swap(AssumedCallees, AssumedCalleesNow);
     AllCalleesKnown = AllCalleesKnownNow;
     return ChangeStatus::CHANGED;
   }
@@ -12138,7 +12170,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).
-    if (AssumedCalles.empty()) {
+    if (AssumedCallees.empty()) {
       assert(AllCalleesKnown &&
              "Expected all callees to be known if there are none.");
       A.changeToUnreachableAfterManifest(CB);
@@ -12146,8 +12178,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     }
 
     // Special handling for the single callee case.
-    if (AllCalleesKnown && AssumedCalles.size() == 1) {
-      auto *NewCallee = AssumedCalles.front();
+    if (AllCalleesKnown && AssumedCallees.size() == 1) {
+      auto *NewCallee = AssumedCallees.front();
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
         return ChangeStatus::CHANGED;
@@ -12167,9 +12199,19 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     // else ...
     // ```
     //
+    bool SpecializedForAnyCallees = false;
+    bool SpecializedForAllCallees = AllCalleesKnown;
     ICmpInst *LastCmp = nullptr;
+    SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
-    for (Function *NewCallee : AssumedCalles) {
+    for (Function *NewCallee : AssumedCallees) {
+      if (!A.shouldSpecializeCallSiteForCallee(*CB, *NewCallee)) {
+        SkippedAssumedCallees.push_back(NewCallee);
+        SpecializedForAllCallees = false;
+        continue;
+      }
+      SpecializedForAnyCallees = true;
+
       LastCmp = new ICmpInst(IP, llvm::CmpInst::ICMP_EQ, FP, NewCallee);
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
@@ -12198,8 +12240,20 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       NewCalls.push_back({NewCall, RetBC});
     }
 
+    auto AttachCalleeMetadata = [&](CallBase &IndirectCB) {
+      if (!AllCalleesKnown)
+        return ChangeStatus::UNCHANGED;
+      MDBuilder MDB(IndirectCB.getContext());
+      MDNode *Callees = MDB.createCallees(SkippedAssumedCallees);
+      IndirectCB.setMetadata(LLVMContext::MD_callees, Callees);
+      return ChangeStatus::CHANGED;
+    };
+
+    if (!SpecializedForAnyCallees)
+      return AttachCalleeMetadata(*CB);
+
     // Check if we need the fallback indirect call still.
-    if (AllCalleesKnown) {
+    if (SpecializedForAllCallees) {
       LastCmp->replaceAllUsesWith(ConstantInt::getTrue(LastCmp->getContext()));
       LastCmp->eraseFromParent();
       new UnreachableInst(IP->getContext(), IP);
@@ -12209,6 +12263,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       CBClone->setName(CB->getName());
       CBClone->insertBefore(IP);
       NewCalls.push_back({CBClone, nullptr});
+      AttachCalleeMetadata(*CBClone);
     }
 
     // Check if we need a PHI to merge the results.
@@ -12239,7 +12294,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return std::string(AllCalleesKnown ? "eliminate" : "specialize") +
-           " indirect call site with " + std::to_string(AssumedCalles.size()) +
+           " indirect call site with " + std::to_string(AssumedCallees.size()) +
            " functions";
   }
 
@@ -12255,19 +12310,22 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   }
 
   bool foreachCallee(function_ref<bool(Function *)> CB) const override {
-    return isValidState() && AllCalleesKnown && all_of(AssumedCalles, CB);
+    return isValidState() && AllCalleesKnown && all_of(AssumedCallees, CB);
   }
 
 private:
+  /// Map to remember filter results.
+  DenseMap<Function *, std::optional<bool>> FilterResults;
+
   /// If the !callee metadata was present, this set will contain all potential
   /// callees (superset).
   SmallSetVector<Function *, 4> PotentialCallees;
 
   /// This set contains all currently assumed calllees, which might grow over
   /// time.
-  SmallSetVector<Function *, 4> AssumedCalles;
+  SmallSetVector<Function *, 4> AssumedCallees;
 
-  /// Flag to indicate if all possible callees are in the AssumedCalles set or
+  /// Flag to indicate if all possible callees are in the AssumedCallees set or
   /// if there could be others.
   bool AllCalleesKnown = true;
 };

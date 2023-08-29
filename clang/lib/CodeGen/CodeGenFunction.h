@@ -334,7 +334,6 @@ public:
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
     bool InSuspendBlock = false;
-    bool MayCoroHandleEscape = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -346,10 +345,6 @@ public:
 
   bool inSuspendBlock() const {
     return isCoroutine() && CurCoro.InSuspendBlock;
-  }
-
-  bool mayCoroHandleEscape() const {
-    return isCoroutine() && CurCoro.MayCoroHandleEscape;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
@@ -1255,11 +1250,11 @@ public:
   /// destroyed by aggressive peephole optimizations that assume that
   /// all uses of a value have been realized in the IR.
   class PeepholeProtection {
-    llvm::Instruction *Inst;
+    llvm::Instruction *Inst = nullptr;
     friend class CodeGenFunction;
 
   public:
-    PeepholeProtection() : Inst(nullptr) {}
+    PeepholeProtection() = default;
   };
 
   /// A non-RAII class containing all the information about a bound

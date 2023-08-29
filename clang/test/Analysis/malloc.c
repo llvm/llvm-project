@@ -1230,7 +1230,6 @@ int my_main_warn(FILE *f) {
     return 0;// expected-warning {{leak}}
 }
 
-// <rdar://problem/10978247>.
 // some people use stack allocated memory as an optimization to avoid
 // a heap allocation for small work sizes.  This tests the analyzer's
 // understanding that the malloc'ed memory is not the same as stackBuffer.
@@ -1263,9 +1262,9 @@ void radar10978247_positive(int myValueSize) {
   else
     return; // expected-warning {{leak}}
 }
-// <rdar://problem/11269741> Previously this triggered a false positive
-// because malloc() is known to return uninitialized memory and the binding
-// of 'o' to 'p->n' was not getting propertly handled.  Now we report a leak.
+// Previously this triggered a false positive because malloc() is known to
+// return uninitialized memory and the binding of 'o' to 'p->n' was not getting
+// propertly handled. Now we report a leak.
 struct rdar11269741_a_t {
   struct rdar11269741_b_t {
     int m;
@@ -1303,7 +1302,7 @@ void radar_11358224_test_double_assign_ints_positive_2(void)
 
 // Assume that functions which take a function pointer can free memory even if
 // they are defined in system headers and take the const pointer to the
-// allocated memory. (radar://11160612)
+// allocated memory.
 int const_ptr_and_callback(int, const char*, int n, void(*)(void*));
 void r11160612_1(void) {
   char *x = malloc(12);
@@ -1460,7 +1459,7 @@ void testCGContextLeak(void)
   // object doesn't escape and it hasn't been freed in this function.
 }
 
-// Allow xpc context to escape. radar://11635258
+// Allow xpc context to escape.
 // TODO: Would be great if we checked that the finalize_connection_context actually releases it.
 static void finalize_connection_context(void *ctx) {
   int *context = ctx;

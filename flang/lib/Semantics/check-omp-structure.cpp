@@ -1647,6 +1647,67 @@ void OmpStructureChecker::Leave(const parser::OmpEndBlockDirective &x) {
   }
 }
 
+inline void OmpStructureChecker::ErrIfAllocatableVariable(
+    const parser::Variable &var) {
+  // Err out if the given symbol has
+  // ALLOCATABLE attribute
+  if (const auto *e{GetExpr(context_, var)})
+    for (const Symbol &symbol : evaluate::CollectSymbols(*e))
+      if (IsAllocatable(symbol)) {
+        const auto &designator =
+            std::get<common::Indirection<parser::Designator>>(var.u);
+        const auto *dataRef =
+            std::get_if<Fortran::parser::DataRef>(&designator.value().u);
+        const Fortran::parser::Name *name =
+            dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
+        if (name)
+          context_.Say(name->source,
+              "%s must not have ALLOCATABLE "
+              "attribute"_err_en_US,
+              name->ToString());
+      }
+}
+
+inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
+    const parser::Variable &var, const parser::Expr &expr) {
+  // Err out if the symbol on the LHS is also used on the RHS of the assignment
+  // statement
+  const auto *e{GetExpr(context_, expr)};
+  const auto *v{GetExpr(context_, var)};
+  if (e && v) {
+    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
+      if (varSymbol == symbol) {
+        context_.Say(expr.source,
+            "RHS expression "
+            "on atomic assignment statement"
+            " cannot access '%s'"_err_en_US,
+            var.GetSource().ToString());
+      }
+    }
+  }
+}
+
+inline void OmpStructureChecker::ErrIfNonScalarAssignmentStmt(
+    const parser::Variable &var, const parser::Expr &expr) {
+  // Err out if either the variable on the LHS or the expression on the RHS of
+  // the assignment statement are non-scalar (i.e. have rank > 0)
+  const auto *e{GetExpr(context_, expr)};
+  const auto *v{GetExpr(context_, var)};
+  if (e && v) {
+    if (e->Rank() != 0)
+      context_.Say(expr.source,
+          "Expected scalar expression "
+          "on the RHS of atomic assignment "
+          "statement"_err_en_US);
+    if (v->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "Expected scalar variable "
+          "on the LHS of atomic assignment "
+          "statement"_err_en_US);
+  }
+}
+
 template <typename T, typename D>
 bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
   using AllowedBinaryOperators =
@@ -1667,16 +1728,55 @@ bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
     if ((exprLeft.value().source.ToString() != variableName) &&
         (exprRight.value().source.ToString() != variableName)) {
       context_.Say(variable.GetSource(),
-          "Atomic update variable '%s' not found in the RHS of the "
-          "assignment statement in an ATOMIC (UPDATE) construct"_err_en_US,
-          variableName);
+          "Atomic update statement should be of form "
+          "`%s = %s operator expr` OR `%s = expr operator %s`"_err_en_US,
+          variableName, variableName, variableName, variableName);
     }
     return common::HasMember<T, AllowedBinaryOperators>;
   }
   return true;
 }
 
-void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
+void OmpStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assignmentStmt) {
+  const auto &var{std::get<parser::Variable>(assignmentStmt.t)};
+  const auto &expr{std::get<parser::Expr>(assignmentStmt.t)};
+  common::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::Designator> &designator) {
+            const auto *dataRef =
+                std::get_if<Fortran::parser::DataRef>(&designator.value().u);
+            const auto *name = dataRef
+                ? std::get_if<Fortran::parser::Name>(&dataRef->u)
+                : nullptr;
+            if (name && IsAllocatable(*name->symbol))
+              context_.Say(name->source,
+                  "%s must not have ALLOCATABLE "
+                  "attribute"_err_en_US,
+                  name->ToString());
+          },
+          [&](const auto &) {
+            // Anything other than a `parser::Designator` is not allowed
+            context_.Say(expr.source,
+                "Expected scalar variable "
+                "of intrinsic type on RHS of atomic "
+                "assignment statement"_err_en_US);
+          }},
+      expr.u);
+  ErrIfLHSAndRHSSymbolsMatch(var, expr);
+  ErrIfNonScalarAssignmentStmt(var, expr);
+}
+
+void OmpStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assignmentStmt) {
+  const auto &var{std::get<parser::Variable>(assignmentStmt.t)};
+  const auto &expr{std::get<parser::Expr>(assignmentStmt.t)};
+  ErrIfAllocatableVariable(var);
+  ErrIfLHSAndRHSSymbolsMatch(var, expr);
+  ErrIfNonScalarAssignmentStmt(var, expr);
+}
+
+void OmpStructureChecker::CheckAtomicUpdateStmt(
     const parser::AssignmentStmt &assignment) {
   const auto &expr{std::get<parser::Expr>(assignment.t)};
   const auto &var{std::get<parser::Variable>(assignment.t)};
@@ -1734,6 +1834,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
           },
       },
       expr.u);
+  ErrIfAllocatableVariable(var);
 }
 
 void OmpStructureChecker::CheckAtomicMemoryOrderClause(
@@ -1772,7 +1873,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicUpdateAssignmentStmt(
+            CheckAtomicUpdateStmt(
                 std::get<parser::Statement<parser::AssignmentStmt>>(
                     atomicConstruct.t)
                     .statement);
@@ -1787,7 +1888,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             const auto &dir{std::get<parser::Verbatim>(atomicUpdate.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicUpdateAssignmentStmt(
+            CheckAtomicUpdateStmt(
                 std::get<parser::Statement<parser::AssignmentStmt>>(
                     atomicUpdate.t)
                     .statement);
@@ -1795,6 +1896,32 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
                 &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
             CheckHintClause<const parser::OmpAtomicClauseList>(
                 &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
+          },
+          [&](const parser::OmpAtomicRead &atomicRead) {
+            const auto &dir{std::get<parser::Verbatim>(atomicRead.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicRead.t), &std::get<2>(atomicRead.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicRead.t), &std::get<2>(atomicRead.t));
+            CheckAtomicCaptureStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicRead.t)
+                    .statement);
+          },
+          [&](const parser::OmpAtomicWrite &atomicWrite) {
+            const auto &dir{std::get<parser::Verbatim>(atomicWrite.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicWrite.t), &std::get<2>(atomicWrite.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicWrite.t), &std::get<2>(atomicWrite.t));
+            CheckAtomicWriteStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicWrite.t)
+                    .statement);
           },
           [&](const auto &atomicConstruct) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};

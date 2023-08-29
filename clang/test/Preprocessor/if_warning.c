@@ -23,7 +23,6 @@ extern int x;
 #endif
 #endif
 
-// rdar://9475098
 #if 0
 #else 1   // expected-warning {{extra tokens}}
 #endif

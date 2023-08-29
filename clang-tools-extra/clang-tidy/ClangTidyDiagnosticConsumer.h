@@ -87,10 +87,10 @@ public:
   /// tablegen'd diagnostic IDs.
   /// FIXME: Figure out a way to manage ID spaces.
   DiagnosticBuilder diag(StringRef CheckName, SourceLocation Loc,
-                         StringRef Message,
+                         StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
-  DiagnosticBuilder diag(StringRef CheckName, StringRef Message,
+  DiagnosticBuilder diag(StringRef CheckName, StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
   DiagnosticBuilder diag(const tooling::Diagnostic &Error);
@@ -212,11 +212,11 @@ public:
   using DiagLevelAndFormatString = std::pair<DiagnosticIDs::Level, std::string>;
   DiagLevelAndFormatString getDiagLevelAndFormatString(unsigned DiagnosticID,
                                                        SourceLocation Loc) {
-    return DiagLevelAndFormatString(
+    return {
         static_cast<DiagnosticIDs::Level>(
             DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
         std::string(
-            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID)));
+            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
 
   void setOptionsCollector(llvm::StringSet<> *Collector) {
@@ -228,7 +228,7 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
-  DiagnosticsEngine *DiagEngine;
+  DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 
   std::string CurrentFile;
@@ -248,13 +248,13 @@ private:
 
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 
-  bool Profile;
+  bool Profile = false;
   std::string ProfilePrefix;
 
   bool AllowEnablingAnalyzerAlphaCheckers;
   bool EnableModuleHeadersParsing;
 
-  bool SelfContainedDiags;
+  bool SelfContainedDiags = false;
 
   NoLintDirectiveHandler NoLintHandler;
   llvm::StringSet<> *OptionsCollector = nullptr;
@@ -313,9 +313,9 @@ private:
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
-  bool LastErrorRelatesToUserCode;
-  bool LastErrorPassesLineFilter;
-  bool LastErrorWasIgnored;
+  bool LastErrorRelatesToUserCode = false;
+  bool LastErrorPassesLineFilter = false;
+  bool LastErrorWasIgnored = false;
 };
 
 } // end namespace tidy

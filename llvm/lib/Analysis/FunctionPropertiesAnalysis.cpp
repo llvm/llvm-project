@@ -19,6 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 #include <deque>
 
@@ -37,6 +38,11 @@ cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
     "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered medium-sized."));
+
+cl::opt<unsigned> CallWithManyArgumentsThreshold(
+    "call-with-many-arguments-threshold", cl::Hidden, cl::init(4),
+    cl::desc("The minimum number of arguments a function call must have before "
+             "it is considered having many arguments."));
 
 namespace {
 int64_t getNrBlocksFromCond(const BasicBlock &BB) {
@@ -103,6 +109,23 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     else
       SmallBasicBlocks += Direction;
 
+    // Calculate critical edges by looking through all successors of a basic
+    // block that has multiple successors and finding ones that have multiple
+    // predecessors, which represent critical edges.
+    if (SuccessorCount > 1) {
+      for (const auto *Successor : successors(&BB)) {
+        if (pred_size(Successor) > 1)
+          CriticalEdgeCount += Direction;
+      }
+    }
+
+    ControlFlowEdgeCount += Direction * SuccessorCount;
+
+    if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
+      if (!BI->isConditional())
+        UnconditionalBranchCount += Direction;
+    }
+
     for (const Instruction &I : BB.instructionsWithoutDebug()) {
       if (I.isCast())
         CastInstructionCount += Direction;
@@ -111,6 +134,41 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
         FloatingPointInstructionCount += Direction;
       else if (I.getType()->isIntegerTy())
         IntegerInstructionCount += Direction;
+
+      if (isa<IntrinsicInst>(I))
+        ++IntrinsicCount;
+
+      if (const auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Call->isIndirectCall())
+          IndirectCallCount += Direction;
+        else
+          DirectCallCount += Direction;
+
+        if (Call->getType()->isIntegerTy())
+          CallReturnsIntegerCount += Direction;
+        else if (Call->getType()->isFloatingPointTy())
+          CallReturnsFloatCount += Direction;
+        else if (Call->getType()->isPointerTy())
+          CallReturnsPointerCount += Direction;
+        else if (Call->getType()->isVectorTy()) {
+          if (Call->getType()->getScalarType()->isIntegerTy())
+            CallReturnsVectorIntCount += Direction;
+          else if (Call->getType()->getScalarType()->isFloatingPointTy())
+            CallReturnsVectorFloatCount += Direction;
+          else if (Call->getType()->getScalarType()->isPointerTy())
+            CallReturnsVectorPointerCount += Direction;
+        }
+
+        if (Call->arg_size() > CallWithManyArgumentsThreshold)
+          CallWithManyArgumentsCount += Direction;
+
+        for (const auto &Arg : Call->args()) {
+          if (Arg->getType()->isPointerTy()) {
+            CallWithPointerArgumentCount += Direction;
+            break;
+          }
+        }
+      }
 
 #define COUNT_OPERAND(OPTYPE)                                                  \
   if (isa<OPTYPE>(Operand)) {                                                  \
@@ -209,6 +267,20 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
     PRINT_PROPERTY(InlineAsmOperandCount)
     PRINT_PROPERTY(ArgumentOperandCount)
     PRINT_PROPERTY(UnknownOperandCount)
+    PRINT_PROPERTY(CriticalEdgeCount)
+    PRINT_PROPERTY(ControlFlowEdgeCount)
+    PRINT_PROPERTY(UnconditionalBranchCount)
+    PRINT_PROPERTY(IntrinsicCount)
+    PRINT_PROPERTY(DirectCallCount)
+    PRINT_PROPERTY(IndirectCallCount)
+    PRINT_PROPERTY(CallReturnsIntegerCount)
+    PRINT_PROPERTY(CallReturnsFloatCount)
+    PRINT_PROPERTY(CallReturnsPointerCount)
+    PRINT_PROPERTY(CallReturnsVectorIntCount)
+    PRINT_PROPERTY(CallReturnsVectorFloatCount)
+    PRINT_PROPERTY(CallReturnsVectorPointerCount)
+    PRINT_PROPERTY(CallWithManyArgumentsCount)
+    PRINT_PROPERTY(CallWithPointerArgumentCount)
   }
 
 #undef PRINT_PROPERTY

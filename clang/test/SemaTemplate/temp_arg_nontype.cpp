@@ -213,7 +213,6 @@ namespace PR6964 {
   { };
 }
 
-// rdar://problem/8302138
 namespace test8 {
   template <int* ip> struct A {
     int* p;

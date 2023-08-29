@@ -37,7 +37,6 @@ void g(int count) {
   int (*b)[][count];
 }
 
-// rdar://8403108
 // CHECK-LABEL: define{{.*}} void @f_8403108
 void f_8403108(unsigned x) {
   // CHECK: call ptr @llvm.stacksave.p0()
@@ -74,7 +73,6 @@ void test1(void) {
      function(1, bork[2]);
 }
 
-// rdar://8476159
 static int GLOB;
 int test2(int n)
 {
@@ -144,7 +142,6 @@ int test4(unsigned n, char (*p)[n][n+1][6]) {
   return p2 - p;
 }
 
-// rdar://11485774
 void test5(void)
 {
   // CHECK-LABEL: define{{.*}} void @test5(

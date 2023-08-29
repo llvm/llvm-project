@@ -356,6 +356,13 @@ void getOpenMPCaptureRegions(
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified target directive, combined or not, needs task based
+/// thread_limit
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
 }
 
 #endif

@@ -67,13 +67,6 @@ static cl::opt<bool> SplitAllEHCode(
     cl::desc("Splits all EH code and it's descendants by default."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> AllowUnsupportedTriple(
-    "mfs-allow-unsupported-triple",
-    cl::desc(
-        "Splits functions even if the target triple isn't supported. This is "
-        "testing flag for targets that don't yet support function splitting."),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 class MachineFunctionSplitter : public MachineFunctionPass {

@@ -11,9 +11,33 @@
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Threading.h"
+#include <memory>
+#include <mutex>
 #include <optional>
 
 using namespace mlir;
+
+SmallVector<Type> &LLVMTypeConverter::getCurrentThreadRecursiveStack() {
+  {
+    // Most of the time, the entry already exists in the map.
+    std::shared_lock<decltype(callStackMutex)> lock(callStackMutex,
+                                                    std::defer_lock);
+    if (getContext().isMultithreadingEnabled())
+      lock.lock();
+    auto recursiveStack = conversionCallStack.find(llvm::get_threadid());
+    if (recursiveStack != conversionCallStack.end())
+      return *recursiveStack->second;
+  }
+
+  // First time this thread gets here, we have to get an exclusive access to
+  // inset in the map
+  std::unique_lock<decltype(callStackMutex)> lock(callStackMutex);
+  auto recursiveStackInserted = conversionCallStack.insert(std::make_pair(
+      llvm::get_threadid(), std::make_unique<SmallVector<Type>>()));
+  return *recursiveStackInserted.first->second.get();
+}
 
 /// Create an LLVMTypeConverter using default LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
@@ -56,8 +80,9 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
     return std::nullopt;
   });
-  addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
-                    ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
+
+  addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results)
+                    -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
     if (LLVM::isCompatibleType(type)) {
       results.push_back(type);
@@ -75,10 +100,15 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
             type.getContext(),
             ("_Converted_" + std::to_string(counter) + type.getName()).str());
       }
-      if (llvm::count(callStack, type) > 1) {
+
+      SmallVectorImpl<Type> &recursiveStack = getCurrentThreadRecursiveStack();
+      if (llvm::count(recursiveStack, type)) {
         results.push_back(convertedType);
         return success();
       }
+      recursiveStack.push_back(type);
+      auto popConversionCallStack = llvm::make_scope_exit(
+          [&recursiveStack]() { recursiveStack.pop_back(); });
 
       SmallVector<Type> convertedElemTypes;
       convertedElemTypes.reserve(type.getBody().size());

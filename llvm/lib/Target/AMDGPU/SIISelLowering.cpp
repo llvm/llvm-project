@@ -8643,8 +8643,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         IntrinsicID == Intrinsic::amdgcn_struct_ptr_buffer_load_lds;
     unsigned OpOffset = HasVIndex ? 1 : 0;
     SDValue VOffset = Op.getOperand(5 + OpOffset);
-    auto CVOffset = dyn_cast<ConstantSDNode>(VOffset);
-    bool HasVOffset = !CVOffset || !CVOffset->isZero();
+    bool HasVOffset = !isNullConstant(VOffset);
     unsigned Size = Op->getConstantOperandVal(4);
 
     switch (Size) {
@@ -11101,10 +11100,8 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
   SDValue Mask = N->getOperand(1);
 
   // fp_class x, 0 -> false
-  if (const ConstantSDNode *CMask = dyn_cast<ConstantSDNode>(Mask)) {
-    if (CMask->isZero())
-      return DAG.getConstant(0, SDLoc(N), MVT::i1);
-  }
+  if (isNullConstant(Mask))
+    return DAG.getConstant(0, SDLoc(N), MVT::i1);
 
   if (N->getOperand(0).isUndef())
     return DAG.getUNDEF(MVT::i1);
@@ -12378,8 +12375,7 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
 
   if (LHS.getOpcode() == ISD::USUBO_CARRY) {
     // sub (usubo_carry x, 0, cc), y => usubo_carry x, y, cc
-    auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    if (!C || !C->isZero())
+    if (!isNullConstant(LHS.getOperand(1)))
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);

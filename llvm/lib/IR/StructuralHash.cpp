@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/StructuralHash.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -24,8 +28,58 @@ class StructuralHashImpl {
 
   void hash(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
 
+  // This will produce different values on 32-bit and 64-bit systens as
+  // hash_combine returns a size_t. However, this is only used for
+  // detailed hashing which, in-tree, only needs to distinguish between
+  // differences in functions.
+  template <typename T> void hashArbitaryType(const T &V) {
+    hash(hash_combine(V));
+  }
+
+  void hashType(Type *ValueType) {
+    hash(ValueType->getTypeID());
+    if (ValueType->isIntegerTy())
+      hash(ValueType->getIntegerBitWidth());
+  }
+
 public:
   StructuralHashImpl() : Hash(4) {}
+
+  void updateOperand(Value *Operand) {
+    hashType(Operand->getType());
+
+    // The cases enumerated below are not exhaustive and are only aimed to
+    // get decent coverage over the function.
+    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(Operand)) {
+      hashArbitaryType(ConstInt->getValue());
+    } else if (ConstantFP *ConstFP = dyn_cast<ConstantFP>(Operand)) {
+      hashArbitaryType(ConstFP->getValue());
+    } else if (Argument *Arg = dyn_cast<Argument>(Operand)) {
+      hash(Arg->getArgNo());
+    } else if (Function *Func = dyn_cast<Function>(Operand)) {
+      // Hashing the name will be deterministic as LLVM's hashing infrastructure
+      // has explicit support for hashing strings and will not simply hash
+      // the pointer.
+      hashArbitaryType(Func->getName());
+    }
+  }
+
+  void updateInstruction(const Instruction &Inst, bool DetailedHash) {
+    hash(Inst.getOpcode());
+
+    if (!DetailedHash)
+      return;
+
+    hashType(Inst.getType());
+
+    // Handle additional properties of specific instructions that cause
+    // semantic differences in the IR.
+    if (const auto *ComparisonInstruction = dyn_cast<CmpInst>(&Inst))
+      hash(ComparisonInstruction->getPredicate());
+
+    for (const auto &Op : Inst.operands())
+      updateOperand(Op);
+  }
 
   // A function hash is calculated by considering only the number of arguments
   // and whether a function is varargs, the order of basic blocks (given by the
@@ -43,7 +97,7 @@ public:
   // expensive checks for pass modification status). When modifying this
   // function, most changes should be gated behind an option and enabled
   // selectively.
-  void update(const Function &F) {
+  void update(const Function &F, bool DetailedHash) {
     // Declarations don't affect analyses.
     if (F.isDeclaration())
       return;
@@ -69,7 +123,7 @@ public:
       // opcodes
       hash(45798);
       for (auto &Inst : *BB)
-        hash(Inst.getOpcode());
+        updateInstruction(Inst, DetailedHash);
 
       const Instruction *Term = BB->getTerminator();
       for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
@@ -90,11 +144,11 @@ public:
     hash(GV.getValueType()->getTypeID());
   }
 
-  void update(const Module &M) {
+  void update(const Module &M, bool DetailedHash) {
     for (const GlobalVariable &GV : M.globals())
       update(GV);
     for (const Function &F : M)
-      update(F);
+      update(F, DetailedHash);
   }
 
   uint64_t getHash() const { return Hash; }
@@ -102,14 +156,14 @@ public:
 
 } // namespace
 
-IRHash llvm::StructuralHash(const Function &F) {
+IRHash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   StructuralHashImpl H;
-  H.update(F);
+  H.update(F, DetailedHash);
   return H.getHash();
 }
 
-IRHash llvm::StructuralHash(const Module &M) {
+IRHash llvm::StructuralHash(const Module &M, bool DetailedHash) {
   StructuralHashImpl H;
-  H.update(M);
+  H.update(M, DetailedHash);
   return H.getHash();
 }

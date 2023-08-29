@@ -20,7 +20,6 @@ void f3(id o)
   o.foo; // expected-error{{property 'foo' not found on object of type 'id'}}
 }
 
-// rdar://8851803
 @class SomeOtherClass; // expected-note {{forward declaration of class here}}
 
 @interface MyClass {

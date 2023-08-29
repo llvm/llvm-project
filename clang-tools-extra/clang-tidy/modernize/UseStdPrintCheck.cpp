@@ -39,10 +39,10 @@ UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
       MaybeHeaderToInclude(Options.get("PrintHeader")) {
 
   if (PrintfLikeFunctions.empty() && FprintfLikeFunctions.empty()) {
-    PrintfLikeFunctions.push_back("::printf");
-    PrintfLikeFunctions.push_back("absl::PrintF");
-    FprintfLikeFunctions.push_back("::fprintf");
-    FprintfLikeFunctions.push_back("absl::FPrintF");
+    PrintfLikeFunctions.emplace_back("::printf");
+    PrintfLikeFunctions.emplace_back("absl::PrintF");
+    FprintfLikeFunctions.emplace_back("::fprintf");
+    FprintfLikeFunctions.emplace_back("absl::FPrintF");
   }
 
   if (!MaybeHeaderToInclude && (ReplacementPrintFunction == "std::print" ||

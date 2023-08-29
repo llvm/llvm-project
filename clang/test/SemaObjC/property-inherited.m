@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify 
 // RUN: %clang_cc1 -x objective-c++ %s -fsyntax-only -verify 
 
-// rdar://6497242 Inherited overridden protocol declared objects don't work
-// rdar://9740328 Case for c++
+// Inherited overridden protocol declared objects don't work
+// Case for c++
 
 @protocol NSObject @end
 @interface NSObject @end
@@ -45,7 +45,6 @@
 @property(assign) NSData *p_data;	// expected-warning{{property type 'NSData *' is incompatible with type 'NSMutableData *' inherited from 'Base'}}
 @end
 
-// rdar://15967517
 @protocol P1
 @property (nonatomic) void* selected;
 @end

@@ -104,7 +104,6 @@ void test_deprecated_9(int a);
 void test_deprecated_10(int a);
 #endif
 
-// rdar://12381408
 // expected-warning@+2  {{unknown command tag name 'retur'; did you mean 'return'?}}
 /// \brief testing fixit
 /// \retur int in FooBar
@@ -138,6 +137,6 @@ int PR18051();
 // CHECK14: fix-it:"{{.*}}":{87:3-87:3}:"[[ATTRIBUTE]] "
 // CHECK: fix-it:"{{.*}}":{97:1-97:1}:"MY_ATTR_DEPRECATED "
 // CHECK14: fix-it:"{{.*}}":{104:1-104:1}:"ATTRIBUTE_DEPRECATED "
-// CHECK: fix-it:"{{.*}}":{110:6-110:11}:"return"
-// CHECK: fix-it:"{{.*}}":{114:6-114:11}:"foobar"
-// CHECK: fix-it:"{{.*}}":{123:6-123:12}:"endcode"
+// CHECK: fix-it:"{{.*}}":{109:6-109:11}:"return"
+// CHECK: fix-it:"{{.*}}":{113:6-113:11}:"foobar"
+// CHECK: fix-it:"{{.*}}":{122:6-122:12}:"endcode"

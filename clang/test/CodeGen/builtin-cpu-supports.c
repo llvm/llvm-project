@@ -30,3 +30,23 @@ int main(void) {
 }
 
 // CHECK: declare dso_local void @__cpu_indicator_init()
+
+// CHECK-LABEL: define{{.*}} @baseline(
+// CHECK:         [[LOAD:%.*]] = load i32, ptr getelementptr inbounds ([[[#]] x i32], ptr @__cpu_features2, i32 0, i32 1)
+// CHECK-NEXT:    and i32 [[LOAD]], -2147483648
+int baseline() { return __builtin_cpu_supports("x86-64"); }
+
+// CHECK-LABEL: define{{.*}} @v2(
+// CHECK:         [[LOAD:%.*]] = load i32, ptr getelementptr inbounds ([[[#]] x i32], ptr @__cpu_features2, i32 0, i32 2)
+// CHECK-NEXT:    and i32 [[LOAD]], 1
+int v2() { return __builtin_cpu_supports("x86-64-v2"); }
+
+// CHECK-LABEL: define{{.*}} @v3(
+// CHECK:         [[LOAD:%.*]] = load i32, ptr getelementptr inbounds ([[[#]] x i32], ptr @__cpu_features2, i32 0, i32 2)
+// CHECK-NEXT:    and i32 [[LOAD]], 2
+int v3() { return __builtin_cpu_supports("x86-64-v3"); }
+
+// CHECK-LABEL: define{{.*}} @v4(
+// CHECK:         [[LOAD:%.*]] = load i32, ptr getelementptr inbounds ([[[#]] x i32], ptr @__cpu_features2, i32 0, i32 2)
+// CHECK-NEXT:    and i32 [[LOAD]], 4
+int v4() { return __builtin_cpu_supports("x86-64-v4"); }
