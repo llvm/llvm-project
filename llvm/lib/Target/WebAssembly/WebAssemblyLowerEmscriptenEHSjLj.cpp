@@ -1401,14 +1401,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     if (auto *CB = dyn_cast<CallBase>(I))
       if (auto Bundle = CB->getOperandBundle(LLVMContext::OB_funclet))
         Bundles.push_back(OperandBundleDef(*Bundle));
-    auto *Free = CallInst::CreateFree(SetjmpTable, Bundles, I);
+    IRB.SetInsertPoint(I);
+    auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
     Free->setDebugLoc(DL);
-    // CallInst::CreateFree may create a bitcast instruction if its argument
-    // types mismatch. We need to set the debug loc for the bitcast too.
-    if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
-      if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
-        BitCastI->setDebugLoc(DL);
-    }
   }
 
   // Every call to saveSetjmp can change setjmpTable and setjmpTableSize
