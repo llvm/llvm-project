@@ -273,9 +273,11 @@ public:
     initializeModule();
   }
 
+  void sanitizeFunction(Function &F, FunctionAnalysisManager &FAM);
+
+private:
   void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
-  void sanitizeFunction(Function &F, FunctionAnalysisManager &FAM);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -331,7 +333,6 @@ public:
 
   void instrumentPersonalityFunctions();
 
-private:
   LLVMContext *C;
   Module &M;
   const StackSafetyGlobalInfo *SSI;
