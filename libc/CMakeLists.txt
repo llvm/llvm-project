@@ -93,6 +93,46 @@ set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
 
+include(LibcConfig)
+# Config loading happens in three steps:
+# 1. Load the config file config/config.json and set up config vars.
+# 2. Load config/${LIBC_TARGET_OS}/config.json if available and override
+#    vars as suitable.
+# 3. Load config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCH}/config.json is
+#    available and override vars as suitable.
+# All the three steps will not override options already set from the
+# CMake command line. That is, the CMake command line option values take
+# precedence over the values in config.json files.
+set(main_config_file ${LIBC_SOURCE_DIR}/config/config.json)
+read_libc_config(${main_config_file} global_config)
+foreach(opt IN LISTS global_config)
+  string(JSON opt_name ERROR_VARIABLE json_error MEMBER ${opt} 0)
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  if(DEFINED ${opt_name})
+    # The option is already defined from the command line so we ignore it here.
+    # We still make note of it so that further config load can also ignore
+    # this option.
+    message(STATUS "${opt_name}: ${${opt_name}} (from command line)")
+    list(APPEND cmd_line_conf ${opt_name})
+    continue()
+  endif()
+
+  string(JSON opt_object ERROR_VARIABLE json_error GET ${opt} ${opt_name})
+  if(json_error)
+    message(FATAL_ERROR "Error reading info of option '${opt_name}': ${json_error}")
+  endif()
+  string(JSON opt_value ERROR_VARIABLE json_error GET ${opt_object} "value")
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  message(STATUS "${opt_name}: ${opt_value}")
+  set(${opt_name} ${opt_value})
+endforeach()
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
+
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm)
