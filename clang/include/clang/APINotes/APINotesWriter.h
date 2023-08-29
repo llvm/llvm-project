@@ -12,8 +12,8 @@
 // method parameters.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_API_NOTES_WRITER_H
-#define LLVM_CLANG_API_NOTES_WRITER_H
+#ifndef LLVM_CLANG_APINOTES_WRITER_H
+#define LLVM_CLANG_APINOTES_WRITER_H
 
 #include "clang/APINotes/Types.h"
 #include "llvm/Support/VersionTuple.h"
@@ -27,7 +27,6 @@ namespace llvm {
 }
 
 namespace clang {
-
 class FileEntry;
 
 namespace api_notes {
@@ -36,18 +35,18 @@ namespace api_notes {
 /// read by the \c APINotesReader.
 class APINotesWriter {
   class Implementation;
-  Implementation &Impl;
+  std::unique_ptr<Implementation> Implementation;
 
 public:
   /// Create a new API notes writer with the given module name and
   /// (optional) source file.
-  APINotesWriter(llvm::StringRef moduleName, const FileEntry *SF);
+  APINotesWriter(llvm::StringRef ModuleName, const FileEntry *SF);
   ~APINotesWriter();
 
   APINotesWriter(const APINotesWriter &) = delete;
   APINotesWriter &operator=(const APINotesWriter &) = delete;
 
-  void writeToStream(llvm::raw_ostream &os);
+  void writeToStream(llvm::raw_ostream &OS);
 
   /// Add information about a specific Objective-C class or protocol or a C++
   /// namespace.
@@ -124,8 +123,7 @@ public:
   /// Add module options
   void addModuleOptions(ModuleOptions opts);
 };
+} // namespace api_notes
+} // namespace clang
 
-} // end namespace api_notes
-} // end namespace clang
-
-#endif // LLVM_CLANG_API_NOTES_WRITER_H
+#endif // LLVM_CLANG_APINOTES_WRITER_H
