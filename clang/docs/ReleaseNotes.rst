@@ -221,7 +221,7 @@ Bug Fixes to C++ Support
 
 - Expressions producing ``nullptr`` are correctly evaluated
   by the constant interpreter when appearing as the operand
-  of a binary comparision.
+  of a binary comparison.
   (`#64923 <https://github.com/llvm/llvm-project/issues/64923>_``)
 
 - Fix a crash when an immediate invocation is not a constant expression
