@@ -131,8 +131,13 @@ class OpenACC_Attr<string name, string attrMnemonic,
 // easier to find out whether the variable is in a declare clause and what kind
 // of clause it is.
 def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
-  let parameters = (ins "DataClauseAttr":$dataClause);
+  let parameters = (ins "DataClauseAttr":$dataClause,
+                        DefaultValuedParameter<"bool", "false">:$implicit);
   let assemblyFormat = "`<` struct(params) `>`";
+  let builders = [AttrBuilder<(ins "DataClauseAttr":$dataClause), [{
+      return $_get($_ctxt, dataClause, /*implicit=*/false);
+    }]>
+  ];
 }
 
 // Attribute to attach functions that perform the pre/post allocation actions or
