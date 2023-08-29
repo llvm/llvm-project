@@ -82,13 +82,13 @@ public:
     requires copy_constructible<_Tp>
       : __value_(in_place, __value), __bound_(__bound_sentinel) {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(__bound_ >= 0, "The value of bound must be greater than or equal to 0");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__bound_ >= 0, "The value of bound must be greater than or equal to 0");
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit repeat_view(_Tp&& __value, _Bound __bound_sentinel = _Bound())
       : __value_(in_place, std::move(__value)), __bound_(__bound_sentinel) {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(__bound_ >= 0, "The value of bound must be greater than or equal to 0");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__bound_ >= 0, "The value of bound must be greater than or equal to 0");
   }
 
   template <class... _TpArgs, class... _BoundArgs>
@@ -98,7 +98,7 @@ public:
       : __value_(in_place, std::make_from_tuple<_Tp>(std::move(__value_args))),
         __bound_(std::make_from_tuple<_Bound>(std::move(__bound_args))) {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(
+      _LIBCPP_ASSERT_UNCATEGORIZED(
           __bound_ >= 0, "The behavior is undefined if Bound is not unreachable_sentinel_t and bound is negative");
   }
 
@@ -161,7 +161,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--() {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(__current_ > 0, "The value of bound must be greater than or equal to 0");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__current_ > 0, "The value of bound must be greater than or equal to 0");
     --__current_;
     return *this;
   }
@@ -174,14 +174,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(__current_ + __n >= 0, "The value of bound must be greater than or equal to 0");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__current_ + __n >= 0, "The value of bound must be greater than or equal to 0");
     __current_ += __n;
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) {
     if constexpr (!same_as<_Bound, unreachable_sentinel_t>)
-      _LIBCPP_ASSERT(__current_ - __n >= 0, "The value of bound must be greater than or equal to 0");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__current_ - __n >= 0, "The value of bound must be greater than or equal to 0");
     __current_ -= __n;
     return *this;
   }
