@@ -33,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MemTransferVolatility.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -1177,6 +1178,18 @@ public:
 /// This class wraps the llvm.memcpy/memmove intrinsics.
 class MemTransferInst : public MemTransferBase<MemIntrinsic> {
 public:
+  MemTransferVolatility getVolatility() const {
+    return MemTransferVolatility(getVolatileCst());
+  }
+  bool isAnyVolatile() const {
+    return MemTransferBase<MemIntrinsic>::isVolatile();
+  }
+  bool isDstVolatile() const { return getVolatility().isDstVolatile(); }
+  bool isSrcVolatile() const { return getVolatility().isSrcVolatile(); }
+
+  // Compatibility predicate.
+  bool isVolatile() const { return isAnyVolatile(); }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
