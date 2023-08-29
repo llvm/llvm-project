@@ -14,19 +14,17 @@ namespace clang::tidy::utils {
 
 ExceptionSpecAnalyzer::State
 ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
-  ExceptionSpecAnalyzer::State State;
-
   // Check if the function has already been analyzed and reuse that result.
   const auto CacheEntry = FunctionCache.find(FuncDecl);
   if (CacheEntry == FunctionCache.end()) {
-    State = analyzeImpl(FuncDecl);
+    ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
 
     // Cache the result of the analysis.
     FunctionCache.try_emplace(FuncDecl, State);
-  } else
-    State = CacheEntry->getSecond();
+    return State;
+  }
 
-  return State;
+  return CacheEntry->getSecond();
 }
 
 ExceptionSpecAnalyzer::State
@@ -144,7 +142,7 @@ ExceptionSpecAnalyzer::analyzeFunctionEST(const FunctionDecl *FuncDecl,
     return State::NotThrowing;
   case CT_Dependent: {
     const Expr *NoexceptExpr = FuncProto->getNoexceptExpr();
-    bool Result;
+    bool Result = false;
     return (NoexceptExpr && !NoexceptExpr->isValueDependent() &&
             NoexceptExpr->EvaluateAsBooleanCondition(
                 Result, FuncDecl->getASTContext(), true) &&

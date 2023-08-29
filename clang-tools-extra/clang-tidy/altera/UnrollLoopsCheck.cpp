@@ -203,7 +203,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
   // If increment is binary and not one of +, -, *, /, we can't know the loop
   // bounds.
   if (const auto *Op = dyn_cast<BinaryOperator>(Increment)) {
-    int ConstantValue;
+    int ConstantValue = 0;
     if (!extractValue(ConstantValue, Op, Context))
       return true;
     switch (Op->getOpcode()) {

@@ -100,8 +100,8 @@ struct CognitiveComplexity final {
     std::pair<unsigned, unsigned short> process() const {
       assert(C != Criteria::None && "invalid criteria");
 
-      unsigned MsgId;           // The id of the message to output.
-      unsigned short Increment; // How much of an increment?
+      unsigned MsgId = 0;           // The id of the message to output.
+      unsigned short Increment = 0; // How much of an increment?
 
       if (C == Criteria::All) {
         Increment = 1 + Nesting;
@@ -196,8 +196,8 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
   Details.emplace_back(Loc, Nesting, C);
   const Detail &D = Details.back();
 
-  unsigned MsgId;
-  unsigned short Increase;
+  unsigned MsgId = 0;
+  unsigned short Increase = 0;
   std::tie(MsgId, Increase) = D.process();
 
   Total += Increase;
@@ -242,9 +242,8 @@ public:
       return Base::TraverseIfStmt(Node);
 
     {
-      CognitiveComplexity::Criteria Reasons;
-
-      Reasons = CognitiveComplexity::Criteria::None;
+      CognitiveComplexity::Criteria Reasons =
+          CognitiveComplexity::Criteria::None;
 
       // "If" increases cognitive complexity.
       Reasons |= CognitiveComplexity::Criteria::Increment;
@@ -290,9 +289,8 @@ public:
       return TraverseIfStmt(E, true);
 
     {
-      CognitiveComplexity::Criteria Reasons;
-
-      Reasons = CognitiveComplexity::Criteria::None;
+      CognitiveComplexity::Criteria Reasons =
+          CognitiveComplexity::Criteria::None;
 
       // "Else" increases cognitive complexity.
       Reasons |= CognitiveComplexity::Criteria::Increment;
@@ -549,8 +547,8 @@ void FunctionCognitiveComplexityCheck::check(
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {
-    unsigned MsgId;          // The id of the message to output.
-    unsigned short Increase; // How much of an increment?
+    unsigned MsgId = 0;          // The id of the message to output.
+    unsigned short Increase = 0; // How much of an increment?
     std::tie(MsgId, Increase) = Detail.process();
     assert(MsgId < Msgs.size() && "MsgId should always be valid");
     // Increase, on the other hand, can be 0.
