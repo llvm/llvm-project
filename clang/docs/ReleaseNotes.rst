@@ -150,6 +150,11 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
   (`#51536 <https://github.com/llvm/llvm-project/issues/51536>_`)
+- Clang's ``-Wfortify-source`` now diagnoses ``snprintf`` call that is known to
+  result in string truncation.
+  (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
+  Also clang no longer emits false positive warnings about the output length of
+  ``%g`` format specifier.
 
 Bug Fixes in This Version
 -------------------------
