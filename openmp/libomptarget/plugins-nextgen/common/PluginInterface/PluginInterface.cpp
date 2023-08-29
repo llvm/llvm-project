@@ -267,6 +267,53 @@ public:
 
 } RecordReplay;
 
+// Extract the mapping of host function pointers to device function pointers
+// from the entry table. Functions marked as 'indirect' in OpenMP will have
+// offloading entries generated for them which map the host's function pointer
+// to a global containing the corresponding function pointer on the device.
+static Expected<std::pair<void *, uint64_t>>
+setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
+                       DeviceImageTy &Image) {
+  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+
+  llvm::ArrayRef<__tgt_offload_entry> Entries(Image.getTgtImage()->EntriesBegin,
+                                              Image.getTgtImage()->EntriesEnd);
+  llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
+  for (const auto &Entry : Entries) {
+    if (Entry.size == 0 || !(Entry.flags & OMP_DECLARE_TARGET_INDIRECT))
+      continue;
+
+    assert(Entry.size == sizeof(void *) && "Global not a function pointer?");
+    auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
+
+    GlobalTy DeviceGlobal(Entry.name, Entry.size);
+    if (auto Err =
+            Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
+      return std::move(Err);
+
+    HstPtr = Entry.addr;
+    if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
+                                       Entry.size, nullptr))
+      return std::move(Err);
+  }
+
+  // If we do not have any indirect globals we exit early.
+  if (IndirectCallTable.empty())
+    return std::pair{nullptr, 0};
+
+  // Sort the array to allow for more efficient lookup of device pointers.
+  llvm::sort(IndirectCallTable,
+             [](const auto &x, const auto &y) { return x.first < y.first; });
+
+  uint64_t TableSize =
+      IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
+  void *DevicePtr = Device.allocate(TableSize, nullptr, TARGET_ALLOC_DEVICE);
+  if (auto Err = Device.dataSubmit(DevicePtr, IndirectCallTable.data(),
+                                   TableSize, nullptr))
+    return std::move(Err);
+  return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
+}
+
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
@@ -626,6 +673,11 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   if (!shouldSetupDeviceEnvironment())
     return Plugin::success();
 
+  // Obtain a table mapping host function pointers to device function pointers.
+  auto CallTablePairOrErr = setupIndirectCallTable(Plugin, *this, Image);
+  if (!CallTablePairOrErr)
+    return CallTablePairOrErr.takeError();
+
   DeviceEnvironmentTy DeviceEnvironment;
   DeviceEnvironment.DebugKind = OMPX_DebugKind;
   DeviceEnvironment.NumDevices = Plugin.getNumDevices();
@@ -633,6 +685,9 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.DeviceNum = DeviceId;
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
   DeviceEnvironment.ClockFrequency = getClockFrequency();
+  DeviceEnvironment.IndirectCallTable =
+      reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
+  DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
 
   // Create the metainfo of the device environment global.
   GlobalTy DevEnvGlobal("__omp_rtl_device_environment",
