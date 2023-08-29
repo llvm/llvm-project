@@ -22,13 +22,13 @@ public:
   SDValue EmitMOPS(AArch64ISD::NodeType SDOpcode, SelectionDAG &DAG,
                    const SDLoc &DL, SDValue Chain, SDValue Dst,
                    SDValue SrcOrValue, SDValue Size, Align Alignment,
-                   bool isVolatile, MachinePointerInfo DstPtrInfo,
+                   MemTransferVolatility Volatile, MachinePointerInfo DstPtrInfo,
                    MachinePointerInfo SrcPtrInfo) const;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align Alignment,
-                                  bool isVolatile, bool AlwaysInline,
+                                  MemTransferVolatility Volatile, bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
@@ -39,7 +39,7 @@ public:
   SDValue
   EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                            SDValue Dst, SDValue Src, SDValue Size,
-                           Align Alignment, bool isVolatile,
+                           Align Alignment, MemTransferVolatility Volatile,
                            MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo) const override;
 
