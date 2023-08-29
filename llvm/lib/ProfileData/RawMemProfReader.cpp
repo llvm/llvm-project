@@ -34,6 +34,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -507,12 +508,16 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
-        // Here we retain a mapping from the GUID to symbol name instead of
-        // adding it to the frame object directly to reduce memory overhead.
-        // This is because there can be many unique frames, particularly for
-        // callsite frames.
-        if (KeepSymbolName)
-          GuidToSymbolName.insert({Guid, DIFrame.FunctionName});
+        // Here we retain a mapping from the GUID to canonical symbol name
+        // instead of adding it to the frame object directly to reduce memory
+        // overhead. This is because there can be many unique frames,
+        // particularly for callsite frames.
+        if (KeepSymbolName) {
+          StringRef CanonicalName =
+              sampleprof::FunctionSamples::getCanonicalFnName(
+                  DIFrame.FunctionName);
+          GuidToSymbolName.insert({Guid, CanonicalName.str()});
+        }
 
         const FrameId Hash = F.hash();
         IdToFrame.insert({Hash, F});

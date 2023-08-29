@@ -374,7 +374,14 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       }
     }
 
-    assert(GraphSec->getMemProt() == Prot && "MemProt should match");
+    if (GraphSec->getMemProt() != Prot) {
+      std::string ErrMsg;
+      raw_string_ostream(ErrMsg)
+          << "In " << G->getName() << ", section " << *Name
+          << " is present more than once with different permissions: "
+          << GraphSec->getMemProt() << " vs " << Prot;
+      return make_error<JITLinkError>(std::move(ErrMsg));
+    }
 
     Block *B = nullptr;
     if (Sec.sh_type != ELF::SHT_NOBITS) {
@@ -498,6 +505,22 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
 
         TargetFlagsType Flags = makeTargetFlags(Sym);
         orc::ExecutorAddrDiff Offset = getRawOffset(Sym, Flags);
+
+        if (Offset + Sym.st_size > B->getSize()) {
+          std::string ErrMsg;
+          raw_string_ostream ErrStream(ErrMsg);
+          ErrStream << "In " << G->getName() << ", symbol ";
+          if (!Name->empty())
+            ErrStream << *Name;
+          else
+            ErrStream << "<anon>";
+          ErrStream << " (" << (B->getAddress() + Offset) << " -- "
+                    << (B->getAddress() + Offset + Sym.st_size) << ") extends "
+                    << formatv("{0:x}", Offset + Sym.st_size - B->getSize())
+                    << " bytes past the end of its containing block ("
+                    << B->getRange() << ")";
+          return make_error<JITLinkError>(std::move(ErrMsg));
+        }
 
         // In RISCV, temporary symbols (Used to generate dwarf, eh_frame
         // sections...) will appear in object code's symbol table, and LLVM does
