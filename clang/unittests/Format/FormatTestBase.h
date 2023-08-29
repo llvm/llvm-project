@@ -105,7 +105,9 @@ protected:
 
   void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
                      const std::optional<FormatStyle> &Style = {}) {
-    _verifyFormat(File, Line, Code, test::messUp(Code), Style);
+    _verifyFormat(File, Line, Code, Code, Style);
+    if (const auto MessedUpCode{messUp(Code)}; MessedUpCode != Code)
+      _verifyFormat(File, Line, Code, MessedUpCode, Style);
   }
 
   void _verifyIncompleteFormat(const char *File, int Line, llvm::StringRef Code,
