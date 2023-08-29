@@ -1,0 +1,7 @@
+buildDir := "build"
+# alias pt := build all
+build target:
+    ninja -C {{buildDir}} {{target}}
+run_test target: (build target)
+    {{buildDir}}/{{target}}
+partTensorTest: (run_test "tools/mlir/unittests/Dialect/PartTensor/MLIRPartTensorTests")
