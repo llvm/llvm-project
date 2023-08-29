@@ -175,6 +175,7 @@ namespace {
 /// PrintRawCompoundStmt - Print a compound stmt without indenting the {, and
 /// with no newline after the }.
 void StmtPrinter::PrintRawCompoundStmt(CompoundStmt *Node) {
+  assert(Node && "Compound statement cannot be null");
   OS << "{" << NL;
   PrintFPPragmas(Node);
   for (auto *I : Node->body())
@@ -599,8 +600,10 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
 
   if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
     Indent() << "@finally";
-    PrintRawCompoundStmt(dyn_cast<CompoundStmt>(FS->getFinallyBody()));
-    OS << NL;
+    if (auto *CS = dyn_cast<CompoundStmt>(FS->getFinallyBody())) {
+      PrintRawCompoundStmt(CS);
+      OS << NL;
+    }
   }
 }
 
@@ -635,7 +638,7 @@ void StmtPrinter::VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Node) {
 
 void StmtPrinter::VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *Node) {
   Indent() << "@autoreleasepool";
-  PrintRawCompoundStmt(dyn_cast<CompoundStmt>(Node->getSubStmt()));
+  PrintRawCompoundStmt(cast<CompoundStmt>(Node->getSubStmt()));
   OS << NL;
 }
 

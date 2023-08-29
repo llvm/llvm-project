@@ -317,8 +317,6 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
   case emitc::CmpPredicate::three_way:
     binaryOperator = "<=>";
     break;
-  default:
-    return cmpOp.emitError("unhandled comparison predicate");
   }
 
   return printBinaryOperation(emitter, operation, binaryOperator);
