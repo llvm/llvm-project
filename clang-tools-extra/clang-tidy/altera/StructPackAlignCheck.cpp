@@ -27,10 +27,10 @@ CharUnits
 StructPackAlignCheck::computeRecommendedAlignment(CharUnits MinByteSize) const {
   CharUnits NewAlign = CharUnits::fromQuantity(1);
   if (!MinByteSize.isPowerOfTwo()) {
-    int MSB = (int)MinByteSize.getQuantity();
+    CharUnits::QuantityType MSB = MinByteSize.getQuantity();
     for (; MSB > 0; MSB /= 2) {
-      NewAlign = NewAlign.alignTo(
-          CharUnits::fromQuantity(((int)NewAlign.getQuantity()) * 2));
+      NewAlign =
+          NewAlign.alignTo(CharUnits::fromQuantity(NewAlign.getQuantity() * 2));
       // Abort if the computed alignment meets the maximum configured alignment.
       if (NewAlign.getQuantity() >= MaxConfiguredAlignment)
         break;
