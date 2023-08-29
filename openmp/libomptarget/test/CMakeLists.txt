@@ -40,3 +40,5 @@ add_openmp_testsuite(check-libomptarget
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
+
+add_subdirectory(ompTest)
