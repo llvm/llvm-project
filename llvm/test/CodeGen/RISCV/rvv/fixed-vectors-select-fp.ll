@@ -3,6 +3,10 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+v,+m -target-abi=ilp32d -riscv-v-vector-bits-min=128 \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v,+m -target-abi=lp64d -riscv-v-vector-bits-min=128 \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
 define <2 x half> @select_v2f16(i1 zeroext %c, <2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: select_v2f16:
