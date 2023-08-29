@@ -270,6 +270,11 @@ Bug Fixes to C++ Support
 - Fix crash when parsing the requires clause of some generic lambdas.
   (`#64689 <https://github.com/llvm/llvm-project/issues/64689>`_)
 
+- Fix crash when the trailing return type of a generic and dependent
+  lambda refers to an init-capture.
+  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
+   `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
