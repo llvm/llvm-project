@@ -724,7 +724,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       if (IsDefined) {
         auto Index = readVaruint32(Ctx);
         if (Index >= DataSegments.size())
-          return make_error<GenericBinaryError>("invalid data symbol index",
+          return make_error<GenericBinaryError>("invalid data segment index",
                                                 object_error::parse_failed);
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
