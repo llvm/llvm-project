@@ -4471,21 +4471,12 @@ public:
 /// handlers and creates a try statement from them.
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
+  // Don't report an error if 'try' is used in system headers.
+  if (!getLangOpts().CXXExceptions &&
       !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
     // Delay error emission for the OpenMP device code.
     targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
   }
-
-  // In OpenMP target regions, we assume that catch is never reached on GPU
-  // targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
