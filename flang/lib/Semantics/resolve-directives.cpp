@@ -265,6 +265,7 @@ private:
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveAcc(Symbol &, Symbol::Flag, Scope &);
   Symbol *ResolveName(const parser::Name &, bool parentScope = false);
+  Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
@@ -835,6 +836,17 @@ Symbol *AccAttributeVisitor::ResolveName(
   return prev;
 }
 
+Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
+  Symbol *prev{currScope().FindSymbol(name.source)};
+  if (!prev || (prev && prev->IsFuncResult())) {
+    prev = currScope().parent().FindSymbol(name.source);
+  }
+  if (prev != name.symbol) {
+    name.symbol = prev;
+  }
+  return prev;
+}
+
 template <typename T>
 common::IfNoLvalue<T, T> FoldExpr(
     evaluate::FoldingContext &foldingContext, T &&expr) {
@@ -907,7 +919,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
   if (optName) {
-    if (Symbol *sym = ResolveName(*optName, true)) {
+    if (Symbol *sym = ResolveFctName(*optName)) {
       Symbol &ultimate{sym->GetUltimate()};
       AddRoutineInfoToSymbol(ultimate, x);
     } else {

@@ -703,18 +703,22 @@ bool llvm::X86::validateCPUSpecificCPUDispatch(StringRef Name) {
   return I != std::end(Processors);
 }
 
-uint64_t llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
+std::array<uint32_t, 4>
+llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   // Processor features and mapping to processor feature value.
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
+  std::array<uint32_t, 4> FeatureMask{};
+  for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)                               \
+  .Case(STR, llvm::X86::FEATURE_##ENUM)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
-    FeaturesMask |= (1ULL << Feature);
+    assert(Feature / 32 < FeatureMask.size());
+    FeatureMask[Feature / 32] |= 1U << (Feature % 32);
   }
-  return FeaturesMask;
+  return FeatureMask;
 }
 
 unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {

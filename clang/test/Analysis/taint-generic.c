@@ -229,6 +229,7 @@ void testTaintSystemCall2(void) {
   char addr[128];
   scanf("%s", addr);
   __builtin_snprintf(buffern, 10, "/bin/mail %s < /tmp/email", addr);
+  // expected-warning@-1 {{'snprintf' will always be truncated; specified size is 10, but format string expands to at least 24}}
   system(buffern); // expected-warning {{Untrusted data is passed to a system call}}
 }
 

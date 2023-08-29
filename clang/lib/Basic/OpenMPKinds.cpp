@@ -748,6 +748,13 @@ bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_parallel_sections;
 }
 
+bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_target || DKind == OMPD_target_parallel ||
+         DKind == OMPD_target_parallel_for ||
+         DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
+         DKind == OMPD_target_parallel_loop;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {

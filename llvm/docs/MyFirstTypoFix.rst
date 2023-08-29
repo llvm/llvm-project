@@ -316,7 +316,7 @@ the change was made.
    $ git commit -am "[Diagnostic] Clarify -Winfinite-recursion message"
 
 Now we're ready to send this change out into the world! By the way,
-There is a unwritten convention of using tag for your commit. Tags
+There is an unwritten convention of using tag for your commit. Tags
 usually represent modules that you intend to modify. If you don't know
 the tags for your modules, you can look at the commit history :
 https://github.com/llvm/llvm-project/commits/main.

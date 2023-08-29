@@ -895,10 +895,7 @@ public:
   }
 
   const DeclStmt *lookupDecl(const VarDecl *VD) const {
-    auto It = Defs.find(VD);
-    if (It == Defs.end())
-      return nullptr;
-    return It->second;
+    return Defs.lookup(VD);
   }
 };
 } // namespace

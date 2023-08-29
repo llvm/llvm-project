@@ -197,10 +197,10 @@ private:
   const StmtGeneratedVarNameMap *GeneratedDecls;
   bool Found;
 
-  bool VisitForStmt(clang::ForStmt *F);
-  bool VisitNamedDecl(clang::NamedDecl *D);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *D);
-  bool VisitTypeLoc(clang::TypeLoc TL);
+  bool VisitForStmt(clang::ForStmt *);
+  bool VisitNamedDecl(clang::NamedDecl *);
+  bool VisitDeclRefExpr(clang::DeclRefExpr *);
+  bool VisitTypeLoc(clang::TypeLoc);
 };
 
 /// The information needed to describe a valid convertible usage

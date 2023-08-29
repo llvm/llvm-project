@@ -128,6 +128,10 @@ X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "gracemont")
 #define X86_FEATURE(ENUM, STR)
 #endif
 
+#ifndef X86_MICROARCH_LEVEL
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)
+#endif
+
 X86_FEATURE_COMPAT(CMOV,            "cmov",                  0)
 X86_FEATURE_COMPAT(MMX,             "mmx",                   1)
 X86_FEATURE_COMPAT(POPCNT,          "popcnt",                9)
@@ -242,5 +246,11 @@ X86_FEATURE       (RETPOLINE_INDIRECT_BRANCHES, "retpoline-indirect-branches")
 X86_FEATURE       (RETPOLINE_INDIRECT_CALLS,    "retpoline-indirect-calls")
 X86_FEATURE       (LVI_CFI,                     "lvi-cfi")
 X86_FEATURE       (LVI_LOAD_HARDENING,          "lvi-load-hardening")
+
+X86_MICROARCH_LEVEL(X86_64_BASELINE,"x86-64",               95)
+X86_MICROARCH_LEVEL(X86_64_V2,      "x86-64-v2",            96)
+X86_MICROARCH_LEVEL(X86_64_V3,      "x86-64-v3",            97)
+X86_MICROARCH_LEVEL(X86_64_V4,      "x86-64-v4",            98)
 #undef X86_FEATURE_COMPAT
 #undef X86_FEATURE
+#undef X86_MICROARCH_LEVEL

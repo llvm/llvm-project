@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
+#include <array>
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
@@ -57,7 +58,10 @@ enum ProcessorSubtypes : unsigned {
 enum ProcessorFeatures {
 #define X86_FEATURE(ENUM, STRING) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
-  CPU_FEATURE_MAX
+  CPU_FEATURE_MAX,
+
+#define X86_MICROARCH_LEVEL(ENUM, STRING, PRIORITY) FEATURE_##ENUM = PRIORITY,
+#include "llvm/TargetParser/X86TargetParser.def"
 };
 
 enum CPUKind {
@@ -171,7 +175,7 @@ void updateImpliedFeatures(StringRef Feature, bool Enabled,
 
 char getCPUDispatchMangling(StringRef Name);
 bool validateCPUSpecificCPUDispatch(StringRef Name);
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+std::array<uint32_t, 4> getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 unsigned getFeaturePriority(ProcessorFeatures Feat);
 
 } // namespace X86

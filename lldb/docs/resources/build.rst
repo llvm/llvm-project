@@ -1,9 +1,6 @@
 Building
 ========
 
-.. contents::
-   :local:
-
 Getting the Sources
 -------------------
 

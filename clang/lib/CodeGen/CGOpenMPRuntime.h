@@ -1435,6 +1435,14 @@ public:
   virtual void emitNumTeamsClause(CodeGenFunction &CGF, const Expr *NumTeams,
                                   const Expr *ThreadLimit, SourceLocation Loc);
 
+  /// Emits call to void __kmpc_set_thread_limit(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 thread_limit) to generate code for
+  /// thread_limit clause on target directive
+  /// \param ThreadLimit An integer expression of threads.
+  virtual void emitThreadLimitClause(CodeGenFunction &CGF,
+                                     const Expr *ThreadLimit,
+                                     SourceLocation Loc);
+
   /// Struct that keeps all the relevant information that should be kept
   /// throughout a 'target data' region.
   class TargetDataInfo : public llvm::OpenMPIRBuilder::TargetDataInfo {
