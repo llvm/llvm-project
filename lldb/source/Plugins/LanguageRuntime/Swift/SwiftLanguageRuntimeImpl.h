@@ -232,10 +232,20 @@ public:
     ReadELF(swift::remote::RemoteAddress ImageStart,
             llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
             llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
+    virtual const swift::reflection::TypeRef *
+    GetTypeRefOrNull(StringRef mangled_type_name) = 0;
+    virtual const swift::reflection::TypeRef *
+    GetTypeRefOrNull(swift::Demangle::Demangler &dem,
+                     swift::Demangle::NodePointer node) = 0;
+    virtual const swift::reflection::TypeInfo *
+    GetClassInstanceTypeInfo(const swift::reflection::TypeRef *type_ref,
+                             swift::remote::TypeInfoProvider *provider) = 0;
     virtual const swift::reflection::TypeInfo *
     GetTypeInfo(const swift::reflection::TypeRef *type_ref,
                 swift::remote::TypeInfoProvider *provider) = 0;
     virtual swift::remote::MemoryReader &GetReader() = 0;
+    virtual const swift::reflection::TypeRef *
+    LookupSuperclass(const swift::reflection::TypeRef *tr) = 0;
     virtual bool
     ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
                           lldb::addr_t pointer,
@@ -251,9 +261,11 @@ public:
     virtual const swift::reflection::TypeRef *
     ReadTypeFromInstance(lldb::addr_t instance_address,
                          bool skip_artificial_subclasses = false) = 0;
-    virtual swift::reflection::TypeRefBuilder &GetBuilder() = 0;
     virtual llvm::Optional<bool> IsValueInlinedInExistentialContainer(
         swift::remote::RemoteAddress existential_address) = 0;
+    virtual const swift::reflection::TypeRef *
+    ApplySubstitutions(const swift::reflection::TypeRef *type_ref,
+                       swift::reflection::GenericArgumentMap substitutions) = 0;
     virtual swift::remote::RemoteAbsolutePointer
     StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
   };

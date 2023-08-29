@@ -13,6 +13,7 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "swift/Demangling/Demangle.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,12 +27,14 @@ template <typename ReflectionContext>
 class TargetReflectionContext
     : public SwiftLanguageRuntimeImpl::ReflectionContextInterface {
   ReflectionContext m_reflection_ctx;
+  swift::reflection::TypeConverter m_type_converter;
 
 public:
   TargetReflectionContext(
       std::shared_ptr<swift::reflection::MemoryReader> reader,
       SwiftMetadataCache *swift_metadata_cache)
-      : m_reflection_ctx(reader, swift_metadata_cache) {}
+      : m_reflection_ctx(reader, swift_metadata_cache),
+        m_type_converter(m_reflection_ctx.getBuilder()) {}
 
   llvm::Optional<uint32_t> AddImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
@@ -53,6 +56,39 @@ public:
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
     return m_reflection_ctx.readELF(ImageStart, FileBuffer,
                                     likely_module_names);
+  }
+
+  const swift::reflection::TypeRef *
+  GetTypeRefOrNull(StringRef mangled_type_name) override {
+    swift::Demangle::Demangler dem;
+    swift::Demangle::NodePointer node = dem.demangleSymbol(mangled_type_name);
+    const swift::reflection::TypeRef *type_ref = GetTypeRefOrNull(dem, node);
+    if (!type_ref)
+      LLDB_LOG(GetLog(LLDBLog::Types), "Could not find typeref for type: {0}",
+               mangled_type_name);
+    return type_ref;
+  }
+
+  virtual const swift::reflection::TypeRef *
+  GetTypeRefOrNull(swift::Demangle::Demangler &dem,
+                   swift::Demangle::NodePointer node) override {
+    auto type_ref_or_err =
+        swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
+    if (type_ref_or_err.isError()) {
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Could not find typeref: decode mangled type failed. Error: {0}",
+               type_ref_or_err.getError()->copyErrorString());
+      return nullptr;
+    }
+    return type_ref_or_err.getType();
+  }
+
+  const swift::reflection::TypeInfo *
+  GetClassInstanceTypeInfo(const swift::reflection::TypeRef *type_ref,
+                           swift::remote::TypeInfoProvider *provider) override {
+    if (!type_ref)
+      return nullptr;
+    return m_type_converter.getClassInstanceTypeInfo(type_ref, 0, provider);
   }
 
   const swift::reflection::TypeInfo *
@@ -93,6 +129,11 @@ public:
 
   swift::reflection::MemoryReader &GetReader() override {
     return m_reflection_ctx.getReader();
+  }
+
+  const swift::reflection::TypeRef *
+  LookupSuperclass(const swift::reflection::TypeRef *tr) override {
+    return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
   }
 
   bool ForEachSuperClassType(
@@ -160,18 +201,20 @@ public:
                                                  skip_artificial_subclasses);
   }
 
-  swift::reflection::TypeRefBuilder &GetBuilder() override {
-    return m_reflection_ctx.getBuilder();
-  }
-
   llvm::Optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) override {
     return m_reflection_ctx.isValueInlinedInExistentialContainer(
         existential_address);
   }
 
-  swift::remote::RemoteAbsolutePointer
-  StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
+  const swift::reflection::TypeRef *ApplySubstitutions(
+      const swift::reflection::TypeRef *type_ref,
+      swift::reflection::GenericArgumentMap substitutions) override{
+    return type_ref->subst(m_reflection_ctx.getBuilder(), substitutions);
+  }
+
+  swift::remote::RemoteAbsolutePointer StripSignedPointer(
+      swift::remote::RemoteAbsolutePointer pointer) override {
     return m_reflection_ctx.stripSignedPointer(pointer);
   }
 };
