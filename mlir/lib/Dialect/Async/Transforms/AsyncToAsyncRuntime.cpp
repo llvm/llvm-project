@@ -812,7 +812,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addDynamicallyLegalOp<cf::AssertOp>(
       [&](cf::AssertOp op) -> bool {
         auto func = op->getParentOfType<func::FuncOp>();
-        return coros->find(func) == coros->end();
+        return !coros->contains(func);
       });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
@@ -842,7 +842,7 @@ void mlir::populateAsyncFuncToAsyncRuntimeConversionPatterns(
       [coros](Operation *op) {
         auto exec = op->getParentOfType<ExecuteOp>();
         auto func = op->getParentOfType<func::FuncOp>();
-        return exec || coros->find(func) == coros->end();
+        return exec || !coros->contains(func);
       });
 }
 
