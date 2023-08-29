@@ -91,8 +91,8 @@ TEST(StructuralHashTest, FunctionRetType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M1 = parseIR(Ctx, "define void @f() { ret void }");
   std::unique_ptr<Module> M2 = parseIR(Ctx, "define i32 @f() { ret i32 0 }");
-  // FIXME: should be different
   EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
 }
 
 TEST(StructuralHashTest, InstructionOpCode) {
@@ -109,7 +109,7 @@ TEST(StructuralHashTest, InstructionOpCode) {
   EXPECT_NE(StructuralHash(*M1), StructuralHash(*M2));
 }
 
-TEST(StructuralHashTest, InstructionType) {
+TEST(StructuralHashTest, InstructionSubType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M1 = parseIR(Ctx, "define void @f(ptr %p) {\n"
                                             "  %a = load i32, ptr %p\n"
@@ -119,8 +119,22 @@ TEST(StructuralHashTest, InstructionType) {
                                             "  %a = load i64, ptr %p\n"
                                             "  ret void\n"
                                             "}\n");
-  // FIXME: should be different
   EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, InstructionType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define void @f(ptr %p) {\n"
+                                            "  %1 = load i32, ptr %p\n"
+                                            "  ret void\n"
+                                            "}\n");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define void @f(ptr %p) {\n"
+                                            "  %1 = load float, ptr %p\n"
+                                            "  ret void\n"
+                                            "}\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
 }
 
 TEST(StructuralHashTest, IgnoredMetadata) {
@@ -138,6 +152,91 @@ TEST(StructuralHashTest, IgnoredMetadata) {
         !0 = !{}
         !1 = !{ptr @llvm.embedded.object, !".llvm.lto"}
         )");
+  // clang-format on
   EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+}
+
+TEST(StructuralHashTest, ComparisonInstructionPredicate) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define i1 @f(i64 %a, i64 %b) {\n"
+                                            "  %1 = icmp eq i64 %a, %b\n"
+                                            "  ret i1 %1\n"
+                                            "}\n");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define i1 @f(i64 %a, i64 %b) {\n"
+                                            "  %1 = icmp ne i64 %a, %b\n"
+                                            " ret i1 %1\n"
+                                            "}\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, IntrinsicInstruction) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 =
+      parseIR(Ctx, "define float @f(float %a) {\n"
+                   "  %b = call float @llvm.sin.f32(float %a)\n"
+                   "  ret float %b\n"
+                   "}\n"
+                   "declare float @llvm.sin.f32(float)\n");
+  std::unique_ptr<Module> M2 =
+      parseIR(Ctx, "define float @f(float %a) {\n"
+                   "  %b = call float @llvm.cos.f32(float %a)\n"
+                   "  ret float %b\n"
+                   "}\n"
+                   "declare float @llvm.cos.f32(float)\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, CallInstruction) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define i64 @f(i64 %a) {\n"
+                                            "  %b = call i64 @f1(i64 %a)\n"
+                                            "  ret i64 %b\n"
+                                            "}\n"
+                                            "declare i64 @f1(i64)");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define i64 @f(i64 %a) {\n"
+                                            "  %b = call i64 @f2(i64 %a)\n"
+                                            "  ret i64 %b\n"
+                                            "}\n"
+                                            "declare i64 @f2(i64)");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, ConstantInteger) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define i64 @f1() {\n"
+                                            "  ret i64 1\n"
+                                            "}\n");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define i64 @f2() {\n"
+                                            "  ret i64 2\n"
+                                            "}\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, BigConstantInteger) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define i128 @f1() {\n"
+                                            "  ret i128 18446744073709551616\n"
+                                            "}\n");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define i128 @f2() {\n"
+                                            "  ret i128 18446744073709551617\n"
+                                            "}\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, ArgumentNumber) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "define i64 @f1(i64 %a, i64 %b) {\n"
+                                            "  ret i64 %a\n"
+                                            "}\n");
+  std::unique_ptr<Module> M2 = parseIR(Ctx, "define i64 @f2(i64 %a, i64 %b) {\n"
+                                            "  ret i64 %b\n"
+                                            "}\n");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+  EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
 }
 } // end anonymous namespace

@@ -715,7 +715,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   assert((GFI || SI.Bases.empty()) &&
          "No gc specified, so cannot relocate pointers!");
 
-  LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
+  LLVM_DEBUG(if (SI.StatepointInstr) dbgs()
+             << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
   for (const auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
@@ -1156,6 +1157,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
 
   // NB! The GC arguments are deliberately left empty.
 
+  LLVM_DEBUG(dbgs() << "Lowering call with deopt bundle " << *Call << "\n");
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
     ReturnVal = lowerRangeToAssertZExt(DAG, *Call, ReturnVal);
     setValue(Call, ReturnVal);
