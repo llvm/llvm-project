@@ -21,7 +21,7 @@ class IncludeOrderPPCallbacks : public PPCallbacks {
 public:
   explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check,
                                    const SourceManager &SM)
-      : LookForMainModule(true), Check(Check), SM(SM) {}
+      : Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -42,7 +42,7 @@ private:
 
   using FileIncludes = std::vector<IncludeDirective>;
   std::map<clang::FileID, FileIncludes> IncludeDirectives;
-  bool LookForMainModule;
+  bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
   const SourceManager &SM;
