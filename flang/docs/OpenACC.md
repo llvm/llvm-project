@@ -17,3 +17,4 @@
 * The end directive for combined construct can omit the `loop` keyword.
 * An `!$acc routine` with no parallelism clause is treated as if the `seq`
   clause was present.
+* `!$acc end loop` does not trigger a parsing error and is just ignored.

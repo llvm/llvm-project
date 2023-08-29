@@ -246,15 +246,15 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return printConstantOp(emitter, operation, value);
 }
 
-static LogicalResult printBinaryArithOperation(CppEmitter &emitter,
-                                               Operation *operation,
-                                               StringRef binaryArithOperator) {
+static LogicalResult printBinaryOperation(CppEmitter &emitter,
+                                          Operation *operation,
+                                          StringRef binaryOperator) {
   raw_ostream &os = emitter.ostream();
 
   if (failed(emitter.emitAssignPrefix(*operation)))
     return failure();
   os << emitter.getOrCreateName(operation->getOperand(0));
-  os << " " << binaryArithOperator;
+  os << " " << binaryOperator;
   os << " " << emitter.getOrCreateName(operation->getOperand(1));
 
   return success();
@@ -263,31 +263,65 @@ static LogicalResult printBinaryArithOperation(CppEmitter &emitter,
 static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
   Operation *operation = addOp.getOperation();
 
-  return printBinaryArithOperation(emitter, operation, "+");
+  return printBinaryOperation(emitter, operation, "+");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::DivOp divOp) {
   Operation *operation = divOp.getOperation();
 
-  return printBinaryArithOperation(emitter, operation, "/");
+  return printBinaryOperation(emitter, operation, "/");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::MulOp mulOp) {
   Operation *operation = mulOp.getOperation();
 
-  return printBinaryArithOperation(emitter, operation, "*");
+  return printBinaryOperation(emitter, operation, "*");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::RemOp remOp) {
   Operation *operation = remOp.getOperation();
 
-  return printBinaryArithOperation(emitter, operation, "%");
+  return printBinaryOperation(emitter, operation, "%");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::SubOp subOp) {
   Operation *operation = subOp.getOperation();
 
-  return printBinaryArithOperation(emitter, operation, "-");
+  return printBinaryOperation(emitter, operation, "-");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
+  Operation *operation = cmpOp.getOperation();
+
+  StringRef binaryOperator;
+
+  switch (cmpOp.getPredicate()) {
+  case emitc::CmpPredicate::eq:
+    binaryOperator = "==";
+    break;
+  case emitc::CmpPredicate::ne:
+    binaryOperator = "!=";
+    break;
+  case emitc::CmpPredicate::lt:
+    binaryOperator = "<";
+    break;
+  case emitc::CmpPredicate::le:
+    binaryOperator = "<=";
+    break;
+  case emitc::CmpPredicate::gt:
+    binaryOperator = ">";
+    break;
+  case emitc::CmpPredicate::ge:
+    binaryOperator = ">=";
+    break;
+  case emitc::CmpPredicate::three_way:
+    binaryOperator = "<=>";
+    break;
+  default:
+    return cmpOp.emitError("unhandled comparison predicate");
+  }
+
+  return printBinaryOperation(emitter, operation, binaryOperator);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -977,8 +1011,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
           .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
-                emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp, emitc::MulOp,
-                emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
+                emitc::CmpOp, emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp,
+                emitc::MulOp, emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

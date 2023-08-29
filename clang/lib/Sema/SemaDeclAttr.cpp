@@ -7065,20 +7065,8 @@ static void handleUuidAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  using llvm::Triple;
-  Triple Target = S.Context.getTargetInfo().getTriple();
-  auto Env = S.Context.getTargetInfo().getTriple().getEnvironment();
-  if (!llvm::is_contained({Triple::Compute, Triple::Mesh, Triple::Amplification,
-                           Triple::Library},
-                          Env)) {
-    uint32_t Pipeline =
-        static_cast<uint32_t>(hlsl::getStageFromEnvironment(Env));
-    S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-        << AL << Pipeline << "Compute, Amplification, Mesh or Library";
-    return;
-  }
-
-  llvm::VersionTuple SMVersion = Target.getOSVersion();
+  llvm::VersionTuple SMVersion =
+      S.Context.getTargetInfo().getTriple().getOSVersion();
   uint32_t ZMax = 1024;
   uint32_t ThreadMax = 1024;
   if (SMVersion.getMajor() <= 4) {
@@ -7137,21 +7125,6 @@ HLSLNumThreadsAttr *Sema::mergeHLSLNumThreadsAttr(Decl *D,
   return ::new (Context) HLSLNumThreadsAttr(Context, AL, X, Y, Z);
 }
 
-static void handleHLSLSVGroupIndexAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  using llvm::Triple;
-  auto Env = S.Context.getTargetInfo().getTriple().getEnvironment();
-  if (Env != Triple::Compute && Env != Triple::Library) {
-    // FIXME: it is OK for a compute shader entry and pixel shader entry live in
-    // same HLSL file. Issue https://github.com/llvm/llvm-project/issues/57880.
-    ShaderStage Pipeline = hlsl::getStageFromEnvironment(Env);
-    S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-        << AL << (uint32_t)Pipeline << "Compute";
-    return;
-  }
-
-  D->addAttr(::new (S.Context) HLSLSV_GroupIndexAttr(S.Context, AL));
-}
-
 static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
   if (!T->hasUnsignedIntegerRepresentation())
     return false;
@@ -7162,23 +7135,6 @@ static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
 
 static void handleHLSLSV_DispatchThreadIDAttr(Sema &S, Decl *D,
                                               const ParsedAttr &AL) {
-  using llvm::Triple;
-  Triple Target = S.Context.getTargetInfo().getTriple();
-  // FIXME: it is OK for a compute shader entry and pixel shader entry live in
-  // same HLSL file.Issue https://github.com/llvm/llvm-project/issues/57880.
-  if (Target.getEnvironment() != Triple::Compute &&
-      Target.getEnvironment() != Triple::Library) {
-    uint32_t Pipeline =
-        (uint32_t)S.Context.getTargetInfo().getTriple().getEnvironment() -
-        (uint32_t)llvm::Triple::Pixel;
-    S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-        << AL << Pipeline << "Compute";
-    return;
-  }
-
-  // FIXME: report warning and ignore semantic when cannot apply on the Decl.
-  // See https://github.com/llvm/llvm-project/issues/57916.
-
   // FIXME: support semantic on field.
   // See https://github.com/llvm/llvm-project/issues/57889.
   if (isa<FieldDecl>(D)) {
@@ -7204,11 +7160,7 @@ static void handleHLSLShaderAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   HLSLShaderAttr::ShaderType ShaderType;
-  if (!HLSLShaderAttr::ConvertStrToShaderType(Str, ShaderType) ||
-      // Library is added to help convert HLSLShaderAttr::ShaderType to
-      // llvm::Triple::EnviromentType. It is not a legal
-      // HLSLShaderAttr::ShaderType.
-      ShaderType == HLSLShaderAttr::Library) {
+  if (!HLSLShaderAttr::ConvertStrToShaderType(Str, ShaderType)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
         << AL << Str << ArgLoc;
     return;
@@ -9347,7 +9299,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleHLSLNumThreadsAttr(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
-    handleHLSLSVGroupIndexAttr(S, D, AL);
+    handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     handleHLSLSV_DispatchThreadIDAttr(S, D, AL);

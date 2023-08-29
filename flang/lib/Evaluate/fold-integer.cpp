@@ -1151,6 +1151,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (auto p{ToInt64(args[0])}) {
       return Expr<T>{context.targetCharacteristics().SelectedIntKind(*p)};
     }
+  } else if (name == "selected_logical_kind") {
+    if (auto p{ToInt64(args[0])}) {
+      return Expr<T>{context.targetCharacteristics().SelectedLogicalKind(*p)};
+    }
   } else if (name == "selected_real_kind" ||
       name == "__builtin_ieee_selected_real_kind") {
     if (auto p{GetInt64ArgOr(args[0], 0)}) {
