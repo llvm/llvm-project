@@ -43,6 +43,13 @@ protected:
   using AllocResult = Expected<std::unique_ptr<InFlightAlloc>>;
   using FinalizeResult = Expected<JITLinkMemoryManager::FinalizedAlloc>;
 
+  // Returns true if the context says that the linker should add default
+  // passes. This can be used by JITLinkerBase implementations when deciding
+  // whether they should add default passes.
+  bool shouldAddDefaultTargetPasses(const Triple &TT) {
+    return Ctx->shouldAddDefaultTargetPasses(TT);
+  }
+
   // Returns the PassConfiguration for this instance. This can be used by
   // JITLinkerBase implementations to add late passes that reference their
   // own data structures (e.g. for ELF implementations to locate / construct
