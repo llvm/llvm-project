@@ -849,7 +849,8 @@ private:
 class LinkGraph {
 private:
   using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
-  using ExternalSymbolSet = DenseSet<Symbol *>;
+  using ExternalSymbolMap = StringMap<Symbol *>;
+  using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
 
   template <typename... ArgTs>
@@ -901,6 +902,12 @@ private:
     return S.symbols();
   }
 
+  struct GetExternalSymbolMapEntryValue {
+    Symbol *operator()(ExternalSymbolMap::value_type &KV) const {
+      return KV.second;
+    }
+  };
+
   struct GetSectionMapEntryValue {
     Section &operator()(SectionMap::value_type &KV) const { return *KV.second; }
   };
@@ -912,7 +919,10 @@ private:
   };
 
 public:
-  using external_symbol_iterator = ExternalSymbolSet::iterator;
+  using external_symbol_iterator =
+      mapped_iterator<ExternalSymbolMap::iterator,
+                      GetExternalSymbolMapEntryValue>;
+  using absolute_symbol_iterator = AbsoluteSymbolSet::iterator;
 
   using section_iterator =
       mapped_iterator<SectionMap::iterator, GetSectionMapEntryValue>;
@@ -1192,15 +1202,11 @@ public:
   /// of 0.
   Symbol &addExternalSymbol(StringRef Name, orc::ExecutorAddrDiff Size,
                             bool IsWeaklyReferenced) {
-    assert(llvm::count_if(ExternalSymbols,
-                          [&](const Symbol *Sym) {
-                            return Sym->getName() == Name;
-                          }) == 0 &&
-           "Duplicate external symbol");
+    assert(!ExternalSymbols.contains(Name) && "Duplicate external symbol");
     auto &Sym = Symbol::constructExternal(
         Allocator, createAddressable(orc::ExecutorAddr(), false), Name, Size,
         Linkage::Strong, IsWeaklyReferenced);
-    ExternalSymbols.insert(&Sym);
+    ExternalSymbols.insert({Sym.getName(), &Sym});
     return Sym;
   }
 
@@ -1281,10 +1287,14 @@ public:
   }
 
   iterator_range<external_symbol_iterator> external_symbols() {
-    return make_range(ExternalSymbols.begin(), ExternalSymbols.end());
+    return make_range(
+        external_symbol_iterator(ExternalSymbols.begin(),
+                                 GetExternalSymbolMapEntryValue()),
+        external_symbol_iterator(ExternalSymbols.end(),
+                                 GetExternalSymbolMapEntryValue()));
   }
 
-  iterator_range<external_symbol_iterator> absolute_symbols() {
+  iterator_range<absolute_symbol_iterator> absolute_symbols() {
     return make_range(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
   }
 
@@ -1320,7 +1330,7 @@ public:
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
-    ExternalSymbols.insert(&Sym);
+    ExternalSymbols.insert({Sym.getName(), &Sym});
   }
 
   /// Make the given symbol an absolute with the given address (must not already
@@ -1334,10 +1344,10 @@ public:
   void makeAbsolute(Symbol &Sym, orc::ExecutorAddr Address) {
     assert(!Sym.isAbsolute() && "Symbol is already absolute");
     if (Sym.isExternal()) {
-      assert(ExternalSymbols.count(&Sym) &&
+      assert(ExternalSymbols.contains(Sym.getName()) &&
              "Sym is not in the absolute symbols set");
       assert(Sym.getOffset() == 0 && "External is not at offset 0");
-      ExternalSymbols.erase(&Sym);
+      ExternalSymbols.erase(Sym.getName());
       auto &A = Sym.getAddressable();
       A.setAbsolute(true);
       A.setAddress(Address);
@@ -1362,9 +1372,9 @@ public:
              "Symbol is not in the absolutes set");
       AbsoluteSymbols.erase(&Sym);
     } else {
-      assert(ExternalSymbols.count(&Sym) &&
+      assert(ExternalSymbols.contains(Sym.getName()) &&
              "Symbol is not in the externals set");
-      ExternalSymbols.erase(&Sym);
+      ExternalSymbols.erase(Sym.getName());
     }
     Addressable &OldBase = *Sym.Base;
     Sym.setBlock(Content);
@@ -1449,10 +1459,11 @@ public:
   void removeExternalSymbol(Symbol &Sym) {
     assert(!Sym.isDefined() && !Sym.isAbsolute() &&
            "Sym is not an external symbol");
-    assert(ExternalSymbols.count(&Sym) && "Symbol is not in the externals set");
-    ExternalSymbols.erase(&Sym);
+    assert(ExternalSymbols.contains(Sym.getName()) &&
+           "Symbol is not in the externals set");
+    ExternalSymbols.erase(Sym.getName());
     Addressable &Base = *Sym.Base;
-    assert(llvm::none_of(ExternalSymbols,
+    assert(llvm::none_of(external_symbols(),
                          [&](Symbol *AS) { return AS->Base == &Base; }) &&
            "Base addressable still in use");
     destroySymbol(Sym);
@@ -1467,7 +1478,7 @@ public:
            "Symbol is not in the absolute symbols set");
     AbsoluteSymbols.erase(&Sym);
     Addressable &Base = *Sym.Base;
-    assert(llvm::none_of(ExternalSymbols,
+    assert(llvm::none_of(external_symbols(),
                          [&](Symbol *AS) { return AS->Base == &Base; }) &&
            "Base addressable still in use");
     destroySymbol(Sym);
@@ -1524,8 +1535,8 @@ private:
   support::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
-  ExternalSymbolSet ExternalSymbols;
-  ExternalSymbolSet AbsoluteSymbols;
+  ExternalSymbolMap ExternalSymbols;
+  AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;
 };
 

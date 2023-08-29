@@ -18,13 +18,14 @@
 #endif
 
 static void reportAllocation(void *ptr, size_t size) {
-  if (__scudo_allocate_hook && ptr)
-    __scudo_allocate_hook(ptr, size);
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_allocate_hook && ptr)
+      __scudo_allocate_hook(ptr, size);
 }
-
 static void reportDeallocation(void *ptr) {
-  if (__scudo_deallocate_hook)
-    __scudo_deallocate_hook(ptr);
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(ptr);
 }
 
 extern "C" {

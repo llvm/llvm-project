@@ -12,6 +12,7 @@
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/SizedDeallocation.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -2846,15 +2847,47 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
-void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   Action::OffloadKind DeviceOffloadKind) const {
+bool Darwin::isSizedDeallocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
+  if (isTargetMacCatalyst())
+    return TargetVersion < sizedDeallocMinVersion(llvm::Triple::MacOSX);
+  switch (TargetPlatform) {
+  case MacOS: // Earlier than 10.12.
+    OS = llvm::Triple::MacOSX;
+    break;
+  case IPhoneOS:
+    OS = llvm::Triple::IOS;
+    break;
+  case TvOS: // Earlier than 10.0.
+    OS = llvm::Triple::TvOS;
+    break;
+  case WatchOS: // Earlier than 3.0.
+    OS = llvm::Triple::WatchOS;
+    break;
+  case DriverKit: // Always available.
+    return false;
+  }
+
+  return TargetVersion < sizedDeallocMinVersion(OS);
+}
+
+void Darwin::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation) &&
+      isSizedDeallocationUnavailable())
+    CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
 

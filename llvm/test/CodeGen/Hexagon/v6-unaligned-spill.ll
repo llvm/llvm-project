@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -disable-cgp-delete-phis < %s | FileCheck %s
 
 ; Test that we no longer generate an unaligned vector store for a spill when
 ; a function has an alloca.
