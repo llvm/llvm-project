@@ -54378,15 +54378,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
+      bool AllConstants = true;
+      bool AllSubVectors = true;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         SDValue Sub = SubOps[I].getOperand(Op);
         unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-        if (Sub.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-            Sub.getOperand(0).getValueType() != VT ||
-            Sub.getConstantOperandAPInt(1) != (I * NumSubElts))
-          return false;
+        SDValue BC = peekThroughBitcasts(Sub);
+        AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
+                        ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
+        AllSubVectors &= Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+                         Sub.getOperand(0).getValueType() == VT &&
+                         Sub.getConstantOperandAPInt(1) == (I * NumSubElts);
       }
-      return true;
+      return AllConstants || AllSubVectors;
     };
 
     switch (Op0.getOpcode()) {
