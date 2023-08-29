@@ -18,6 +18,7 @@
 .text
 .balign 4
 DEFINE_COMPILERRT_FUNCTION(___chkstk_ms)
+DEFINE_COMPILERRT_FUNCTION(__chkstk)
         push   %rcx
         push   %rax
         cmp    $0x1000,%rax
@@ -35,6 +36,7 @@ DEFINE_COMPILERRT_FUNCTION(___chkstk_ms)
         pop    %rax
         pop    %rcx
         ret
+END_COMPILERRT_FUNCTION(__chkstk)
 END_COMPILERRT_FUNCTION(___chkstk_ms)
 
 #endif // __x86_64__
