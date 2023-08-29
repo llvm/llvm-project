@@ -89,7 +89,7 @@ class Dialect {
   bit isExtensible = 0;
 
   // Whether inherent Attributes defined in ODS will be stored as Properties.
-  bit usePropertiesForAttributes = 1;
+  bit usePropertiesForAttributes = 0;
 }
 
 #endif // DIALECTBASE_TD

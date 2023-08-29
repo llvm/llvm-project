@@ -8,14 +8,6 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
-## LLVM 18
-
-### Properties: beyond attributes
-
-See LLVM 17 notes below. The Dialect option `let usePropertiesForAttributes = 1;` is
-now the default. You can set it to 0 to revert to the previous behavior. This will be
-removed in LLVM 19.
-
 ## LLVM 17
 
 See also the [deprecations and refactoring](https://mlir.llvm.org/deprecation/) doc.

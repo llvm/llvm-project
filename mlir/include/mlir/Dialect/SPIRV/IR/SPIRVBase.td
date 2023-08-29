@@ -52,6 +52,7 @@ def SPIRV_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
 
   let extraClassDeclaration = [{
     void registerAttributes();
