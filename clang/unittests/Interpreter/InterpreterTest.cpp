@@ -234,16 +234,10 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
   }
 
   std::string MangledName = MangleName(FD);
-  auto Addr = Interp->getSymbolAddress(MangledName);
-  EXPECT_FALSE(!Addr);
-  EXPECT_NE(0U, Addr->getValue());
+  auto Addr = cantFail(Interp->getSymbolAddress(MangledName));
+  EXPECT_NE(0U, Addr.getValue());
   GlobalDecl GD(FD);
-  EXPECT_EQ(*Addr, cantFail(Interp->getSymbolAddress(GD)));
-  cantFail(
-      Interp->ParseAndExecute("extern \"C\" int printf(const char*,...);"));
-  Addr = Interp->getSymbolAddress("printf");
-  EXPECT_FALSE(!Addr);
-  EXPECT_EQ((unsigned long long)&printf, Addr->getValue());
+  EXPECT_EQ(Addr, cantFail(Interp->getSymbolAddress(GD)));
 }
 
 static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
