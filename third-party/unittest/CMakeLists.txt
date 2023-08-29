@@ -86,7 +86,7 @@ add_subdirectory(UnitTestMain)
 
 if (LLVM_INSTALL_GTEST)
   install(TARGETS llvm_gtest llvm_gtest_main LLVMTestingSupport LLVMTestingAnnotations
-	  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}" COMPONENT llvm_gtest)
+	  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT llvm_gtest)
   install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT llvm_gtest)
   install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT llvm_gtest)
 endif()

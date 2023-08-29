@@ -327,7 +327,7 @@ public:
     /// Mark the entry as having no declare target entry kind.
     OMPTargetGlobalVarEntryNone = 0x3,
     /// Mark the entry as a declare target indirect global.
-    OMPTargetGlobalVarEntryIndirect = 0x4,
+    OMPTargetGlobalVarEntryIndirect = 0x8,
   };
 
   /// Kind of device clause for declare target variables

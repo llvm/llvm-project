@@ -204,7 +204,12 @@ Improvements to Clang's diagnostics
   (`#56035: <https://github.com/llvm/llvm-project/issues/56035>`_).
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
-  (`#51536 <https://github.com/llvm/llvm-project/issues/51536>_`)
+  (`#51536 <https://github.com/llvm/llvm-project/issues/51536>`_)
+- Clang's ``-Wfortify-source`` now diagnoses ``snprintf`` call that is known to
+  result in string truncation.
+  (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
+  Also clang no longer emits false positive warnings about the output length of
+  ``%g`` format specifier.
 
 Bug Fixes in This Version
 -------------------------
@@ -213,10 +218,10 @@ Bug Fixes in This Version
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
 - Fix crash on use of a variadic overloaded operator.
-  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>`_)
 - Fix a hang on valid C code passing a function type as an argument to
   ``typeof`` to form a function declaration.
-  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>_`)
+  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>`_)
 - Clang now reports missing-field-initializers warning for missing designated
   initializers in C++.
   (`#56628 <https://github.com/llvm/llvm-project/issues/56628>`_)
@@ -237,6 +242,8 @@ Bug Fixes in This Version
 - Fix crash in __builtin_strncmp and related builtins when the size value
   exceeded the maximum value representable by int64_t. Fixes
   (`#64876 <https://github.com/llvm/llvm-project/issues/64876>`_)
+- Fixed an assertion if a function has cleanups and fatal erors.
+  (`#48974 <https://github.com/llvm/llvm-project/issues/48974>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -271,8 +278,8 @@ Bug Fixes to C++ Support
 
 - Expressions producing ``nullptr`` are correctly evaluated
   by the constant interpreter when appearing as the operand
-  of a binary comparision.
-  (`#64923 <https://github.com/llvm/llvm-project/issues/64923>_``)
+  of a binary comparison.
+  (`#64923 <https://github.com/llvm/llvm-project/issues/64923>`_)
 
 - Fix a crash when an immediate invocation is not a constant expression
   and appear in an implicit cast.

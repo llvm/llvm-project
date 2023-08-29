@@ -343,7 +343,6 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       }
     }
     Builder.addUnowned(*MaybePredState);
-    continue;
   }
   return std::move(Builder).take();
 }

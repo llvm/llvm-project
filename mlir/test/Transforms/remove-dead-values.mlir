@@ -207,6 +207,7 @@ func.func @clean_region_branch_op_dont_remove_first_2_results_but_remove_first_o
 // CHECK-NEXT:    %[[c0:.*]] = arith.constant 0
 // CHECK-NEXT:    %[[c1:.*]] = arith.constant 1
 // CHECK-NEXT:    %[[live_and_non_live:.*]]:2 = scf.while (%[[arg3:.*]] = %[[c0]], %[[arg4:.*]] = %[[c1]]) : (i32, i32) -> (i32, i32) {
+// CHECK-NEXT:      func.call @identity() : () -> ()
 // CHECK-NEXT:      scf.condition(%[[arg2]]) %[[arg4]], %[[arg3]] : i32, i32
 // CHECK-NEXT:    } do {
 // CHECK-NEXT:    ^bb0(%[[arg5:.*]]: i32, %[[arg6:.*]]: i32):
@@ -214,13 +215,16 @@ func.func @clean_region_branch_op_dont_remove_first_2_results_but_remove_first_o
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return %[[live_and_non_live]]#0 : i32
 // CHECK-NEXT:  }
+// CHECK:       func.func private @identity() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
 func.func @clean_region_branch_op_remove_last_2_results_last_2_arguments_and_last_operand(%arg2: i1) -> (i32) {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 1 : i32
   %c2 = arith.constant 2 : i32
   %live, %non_live, %non_live_0, %non_live_1 = scf.while (%arg3 = %c0, %arg4 = %c1, %arg10 = %c2) : (i32, i32, i32) -> (i32, i32, i32, i32) {
     %non_live_2 = arith.addi %arg10, %arg10 : i32
-    %non_live_3 = arith.muli %arg10, %arg10 : i32
+    %non_live_3 = func.call @identity(%arg10) : (i32) -> (i32)
     scf.condition(%arg2) %arg4, %arg3, %non_live_2, %non_live_3 : i32, i32, i32, i32
   } do {
   ^bb0(%arg5: i32, %arg6: i32, %arg7: i32, %arg8: i32):
@@ -228,6 +232,9 @@ func.func @clean_region_branch_op_remove_last_2_results_last_2_arguments_and_las
     scf.yield %arg5, %arg6, %non_live_4 : i32, i32, i32
   }
   return %live : i32
+}
+func.func private @identity(%arg1 : i32) -> (i32) {
+  return %arg1 : i32
 }
 
 // -----

@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -4030,7 +4029,7 @@ void BinaryFunction::calculateLoopInfo() {
   }
 }
 
-void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
+void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   if (!isEmitted()) {
     assert(!isInjected() && "injected function should be emitted");
     setOutputAddress(getAddress());
@@ -4038,16 +4037,17 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
     return;
   }
 
-  const uint64_t BaseAddress = getCodeSection()->getOutputAddress();
+  const auto SymbolInfo = Linker.lookupSymbolInfo(getSymbol()->getName());
+  assert(SymbolInfo && "Cannot find function entry symbol");
+  setOutputAddress(SymbolInfo->Address);
+  setOutputSize(SymbolInfo->Size);
+
   if (BC.HasRelocations || isInjected()) {
-    const uint64_t StartOffset = Layout.getSymbolOffset(*getSymbol());
-    const uint64_t EndOffset = Layout.getSymbolOffset(*getFunctionEndLabel());
-    setOutputAddress(BaseAddress + StartOffset);
-    setOutputSize(EndOffset - StartOffset);
     if (hasConstantIsland()) {
-      const uint64_t DataOffset =
-          Layout.getSymbolOffset(*getFunctionConstantIslandLabel());
-      setOutputDataAddress(BaseAddress + DataOffset);
+      const auto DataAddress =
+          Linker.lookupSymbol(getFunctionConstantIslandLabel()->getName());
+      assert(DataAddress && "Cannot find function CI symbol");
+      setOutputDataAddress(*DataAddress);
       for (auto It : Islands->Offsets) {
         const uint64_t OldOffset = It.first;
         BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
@@ -4055,8 +4055,11 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           continue;
 
         MCSymbol *Symbol = It.second;
-        const uint64_t NewOffset = Layout.getSymbolOffset(*Symbol);
-        BD->setOutputLocation(*getCodeSection(), NewOffset);
+        const auto NewAddress = Linker.lookupSymbol(Symbol->getName());
+        assert(NewAddress && "Cannot find CI symbol");
+        auto &Section = *getCodeSection();
+        const auto NewOffset = *NewAddress - Section.getOutputAddress();
+        BD->setOutputLocation(Section, NewOffset);
       }
     }
     if (isSplit()) {
@@ -4066,7 +4069,6 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
         // If fragment is empty, cold section might not exist
         if (FF.empty() && ColdSection.getError())
           continue;
-        const uint64_t ColdBaseAddress = ColdSection->getOutputAddress();
 
         const MCSymbol *ColdStartSymbol = getSymbol(FF.getFragmentNum());
         // If fragment is empty, symbol might have not been emitted
@@ -4075,31 +4077,24 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           continue;
         assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
                "split function should have defined cold symbol");
-        const MCSymbol *ColdEndSymbol =
-            getFunctionEndLabel(FF.getFragmentNum());
-        assert(ColdEndSymbol && ColdEndSymbol->isDefined() &&
-               "split function should have defined cold end symbol");
-        const uint64_t ColdStartOffset =
-            Layout.getSymbolOffset(*ColdStartSymbol);
-        const uint64_t ColdEndOffset = Layout.getSymbolOffset(*ColdEndSymbol);
-        FF.setAddress(ColdBaseAddress + ColdStartOffset);
-        FF.setImageSize(ColdEndOffset - ColdStartOffset);
+        const auto ColdStartSymbolInfo =
+            Linker.lookupSymbolInfo(ColdStartSymbol->getName());
+        assert(ColdStartSymbolInfo && "Cannot find cold start symbol");
+        FF.setAddress(ColdStartSymbolInfo->Address);
+        FF.setImageSize(ColdStartSymbolInfo->Size);
         if (hasConstantIsland()) {
-          const uint64_t DataOffset =
-              Layout.getSymbolOffset(*getFunctionColdConstantIslandLabel());
-          setOutputColdDataAddress(ColdBaseAddress + DataOffset);
+          const auto DataAddress = Linker.lookupSymbol(
+              getFunctionColdConstantIslandLabel()->getName());
+          assert(DataAddress && "Cannot find cold CI symbol");
+          setOutputColdDataAddress(*DataAddress);
         }
       }
     }
-  } else {
-    setOutputAddress(getAddress());
-    setOutputSize(Layout.getSymbolOffset(*getFunctionEndLabel()));
   }
 
   // Update basic block output ranges for the debug info, if we have
   // secondary entry points in the symbol table to update or if writing BAT.
-  if (!opts::UpdateDebugSections && !isMultiEntry() &&
-      !requiresAddressTranslation())
+  if (!requiresAddressMap())
     return;
 
   // Output ranges should match the input if the body hasn't changed.

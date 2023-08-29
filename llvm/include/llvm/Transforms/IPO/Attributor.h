@@ -1417,6 +1417,11 @@ struct AttributorConfig {
   std::function<void(Attributor &A, const Function &F)> InitializationCallback =
       nullptr;
 
+  /// Callback function to determine if an indirect call targets should be made
+  /// direct call targets (with an if-cascade).
+  std::function<bool(Attributor &A, CallBase &CB, Function &AssummedCallee)>
+      IndirectCalleeSpecializationCallback = nullptr;
+
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
 
@@ -1687,6 +1692,15 @@ struct Attributor {
 
   /// Return true if this is a module pass, false otherwise.
   bool isModulePass() const { return Configuration.IsModulePass; }
+
+  /// Return true if we should specialize the call site \b CB for the potential
+  /// callee \p Fn.
+  bool shouldSpecializeCallSiteForCallee(CallBase &CB, Function &Callee) {
+    return Configuration.IndirectCalleeSpecializationCallback
+               ? Configuration.IndirectCalleeSpecializationCallback(*this, CB,
+                                                                    Callee)
+               : true;
+  }
 
   /// Return true if we derive attributes for \p Fn
   bool isRunOn(Function &Fn) const { return isRunOn(&Fn); }

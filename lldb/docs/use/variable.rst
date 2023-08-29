@@ -1,9 +1,6 @@
 Variable Formatting
 ===================
 
-.. contents::
-   :local:
-
 LLDB has a data formatters subsystem that allows users to define custom display
 options for their variables.
 

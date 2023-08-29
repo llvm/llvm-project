@@ -202,7 +202,8 @@ void check_invalid_specifier(FILE* fp, char *buf)
   printf("%s%lv%d","unix",10,20); // expected-warning {{invalid conversion specifier 'v'}} expected-warning {{data argument not used by format string}}
   fprintf(fp,"%%%l"); // expected-warning {{incomplete format specifier}}
   sprintf(buf,"%%%%%ld%d%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
-  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}}
+  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}} \
+                                            // expected-warning{{'snprintf' will always be truncated; specified size is 2, but format string expands to at least 7}}
 }
 
 void check_null_char_string(char* b)

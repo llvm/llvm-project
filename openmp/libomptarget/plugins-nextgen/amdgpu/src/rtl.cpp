@@ -780,7 +780,7 @@ private:
   }
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
-                        uint32_t NumThreads) const override {
+                        uint32_t &NumThreads) const override {
     assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
            "Multi dimensional launch not supported yet.");
 

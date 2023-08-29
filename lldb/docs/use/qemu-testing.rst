@@ -1,9 +1,6 @@
 Testing LLDB using QEMU
 =======================
 
-.. contents::
-   :local:
-
 QEMU system mode emulation
 --------------------------
 

@@ -269,7 +269,7 @@ template <> struct OptionEnumMapping<concurrency::MtUnsafeCheck::FunctionSet> {
         Mapping[] = {{concurrency::MtUnsafeCheck::FunctionSet::Posix, "posix"},
                      {concurrency::MtUnsafeCheck::FunctionSet::Glibc, "glibc"},
                      {concurrency::MtUnsafeCheck::FunctionSet::Any, "any"}};
-    return ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
