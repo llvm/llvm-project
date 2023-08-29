@@ -151,11 +151,13 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
                                           const CharSourceRange &R) {
   // We want the last character in this location, so we will adjust the
   // location accordingly.
+  SourceLocation BeginLoc = R.getBegin();
   SourceLocation EndLoc = R.getEnd();
   bool IsTokenRange = R.isTokenRange();
   if (EndLoc.isValid() && EndLoc.isMacroID() &&
       !SM.isMacroArgExpansion(EndLoc)) {
     CharSourceRange Expansion = SM.getExpansionRange(EndLoc);
+    BeginLoc = Expansion.getBegin();
     EndLoc = Expansion.getEnd();
     IsTokenRange = Expansion.isTokenRange();
   }
@@ -166,7 +168,7 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
   }
 
   CXSourceRange Result = {
-      {&SM, &LangOpts}, R.getBegin().getRawEncoding(), EndLoc.getRawEncoding()};
+      {&SM, &LangOpts}, BeginLoc.getRawEncoding(), EndLoc.getRawEncoding()};
   return Result;
 }
 
