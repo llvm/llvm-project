@@ -3,6 +3,18 @@ STRING_EXTENSION_OUTSIDE(SBSection)
 %extend lldb::SBSection {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
         def __iter__(self):
             '''Iterate over all subsections in a lldb.SBSection object.'''
             return lldb_iter(self, 'GetNumSubSections', 'GetSubSectionAtIndex')

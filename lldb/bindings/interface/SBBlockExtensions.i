@@ -3,6 +3,21 @@ STRING_EXTENSION_OUTSIDE(SBBlock)
 %extend lldb::SBBlock {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __int__(self):
+            pass
+
+        def __len__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
+        def __iter__(self):
+            pass
+
         def get_range_at_index(self, idx):
             if idx < self.GetNumRanges():
                 return [self.GetRangeStartAddress(idx), self.GetRangeEndAddress(idx)]
