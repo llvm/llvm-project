@@ -254,7 +254,7 @@ SwiftLanguageRuntimeImpl::GetMemoryReader() {
         m_process, [&](swift::remote::RemoteAbsolutePointer pointer) {
           ThreadSafeReflectionContext reflection_context =
               GetReflectionContext();
-          return reflection_context->stripSignedPointer(pointer);
+          return reflection_context->StripSignedPointer(pointer);
         }));
   }
 
@@ -668,7 +668,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       return {};
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-    auto &builder = reflection_ctx->getBuilder();
+    auto &builder = reflection_ctx->GetBuilder();
     auto tc = swift::reflection::TypeConverter(builder);
     LLDBTypeInfoProvider tip(*this, *ts);
     auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
@@ -742,7 +742,7 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
         return referent.GetNumFields(exe_ctx);
       return 0;
     case ReferenceKind::Strong:
-      TypeConverter tc(GetReflectionContext()->getBuilder());
+      TypeConverter tc(GetReflectionContext()->GetBuilder());
       LLDBTypeInfoProvider tip(*this, *ts);
       auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
       if (auto *rti = llvm::dyn_cast_or_null<RecordTypeInfo>(cti)) {
@@ -875,7 +875,7 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
                                            child_indexes);
     case ReferenceKind::Strong: {
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-      auto &builder = reflection_ctx->getBuilder();
+      auto &builder = reflection_ctx->GetBuilder();
       TypeConverter tc(builder);
       LLDBTypeInfoProvider tip(*this, *ts);
       // `current_tr` iterates the class hierarchy, from the current class, each
@@ -1366,7 +1366,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
           return {};
         }
 
-        auto *type_ref = reflection_ctx->readTypeFromMetadata(md);
+        auto *type_ref = reflection_ctx->ReadTypeFromMetadata(md);
         if (!type_ref) {
           LLDB_LOGF(log,
                     "cannot decode pack_expansion type: failed to decode type "
@@ -1393,7 +1393,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
 
       // Build a TypeRef from the demangle tree.
       auto typeref_or_err =
-          decodeMangledType(reflection_ctx->getBuilder(), pack_element);
+          decodeMangledType(reflection_ctx->GetBuilder(), pack_element);
       if (typeref_or_err.isError()) {
         LLDB_LOGF(log, "Couldn't get TypeRef for %s",
                   pack_type.GetMangledTypeName().GetCString());
@@ -1403,7 +1403,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
 
       // Apply the substitutions.
       auto bound_typeref =
-          typeref->subst(reflection_ctx->getBuilder(), substitutions);
+          typeref->subst(reflection_ctx->GetBuilder(), substitutions);
       swift::Demangle::NodePointer node = bound_typeref->getDemangling(dem);
       CompilerType type = ts->RemangleAsType(dem, node);
 
@@ -1555,7 +1555,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
     }
   Log *log(GetLog(LLDBLog::Types));
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  const auto *typeref = reflection_ctx->readTypeFromInstance(instance_ptr);
+  const auto *typeref = reflection_ctx->ReadTypeFromInstance(instance_ptr);
   if (!typeref) {
     LLDB_LOGF(log,
               "could not read typeref for type: %s (instance_ptr = 0x%" PRIx64
@@ -1706,7 +1706,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   swift::remote::RemoteAddress remote_existential(existential_address);
 
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  auto pair = reflection_ctx->projectExistentialAndUnwrapClass(
+  auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
       remote_existential, *protocol_typeref);
   if (use_local_buffer)
     PopLocalBuffer();
@@ -1818,7 +1818,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParameters(
   NodePointer unbound_node =
       dem.demangleSymbol(unbound_type.GetMangledTypeName().GetStringRef());
   auto type_ref_or_err =
-      decodeMangledType(reflection_ctx->getBuilder(), unbound_node);
+      decodeMangledType(reflection_ctx->GetBuilder(), unbound_node);
   if (type_ref_or_err.isError()) {
     LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
              "Couldn't get TypeRef of unbound type.");
@@ -1844,7 +1844,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParameters(
     NodePointer child_node =
         dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
     auto type_ref_or_err =
-        decodeMangledType(reflection_ctx->getBuilder(), child_node);
+        decodeMangledType(reflection_ctx->GetBuilder(), child_node);
     if (type_ref_or_err.isError()) {
       LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
                "Couldn't get TypeRef when binding generic type parameters.");
@@ -1862,7 +1862,7 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParameters(
 
   // Apply the substitutions.
   const swift::reflection::TypeRef *bound_type_ref =
-      type_ref->subst(reflection_ctx->getBuilder(), substitutions);
+      type_ref->subst(reflection_ctx->GetBuilder(), substitutions);
   NodePointer node = bound_type_ref->getDemangling(dem);
   return ts->GetTypeSystemSwiftTypeRef().RemangleAsType(dem, node);
 }
@@ -1900,7 +1900,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
     if (!metadata_location)
       return;
     const swift::reflection::TypeRef *type_ref =
-        reflection_ctx->readTypeFromMetadata(*metadata_location);
+        reflection_ctx->ReadTypeFromMetadata(*metadata_location);
     if (!type_ref)
       return;
     substitutions.insert({{depth, index}, type_ref});
@@ -1918,7 +1918,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
   // Build a TypeRef from the demangle tree.
   auto type_ref_or_err =
-      decodeMangledType(reflection_ctx->getBuilder(), canonical);
+      decodeMangledType(reflection_ctx->GetBuilder(), canonical);
   if (type_ref_or_err.isError()) {
     LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
              "Couldn't get TypeRef");
@@ -1928,7 +1928,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
   // Apply the substitutions.
   const swift::reflection::TypeRef *bound_type_ref =
-      type_ref->subst(reflection_ctx->getBuilder(), substitutions);
+      type_ref->subst(reflection_ctx->GetBuilder(), substitutions);
   NodePointer node = bound_type_ref->getDemangling(dem);
 
   // Import the type into the scratch context. Subsequent conversions
@@ -2165,7 +2165,7 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
       swift::remote::RemoteAddress remote_existential(existential_address);
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
       llvm::Optional<bool> is_inlined =
-          reflection_ctx->isValueInlinedInExistentialContainer(
+          reflection_ctx->IsValueInlinedInExistentialContainer(
               remote_existential);
 
       if (use_local_buffer)
@@ -2548,7 +2548,7 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
     return nullptr;
 
   auto type_ref_or_err =
-      swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
+      swift::Demangle::decodeMangledType(reflection_ctx->GetBuilder(), node);
   if (type_ref_or_err.isError()) {
     LLDB_LOGF(log,
               "[SwiftLanguageRuntimeImpl::GetTypeRef] Could not find typeref "
@@ -2623,7 +2623,7 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
     return nullptr;
 
   LLDBTypeInfoProvider provider(*this, *ts);
-  return reflection_ctx->getTypeInfo(type_ref, &provider);
+  return reflection_ctx->GetTypeInfo(type_ref, &provider);
 }
 
 bool SwiftLanguageRuntimeImpl::IsStoredInlineInBuffer(CompilerType type) {

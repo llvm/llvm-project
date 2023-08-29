@@ -220,42 +220,42 @@ public:
 
     virtual ~ReflectionContextInterface();
 
-    virtual llvm::Optional<uint32_t> addImage(
+    virtual llvm::Optional<uint32_t> AddImage(
         llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
             swift::ReflectionSectionKind)>
             find_section,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual llvm::Optional<uint32_t> addImage(
+    virtual llvm::Optional<uint32_t> AddImage(
         swift::remote::RemoteAddress image_start,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
     virtual llvm::Optional<uint32_t>
-    readELF(swift::remote::RemoteAddress ImageStart,
+    ReadELF(swift::remote::RemoteAddress ImageStart,
             llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
             llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
     virtual const swift::reflection::TypeInfo *
-    getTypeInfo(const swift::reflection::TypeRef *type_ref,
+    GetTypeInfo(const swift::reflection::TypeRef *type_ref,
                 swift::remote::TypeInfoProvider *provider) = 0;
-    virtual swift::remote::MemoryReader &getReader() = 0;
+    virtual swift::remote::MemoryReader &GetReader() = 0;
     virtual bool
     ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
                           lldb::addr_t pointer,
                           std::function<bool(SuperClassType)> fn) = 0;
     virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
                                      swift::remote::RemoteAddress>>
-    projectExistentialAndUnwrapClass(
+    ProjectExistentialAndUnwrapClass(
         swift::remote::RemoteAddress existential_addess,
         const swift::reflection::TypeRef &existential_tr) = 0;
     virtual const swift::reflection::TypeRef *
-    readTypeFromMetadata(lldb::addr_t metadata_address,
+    ReadTypeFromMetadata(lldb::addr_t metadata_address,
                          bool skip_artificial_subclasses = false) = 0;
     virtual const swift::reflection::TypeRef *
-    readTypeFromInstance(lldb::addr_t instance_address,
+    ReadTypeFromInstance(lldb::addr_t instance_address,
                          bool skip_artificial_subclasses = false) = 0;
-    virtual swift::reflection::TypeRefBuilder &getBuilder() = 0;
-    virtual llvm::Optional<bool> isValueInlinedInExistentialContainer(
+    virtual swift::reflection::TypeRefBuilder &GetBuilder() = 0;
+    virtual llvm::Optional<bool> IsValueInlinedInExistentialContainer(
         swift::remote::RemoteAddress existential_address) = 0;
     virtual swift::remote::RemoteAbsolutePointer
-    stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
+    StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
   };
 
   /// A wrapper around TargetReflectionContext, which holds a lock to ensure

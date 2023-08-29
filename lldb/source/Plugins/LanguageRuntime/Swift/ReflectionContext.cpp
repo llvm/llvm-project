@@ -33,7 +33,7 @@ public:
       SwiftMetadataCache *swift_metadata_cache)
       : m_reflection_ctx(reader, swift_metadata_cache) {}
 
-  llvm::Optional<uint32_t> addImage(
+  llvm::Optional<uint32_t> AddImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
           swift::ReflectionSectionKind)>
           find_section,
@@ -42,12 +42,12 @@ public:
   }
 
   llvm::Optional<uint32_t>
-  addImage(swift::remote::RemoteAddress image_start,
+  AddImage(swift::remote::RemoteAddress image_start,
            llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
     return m_reflection_ctx.addImage(image_start, likely_module_names);
   }
 
-  llvm::Optional<uint32_t> readELF(
+  llvm::Optional<uint32_t> ReadELF(
       swift::remote::RemoteAddress ImageStart,
       llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
@@ -56,7 +56,7 @@ public:
   }
 
   const swift::reflection::TypeInfo *
-  getTypeInfo(const swift::reflection::TypeRef *type_ref,
+  GetTypeInfo(const swift::reflection::TypeRef *type_ref,
               swift::remote::TypeInfoProvider *provider) override {
     if (!type_ref)
       return nullptr;
@@ -91,7 +91,7 @@ public:
     return type_info;
   }
 
-  swift::reflection::MemoryReader &getReader() override {
+  swift::reflection::MemoryReader &GetReader() override {
     return m_reflection_ctx.getReader();
   }
 
@@ -130,7 +130,7 @@ public:
 
   llvm::Optional<std::pair<const swift::reflection::TypeRef *,
                            swift::reflection::RemoteAddress>>
-  projectExistentialAndUnwrapClass(
+  ProjectExistentialAndUnwrapClass(
       swift::reflection::RemoteAddress existential_address,
       const swift::reflection::TypeRef &existential_tr) override {
     return m_reflection_ctx.projectExistentialAndUnwrapClass(
@@ -138,14 +138,14 @@ public:
   }
 
   const swift::reflection::TypeRef *
-  readTypeFromMetadata(lldb::addr_t metadata_address,
+  ReadTypeFromMetadata(lldb::addr_t metadata_address,
                        bool skip_artificial_subclasses) override {
     return m_reflection_ctx.readTypeFromMetadata(metadata_address,
                                                  skip_artificial_subclasses);
   }
 
   const swift::reflection::TypeRef *
-  readTypeFromInstance(lldb::addr_t instance_address,
+  ReadTypeFromInstance(lldb::addr_t instance_address,
                        bool skip_artificial_subclasses) override {
     auto metadata_address =
         m_reflection_ctx.readMetadataFromInstance(instance_address);
@@ -160,18 +160,18 @@ public:
                                                  skip_artificial_subclasses);
   }
 
-  swift::reflection::TypeRefBuilder &getBuilder() override {
+  swift::reflection::TypeRefBuilder &GetBuilder() override {
     return m_reflection_ctx.getBuilder();
   }
 
-  llvm::Optional<bool> isValueInlinedInExistentialContainer(
+  llvm::Optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) override {
     return m_reflection_ctx.isValueInlinedInExistentialContainer(
         existential_address);
   }
 
   swift::remote::RemoteAbsolutePointer
-  stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
+  StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
     return m_reflection_ctx.stripSignedPointer(pointer);
   }
 };

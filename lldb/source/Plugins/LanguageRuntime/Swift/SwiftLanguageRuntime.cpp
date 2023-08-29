@@ -671,7 +671,7 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
   if (!obj_file_format)
     return false;
 
-  auto reflection_info_id = m_reflection_ctx->addImage(
+  auto reflection_info_id = m_reflection_ctx->AddImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
         auto section_name = obj_file_format->getSectionName(section_kind);
@@ -836,7 +836,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     return {};
   };
 
-  return m_reflection_ctx->addImage(
+  return m_reflection_ctx->AddImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
         auto pair = find_section_with_kind(segment, section_kind);
@@ -895,7 +895,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
     const uint8_t *file_data = extractor.GetDataStart();
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
-    info_id = m_reflection_ctx->readELF(
+    info_id = m_reflection_ctx->ReadELF(
         swift::remote::RemoteAddress(load_ptr),
         llvm::Optional<llvm::sys::MemoryBlock>(file_buffer),
         likely_module_names);
@@ -903,10 +903,10 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
              obj_file->GetPluginName().equals("mach-o")) {
     info_id = AddObjectFileToReflectionContext(module_sp, likely_module_names);
     if (!info_id)
-      info_id = m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+      info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
                                  likely_module_names);
   } else {
-    info_id = m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+    info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
                                likely_module_names);
   }
 
