@@ -17,13 +17,20 @@ struct MyTask {
   // A lazy promise with an await_transform method that supports awaiting
   // integer references using the Awaiter struct above.
   struct promise_type {
-    MyTask get_return_object() { return {}; }
+    MyTask get_return_object() {
+      return MyTask{
+          std::coroutine_handle<promise_type>::from_promise(*this),
+      };
+    }
+
     std::suspend_always initial_suspend() { return {}; }
     std::suspend_always final_suspend() noexcept { return {}; }
     void unhandled_exception();
 
     auto await_transform(const int& x) { return Awaiter{x}; }
   };
+
+  std::coroutine_handle<> h;
 };
 
 // A global array of integers.
