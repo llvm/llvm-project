@@ -37,7 +37,7 @@ struct MutuallyExclusiveRegionsOp
   }
 
   // Regions have no successors.
-  void getSuccessorRegions(RegionBranchPoint point,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            SmallVectorImpl<RegionSuccessor> &regions) {}
 };
 
@@ -51,13 +51,14 @@ struct LoopRegionsOp
 
   static StringRef getOperationName() { return "cftest.loop_regions_op"; }
 
-  void getSuccessorRegions(RegionBranchPoint point,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (Region *region = point.getRegionOrNull()) {
-      if (point == (*this)->getRegion(1))
+    if (index) {
+      if (*index == 1)
         // This region also branches back to the parent.
         regions.push_back(RegionSuccessor());
-      regions.push_back(RegionSuccessor(region));
+      regions.push_back(
+          RegionSuccessor(&getOperation()->getRegion(*index % kNumRegions)));
     }
   }
 };
@@ -73,11 +74,11 @@ struct DoubleLoopRegionsOp
     return "cftest.double_loop_regions_op";
   }
 
-  void getSuccessorRegions(RegionBranchPoint point,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (Region *region = point.getRegionOrNull()) {
+    if (index.has_value()) {
       regions.push_back(RegionSuccessor());
-      regions.push_back(RegionSuccessor(region));
+      regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
     }
   }
 };
@@ -91,9 +92,9 @@ struct SequentialRegionsOp
   static StringRef getOperationName() { return "cftest.sequential_regions_op"; }
 
   // Region 0 has Region 1 as a successor.
-  void getSuccessorRegions(RegionBranchPoint point,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (point == (*this)->getRegion(0)) {
+    if (index == 0u) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }

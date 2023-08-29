@@ -316,11 +316,15 @@ static void cleanRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // Return the successors of `region` if the latter is not null. Else return
   // the successors of `regionBranchOp`.
   auto getSuccessors = [&](Region *region = nullptr) {
-    auto point = region ? region : RegionBranchPoint::parent();
+    std::optional<unsigned> index =
+        region ? std::optional(region->getRegionNumber()) : std::nullopt;
     SmallVector<Attribute> operandAttributes(regionBranchOp->getNumOperands(),
                                              nullptr);
     SmallVector<RegionSuccessor> successors;
-    regionBranchOp.getSuccessorRegions(point, successors);
+    if (!index)
+      regionBranchOp.getEntrySuccessorRegions(operandAttributes, successors);
+    else
+      regionBranchOp.getSuccessorRegions(index, successors);
     return successors;
   };
 
@@ -329,10 +333,14 @@ static void cleanRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // forwarded to `successor`.
   auto getForwardedOpOperands = [&](const RegionSuccessor &successor,
                                     Operation *terminator = nullptr) {
+    Region *successorRegion = successor.getSuccessor();
+    std::optional<unsigned> index =
+        successorRegion ? std::optional(successorRegion->getRegionNumber())
+                        : std::nullopt;
     OperandRange operands =
         terminator ? cast<RegionBranchTerminatorOpInterface>(terminator)
-                         .getSuccessorOperands(successor)
-                   : regionBranchOp.getEntrySuccessorOperands(successor);
+                         .getSuccessorOperands(index)
+                   : regionBranchOp.getEntrySuccessorOperands(index);
     SmallVector<OpOperand *> opOperands = operandsToOpOperands(operands);
     return opOperands;
   };
