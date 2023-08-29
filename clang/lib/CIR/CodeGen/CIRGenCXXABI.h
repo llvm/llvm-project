@@ -258,6 +258,16 @@ public:
     return false;
   }
 
+  /// Returns true if the target allows calling a function through a pointer
+  /// with a different signature than the actual function (or equivalently,
+  /// bitcasting a function or function pointer to a different function type).
+  /// In principle in the most general case this could depend on the target, the
+  /// calling convention, and the actual types of the arguments and return
+  /// value. Here it just means whether the signature mismatch could *ever* be
+  /// allowed; in other words, does the target do strict checking of signatures
+  /// for all calls.
+  virtual bool canCallMismatchedFunctionType() const { return true; }
+
   virtual ~CIRGenCXXABI();
 
   void setCXXABIThisValue(CIRGenFunction &CGF, mlir::Value ThisPtr);

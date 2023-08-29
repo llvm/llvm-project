@@ -514,7 +514,8 @@ public:
 
   // Produce code for this constructor/destructor for global initialzation.
   void codegenGlobalInitCxxStructor(const clang::VarDecl *D,
-                                    mlir::cir::GlobalOp Addr);
+                                    mlir::cir::GlobalOp Addr, bool NeedsCtor,
+                                    bool NeedsDtor);
 
   bool lookupRepresentativeDecl(llvm::StringRef MangledName,
                                 clang::GlobalDecl &Result) const;
