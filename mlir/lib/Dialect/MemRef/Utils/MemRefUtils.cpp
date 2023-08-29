@@ -102,7 +102,7 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes) {
   SmallVector<OpFoldResult> strides(sizes.size());
-  if (sizes.size() > 0) {
+  if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
     AffineExpr s0, s1;
     bindSymbols(builder.getContext(), s0, s1);
