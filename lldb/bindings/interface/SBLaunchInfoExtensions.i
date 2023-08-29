@@ -1,5 +1,3 @@
-STRING_EXTENSION_OUTSIDE(SBLaunchInfo)
-
 %extend lldb::SBLaunchInfo {
 #ifdef SWIGPYTHON
     // operator== is a free function, which swig does not handle, so we inject
