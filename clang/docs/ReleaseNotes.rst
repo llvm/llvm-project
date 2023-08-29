@@ -234,6 +234,10 @@ Bug Fixes to C++ Support
   and appear in an implicit cast.
   (`#64949 <https://github.com/llvm/llvm-project/issues/64949>`_).
 
+- Fix crash when parsing ill-formed lambda trailing return type. Fixes:
+  (`#64962 <https://github.com/llvm/llvm-project/issues/64962>`_) and
+  (`#28679 <https://github.com/llvm/llvm-project/issues/28679>`_).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
