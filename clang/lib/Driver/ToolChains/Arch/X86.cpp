@@ -118,7 +118,13 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
 
 void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
-                               std::vector<StringRef> &Features) {
+                               std::vector<StringRef> &Features, bool ForAS) {
+  if (ForAS) {
+    // Some target-specific options are only handled in AddX86TargetArgs, which
+    // is not called by ClangAs::ConstructJob. Claim them here.
+    Args.claimAllArgs(options::OPT_mfpmath_EQ);
+  }
+
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
