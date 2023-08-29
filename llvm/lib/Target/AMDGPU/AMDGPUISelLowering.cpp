@@ -4046,8 +4046,7 @@ static SDValue getAddOneOp(const SDNode *V) {
   if (V->getOpcode() != ISD::ADD)
     return SDValue();
 
-  auto *C = dyn_cast<ConstantSDNode>(V->getOperand(1));
-  return C && C->isOne() ? V->getOperand(0) : SDValue();
+  return isOneConstant(V->getOperand(1)) ? V->getOperand(0) : SDValue();
 }
 
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
@@ -4277,8 +4276,7 @@ SDValue AMDGPUTargetLowering::getFFBX_U32(SelectionDAG &DAG,
 SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond,
                                                  SDValue LHS, SDValue RHS,
                                                  DAGCombinerInfo &DCI) const {
-  ConstantSDNode *CmpRhs = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
-  if (!CmpRhs || !CmpRhs->isZero())
+  if (!isNullConstant(Cond.getOperand(1)))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

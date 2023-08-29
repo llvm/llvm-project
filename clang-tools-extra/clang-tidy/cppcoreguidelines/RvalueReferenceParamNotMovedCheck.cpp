@@ -31,9 +31,8 @@ AST_MATCHER_P2(Stmt, argumentOf, bool, AllowPartialMove, StatementMatcher,
                Ref) {
   if (AllowPartialMove) {
     return stmt(anyOf(Ref, hasDescendant(Ref))).matches(Node, Finder, Builder);
-  } else {
-    return Ref.matches(Node, Finder, Builder);
   }
+  return Ref.matches(Node, Finder, Builder);
 }
 } // namespace
 

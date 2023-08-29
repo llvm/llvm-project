@@ -88,8 +88,8 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
                    tok::kw_signed))
     return;
 
-  bool IsSigned;
-  unsigned Width;
+  bool IsSigned = false;
+  unsigned Width = 0;
   const TargetInfo &TargetInfo = Result.Context->getTargetInfo();
 
   // Look for uses of short, long, long long and their unsigned versions.

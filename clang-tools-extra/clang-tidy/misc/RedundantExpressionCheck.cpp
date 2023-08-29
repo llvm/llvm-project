@@ -1027,7 +1027,7 @@ void RedundantExpressionCheck::checkArithmeticExpr(
     const MatchFinder::MatchResult &Result) {
   APSInt LhsValue, RhsValue;
   const Expr *LhsSymbol = nullptr, *RhsSymbol = nullptr;
-  BinaryOperatorKind LhsOpcode, RhsOpcode;
+  BinaryOperatorKind LhsOpcode{}, RhsOpcode{};
 
   if (const auto *ComparisonOperator = Result.Nodes.getNodeAs<BinaryOperator>(
           "binop-const-compare-to-sym")) {
@@ -1104,7 +1104,7 @@ void RedundantExpressionCheck::checkBitwiseExpr(
 
     APSInt LhsValue, RhsValue;
     const Expr *LhsSymbol = nullptr;
-    BinaryOperatorKind LhsOpcode;
+    BinaryOperatorKind LhsOpcode{};
     if (!retrieveBinOpIntegerConstantExpr(Result, "lhs", LhsOpcode, LhsSymbol,
                                           LhsValue) ||
         !retrieveIntegerConstantExpr(Result, "rhs", RhsValue))
@@ -1180,7 +1180,7 @@ void RedundantExpressionCheck::checkRelationalExpr(
     const Expr *LhsExpr = nullptr, *RhsExpr = nullptr;
     const Expr *LhsSymbol = nullptr, *RhsSymbol = nullptr;
     const Expr *LhsConst = nullptr, *RhsConst = nullptr;
-    BinaryOperatorKind LhsOpcode, RhsOpcode;
+    BinaryOperatorKind LhsOpcode{}, RhsOpcode{};
     APSInt LhsValue, RhsValue;
 
     if (!retrieveRelationalIntegerConstantExpr(
@@ -1240,7 +1240,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     // intentional.
     if (areSidesBinaryConstExpressions(BinOp, Result.Context)) {
       const Expr *LhsConst = nullptr, *RhsConst = nullptr;
-      BinaryOperatorKind MainOpcode, SideOpcode;
+      BinaryOperatorKind MainOpcode{}, SideOpcode{};
 
       if (!retrieveConstExprFromBothSides(BinOp, MainOpcode, SideOpcode,
                                           LhsConst, RhsConst, Result.Context))

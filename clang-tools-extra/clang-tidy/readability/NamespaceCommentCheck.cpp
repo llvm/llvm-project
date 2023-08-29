@@ -27,8 +27,8 @@ NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
           "^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
           "namespace( +(((inline )|([a-zA-Z0-9_:]))+))?\\.? *(\\*/)?$",
           llvm::Regex::IgnoreCase),
-      ShortNamespaceLines(Options.get("ShortNamespaceLines", 1u)),
-      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1u)) {}
+      ShortNamespaceLines(Options.get("ShortNamespaceLines", 1U)),
+      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)) {}
 
 void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortNamespaceLines", ShortNamespaceLines);

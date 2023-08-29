@@ -369,20 +369,15 @@ define i64 @and_i64_0xff000(i64 %a) {
   ret i64 %b
 }
 
-;; This case is not optimized to `bstrpick + slli`,
-;; since the immediate -2048 can be composed via
-;; a single `addi.w $rx, $zero, -2048`.
 define i64 @and_i64_minus_2048(i64 %a) {
 ; LA32-LABEL: and_i64_minus_2048:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a2, $zero, -2048
-; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    bstrins.w $a0, $zero, 10, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_minus_2048:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a1, $zero, -2048
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 10, 0
 ; LA64-NEXT:    ret
   %b = and i64 %a, -2048
   ret i64 %b
@@ -423,6 +418,20 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
   %h = mul i64 %e, %f
   %i = xor i64 %g, %h
   ret i64 %i
+}
+
+define i64 @and_i64_0xffffffffff00ffff(i64 %a) {
+; LA32-LABEL: and_i64_0xffffffffff00ffff:
+; LA32:       # %bb.0:
+; LA32-NEXT:    bstrins.w $a0, $zero, 23, 16
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_0xffffffffff00ffff:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrins.d $a0, $zero, 23, 16
+; LA64-NEXT:    ret
+  %b = and i64 %a, 18446744073692839935
+  ret i64 %b
 }
 
 define i32 @and_add_lsr(i32 %x, i32 %y) {

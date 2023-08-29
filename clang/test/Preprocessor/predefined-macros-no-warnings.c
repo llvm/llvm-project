@@ -135,7 +135,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple tcele
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-ananas
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-linux-android
@@ -157,7 +156,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-hurd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-ananas
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-linux-android

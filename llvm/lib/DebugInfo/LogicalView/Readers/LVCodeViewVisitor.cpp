@@ -1688,23 +1688,6 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
   return Error::success();
 }
 
-// S_ARMSWITCHTABLE
-Error LVSymbolVisitor::visitKnownRecord(CVSymbol &CVR,
-                                        JumpTableSym &JumpTable) {
-  LLVM_DEBUG({
-    W.printHex("BaseOffset", JumpTable.BaseOffset);
-    W.printNumber("BaseSegment", JumpTable.BaseSegment);
-    W.printFlags("SwitchType", static_cast<uint16_t>(JumpTable.SwitchType),
-                 getJumpTableEntrySizeNames());
-    W.printHex("BranchOffset", JumpTable.BranchOffset);
-    W.printHex("TableOffset", JumpTable.TableOffset);
-    W.printNumber("BranchSegment", JumpTable.BranchSegment);
-    W.printNumber("TableSegment", JumpTable.TableSegment);
-    W.printNumber("EntriesCount", JumpTable.EntriesCount);
-  });
-  return Error::success();
-}
-
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "CodeViewLogicalVisitor"
 

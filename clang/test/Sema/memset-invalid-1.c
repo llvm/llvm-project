@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only %s -verify
-// rdar://13081751
 
 typedef __SIZE_TYPE__ size_t;
 void *memset(void*, int, size_t);

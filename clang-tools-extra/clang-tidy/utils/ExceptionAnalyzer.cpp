@@ -19,7 +19,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerException(
 
 void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
     const Throwables &Exceptions) {
-  if (Exceptions.size() == 0)
+  if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
   ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
@@ -404,7 +404,7 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
     ThrownExceptions.erase(T);
 
   reevaluateBehaviour();
-  return TypesToDelete.size() > 0;
+  return !TypesToDelete.empty();
 }
 
 ExceptionAnalyzer::ExceptionInfo &
@@ -437,7 +437,7 @@ void ExceptionAnalyzer::ExceptionInfo::clear() {
 }
 
 void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
-  if (ThrownExceptions.size() == 0)
+  if (ThrownExceptions.empty())
     if (ContainsUnknown)
       Behaviour = State::Unknown;
     else

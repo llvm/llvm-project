@@ -1578,7 +1578,7 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayRef<Attribute> targets) {
   build(builder, result, name,
-        targets.size() > 0 ? builder.getArrayAttr(targets) : ArrayAttr());
+        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets));
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1661,7 +1661,7 @@ void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
 void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                      Attribute offloadingHandler, ArrayRef<Attribute> objects) {
   build(builder, result, name, offloadingHandler,
-        objects.size() > 0 ? builder.getArrayAttr(objects) : ArrayAttr());
+        objects.empty() ? ArrayAttr() : builder.getArrayAttr(objects));
 }
 
 static ParseResult parseOffloadingHandler(OpAsmParser &parser,

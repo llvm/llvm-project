@@ -62,7 +62,7 @@
 ! HELP-NEXT: -fopenmp-targets=<value>
 ! HELP-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! HELP-NEXT: -fopenmp-version=<value>
-! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! HELP-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -foptimization-record-file=<file>
 ! HELP-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
@@ -202,7 +202,7 @@
 ! HELP-FC1-NEXT:                         Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp-version=<value>
-! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! HELP-FC1-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -fppc-native-vector-element-order

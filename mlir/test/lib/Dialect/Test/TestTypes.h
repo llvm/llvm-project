@@ -91,9 +91,6 @@ struct FieldParser<std::optional<int>> {
 
 #include "TestTypeInterfaces.h.inc"
 
-#define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.h.inc"
-
 namespace test {
 
 /// Storage for simple named recursive types, where the type is identified by
@@ -149,5 +146,8 @@ public:
 };
 
 } // namespace test
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.h.inc"
 
 #endif // MLIR_TESTTYPES_H

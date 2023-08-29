@@ -7,10 +7,10 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -23,10 +23,10 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -39,10 +39,10 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -55,8 +55,8 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w2, #0x1
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    mov z0.h, w2
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]

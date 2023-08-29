@@ -6,42 +6,68 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This specialises functions with constant parameters. Constant parameters
-// like function pointers and constant globals are propagated to the callee by
-// specializing the function. The main benefit of this pass at the moment is
-// that indirect calls are transformed into direct calls, which provides inline
-// opportunities that the inliner would not have been able to achieve. That's
-// why function specialisation is run before the inliner in the optimisation
-// pipeline; that is by design. Otherwise, we would only benefit from constant
-// passing, which is a valid use-case too, but hasn't been explored much in
-// terms of performance uplifts, cost-model and compile-time impact.
+// Overview:
+// ---------
+// Function Specialization is a transformation which propagates the constant
+// parameters of a function call from the caller to the callee. It is part of
+// the Inter-Procedural Sparse Conditional Constant Propagation (IPSCCP) pass.
+// The transformation runs iteratively a number of times which is controlled
+// by the option `funcspec-max-iters`. Running it multiple times is needed
+// for specializing recursive functions, but also exposes new opportunities
+// arising from specializations which return constant values or contain calls
+// which can be specialized.
 //
-// Current limitations:
-// - It does not yet handle integer ranges. We do support "literal constants",
-//   but that's off by default under an option.
-// - The cost-model could be further looked into (it mainly focuses on inlining
-//   benefits),
+// Function Specialization supports propagating constant parameters like
+// function pointers, literal constants and addresses of global variables.
+// By propagating function pointers, indirect calls become direct calls. This
+// exposes inlining opportunities which we would have otherwise missed. That's
+// why function specialization is run before the inliner in the optimization
+// pipeline; that is by design.
+//
+// Cost Model:
+// -----------
+// The cost model facilitates a utility for estimating the specialization bonus
+// from propagating a constant argument. This is the InstCostVisitor, a class
+// that inherits from the InstVisitor. The bonus itself is expressed as codesize
+// and latency savings. Codesize savings means the amount of code that becomes
+// dead in the specialization from propagating the constant, whereas latency
+// savings represents the cycles we are saving from replacing instructions with
+// constant values. The InstCostVisitor overrides a set of `visit*` methods to
+// be able to handle different types of instructions. These attempt to constant-
+// fold the instruction in which case a constant is returned and propagated
+// further.
+//
+// Function pointers are not handled by the InstCostVisitor. They are treated
+// separately as they could expose inlining opportunities via indirect call
+// promotion. The inlining bonus contributes to the total specialization score.
+//
+// For a specialization to be profitable its bonus needs to exceed a minimum
+// threshold. There are three options for controlling the threshold which are
+// expressed as percentages of the original function size:
+//  * funcspec-min-codesize-savings
+//  * funcspec-min-latency-savings
+//  * funcspec-min-inlining-bonus
+// There's also an option for controlling the codesize growth from recursive
+// specializations. That is `funcspec-max-codesize-growth`.
+//
+// Once we have all the potential specializations with their score we need to
+// choose the best ones, which fit in the module specialization budget. That
+// is controlled by the option `funcspec-max-clones`. To find the best `NSpec`
+// specializations we use a max-heap. For more details refer to D139346.
 //
 // Ideas:
+// ------
 // - With a function specialization attribute for arguments, we could have
 //   a direct way to steer function specialization, avoiding the cost-model,
 //   and thus control compile-times / code-size.
 //
-// Todos:
-// - Specializing recursive functions relies on running the transformation a
-//   number of times, which is controlled by option
-//   `func-specialization-max-iters`. Thus, increasing this value and the
-//   number of iterations, will linearly increase the number of times recursive
-//   functions get specialized, see also the discussion in
-//   https://reviews.llvm.org/D106426 for details. Perhaps there is a
-//   compile-time friendlier way to control/limit the number of specialisations
-//   for recursive functions.
-// - Don't transform the function if function specialization does not trigger;
-//   the SCCPSolver may make IR changes.
+// - Perhaps a post-inlining function specialization pass could be more
+//   aggressive on literal constants.
 //
 // References:
-// - 2021 LLVM Dev Mtg “Introducing function specialisation, and can we enable
-//   it by default?”, https://www.youtube.com/watch?v=zJiCjeXgV5Q
+// -----------
+// 2021 LLVM Dev Mtg “Introducing function specialisation, and can we enable
+// it by default?”, https://www.youtube.com/watch?v=zJiCjeXgV5Q
 //
 //===----------------------------------------------------------------------===//
 

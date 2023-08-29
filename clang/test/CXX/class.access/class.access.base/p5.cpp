@@ -72,7 +72,7 @@ namespace test3 {
   };
 }
 
-// Don't crash. <rdar://12926092>
+// Don't crash.
 // Note that 'field' is indeed a private member of X but that access
 // is indeed ultimately constrained by the protected inheritance from Y.
 // If someone wants to put the effort into improving this diagnostic,

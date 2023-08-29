@@ -49,7 +49,7 @@
 // RUN:     readability-identifier-naming.StaticConstantCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.StaticVariableCase: camelBack, \
 // RUN:     readability-identifier-naming.StaticVariablePrefix: 's_', \
-// RUN:     readability-identifier-naming.StructCase: lower_case, \
+// RUN:     readability-identifier-naming.StructCase: Leading_upper_snake_case, \
 // RUN:     readability-identifier-naming.TemplateParameterCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.TemplateTemplateParameterCase: CamelCase, \
 // RUN:     readability-identifier-naming.TemplateUsingCase: lower_case, \
@@ -513,9 +513,9 @@ constexpr int CE_function() { return 3; }
 
 struct THIS___Structure {
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'THIS___Structure'
-// CHECK-FIXES: {{^}}struct this_structure {{{$}}
+// CHECK-FIXES: {{^}}struct This_structure {{{$}}
     THIS___Structure();
-// CHECK-FIXES: {{^}}    this_structure();{{$}}
+// CHECK-FIXES: {{^}}    This_structure();{{$}}
 
   union __MyUnion_is_wonderful__ {};
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for union '__MyUnion_is_wonderful__'
@@ -524,7 +524,7 @@ struct THIS___Structure {
 
 typedef THIS___Structure struct_type;
 // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for typedef 'struct_type'
-// CHECK-FIXES: {{^}}typedef this_structure struct_type_t;{{$}}
+// CHECK-FIXES: {{^}}typedef This_structure struct_type_t;{{$}}
 
 struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 // CHECK-FIXES: {{^}}struct_type_t GlobalTypedefTestFunction(struct_type_t a_argument1) {
@@ -534,7 +534,7 @@ struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 
 using my_struct_type = THIS___Structure;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'my_struct_type'
-// CHECK-FIXES: {{^}}using my_Struct_Type_t = this_structure;{{$}}
+// CHECK-FIXES: {{^}}using my_Struct_Type_t = This_structure;{{$}}
 
 template<typename t_t>
 using SomeOtherTemplate = my_other_templated_class  <:: FOO_NS  ::my_class>;
@@ -596,6 +596,8 @@ void MY_TEST_Macro(function) {}
 }
 
 template <typename t_t> struct a {
+// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: invalid case style for struct 'a'
+// CHECK-FIXES: {{^}}template <typename t_t> struct A {{{$}}
   typename t_t::template b<> c;
 
   char const MY_ConstMember_string[4] = "123";
@@ -609,9 +611,11 @@ template <typename t_t> struct a {
 
 template<typename t_t>
 char const a<t_t>::MyConstClass_string[] = "123";
-// CHECK-FIXES: {{^}}char const a<t_t>::kMyConstClassString[] = "123";{{$}}
+// CHECK-FIXES: {{^}}char const A<t_t>::kMyConstClassString[] = "123";{{$}}
 
 template <template <typename> class A> struct b { A<int> c; };
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: invalid case style for struct 'b'
+// CHECK-FIXES:template <template <typename> class A> struct B { A<int> c; };{{$}}
 
 unsigned MY_GLOBAL_array[] = {1,2,3};
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'MY_GLOBAL_array'
@@ -645,17 +649,17 @@ using namespace FOO_NS::InlineNamespace;
 // CHECK-FIXES: {{^}}using namespace foo_ns::inline_namespace;
 
 void QualifiedTypeLocTest(THIS___Structure);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure);{{$}}
 void QualifiedTypeLocTest(THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure &);{{$}}
 void QualifiedTypeLocTest(THIS___Structure &&);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &&);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(This_structure &&);{{$}}
 void QualifiedTypeLocTest(const THIS___Structure);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const This_structure);{{$}}
 void QualifiedTypeLocTest(const THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const This_structure &);{{$}}
 void QualifiedTypeLocTest(volatile THIS___Structure &);
-// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile this_structure &);{{$}}
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile This_structure &);{{$}}
 
 namespace redecls {
 // We only want the warning to show up once here for the first decl.
@@ -700,6 +704,8 @@ auto GetRes(type_t& Param) -> decltype(Param.res());
 // Check implicit declarations in coroutines
 
 struct async_obj {
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'async_obj'
+// CHECK-FIXES: {{^}}struct Async_obj {{{$}}
 public:
   never_suspend operator co_await() const noexcept;
 };
@@ -711,8 +717,8 @@ task ImplicitDeclTest(async_obj &a_object) {
 // Test scenario when canonical declaration will be a forward declaration
 struct ForwardDeclStruct;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'ForwardDeclStruct' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}struct forward_decl_struct;
-// CHECK-FIXES: {{^}}struct forward_decl_struct {
+// CHECK-FIXES: {{^}}struct Forward_decl_struct;
+// CHECK-FIXES: {{^}}struct Forward_decl_struct {
 struct ForwardDeclStruct {
 };
 

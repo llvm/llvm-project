@@ -35,7 +35,6 @@ void selfStaysLive(void) {
 
 // Test that retain release checker warns on leaks and use-after-frees when 
 // self init is not enabled.  
-// radar://12115830
 @interface ParentOfCell : NSObject
 - (id)initWithInt: (int)inInt;
 @end
