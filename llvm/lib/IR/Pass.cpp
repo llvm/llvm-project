@@ -139,14 +139,12 @@ LLVM_DUMP_METHOD void Pass::dump() const {
 #endif
 
 #ifdef EXPENSIVE_CHECKS
-// TODO: Use detailed structural hashing once exposed bugs have been fixed/
-// (https://github.com/llvm/llvm-project/issues/64938)
 uint64_t Pass::structuralHash(Module &M) const {
-  return StructuralHash(M, false);
+  return StructuralHash(M, true);
 }
 
 uint64_t Pass::structuralHash(Function &F) const {
-  return StructuralHash(F, false);
+  return StructuralHash(F, true);
 }
 #endif
 
