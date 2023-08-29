@@ -48,6 +48,27 @@ bool shouldPrintAfterAll();
 std::vector<std::string> printBeforePasses();
 std::vector<std::string> printAfterPasses();
 
+// Returns true if dumping IR to a file before/after some pass is enabled
+// wether all passes or a specific pass.
+bool shouldDumpBeforeSomePass();
+bool shouldDumpAfterSomePass();
+
+// Returns true if we should dump IR to a file before/after a specific pass. The
+// argument should be the pass ID, e.g. "instcombine"
+bool shouldDumpBeforePass(StringRef PassID);
+bool shouldDumpAfterPass(StringRef PassID);
+
+// Returns true if we should dump IR to a file before/after all passes.
+bool shouldDumpBeforeAll();
+bool shouldDumpAfterAll();
+
+// The list of passes to dump IR to a file before/after, if we only want
+// to print before/after specific passes.
+std::vector<std::string> dumpBeforePasses();
+std::vector<std::string> dumpAfterPasses();
+
+StringRef irInstrumentationDumpDirectory();
+
 // Returns true if we should always print the entire module.
 bool forcePrintModuleIR();
 

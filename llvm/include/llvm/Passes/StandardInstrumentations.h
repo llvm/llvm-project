@@ -69,6 +69,62 @@ private:
   unsigned CurrentPassNumber = 0;
 };
 
+class DumpIRInstrumentation {
+public:
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
+  void dumpBeforePass(StringRef PassID, Any IR);
+  void dumpAfterPass(StringRef PassID, Any IR);
+
+  bool shouldDumpBeforePass(StringRef PassID);
+  bool shouldDumpAfterPass(StringRef PassID);
+
+  PassInstrumentationCallbacks *PIC;
+
+  // The module currently being processed in the pipeline.
+  Module const *CurrentModule = nullptr;
+
+  void pushPass(StringRef PassID, Any IR);
+  void popPass(StringRef PassID);
+
+  SmallString<16> InstrumentationDumpDirectory;
+  StringRef fetchInstrumentationDumpDirectory();
+
+  SmallString<16> fetchCurrentInstrumentationDumpFile(StringRef Suffix);
+
+  // A table to store how many times a given pass has run at the current "nested
+  // level"
+  using PassRunsFrequencyTableT = DenseMap<StringRef, unsigned>;
+  // A stack each frame of which (aside from the very first) represents a pass
+  // being run on some unit of IR. The larger, the stack grows, the smaller the
+  // unit of IR. For example, we would first push a module pass, then for each
+  // function pass in that module pass, we would push a frame and so on. This
+  // information is used to craft the output path for this logging.
+  //
+  // Each frame contains a map to track how many times a given subpass runs. For
+  // example, to keep track of how many times a function pass Foo runs within a
+  // module pass Bar. The first frame of the stack represents the module being
+  // processed rather than any particular pass. This is to create a frequency
+  // table to track module level pass run counts without having to special case
+  // that logic.
+  //
+  // When a change in the module being processed is detected, this first frame
+  // is updated accordingly.
+
+  struct PipelineStateStackFrame {
+    StringRef PassID;
+    PassRunsFrequencyTableT FreqTable;
+    unsigned int PassCount;
+
+    PipelineStateStackFrame(StringRef PassID) : PassID{PassID}, PassCount{0} {}
+  };
+
+  using PipelineStateStackT = SmallVector<PipelineStateStackFrame>;
+
+  PipelineStateStackT PipelineStateStack;
+};
+
 class OptNoneInstrumentation {
 public:
   OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
@@ -555,6 +611,7 @@ private:
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
+  DumpIRInstrumentation DumpIR;
   PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;
   TimeProfilingPassesHandler TimeProfilingPasses;

@@ -33,6 +33,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -828,6 +829,182 @@ void PrintIRInstrumentation::registerCallbacks(
           this->printAfterPassInvalidated(P);
         });
   }
+}
+
+void DumpIRInstrumentation::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+
+  if (!(shouldDumpBeforeSomePass() || shouldDumpAfterSomePass()))
+    return;
+
+  this->PIC = &PIC;
+
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any IR) { this->pushPass(P, IR); });
+
+  if (shouldDumpBeforeSomePass())
+    PIC.registerBeforeNonSkippedPassCallback(
+        [this](StringRef P, Any IR) { this->dumpBeforePass(P, IR); });
+
+  if (shouldDumpAfterSomePass()) {
+    PIC.registerAfterPassCallback(
+        [this](StringRef P, Any IR, const PreservedAnalyses &) {
+          this->dumpAfterPass(P, IR);
+        });
+  }
+
+  // It is important the the "popPass" callback fires after the dumpAfterPass
+  // callback
+  PIC.registerAfterPassCallback(
+      [this](StringRef P, Any IR, const PreservedAnalyses &) {
+        this->popPass(P);
+      });
+}
+
+void DumpIRInstrumentation::dumpBeforePass(StringRef PassID, Any IR) {
+  if (isIgnored(PassID))
+    return;
+
+  if (!shouldDumpBeforePass(PassID)) {
+    return;
+  }
+
+  SmallString<16> OutputPath =
+      fetchCurrentInstrumentationDumpFile("-before.ll");
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(OutputPath, EC, llvm::sys::fs::CD_CreateAlways);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + OutputPath +
+                       " to support dump-before: " + EC.message());
+
+  OS << "*** IR Dump Before " << PassID << " on " << getIRName(IR) << " ***\n";
+  unwrapAndPrint(OS, IR);
+}
+
+void DumpIRInstrumentation::dumpAfterPass(StringRef PassID, Any IR) {
+  if (isIgnored(PassID))
+    return;
+
+  if (!shouldDumpAfterPass(PassID))
+    return;
+
+  SmallString<16> OutputPath = fetchCurrentInstrumentationDumpFile("-after.ll");
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(OutputPath, EC, llvm::sys::fs::CD_CreateAlways);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + OutputPath +
+                       " to support -dump-after: " + EC.message());
+
+  OS << "*** IR Dump After " << PassID << " on " << getIRName(IR) << " ***\n";
+  unwrapAndPrint(OS, IR);
+}
+
+bool DumpIRInstrumentation::shouldDumpBeforePass(StringRef PassID) {
+  if (shouldDumpBeforeAll())
+    return true;
+
+  StringRef PassName = PIC->getPassNameForClassName(PassID);
+  return is_contained(dumpBeforePasses(), PassName);
+}
+
+bool DumpIRInstrumentation::shouldDumpAfterPass(StringRef PassID) {
+  if (shouldDumpAfterAll())
+    return true;
+
+  StringRef PassName = PIC->getPassNameForClassName(PassID);
+  return is_contained(dumpAfterPasses(), PassName);
+}
+
+void DumpIRInstrumentation::pushPass(StringRef PassID, Any IR) {
+  const Module *M = unwrapModule(IR);
+  if (CurrentModule != M) {
+    // If currentModule is nullptr, or is not equal to M, we are starting to
+    // process a new module.
+
+    // The first frame of the stack should maintain a frequency table
+    // for module level passes.
+    PipelineStateStack.clear();
+    PipelineStateStack.push_back(PipelineStateStackFrame(M->getName()));
+
+    CurrentModule = M;
+  }
+
+  PassRunsFrequencyTableT &FreqTable = PipelineStateStack.back().FreqTable;
+  if (FreqTable.find(PassID) == FreqTable.end())
+    FreqTable[PassID] = 0;
+
+  PipelineStateStack.push_back(PipelineStateStackFrame(PassID));
+}
+
+void DumpIRInstrumentation::popPass(StringRef PassID) {
+  PipelineStateStack.pop_back();
+  assert(!PipelineStateStack.empty());
+
+  PassRunsFrequencyTableT &FreqTable = PipelineStateStack.back().FreqTable;
+  assert(FreqTable.find(PassID) != FreqTable.end());
+  FreqTable[PassID]++;
+  PipelineStateStack.back().PassCount++;
+}
+
+StringRef DumpIRInstrumentation::fetchInstrumentationDumpDirectory() {
+  if (!InstrumentationDumpDirectory.empty())
+    return InstrumentationDumpDirectory;
+
+  if (!irInstrumentationDumpDirectory().empty())
+    return irInstrumentationDumpDirectory();
+
+  std::error_code EC =
+      sys::fs::createUniqueDirectory("dumped-ir", InstrumentationDumpDirectory);
+  if (EC)
+    report_fatal_error(
+        Twine("Failed to create unique directory for IR dumping: ") +
+        EC.message());
+
+  return InstrumentationDumpDirectory;
+}
+
+SmallString<16>
+DumpIRInstrumentation::fetchCurrentInstrumentationDumpFile(StringRef Suffix) {
+  SmallString<16> OutputPath;
+  sys::path::append(OutputPath, fetchInstrumentationDumpDirectory());
+  assert(CurrentModule);
+  sys::path::append(OutputPath, CurrentModule->getName());
+  auto *StateStackIt = PipelineStateStack.begin();
+  // Skip over the first frame in the stack which represents the module being
+  // processed
+  for (++StateStackIt; StateStackIt != PipelineStateStack.end();
+       ++StateStackIt) {
+    SmallString<8> PathComponentName;
+    // Check the previous frame's pass count to see how many passes of
+    // any kind have run on this "nesting level".
+    unsigned int PassCount = (StateStackIt - 1)->PassCount;
+    PathComponentName += std::to_string(PassCount);
+    PathComponentName += ".";
+    // Check the previous frame's frequency table to see how many times
+    // this pass has run at this "nesting level".
+    PassRunsFrequencyTableT &FreqTable = (StateStackIt - 1)->FreqTable;
+    StringRef FramePassID = StateStackIt->PassID;
+    PathComponentName += FramePassID;
+    PathComponentName += ".";
+    assert(FreqTable.find(FramePassID) != FreqTable.end() &&
+           "DumpIRInstrumentation pass frequency table missing entry");
+    // Make sure the uint is converted to a character and not interpretted as
+    // one
+    PathComponentName += std::to_string(FreqTable[FramePassID]);
+    sys::path::append(OutputPath, PathComponentName);
+  }
+  OutputPath += Suffix;
+
+  // Make sure the directory we wish to write our log file into exists.
+  StringRef ParentDirectory = sys::path::parent_path(OutputPath);
+  if (!ParentDirectory.empty()) {
+    if (auto EC = llvm::sys::fs::create_directories(ParentDirectory)) {
+      report_fatal_error(Twine("Failed to create directory '") +
+                         ParentDirectory + "' :" + EC.message());
+    }
+  }
+
+  return OutputPath;
 }
 
 void OptNoneInstrumentation::registerCallbacks(
@@ -2288,6 +2465,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
+  DumpIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
   OptNone.registerCallbacks(PIC);

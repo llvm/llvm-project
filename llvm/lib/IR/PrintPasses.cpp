@@ -33,6 +33,31 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
                                    llvm::cl::desc("Print IR after each pass"),
                                    cl::init(false), cl::Hidden);
 
+static cl::list<std::string>
+    DumpBefore("dump-before",
+               llvm::cl::desc("Dump IR to a file before specified passes"),
+               cl::CommaSeparated, cl::Hidden);
+
+static cl::list<std::string>
+    DumpAfter("dump-after",
+              llvm::cl::desc("Dump IR to a file after specified passes"),
+              cl::CommaSeparated, cl::Hidden);
+
+static cl::opt<bool>
+    DumpBeforeAll("dump-before-all",
+                  llvm::cl::desc("Dump IR to a file before each pass"),
+                  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    DumpAfterAll("dump-after-all",
+                 llvm::cl::desc("Dump IR to a file after each pass"),
+                 cl::init(false), cl::Hidden);
+
+static cl::opt<std::string> DumpDirectory(
+    "ir-dump-directory",
+    llvm::cl::desc("A directory to dump IR log files into before and after "
+                   "passes as specified using -dump-before / -dump-after"),
+    cl::init(""), cl::Hidden, cl::value_desc("filename"));
+
 // Print out the IR after passes, similar to -print-after-all except that it
 // only prints the IR after passes that change the IR. Those passes that do not
 // make changes to the IR are reported as not making any changes. In addition,
@@ -138,6 +163,35 @@ std::vector<std::string> llvm::printBeforePasses() {
 std::vector<std::string> llvm::printAfterPasses() {
   return std::vector<std::string>(PrintAfter);
 }
+
+bool llvm::shouldDumpBeforeSomePass() {
+  return DumpBeforeAll || !DumpBefore.empty();
+}
+
+bool llvm::shouldDumpAfterSomePass() {
+  return DumpAfterAll || !DumpAfter.empty();
+}
+
+bool llvm::shouldDumpBeforeAll() { return DumpBeforeAll; }
+
+bool llvm::shouldDumpAfterAll() { return DumpAfterAll; }
+
+bool llvm::shouldDumpBeforePass(StringRef PassID) {
+  return DumpBeforeAll || llvm::is_contained(DumpBefore, PassID);
+}
+
+bool llvm::shouldDumpAfterPass(StringRef PassID) {
+  return DumpAfterAll || llvm::is_contained(DumpAfter, PassID);
+}
+std::vector<std::string> llvm::dumpBeforePasses() {
+  return std::vector<std::string>(DumpBefore);
+}
+
+std::vector<std::string> llvm::dumpAfterPasses() {
+  return std::vector<std::string>(DumpAfter);
+}
+
+StringRef llvm::irInstrumentationDumpDirectory() { return DumpDirectory; }
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 

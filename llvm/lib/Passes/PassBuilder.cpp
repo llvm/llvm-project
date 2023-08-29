@@ -386,7 +386,8 @@ AnalysisKey NoOpLoopAnalysis::Key;
 /// We currently only use this for --print-before/after.
 bool shouldPopulateClassToPassNames() {
   return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty();
+         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
+         !dumpAfterPasses().empty() || !dumpBeforePasses().empty();
 }
 
 // A pass for testing -print-on-crash.

@@ -1,0 +1,76 @@
+; This first run is intended to test that the -dump* write an appropriate amount of IR to the file for different types of passes
+
+; RUN: opt %s -disable-output -passes='no-op-module,function(no-op-function),function(loop(no-op-loop)),no-op-module' -ir-dump-directory %t/logs -dump-after=no-op-module,no-op-function,no-op-loop -dump-before=no-op-module,no-op-function,no-op-loop
+
+; RUN: cat '%t/logs/%s/0.NoOpModulePass.0-before.ll' | FileCheck %s --check-prefix=MODULE-PASS --check-prefix=MODULE-PASS-BEFORE -DSOURCE_FILE_NAME=%s
+; RUN: cat '%t/logs/%s/0.NoOpModulePass.0-after.ll' | FileCheck %s --check-prefix=MODULE-PASS --check-prefix=MODULE-PASS-AFTER -DSOURCE_FILE_NAME=%s
+
+; MODULE-PASS-BEFORE: *** IR Dump Before NoOpModulePass on [module] ***
+; MODULE-PASS-AFTER: *** IR Dump After NoOpModulePass on [module] ***
+; MODULE-PASS: ; ModuleID = '[[SOURCE_FILE_NAME]]'
+; MODULE-PASS: source_filename = "[[SOURCE_FILE_NAME]]"
+; MODULE-PASS: define void @foo() {
+; MODULE-PASS:   ret void
+; MODULE-PASS: }
+; MODULE-PASS: define void @bar() {
+; MODULE-PASS: entry:
+; MODULE-PASS:   br label %loop
+; MODULE-PASS: loop:
+; MODULE-PASS:   br label %loop
+; MODULE-PASS: }
+
+; RUN: cat '%t/logs/%s/1.ModuleToFunctionPassAdaptor.0/0.PassManager<llvm::Function>.0/0.NoOpFunctionPass.0-before.ll' | FileCheck %s --check-prefix=FUNCTION-PASS-FOO --check-prefix=FUNCTION-PASS-FOO-BEFORE
+; RUN: cat '%t/logs/%s/1.ModuleToFunctionPassAdaptor.0/0.PassManager<llvm::Function>.0/0.NoOpFunctionPass.0-after.ll' | FileCheck %s --check-prefix=FUNCTION-PASS-FOO --check-prefix=FUNCTION-PASS-FOO-AFTER
+
+; FUNCTION-PASS-FOO-BEFORE: *** IR Dump Before NoOpFunctionPass on foo ***
+; FUNCTION-PASS-FOO-AFTER: *** IR Dump After NoOpFunctionPass on foo ***
+; FUNCTION-PASS-FOO: define void @foo() {
+; FUNCTION-PASS-FOO:   ret void
+; FUNCTION-PASS-FOO: }
+
+; RUN: cat '%t/logs/%s/1.ModuleToFunctionPassAdaptor.0/1.PassManager<llvm::Function>.1/0.NoOpFunctionPass.0-before.ll' | FileCheck %s --check-prefix=FUNCTION-PASS-BAR --check-prefix=FUNCTION-PASS-BAR-BEFORE
+; RUN: cat '%t/logs/%s/1.ModuleToFunctionPassAdaptor.0/1.PassManager<llvm::Function>.1/0.NoOpFunctionPass.0-after.ll' | FileCheck %s --check-prefix=FUNCTION-PASS-BAR --check-prefix=FUNCTION-PASS-BAR-AFTER
+
+; FUNCTION-PASS-BAR-BEFORE: *** IR Dump Before NoOpFunctionPass on bar ***
+; FUNCTION-PASS-BAR-AFTER:  *** IR Dump After NoOpFunctionPass on bar ***
+; FUNCTION-PASS-BAR: define void @bar() {
+; FUNCTION-PASS-BAR: entry:
+; FUNCTION-PASS-BAR:     br label %loop
+; FUNCTION-PASS-BAR: loop:
+; FUNCTION-PASS-BAR:     br label %loop
+; FUNCTION-PASS-BAR: }
+
+; RUN: cat '%t/logs/%s/2.ModuleToFunctionPassAdaptor.1/1.PassManager<llvm::Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<llvm::Loop, llvm::AnalysisManager<llvm::Loop, llvm::LoopStandardAnalysisResults&>, llvm::LoopStandardAnalysisResults&, llvm::LPMUpdater&>.0/0.NoOpLoopPass.0-before.ll' | FileCheck %s --check-prefix=LOOP-PASS --check-prefix=LOOP-PASS-BEFORE
+; RUN: cat '%t/logs/%s/2.ModuleToFunctionPassAdaptor.1/1.PassManager<llvm::Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<llvm::Loop, llvm::AnalysisManager<llvm::Loop, llvm::LoopStandardAnalysisResults&>, llvm::LoopStandardAnalysisResults&, llvm::LPMUpdater&>.0/0.NoOpLoopPass.0-after.ll' | FileCheck %s --check-prefix=LOOP-PASS --check-prefix=LOOP-PASS-AFTER
+
+; LOOP-PASS-BEFORE: *** IR Dump Before NoOpLoopPass on loop ***
+; LOOP-PASS-AFTER:  *** IR Dump After NoOpLoopPass on loop ***
+; LOOP-PASS: entry:
+; LOOP-PASS:   br label %loop
+; LOOP-PASS: ; Loop:
+; LOOP-PASS: loop:
+; LOOP-PASS:   br label %loop
+
+; This test verifies that dumping before and after really does dump before and after
+
+; RUN: rm -rf %t/logs
+; RUN: opt -S %s -passes=globaldce -ir-dump-directory %t/logs -dump-before=globaldce -dump-after=globaldce > %t/output.ll
+; Just compare the last few lines of all files to remove comments and header inserted by the logging
+; RUN: tail -n 11 %s > %t/normalized-input.ll
+; RUN: tail -n 11 %t/output.ll > %t/normalized-output.ll
+; RUN: tail -n 11 '%t/logs/%s/0.GlobalDCEPass.0-before.ll' > %t/normalized-before.ll
+; RUN: tail -n 11 '%t/logs/%s/0.GlobalDCEPass.0-after.ll' > %t/normalized-after.ll
+; RUN: diff %t/normalized-input.ll %t/normalized-before.ll
+; RUN: diff %t/normalized-output.ll %t/normalized-after.ll
+
+define void @foo() {
+  ret void
+}
+
+define void @bar() {
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  br label %loop
+}
