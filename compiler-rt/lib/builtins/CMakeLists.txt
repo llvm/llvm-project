@@ -362,7 +362,7 @@ if (NOT MSVC)
   if (WIN32)
     set(i386_SOURCES
       ${i386_SOURCES}
-      i386/chkstk2.S
+      i386/chkstk.S
     )
   endif()
 else () # MSVC
