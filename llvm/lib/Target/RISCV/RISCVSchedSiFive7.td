@@ -774,11 +774,12 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar Cycles = SiFive7GetReductionCycles<mx, sew>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    let Latency = Cycles, ReleaseAtCycles = [Cycles] in
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SiFive7VA],
-                                   mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SiFive7VA],
-                                   mx, sew, IsWorstCase>;
+    let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SiFive7VA],
+                                     mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SiFive7VA],
+                                     mx, sew, IsWorstCase>;
+    }
   }
 }
 
