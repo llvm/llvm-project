@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Driver/Options.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang;
 
@@ -112,4 +115,14 @@ AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr) {
       .Default(llvm::AsanDetectStackUseAfterReturnMode::Invalid);
 }
 
+bool isExecuteOnlyTarget(const llvm::Triple &Triple,
+                         const llvm::opt::ArgList &Args) {
+  if (Triple.isPS5())
+    return true;
+
+  // On Arm, the clang `-mexecute-only` option is used to generate the
+  // execute-only output (no data access to code sections).
+  return Args.hasFlag(clang::driver::options::OPT_mexecute_only,
+                      clang::driver::options::OPT_mno_execute_only, false);
+}
 } // namespace clang
