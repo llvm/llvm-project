@@ -149,7 +149,7 @@ class CanonicalizerAllocator : public FoldingNodeAllocator {
       // Node is pre-existing; check if it's in our remapping table.
       if (auto *N = Remappings.lookup(Result.first)) {
         Result.first = N;
-        assert(Remappings.find(Result.first) == Remappings.end() &&
+        assert(!Remappings.contains(Result.first) &&
                "should never need multiple remap steps");
       }
       if (Result.first == TrackedNode)
