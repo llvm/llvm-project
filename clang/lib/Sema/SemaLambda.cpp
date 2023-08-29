@@ -20,6 +20,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 using namespace clang;
@@ -2253,4 +2254,35 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Cleanup.setExprNeedsCleanups(true);
 
   return BuildBlock;
+}
+
+Sema::LambdaScopeForCallOperatorInstantiationRAII::
+    LambdaScopeForCallOperatorInstantiationRAII(
+        Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
+        LocalInstantiationScope &Scope)
+    : FunctionScopeRAII(SemasRef) {
+  if (!isLambdaCallOperator(FD)) {
+    FunctionScopeRAII::disable();
+    return;
+  }
+
+  if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
+    FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
+    if (const auto *FromMemTempl =
+            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
+      SemasRef.addInstantiatedCapturesToScope(
+          FD, FromMemTempl->getTemplatedDecl(), Scope, MLTAL);
+    }
+  }
+
+  else if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
+           FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
+    FunctionDecl *InstantiatedFrom =
+        FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization
+            ? FD->getInstantiatedFromMemberFunction()
+            : FD->getInstantiatedFromDecl();
+    SemasRef.addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL);
+  }
+
+  SemasRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 }
