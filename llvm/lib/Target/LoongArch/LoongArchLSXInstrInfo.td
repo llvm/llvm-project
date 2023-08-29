@@ -145,7 +145,7 @@ def lsxsplati32 : PatFrag<(ops node:$e0),
 def lsxsplati64 : PatFrag<(ops node:$e0),
                           (v2i64 (build_vector node:$e0, node:$e0))>;
 
-def to_valide_timm : SDNodeXForm<timm, [{
+def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
   return CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
 }]>;
@@ -1639,10 +1639,10 @@ foreach Inst = ["VEXTH_Q_D", "VEXTH_QU_DU", "VMSKLTZ_D",
 // Pat<(Intrinsic timm:$imm)
 //     (LAInst timm:$imm)>;
 def : Pat<(int_loongarch_lsx_vldi timm:$imm),
-          (VLDI (to_valide_timm timm:$imm))>;
+          (VLDI (to_valid_timm timm:$imm))>;
 foreach Inst = ["VREPLI_B", "VREPLI_H", "VREPLI_W", "VREPLI_D"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret timm:$imm),
-            (!cast<LAInst>("Pseudo"#Inst) (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>("Pseudo"#Inst) (to_valid_timm timm:$imm))>;
 
 // vty: v16i8/v8i16/v4i32/v2i64
 // Pat<(Intrinsic vty:$vj, timm:$imm)
@@ -1652,25 +1652,25 @@ foreach Inst = ["VSAT_B", "VSAT_BU", "VNORI_B", "VROTRI_B", "VSLLWIL_H_B",
                 "VSEQI_B", "VSLEI_B", "VSLEI_BU", "VSLTI_B", "VSLTI_BU",
                 "VREPLVEI_B", "VBSLL_V", "VBSRL_V", "VSHUF4I_B"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v16i8 LSX128:$vj), timm:$imm),
-            (!cast<LAInst>(Inst) LSX128:$vj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LSX128:$vj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSAT_H", "VSAT_HU", "VROTRI_H", "VSLLWIL_W_H",
                 "VSLLWIL_WU_HU", "VSRLRI_H", "VSRARI_H",
                 "VSEQI_H", "VSLEI_H", "VSLEI_HU", "VSLTI_H", "VSLTI_HU",
                 "VREPLVEI_H", "VSHUF4I_H"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v8i16 LSX128:$vj), timm:$imm),
-            (!cast<LAInst>(Inst) LSX128:$vj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LSX128:$vj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSAT_W", "VSAT_WU", "VROTRI_W", "VSLLWIL_D_W",
                 "VSLLWIL_DU_WU", "VSRLRI_W", "VSRARI_W",
                 "VSEQI_W", "VSLEI_W", "VSLEI_WU", "VSLTI_W", "VSLTI_WU",
                 "VREPLVEI_W", "VSHUF4I_W"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4i32 LSX128:$vj), timm:$imm),
-            (!cast<LAInst>(Inst) LSX128:$vj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LSX128:$vj, (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSAT_D", "VSAT_DU", "VROTRI_D", "VSRLRI_D", "VSRARI_D",
                 "VSEQI_D", "VSLEI_D", "VSLEI_DU", "VSLTI_D", "VSLTI_DU",
                 "VPICKVE2GR_D", "VPICKVE2GR_DU",
                 "VREPLVEI_D"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2i64 LSX128:$vj), timm:$imm),
-            (!cast<LAInst>(Inst) LSX128:$vj, (to_valide_timm timm:$imm))>;
+            (!cast<LAInst>(Inst) LSX128:$vj, (to_valid_timm timm:$imm))>;
 
 // vty: v16i8/v8i16/v4i32/v2i64
 // Pat<(Intrinsic vty:$vd, vty:$vj, timm:$imm)
@@ -1682,7 +1682,7 @@ foreach Inst = ["VSRLNI_B_H", "VSRANI_B_H", "VSRLRNI_B_H", "VSRARNI_B_H",
   def : Pat<(deriveLSXIntrinsic<Inst>.ret
                (v16i8 LSX128:$vd), (v16i8 LSX128:$vj), timm:$imm),
             (!cast<LAInst>(Inst) LSX128:$vd, LSX128:$vj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSRLNI_H_W", "VSRANI_H_W", "VSRLRNI_H_W", "VSRARNI_H_W",
                 "VSSRLNI_H_W", "VSSRANI_H_W", "VSSRLNI_HU_W", "VSSRANI_HU_W",
                 "VSSRLRNI_H_W", "VSSRARNI_H_W", "VSSRLRNI_HU_W", "VSSRARNI_HU_W",
@@ -1690,7 +1690,7 @@ foreach Inst = ["VSRLNI_H_W", "VSRANI_H_W", "VSRLRNI_H_W", "VSRARNI_H_W",
   def : Pat<(deriveLSXIntrinsic<Inst>.ret
                (v8i16 LSX128:$vd), (v8i16 LSX128:$vj), timm:$imm),
             (!cast<LAInst>(Inst) LSX128:$vd, LSX128:$vj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSRLNI_W_D", "VSRANI_W_D", "VSRLRNI_W_D", "VSRARNI_W_D",
                 "VSSRLNI_W_D", "VSSRANI_W_D", "VSSRLNI_WU_D", "VSSRANI_WU_D",
                 "VSSRLRNI_W_D", "VSSRARNI_W_D", "VSSRLRNI_WU_D", "VSSRARNI_WU_D",
@@ -1698,7 +1698,7 @@ foreach Inst = ["VSRLNI_W_D", "VSRANI_W_D", "VSRLRNI_W_D", "VSRARNI_W_D",
   def : Pat<(deriveLSXIntrinsic<Inst>.ret
                (v4i32 LSX128:$vd), (v4i32 LSX128:$vj), timm:$imm),
             (!cast<LAInst>(Inst) LSX128:$vd, LSX128:$vj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 foreach Inst = ["VSRLNI_D_Q", "VSRANI_D_Q", "VSRLRNI_D_Q", "VSRARNI_D_Q",
                 "VSSRLNI_D_Q", "VSSRANI_D_Q", "VSSRLNI_DU_Q", "VSSRANI_DU_Q",
                 "VSSRLRNI_D_Q", "VSSRARNI_D_Q", "VSSRLRNI_DU_Q", "VSSRARNI_DU_Q",
@@ -1706,7 +1706,7 @@ foreach Inst = ["VSRLNI_D_Q", "VSRANI_D_Q", "VSRLRNI_D_Q", "VSRARNI_D_Q",
   def : Pat<(deriveLSXIntrinsic<Inst>.ret
                (v2i64 LSX128:$vd), (v2i64 LSX128:$vj), timm:$imm),
             (!cast<LAInst>(Inst) LSX128:$vd, LSX128:$vj,
-               (to_valide_timm timm:$imm))>;
+               (to_valid_timm timm:$imm))>;
 
 // vty: v16i8/v8i16/v4i32/v2i64
 // Pat<(Intrinsic vty:$vd, vty:$vj, vty:$vk),
@@ -1788,36 +1788,36 @@ foreach Inst = ["VFLOGB_D", "VFCLASS_D", "VFSQRT_D", "VFRECIP_D", "VFRSQRT_D",
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),
-          (VLD GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VLD GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lsx_vldx GPR:$rj, GPR:$rk),
           (VLDX GPR:$rj, GPR:$rk)>;
 
 def : Pat<(int_loongarch_lsx_vldrepl_b GPR:$rj, timm:$imm),
-          (VLDREPL_B GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VLDREPL_B GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lsx_vldrepl_h GPR:$rj, timm:$imm),
-          (VLDREPL_H GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VLDREPL_H GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lsx_vldrepl_w GPR:$rj, timm:$imm),
-          (VLDREPL_W GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VLDREPL_W GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lsx_vldrepl_d GPR:$rj, timm:$imm),
-          (VLDREPL_D GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VLDREPL_D GPR:$rj, (to_valid_timm timm:$imm))>;
 
 // store
 def : Pat<(int_loongarch_lsx_vst LSX128:$vd, GPR:$rj, timm:$imm),
-          (VST LSX128:$vd, GPR:$rj, (to_valide_timm timm:$imm))>;
+          (VST LSX128:$vd, GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lsx_vstx LSX128:$vd, GPR:$rj, GPR:$rk),
           (VSTX LSX128:$vd, GPR:$rj, GPR:$rk)>;
 
 def : Pat<(int_loongarch_lsx_vstelm_b v16i8:$vd, GPR:$rj, timm:$imm, timm:$idx),
-          (VSTELM_B v16i8:$vd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (VSTELM_B v16i8:$vd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lsx_vstelm_h v8i16:$vd, GPR:$rj, timm:$imm, timm:$idx),
-          (VSTELM_H v8i16:$vd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (VSTELM_H v8i16:$vd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lsx_vstelm_w v4i32:$vd, GPR:$rj, timm:$imm, timm:$idx),
-          (VSTELM_W v4i32:$vd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (VSTELM_W v4i32:$vd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 def : Pat<(int_loongarch_lsx_vstelm_d v2i64:$vd, GPR:$rj, timm:$imm, timm:$idx),
-          (VSTELM_D v2i64:$vd, GPR:$rj, (to_valide_timm timm:$imm),
-                    (to_valide_timm timm:$idx))>;
+          (VSTELM_D v2i64:$vd, GPR:$rj, (to_valid_timm timm:$imm),
+                    (to_valid_timm timm:$idx))>;
 
 } // Predicates = [HasExtLSX]

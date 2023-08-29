@@ -11,7 +11,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects padding_dimensions to contain positive integers, found [1, -7]}}
-  transform.structured.pad %arg0 {padding_dimensions=[1, -7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 {padding_dimensions=[1, -7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -19,7 +19,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects pack_paddings to contain booleans (0/1), found [1, 7]}}
-  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -27,7 +27,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects transpose_paddings to be a permutation, found [1, 1]}}
-  transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----

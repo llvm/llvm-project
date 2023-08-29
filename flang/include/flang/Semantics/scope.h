@@ -249,9 +249,6 @@ public:
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
-  // Find the smallest scope under this one that contains source
-  const Scope *FindScope(parser::CharBlock) const;
-  Scope *FindScope(parser::CharBlock);
 
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,

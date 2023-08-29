@@ -425,6 +425,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           return true;
         }
 
+        // Continued template parameter.
+        if (Changes[ScopeStart - 1].Tok->is(TT_TemplateOpener))
+          return true;
+
         return false;
       };
 

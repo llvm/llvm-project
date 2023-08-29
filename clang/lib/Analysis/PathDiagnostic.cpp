@@ -584,6 +584,7 @@ PathDiagnosticLocation
 PathDiagnosticLocation::createBegin(const Stmt *S,
                                     const SourceManager &SM,
                                     LocationOrAnalysisDeclContext LAC) {
+  assert(S && "Statement cannot be null");
   return PathDiagnosticLocation(getValidSourceLocation(S, LAC),
                                 SM, SingleLocK);
 }

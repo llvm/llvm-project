@@ -414,6 +414,51 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
   }];
 }
 
+def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
+    AllTypesMatch<["tile", "result"]>,
+    TypesMatchWith<
+      "type of 'vector' matches type of 'tile' slice",
+      "tile", "vector",
+      "VectorType::get("
+        "::llvm::cast<mlir::VectorType>($_self).getShape().drop_front(),"
+        "::llvm::cast<mlir::VectorType>($_self).getElementType(),"
+        "/*scalableDims=*/{true})">,
+]> {
+  let summary = "Move 1-D scalable vector to slice of 2-D tile";
+  let description = [{
+    The vector to tile slice operation moves a 1-D scalable vector to a slice
+    of a 2-D scalable vector tile at the given index. The type of the 1-D
+    scalable vector to be moved must match the type of the tile slice. A tile
+    slice is a 1-D vector of horizontally or vertically contiguous elements
+    within a ZA tile. Horizontal tile slices are currently assumed when
+    lowering to intrinsics. The updated tile is returned as the result.
+
+    Example 1: Move a vector<[16]xi8> into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[16]xi8> into vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Move a vector<[2]xf64> into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[2]xf64> into vector<[2]x[2]xf64>
+    ```
+  }];
+  let arguments = (ins
+      SVEVector:$vector, SMETile:$tile, Index:$tile_slice_index);
+  let results = (outs SMETile:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getTileType() {
+      return ::llvm::cast<VectorType>(getTile().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $vector `,` $tile `,` $tile_slice_index
+      attr-dict `:` type($vector) `into` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME Intrinsic op definitions
 //===----------------------------------------------------------------------===//
