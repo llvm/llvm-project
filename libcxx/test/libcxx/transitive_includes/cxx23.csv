@@ -152,7 +152,9 @@ deque stdexcept
 deque tuple
 deque version
 exception cstddef
+exception cstdint
 exception cstdlib
+exception type_traits
 exception version
 execution cstddef
 execution version
@@ -251,6 +253,7 @@ future ratio
 future stdexcept
 future string
 future thread
+future type_traits
 future typeinfo
 future version
 initializer_list cstddef

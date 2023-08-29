@@ -220,6 +220,7 @@ deque type_traits
 deque typeinfo
 deque version
 exception cstddef
+exception cstdint
 exception cstdlib
 exception type_traits
 exception version

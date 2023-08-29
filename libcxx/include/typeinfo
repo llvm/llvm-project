@@ -59,7 +59,6 @@ public:
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__typeinfo/typeinfo.h>
-#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
