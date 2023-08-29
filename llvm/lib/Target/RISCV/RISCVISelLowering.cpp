@@ -3559,9 +3559,11 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     if ((LoC >> 31) == HiC)
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Lo, VL);
 
-    // If vl is equal to XLEN_MAX and Hi constant is equal to Lo, we could use
+    // If vl is equal to VLMAX and Hi constant is equal to Lo, we could use
     // vmv.v.x whose EEW = 32 to lower it.
-    if (LoC == HiC && isAllOnesConstant(VL)) {
+    if (LoC == HiC && (isAllOnesConstant(VL) ||
+                       (isa<RegisterSDNode>(VL) &&
+                        cast<RegisterSDNode>(VL)->getReg() == RISCV::X0))) {
       MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
       // TODO: if vl <= min(VLMAX), we can also do this. But we could not
       // access the subtarget here now.
