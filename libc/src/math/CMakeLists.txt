@@ -85,6 +85,7 @@ add_math_entrypoint_object(expf)
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
 
+add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 
 add_math_entrypoint_object(expm1f)
