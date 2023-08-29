@@ -73,7 +73,13 @@ void CIRGenModule::buildGlobalVarDeclInit(const VarDecl *D,
     assert(!UnimplementedFeature::addressSpace());
 
     if (!T->isReferenceType()) {
-      codegenGlobalInitCxxStructor(D, Addr);
+      bool NeedsDtor =
+          D->needsDestruction(getASTContext()) == QualType::DK_cxx_destructor;
+      assert(!isTypeConstant(D->getType(), true, !NeedsDtor) &&
+             "invaraint-typed initialization NYI");
+
+      if (PerformInit || NeedsDtor)
+        codegenGlobalInitCxxStructor(D, Addr, PerformInit, NeedsDtor);
       return;
     }
   }

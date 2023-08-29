@@ -33,10 +33,14 @@ module {
     #cir.global_view<@type_info_A> : !cir.ptr<!s8i>}>
   : !cir.struct<struct "" {!cir.ptr<!s8i>, !cir.ptr<!s8i>, !cir.ptr<!s8i>}>
   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>, !s8i)
+  cir.func private @_ZN4InitD1Ev(!cir.ptr<!ty_22Init22>)
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
     %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
     %1 = cir.const(#cir.int<3> : !s8i) : !s8i
     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !s8i) -> ()
+  } dtor {
+    %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
+    cir.call @_ZN4InitD1Ev(%0) : (!cir.ptr<!ty_22Init22>) -> ()
   }
 }
 

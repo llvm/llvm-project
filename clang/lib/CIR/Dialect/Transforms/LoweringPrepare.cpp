@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 
 using namespace mlir;
@@ -129,6 +130,13 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     assert(!op.getAst()->getAstDecl()->getAttr<clang::InitPriorityAttr>() &&
            "custom initialization priority NYI");
     dynamicInitializers.push_back(f);
+  }
+
+  auto &dtorRegion = op.getDtorRegion();
+  if (!dtorRegion.empty()) {
+    // TODO: handle destructor
+    // Clear the dtor region
+    dtorRegion.getBlocks().clear();
   }
 }
 
