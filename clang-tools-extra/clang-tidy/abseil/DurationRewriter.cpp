@@ -278,7 +278,7 @@ std::string rewriteExprFromNumberToDuration(
     return *MaybeRewrite;
 
   if (isLiteralZero(Result, RootNode))
-    return std::string("absl::ZeroDuration()");
+    return {"absl::ZeroDuration()"};
 
   return (llvm::Twine(getDurationFactoryForScale(Scale)) + "(" +
           simplifyDurationFactoryArg(Result, RootNode) + ")")
@@ -296,7 +296,7 @@ std::string rewriteExprFromNumberToTime(
     return *MaybeRewrite;
 
   if (isLiteralZero(Result, RootNode))
-    return std::string("absl::UnixEpoch()");
+    return {"absl::UnixEpoch()"};
 
   return (llvm::Twine(getTimeFactoryForScale(Scale)) + "(" +
           tooling::fixit::getText(RootNode, *Result.Context) + ")")

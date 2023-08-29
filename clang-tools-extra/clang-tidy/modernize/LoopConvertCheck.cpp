@@ -38,7 +38,7 @@ template <> struct OptionEnumMapping<modernize::Confidence::Level> {
         Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
                      {modernize::Confidence::CL_Safe, "safe"},
                      {modernize::Confidence::CL_Risky, "risky"}};
-    return ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -51,7 +51,7 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
                      {modernize::VariableNamer::NS_CamelBack, "camelBack"},
                      {modernize::VariableNamer::NS_LowerCase, "lower_case"},
                      {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
-    return ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -465,7 +465,7 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
       SourceMgr.getFileID(Range.getEnd())) {
-    return StringRef(); // Empty string.
+    return {}; // Empty string.
   }
 
   return Lexer::getSourceText(CharSourceRange(Range, true), SourceMgr,
