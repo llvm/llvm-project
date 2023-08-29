@@ -44,6 +44,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -81,8 +82,20 @@ using namespace llvm;
 
 STATISTIC(NumArgumentsPromoted, "Number of pointer arguments promoted");
 STATISTIC(NumArgumentsDead, "Number of dead pointer args eliminated");
+STATISTIC(NumExternPromotions, "Number of extern functions promoted");
 
 namespace {
+
+enum ExternPromotionOption { Always, Never, ThinLTOPreLink };
+
+cl::opt<ExternPromotionOption> ExternPromotion(
+    "argpromotion-extern-promotion",
+    cl::desc("Whether or not to wrap and promote extern functions"),
+    cl::values(clEnumValN(Always, "always", "Always try"),
+               clEnumValN(Never, "never", "Never try"),
+               clEnumValN(ThinLTOPreLink, "thinltoprelink",
+                          "Try only during ThinLTO prelink")),
+    cl::init(ThinLTOPreLink));
 
 struct ArgPart {
   Type *Ty;
@@ -424,7 +437,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 /// specified function argument.
 static bool allCallersPassValidPointerForArgument(Argument *Arg,
                                                   Align NeededAlign,
-                                                  uint64_t NeededDerefBytes) {
+                                                  uint64_t NeededDerefBytes, bool HasLocalLinkage) {
   Function *Callee = Arg->getParent();
   const DataLayout &DL = Callee->getParent()->getDataLayout();
   APInt Bytes(64, NeededDerefBytes);
@@ -434,18 +447,105 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
-  // direct callees.
-  return all_of(Callee->users(), [&](User *U) {
+  // direct callees, unless the function is visible externally.
+  return HasLocalLinkage && all_of(Callee->users(), [&](User *U) {
     CallBase &CB = cast<CallBase>(*U);
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
                                               NeededAlign, Bytes, DL);
   });
 }
 
+/// Generate a wrapper around F that allows F to be argpromoted even if its
+/// linkage would otherwise not permit changing its signature. Returns whether
+/// or not we wrapped the function.
+static bool wrapForExternPromotion(Function *F) {
+  // Don't argpromote an already argpromoted function.  Note that in a ThinLTO
+  // context, we might not know its name (which can change due to ThinLTO's
+  // linkage fiddling).
+  if (F->getName().contains(".argpromoted")) {
+    return false;
+  }
+
+  if (F->getSection() == "__llvm_argpromotion_wrappers") {
+    return false;
+  }
+
+  // A function with one of these is likely trying to do something tricky in a
+  // way that could break if we split up a function and its "real"
+  // implementation.
+  if (F->getSection() != "" || F->hasPrefixData() || F->hasPrologueData())
+    return false;
+
+  // There's some unresolved bug here when a byval parameter is followed by
+  // argpromoted values.
+  for (Argument &Arg : F->args()) {
+    if (Arg.hasByValAttr()) {
+      return false;
+    }
+  }
+
+  switch (F->getLinkage()) {
+  case GlobalValue::InternalLinkage:
+  case GlobalValue::PrivateLinkage:
+    llvm_unreachable("Trying to wrap an internal function");
+    break;
+  case GlobalValue::WeakAnyLinkage:
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::ExternalWeakLinkage:
+  case GlobalValue::AvailableExternallyLinkage:
+  // Don't think these should be possible for functions?
+  case GlobalValue::CommonLinkage:
+  case GlobalValue::AppendingLinkage:
+    return false;
+
+  case GlobalValue::ExternalLinkage:
+  case GlobalValue::LinkOnceODRLinkage:
+  case GlobalValue::WeakODRLinkage:
+    break;
+  }
+
+  // If we made it here, we're going to argpromote the function.
+
+  std::string Name = F->getName().str();
+  F->setName(Name + ".argpromoted");
+  // Need to copy over linkage to WF before we change it.
+  Function *WF = Function::Create(F->getFunctionType(), F->getLinkage(),
+                                  F->getAddressSpace(), Name, F->getParent());
+  WF->copyAttributesFrom(F);
+  WF->setCallingConv(F->getCallingConv());
+  WF->setSection("__llvm_argpromotion_wrappers");
+
+  // Different modules might argpromote the same function in different ways
+  // depending on things like inlining decisions, so it's not safe to "split up"
+  // a wrapper and the wrapped function (and risk getting them from different
+  // modules). So the wrapper gets the original linkage, but the wrapee has to
+  // be internal.
+  F->setLinkage(GlobalValue::InternalLinkage);
+
+  WF->removeFnAttr(Attribute::AttrKind::NoInline);
+  WF->addFnAttr(Attribute::AttrKind::AlwaysInline);
+
+  SmallVector<Value *, 8> Args;
+  for (Argument &Arg : WF->args()) {
+    Args.push_back(&Arg);
+  }
+
+  BasicBlock *BB = BasicBlock::Create(WF->getContext(), "entry", WF);
+  IRBuilder<NoFolder> IRB(BB);
+  CallInst *Call = IRB.CreateCall(F, Args);
+  Call->setCallingConv(F->getCallingConv());
+  if (WF->getReturnType()->isVoidTy()) {
+    IRB.CreateRetVoid();
+  } else {
+    IRB.CreateRet(Call);
+  }
+  return true;
+}
+
 /// Determine that this argument is safe to promote, and find the argument
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
-                         unsigned MaxElements, bool IsRecursive,
+                         unsigned MaxElements, bool IsRecursive, bool HasLocalLinkage,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
@@ -619,7 +719,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   if (NeededDerefBytes || NeededAlign > 1) {
     // Try to prove a required deref / aligned requirement.
     if (!allCallersPassValidPointerForArgument(Arg, NeededAlign,
-                                               NeededDerefBytes)) {
+                                               NeededDerefBytes, HasLocalLinkage)) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "not dereferenceable or aligned\n");
       return false;
@@ -698,15 +798,12 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 /// example, all callers are direct).  If safe to promote some arguments, it
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
-                                  unsigned MaxElements, bool IsRecursive) {
+                                  unsigned MaxElements, bool IsRecursive,
+                                  bool PromoteExterns) {
   // Don't perform argument promotion for naked functions; otherwise we can end
   // up removing parameters that are seemingly 'not used' as they are referred
   // to in the assembly.
   if (F->hasFnAttribute(Attribute::Naked))
-    return nullptr;
-
-  // Make sure that it is local to this module.
-  if (!F->hasLocalLinkage())
     return nullptr;
 
   // Don't promote arguments for variadic functions. Adding, removing, or
@@ -761,25 +858,17 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
+  SmallVector<unsigned, 2> SretsToConvert;
   unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
   for (Argument *PtrArg : PointerArgs) {
-    // Replace sret attribute with noalias. This reduces register pressure by
-    // avoiding a register copy.
     if (PtrArg->hasStructRetAttr()) {
-      unsigned ArgNo = PtrArg->getArgNo();
-      F->removeParamAttr(ArgNo, Attribute::StructRet);
-      F->addParamAttr(ArgNo, Attribute::NoAlias);
-      for (Use &U : F->uses()) {
-        CallBase &CB = cast<CallBase>(*U.getUser());
-        CB.removeParamAttr(ArgNo, Attribute::StructRet);
-        CB.addParamAttr(ArgNo, Attribute::NoAlias);
-      }
+      SretsToConvert.push_back(PtrArg->getArgNo());
     }
 
     // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
 
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, F->hasLocalLinkage(), ArgParts)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
@@ -791,12 +880,43 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     }
   }
 
+  auto ConvertSrets = [&]() {
+    for (unsigned ArgNo : SretsToConvert) {
+      F->removeParamAttr(ArgNo, Attribute::StructRet);
+      F->addParamAttr(ArgNo, Attribute::NoAlias);
+      for (Use &U : F->uses()) {
+        CallBase &CB = cast<CallBase>(*U.getUser());
+        CB.removeParamAttr(ArgNo, Attribute::StructRet);
+        CB.addParamAttr(ArgNo, Attribute::NoAlias);
+      }
+    }
+  };
+
+  // For functions with local linkage, we always replace sret attributes with
+  // noalias. This is advantageous because on e.g. the x86-64 Sys-V ABI, the
+  // sret argument is always returned by the function as well, so swapping it
+  // for noalias reduces register pressure.
+  // If we're in a situation where we may wrap an extern function for promotion,
+  // we wait until we've decided that it's safe and advantageous, and have
+  // copied over the old calling convention to the wrapper.
+  if (F->hasLocalLinkage()) {
+    ConvertSrets();
+  }
+
   // No promotable pointer arguments.
   if (ArgsToPromote.empty())
     return nullptr;
 
   if (NumArgsAfterPromote > TTI.getMaxNumArgs())
     return nullptr;
+
+  // Make sure that it is local to this module.
+  if (!F->hasLocalLinkage()) {
+    if (!(PromoteExterns && wrapForExternPromotion(F)))
+      return nullptr;
+    ConvertSrets();
+    ++NumExternPromotions;
+  }
 
   return doPromotion(F, FAM, ArgsToPromote);
 }
@@ -805,6 +925,19 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
                                              CGSCCAnalysisManager &AM,
                                              LazyCallGraph &CG,
                                              CGSCCUpdateResult &UR) {
+  bool PromoteExterns;
+  switch (ExternPromotion) {
+  case Always:
+    PromoteExterns = true;
+    break;
+  case Never:
+    PromoteExterns = false;
+    break;
+  case ThinLTOPreLink:
+    PromoteExterns = IsThinLTOPreLink;
+    break;
+  }
+
   bool Changed = false, LocalChange;
 
   // Iterate until we stop promoting from this SCC.
@@ -817,7 +950,8 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
     bool IsRecursive = C.size() > 1;
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
-      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive);
+      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive,
+                                        PromoteExterns);
       if (!NewF)
         continue;
       LocalChange = true;

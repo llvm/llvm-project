@@ -15,6 +15,8 @@
 
 namespace llvm {
 
+static constexpr unsigned ArgPromotionDefaultMaxElements = 2;
+
 /// Argument promotion pass.
 ///
 /// This pass walks the functions in each SCC and for each one tries to
@@ -22,9 +24,12 @@ namespace llvm {
 /// direct (by-value) arguments.
 class ArgumentPromotionPass : public PassInfoMixin<ArgumentPromotionPass> {
   unsigned MaxElements;
+  bool IsThinLTOPreLink;
 
 public:
-  ArgumentPromotionPass(unsigned MaxElements = 2u) : MaxElements(MaxElements) {}
+  ArgumentPromotionPass(unsigned MaxElements = ArgPromotionDefaultMaxElements,
+                        bool IsThinLTOPreLink = false)
+      : MaxElements(MaxElements), IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);

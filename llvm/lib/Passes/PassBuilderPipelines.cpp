@@ -931,7 +931,9 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // When at O3 add argument promotion to the pass pipeline.
   // FIXME: It isn't at all clear why this should be limited to O3.
   if (Level == OptimizationLevel::O3)
-    MainCGPipeline.addPass(ArgumentPromotionPass());
+    MainCGPipeline.addPass(
+        ArgumentPromotionPass(ArgPromotionDefaultMaxElements,
+                              Phase == ThinOrFullLTOPhase::ThinLTOPreLink));
 
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
@@ -1864,7 +1866,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+      ArgumentPromotionPass(ArgPromotionDefaultMaxElements)));
 
   FunctionPassManager FPM;
   // The IPO Passes may leave cruft around. Clean up after them.
