@@ -787,23 +787,13 @@ define <8 x i32> @unary_interleave_v8i32(<8 x i32> %x) {
 ; This interleaves the first 2 elements of a vector in opposite order. With
 ; undefs for the remaining elements. We use to miscompile this.
 define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
-; V128-LABEL: unary_interleave_10uu_v4i8:
-; V128:       # %bb.0:
-; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; V128-NEXT:    vid.v v9
-; V128-NEXT:    vrsub.vi v10, v9, 1
-; V128-NEXT:    vrgather.vv v9, v8, v10
-; V128-NEXT:    vmv1r.v v8, v9
-; V128-NEXT:    ret
-;
-; V512-LABEL: unary_interleave_10uu_v4i8:
-; V512:       # %bb.0:
-; V512-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; V512-NEXT:    vid.v v9
-; V512-NEXT:    vrsub.vi v10, v9, 1
-; V512-NEXT:    vrgather.vv v9, v8, v10
-; V512-NEXT:    vmv1r.v v8, v9
-; V512-NEXT:    ret
+; CHECK-LABEL: unary_interleave_10uu_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsrl.vi v9, v8, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 8
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    ret
   %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
   ret <4 x i8> %a
 }
