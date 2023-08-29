@@ -1,6 +1,7 @@
 include "config/public_api.td"
 
 include "spec/stdc.td"
+include "spec/posix.td"
 include "spec/gpu_ext.td"
 
 def StringAPI : PublicAPI<"string.h"> {
@@ -38,5 +39,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 def TimeAPI : PublicAPI<"time.h"> {
   let Types = [
     "clock_t",
+    "time_t",
+    "struct timespec",
   ];
 }
