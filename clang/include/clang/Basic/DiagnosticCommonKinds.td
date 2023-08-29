@@ -425,13 +425,4 @@ def err_opencl_extension_and_feature_differs : Error<
   "options %0 and %1 are set to different values">;
 def err_opencl_feature_requires : Error<
   "feature %0 requires support of %1 feature">;
-
-def warn_throw_not_valid_on_target : Warning<
-  "target '%0' does not support exception handling;"
-  " 'throw' is assumed to be never reached">,
-  InGroup<OpenMPTargetException>;
-def warn_try_not_valid_on_target : Warning<
-  "target '%0' does not support exception handling;"
-  " 'catch' block is ignored">,
-  InGroup<OpenMPTargetException>;
 }
