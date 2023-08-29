@@ -23,7 +23,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         output = self.get_stdout()
         self.assertTrue(output is None or len(output) == 0)
 
-    @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
     def test_launch(self):
@@ -46,7 +45,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         time.sleep(1)
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
-    @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
     @expectedFailureNetBSD

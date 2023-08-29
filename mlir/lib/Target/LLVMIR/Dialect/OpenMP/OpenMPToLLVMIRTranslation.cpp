@@ -1884,7 +1884,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   DataLayout DL = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapOperands = targetOp.getMapOperands();
-  ArrayAttr mapTypes = targetOp.getMapTypes().value();
+  ArrayAttr mapTypes = targetOp.getMapTypes().value_or(nullptr);
 
   llvm::OpenMPIRBuilder::MapInfosTy combinedInfos;
   auto genMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)

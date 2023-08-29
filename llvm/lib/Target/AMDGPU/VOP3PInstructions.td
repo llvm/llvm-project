@@ -441,6 +441,20 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
 let SubtargetPredicate = HasDot8Insts  in {
 defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_sudot4>;
 defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_sudot8>;
+
+def : GCNPat < (int_amdgcn_sdot8 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT8_I32_IU4  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
+
+def : GCNPat < (int_amdgcn_sdot4 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT4_I32_IU8  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
 } // End SubtargetPredicate = HasDot8Insts
 
 // Does not use opsel, no src_modifiers on src0 and src1.

@@ -857,6 +857,11 @@ def warn_fortify_source_format_overflow : Warning<
   " but format string expands to at least %2">,
   InGroup<FortifySource>;
 
+def warn_fortify_source_format_truncation: Warning<
+  "'%0' will always be truncated; specified size is %1,"
+  " but format string expands to at least %2">,
+  InGroup<FortifySource>;
+
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
   "%2, but the corresponding specifier may require size %3">,
@@ -11870,7 +11875,7 @@ def err_hlsl_attr_invalid_type : Error<
 def err_hlsl_attr_invalid_ast_node : Error<
    "attribute %0 only applies to %1">;
 def err_hlsl_entry_shader_attr_mismatch : Error<
-   "%0 attribute on entry function does not match the pipeline stage">;
+   "%0 attribute on entry function does not match the target profile">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;

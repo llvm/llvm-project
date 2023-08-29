@@ -1088,6 +1088,13 @@ public:
                                               llvm::GlobalVariable *Addr,
                                               bool PerformInit);
 
+  /// Emit code for handling declare target functions in the runtime.
+  /// \param FD Declare target function.
+  /// \param Addr Address of the global \a FD.
+  /// \param PerformInit true if initialization expression is not constant.
+  virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
+                                         llvm::GlobalValue *GV);
+
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
   /// \param VarType Type of the artificial threadprivate variable.
@@ -1427,6 +1434,14 @@ public:
   /// \param ThreadLimit An integer expression of threads.
   virtual void emitNumTeamsClause(CodeGenFunction &CGF, const Expr *NumTeams,
                                   const Expr *ThreadLimit, SourceLocation Loc);
+
+  /// Emits call to void __kmpc_set_thread_limit(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 thread_limit) to generate code for
+  /// thread_limit clause on target directive
+  /// \param ThreadLimit An integer expression of threads.
+  virtual void emitThreadLimitClause(CodeGenFunction &CGF,
+                                     const Expr *ThreadLimit,
+                                     SourceLocation Loc);
 
   /// Struct that keeps all the relevant information that should be kept
   /// throughout a 'target data' region.

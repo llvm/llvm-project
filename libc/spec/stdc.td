@@ -437,6 +437,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"expf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
+          FunctionSpec<"exp2", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"expm1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 

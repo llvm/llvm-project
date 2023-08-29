@@ -14,6 +14,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_mman
     libc.include.sys_socket
     libc.include.sys_syscall
+    libc.include.sys_time
     libc.include.threads
     libc.include.time
     libc.include.unistd

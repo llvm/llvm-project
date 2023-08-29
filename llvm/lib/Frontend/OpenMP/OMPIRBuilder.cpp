@@ -5705,9 +5705,10 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
 
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          uint64_t Size, int32_t Flags,
-                                         GlobalValue::LinkageTypes) {
+                                         GlobalValue::LinkageTypes,
+                                         StringRef Name) {
   if (!Config.isGPU()) {
-    emitOffloadingEntry(ID, Addr->getName(), Size, Flags);
+    emitOffloadingEntry(ID, Name.empty() ? Addr->getName() : Name, Size, Flags);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -5867,13 +5868,20 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
 
       // Hidden or internal symbols on the device are not externally visible.
       // We should not attempt to register them by creating an offloading
-      // entry.
+      // entry. Indirect variables are handled separately on the device.
       if (auto *GV = dyn_cast<GlobalValue>(CE->getAddress()))
-        if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
+        if ((GV->hasLocalLinkage() || GV->hasHiddenVisibility()) &&
+            Flags != OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
           continue;
 
-      createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
-                         Flags, CE->getLinkage());
+      // Indirect globals need to use a special name that doesn't match the name
+      // of the associated host global.
+      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+        createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
+                           Flags, CE->getLinkage(), CE->getVarName());
+      else
+        createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
+                           Flags, CE->getLinkage());
 
     } else {
       llvm_unreachable("Unsupported entry kind.");
@@ -6218,8 +6226,13 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       }
       return;
     }
-    OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
-                                              Addr, VarSize, Flags, Linkage);
+    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+      OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
+                                                Addr, VarSize, Flags, Linkage,
+                                                VarName.str());
+    else
+      OffloadEntriesDeviceGlobalVar.try_emplace(
+          VarName, OffloadingEntriesNum, Addr, VarSize, Flags, Linkage, "");
     ++OffloadingEntriesNum;
   }
 }

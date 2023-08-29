@@ -175,9 +175,25 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
           continue;
 
         // Disallow substituitions involving regs in instrs that cannot use REX
+        // The relationship of X86 registers is shown in the diagram. BL and BH
+        // do not have a direct alias relationship. However, if the BH register
+        // cannot be swapped, then the BX/EBX/RBX registers cannot be swapped as
+        // well, which means that BL register also cannot be swapped. Therefore,
+        // in the presence of BX/EBX/RBX registers, BL and BH have an alias
+        // relationship.
+        // ┌─────────────────┐
+        // │  RBX            │
+        // ├─────┬───────────┤
+        // │     │  EBX      │
+        // ├─────┴──┬────────┤
+        // │        │   BX   │
+        // ├────────┼───┬────┤
+        // │        │BH │BL  │
+        // └────────┴───┴────┘
         if (CannotUseREX) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
+          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
           continue;
         }
 
@@ -185,6 +201,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (BC.MIB->isUpper8BitReg(Reg) && ClassicCSR.test(Reg)) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
+          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
           continue;
         }
 
@@ -369,6 +386,15 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
 
   if (!RBX)
     return false;
+
+  // The high 8 bits of the register will never be swapped. To prevent the high
+  // 8 bits from being swapped incorrectly, we should switched to swapping the
+  // low 8 bits of the register instead.
+  if (BC.MIB->isUpper8BitReg(RBX)) {
+    RBX = BC.MIB->getAliasSized(RBX, 1);
+    if (RegScore[RBX] < 0 || RegScore[RBX] > RegScore[Candidate])
+      return false;
+  }
 
   LLVM_DEBUG(dbgs() << "\n ** Swapping " << BC.MRI->getName(RBX) << " with "
                     << BC.MRI->getName(Candidate) << "\n\n");

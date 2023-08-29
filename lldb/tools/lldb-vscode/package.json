@@ -1,26 +1,30 @@
 {
 	"name": "lldb-vscode",
-	"displayName": "LLDB native Debug stub",
+	"displayName": "LLDB VSCode",
 	"version": "0.1.0",
 	"publisher": "llvm",
-	"repository": "llvm.org",
-	"description": "Debug adapter for LLDB which uses a C++ tool to interface directly with LLDB.",
-	"author": {
-		"name": "Greg Clayton",
-		"email": "clayborg@gmail.com"
+	"homepage": "https://lldb.llvm.org",
+	"description": "LLDB debugging from VSCode",
+	"license": "Apache 2.0 License with LLVM exceptions",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/llvm/llvm-project.git"
 	},
-	"license": "LLVM",
+	"bugs": {
+		"url": "https://github.com/llvm/llvm-project/issues"
+	},
 	"keywords": [
-		"multi-root ready"
+		"C",
+		"C++",
+		"LLVM",
+		"LLDB"
 	],
 	"engines": {
-		"vscode": "^1.18.0",
-		"node": "^7.9.0"
+		"vscode": "^1.18.0"
 	},
 	"categories": [
 		"Debuggers"
 	],
-	"private": true,
 	"devDependencies": {
 		"@types/node": "7.0.43",
 		"@types/mocha": "2.2.45",
@@ -34,69 +38,69 @@
 	"contributes": {
 		"languages": [
 			{
-                "id": "lldb.disassembly",
-                "aliases": [
-                "Disassembly"
-                ],
-                "extensions": [
-                ".disasm"
-                ]
+				"id": "lldb.disassembly",
+				"aliases": [
+					"Disassembly"
+				],
+				"extensions": [
+					".disasm"
+				]
 			}
 		],
 		"grammars": [
 			{
-                "language": "lldb.disassembly",
-                "scopeName": "source.disassembly",
-                "path": "./syntaxes/disassembly.json"
-            }
-        ],
-        "breakpoints": [
-          {
-            "language": "ada"
-          },
-          {
-            "language": "arm"
-          },
-          {
-            "language": "asm"
-          },
-          {
-            "language": "c"
-          },
-          {
-            "language": "cpp"
-          },
-          {
-            "language": "crystal"
-          },
-          {
-            "language": "d"
-          },
-          {
-            "language": "fortan"
-          },
-          {
-            "language": "fortran-modern"
-          },
-          {
-            "language": "nim"
-          },
-          {
-            "language": "objective-c"
-          },
-          {
-            "language": "objectpascal"
-          },
-          {
-            "language": "pascal"
-          },
-          {
-            "language": "rust"
-          },
-          {
-            "language": "swift"
-          }
-        ],
+				"language": "lldb.disassembly",
+				"scopeName": "source.disassembly",
+				"path": "./syntaxes/disassembly.json"
+			}
+		],
+		"breakpoints": [
+			{
+				"language": "ada"
+			},
+			{
+				"language": "arm"
+			},
+			{
+				"language": "asm"
+			},
+			{
+				"language": "c"
+			},
+			{
+				"language": "cpp"
+			},
+			{
+				"language": "crystal"
+			},
+			{
+				"language": "d"
+			},
+			{
+				"language": "fortan"
+			},
+			{
+				"language": "fortran-modern"
+			},
+			{
+				"language": "nim"
+			},
+			{
+				"language": "objective-c"
+			},
+			{
+				"language": "objectpascal"
+			},
+			{
+				"language": "pascal"
+			},
+			{
+				"language": "rust"
+			},
+			{
+				"language": "swift"
+			}
+		],
 		"debuggers": [
 			{
 				"type": "lldb-vscode",
@@ -149,7 +153,7 @@
 							},
 							"env": {
 								"type": "array",
-								"description": "Additional environment variables to set when launching the program. This is an array of strings that contains the variable name followed by an optional '=' character and the environment variable's value. Example:  [\"FOO=BAR\", \"BAZ\"]",
+								"description": "Additional environment variables to set when launching the program. This is an array of strings that contains the variable name followed by an optional '=' character and the environment variable's value.",
 								"default": []
 							},
 							"stopOnEntry": {
@@ -183,12 +187,12 @@
 							},
 							"sourceMap": {
 								"type": "array",
-								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination pathname. Overrides sourcePath.",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
 								"default": []
 							},
 							"debuggerRoot": {
 								"type": "string",
-								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
+								"description": "Specify a working directory to set the debug adapter to so relative object files can be located."
 							},
 							"targetTriple": {
 								"type": "string",
@@ -263,12 +267,12 @@
 							},
 							"sourceMap": {
 								"type": "array",
-								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination pathname. Overrides sourcePath.",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
 								"default": []
 							},
 							"debuggerRoot": {
 								"type": "string",
-								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
+								"description": "Specify a working directory to set the debug adapter to so relative object files can be located."
 							},
 							"targetTriple": {
 								"type": "string",

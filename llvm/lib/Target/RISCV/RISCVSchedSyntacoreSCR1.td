@@ -55,14 +55,14 @@ def : WriteRes<WriteIMul, [SCR1_MUL]>;
 def : WriteRes<WriteIMul32, [SCR1_MUL]>;
 
 // Integer division: latency 33, inverse throughput 33
-let Latency = 33, ResourceCycles = [33] in {
+let Latency = 33, ReleaseAtCycles = [33] in {
 def : WriteRes<WriteIDiv32, [SCR1_DIV]>;
 def : WriteRes<WriteIDiv, [SCR1_DIV]>;
 }
 
 // Load/store instructions on SCR1 have latency 2 and inverse throughput 2
 // (SCR1_CFG_RV32IMC_MAX includes TCM)
-let Latency = 2, ResourceCycles=[2] in {
+let Latency = 2, ReleaseAtCycles=[2] in {
 // Memory
 def : WriteRes<WriteSTB, [SCR1_LSU]>;
 def : WriteRes<WriteSTH, [SCR1_LSU]>;

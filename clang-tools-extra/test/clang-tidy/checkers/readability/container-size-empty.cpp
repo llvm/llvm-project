@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-container-size-empty %t -- \
+// RUN: %check_clang_tidy -std=c++14-or-later %s readability-container-size-empty %t -- \
 // RUN: -config="{CheckOptions: {readability-container-size-empty.ExcludedComparisonTypes: '::std::array;::IgnoredDummyType'}}" \
 // RUN: -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
 #include <string>
@@ -23,7 +23,7 @@ template <typename T> struct set {
 }
 
 namespace string_literals{
-string operator""_s(const char *, size_t);
+string operator""s(const char *, size_t);
 }
 
 }
@@ -778,7 +778,7 @@ bool testIgnoredDummyType(const IgnoredDummyType& value) {
 bool testStringLiterals(const std::string& s)
 {
   using namespace std::string_literals;
-  return s == ""_s;
+  return s == ""s;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
   // CHECK-FIXES: {{^  }}return s.empty()
 }
@@ -786,5 +786,5 @@ bool testStringLiterals(const std::string& s)
 bool testNotEmptyStringLiterals(const std::string& s)
 {
   using namespace std::string_literals;
-  return s == "foo"_s;
+  return s == "foo"s;
 }

@@ -77,6 +77,7 @@ class Preprocessor;
 class PreprocessorOptions;
 class Sema;
 class TargetInfo;
+class SyntaxOnlyAction;
 
 /// \brief Enumerates the available scopes for skipping function bodies.
 enum class SkipFunctionBodiesScope { None, Preamble, PreambleAndMainFile };
@@ -887,6 +888,10 @@ public:
   /// \param IncludeBriefComments Whether to include brief documentation within
   /// the set of code completions returned.
   ///
+  /// \param Act If supplied, this argument is used to parse the input file,
+  /// allowing customized parsing by overriding SyntaxOnlyAction lifecycle
+  /// methods.
+  ///
   /// FIXME: The Diag, LangOpts, SourceMgr, FileMgr, StoredDiagnostics, and
   /// OwnedBuffers parameters are all disgusting hacks. They will go away.
   void CodeComplete(StringRef File, unsigned Line, unsigned Column,
@@ -897,7 +902,8 @@ public:
                     DiagnosticsEngine &Diag, LangOptions &LangOpts,
                     SourceManager &SourceMgr, FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
-                    SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers);
+                    SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
+                    std::unique_ptr<SyntaxOnlyAction> Act = nullptr);
 
   /// Save this translation unit to a file with the given name.
   ///

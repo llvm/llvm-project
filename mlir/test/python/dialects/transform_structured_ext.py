@@ -560,17 +560,49 @@ def testTileToForallMapping():
 
 
 @run
-def testVectorize():
+def testVectorizeAllAttrs():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
-        structured.VectorizeOp(sequence.bodyTarget, vectorize_padding=True)
+        structured.VectorizeOp(
+            sequence.bodyTarget,
+            disable_multi_reduction_to_contract_patterns=True,
+            disable_transfer_permutation_map_lowering_patterns=True,
+            vectorize_nd_extract=True,
+            vectorize_padding=True,
+        )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: testVectorize
+    # CHECK-LABEL: TEST: testVectorizeAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
-    # CHECK: {vectorize_padding}
+    # CHECK-SAME: disable_multi_reduction_to_contract_patterns
+    # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-SAME: vectorize_nd_extract
+    # CHECK-SAME: vectorize_padding
+
+
+@run
+def testVectorizeNoAttrs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.VectorizeOp(
+            sequence.bodyTarget,
+            disable_multi_reduction_to_contract_patterns=False,
+            disable_transfer_permutation_map_lowering_patterns=False,
+            vectorize_nd_extract=False,
+            vectorize_padding=False,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testVectorizeNoAttrs
+    # CHECK: transform.sequence
+    # CHECK: = transform.structured.vectorize
+    # CHECK-NOT: disable_multi_reduction_to_contract_patterns
+    # CHECK-NOT: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-NOT: vectorize_nd_extract
+    # CHECK-NOT: vectorize_padding
 
 
 @run

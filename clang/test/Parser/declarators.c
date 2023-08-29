@@ -40,7 +40,7 @@ int (test5), ;  // expected-error {{expected identifier or '('}}
 
 
 
-// PR3963 & rdar://6759604 - test error recovery for mistyped "typenames".
+// PR3963 - test error recovery for mistyped "typenames".
 
 foo_t *d;      // expected-error {{unknown type name 'foo_t'}}
 foo_t a;   // expected-error {{unknown type name 'foo_t'}}
@@ -48,7 +48,7 @@ int test6() { /* expected-warning {{a function declaration without a prototype i
   return a; // a should be declared.
 }
 
-// Use of tagged type without tag. rdar://6783347
+// Use of tagged type without tag.
 struct xyz { int y; };
 enum myenum { ASDFAS };
 xyz b;         // expected-error {{must use 'struct' tag to refer to type 'xyz'}}
@@ -81,10 +81,8 @@ struct test10 { int a; } static test10x;
 struct test11 { int a; } const test11x;
 
 
-// rdar://7608537
 struct test13 { int a; } (test13x);
 
-// <rdar://problem/8044088>
 struct X<foo::int> { }; // expected-error{{expected identifier or '('}}
 
 
@@ -95,7 +93,6 @@ void test14(void)  // expected-error {{expected ';' after top level declarator}}
 void test14a(void);
 void *test14b = (void*)test14a; // Make sure test14a didn't get skipped.
 
-// rdar://problem/8358508
 long struct X { int x; } test15(void); // expected-error {{'long struct' is invalid}}
 
 void test16(i) int i j; { } // expected-error {{expected ';' at end of declaration}} \

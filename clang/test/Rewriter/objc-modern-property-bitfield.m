@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fms-extensions -rewrite-objc %s -o %t-modern-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Wno-address-of-temporary -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-modern-rw.cpp
-// rdar://13138459
 
 void *sel_registerName(const char *);
 extern void abort();

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify %s
-// rdar://10790488
 
 @interface NSArray @end
 

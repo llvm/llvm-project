@@ -1275,3 +1275,33 @@ namespace TemporaryWithBadPointer {
     (dbt2.wp = nullptr, 0)
   };
 }
+
+namespace UninitCompoundAssign {
+constexpr int scalar(int a) {
+  int sum; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  sum += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(scalar(3), ""); // expected-error {{constant expression}} \
+                              // expected-note {{in call to 'scalar(3)'}}
+
+constexpr int array(int a) {
+  int arr[3]; // cxx14-warning {{uninitialized variable in a constexpr function is a C++20 extension}}
+  arr[1] += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(array(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'array(3)'}}
+
+struct Foo {
+  int val; // cxx14-note{{member not initialized by constructor}}
+  constexpr Foo() {} // cxx14-warning {{constexpr constructor that does not initialize all members is a C++20 extension}}
+};
+constexpr int field(int a) {
+  Foo f;
+  f.val += a; // expected-note {{read of uninitialized object}};
+  return 0;
+}
+static_assert(field(3), ""); // expected-error {{constant expression}} \
+                             // expected-note {{in call to 'field(3)'}}
+}

@@ -6078,6 +6078,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
     Check(CmpInst::isIntPredicate(Pred),
           "invalid predicate for VP integer comparison intrinsic", &VPI);
   }
+  if (VPI.getIntrinsicID() == Intrinsic::vp_is_fpclass) {
+    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
+    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
+          "unsupported bits for llvm.vp.is.fpclass test mask");
+  }
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {

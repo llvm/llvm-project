@@ -60,7 +60,7 @@ static bool hasDisjointValueRange(const EnumDecl *Enum1,
 }
 
 static bool isNonPowerOf2NorNullLiteral(const EnumConstantDecl *EnumConst) {
-  llvm::APSInt Val = EnumConst->getInitVal();
+  const llvm::APSInt &Val = EnumConst->getInitVal();
   if (Val.isPowerOf2() || !Val.getBoolValue())
     return false;
   const Expr *InitExpr = EnumConst->getInitExpr();

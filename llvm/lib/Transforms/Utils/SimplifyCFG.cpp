@@ -5676,7 +5676,7 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   for (Instruction &I : CaseDest->instructionsWithoutDebug(false)) {
     if (I.isTerminator()) {
       // If the terminator is a simple branch, continue to the next block.
-      if (I.getNumSuccessors() != 1 || I.isExceptionalTerminator())
+      if (I.getNumSuccessors() != 1 || I.isSpecialTerminator())
         return false;
       Pred = CaseDest;
       CaseDest = I.getSuccessor(0);

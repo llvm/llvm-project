@@ -20,7 +20,6 @@ void test_foo(short* sp) {
 }
 
 namespace radar9046492 {
-// rdar://9046492
 #define FOO __attribute__((unavailable("not available - replaced")))
 
 void foo() FOO; // expected-note{{'foo' has been explicitly marked unavailable here}}
@@ -40,7 +39,6 @@ void unavail(short* sp) {
 
 // Show that delayed processing of 'unavailable' is the same
 // delayed process for 'deprecated'.
-// <rdar://problem/12241361> and <rdar://problem/15584219>
 enum DeprecatedEnum { DE_A, DE_B } __attribute__((deprecated)); // expected-note {{'DeprecatedEnum' has been explicitly marked deprecated here}}
 typedef enum DeprecatedEnum AnotherDeprecatedEnum; // expected-warning {{'DeprecatedEnum' is deprecated}}
 

@@ -194,7 +194,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Don't break unwinding instructions or terminators with other side-effects.
   Instruction *PTI = PredBB->getTerminator();
-  if (PTI->isExceptionalTerminator() || PTI->mayHaveSideEffects())
+  if (PTI->isSpecialTerminator() || PTI->mayHaveSideEffects())
     return false;
 
   // Can't merge if there are multiple distinct successors.

@@ -2967,6 +2967,32 @@ TEST(Hover, All) {
          HI.NamespaceScope = "";
          HI.Value = "0";
        }},
+      // Should not crash.
+      {R"objc(
+        typedef struct MyRect {} MyRect;
+
+        @interface IFace
+        @property(nonatomic) MyRect frame;
+        @end
+
+        MyRect foobar() {
+          MyRect mr;
+          return mr;
+        }
+        void test() {
+          IFace *v;
+          v.frame = [[foo^bar]]();
+        }
+        )objc",
+       [](HoverInfo &HI) {
+         HI.Name = "foobar";
+         HI.Kind = index::SymbolKind::Function;
+         HI.NamespaceScope = "";
+         HI.Definition = "MyRect foobar()";
+         HI.Type = {"MyRect ()", "MyRect ()"};
+         HI.ReturnType = {"MyRect", "MyRect"};
+         HI.Parameters.emplace();
+       }},
       {R"cpp(
          void foo(int * __attribute__(([[non^null]], noescape)) );
          )cpp",

@@ -329,8 +329,6 @@ public:
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.shouldSample())) {
       if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
-        if (UNLIKELY(&__scudo_allocate_hook))
-          __scudo_allocate_hook(Ptr, Size);
         Stats.lock();
         Stats.add(StatAllocated, GuardedAllocSlotSize);
         Stats.sub(StatFree, GuardedAllocSlotSize);
@@ -535,9 +533,6 @@ public:
         Chunk::SizeOrUnusedBytesMask;
     Chunk::storeHeader(Cookie, Ptr, &Header);
 
-    if (UNLIKELY(&__scudo_allocate_hook))
-      __scudo_allocate_hook(TaggedPtr, Size);
-
     return TaggedPtr;
   }
 
@@ -550,9 +545,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-
-    if (UNLIKELY(&__scudo_deallocate_hook))
-      __scudo_deallocate_hook(Ptr);
 
     if (UNLIKELY(!Ptr))
       return;
@@ -697,8 +689,6 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      if (UNLIKELY(&__scudo_deallocate_hook))
-        __scudo_deallocate_hook(OldTaggedPtr);
       quarantineOrDeallocateChunk(Options, OldTaggedPtr, &OldHeader, OldSize);
     }
     return NewPtr;

@@ -364,11 +364,6 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
     }
-
-    // Check if the global is private gcov data.
-    if (GV->getName().startswith("__llvm_gcov") ||
-        GV->getName().startswith("__llvm_gcda"))
-      return false;
   }
 
   // Do not instrument accesses from different address spaces; we cannot deal
@@ -522,6 +517,9 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // Traverse all instructions, collect loads/stores/returns, check for calls.
   for (auto &BB : F) {
     for (auto &Inst : BB) {
+      // Skip instructions inserted by another instrumentation.
+      if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
+        continue;
       if (isTsanAtomic(&Inst))
         AtomicAccesses.push_back(&Inst);
       else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))

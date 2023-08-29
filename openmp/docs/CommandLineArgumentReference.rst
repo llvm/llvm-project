@@ -37,8 +37,7 @@ Use the static OpenMP host runtime while linking.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Set the OpenMP version to a specific version ``<arg>`` of the OpenMP standard. 
 For example, you may use ``-fopenmp-version=45`` to select version 4.5 of 
-the OpenMP standard. The default value is ``-fopenmp-version=50`` for ``Clang`` 
-and ``-fopenmp-version=11`` for ``flang-new``.
+the OpenMP standard. The default value is ``-fopenmp-version=51`` for ``Clang``.
 
 .. _offload_command_line_arguments:
 

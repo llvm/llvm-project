@@ -971,13 +971,13 @@ struct FormatStyle {
   /// For example:
   /// \code
   ///   x = (char *__capability)&y;
-  ///   int function(void) __ununsed;
+  ///   int function(void) __unused;
   ///   void only_writes_to_buffer(char *__output buffer);
   /// \endcode
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   AttributeMacros: ['__capability', '__output', '__ununsed']
+  ///   AttributeMacros: ['__capability', '__output', '__unused']
   /// \endcode
   ///
   /// \version 12
@@ -4015,41 +4015,41 @@ struct FormatStyle {
   ///     AfterFunctionDefinitionName: true
   /// \endcode
   struct SpaceBeforeParensCustom {
-    /// If ``true``, put space betwee control statement keywords
+    /// If ``true``, put space between control statement keywords
     /// (for/if/while...) and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    if (...) {}                     vs.    if(...) {}
     /// \endcode
-    bool AfterControlStatements;
+    bool AfterControlStatements = false;
     /// If ``true``, put space between foreach macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    FOREACH (...)                   vs.    FOREACH(...)
     ///      <loop-body>                            <loop-body>
     /// \endcode
-    bool AfterForeachMacros;
+    bool AfterForeachMacros = false;
     /// If ``true``, put a space between function declaration name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f ();                      vs.    void f();
     /// \endcode
-    bool AfterFunctionDeclarationName;
+    bool AfterFunctionDeclarationName = false;
     /// If ``true``, put a space between function definition name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f () {}                    vs.    void f() {}
     /// \endcode
-    bool AfterFunctionDefinitionName;
+    bool AfterFunctionDefinitionName = false;
     /// If ``true``, put space between if macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    IF (...)                        vs.    IF(...)
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
-    bool AfterIfMacros;
+    bool AfterIfMacros = false;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4057,7 +4057,7 @@ struct FormatStyle {
     ///    void operator++ (int a);        vs.    void operator++(int a);
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
-    bool AfterOverloadedOperator;
+    bool AfterOverloadedOperator = false;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4066,7 +4066,7 @@ struct FormatStyle {
     ///    requires (A<T> && B<T>)                requires(A<T> && B<T>)
     ///    ...                                    ...
     /// \endcode
-    bool AfterRequiresInClause;
+    bool AfterRequiresInClause = false;
     /// If ``true``, put space between requires keyword in a requires expression
     /// and opening parentheses.
     /// \code
@@ -4076,7 +4076,7 @@ struct FormatStyle {
     ///                  ...                                    ...
     ///                }                                      }
     /// \endcode
-    bool AfterRequiresInExpression;
+    bool AfterRequiresInExpression = false;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -4084,14 +4084,9 @@ struct FormatStyle {
     ///    void f (int a);                 vs.    void f();
     ///    f (a);                                 f();
     /// \endcode
-    bool BeforeNonEmptyParentheses;
+    bool BeforeNonEmptyParentheses = false;
 
-    SpaceBeforeParensCustom()
-        : AfterControlStatements(false), AfterForeachMacros(false),
-          AfterFunctionDeclarationName(false),
-          AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterRequiresInClause(false),
-          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
+    SpaceBeforeParensCustom() = default;
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&

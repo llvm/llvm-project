@@ -364,9 +364,7 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
                                 llvm::raw_ostream &Stream) {
   StringRef Delimiter = "";
 
-  for (int I = 0, Size = Args.size(); I < Size; ++I) {
-    const BindArgument &B = Args[I];
-
+  for (const BindArgument &B : Args) {
     Stream << Delimiter;
 
     if (B.Kind == BK_Placeholder) {

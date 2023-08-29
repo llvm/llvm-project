@@ -175,9 +175,7 @@ public:
   bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
-  bool isExceptionalTerminator() const {
-    return isExceptionalTerminator(getOpcode());
-  }
+  bool isSpecialTerminator() const { return isSpecialTerminator(getOpcode()); }
 
   /// It checks if this instruction is the only user of at least one of
   /// its operands.
@@ -235,14 +233,16 @@ public:
     return Opcode >= FuncletPadOpsBegin && Opcode < FuncletPadOpsEnd;
   }
 
-  /// Returns true if the Opcode is a terminator related to exception handling.
-  static inline bool isExceptionalTerminator(unsigned Opcode) {
+  /// Returns true if the Opcode is a "special" terminator that does more than
+  /// branch to a successor (e.g. have a side effect or return a value).
+  static inline bool isSpecialTerminator(unsigned Opcode) {
     switch (Opcode) {
     case Instruction::CatchSwitch:
     case Instruction::CatchRet:
     case Instruction::CleanupRet:
     case Instruction::Invoke:
     case Instruction::Resume:
+    case Instruction::CallBr:
       return true;
     default:
       return false;

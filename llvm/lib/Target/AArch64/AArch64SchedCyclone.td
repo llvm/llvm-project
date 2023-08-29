@@ -158,7 +158,7 @@ def : WriteRes<WriteI, [CyUnitI]>;
 // EXAMPLE: ADDrs Xn, Xm LSL #imm
 def : WriteRes<WriteISReg, [CyUnitIS]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 
 // ADD with extended register operand is the same as shifted reg operand.
@@ -166,7 +166,7 @@ def : WriteRes<WriteISReg, [CyUnitIS]> {
 // EXAMPLE: ADDXre Xn, Xm, UXTB #1
 def : WriteRes<WriteIEReg, [CyUnitIS]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 
 // Variable shift and bitfield operations.
@@ -209,14 +209,14 @@ def : WriteRes<WriteIM64, [CyUnitIM]> {
 // SDIVW,UDIVW
 def : WriteRes<WriteID32, [CyUnitID, CyUnitIntDiv]> {
   let Latency = 10;
-  let ResourceCycles = [2, 10];
+  let ReleaseAtCycles = [2, 10];
 }
 // 64-bit divide takes 7-21 cycles. 13 cycles covers a 32-bit quotient.
 // The ID pipe is consumed for 2 cycles: issue and writeback.
 // SDIVX,UDIVX
 def : WriteRes<WriteID64, [CyUnitID, CyUnitIntDiv]> {
   let Latency = 13;
-  let ResourceCycles = [2, 13];
+  let ReleaseAtCycles = [2, 13];
 }
 
 //---
@@ -555,7 +555,7 @@ def : InstRW<[CyWritePMUL], (instregex "PMULv", "PMULLv")>;
 // TODO: Specialize FSQRT for longer latency.
 def : WriteRes<WriteFDiv, [CyUnitVD, CyUnitFloatDiv]> {
   let Latency = 17;
-  let ResourceCycles = [2, 17];
+  let ReleaseAtCycles = [2, 17];
 }
 
 def : InstRW<[CyWriteV4], (instregex "FRECPEv","FRECPXv","URECPEv","URSQRTEv")>;

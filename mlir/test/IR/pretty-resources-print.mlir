@@ -1,6 +1,6 @@
 // Check printing with --mlir-elide-resource-strings-if-larger elides printing large resources
 
-// RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=10| FileCheck %s
+// RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=20| FileCheck %s
 
 // To ensure we print the resource keys, have reference to them
 // CHECK: attr = dense_resource<blob1> : tensor<3xi64>
@@ -13,7 +13,7 @@
 // CHECK-NEXT:   external_resources: {
 // CHECK-NEXT:     external: {
 // CHECK-NEXT:       bool: true,
-// CHECK-NEXT:       string: "string"
+// CHECK-NEXT:       string: "\22string\22"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     other_stuff: {
 // CHECK-NEXT:       bool: true
@@ -32,7 +32,7 @@
     external: {
       blob: "0x08000000010000000000000002000000000000000300000000000000",
       bool: true,
-      string: "string"
+      string: "\"string\"" // with escape characters
     },
     other_stuff: {
       bool: true

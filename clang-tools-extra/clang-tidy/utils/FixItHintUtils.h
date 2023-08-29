@@ -42,8 +42,8 @@ enum class QualifierTarget {
 std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
                       DeclSpec::TQ Qualifier,
-                      QualifierTarget CT = QualifierTarget::Pointee,
-                      QualifierPolicy CP = QualifierPolicy::Left);
+                      QualifierTarget QualTarget = QualifierTarget::Pointee,
+                      QualifierPolicy QualPolicy = QualifierPolicy::Left);
 
 // \brief Format a pointer to an expression
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context);

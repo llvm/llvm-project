@@ -67,7 +67,6 @@ void f4(void) {
   d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
 }
 
-// rdar://15931426
 // Don't permit a lax conversion to and from a pointer type.
 typedef short short_sizeof_pointer __attribute__((vector_size(sizeof(void*))));
 void f5(void) {

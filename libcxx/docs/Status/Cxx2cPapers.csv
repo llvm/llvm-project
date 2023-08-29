@@ -20,7 +20,7 @@
 "`P2637R3 <https://wg21.link/P2637R3>`__","LWG","Member ``visit``","Varna June 2023","","","|format|"
 "`P2641R4 <https://wg21.link/P2641R4>`__","CWG, LWG","Checking if a ``union`` alternative is active","Varna June 2023","","",""
 "`P1759R6 <https://wg21.link/P1759R6>`__","LWG","Native handles and file streams","Varna June 2023","","",""
-"`P2697R1 <https://wg21.link/P2697R1>`__","LWG","Interfacing ``bitset`` with ``string_view``","Varna June 2023","","",""
+"`P2697R1 <https://wg21.link/P2697R1>`__","LWG","Interfacing ``bitset`` with ``string_view``","Varna June 2023","|Complete|","18.0",""
 "`P1383R2 <https://wg21.link/P1383R2>`__","LWG","More ``constexpr`` for ``<cmath>`` and ``<complex>``","Varna June 2023","","",""
 "`P2734R0 <https://wg21.link/P2734R0>`__","LWG","Adding the new SI prefixes","Varna June 2023","|Complete|","17.0",""
 "`P2548R6 <https://wg21.link/P2548R6>`__","LWG","``copyable_function``","Varna June 2023","","",""

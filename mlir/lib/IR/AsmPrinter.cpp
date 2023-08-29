@@ -1056,6 +1056,12 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 
 void AliasInitializer::markAliasNonDeferrable(size_t aliasIndex) {
   auto it = std::next(aliases.begin(), aliasIndex);
+
+  // If already marked non-deferrable stop the recursion.
+  // All children should already be marked non-deferrable as well.
+  if (!it->second.canBeDeferred)
+    return;
+
   it->second.canBeDeferred = false;
 
   // Propagate the non-deferrable flag to any child aliases.
@@ -3101,7 +3107,11 @@ private:
     }
 
     void buildString(StringRef key, StringRef data) final {
-      printFn(key, [&](raw_ostream &os) { os << "\"" << data << "\""; });
+      printFn(key, [&](raw_ostream &os) {
+        os << "\"";
+        llvm::printEscapedString(data, os);
+        os << "\"";
+      });
     }
 
     void buildBlob(StringRef key, ArrayRef<char> data,

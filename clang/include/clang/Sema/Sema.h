@@ -11554,6 +11554,11 @@ public:
   /// associated statement.
   StmtResult ActOnOpenMPSectionDirective(Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp scope' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPScopeDirective(ArrayRef<OMPClause *> Clauses,
+                                       Stmt *AStmt, SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp single' after parsing of the
   /// associated statement.
   StmtResult ActOnOpenMPSingleDirective(ArrayRef<OMPClause *> Clauses,
@@ -13451,7 +13456,9 @@ public:
     PCC_ParenthesizedExpression,
     /// Code completion occurs within a sequence of declaration
     /// specifiers within a function, method, or block.
-    PCC_LocalDeclarationSpecifiers
+    PCC_LocalDeclarationSpecifiers,
+    /// Code completion occurs at top-level in a REPL session
+    PCC_TopLevelOrExpression,
   };
 
   void CodeCompleteModuleImport(SourceLocation ImportLoc, ModuleIdPath Path);

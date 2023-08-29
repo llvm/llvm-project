@@ -162,6 +162,12 @@ protected:
   /// Pointer to the LLVM dialect.
   LLVM::LLVMDialect *llvmDialect;
 
+  // Recursive structure detection.
+  // We store one entry per thread here, and rely on locking.
+  DenseMap<uint64_t, std::unique_ptr<SmallVector<Type>>> conversionCallStack;
+  llvm::sys::SmartRWMutex<true> callStackMutex;
+  SmallVector<Type> &getCurrentThreadRecursiveStack();
+
 private:
   /// Convert a function type.  The arguments and results are converted one by
   /// one.  Additionally, if the function returns more than one value, pack the
