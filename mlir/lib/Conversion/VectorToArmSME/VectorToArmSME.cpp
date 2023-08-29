@@ -24,6 +24,38 @@ static bool isSplatZero(Type elemType, DenseElementsAttr val) {
   return false;
 }
 
+/// Generates a for loop over ZA tile slices where the induction variable is
+/// the tile slice index.
+static scf::ForOp getLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
+                                        Type eltType) {
+  auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+      loc, arm_sme::getSMETileSliceMinNumElts(eltType));
+  auto vscale =
+      rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+  auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto numTileSlices =
+      rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+  auto forOp =
+      rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step);
+  rewriter.setInsertionPointToStart(forOp.getBody());
+  return forOp;
+}
+
+/// Returns a tile of the given vector type.
+static arm_sme::CastTileToVector
+getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
+                          VectorType type) {
+  unsigned tileElementWidth = type.getElementType().getIntOrFloatBitWidth();
+
+  // Create 'arm_sme.get_tile' op.
+  auto tileId = rewriter.create<arm_sme::GetTileID>(
+      loc, rewriter.getIntegerType(tileElementWidth));
+
+  // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type.
+  return rewriter.create<arm_sme::CastTileToVector>(loc, type, tileId);
+}
+
 namespace {
 
 /// Conversion pattern for vector.transfer_write.
@@ -122,29 +154,10 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
         tileSliceType, denseAttr.getSplatValue<Attribute>());
     auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
 
-    unsigned tileElementWidth = tileElementType.getIntOrFloatBitWidth();
+    arm_sme::CastTileToVector tile =
+        getSMETileAndCastToVector(rewriter, loc, tileType);
 
-    // Create 'arm_sme.get_tile' op.
-    auto tileId = rewriter.create<arm_sme::GetTileID>(
-        loc, rewriter.getIntegerType(tileElementWidth));
-
-    // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type to
-    // use as input tile to 'arm_sme.move_vector_to_tile_slice' ops.
-    auto tile =
-        rewriter.create<arm_sme::CastTileToVector>(loc, tileType, tileId);
-
-    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
-    auto vscale =
-        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto numTileSlices =
-        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
-    // Create a loop that broadcasts the constant to each ZA tile slice.
-    auto forOp =
-        rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step);
-    rewriter.setInsertionPointToStart(forOp.getBody());
+    auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
     auto tileSliceIndex = forOp.getInductionVar();
 
     // Create 'arm_sme.move_vector_to_tile_slice' to write vector to tile slice.
@@ -159,10 +172,78 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
   }
 };
 
+/// Conversion pattern for vector.broadcast.
+///
+/// Example:
+///
+///   %broadcast_to_tile = vector.broadcast %src : i32 to vector<[4]x[4]xi32>
+///
+/// is converted to:
+///
+///   %broadcast_to_1d = vector.broadcast %src : i32 to vector<[4]xi32>
+///   scf.for %tile_slice_index = %c0 to %num_tile_slices step %c1 {
+///     arm_sme.move_vector_to_tile_slice %broadcast_to_1d, %tile,
+///       %tile_slice_index : vector<[4]xi32> into vector<[4]x[4]xi32>
+///   }
+///
+/// Supports scalar, 0-d vector, and 1-d vector broadcasts.
+struct BroadcastOpToArmSMELowering
+    : public OpRewritePattern<vector::BroadcastOp> {
+  using OpRewritePattern<vector::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const final {
+    auto tileType = broadcastOp.getResultVectorType();
+    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
+      return failure();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    auto loc = broadcastOp.getLoc();
+
+    auto srcType = broadcastOp.getSourceType();
+    auto srcVectorType = dyn_cast<VectorType>(srcType);
+    auto tileElementType = tileType.getElementType();
+
+    Value broadcastOp1D;
+    if (srcType.isIntOrFloat() ||
+        (srcVectorType && (srcVectorType.getRank() == 0))) {
+      // Broadcast scalar or 0-d vector to 1-d vector.
+      auto tileSliceType =
+          VectorType::get(tileType.getShape().drop_front(), tileElementType,
+                          /*scalableDims=*/{true});
+      broadcastOp1D = rewriter.create<vector::BroadcastOp>(
+          loc, tileSliceType, broadcastOp.getSource());
+    } else if (srcVectorType && (srcVectorType.getRank() == 1))
+      // Value to broadcast is already a 1-d vector, nothing to do.
+      broadcastOp1D = broadcastOp.getSource();
+    else
+      return failure();
+
+    arm_sme::CastTileToVector tile =
+        getSMETileAndCastToVector(rewriter, loc, tileType);
+
+    // Create a loop over ZA tile slices.
+    auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
+    auto tileSliceIndex = forOp.getInductionVar();
+
+    // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value to each
+    // tile slice.
+    rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
+        loc, tileType, broadcastOp1D, tile, tileSliceIndex);
+
+    rewriter.setInsertionPointAfter(forOp);
+
+    rewriter.replaceOp(broadcastOp, tile);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
   patterns.add<TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, ConstantOpToArmSMELowering>(&ctx);
+               VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
+               BroadcastOpToArmSMELowering>(&ctx);
 }
