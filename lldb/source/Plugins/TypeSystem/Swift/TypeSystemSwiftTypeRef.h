@@ -17,8 +17,6 @@
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
 
-#include "swift/AST/Type.h"
-
 // FIXME: needed only for the DenseMap.
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/Basic/Module.h"
@@ -74,8 +72,6 @@ public:
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
 
-  swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
-  swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
   CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) override;

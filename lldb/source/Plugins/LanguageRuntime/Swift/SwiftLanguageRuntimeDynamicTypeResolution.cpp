@@ -43,20 +43,14 @@ using namespace lldb_private;
 namespace lldb_private {
 swift::Type GetSwiftType(CompilerType type) {
   auto ts = type.GetTypeSystem();
-  if (auto tr = ts.dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-    return tr->GetSwiftType(type);
-  if (auto ast = ts.dyn_cast_or_null<SwiftASTContext>())
-    return ast->GetSwiftType(type);
+  if (auto tr = ts.dyn_cast_or_null<TypeSystemSwift>())
+    if (auto ast = tr->GetSwiftASTContext())
+      return ast->GetSwiftType(type);
   return {};
 }
 
 swift::CanType GetCanonicalSwiftType(CompilerType type) {
-  swift::Type swift_type = nullptr;
-  auto ts = type.GetTypeSystem();
-  if (auto tr = ts.dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-    swift_type = tr->GetSwiftType(type);
-  if (auto ast = ts.dyn_cast_or_null<SwiftASTContext>())
-    swift_type = ast->GetSwiftType(type);
+  swift::Type swift_type = GetSwiftType(type);
   return swift_type ? swift_type->getCanonicalType() : swift::CanType();
 }
 
