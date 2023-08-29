@@ -3156,6 +3156,8 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx12:
   case AMDGPU::V_MUL_HI_I32_e64_dpp:
   case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx12:
+  case AMDGPU::V_MAD_U32_e64_dpp:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx12:
     return true;
   default:
     return hasAny64BitVGPROperands(OpDesc);

@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 < %s | FileCheck -check-prefixes=GFX1210 %s
 
 ; We want to undo these canonicalizations to enable mad matching:
 ; (x * y) + x --> x * (y + 1)
@@ -36,6 +37,16 @@ define i32 @v_mul_add_1_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 1
   %mul = mul i32 %x, %add
   ret i32 %mul
@@ -67,6 +78,16 @@ define i32 @v_mul_add_1_i32_commute(i32 %x, i32 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i32_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 1
   %mul = mul i32 %add, %x
   ret i32 %mul
@@ -98,6 +119,16 @@ define i32 @v_mul_add_x_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %x, %y
   %add = add i32 %x, %mul
   ret i32 %add
@@ -131,6 +162,18 @@ define i32 @v_mul_sub_1_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %y, 1
   %mul = mul i32 %x, %sub
   ret i32 %mul
@@ -164,6 +207,18 @@ define i32 @v_mul_sub_1_i32_commute(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i32_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %y, 1
   %mul = mul i32 %sub, %x
   ret i32 %mul
@@ -197,6 +252,18 @@ define i32 @v_mul_sub_x_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v0, v1
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v0, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %x, %y
   %sub = sub i32 %mul, %x
   ret i32 %sub
@@ -230,6 +297,18 @@ define i32 @v_mul_add_2_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 2, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 2, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 2
   %mul = mul i32 %x, %add
   ret i32 %mul
@@ -263,6 +342,18 @@ define i32 @v_mul_sub_2_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -2, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, -2, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %y, 2
   %mul = mul i32 %x, %sub
   ret i32 %mul
@@ -296,6 +387,18 @@ define i32 @v_mul_add_65_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0x41, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_65_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 0x41, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 65
   %mul = mul i32 %x, %add
   ret i32 %mul
@@ -329,6 +432,18 @@ define i32 @v_mul_sub_65_i32(i32 %x, i32 %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0xffffffbf, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_65_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 0xffffffbf, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %y, 65
   %mul = mul i32 %x, %sub
   ret i32 %mul
@@ -358,6 +473,16 @@ define i24 @v_mul_add_1_i24_zext(i24 zeroext %x, i24 zeroext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i24_zext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i24 %y, 1
   %mul = mul i24 %x, %add
   ret i24 %mul
@@ -391,6 +516,18 @@ define i24 @v_mul_sub_1_i24_zext(i24 zeroext %x, i24 zeroext %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i24_zext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i24 %y, 1
   %mul = mul i24 %x, %sub
   ret i24 %mul
@@ -420,6 +557,16 @@ define i24 @v_add_mul_i24_zext_1(i24 zeroext %x, i24 zeroext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_add_mul_i24_zext_1:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i24 %x, %y
   %add = add i24 %mul, %x
   ret i24 %add
@@ -449,6 +596,16 @@ define i24 @v_mul_add_1_i24_sext(i24 signext %x, i24 signext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i24_sext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i24 %y, 1
   %mul = mul i24 %x, %add
   ret i24 %mul
@@ -478,6 +635,16 @@ define i24 @v_add_mul_i24_sext_1(i24 signext %x, i24 signext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_add_mul_i24_sext_1:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i24 %x, %y
   %add = add i24 %mul, %x
   ret i24 %add
@@ -511,6 +678,18 @@ define i24 @v_mul_sub_1_i24_sext(i24 signext %x, i24 signext %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i24_sext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i24 %y, 1
   %mul = mul i24 %x, %sub
   ret i24 %mul
@@ -542,6 +721,16 @@ define i25 @v_mul_add_1_i25_zext(i25 zeroext %x, i25 zeroext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i25_zext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i25 %y, 1
   %mul = mul i25 %x, %add
   ret i25 %mul
@@ -575,6 +764,18 @@ define i25 @v_mul_sub_1_i25_zext(i25 zeroext %x, i25 zeroext %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i25_zext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i25 %y, 1
   %mul = mul i25 %x, %sub
   ret i25 %mul
@@ -606,6 +807,16 @@ define i25 @v_mul_add_1_i25_sext(i25 signext %x, i25 signext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i25_sext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i25 %y, 1
   %mul = mul i25 %x, %add
   ret i25 %mul
@@ -639,6 +850,18 @@ define i25 @v_mul_sub_1_i25_sext(i25 signext %x, i25 signext %y) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i25_sext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i25 %y, 1
   %mul = mul i25 %x, %sub
   ret i25 %mul
@@ -671,6 +894,16 @@ define i16 @v_mul_add_1_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i16 %y, 1
   %mul = mul i16 %x, %add
   ret i16 %mul
@@ -705,6 +938,18 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i16_zext_result:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i16 %y, 1
   %mul = mul i16 %x, %add
   %zext = zext i16 %mul to i32
@@ -738,6 +983,16 @@ define i16 @v_mul_add_1_i16_commute(i16 %x, i16 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i16_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i16 %y, 1
   %mul = mul i16 %add, %x
   ret i16 %mul
@@ -769,6 +1024,16 @@ define i16 @v_mul_add_x_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %x, %y
   %add = add i16 %x, %mul
   ret i16 %add
@@ -804,6 +1069,18 @@ define i16 @v_mul_sub_1_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_add_nc_u16 v1, v1, -1
 ; GFX10-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u16 v1, v1, -1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i16 %y, 1
   %mul = mul i16 %x, %sub
   ret i16 %mul
@@ -839,6 +1116,18 @@ define i16 @v_mul_sub_1_i16_commute(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_add_nc_u16 v1, v1, -1
 ; GFX10-NEXT:    v_mul_lo_u16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i16_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u16 v1, v1, -1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u16 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i16 %y, 1
   %mul = mul i16 %sub, %x
   ret i16 %mul
@@ -874,6 +1163,18 @@ define i16 @v_mul_sub_x_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_mul_lo_u16 v1, v0, v1
 ; GFX10-NEXT:    v_sub_nc_u16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mul_lo_u16 v1, v0, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_sub_nc_u16 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %x, %y
   %sub = sub i16 %mul, %x
   ret i16 %sub
@@ -909,6 +1210,18 @@ define i16 @v_mul_add_2_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_add_nc_u16 v1, v1, 2
 ; GFX10-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u16 v1, v1, 2
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i16 %y, 2
   %mul = mul i16 %x, %add
   ret i16 %mul
@@ -944,6 +1257,18 @@ define i16 @v_mul_sub_2_i16(i16 %x, i16 %y) {
 ; GFX10-NEXT:    v_add_nc_u16 v1, v1, -2
 ; GFX10-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u16 v1, v1, -2
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i16 %y, 2
   %mul = mul i16 %x, %sub
   ret i16 %mul
@@ -1004,6 +1329,21 @@ define i64 @v_mul_add_1_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v5, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[4:5], null, v0, v2, v[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v2, v5
+; GFX1210-NEXT:    v_mad_u32 v1, v0, v3, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1210-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %y, 1
   %mul = mul i64 %x, %add
   ret i64 %mul
@@ -1064,6 +1404,21 @@ define i64 @v_mul_add_1_i64_commute(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v5, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i64_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[4:5], null, v0, v2, v[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v2, v5
+; GFX1210-NEXT:    v_mad_u32 v1, v0, v3, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1210-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %y, 1
   %mul = mul i64 %add, %x
   ret i64 %mul
@@ -1124,6 +1479,21 @@ define i64 @v_mul_add_x_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v5, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[4:5], null, v0, v2, v[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v2, v5
+; GFX1210-NEXT:    v_mad_u32 v1, v0, v3, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1210-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %x, %y
   %add = add i64 %x, %mul
   ret i64 %add
@@ -1190,6 +1560,18 @@ define i64 @v_mul_sub_1_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v2, 0
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v3, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[2:3]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u64_e32 v[0:1], v[0:1], v[2:3]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i64 %y, 1
   %mul = mul i64 %x, %sub
   ret i64 %mul
@@ -1256,6 +1638,18 @@ define i64 @v_mul_sub_1_i64_commute(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v0, 0
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v4, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_i64_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[2:3]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u64_e32 v[0:1], v[2:3], v[0:1]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i64 %y, 1
   %mul = mul i64 %sub, %x
   ret i64 %mul
@@ -1320,6 +1714,18 @@ define i64 @v_mul_sub_x_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_sub_co_u32 v0, vcc_lo, v2, v0
 ; GFX10-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mul_u64_e32 v[2:3], v[0:1], v[2:3]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_sub_nc_u64_e32 v[0:1], v[2:3], v[0:1]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %x, %y
   %sub = sub i64 %mul, %x
   ret i64 %sub
@@ -1386,6 +1792,18 @@ define i64 @v_mul_add_2_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v2, 0
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v3, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], 2, v[2:3]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u64_e32 v[0:1], v[0:1], v[2:3]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %y, 2
   %mul = mul i64 %x, %add
   ret i64 %mul
@@ -1452,6 +1870,18 @@ define i64 @v_mul_sub_2_i64(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v2, 0
 ; GFX10-NEXT:    v_add3_u32 v1, v1, v3, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], -2, v[2:3]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_u64_e32 v[0:1], v[0:1], v[2:3]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i64 %y, 2
   %mul = mul i64 %x, %sub
   ret i64 %mul
@@ -1500,6 +1930,17 @@ define <2 x i32> @v_mul_add_1_i32_multiple(i32 %x, i32 %y, i32 %z) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v3, v[0:1]
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, v3, v[2:3]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i32_multiple:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    v_mad_u32 v1, v2, v1, v2
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 1
   %mul0 = mul i32 %x, %add
   %mul1 = mul i32 %z, %add
@@ -1536,6 +1977,18 @@ define <2 x i32> @v_mul_add_1_i32_other_use(i32 %x, i32 %y, i32 %z) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i32_other_use:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %y, 1
   %mul0 = mul i32 %x, %add
   %mul1 = mul i32 %z, %add
@@ -1586,6 +2039,22 @@ define i32 @v_mul_add_1_i32_chain(i32 %arg0, i32 %arg1, i32 %arg2) {
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v2, v0
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i32_chain:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_add_nc_u32_e32 v2, 1, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v2, v1
+; GFX1210-NEXT:    v_add_nc_u32_e32 v2, v1, v2
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %i2 = add i32 %arg0, 1
   %i3 = mul i32 %i2, %arg1
   %i4 = add i32 %i3, %i2
@@ -1632,6 +2101,18 @@ define <2 x i16> @v_mul_add_1_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_u16 v1, v1, -1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_u16 v1, v1, -1 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %y, <i16 1, i16 1>
   %mul = mul <2 x i16> %x, %add
   ret <2 x i16> %mul
@@ -1675,6 +2156,18 @@ define <2 x i16> @v_mul_add_1_v2i16_commute(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_u16 v1, v1, -1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i16_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_u16 v1, v1, -1 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %y, <i16 1, i16 1>
   %mul = mul <2 x i16> %add, %x
   ret <2 x i16> %mul
@@ -1720,6 +2213,18 @@ define <2 x i16> @v_mul_add_x_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i16> %x, %y
   %add = add <2 x i16> %x, %mul
   ret <2 x i16> %add
@@ -1763,6 +2268,18 @@ define <2 x i16> @v_mul_sub_1_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i16> %y, <i16 1, i16 1>
   %mul = mul <2 x i16> %x, %sub
   ret <2 x i16> %mul
@@ -1806,6 +2323,18 @@ define <2 x i16> @v_mul_sub_1_v2i16_commute(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i16_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i16> %y, <i16 1, i16 1>
   %mul = mul <2 x i16> %sub, %x
   ret <2 x i16> %mul
@@ -1853,6 +2382,18 @@ define <2 x i16> @v_mul_sub_x_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
 ; GFX10-NEXT:    v_pk_sub_i16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_sub_i16 v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i16> %x, %y
   %sub = sub <2 x i16> %mul, %x
   ret <2 x i16> %sub
@@ -1896,6 +2437,18 @@ define <2 x i16> @v_mul_add_2_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_u16 v1, v1, -2 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_u16 v1, v1, -2 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %y, <i16 2, i16 2>
   %mul = mul <2 x i16> %x, %add
   ret <2 x i16> %mul
@@ -1939,6 +2492,18 @@ define <2 x i16> @v_mul_sub_2_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX10-NEXT:    v_pk_sub_i16 v1, v1, 2 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_sub_i16 v1, v1, 2 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i16> %y, <i16 2, i16 2>
   %mul = mul <2 x i16> %x, %sub
   ret <2 x i16> %mul
@@ -1987,6 +2552,17 @@ define <2 x i32> @v_mul_add_1_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v1, v3, v[1:2]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i32> %y, <i32 1, i32 1>
   %mul = mul <2 x i32> %x, %add
   ret <2 x i32> %mul
@@ -2035,6 +2611,17 @@ define <2 x i32> @v_mul_add_1_v2i32_commute(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v1, v3, v[1:2]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i32_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i32> %y, <i32 1, i32 1>
   %mul = mul <2 x i32> %add, %x
   ret <2 x i32> %mul
@@ -2083,6 +2670,17 @@ define <2 x i32> @v_mul_add_x_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v1, v3, v[1:2]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i32> %x, %y
   %add = add <2 x i32> %x, %mul
   ret <2 x i32> %add
@@ -2124,6 +2722,19 @@ define <2 x i32> @v_mul_sub_1_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i32> %y, <i32 1, i32 1>
   %mul = mul <2 x i32> %x, %sub
   ret <2 x i32> %mul
@@ -2165,6 +2776,19 @@ define <2 x i32> @v_mul_sub_1_v2i32_commute(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v2, v0
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i32_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v2, v0
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i32> %y, <i32 1, i32 1>
   %mul = mul <2 x i32> %sub, %x
   ret <2 x i32> %mul
@@ -2215,6 +2839,19 @@ define <2 x i32> @v_mul_sub_x_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v0, v2
+; GFX1210-NEXT:    v_mul_lo_u32 v3, v1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_dual_sub_nc_u32 v0, v2, v0 :: v_dual_sub_nc_u32 v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i32> %x, %y
   %sub = sub <2 x i32> %mul, %x
   ret <2 x i32> %sub
@@ -2256,6 +2893,19 @@ define <2 x i32> @v_mul_add_2_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, 2, v2 :: v_dual_add_nc_u32 v3, 2, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i32> %y, <i32 2, i32 2>
   %mul = mul <2 x i32> %x, %add
   ret <2 x i32> %mul
@@ -2297,6 +2947,19 @@ define <2 x i32> @v_mul_sub_2_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_v2i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -2, v2 :: v_dual_add_nc_u32 v3, -2, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_lo_u32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i32> %y, <i32 2, i32 2>
   %mul = mul <2 x i32> %x, %sub
   ret <2 x i32> %mul
@@ -2330,6 +2993,17 @@ define <2 x i24> @v_mul_add_1_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
 ; GFX10-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i24> %y, <i24 1, i24 1>
   %mul = mul <2 x i24> %x, %add
   ret <2 x i24> %mul
@@ -2363,6 +3037,17 @@ define <2 x i24> @v_mul_add_1_v2i24_commute(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
 ; GFX10-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i24_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i24> %y, <i24 1, i24 1>
   %mul = mul <2 x i24> %add, %x
   ret <2 x i24> %mul
@@ -2396,6 +3081,17 @@ define <2 x i24> @v_mul_add_x_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
 ; GFX10-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_x_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
+; GFX1210-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i24> %x, %y
   %add = add <2 x i24> %x, %mul
   ret <2 x i24> %add
@@ -2437,6 +3133,19 @@ define <2 x i24> @v_mul_sub_1_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i24> %y, <i24 1, i24 1>
   %mul = mul <2 x i24> %x, %sub
   ret <2 x i24> %mul
@@ -2478,6 +3187,19 @@ define <2 x i24> @v_mul_sub_1_v2i24_commute(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v2, v0
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_1_v2i24_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v2, v0
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i24> %y, <i24 1, i24 1>
   %mul = mul <2 x i24> %sub, %x
   ret <2 x i24> %mul
@@ -2519,6 +3241,19 @@ define <2 x i24> @v_mul_sub_x_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v1, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_x_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v2, v0, v2
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v3, v1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_dual_sub_nc_u32 v0, v2, v0 :: v_dual_sub_nc_u32 v1, v3, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i24> %x, %y
   %sub = sub <2 x i24> %mul, %x
   ret <2 x i24> %sub
@@ -2560,6 +3295,19 @@ define <2 x i24> @v_mul_add_2_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_2_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, 2, v2 :: v_dual_add_nc_u32 v3, 2, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i24> %y, <i24 2, i24 2>
   %mul = mul <2 x i24> %x, %add
   ret <2 x i24> %mul
@@ -2601,6 +3349,19 @@ define <2 x i24> @v_mul_sub_2_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_sub_2_v2i24:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, -2, v2 :: v_dual_add_nc_u32 v3, -2, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
+; GFX1210-NEXT:    v_mul_u32_u24_e32 v1, v1, v3
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub <2 x i24> %y, <i24 2, i24 2>
   %mul = mul <2 x i24> %x, %sub
   ret <2 x i24> %mul
@@ -2632,6 +3393,16 @@ define i32 @v_mul_9_add_52_i32(i32 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 9, 52
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_9_add_52_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 9, 52
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 9
   %add = add i32 %mul, 52
   ret i32 %add
@@ -2662,6 +3433,16 @@ define i16 @v_mul_9_add_52_i16(i16 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, 9, 52
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_9_add_52_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, 9, 52
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %arg, 9
   %add = add i16 %mul, 52
   ret i16 %add
@@ -2704,6 +3485,18 @@ define <2 x i16> @v_mul_9_add_52_v2i16(<2 x i16> %arg) {
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, 9 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, 52 op_sel_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_9_add_52_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, 9 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_add_u16 v0, v0, 52 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i16> %arg, <i16 9, i16 9>
   %add = add <2 x i16> %mul, <i16 52, i16 52>
   ret <2 x i16> %add
@@ -2762,6 +3555,19 @@ define i64 @v_mul_9_add_52_i64(i64 %arg) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 9, 52
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 9, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_9_add_52_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 9, 52
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, v2, 9, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %arg, 9
   %add = add i64 %mul, 52
   ret i64 %add
@@ -2793,6 +3599,16 @@ define i32 @v_mul_5_add_1_i32(i32 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 5, 1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_5_add_1_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 5, 1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 5
   %add = add i32 %mul, 1
   ret i32 %add
@@ -2829,6 +3645,18 @@ define i32 @v_mul_284_add_82_i32(i32 %arg) {
 ; GFX10-NEXT:    s_movk_i32 s4, 0x11c
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s4, 0x52
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_284_add_82_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_movk_i32 s0, 0x11c
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, s0, 0x52
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 284
   %add = add i32 %mul, 82
   ret i32 %add
@@ -2859,6 +3687,16 @@ define i16 @v_mul_5_add_1_i16(i16 %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, 5, 1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_5_add_1_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, 5, 1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %arg, 5
   %add = add i16 %mul, 1
   ret i16 %add
@@ -2896,6 +3734,18 @@ define i16 @v_mul_284_add_82_i16(i16 %arg) {
 ; GFX10-NEXT:    s_movk_i32 s4, 0x11c
 ; GFX10-NEXT:    v_mad_u16 v0, v0, s4, 0x52
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_284_add_82_i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_movk_i32 s0, 0x11c
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    v_mad_u16 v0, v0, s0, 0x52
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %arg, 284
   %add = add i16 %mul, 82
   ret i16 %add
@@ -2938,6 +3788,18 @@ define <2 x i16> @v_mul_5_add_1_v2i16(<2 x i16> %arg) {
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, 5 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_sub_u16 v0, v0, -1 op_sel_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_5_add_1_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, v0, 5 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_sub_u16 v0, v0, -1 op_sel_hi:[1,0]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i16> %arg, <i16 5, i16 5>
   %add = add <2 x i16> %mul, <i16 1, i16 1>
   ret <2 x i16> %add
@@ -2986,6 +3848,18 @@ define <2 x i16> @v_mul_284_add_82_v2i16(<2 x i16> %arg) {
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, 0x11c, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0x52, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_284_add_82_v2i16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_pk_mul_lo_u16 v0, 0x11c, v0 op_sel_hi:[0,1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_pk_add_u16 v0, 0x52, v0 op_sel_hi:[0,1]
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul <2 x i16> %arg, <i16 284, i16 284>
   %add = add <2 x i16> %mul, <i16 82, i16 82>
   ret <2 x i16> %add
@@ -3044,6 +3918,19 @@ define i64 @v_mul_5_add_1_i64(i64 %arg) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, 5, 1
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, v2, 5, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_5_add_1_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 5, 1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, v2, 5, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %arg, 5
   %add = add i64 %mul, 1
   ret i64 %add
@@ -3118,6 +4005,20 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, 0x11c, v0, s[4:5]
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x11c, v2, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_284_add_82_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_mov_b64 s[0:1], 0x52
+; GFX1210-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, 0x11c, v0, s[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, 0x11c, v2, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %arg, 284
   %add = add i64 %mul, 82
   ret i64 %add
@@ -3192,6 +4093,20 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, 0x37b4a145, v0, s[4:5]
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], null, 0x37b4a145, v2, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_934584645_add_8234599_i64:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_mov_b64 s[0:1], 0x7da667
+; GFX1210-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, 0x37b4a145, v0, s[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-NEXT:    v_mad_u32 v1, 0x37b4a145, v2, v1
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i64 %arg, 934584645
   %add = add i64 %mul, 8234599
   ret i64 %add
@@ -3378,6 +4293,46 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v3, vcc_lo
 ; GFX10-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: compute_mad:
+; GFX1210:       ; %bb.0: ; %bb
+; GFX1210-NEXT:    s_load_b96 s[4:6], s[0:1], 0x10
+; GFX1210-NEXT:    s_mov_b32 s7, ttmp9
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_add_co_i32 s2, s6, 1
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v1, s2, v0
+; GFX1210-NEXT:    v_dual_add_nc_u32 v2, s2, v1 :: v_dual_add_nc_u32 v1, 1, v1
+; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v0
+; GFX1210-NEXT:    v_mul_lo_u32 v3, v2, v1
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_add_nc_u32_e32 v1, v3, v1
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x4
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX1210-NEXT:    v_mul_lo_u32 v1, v1, v2
+; GFX1210-NEXT:    v_add_nc_u32_e32 v2, 1, v3
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v3, v1, v2
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX1210-NEXT:    v_add_nc_u32_e32 v2, v3, v2
+; GFX1210-NEXT:    v_mad_u32 v0, s7, s2, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v1
+; GFX1210-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_mad_u32 v3, v2, v3, v2
+; GFX1210-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[4:5]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1210-NEXT:    v_mad_u32 v2, v3, v2, v3
+; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1210-NEXT:    s_nop 0
+; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1210-NEXT:    s_endpgm
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
   %i2 = add i32 %arg1, 1
@@ -3434,6 +4389,13 @@ define amdgpu_ps i32 @s_mul_add_1_i32(i32 inreg %x, i32 inreg %y) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, 1
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1210-LABEL: s_mul_add_1_i32:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_add_co_i32 s1, s1, 1
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_mul_i32 s0, s0, s1
+; GFX1210-NEXT:    ; return to shader part epilog
   %add = add i32 %y, 1
   %mul = mul i32 %x, %add
   ret i32 %mul
@@ -3463,6 +4425,13 @@ define amdgpu_ps i32 @s_mul_add_1_i32_commute(i32 inreg %x, i32 inreg %y) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, 1
 ; GFX10-NEXT:    s_mul_i32 s0, s1, s0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1210-LABEL: s_mul_add_1_i32_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_add_co_i32 s1, s1, 1
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_mul_i32 s0, s1, s0
+; GFX1210-NEXT:    ; return to shader part epilog
   %add = add i32 %y, 1
   %mul = mul i32 %add, %x
   ret i32 %mul
@@ -3495,6 +4464,16 @@ define i8 @v_mul_add_1_i8(i8 %x, i8 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i8 %y, 1
   %mul = mul i8 %x, %add
   ret i8 %mul
@@ -3527,6 +4506,16 @@ define i8 @v_mul_add_1_i8_commute(i8 %x, i8 %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i8_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i8 %y, 1
   %mul = mul i8 %add, %x
   ret i8 %mul
@@ -3558,6 +4547,16 @@ define i8 @v_mul_add_1_i8_zext(i8 zeroext %x, i8 zeroext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i8_zext:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i8 %y, 1
   %mul = mul i8 %x, %add
   ret i8 %mul
@@ -3589,6 +4588,16 @@ define i8 @v_mul_add_1_i8_zext_commute(i8 zeroext %x, i8 zeroext %y) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_i8_zext_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v1, v0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add i8 %y, 1
   %mul = mul i8 %add, %x
   ret i8 %mul
@@ -3640,6 +4649,21 @@ define <2 x i8> @v_mul_add_1_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v1, v1, v3, v1
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v2, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_lshlrev_b16 v2, 8, v1
+; GFX1210-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1210-NEXT:    v_bitop3_b16 v0, v0, v2, 0xff bitop3:0xec
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i8> %y, <i8 1, i8 1>
   %mul = mul <2 x i8> %x, %add
   ret <2 x i8> %mul
@@ -3691,6 +4715,21 @@ define <2 x i8> @v_mul_add_1_v2i8_commute(<2 x i8> %x, <2 x i8> %y) {
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_mul_add_1_v2i8_commute:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mad_u16 v1, v1, v3, v1
+; GFX1210-NEXT:    v_mad_u16 v0, v0, v2, v0
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    v_lshlrev_b16 v2, 8, v1
+; GFX1210-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1210-NEXT:    v_bitop3_b16 v0, v0, v2, 0xff bitop3:0xec
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i8> %y, <i8 1, i8 1>
   %mul = mul <2 x i8> %add, %x
   ret <2 x i8> %mul

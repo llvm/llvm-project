@@ -80,6 +80,10 @@ def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64> {
   let HasExt64BitDPP = 1;
 }
 
+def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
+  let HasExt64BitDPP = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
 //===----------------------------------------------------------------------===//
@@ -172,6 +176,10 @@ defm V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32
 defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
+
+let SubtargetPredicate = isGFX12_10Plus in {
+defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
+}
 
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
@@ -714,6 +722,10 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+let SubtargetPredicate = isGFX12_10Plus in {
+def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
+}
+
 let SubtargetPredicate = isGFX940orGFX12_10 in
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
@@ -1127,6 +1139,10 @@ defm V_CVT_SR_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36c>;
 let SubtargetPredicate = HasBitOp3Insts in {
 defm V_BITOP3_B16         : VOP3_Real_BITOP3_t16_gfx12<0x233>;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx12<0x234>;
+}
+
+let SubtargetPredicate = isGFX12_10Plus in {
+defm V_MAD_U32 : VOP3Only_Realtriple_gfx12<0x235>;
 }
 
 //===----------------------------------------------------------------------===//
