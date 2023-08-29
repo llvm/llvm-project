@@ -19,12 +19,14 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1415,6 +1417,74 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   return true;
 }
 
+using InsertionPt = PointerUnion<Instruction *, BasicBlock *>;
+/// Find the nearest Instruction or BasicBlock that dominates both I1 and
+/// I2.
+static InsertionPt findNearestCommonDominator(InsertionPt I1, InsertionPt I2,
+                                              DominatorTree *DT) {
+  auto GetParent = [](InsertionPt I) {
+    if (auto *BB = dyn_cast<BasicBlock *>(I))
+      return BB;
+    return cast<Instruction *>(I)->getParent();
+  };
+  BasicBlock *BB1 = GetParent(I1);
+  BasicBlock *BB2 = GetParent(I2);
+  if (BB1 == BB2) {
+    // BasicBlock InsertionPt means the terminator.
+    if (isa<BasicBlock *>(I1))
+      return I2;
+    if (isa<BasicBlock *>(I2))
+      return I1;
+    return cast<Instruction *>(I1)->comesBefore(cast<Instruction *>(I2)) ? I1
+                                                                         : I2;
+  }
+
+  // These checks are necessary, because findNearestCommonDominator for NodeT
+  // doesn't handle these.
+  if (!DT->isReachableFromEntry(BB2))
+    return I1;
+  if (!DT->isReachableFromEntry(BB1))
+    return I2;
+
+  BasicBlock *DomBB = DT->findNearestCommonDominator(BB1, BB2);
+  if (BB2 == DomBB)
+    return I2;
+  if (BB1 == DomBB)
+    return I1;
+  return DomBB;
+}
+
+/// Find the nearest Instruction or BasicBlock that post-dominates both I1 and
+/// I2.
+static InsertionPt findNearestCommonPostDominator(InsertionPt I1,
+                                                  InsertionPt I2,
+                                                  PostDominatorTree *PDT) {
+  auto GetParent = [](InsertionPt I) {
+    if (auto *BB = dyn_cast<BasicBlock *>(I))
+      return BB;
+    return cast<Instruction *>(I)->getParent();
+  };
+  BasicBlock *BB1 = GetParent(I1);
+  BasicBlock *BB2 = GetParent(I2);
+  if (BB1 == BB2) {
+    // BasicBlock InsertionPt means the first non-phi instruction.
+    if (isa<BasicBlock *>(I1))
+      return I2;
+    if (isa<BasicBlock *>(I2))
+      return I1;
+    return cast<Instruction *>(I1)->comesBefore(cast<Instruction *>(I2)) ? I2
+                                                                         : I1;
+  }
+  BasicBlock *PDomBB = PDT->findNearestCommonDominator(BB1, BB2);
+  if (!PDomBB)
+    return nullptr;
+  if (BB2 == PDomBB)
+    return I2;
+  if (BB1 == PDomBB)
+    return I1;
+  return PDomBB;
+}
+
 // Attempts to optimize the pattern whereby memory is copied from an alloca to
 // another alloca, where the two allocas don't have conflicting mod/ref. If
 // successful, the two allocas can be merged into one and the transfer can be
@@ -1440,8 +1510,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
-  // 1. Check that copy is full. Calculate the static size of the allocas to be
-  // merged, bail out if we can't.
+  // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getModule()->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
   if (!SrcSize || SrcSize->isScalable() || Size != SrcSize->getFixedValue()) {
@@ -1455,19 +1524,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
-  // 2-1. Check that src and dest are static allocas, which are not affected by
-  // stacksave/stackrestore.
-  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca() ||
-      SrcAlloca->getParent() != Load->getParent() ||
-      SrcAlloca->getParent() != Store->getParent())
+  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
 
-  // 2-2. Check that src and dest are never captured, unescaped allocas. Also
-  // collect lifetime markers first/last users in order to shrink wrap the
-  // lifetimes, and instructions with noalias metadata to remove them.
+  // Check that src and dest are never captured, unescaped allocas. Also
+  // find the nearest common dominator and postdominator for all users in
+  // order to shrink wrap the lifetimes, and instructions with noalias metadata
+  // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  Instruction *FirstUser = nullptr, *LastUser = nullptr;
+  InsertionPt Dom = nullptr, PDom = nullptr;
   SmallSet<Instruction *, 4> NoAliasInstrs;
 
   // Recursively track the user and check whether modified alias exist.
@@ -1505,12 +1571,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           continue;
         case UseCaptureKind::NO_CAPTURE: {
           auto *UI = cast<Instruction>(U.getUser());
-          if (DestAlloca->getParent() != UI->getParent())
-            return false;
-          if (!FirstUser || UI->comesBefore(FirstUser))
-            FirstUser = UI;
-          if (!LastUser || LastUser->comesBefore(UI))
-            LastUser = UI;
+          if (!Dom) {
+            PDom = Dom = UI;
+          } else {
+            Dom = findNearestCommonDominator(Dom, UI, DT);
+            if (PDom)
+              PDom = findNearestCommonPostDominator(PDom, UI, PDT);
+          }
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1534,37 +1601,64 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  // 3. Check that dest has no Mod/Ref, except full size lifetime intrinsics,
-  // from the alloca to the Store.
+  // Check that dest has no Mod/Ref, from the alloca to the Store, except full
+  // size lifetime intrinsics. And collect modref inst for the reachability
+  // check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
   MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
+  SmallVector<BasicBlock *, 8> ReachabilityWorklist;
   auto DestModRefCallback = [&](Instruction *UI) -> bool {
     // We don't care about the store itself.
     if (UI == Store)
       return true;
     ModRefInfo Res = BAA.getModRefInfo(UI, DestLoc);
-    // FIXME: For multi-BB cases, we need to see reachability from it to
-    // store.
-    // Bailout if Dest may have any ModRef before Store.
-    if (UI->comesBefore(Store) && isModOrRefSet(Res))
-      return false;
-    DestModRef |= BAA.getModRefInfo(UI, DestLoc);
+    DestModRef |= Res;
+    if (isModOrRefSet(Res)) {
+      // Instructions reachability checks.
+      // FIXME: adding the Instruction version isPotentiallyReachableFromMany on
+      // lib/Analysis/CFG.cpp (currently only for BasicBlocks) might be helpful.
+      if (UI->getParent() == Store->getParent()) {
+        // The same block case is special because it's the only time we're
+        // looking within a single block to see which instruction comes first.
+        // Once we start looking at multiple blocks, the first instruction of
+        // the block is reachable, so we only need to determine reachability
+        // between whole blocks.
+        BasicBlock *BB = UI->getParent();
 
+        // If A comes before B, then B is definitively reachable from A.
+        if (UI->comesBefore(Store))
+          return false;
+
+        // If the user's parent block is entry, no predecessor exists.
+        if (BB->isEntryBlock())
+          return true;
+
+        // Otherwise, continue doing the normal per-BB CFG walk.
+        ReachabilityWorklist.append(succ_begin(BB), succ_end(BB));
+      } else {
+        ReachabilityWorklist.push_back(UI->getParent());
+      }
+    }
     return true;
   };
 
   if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback))
     return false;
+  // Bailout if Dest may have any ModRef before Store.
+  if (!ReachabilityWorklist.empty() &&
+      isPotentiallyReachableFromMany(ReachabilityWorklist, Store->getParent(),
+                                     nullptr, DT, nullptr))
+    return false;
 
-  // 3. Check that, from after the Load to the end of the BB,
-  // 3-1. if the dest has any Mod, src has no Ref, and
-  // 3-2. if the dest has any Ref, src has no Mod except full-sized lifetimes.
+  // Check that, from after the Load to the end of the BB,
+  //   - if the dest has any Mod, src has no Ref, and
+  //   - if the dest has any Ref, src has no Mod except full-sized lifetimes.
   MemoryLocation SrcLoc(SrcAlloca, LocationSize::precise(Size));
 
   auto SrcModRefCallback = [&](Instruction *UI) -> bool {
-    // Any ModRef before Load doesn't matter, also Load and Store can be
-    // ignored.
-    if (UI->comesBefore(Load) || UI == Load || UI == Store)
+    // Any ModRef post-dominated by Load doesn't matter, also Load and Store
+    // themselves can be ignored.
+    if (PDT->dominates(Load, UI) || UI == Load || UI == Store)
       return true;
     ModRefInfo Res = BAA.getModRefInfo(UI, SrcLoc);
     if ((isModSet(DestModRef) && isRefSet(Res)) ||
@@ -1596,22 +1690,48 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     ConstantInt *AllocaSize = ConstantInt::get(Type::getInt64Ty(C), Size);
     // Create a new lifetime start marker before the first user of src or alloca
     // users.
-    Builder.SetInsertPoint(FirstUser->getParent(), FirstUser->getIterator());
-    auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
-    auto *FirstMA = MSSA->getMemoryAccess(FirstUser);
-    auto *StartMA = MSSAU->createMemoryAccessBefore(Start, nullptr, FirstMA);
+    MemoryAccess *StartMA;
+    if (auto *DomI = dyn_cast_if_present<Instruction *>(Dom)) {
+      Builder.SetInsertPoint(DomI->getParent(), DomI->getIterator());
+      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
+      StartMA = MSSAU->createMemoryAccessBefore(Start, nullptr,
+                                                MSSA->getMemoryAccess(DomI));
+    } else {
+      auto *DomB = cast<BasicBlock *>(Dom);
+      Builder.SetInsertPoint(DomB->getTerminator());
+      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
+      StartMA = MSSAU->createMemoryAccessInBB(
+          Start, nullptr, Start->getParent(), MemorySSA::BeforeTerminator);
+    }
     MSSAU->insertDef(cast<MemoryDef>(StartMA), /*RenameUses=*/true);
 
     // Create a new lifetime end marker after the last user of src or alloca
-    // users.
-    // FIXME: If the last user is the terminator for the bb, we can insert
-    // lifetime.end marker to the immidiate post-dominator, but currently do
-    // nothing.
-    if (!LastUser->isTerminator()) {
-      Builder.SetInsertPoint(LastUser->getParent(), ++LastUser->getIterator());
-      auto *End = Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
-      auto *LastMA = MSSA->getMemoryAccess(LastUser);
-      auto *EndMA = MSSAU->createMemoryAccessAfter(End, nullptr, LastMA);
+    // users. If there's no such postdominator, just don't bother; we could
+    // create one at each exit block, but that'd be essentially semantically
+    // meaningless.
+    // If the PDom is the terminator (e.g. invoke), see the next immediate post
+    // dominator.
+    if (auto *PDomI = dyn_cast_if_present<Instruction *>(PDom);
+        PDomI && PDomI->isTerminator()) {
+      auto *IPDomNode = (*PDT)[PDomI->getParent()]->getIDom();
+      PDom = IPDomNode ? IPDomNode->getBlock() : nullptr;
+    }
+    if (PDom) {
+      MemoryAccess *EndMA;
+      if (auto *PDomI = dyn_cast<Instruction *>(PDom)) {
+        // If PDom is Instruction ptr, insert after it, because it's a user of
+        // SrcAlloca.
+        Builder.SetInsertPoint(PDomI->getParent(), ++PDomI->getIterator());
+        auto *End = Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
+        EndMA = MSSAU->createMemoryAccessAfter(End, nullptr,
+                                               MSSA->getMemoryAccess(PDomI));
+      } else {
+        auto *PDomB = cast<BasicBlock *>(PDom);
+        Builder.SetInsertPoint(PDomB, PDomB->getFirstInsertionPt());
+        auto *End = Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
+        EndMA = MSSAU->createMemoryAccessInBB(End, nullptr, End->getParent(),
+                                              MemorySSA::Beginning);
+      }
       MSSAU->insertDef(cast<MemoryDef>(EndMA), /*RenameUses=*/true);
     }
 
@@ -1999,9 +2119,10 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
   auto *MSSA = &AM.getResult<MemorySSAAnalysis>(F);
 
-  bool MadeChange = runImpl(F, &TLI, AA, AC, DT, &MSSA->getMSSA());
+  bool MadeChange = runImpl(F, &TLI, AA, AC, DT, PDT, &MSSA->getMSSA());
   if (!MadeChange)
     return PreservedAnalyses::all();
 
@@ -2013,12 +2134,14 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 bool MemCpyOptPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
                             AliasAnalysis *AA_, AssumptionCache *AC_,
-                            DominatorTree *DT_, MemorySSA *MSSA_) {
+                            DominatorTree *DT_, PostDominatorTree *PDT_,
+                            MemorySSA *MSSA_) {
   bool MadeChange = false;
   TLI = TLI_;
   AA = AA_;
   AC = AC_;
   DT = DT_;
+  PDT = PDT_;
   MSSA = MSSA_;
   MemorySSAUpdater MSSAU_(MSSA_);
   MSSAU = &MSSAU_;
