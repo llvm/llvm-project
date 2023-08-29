@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_folding.py %s %flang_fc1
+! UNSUPPORTED: target=powerpc{{.*}}, target=aarch{{.*}}, system-windows, system-solaris
 ! Tests folding of OUT_OF_RANGE().
 module m
   integer(1),  parameter :: i1v(*)  = [ -huge(1_1)  - 1_1,  huge(1_1) ]
