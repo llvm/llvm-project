@@ -631,6 +631,9 @@ public:
   CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
                          Value *ArraySize, Function *MallocF = nullptr,
                          const Twine &Name = "");
+  /// Generate the IR for a call to the builtin free function.
+  CallInst *CreateFree(Value *Source,
+                       ArrayRef<OperandBundleDef> Bundles = std::nullopt);
 
   CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
                                                Value *Size, Align Alignment,
