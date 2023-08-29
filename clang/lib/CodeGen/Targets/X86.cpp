@@ -3115,7 +3115,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // register save area.
     if (TyAlign.getQuantity() > 8) {
       Address Tmp = CGF.CreateMemTemp(Ty);
-      CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize, false);
+      CGF.Builder.CreateMemCpy(Tmp, RegAddr, TySize);
       RegAddr = Tmp;
     }
 

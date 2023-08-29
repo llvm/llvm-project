@@ -526,7 +526,7 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
           llvm::ConstantInt::get(this->CGF->SizeTy, Size.getQuantity());
       DstAddr = DstAddr.withElementType(this->CGF->Int8Ty);
       SrcAddr = SrcAddr.withElementType(this->CGF->Int8Ty);
-      this->CGF->Builder.CreateMemCpy(DstAddr, SrcAddr, SizeVal, false);
+      this->CGF->Builder.CreateMemCpy(DstAddr, SrcAddr, SizeVal);
     } else {
       llvm::Type *Ty = llvm::Type::getIntNTy(
           this->CGF->getLLVMContext(),

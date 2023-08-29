@@ -1278,7 +1278,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
       Builder.CreateMemCpy(Loc,
                            createUnnamedGlobalForMemcpyFrom(
                                CGM, D, Builder, constant, Loc.getAlignment()),
-                           SizeVal, isVolatile);
+                           SizeVal, {isVolatile, false});
   if (IsAutoInit)
     I->addAnnotationMetadata("auto-init");
 }
@@ -1846,7 +1846,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
         Builder.CreateMemCpy(Address(Cur, Int8Ty, CurAlign),
                              createUnnamedGlobalForMemcpyFrom(
                                  CGM, D, Builder, Constant, ConstantAlign),
-                             BaseSizeInChars, isVolatile);
+                             BaseSizeInChars, {isVolatile, false});
     I->addAnnotationMetadata("auto-init");
     llvm::Value *Next =
         Builder.CreateInBoundsGEP(Int8Ty, Cur, BaseSizeInChars, "vla.next");

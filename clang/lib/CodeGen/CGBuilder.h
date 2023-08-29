@@ -298,16 +298,16 @@ public:
 
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
-                               bool IsVolatile = false) {
+                               llvm::MemTransferVolatility VolFlags = {}) {
     return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
                         Src.getPointer(), Src.getAlignment().getAsAlign(), Size,
-                        IsVolatile);
+                        VolFlags);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
-                               bool IsVolatile = false) {
+                               llvm::MemTransferVolatility VolFlags = {}) {
     return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
                         Src.getPointer(), Src.getAlignment().getAsAlign(), Size,
-                        IsVolatile);
+                        VolFlags);
   }
 
   using CGBuilderBaseTy::CreateMemCpyInline;
@@ -319,10 +319,10 @@ public:
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
-                                bool IsVolatile = false) {
+                                llvm::MemTransferVolatility VolFlags = {}) {
     return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
                          Src.getPointer(), Src.getAlignment().getAsAlign(),
-                         Size, IsVolatile);
+                         Size, VolFlags);
   }
 
   using CGBuilderBaseTy::CreateMemSet;
