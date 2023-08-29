@@ -40,7 +40,7 @@ private:
     bool IsMainModule;     ///< true if this was the first include in a file
   };
 
-  typedef std::vector<IncludeDirective> FileIncludes;
+  using FileIncludes = std::vector<IncludeDirective>;
   std::map<clang::FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule;
 
