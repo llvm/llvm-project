@@ -16,7 +16,6 @@
 #include "LLDBMemoryReader.h"
 #include "SwiftLanguageRuntime.h"
 #include "SwiftMetadataCache.h"
-#include "swift/RemoteInspection/TypeLowering.h"
 #include "llvm/Support/Memory.h"
 
 namespace swift {
@@ -36,6 +35,10 @@ class SwiftLanguageRuntimeImpl {
 
 public:
   SwiftLanguageRuntimeImpl(Process &process);
+  SwiftLanguageRuntimeImpl(const SwiftLanguageRuntimeImpl &) = delete;
+  const SwiftLanguageRuntimeImpl &
+  operator=(const SwiftLanguageRuntimeImpl &) = delete;
+
   static lldb::BreakpointPreconditionSP
   GetBreakpointExceptionPrecondition(lldb::LanguageType language,
                                      bool throw_bp);
@@ -154,6 +157,10 @@ public:
                                          TypeSystemSwiftTypeRef &ts,
                                          ConstString mangled_name);
 
+  /// Like \p BindGenericTypeParameters but for RemoteAST.
+  CompilerType BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
+                                                  CompilerType base_type);
+
   /// \see SwiftLanguageRuntime::BindGenericTypeParameters().
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          CompilerType base_type);
@@ -205,55 +212,73 @@ public:
   /// a specific pointer width.
   class ReflectionContextInterface {
   public:
-    /// Return a 32-bit reflection context.
+    /// Return a reflection context.
     static std::unique_ptr<ReflectionContextInterface>
-    CreateReflectionContext32(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
-        SwiftMetadataCache *swift_metadata_cache);
-
-    /// Return a 64-bit reflection context.
-    static std::unique_ptr<ReflectionContextInterface>
-    CreateReflectionContext64(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+    CreateReflectionContext(uint8_t pointer_size,
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool objc_interop,
         SwiftMetadataCache *swift_metadata_cache);
 
     virtual ~ReflectionContextInterface();
 
-    virtual llvm::Optional<uint32_t> addImage(
+    virtual llvm::Optional<uint32_t> AddImage(
         llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
             swift::ReflectionSectionKind)>
             find_section,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual llvm::Optional<uint32_t> addImage(
+    virtual llvm::Optional<uint32_t> AddImage(
         swift::remote::RemoteAddress image_start,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
     virtual llvm::Optional<uint32_t>
-    readELF(swift::remote::RemoteAddress ImageStart,
+    ReadELF(swift::remote::RemoteAddress ImageStart,
             llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
             llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
     virtual const swift::reflection::TypeInfo *
-    getTypeInfo(const swift::reflection::TypeRef *type_ref,
+    GetTypeInfo(const swift::reflection::TypeRef *type_ref,
                 swift::remote::TypeInfoProvider *provider) = 0;
-    virtual swift::remote::MemoryReader &getReader() = 0;
+    virtual swift::remote::MemoryReader &GetReader() = 0;
     virtual bool
-    ForEachSuperClassType(LLDBTypeInfoProvider *tip, lldb::addr_t pointer,
+    ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
+                          lldb::addr_t pointer,
                           std::function<bool(SuperClassType)> fn) = 0;
     virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
                                      swift::remote::RemoteAddress>>
-    projectExistentialAndUnwrapClass(
+    ProjectExistentialAndUnwrapClass(
         swift::remote::RemoteAddress existential_addess,
         const swift::reflection::TypeRef &existential_tr) = 0;
     virtual const swift::reflection::TypeRef *
-    readTypeFromMetadata(lldb::addr_t metadata_address,
+    ReadTypeFromMetadata(lldb::addr_t metadata_address,
                          bool skip_artificial_subclasses = false) = 0;
     virtual const swift::reflection::TypeRef *
-    readTypeFromInstance(lldb::addr_t instance_address,
+    ReadTypeFromInstance(lldb::addr_t instance_address,
                          bool skip_artificial_subclasses = false) = 0;
-    virtual swift::reflection::TypeRefBuilder &getBuilder() = 0;
-    virtual llvm::Optional<bool> isValueInlinedInExistentialContainer(
+    virtual swift::reflection::TypeRefBuilder &GetBuilder() = 0;
+    virtual llvm::Optional<bool> IsValueInlinedInExistentialContainer(
         swift::remote::RemoteAddress existential_address) = 0;
     virtual swift::remote::RemoteAbsolutePointer
-    stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
+    StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
+  };
+
+  /// A wrapper around TargetReflectionContext, which holds a lock to ensure
+  /// exclusive access.
+  struct ThreadSafeReflectionContext {
+    ThreadSafeReflectionContext(ReflectionContextInterface *reflection_ctx,
+                             std::recursive_mutex &mutex)
+        : m_reflection_ctx(reflection_ctx), m_lock(mutex, std::adopt_lock) {}
+
+    ReflectionContextInterface *operator->() const {
+      return m_reflection_ctx;
+    }
+
+    operator bool() const {
+      return m_reflection_ctx != nullptr;
+    }
+
+  private:
+    ReflectionContextInterface *m_reflection_ctx;
+    // This lock operates on a recursive mutex because the initialization
+    // of ReflectionContext recursive calls itself (see
+    // SwiftLanguageRuntimeImpl::SetupReflection).
+    std::lock_guard<std::recursive_mutex> m_lock;
   };
 
 protected:
@@ -292,13 +317,22 @@ protected:
                                       TypeAndOrName &class_type_or_name,
                                       Address &address,
                                       Value::ValueType &value_type);
-
+#ifndef NDEBUG
+  ConstString GetDynamicTypeName_ClassRemoteAST(ValueObject &in_value,
+                                                lldb::addr_t instance_ptr);
+#endif
   bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
                                          CompilerType protocol_type,
                                          lldb::DynamicValueType use_dynamic,
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
-
+#ifndef NDEBUG
+  llvm::Optional<std::pair<CompilerType, Address>>
+  GetDynamicTypeAndAddress_ProtocolRemoteAST(ValueObject &in_value,
+                                             CompilerType protocol_type,
+                                             bool use_local_buffer,
+                                             lldb::addr_t existential_address);
+#endif
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                       CompilerType &bound_type,
                                       lldb::DynamicValueType use_dynamic,
@@ -384,8 +418,13 @@ private:
   /// Lazily initialize and return \p m_dynamic_exclusivity_flag_addr.
   llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
 
-  /// Lazily initialize the reflection context. Return \p nullptr on failure.
-  ReflectionContextInterface *GetReflectionContext();
+  /// Lazily initialize the reflection context. Returns a
+  /// ThreadSafeReflectionContext with a \p nullptr on failure.
+  ThreadSafeReflectionContext GetReflectionContext();
+
+  // Add the modules in m_modules_to_add to the Reflection Context. The
+  // ModulesDidLoad() callback appends to m_modules_to_add.
+  void ProcessModulesToAdd();
 
   /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
   llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
@@ -409,12 +448,14 @@ private:
   /// \{
   std::unique_ptr<ReflectionContextInterface> m_reflection_ctx;
 
+  /// Mutex guarding accesses to the reflection context.
+  std::recursive_mutex m_reflection_ctx_mutex;
+
   SwiftMetadataCache m_swift_metadata_cache;
 
   /// Record modules added through ModulesDidLoad, which are to be
   /// added to the reflection context once it's being initialized.
   ModuleList m_modules_to_add;
-  std::recursive_mutex m_add_module_mutex;
 
   /// Add the image to the reflection context.
   /// \return true on success.
@@ -449,9 +490,12 @@ private:
   /// Swift native NSError isa.
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
-  SwiftLanguageRuntimeImpl(const SwiftLanguageRuntimeImpl &) = delete;
-  const SwiftLanguageRuntimeImpl &
-  operator=(const SwiftLanguageRuntimeImpl &) = delete;
+#ifndef NDEBUG
+  /// Assert helper to determine if the scratch SwiftASTContext is locked.
+  static bool IsScratchContextLocked(Target &target);
+  /// Assert helper to determine if the scratch SwiftASTContext is locked.
+  static bool IsScratchContextLocked(lldb::TargetSP target);
+#endif
 };
 
 } // namespace lldb_private
