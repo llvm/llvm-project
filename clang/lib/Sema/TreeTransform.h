@@ -12325,7 +12325,7 @@ TreeTransform<Derived>::TransformCXXNullPtrLiteralExpr(
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
-  QualType T = getSema().getCurrentThisType();
+  QualType T = getDerived().TransformType(E->getType());
 
   if (!getDerived().AlwaysRebuild() && T == E->getType()) {
     // Mark it referenced in the new context regardless.
