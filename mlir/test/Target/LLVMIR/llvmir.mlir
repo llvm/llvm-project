@@ -2292,3 +2292,132 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// Zero-initialize operation.
+//
+
+llvm.mlir.global linkonce @zero_integer() : i32 {
+  %0 = llvm.mlir.zero : i32
+  llvm.return %0 : i32
+}
+// CHECK: @zero_integer = linkonce global i32 0
+
+llvm.mlir.global linkonce @zero_float() : f32 {
+  %0 = llvm.mlir.zero : f32
+  llvm.return %0 : f32
+}
+// CHECK: @zero_float = linkonce global float 0.000000e+00
+
+llvm.mlir.global linkonce @zero_array() : !llvm.array<5 x i32> {
+  %0 = llvm.mlir.zero : !llvm.array<5 x i32>
+  llvm.return %0 : !llvm.array<5 x i32>
+}
+// CHECK: @zero_array = linkonce global [5 x i32] zeroinitializer
+
+llvm.mlir.global linkonce @zero_struct() : !llvm.struct<(i32, f64, i8)> {
+  %0 = llvm.mlir.zero : !llvm.struct<(i32, f64, i8)>
+  llvm.return %0 : !llvm.struct<(i32, f64, i8)>
+}
+// CHECK: @zero_struct = linkonce global { i32, double, i8 } zeroinitializer
+
+llvm.mlir.global linkonce @zero_ptr() : !llvm.ptr<i32> {
+  %0 = llvm.mlir.zero : !llvm.ptr<i32>
+  llvm.return %0 : !llvm.ptr<i32>
+}
+// CHECK: @zero_ptr = linkonce global ptr null
+
+llvm.mlir.global linkonce @zero_vector() : !llvm.vec<42 x ptr<i32>> {
+  %0 = llvm.mlir.zero : !llvm.vec<42 x ptr<i32>>
+  llvm.return %0 : !llvm.vec<42 x ptr<i32>>
+}
+// CHECK: @zero_vector = linkonce global <42 x ptr> zeroinitializer
+
+llvm.mlir.global linkonce @zero_nested() : !llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)> {
+  %0 = llvm.mlir.zero : !llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)>
+  llvm.return %0 : !llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)>
+}
+// CHECK: @zero_nested = linkonce global { i32, { i32, i32 }, double } zeroinitializer
+
+llvm.mlir.global linkonce @zero_func_ptr() : !llvm.ptr<func<i32 (i32)>> {
+  %0 = llvm.mlir.zero : !llvm.ptr<func<i32 (i32)>>
+  llvm.return %0 : !llvm.ptr<func<i32 (i32)>>
+}
+// CHECK: @zero_func_ptr = linkonce global ptr null
+
+llvm.mlir.global linkonce @zero_complex_type() : !llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >> {
+  %0 = llvm.mlir.zero : !llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >>
+  llvm.return %0 : !llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >>
+}
+// CHECK: @zero_complex_type = linkonce global [5 x { i32, [3 x ptr] }] zeroinitializer
+
+llvm.func @local_zero_initialize() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+
+  // Integer type
+  %local_integer = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr<i32>
+  %1 = llvm.mlir.zero : i32
+  llvm.store %1, %local_integer : !llvm.ptr<i32>
+  // CHECK: %[[#V1:]] = alloca i32, i64 1, align 4
+  // CHECK: store i32 0, ptr %[[#V1]], align 4
+
+  // Float type
+  %local_float = llvm.alloca %0 x f32 : (i64) -> !llvm.ptr<f32>
+  %2 = llvm.mlir.zero : f32
+  llvm.store %2, %local_float : !llvm.ptr<f32>
+  // CHECK: %[[#V2:]] = alloca float, i64 1, align 4
+  // CHECK: store float 0.000000e+00, ptr %[[#V2]], align 4
+
+  // Array type
+  %local_array = llvm.alloca %0 x !llvm.array<5 x i32> : (i64) -> !llvm.ptr<!llvm.array<5 x i32>>
+  %3 = llvm.mlir.zero : !llvm.array<5 x i32>
+  llvm.store %3, %local_array : !llvm.ptr<!llvm.array<5 x i32>>
+  // CHECK: %[[#V3:]] = alloca [5 x i32], i64 1, align 4
+  // CHECK: store [5 x i32] zeroinitializer, ptr %[[#V3]], align 4
+
+  // Struct type
+  %local_struct = llvm.alloca %0 x !llvm.struct<(i32, f64, i8)> : (i64) -> !llvm.ptr<!llvm.struct<(i32, f64, i8)>>
+  %4 = llvm.mlir.zero : !llvm.struct<(i32, f64, i8)>
+  llvm.store %4, %local_struct : !llvm.ptr<!llvm.struct<(i32, f64, i8)>>
+  // CHECK: %[[#V4:]] = alloca { i32, double, i8 }, i64 1, align 8
+  // CHECK: store { i32, double, i8 } zeroinitializer, ptr %[[#V4]], align 8
+
+  // Pointer type
+  %local_ptr = llvm.alloca %0 x !llvm.ptr<i32> : (i64) -> !llvm.ptr<!llvm.ptr<i32>>
+  %5 = llvm.mlir.zero : !llvm.ptr<i32>
+  llvm.store %5, %local_ptr : !llvm.ptr<!llvm.ptr<i32>>
+  // CHECK: %[[#V5:]] = alloca ptr, i64 1, align 8
+  // CHECK: store ptr null, ptr %[[#V5]], align 8
+
+  // Vector type
+  %local_vector = llvm.alloca %0 x !llvm.vec<42 x ptr<i32>> : (i64) -> !llvm.ptr<!llvm.vec<42 x ptr<i32>>>
+  %6 = llvm.mlir.zero : !llvm.vec<42 x ptr<i32>>
+  llvm.store %6, %local_vector : !llvm.ptr<!llvm.vec<42 x ptr<i32>>>
+  // CHECK: %[[#V6:]] = alloca <42 x ptr>, i64 1, align 512
+  // CHECK: store <42 x ptr> zeroinitializer, ptr %[[#V6]], align 512
+
+  // Nested type
+  %local_nested = llvm.alloca %0 x !llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)> : (i64) -> !llvm.ptr<!llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)>>
+  %7 = llvm.mlir.zero : !llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)>
+  llvm.store %7, %local_nested : !llvm.ptr<!llvm.struct<(i32, !llvm.struct<(i32, i32)>, f64)>>
+  // CHECK: %[[#V7:]] = alloca { i32, { i32, i32 }, double }, i64 1, align 8
+  // CHECK: store { i32, { i32, i32 }, double } zeroinitializer, ptr %[[#V7]], align 8
+
+  // Function Pointer type
+  %local_func_ptr = llvm.alloca %0 x !llvm.ptr<func<i32 (i32)>> : (i64) -> !llvm.ptr<!llvm.ptr<func<i32 (i32)>>>
+  %8 = llvm.mlir.zero : !llvm.ptr<func<i32 (i32)>>
+  llvm.store %8, %local_func_ptr : !llvm.ptr<!llvm.ptr<func<i32 (i32)>>>
+  // CHECK: %[[#V8:]] = alloca ptr, i64 1, align 8
+  // CHECK: store ptr null, ptr %[[#V8]], align 8
+
+  // Complex type
+  %local_complex = llvm.alloca %0 x !llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >> : (i64) -> !llvm.ptr<!llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >>>
+  %9 = llvm.mlir.zero : !llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >>
+  llvm.store %9, %local_complex : !llvm.ptr<!llvm.array<5 x !llvm.struct<(i32, !llvm.array<3 x !llvm.ptr<i32>>) >>>
+  // CHECK: %[[#V9:]] = alloca [5 x { i32, [3 x ptr] }], i64 1, align 8
+  // CHECK: store [5 x { i32, [3 x ptr] }] zeroinitializer, ptr %[[#V9]], align 8
+
+  llvm.return
+}
