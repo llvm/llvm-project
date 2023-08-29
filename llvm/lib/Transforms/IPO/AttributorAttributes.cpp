@@ -12115,11 +12115,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!AllCalleesKnownNow && AssumedCalleesNow.empty())
       return indicatePessimisticFixpoint();
 
-    if (AssumedCalleesNow == AssumedCalles &&
+    if (AssumedCalleesNow == AssumedCallees &&
         AllCalleesKnown == AllCalleesKnownNow)
       return ChangeStatus::UNCHANGED;
 
-    std::swap(AssumedCalles, AssumedCalleesNow);
+    std::swap(AssumedCallees, AssumedCalleesNow);
     AllCalleesKnown = AllCalleesKnownNow;
     return ChangeStatus::CHANGED;
   }
@@ -12138,7 +12138,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).
-    if (AssumedCalles.empty()) {
+    if (AssumedCallees.empty()) {
       assert(AllCalleesKnown &&
              "Expected all callees to be known if there are none.");
       A.changeToUnreachableAfterManifest(CB);
@@ -12146,8 +12146,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     }
 
     // Special handling for the single callee case.
-    if (AllCalleesKnown && AssumedCalles.size() == 1) {
-      auto *NewCallee = AssumedCalles.front();
+    if (AllCalleesKnown && AssumedCallees.size() == 1) {
+      auto *NewCallee = AssumedCallees.front();
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
         return ChangeStatus::CHANGED;
@@ -12169,7 +12169,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     //
     ICmpInst *LastCmp = nullptr;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
-    for (Function *NewCallee : AssumedCalles) {
+    for (Function *NewCallee : AssumedCallees) {
       LastCmp = new ICmpInst(IP, llvm::CmpInst::ICMP_EQ, FP, NewCallee);
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
@@ -12239,7 +12239,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return std::string(AllCalleesKnown ? "eliminate" : "specialize") +
-           " indirect call site with " + std::to_string(AssumedCalles.size()) +
+           " indirect call site with " + std::to_string(AssumedCallees.size()) +
            " functions";
   }
 
@@ -12255,7 +12255,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   }
 
   bool foreachCallee(function_ref<bool(Function *)> CB) const override {
-    return isValidState() && AllCalleesKnown && all_of(AssumedCalles, CB);
+    return isValidState() && AllCalleesKnown && all_of(AssumedCallees, CB);
   }
 
 private:
@@ -12265,9 +12265,9 @@ private:
 
   /// This set contains all currently assumed calllees, which might grow over
   /// time.
-  SmallSetVector<Function *, 4> AssumedCalles;
+  SmallSetVector<Function *, 4> AssumedCallees;
 
-  /// Flag to indicate if all possible callees are in the AssumedCalles set or
+  /// Flag to indicate if all possible callees are in the AssumedCallees set or
   /// if there could be others.
   bool AllCalleesKnown = true;
 };
