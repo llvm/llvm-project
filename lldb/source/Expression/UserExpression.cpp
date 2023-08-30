@@ -42,11 +42,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-#endif //LLDB_ENABLE_SWIFT
-
 using namespace lldb_private;
 
 char UserExpression::ID;
@@ -439,18 +434,9 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
-  if (options.GetSuppressPersistentResult() && result_var && target) {
-#ifdef LLDB_ENABLE_SWIFT
-    if (m_language == lldb::eLanguageTypeSwift) {
-      if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
-        if (auto *persistent_state =
-                target->GetSwiftPersistentExpressionState(*exe_scope))
-          persistent_state->RemovePersistentVariable(result_var);
-    } else
-#endif // LLDB_ENABLE_SWIFT
+  if (options.GetSuppressPersistentResult() && result_var && target)
     if (auto *persistent_state =
                    target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);
-  }
   return expr_result;
 }
