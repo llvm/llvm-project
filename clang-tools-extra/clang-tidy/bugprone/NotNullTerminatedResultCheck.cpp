@@ -939,7 +939,7 @@ void NotNullTerminatedResultCheck::memchrFix(
 
 void NotNullTerminatedResultCheck::memmoveFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
-    DiagnosticBuilder &Diag) {
+    DiagnosticBuilder &Diag) const {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
 
   if (UseSafeFunctions && isKnownDest(Result)) {
