@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
@@ -29,6 +30,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Object/TapiFile.h"
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/Object/Wasm.h"
@@ -1890,6 +1892,62 @@ static Expected<bool> hasSymbols(SymbolicFile &Obj) {
   return !Obj.symbols().empty();
 }
 
+static void printSymbolNamesFromObject(
+    SymbolicFile &Obj, std::vector<NMSymbol> &SymbolList,
+    bool PrintSymbolObject, bool PrintObjectLabel, StringRef ArchiveName = {},
+    StringRef ArchitectureName = {}, StringRef ObjectName = {},
+    bool PrintArchiveName = true) {
+
+  if (PrintObjectLabel && !ExportSymbols)
+    printObjectLabel(PrintArchiveName, ArchiveName, ArchitectureName,
+                     ObjectName.empty() ? Obj.getFileName() : ObjectName);
+
+  if (!getSymbolNamesFromObject(Obj, SymbolList) || ExportSymbols)
+    return;
+
+  // If there is an error in hasSymbols(), the error should be encountered in
+  // function getSymbolNamesFromObject first.
+  if (!cantFail(hasSymbols(Obj)) && SymbolList.empty() && !Quiet) {
+    writeFileName(errs(), ArchiveName, ArchitectureName);
+    errs() << "no symbols\n";
+  }
+
+  sortSymbolList(SymbolList);
+  printSymbolList(Obj, SymbolList, PrintSymbolObject, ArchiveName,
+                  ArchitectureName);
+}
+
+static void dumpSymbolsNameFromMachOFilesetEntry(
+    MachOObjectFile *Obj, std::vector<NMSymbol> &SymbolList,
+    bool PrintSymbolObject, bool PrintObjectLabel) {
+  auto Buf = Obj->getMemoryBufferRef();
+  const auto *End = Obj->load_commands().end();
+  for (const auto *It = Obj->load_commands().begin(); It != End; ++It) {
+    const auto &Command = *It;
+    if (Command.C.cmd != MachO::LC_FILESET_ENTRY)
+      continue;
+
+    MachO::fileset_entry_command Entry =
+        Obj->getFilesetEntryLoadCommand(Command);
+    auto MaybeMachO =
+        MachOObjectFile::createMachOObjectFile(Buf, 0, 0, Entry.fileoff);
+
+    if (Error Err = MaybeMachO.takeError())
+      report_fatal_error(std::move(Err));
+
+    const char *EntryName = Command.Ptr + Entry.entry_id.offset;
+    if (EntryName)
+      outs() << "Symbols for " << EntryName << ": \n";
+
+    std::unique_ptr<MachOObjectFile> EntryMachO = std::move(MaybeMachO.get());
+    printSymbolNamesFromObject(*EntryMachO, SymbolList, PrintSymbolObject,
+                               PrintObjectLabel);
+
+    if (std::next(It) != End)
+      outs() << "\n";
+  }
+}
+
 static void dumpSymbolNamesFromObject(
     SymbolicFile &Obj, std::vector<NMSymbol> &SymbolList,
     bool PrintSymbolObject, bool PrintObjectLabel, StringRef ArchiveName = {},
@@ -1904,23 +1962,21 @@ static void dumpSymbolNamesFromObject(
     return;
   }
 
-  if (PrintObjectLabel && !ExportSymbols)
-    printObjectLabel(PrintArchiveName, ArchiveName, ArchitectureName,
-                     ObjectName.empty() ? Obj.getFileName() : ObjectName);
-  if (!getSymbolNamesFromObject(Obj, SymbolList) || ExportSymbols)
-    return;
   CurrentFilename = Obj.getFileName();
 
-  // If there is an error in hasSymbols(), the error should be encountered in
-  // function getSymbolNamesFromObject first.
-  if (!cantFail(hasSymbols(Obj)) && SymbolList.empty() && !Quiet) {
-    writeFileName(errs(), ArchiveName, ArchitectureName);
-    errs() << "no symbols\n";
+  // Are we handling a MachO of type MH_FILESET?
+  if (Obj.isMachO() && Obj.is64Bit() &&
+      cast<MachOObjectFile>(&Obj)->getHeader64().filetype ==
+          MachO::MH_FILESET) {
+    dumpSymbolsNameFromMachOFilesetEntry(cast<MachOObjectFile>(&Obj),
+                                         SymbolList, PrintSymbolObject,
+                                         PrintObjectLabel);
+    return;
   }
 
-  sortSymbolList(SymbolList);
-  printSymbolList(Obj, SymbolList, PrintSymbolObject, ArchiveName,
-                  ArchitectureName);
+  printSymbolNamesFromObject(Obj, SymbolList, PrintSymbolObject,
+                             PrintObjectLabel, ArchiveName, ArchitectureName,
+                             ObjectName, PrintArchiveName);
 }
 
 // checkMachOAndArchFlags() checks to see if the SymbolicFile is a Mach-O file
