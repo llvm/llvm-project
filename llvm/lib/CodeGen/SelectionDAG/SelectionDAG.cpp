@@ -3078,6 +3078,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(SrcOp, Depth + 1).trunc(BitWidth);
     break;
   }
+  case ISD::SPLAT_VECTOR_PARTS: {
+    unsigned ScalarSize = Op.getOperand(0).getScalarValueSizeInBits();
+    assert(ScalarSize * Op.getNumOperands() == BitWidth &&
+           "Expected SPLAT_VECTOR_PARTS scalars to cover element width");
+    for (auto [I, SrcOp] : enumerate(Op->ops())) {
+      Known.insertBits(computeKnownBits(SrcOp, Depth + 1), ScalarSize * I);
+    }
+    break;
+  }
   case ISD::BUILD_VECTOR:
     assert(!Op.getValueType().isScalableVector());
     // Collect the known bits that are shared by every demanded vector element.
