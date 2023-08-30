@@ -10230,7 +10230,8 @@ struct AANoUndefFloating : public AANoUndefImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoUndefImpl::initialize(A);
-    if (!getState().isAtFixpoint())
+    if (!getState().isAtFixpoint() && getAnchorScope() &&
+        !getAnchorScope()->isDeclaration())
       if (Instruction *CtxI = getCtxI())
         followUsesInMBEC(*this, A, getState(), *CtxI);
   }
@@ -12091,6 +12092,36 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       AssumedCalleesNow.set_union(PotentialCallees);
     }
 
+    // Try to find a reason for \p Fn not to be a potential callee. If none was
+    // found, add it to the assumed callees set.
+    auto CheckPotentialCallee = [&](Function &Fn) {
+      if (!PotentialCallees.empty() && !PotentialCallees.count(&Fn))
+        return false;
+
+      auto &CachedResult = FilterResults[&Fn];
+      if (CachedResult.has_value())
+        return CachedResult.value();
+
+      int NumFnArgs = Fn.arg_size();
+      int NumCBArgs = CB->arg_size();
+
+      // Check if any excess argument (which we fill up with poison) is known to
+      // be UB on undef.
+      for (int I = NumCBArgs; I < NumFnArgs; ++I) {
+        bool IsKnown = false;
+        if (AA::hasAssumedIRAttr<Attribute::NoUndef>(
+                A, this, IRPosition::argument(*Fn.getArg(I)),
+                DepClassTy::OPTIONAL, IsKnown)) {
+          if (IsKnown)
+            CachedResult = false;
+          return false;
+        }
+      }
+
+      CachedResult = true;
+      return true;
+    };
+
     // Check simplification result, prune known UB callees, also restrict it to
     // the !callees set, if present.
     for (auto &VAC : Values) {
@@ -12101,7 +12132,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         continue;
       // TODO: Check for known UB, e.g., poison + noundef.
       if (auto *VACFn = dyn_cast<Function>(VAC.getValue())) {
-        if (PotentialCallees.empty() || PotentialCallees.count(VACFn))
+        if (CheckPotentialCallee(*VACFn))
           AssumedCalleesNow.insert(VACFn);
         continue;
       }
@@ -12283,6 +12314,9 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   }
 
 private:
+  /// Map to remember filter results.
+  DenseMap<Function *, std::optional<bool>> FilterResults;
+
   /// If the !callee metadata was present, this set will contain all potential
   /// callees (superset).
   SmallSetVector<Function *, 4> PotentialCallees;
