@@ -161,7 +161,7 @@ ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
     DC = DC->getParent();
   }
 
-  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
     RD = RD->getDefinition();
     if (RD) {
       Info.Bases.push_back(RD);
