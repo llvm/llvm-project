@@ -38,6 +38,22 @@ class Value;
 class TypeConverter {
 public:
   virtual ~TypeConverter() = default;
+  TypeConverter() = default;
+  // Copy the registered conversions, but not the caches
+  TypeConverter(const TypeConverter &other)
+      : conversions(other.conversions),
+        argumentMaterializations(other.argumentMaterializations),
+        sourceMaterializations(other.sourceMaterializations),
+        targetMaterializations(other.targetMaterializations),
+        typeAttributeConversions(other.typeAttributeConversions) {}
+  TypeConverter &operator=(const TypeConverter &other) {
+    conversions = other.conversions;
+    argumentMaterializations = other.argumentMaterializations;
+    sourceMaterializations = other.sourceMaterializations;
+    targetMaterializations = other.targetMaterializations;
+    typeAttributeConversions = other.typeAttributeConversions;
+    return *this;
+  }
 
   /// This class provides all of the information necessary to convert a type
   /// signature.
@@ -421,6 +437,8 @@ private:
   mutable DenseMap<Type, Type> cachedDirectConversions;
   /// This cache stores the successful 1->N conversions, where N != 1.
   mutable DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
+  /// A mutex used for cache access
+  mutable llvm::sys::SmartRWMutex<true> cacheMutex;
 };
 
 //===----------------------------------------------------------------------===//

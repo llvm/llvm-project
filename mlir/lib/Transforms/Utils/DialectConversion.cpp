@@ -2920,24 +2920,34 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) const {
-  auto existingIt = cachedDirectConversions.find(t);
-  if (existingIt != cachedDirectConversions.end()) {
-    if (existingIt->second)
-      results.push_back(existingIt->second);
-    return success(existingIt->second != nullptr);
+  {
+    std::shared_lock<decltype(cacheMutex)> cacheReadLock(cacheMutex,
+                                                         std::defer_lock);
+    if (t.getContext()->isMultithreadingEnabled())
+      cacheReadLock.lock();
+    auto existingIt = cachedDirectConversions.find(t);
+    if (existingIt != cachedDirectConversions.end()) {
+      if (existingIt->second)
+        results.push_back(existingIt->second);
+      return success(existingIt->second != nullptr);
+    }
+    auto multiIt = cachedMultiConversions.find(t);
+    if (multiIt != cachedMultiConversions.end()) {
+      results.append(multiIt->second.begin(), multiIt->second.end());
+      return success();
+    }
   }
-  auto multiIt = cachedMultiConversions.find(t);
-  if (multiIt != cachedMultiConversions.end()) {
-    results.append(multiIt->second.begin(), multiIt->second.end());
-    return success();
-  }
-
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
   size_t currentCount = results.size();
 
+  std::unique_lock<decltype(cacheMutex)> cacheWriteLock(cacheMutex,
+                                                        std::defer_lock);
+
   for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
     if (std::optional<LogicalResult> result = converter(t, results)) {
+      if (t.getContext()->isMultithreadingEnabled())
+        cacheWriteLock.lock();
       if (!succeeded(*result)) {
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
