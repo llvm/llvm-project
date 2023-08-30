@@ -17,8 +17,7 @@ define void @simple_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
 ; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    bl %plt(notdead)
@@ -62,10 +61,9 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
-; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    move $s0, $sp
+; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    bl %plt(notdead)
@@ -118,8 +116,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 16
 ; LA32-NEXT:    addi.w $a0, $a0, 15
-; LA32-NEXT:    addi.w $a1, $zero, -16
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    addi.w $sp, $sp, -16
