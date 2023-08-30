@@ -16,7 +16,7 @@
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2"
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/../../.."
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-SPARC32-SAME: "-zignore" "-latomic" "-zrecord"
+// CHECK-LD-SPARC32-SAME: "-z" "ignore" "-latomic" "-z" "record"
 // CHECK-LD-SPARC32-SAME: "-lgcc_s"
 // CHECK-LD-SPARC32-SAME: "-lc"
 // CHECK-LD-SPARC32-SAME: "-lgcc"

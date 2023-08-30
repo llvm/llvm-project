@@ -164,9 +164,9 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
     // forcibly link with libatomic as a workaround.
     if (getToolChain().getTriple().getArch() == llvm::Triple::sparc) {
-      CmdArgs.push_back(getAsNeededOption(getToolChain(), true));
+      addAsNeededOption(getToolChain(), Args, CmdArgs, true);
       CmdArgs.push_back("-latomic");
-      CmdArgs.push_back(getAsNeededOption(getToolChain(), false));
+      addAsNeededOption(getToolChain(), Args, CmdArgs, false);
     }
     CmdArgs.push_back("-lgcc_s");
     CmdArgs.push_back("-lc");
@@ -176,20 +176,24 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {
-      linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
+      linkSanitizerRuntimeDeps(getToolChain(), Args, CmdArgs);
 
       // Work around Solaris/amd64 ld bug when calling __tls_get_addr directly.
       // However, ld -z relax=transtls is available since Solaris 11.2, but not
       // in Illumos.
       if (getToolChain().getTriple().getArch() == llvm::Triple::x86_64 &&
           (SA.needsAsanRt() || SA.needsStatsRt() ||
-           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())))
-        CmdArgs.push_back("-zrelax=transtls");
+           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime()))) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("relax=transtls");
+      }
     }
     // Avoid AsanInitInternal cycle, Issue #64126.
     if (getToolChain().getTriple().isX86() && SA.needsSharedRt() &&
-        SA.needsAsanRt())
-      CmdArgs.push_back("-znow");
+        SA.needsAsanRt()) {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("now");
+    }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
