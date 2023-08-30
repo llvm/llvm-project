@@ -211,6 +211,15 @@ libc++ specific options
 
   Toggle the installation of the libc++ headers.
 
+.. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
+
+  **Default**: ``OFF``
+
+  Build libc++ with assertions enabled in the compiled library, and enable assertions
+  by default when building user code as well. Assertions can be turned off by users
+  by defining ``_LIBCPP_ENABLE_ASSERTIONS=0``. For details, see
+  :ref:`the documentation <assertions-mode>`.
+
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``

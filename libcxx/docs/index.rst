@@ -40,7 +40,6 @@ Getting Started with libc++
    TestingLibcxx
    Contributing
    Modules
-   Hardening
    ReleaseProcedure
    Status/Cxx14
    Status/Cxx17

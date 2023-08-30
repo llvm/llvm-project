@@ -17,7 +17,7 @@
 // Make sure that calling latch with a negative value triggers an assertion
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-debug-mode && !libcpp-has-assertions
 // XFAIL: availability-verbose_abort-missing
 
 #include <latch>

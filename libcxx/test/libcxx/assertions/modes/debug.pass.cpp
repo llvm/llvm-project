@@ -9,7 +9,7 @@
 // This test ensures that assertions trigger without the user having to do anything when the debug mode has been enabled
 // by default.
 
-// UNSUPPORTED: !libcpp-has-debug-mode
+// REQUIRES: libcpp-has-debug-mode
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.

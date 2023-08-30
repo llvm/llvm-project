@@ -138,17 +138,50 @@ IWYU, you should run the tool like so:
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp```
 file with the libc++-provided ``libcxx.imp`` file.
 
+.. _assertions-mode:
+
+Enabling the "safe libc++" mode
+===============================
+
+Libc++ contains a number of assertions whose goal is to catch undefined behavior in the
+library, usually caused by precondition violations. Those assertions do not aim to be
+exhaustive -- instead they aim to provide a good balance between safety and performance.
+In particular, these assertions do not change the complexity of algorithms. However, they
+might, in some cases, interfere with compiler optimizations.
+
+By default, these assertions are turned off. Vendors can decide to turn them on while building
+the compiled library by defining ``LIBCXX_ENABLE_ASSERTIONS=ON`` at CMake configuration time.
+When ``LIBCXX_ENABLE_ASSERTIONS`` is used, the compiled library will be built with assertions
+enabled, **and** user code will be built with assertions enabled by default. If
+``LIBCXX_ENABLE_ASSERTIONS=OFF`` at CMake configure time, the compiled library will not contain
+assertions and the default when building user code will be to have assertions disabled.
+As a user, you can consult your vendor to know whether assertions are enabled by default.
+
+Furthermore, independently of any vendor-selected default, users can always control whether
+assertions are enabled in their code by defining ``_LIBCPP_ENABLE_ASSERTIONS=0|1`` before
+including any libc++ header (we recommend passing ``-D_LIBCPP_ENABLE_ASSERTIONS=X`` to the
+compiler). Note that if the compiled library was built by the vendor without assertions,
+functions compiled inside the static or shared library won't have assertions enabled even
+if the user defines ``_LIBCPP_ENABLE_ASSERTIONS=1`` (the same is true for the inverse case
+where the static or shared library was compiled **with** assertions but the user tries to
+disable them). However, most of the code in libc++ is in the headers, so the user-selected
+value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
+
+When an assertion fails, the program is aborted through a special verbose termination function. This
+behavior is customizable; see the :ref:`Overriding the default termination handler
+<termination-handler>` section for more information.
+
 .. _termination-handler:
 
 Overriding the default termination handler
 ==========================================
 
-When the library wants to terminate due to an unforeseen condition (such as a hardening assertion
-failure), the program is aborted through a special verbose termination function. The library provides
-a default function that prints an error message and calls ``std::abort()``. Note that this function is
-provided by the static or shared library, so it is only available when deploying to a platform where
-the compiled library is sufficiently recent. On older platforms, the program will terminate in an
-unspecified unsuccessful manner, but the quality of diagnostics won't be great.
+When the library wants to terminate due to an unforeseen condition (such as an assertion failure),
+the program is aborted through a special verbose termination function. The library provides
+a default function that prints an error message and calls ``std::abort()``. Note that this function
+is provided by the static or shared library, so it is only available when deploying to a platform
+where the compiled library is sufficiently recent. On older platforms, the program will terminate in
+an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 
 However, users can also override that mechanism at two different levels. First, the mechanism can be
 overridden at compile time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
@@ -191,7 +224,7 @@ and ``operator delete``. For example:
 
   int main() {
     std::vector<int> v;
-    int& x = v[0]; // Your termination function will be called here if hardening is enabled.
+    int& x = v[0]; // Your termination function will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
   }
 
 Also note that the verbose termination function should never return. Since assertions in libc++
@@ -206,19 +239,13 @@ Libc++ Configuration Macros
 ===========================
 
 Libc++ provides a number of configuration macros which can be used to enable
-or disable extended libc++ behavior, including enabling hardening or thread
+or disable extended libc++ behavior, including enabling the safe mode or thread
 safety annotations.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
-
-**_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
-
-**_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.

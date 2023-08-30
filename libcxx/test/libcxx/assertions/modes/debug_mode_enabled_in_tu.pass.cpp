@@ -9,7 +9,7 @@
 // This test ensures that we can enable the debug mode on a per-TU basis regardless of how the library was built.
 
 // Hardened mode would additionally trigger the error that hardened and debug modes are mutually exclusive.
-// UNSUPPORTED: libcpp-has-hardened-mode
+// UNSUPPORTED: libcpp-has-hardened-mode, libcpp-has-debug-mode, libcpp-has-assertions
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.

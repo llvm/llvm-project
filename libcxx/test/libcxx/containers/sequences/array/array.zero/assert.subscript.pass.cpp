@@ -8,7 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode && !libcpp-has-assertions
 // XFAIL: availability-verbose_abort-missing
 
 // test that array<T, 0>::operator[] triggers an assertion
