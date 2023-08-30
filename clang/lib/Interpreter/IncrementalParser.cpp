@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncrementalParser.h"
-
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
@@ -158,10 +157,15 @@ public:
   TranslationUnitKind getTranslationUnitKind() override {
     return TU_Incremental;
   }
-
   void ExecuteAction() override {
     CompilerInstance &CI = getCompilerInstance();
     assert(CI.hasPreprocessor() && "No PP!");
+
+    // FIXME: Move the truncation aspect of this into Sema, we delayed this till
+    // here so the source manager would be initialized.
+    if (hasCodeCompletionSupport() &&
+        !CI.getFrontendOpts().CodeCompletionAt.FileName.empty())
+      CI.createCodeCompletionConsumer();
 
     // Use a code completion consumer?
     CodeCompleteConsumer *CompletionConsumer = nullptr;
@@ -394,4 +398,5 @@ llvm::StringRef IncrementalParser::GetMangledName(GlobalDecl GD) const {
   assert(CG);
   return CG->GetMangledName(GD);
 }
+
 } // end namespace clang
