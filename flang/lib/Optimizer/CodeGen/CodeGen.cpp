@@ -2892,6 +2892,7 @@ struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   }
 };
 
+#ifndef NDEBUG
 // Check if attr's type is compatible with ty.
 //
 // This is done by comparing attr's element type, converted to LLVM type,
@@ -2927,6 +2928,7 @@ static inline bool attributeTypeIsCompatible(mlir::MLIRContext *ctx,
 
   return attrEleTy == eleTy;
 }
+#endif
 
 /// Lower `fir.global` operation to `llvm.global` operation.
 /// `fir.insert_on_range` operations are replaced with constant dense attribute
