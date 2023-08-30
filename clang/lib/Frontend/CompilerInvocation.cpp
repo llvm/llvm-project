@@ -5052,8 +5052,9 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   }
 
   // Caching + implicit modules, which is only set in clang-scan-deps, puts
-  // additional CASIDs in the pcm.
-  HBuilder.add(getFrontendOpts().CacheCompileJob);
+  // additional CASIDs in the pcm for either cas-fs or include-tree.
+  HBuilder.add(getFrontendOpts().CacheCompileJob,
+               getFrontendOpts().ForIncludeTreeScan);
 
   llvm::MD5::MD5Result Result;
   HBuilder.getHasher().final(Result);
