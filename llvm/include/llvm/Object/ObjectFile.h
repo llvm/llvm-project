@@ -389,9 +389,9 @@ public:
   createELFObjectFile(MemoryBufferRef Object, bool InitContent = true);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
-  createMachOObjectFile(MemoryBufferRef Object,
-                        uint32_t UniversalCputype = 0,
-                        uint32_t UniversalIndex = 0);
+  createMachOObjectFile(MemoryBufferRef Object, uint32_t UniversalCputype = 0,
+                        uint32_t UniversalIndex = 0,
+                        size_t MachOFilesetEntryOffset = 0);
 
   static Expected<std::unique_ptr<ObjectFile>>
   createGOFFObjectFile(MemoryBufferRef Object);
