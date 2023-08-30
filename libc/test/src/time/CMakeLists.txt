@@ -136,7 +136,7 @@ add_libc_unittest(
     libc.src.errno.errno
 )
 
-add_libc_unittest(
+add_libc_test(
   clock_test
   SUITE
     libc_time_unittests
