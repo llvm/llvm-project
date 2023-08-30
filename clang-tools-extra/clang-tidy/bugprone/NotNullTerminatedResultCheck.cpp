@@ -177,7 +177,7 @@ static bool isDestBasedOnGivenLength(const MatchFinder::MatchResult &Result) {
   StringRef LengthExprStr =
       exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result).trim();
 
-  return DestCapacityExprStr != "" && LengthExprStr != "" &&
+  return !DestCapacityExprStr.empty() && !LengthExprStr.empty() &&
          DestCapacityExprStr.contains(LengthExprStr);
 }
 
