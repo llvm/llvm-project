@@ -5793,20 +5793,20 @@ TEST_F(FormatTest, MacroCallsWithoutTrailingSemicolon) {
                "F(x)\n"
                "try { Q(); } catch (...) {}\n"
                "}");
-  EXPECT_EQ("class A {\n"
-            "  A() : t(0) {}\n"
-            "  A(int i) noexcept() : {}\n"
-            "  A(X x)\n" // FIXME: function-level try blocks are broken.
-            "  try : t(0) {\n"
-            "  } catch (...) {\n"
-            "  }\n"
-            "};",
-            format("class A {\n"
-                   "  A()\n : t(0) {}\n"
-                   "  A(int i)\n noexcept() : {}\n"
-                   "  A(X x)\n"
-                   "  try : t(0) {} catch (...) {}\n"
-                   "};"));
+  verifyFormat("class A {\n"
+               "  A() : t(0) {}\n"
+               "  A(int i) noexcept() : {}\n"
+               "  A(X x)\n" // FIXME: function-level try blocks are broken.
+               "  try : t(0) {\n"
+               "  } catch (...) {\n"
+               "  }\n"
+               "};",
+               "class A {\n"
+               "  A()\n : t(0) {}\n"
+               "  A(int i)\n noexcept() : {}\n"
+               "  A(X x)\n"
+               "  try : t(0) {} catch (...) {}\n"
+               "};");
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
@@ -7734,25 +7734,25 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
-                      "    paramC);\n"
-                      "void functionDecl(int A, int B,\n"
-                      "    int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(paramA, paramB,\n"
+                         "    paramC);\n"
+                         "void functionDecl(int A, int B,\n"
+                         "    int C);"),
+               Input, Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
-                      "             paramC);\n"
-                      "void functionDecl(int A, int B,\n"
-                      "                  int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(paramA, paramB,\n"
+                         "             paramC);\n"
+                         "void functionDecl(int A, int B,\n"
+                         "                  int C);"),
+               Input, Style);
   // However, BAS_AlwaysBreak and BAS_BlockIndent should take precedence over
   // AllowAllArgumentsOnNextLine.
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  EXPECT_EQ(StringRef("functionCall(\n"
-                      "    paramA, paramB, paramC);\n"
-                      "void functionDecl(\n"
-                      "    int A, int B, int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(\n"
+                         "    paramA, paramB, paramC);\n"
+                         "void functionDecl(\n"
+                         "    int A, int B, int C);"),
+               Input, Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
   verifyFormat("functionCall(\n"
                "    paramA, paramB, paramC\n"
@@ -7766,25 +7766,25 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
   // first argument.
   Style.AllowAllArgumentsOnNextLine = true;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  EXPECT_EQ(StringRef("functionCall(\n"
-                      "    paramA, paramB, paramC);\n"
-                      "void functionDecl(\n"
-                      "    int A, int B, int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(\n"
+                         "    paramA, paramB, paramC);\n"
+                         "void functionDecl(\n"
+                         "    int A, int B, int C);"),
+               Input, Style);
   // It wouldn't fit on one line with aligned parameters so this setting
   // doesn't change anything for BAS_Align.
   Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
-                      "             paramC);\n"
-                      "void functionDecl(int A, int B,\n"
-                      "                  int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(paramA, paramB,\n"
+                         "             paramC);\n"
+                         "void functionDecl(int A, int B,\n"
+                         "                  int C);"),
+               Input, Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  EXPECT_EQ(StringRef("functionCall(\n"
-                      "    paramA, paramB, paramC);\n"
-                      "void functionDecl(\n"
-                      "    int A, int B, int C);"),
-            format(Input, Style));
+  verifyFormat(StringRef("functionCall(\n"
+                         "    paramA, paramB, paramC);\n"
+                         "void functionDecl(\n"
+                         "    int A, int B, int C);"),
+               Input, Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
@@ -8627,25 +8627,25 @@ TEST_F(FormatTest, FormatsOneParameterPerLineIfNecessary) {
 TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
   FormatStyle Style = getLLVMStyleWithColumns(15);
   Style.ExperimentalAutoDetectBinPacking = true;
-  EXPECT_EQ("aaa(aaaa,\n"
-            "    aaaa,\n"
-            "    aaaa);\n"
-            "aaa(aaaa,\n"
-            "    aaaa,\n"
-            "    aaaa);",
-            format("aaa(aaaa,\n" // one-per-line
-                   "  aaaa,\n"
-                   "    aaaa  );\n"
-                   "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
-                   Style));
-  EXPECT_EQ("aaa(aaaa, aaaa,\n"
-            "    aaaa);\n"
-            "aaa(aaaa, aaaa,\n"
-            "    aaaa);",
-            format("aaa(aaaa,  aaaa,\n" // bin-packed
-                   "    aaaa  );\n"
-                   "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
-                   Style));
+  verifyFormat("aaa(aaaa,\n"
+               "    aaaa,\n"
+               "    aaaa);\n"
+               "aaa(aaaa,\n"
+               "    aaaa,\n"
+               "    aaaa);",
+               "aaa(aaaa,\n" // one-per-line
+               "  aaaa,\n"
+               "    aaaa  );\n"
+               "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
+               Style);
+  verifyFormat("aaa(aaaa, aaaa,\n"
+               "    aaaa);\n"
+               "aaa(aaaa, aaaa,\n"
+               "    aaaa);",
+               "aaa(aaaa,  aaaa,\n" // bin-packed
+               "    aaaa  );\n"
+               "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
+               Style);
 }
 
 TEST_F(FormatTest, FormatsBuilderPattern) {
@@ -11096,8 +11096,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   // However a space between cv-qualifiers and ref-qualifiers *is* evidence.
   Prefix = "void a() const &;\n"
            "void b() const &;\n";
-  EXPECT_EQ(Prefix + "int *x;",
-            format(Prefix + "int* x;", DerivePointerAlignment));
+  verifyFormat(Prefix + "int *x;", Prefix + "int* x;", DerivePointerAlignment);
 }
 
 TEST_F(FormatTest, PointerAlignmentFallback) {
@@ -20990,15 +20989,14 @@ TEST_F(FormatTest, UnderstandsPragmas) {
                "#pragma    mark   Any non-hyphenated or hyphenated string "
                "(including parentheses).");
 
-  EXPECT_EQ(
-      "#pragma comment(linker,    \\\n"
-      "                \"argument\" \\\n"
-      "                \"argument\"",
-      format("#pragma comment(linker,      \\\n"
-             "                 \"argument\" \\\n"
-             "                 \"argument\"",
-             getStyleWithColumns(
-                 getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp), 32)));
+  verifyFormat("#pragma comment(linker,    \\\n"
+               "                \"argument\" \\\n"
+               "                \"argument\"",
+               "#pragma comment(linker,      \\\n"
+               "                 \"argument\" \\\n"
+               "                 \"argument\"",
+               getStyleWithColumns(
+                   getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp), 32));
 }
 
 TEST_F(FormatTest, UnderstandsPragmaOmpTarget) {
