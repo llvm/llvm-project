@@ -1514,6 +1514,8 @@ public:
   // TODO: this can also be abstrated into common AST helpers
   bool hasBooleanRepresentation(clang::QualType Ty);
 
+  void buildCXXThrowExpr(const CXXThrowExpr *E);
+
   /// Return the address of a local variable.
   Address GetAddrOfLocalVar(const clang::VarDecl *VD) {
     auto it = LocalDeclMap.find(VD);
@@ -1556,6 +1558,7 @@ public:
   /// given memory location.
   void buildAnyExprToMem(const Expr *E, Address Location, Qualifiers Quals,
                          bool IsInitializer);
+  void buildAnyExprToExn(const Expr *E, Address Addr);
 
   LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
   LValue buildMemberExpr(const MemberExpr *E);
@@ -1604,6 +1607,14 @@ public:
     CleanupKind getKind() const { return (CleanupKind)Kind; }
     bool isConditional() const { return IsConditional; }
   };
+
+  // TODO(cir): perhaps return a mlir::BasicBlock* here, for now
+  // only check if a landing pad is required.
+  bool getInvokeDest() {
+    if (!EHStack.requiresLandingPad())
+      return false;
+    return true;
+  }
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.

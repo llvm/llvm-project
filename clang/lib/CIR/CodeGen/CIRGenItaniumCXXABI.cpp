@@ -119,6 +119,8 @@ public:
                            CXXDtorType Type, bool ForVirtualBase,
                            bool Delegating, Address This,
                            QualType ThisTy) override;
+  virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) override;
+  virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) override;
 
   bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
@@ -1665,4 +1667,65 @@ mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
     bool ForVirtualBase, bool Delegating) {
   GlobalDecl GD(DD, Type);
   return CGF.GetVTTParameter(GD, ForVirtualBase, Delegating);
+}
+
+void CIRGenItaniumCXXABI::buildRethrow(CIRGenFunction &CGF, bool isNoReturn) {
+  // void __cxa_rethrow();
+  llvm_unreachable("NYI");
+}
+
+void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
+                                     const CXXThrowExpr *E) {
+  // This differs a bit from LLVM codegen, CIR has native operations for some
+  // cxa functions, and defers allocation size computation, always pass the dtor
+  // symbol, etc. CIRGen also does not use getAllocateExceptionFn / getThrowFn.
+
+  // Now allocate the exception object.
+  auto &builder = CGF.getBuilder();
+  QualType clangThrowType = E->getSubExpr()->getType();
+  auto throwTy = CGF.ConvertType(clangThrowType);
+  auto subExprLoc = CGF.getLoc(E->getSubExpr()->getSourceRange());
+  // Defer computing allocation size to some later lowering pass.
+  auto exceptionPtr =
+      builder
+          .create<mlir::cir::AllocException>(
+              subExprLoc, builder.getPointerTo(throwTy), throwTy)
+          .getAddr();
+
+  // Build expression and store its result into exceptionPtr.
+  CharUnits exnAlign = CGF.getContext().getExnObjectAlignment();
+  CGF.buildAnyExprToExn(E->getSubExpr(), Address(exceptionPtr, exnAlign));
+
+  // Get the RTTI symbol address.
+  auto typeInfo = CGM.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
+                                              /*ForEH=*/true)
+                      .dyn_cast_or_null<mlir::cir::GlobalViewAttr>();
+  assert(typeInfo && "expected GlobalViewAttr typeinfo");
+  assert(!typeInfo.getIndices() && "expected no indirection");
+
+  // The address of the destructor.
+  //
+  // Note: LLVM codegen already optimizes out the dtor if the
+  // type is a record with trivial dtor (by passing down a
+  // null dtor). In CIR, we forward this info and allow for
+  // LoweringPrepare or some other pass to skip passing the
+  // trivial function.
+  //
+  // TODO(cir): alternatively, dtor could be ignored here and
+  // the type used to gather the relevant dtor during
+  // LoweringPrepare.
+  mlir::FlatSymbolRefAttr dtor{};
+  if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
+    CXXRecordDecl *rec = cast<CXXRecordDecl>(recordTy->getDecl());
+    CXXDestructorDecl *dtorD = rec->getDestructor();
+    dtor = mlir::FlatSymbolRefAttr::get(
+        CGM.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete))
+            .getSymNameAttr());
+  }
+
+  assert(!CGF.getInvokeDest() && "landing pad like logic NYI");
+
+  // Now throw the exception.
+  builder.create<mlir::cir::ThrowOp>(CGF.getLoc(E->getSourceRange()),
+                                     exceptionPtr, typeInfo.getSymbol(), dtor);
 }
