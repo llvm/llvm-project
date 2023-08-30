@@ -53,7 +53,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   static const char *const DefaultMsg =
       "Assigned value is garbage or undefined";
   if (!BT)
-    BT.reset(new BuiltinBug(this, DefaultMsg));
+    BT.reset(new BugType(this, DefaultMsg));
 
   // Generate a report for this bug.
   llvm::SmallString<128> Str;
