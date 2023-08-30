@@ -3,6 +3,23 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeCategory, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeCategory {
 #ifdef SWIGPYTHON
         %pythoncode %{
+            def __eq__(self, other):
+                return not self.__ne__(other)
+
+            def __int__(self):
+                pass
+
+            def __hex__(self):
+                pass
+
+            def __oct__(self):
+                pass
+
+            def __len__(self):
+                pass
+
+            def __iter__(self):
+                pass
 
             class formatters_access_class(object):
                 '''A helper object that will lazily hand out formatters for a specific category.'''
