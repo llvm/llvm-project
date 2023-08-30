@@ -360,6 +360,63 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
                                 JustAddress);
 }
 
+/// The await_suspend call performed by co_await is essentially asynchronous
+/// to the execution of the coroutine. Inlining it normally into an unsplit
+/// coroutine can cause miscompilation because the coroutine CFG misrepresents
+/// the true control flow of the program: things that happen in the
+/// await_suspend are not guaranteed to happen prior to the resumption of the
+/// coroutine, and things that happen after the resumption of the coroutine
+/// (including its exit and the potential deallocation of the coroutine frame)
+/// are not guaranteed to happen only after the end of await_suspend.
+///
+/// See https://github.com/llvm/llvm-project/issues/56301 and
+/// https://reviews.llvm.org/D157070 for the example and the full discussion.
+///
+/// The short-term solution to this problem is to mark the call as uninlinable.
+/// But we don't want to do this if the call is known to be trivial, which is
+/// very common.
+///
+/// The long-term solution may introduce patterns like:
+///
+///  call @llvm.coro.await_suspend(ptr %awaiter, ptr %handle,
+///                                ptr @awaitSuspendFn)
+///
+/// Then it is much easier to perform the safety analysis in the middle end.
+/// If it is safe to inline the call to awaitSuspend, we can replace it in the
+/// CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
+static void tryMarkAwaitSuspendNoInline(Sema &S, OpaqueValueExpr *Awaiter,
+                                        CallExpr *AwaitSuspend) {
+  // The method here to extract the awaiter decl is not precise.
+  // This is intentional. Since it is hard to perform the analysis in the
+  // frontend due to the complexity of C++'s type systems.
+  // And we prefer to perform such analysis in the middle end since it is
+  // easier to implement and more powerful.
+  CXXRecordDecl *AwaiterDecl =
+      Awaiter->getType().getNonReferenceType()->getAsCXXRecordDecl();
+
+  if (AwaiterDecl && AwaiterDecl->field_empty())
+    return;
+
+  FunctionDecl *FD = AwaitSuspend->getDirectCallee();
+
+  assert(FD);
+
+  // If the `await_suspend()` function is marked as `always_inline` explicitly,
+  // we should give the user the right to control the codegen.
+  if (FD->hasAttr<NoInlineAttr>() || FD->hasAttr<AlwaysInlineAttr>())
+    return;
+
+  // This is problematic if the user calls the await_suspend standalone. But on
+  // the on hand, it is not incorrect semantically since inlining is not part
+  // of the standard. On the other hand, it is relatively rare to call
+  // the await_suspend function standalone.
+  //
+  // And given we've already had the long-term plan, the current workaround
+  // looks relatively tolerant.
+  FD->addAttr(
+      NoInlineAttr::CreateImplicit(S.getASTContext(), FD->getLocation()));
+}
+
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
 /// expression.
 /// The generated AST tries to clean up temporary objects as early as
@@ -430,6 +487,10 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //     a prvalue of type void, bool, or std::coroutine_handle<Z> for some
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
+
+    // We need to mark await_suspend as noinline temporarily. See the comment
+    // of tryMarkAwaitSuspendNoInline for details.
+    tryMarkAwaitSuspendNoInline(S, Operand, AwaitSuspend);
 
     // Support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend =
