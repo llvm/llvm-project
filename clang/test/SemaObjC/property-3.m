@@ -13,7 +13,6 @@
 @property (readwrite, copy) I* d2;
 @end
 
-// rdar://13156292
 typedef signed char BOOL;
 
 @protocol EKProtocolCalendar

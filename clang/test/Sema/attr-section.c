@@ -3,8 +3,6 @@
 int x __attribute__((section(
    42)));  // expected-error {{expected string literal as argument of 'section' attribute}}
 
-
-// rdar://4341926
 int y __attribute__((section(
    "sadf"))); // expected-error {{mach-o section specifier requires a segment and section separated by a comma}}
 

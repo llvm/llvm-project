@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -E %s -o %t.mm
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc %t.mm -o - | FileCheck %s
 
-// rdar://11095151
-
 typedef void (^void_block_t)(void);
 
 @interface PropertyClass {

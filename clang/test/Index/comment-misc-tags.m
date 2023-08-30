@@ -2,7 +2,6 @@
 // RUN: mkdir %t
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s > %t/out
 // RUN: FileCheck %s < %t/out
-// rdar://12379114
 
 /*!
      @interface IOCommandGate
@@ -47,7 +46,6 @@
 // CHECK-NEXT:     (CXComment_Paragraph
 // CHECK-NEXT:     (CXComment_Text Text=[ //k_ref/doc/uid/XX30000905-CH204 Programming])
 
-// rdar://12379053
 /*!
 \arg \c AlignLeft left alignment.
 \li \c AlignRight right alignment.
@@ -72,7 +70,6 @@ struct S {
 // CHECK:       (CXComment_Paragraph
 // CHECK-NEXT:    (CXComment_Text Text=[  No other types of alignment are supported.]))
 
-// rdar://12379053
 /*! \struct Test
  * Normal text.
  *

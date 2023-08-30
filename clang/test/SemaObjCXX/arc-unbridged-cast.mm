@@ -15,7 +15,6 @@ extern "C" id CFBridgingRelease(CFTypeRef);
 
 extern Object *object;
 
-// rdar://9744349
 id test0(void) {
   id p1 = (id)[object property];
   id p2 = (__bridge_transfer id)[object property];
@@ -23,7 +22,6 @@ id test0(void) {
   return (id) object.property;
 }
 
-// rdar://10140692
 CFStringRef unauditedString(void);
 CFStringRef plusOneString(void) __attribute__((cf_returns_retained));
 
@@ -75,7 +73,6 @@ void test1(int cond) {
   x = (id) (cond ? (CFStringRef) @"help" : [object newString]); // a bit questionable
 }
 
-// rdar://problem/10246264
 @interface CFTaker
 - (void) takeOrdinary: (CFStringRef) arg;
 - (void) takeVariadic: (int) n, ...;
@@ -109,7 +106,6 @@ void testTakerFunctions(id string) {
   takeCFConsumedAudited((CFStringRef) string); // expected-error {{cast of Objective-C pointer type 'id' to C pointer type 'CFStringRef'}} expected-note {{use __bridge to}} expected-note {{use CFBridgingRetain call to}}
 }
 
-// rdar://12788838
 id obj;
 
 void rdar12788838() {

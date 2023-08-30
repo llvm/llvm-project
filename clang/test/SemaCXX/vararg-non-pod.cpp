@@ -156,8 +156,7 @@ void test_typeid(Base &base) {
 }
 
 
-// rdar://7985267 - Shouldn't warn, doesn't actually use __builtin_va_start is
-// magic.
+// Shouldn't warn, doesn't actually use __builtin_va_start is magic.
 
 void t6(Foo somearg, ... ) {
   __builtin_va_list list;

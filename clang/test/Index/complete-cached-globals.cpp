@@ -14,8 +14,6 @@ static void foo() {
   return;
 }
 
-// rdar://23454249
-
 // RUN: c-index-test -code-completion-at=%s:14:3 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:14:3 %s | FileCheck -check-prefix=CHECK-CC1 %s
 
