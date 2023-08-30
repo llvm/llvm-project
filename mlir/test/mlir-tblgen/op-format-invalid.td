@@ -357,7 +357,7 @@ def OptionalInvalidB : TestFormat_Op<[{
 def OptionalInvalidC : TestFormat_Op<[{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first parsable element of an optional group must be a literal or variable
+// CHECK: error: first parsable element of an optional group must be a literal, variable, or custom directive
 def OptionalInvalidD : TestFormat_Op<[{
   (type($operand) $operand^)? attr-dict
 }]>, Arguments<(ins Optional<I64>:$operand)>;
