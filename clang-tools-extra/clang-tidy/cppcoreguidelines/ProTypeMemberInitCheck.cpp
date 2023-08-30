@@ -31,7 +31,7 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
 // if the record contains an anonymous struct).
 template <typename T, typename Func>
-void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
+void forEachField(const RecordDecl &Record, const T &Fields, const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl())
@@ -44,7 +44,7 @@ void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
 
 template <typename T, typename Func>
 void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
-                            bool &AnyMemberHasInitPerUnion, Func &&Fn) {
+                            bool &AnyMemberHasInitPerUnion, const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl()) {
