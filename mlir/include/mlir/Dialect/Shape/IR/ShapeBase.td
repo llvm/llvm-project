@@ -41,6 +41,7 @@ def ShapeDialect : Dialect {
   let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
 }
 
 class Shape_Type<string name, string typeMnemonic> : TypeDef<ShapeDialect, name> {

@@ -9,7 +9,6 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "foobar";
-  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -177,7 +176,6 @@ def AOp : NS_Op<"a_op", []> {
 def Test2_Dialect : Dialect {
   let name = "test2";
   let cppNamespace = "foobar2";
-  let usePropertiesForAttributes = 0;
 }
 def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
   let arguments = (ins

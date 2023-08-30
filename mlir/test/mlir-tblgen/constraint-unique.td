@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 
 class NS_Op<string mnemonic, list<Trait> traits = []> :

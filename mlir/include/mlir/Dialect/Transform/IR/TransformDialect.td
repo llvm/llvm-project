@@ -19,6 +19,8 @@ def Transform_Dialect : Dialect {
   let cppNamespace = "::mlir::transform";
 
   let hasOperationAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
+
   let extraClassDeclaration = [{
       /// Name of the attribute attachable to the symbol table operation
       /// containing named sequences. This is used to trigger verification.
