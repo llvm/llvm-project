@@ -1424,7 +1424,17 @@ bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
   // CompositeNode we should choose only one either Real or Imag instruction to
   // use as an anchor for generating complex instruction.
   auto It = RootToNode.find(RootI);
-  if (It != RootToNode.end() && It->second->Real == RootI) {
+  if (It != RootToNode.end()) {
+    auto RootNode = It->second;
+    assert(RootNode->Operation ==
+           ComplexDeinterleavingOperation::ReductionOperation);
+    // Find out which part, Real or Imag, comes later, and only if we come to
+    // the latest part, add it to OrderedRoots.
+    auto *R = cast<Instruction>(RootNode->Real);
+    auto *I = cast<Instruction>(RootNode->Imag);
+    auto *ReplacementAnchor = R->comesBefore(I) ? I : R;
+    if (ReplacementAnchor != RootI)
+      return false;
     OrderedRoots.push_back(RootI);
     return true;
   }
