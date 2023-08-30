@@ -1515,6 +1515,16 @@ CXXDependentScopeMemberExpr *CXXDependentScopeMemberExpr::CreateEmpty(
       EmptyShell(), HasTemplateKWAndArgsInfo, HasFirstQualifierFoundInScope);
 }
 
+CXXThisExpr *CXXThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
+                                 QualType Ty, bool IsImplicit) {
+  return new (Ctx) CXXThisExpr(L, Ty, IsImplicit,
+                               Ctx.getLangOpts().HLSL ? VK_LValue : VK_PRValue);
+}
+
+CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
+  return new (Ctx) CXXThisExpr(EmptyShell());
+}
+
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {

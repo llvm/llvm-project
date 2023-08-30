@@ -1897,20 +1897,11 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
     baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
-    if (getLangOpts().HLSL && ThisTy.getTypePtr()->isPointerType()) {
-      ThisTy = ThisTy.getTypePtr()->getPointeeType();
-      return BuildMemberReferenceExpr(baseExpr, ThisTy,
-                                      /*OpLoc*/ SourceLocation(),
-                                      /*IsArrow*/ false, SS, TemplateKWLoc,
-                                      /*FirstQualifierInScope*/ nullptr, R,
-                                      TemplateArgs, S);
-    }
   }
 
-  return BuildMemberReferenceExpr(baseExpr, ThisTy,
-                                  /*OpLoc*/ SourceLocation(),
-                                  /*IsArrow*/ true,
-                                  SS, TemplateKWLoc,
-                                  /*FirstQualifierInScope*/ nullptr,
-                                  R, TemplateArgs, S);
+  return BuildMemberReferenceExpr(
+      baseExpr, ThisTy,
+      /*OpLoc=*/SourceLocation(),
+      /*IsArrow=*/!getLangOpts().HLSL, SS, TemplateKWLoc,
+      /*FirstQualifierInScope=*/nullptr, R, TemplateArgs, S);
 }
