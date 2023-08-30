@@ -214,10 +214,12 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       Iterations = ceil(float(InitValue - EndValue) / ConstantValue);
       break;
     case (BO_MulAssign):
-      Iterations = 1 + (log(EndValue) - log(InitValue)) / log(ConstantValue);
+      Iterations = 1 + (log((double)EndValue) - log((double)InitValue)) /
+                           log((double)ConstantValue);
       break;
     case (BO_DivAssign):
-      Iterations = 1 + (log(InitValue) - log(EndValue)) / log(ConstantValue);
+      Iterations = 1 + (log((double)InitValue) - log((double)EndValue)) /
+                           log((double)ConstantValue);
       break;
     default:
       // All other operators are not handled; assume large bounds.
