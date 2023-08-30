@@ -187,6 +187,8 @@ Bug Fixes in This Version
 - Fix crash in __builtin_strncmp and related builtins when the size value
   exceeded the maximum value representable by int64_t. Fixes
   (`#64876 <https://github.com/llvm/llvm-project/issues/64876>`_)
+- Fixed an assertion if a function has cleanups and fatal erors.
+  (`#48974 <https://github.com/llvm/llvm-project/issues/48974>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
