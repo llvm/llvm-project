@@ -27,4 +27,43 @@ steps:
       message: "${BUILDKITE_MESSAGE}"
       commit: "${BUILDKITE_COMMIT}"
       branch: "${BUILDKITE_BRANCH}"
-EOF
+
+  - label: ':linux: x64 Debian'
+    artifact_paths:
+      - '*_result.json'
+      - 'build/monolithic-linux/test-results.xml'
+    agents:
+      queue: 'linux'
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+        - exit_status: 255
+          limit: 2 # Forced agent shutdown
+    timeout_in_minutes: 120
+    env:
+      CC: 'clang'
+      CXX: 'clang++'
+    commands:
+      - './.ci/monolithic-linux.sh "bolt;clang-tools-extra;compiler-rt;flang;libc;libclc;lld;llvm;mlir;polly;pstl" "check-all"'
+
+  - label: ':windows: x64 Windows'
+    artifact_paths:
+      - '*_result.json'
+      - 'build/monolithic-windows/test-results.xml'
+    agents:
+      queue: 'windows'
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+        - exit_status: 255
+          limit: 2 # Forced agent shutdown
+    timeout_in_minutes: 150
+    env:
+      CC: 'cl'
+      CXX: 'cl'
+      LD: 'link'
+    commands:
+      - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
+      - 'bash .ci/monolithic-windows.sh "clang-tools-extra;flang;libclc;lld;llvm;mlir;polly;pstl" "check-all"'
