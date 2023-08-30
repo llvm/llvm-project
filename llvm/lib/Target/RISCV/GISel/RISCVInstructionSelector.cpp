@@ -50,8 +50,6 @@ private:
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
 
-  ComplexRendererFns selectS32ShiftMask(MachineOperand &Root) const;
-
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
   const RISCVRegisterInfo &TRI;
@@ -91,16 +89,6 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 {
 }
 
-InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::selectS32ShiftMask(MachineOperand &Root) const {
-  // TODO: Also check if we are seeing the result of an AND operation which
-  // could be bypassed since we only check the lower log2(xlen) bits.
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); } // src_mods
-  }};
-}
-
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   MachineBasicBlock &MBB = *MI.getParent();
@@ -123,7 +111,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_TRUNC:
     MI.setDesc(TII.get(TargetOpcode::COPY));
     return true;
   case TargetOpcode::G_CONSTANT:
@@ -142,7 +129,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
     LLT Ty, const RegisterBank &RB, bool GetAllRegSet) const {
   if (RB.getID() == RISCV::GPRRegBankID) {
-    if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
+    if (Ty.getSizeInBits() == (STI.is64Bit() ? 64 : 32))
       return &RISCV::GPRRegClass;
   }
 
