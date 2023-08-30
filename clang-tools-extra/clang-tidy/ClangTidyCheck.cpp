@@ -94,7 +94,7 @@ static std::optional<bool> getAsBool(StringRef Value,
                                      const llvm::Twine &LookupName) {
 
   if (std::optional<bool> Parsed = llvm::yaml::parseBool(Value))
-    return *Parsed;
+    return Parsed;
   // To maintain backwards compatability, we support parsing numbers as
   // booleans, even though its not supported in YAML.
   long long Number;
