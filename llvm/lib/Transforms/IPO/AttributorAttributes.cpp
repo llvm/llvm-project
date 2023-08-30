@@ -12429,6 +12429,9 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     CallBase *CB = cast<CallBase>(getCtxI());
     Value *FP = CB->getCalledOperand();
+    if (FP->getType()->getPointerAddressSpace())
+      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
+                                 FP->getName() + ".as0", CB);
 
     bool CBIsVoid = CB->getType()->isVoidTy();
     Instruction *IP = CB;
