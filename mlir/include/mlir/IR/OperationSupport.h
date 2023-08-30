@@ -555,7 +555,7 @@ public:
                                              StringRef name) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        return ConcreteOp::getInherentAttr(concreteOp.getContext(),
+        return ConcreteOp::getInherentAttr(concreteOp->getContext(),
                                            concreteOp.getProperties(), name);
       }
       // If the op does not have support for properties, we dispatch back to the
@@ -576,7 +576,7 @@ public:
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        ConcreteOp::populateInherentAttrs(concreteOp.getContext(),
+        ConcreteOp::populateInherentAttrs(concreteOp->getContext(),
                                           concreteOp.getProperties(), attrs);
       }
     }
