@@ -237,10 +237,9 @@ void SetThreadName(std::thread &thread, const std::string &name) {
   std::wstring wname;
   auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), name.size(), nullptr, 0);
   wname.resize(sz);
-  if (sz == MultiByteToWideChar(CP_UTF8, 0, name.data, name.size, wname.data(),
-                                sz) > 0) {
-    wname.resize(sz - 1);
-    (void)SetThreadDescription(thread.native_handle(), wname.c_str());
+  if (sz == MultiByteToWideChar(CP_UTF8, 0, name.data, name.size, &wname[0], sz) > 0) {
+      wname.resize(sz - 1);
+      (void)SetThreadDescription(thread.native_handle(), wname.c_str());
   }
 }
 
