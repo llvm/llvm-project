@@ -49,11 +49,11 @@ func.func @pad_to_memory_space(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad = transform.structured.pad %0 {
+  %padded, %pad, %copy_back = transform.structured.pad %0 {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
   %buffer, %new_ops = transform.structured.bufferize_to_allocation %pad {memory_space = 3} : !transform.any_op
   %2 = transform.bufferization.one_shot_bufferize %arg1 {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
@@ -106,11 +106,11 @@ func.func @vectorize_and_bufferize_pad(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad = transform.structured.pad %0 {
+  %padded, %pad, %copy_back = transform.structured.pad %0 {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
   transform.structured.masked_vectorize %pad vector_sizes [10, 12] : !transform.any_op
   %vector_write = transform.structured.match ops{["vector.transfer_write"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %mask_op = transform.get_parent_op %vector_write {op_name = "vector.mask"} : (!transform.any_op) -> !transform.any_op

@@ -21,7 +21,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   // CHECK: transform.structured.pad
-  %0, %1 = transform.structured.pad %arg0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %0, %1, %2 = transform.structured.pad %arg0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 transform.sequence failures(propagate) {
