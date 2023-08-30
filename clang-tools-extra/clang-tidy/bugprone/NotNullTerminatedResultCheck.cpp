@@ -483,7 +483,7 @@ static void insertNullTerminatorExpr(StringRef Name,
       (Twine('\n') + SpaceBeforeStmtStr +
        exprToStr(Result.Nodes.getNodeAs<Expr>(DestExprName), Result) + "[" +
        exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result) +
-       "] = " + ((Name[0] != 'w') ? "\'\\0\';" : "L\'\\0\';"))
+       "] = " + ((Name[0] != 'w') ? R"('\0';)" : R"(L'\0';)"))
           .str();
 
   const auto AddNullTerminatorExprFix = FixItHint::CreateInsertion(
