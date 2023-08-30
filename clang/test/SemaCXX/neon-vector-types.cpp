@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify "-triple" "thumbv7-apple-ios3.0.0" -target-feature +neon %s
-// rdar://9208404
 
 typedef int MP4Err;
 typedef float Float32;

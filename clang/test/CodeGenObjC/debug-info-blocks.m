@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
 
-// rdar://problem/9279956
 // Test that we generate the proper debug location for a captured self.
 // The second half of this test is in llvm/tests/DebugInfo/debug-info-blocks.ll
 
