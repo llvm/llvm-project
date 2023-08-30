@@ -3467,10 +3467,10 @@ void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 /// return the successor regions. These are the regions that may be selected
 /// during the flow of control.
 void fir::IfOp::getSuccessorRegions(
-    std::optional<unsigned> index,
+    mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
-  if (index) {
+  if (!point.isParent()) {
     regions.push_back(mlir::RegionSuccessor(getResults()));
     return;
   }

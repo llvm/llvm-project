@@ -312,7 +312,8 @@ void AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
 
   // Special cases where control flow may dictate data flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, std::nullopt, before);
+    return visitRegionBranchOperation(op, branch, RegionBranchPoint::parent(),
+                                      before);
   if (auto call = dyn_cast<CallOpInterface>(op))
     return visitCallOperation(call, before);
 
@@ -368,8 +369,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // If this block is exiting from an operation with region-based control
     // flow, propagate the lattice back along the control flow edge.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      visitRegionBranchOperation(block, branch,
-                                 block->getParent()->getRegionNumber(), before);
+      visitRegionBranchOperation(block, branch, block->getParent(), before);
       return;
     }
 
@@ -396,13 +396,13 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
 
 void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     ProgramPoint point, RegionBranchOpInterface branch,
-    std::optional<unsigned> regionNo, AbstractDenseLattice *before) {
+    RegionBranchPoint branchPoint, AbstractDenseLattice *before) {
 
   // The successors of the operation may be either the first operation of the
   // entry block of each possible successor region, or the next operation when
   // the branch is a successor of itself.
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(regionNo, successors);
+  branch.getSuccessorRegions(branchPoint, successors);
   for (const RegionSuccessor &successor : successors) {
     const AbstractDenseLattice *after;
     if (successor.isParent() || successor.getSuccessor()->empty()) {
@@ -423,10 +423,8 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
       else
         after = getLatticeFor(point, &successorBlock->front());
     }
-    std::optional<unsigned> successorNo =
-        successor.isParent() ? std::optional<unsigned>()
-                             : successor.getSuccessor()->getRegionNumber();
-    visitRegionBranchControlFlowTransfer(branch, regionNo, successorNo, *after,
+
+    visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
                                          before);
   }
 }
