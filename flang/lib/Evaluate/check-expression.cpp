@@ -114,6 +114,7 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
   // LBOUND, UBOUND, and SIZE with truly constant DIM= arguments will have
   // been rewritten into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
+    const characteristics::Procedure &proc{intrinsic->characteristics.value()};
     if (intrinsic->name == "kind" ||
         intrinsic->name == IntrinsicProcTable::InvalidName ||
         call.arguments().empty() || !call.arguments()[0]) {
@@ -129,6 +130,16 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
+    } else if (proc.IsPure()) {
+      for (const auto &arg : call.arguments()) {
+        if (!arg) {
+          return false;
+        } else if (const auto *expr{arg->UnwrapExpr()};
+                   !expr || !(*this)(*expr)) {
+          return false;
+        }
+      }
+      return true;
     }
     // TODO: STORAGE_SIZE
   }
