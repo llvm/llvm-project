@@ -3025,7 +3025,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           }
           if (!ok) {
             context.messages().Say(at,
-                "Arguments of OPERATION= procedure of REDUCE() must be both scalar of the same type as ARRAY=, and neither allocatable, pointer, polymorphic, or optional"_err_en_US);
+                "Arguments of OPERATION= procedure of REDUCE() must be both scalar of the same type as ARRAY=, and neither allocatable, pointer, polymorphic, nor optional"_err_en_US);
           } else if (data[0]->attrs.test(characteristics::DummyDataObject::
                              Attr::Asynchronous) !=
                   data[1]->attrs.test(
