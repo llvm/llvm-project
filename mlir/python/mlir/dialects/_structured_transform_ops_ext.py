@@ -783,16 +783,20 @@ class VectorizeOp:
         self,
         target: Union[Operation, Value],
         *,
-        vectorize_padding: Union[bool, BoolAttr] = False,
+        disable_multi_reduction_to_contract_patterns: bool = False,
+        disable_transfer_permutation_map_lowering_patterns: bool = False,
+        vectorize_nd_extract: bool = False,
+        vectorize_padding: bool = False,
         loc=None,
         ip=None,
     ):
         pdl_operation_type = pdl.OperationType.get()
-        if isinstance(vectorize_padding, bool):
-            vectorize_padding = UnitAttr.get()
         super().__init__(
             pdl_operation_type,
             _get_op_result_or_value(target),
+            disable_multi_reduction_to_contract_patterns=disable_multi_reduction_to_contract_patterns,
+            disable_transfer_permutation_map_lowering_patterns=disable_transfer_permutation_map_lowering_patterns,
+            vectorize_nd_extract=vectorize_nd_extract,
             vectorize_padding=vectorize_padding,
             loc=loc,
             ip=ip,
