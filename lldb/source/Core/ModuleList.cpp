@@ -75,8 +75,7 @@ enum {
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
-  m_collection_sp =
-      std::make_shared<OptionValueProperties>(ConstString("symbols"));
+  m_collection_sp = std::make_shared<OptionValueProperties>("symbols");
   m_collection_sp->Initialize(g_modulelist_properties);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
