@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++14-extensions -Wno-c++17-extensions -verify -std=c++11 %s
 template<typename T> void f() {
   T t;
   t = 17;
@@ -294,3 +294,115 @@ void RAIIWrapperTest() {
 }
 
 } // namespace gh54489
+
+namespace inside_condition {
+  void ifs() {
+    if (int hoge = 0) // expected-warning {{unused variable 'hoge'}}
+      return;
+    if (const int const_hoge = 0) // expected-warning {{unused variable 'const_hoge'}}
+      return;
+    else if (int fuga = 0)
+      (void)fuga;
+    else if (int used = 1; int catched = used) // expected-warning {{unused variable 'catched'}}
+      return;
+    else if (int refed = 1; int used = refed)
+      (void)used;
+    else if (int unused1 = 2; int unused2 = 3) // expected-warning {{unused variable 'unused1'}} \
+                                               // expected-warning {{unused variable 'unused2'}}
+      return;
+    else if (int unused = 4; int used = 5) // expected-warning {{unused variable 'unused'}}
+      (void)used;
+    else if (int used = 6; int unused = 7) // expected-warning {{unused variable 'unused'}}
+      (void)used;
+    else if (int used1 = 8; int used2 = 9)
+      (void)(used1 + used2);
+    else if (auto [a, b] = (int[2]){ 1, 2 }; 1) // expected-warning {{unused variable '[a, b]'}}
+      return;
+    else if (auto [a, b] = (int[2]){ 1, 2 }; a)
+      return;
+  }
+
+  void fors() {
+    for (int i = 0;int unused = 0;); // expected-warning {{unused variable 'i'}} \
+                                     // expected-warning {{unused variable 'unused'}}
+    for (int i = 0;int used = 0;) // expected-warning {{unused variable 'i'}}
+      (void)used;
+      while(int var = 1) // expected-warning {{unused variable 'var'}}
+        return;
+  }
+
+  void whiles() {
+    while(int unused = 1) // expected-warning {{unused variable 'unused'}}
+      return;
+    while(int used = 1)
+      (void)used;
+  }
+
+
+  void switches() {
+    switch(int unused = 1) { // expected-warning {{unused variable 'unused'}}
+      case 1: return;
+    }
+    switch(constexpr int used = 3; int unused = 4) { // expected-warning {{unused variable 'unused'}}
+      case used: return;
+    }
+    switch(int used = 3; int unused = 4) { // expected-warning {{unused variable 'unused'}}
+      case 3: (void)used;
+    }
+    switch(constexpr int used1 = 0; constexpr int used2 = 6) {
+      case (used1+used2): return;
+    }
+    switch(auto [a, b] = (int[2]){ 1, 2 }; 1) { // expected-warning {{unused variable '[a, b]'}}
+      case 1: return;
+    }
+    switch(auto [a, b] = (int[2]){ 1, 2 }; b) {
+      case 1: return;
+    }
+    switch(auto [a, b] = (int[2]){ 1, 2 }; 1) {
+      case 1: (void)a;
+    }
+  }
+  template <typename T>
+  struct Vector {
+    void doIt() {
+      for (auto& e : elements){} // expected-warning {{unused variable 'e'}}
+    }
+    T elements[10];
+  };
+  void ranged_for() {
+    Vector<int>    vector;
+    vector.doIt(); // expected-note {{here}}
+  }
+
+
+  struct RAII {
+    int &x;
+    RAII(int &ref) : x(ref) {}
+    ~RAII() { x = 0;}
+    operator int() const { return 1; }
+  };
+  void aggregate() {
+    int x = 10;
+    int y = 10;
+    if (RAII var = x) {}
+    for(RAII var = x; RAII var2 = y;) {}
+    while (RAII var = x) {}
+    switch (RAII var = x) {}
+  }
+
+  struct TrivialDtor{
+    int &x;
+    TrivialDtor(int &ref) : x(ref) { ref = 32; }
+    operator int() const { return 1; }
+  };
+  void trivial_dtor() {
+    int x = 10;
+    int y = 10;
+    if (TrivialDtor var = x) {} // expected-warning {{unused variable 'var'}}
+    for(TrivialDtor var = x; TrivialDtor var2 = y;) {} // expected-warning {{unused variable 'var'}} \
+                                         // expected-warning {{unused variable 'var2'}}
+    while (TrivialDtor var = x) {} // expected-warning {{unused variable 'var'}}
+    switch (TrivialDtor var = x) {} // expected-warning {{unused variable 'var'}}
+  }
+
+} // namespace inside_condition
