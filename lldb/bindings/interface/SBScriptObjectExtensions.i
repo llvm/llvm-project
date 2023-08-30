@@ -1,5 +1,3 @@
-STRING_EXTENSION_OUTSIDE(SBScriptObject)
-
 %extend lldb::SBScriptObject {
 #ifdef SWIGPYTHON
     %pythoncode %{
