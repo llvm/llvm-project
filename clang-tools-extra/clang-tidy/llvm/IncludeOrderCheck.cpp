@@ -143,7 +143,7 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
     // block.
     for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
       // Find the first include that's not in the right position.
-      unsigned I, E;
+      unsigned I = 0, E = 0;
       for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
         if (IncludeIndices[I] != I)
           break;

@@ -97,7 +97,7 @@ static std::optional<bool> getAsBool(StringRef Value,
     return Parsed;
   // To maintain backwards compatability, we support parsing numbers as
   // booleans, even though its not supported in YAML.
-  long long Number;
+  long long Number = 0;
   if (!Value.getAsInteger(10, Number))
     return Number != 0;
   return std::nullopt;
