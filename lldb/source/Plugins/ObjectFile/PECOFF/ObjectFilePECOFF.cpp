@@ -79,8 +79,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ObjectFilePECOFF::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ObjectFilePECOFF::GetPluginNameStatic();
   }
 
   PluginProperties() {
