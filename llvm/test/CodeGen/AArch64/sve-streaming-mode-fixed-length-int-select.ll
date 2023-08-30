@@ -7,10 +7,10 @@ define <4 x i8> @select_v4i8(<4 x i8> %op1, <4 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -23,10 +23,9 @@ define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.b, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -39,10 +38,9 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.b, w0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -55,8 +53,7 @@ define void @select_v32i8(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    and w8, w2, #0x1
-; CHECK-NEXT:    mov z0.b, w8
+; CHECK-NEXT:    mov z0.b, w2
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]
@@ -93,10 +90,10 @@ define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -109,10 +106,10 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -125,8 +122,8 @@ define void @select_v16i16(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    and w8, w2, #0x1
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    mov z0.h, w2
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]

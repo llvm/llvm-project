@@ -35,9 +35,9 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
@@ -55,10 +55,10 @@ define void @select_v32f16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    and w8, w2, #0x1
-; VBITS_GE_256-NEXT:    ptrue p1.h
-; VBITS_GE_256-NEXT:    mov z0.h, w8
+; VBITS_GE_256-NEXT:    mov z0.h, w2
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    ptrue p1.h
+; VBITS_GE_256-NEXT:    and z0.h, z0.h, #0x1
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1, x8, lsl #1]
@@ -73,9 +73,9 @@ define void @select_v32f16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_512-LABEL: select_v32f16:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    and w8, w2, #0x1
+; VBITS_GE_512-NEXT:    mov z0.h, w2
 ; VBITS_GE_512-NEXT:    ptrue p1.h
-; VBITS_GE_512-NEXT:    mov z0.h, w8
+; VBITS_GE_512-NEXT:    and z0.h, z0.h, #0x1
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1h { z2.h }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z0.h, #0
@@ -93,9 +93,9 @@ define void @select_v64f16(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
@@ -113,9 +113,9 @@ define void @select_v128f16(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
