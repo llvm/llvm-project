@@ -328,6 +328,7 @@ Error IncludeTreeActionController::initialize(
 
   // Enable caching in the resulting commands.
   ScanInstance.getFrontendOpts().CacheCompileJob = true;
+  ScanInstance.getFrontendOpts().ForIncludeTreeScan = true;
   CASOpts = ScanInstance.getCASOpts();
 
   return Error::success();
