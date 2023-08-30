@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_APINOTES_APINOTESFORMAT_H
 #define LLVM_CLANG_LIB_APINOTES_APINOTESFORMAT_H
 
+#include "clang/APINotes/Types.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/Bitcode/BitcodeConvenience.h"
 
