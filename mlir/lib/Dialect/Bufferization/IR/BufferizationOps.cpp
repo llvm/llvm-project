@@ -1018,10 +1018,15 @@ struct RemoveAllocDeallocPairWhenNoOtherUsers
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<DeallocRemoveDuplicateDeallocMemrefs,
-              DeallocRemoveDuplicateRetainedMemrefs, EraseEmptyDealloc,
-              EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc,
-              RemoveAllocDeallocPairWhenNoOtherUsers>(context);
+  populateDeallocOpCanonicalizationPatterns(results, context);
+}
+
+void bufferization::populateDeallocOpCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<DeallocRemoveDuplicateDeallocMemrefs,
+               DeallocRemoveDuplicateRetainedMemrefs, EraseEmptyDealloc,
+               EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc,
+               RemoveAllocDeallocPairWhenNoOtherUsers>(context);
 }
 
 //===----------------------------------------------------------------------===//
