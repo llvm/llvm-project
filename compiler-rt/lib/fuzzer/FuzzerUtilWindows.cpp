@@ -234,13 +234,8 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), name.size(), nullptr, 0);
-  std::wstring wname(sz, L' ');
-  if ((sz == MultiByteToWideChar(CP_UTF8, 0, name.data(), name.size(),
-                                 &wname[0], sz)) > 0) {
-    wname.resize(sz - 1);
-    (void)SetThreadDescription(thread.native_handle(), wname.c_str());
-  }
+  // TODO ?
+  // to UTF-8 then SetThreadDescription ?
 }
 
 } // namespace fuzzer
