@@ -11976,7 +11976,9 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         ":TensorDialect",
         ":Transforms",
         ":ViewLikeInterface",
@@ -11996,6 +11998,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BufferizationDialect",
+        ":BufferizationTransforms",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
