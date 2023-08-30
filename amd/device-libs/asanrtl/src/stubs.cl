@@ -21,10 +21,6 @@ USED NO_SANITIZE_ADDR void __asan_register_image_globals(uptr flag) {}
 
 USED NO_SANITIZE_ADDR void __asan_unregister_image_globals(uptr flag) {}
 
-USED NO_SANITIZE_ADDR void __asan_register_elf_globals(uptr flag, uptr start, uptr stop) {}
-
-USED NO_SANITIZE_ADDR void __asan_unregister_elf_globals(uptr flag, uptr start, uptr stop) {}
-
 USED NO_SANITIZE_ADDR void __asan_init(void) {}
 
 USED NO_SANITIZE_ADDR void __asan_version_mismatch_check_v8(void) {}

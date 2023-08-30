@@ -44,6 +44,17 @@ poison_redzones(__global const struct device_global *g) {
     }
 }
 
+// unpoison global and redzones around it only if global is shadow granularity aligned.
+NO_SANITIZE_ADDR
+static void
+unpoison_redzones(__global const struct device_global *g) {
+    if (!is_aligned_by_granularity(g->beg))
+      return;
+    if (!is_aligned_by_granularity(g->size_with_redzone))
+      return;
+    fill_shadowof(g->beg, g->size_with_redzone, 0);
+}
+
 // This function is called by one-workitem constructor kernel.
 USED NO_INLINE NO_SANITIZE_ADDR
 void
@@ -53,22 +64,50 @@ __asan_register_globals(uptr globals, uptr n) {
        poison_redzones(&dglobals[i]);
 }
 
-// unpoison global and redzones around it only if global is shadow granularity aligned.
-NO_SANITIZE_ADDR
-static void
-unpoison_global(__global const struct device_global *g) {
-    if (!is_aligned_by_granularity(g->beg))
-      return;
-    if (!is_aligned_by_granularity(g->size_with_redzone))
-      return;
-    fill_shadowof(g->beg, g->size_with_redzone, 0);
-}
-
 // This function is called by one-workitem destructor kernel.
 USED NO_INLINE NO_SANITIZE_ADDR
 void
 __asan_unregister_globals(uptr globals, uptr n) {
     __global struct device_global* dglobals = (__global struct device_global*) globals;
     for (uptr i = 0; i < n; i++)
-       unpoison_global(&dglobals[i]);
+       unpoison_redzones(&dglobals[i]);
 }
+
+USED NO_INLINE NO_SANITIZE_ADDR
+void
+__asan_register_elf_globals(uptr flag, uptr start, uptr stop)
+{
+    if (!start)
+        return;
+
+    __global uptr *f = (__global uptr *)flag;
+    if (*f)
+        return;
+
+    __global struct device_global *b = (__global struct device_global *)start;
+    __global struct device_global *e = (__global struct device_global *)stop;
+
+    __asan_register_globals(start, e - b);
+
+    *f = 1;
+}
+
+USED NO_INLINE NO_SANITIZE_ADDR
+void
+__asan_unregister_elf_globals(uptr flag, uptr start, uptr stop)
+{
+    if (!start)
+        return;
+
+    __global uptr *f = (__global uptr *)flag;
+    if (!*f)
+        return;
+
+    __global struct device_global *b = (__global struct device_global *)start;
+    __global struct device_global *e = (__global struct device_global *)stop;
+
+    __asan_unregister_globals(start, e - b);
+
+    *f = 0;
+}
+
