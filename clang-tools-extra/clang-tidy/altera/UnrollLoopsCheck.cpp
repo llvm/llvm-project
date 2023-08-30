@@ -246,7 +246,7 @@ bool UnrollLoopsCheck::extractValue(int &Value, const BinaryOperator *Op,
 }
 
 bool UnrollLoopsCheck::exprHasLargeNumIterations(const Expr *Expression,
-                                                 const ASTContext *Context) {
+                                                 const ASTContext *Context) const {
   Expr::EvalResult Result;
   if (Expression->EvaluateAsRValue(Result, *Context)) {
     if (!Result.Val.isInt())
