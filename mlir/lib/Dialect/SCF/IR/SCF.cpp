@@ -266,9 +266,9 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
 void ExecuteRegionOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ExecuteRegionOp, branch into the body.
-  if (point.isParent()) {
+  if (!index) {
     regions.push_back(RegionSuccessor(&getRegion()));
     return;
   }
@@ -282,8 +282,8 @@ void ExecuteRegionOp::getSuccessorRegions(
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
-  assert((point.isParent() || point == getParentOp().getAfter()) &&
+ConditionOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
+  assert((!index || index == getParentOp().getAfter().getRegionNumber()) &&
          "condition op can only exit the loop or branch to the after"
          "region");
   // Pass all operands except the condition to the successor region.
@@ -553,7 +553,7 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 /// Return operands used when entering the region at 'index'. These operands
 /// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable.
-OperandRange ForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+OperandRange ForOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
   return getInitArgs();
 }
 
@@ -562,7 +562,7 @@ OperandRange ForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void ForOp::getSuccessorRegions(RegionBranchPoint point,
+void ForOp::getSuccessorRegions(std::optional<unsigned> index,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
@@ -1731,7 +1731,7 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void ForallOp::getSuccessorRegions(RegionBranchPoint point,
+void ForallOp::getSuccessorRegions(std::optional<unsigned> index,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
@@ -2011,10 +2011,10 @@ void IfOp::print(OpAsmPrinter &p) {
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void IfOp::getSuccessorRegions(RegionBranchPoint point,
+void IfOp::getSuccessorRegions(std::optional<unsigned> index,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
-  if (!point.isParent()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -3042,7 +3042,7 @@ void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
 void ParallelOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
   // body.
@@ -3169,8 +3169,8 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
     afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 
-OperandRange WhileOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBefore() &&
+OperandRange WhileOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
+  assert(index && *index == 0 &&
          "WhileOp is expected to branch only to the first region");
 
   return getInits();
@@ -3192,18 +3192,17 @@ Block::BlockArgListType WhileOp::getAfterArguments() {
   return getAfterBody()->getArguments();
 }
 
-void WhileOp::getSuccessorRegions(RegionBranchPoint point,
+void WhileOp::getSuccessorRegions(std::optional<unsigned> index,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op always branches to the condition region.
-  if (point.isParent()) {
+  if (!index) {
     regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }
 
-  assert(llvm::is_contained({&getAfter(), &getBefore()}, point) &&
-         "there are only two regions in a WhileOp");
+  assert(*index < 2 && "there are only two regions in a WhileOp");
   // The body region always branches back to the condition region.
-  if (point == getAfter()) {
+  if (*index == 1) {
     regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }
@@ -4024,9 +4023,10 @@ Block &scf::IndexSwitchOp::getCaseBlock(unsigned idx) {
 }
 
 void IndexSwitchOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
+    std::optional<unsigned> index,
+    SmallVectorImpl<RegionSuccessor> &successors) {
   // All regions branch back to the parent op.
-  if (!point.isParent()) {
+  if (index) {
     successors.emplace_back(getResults());
     return;
   }

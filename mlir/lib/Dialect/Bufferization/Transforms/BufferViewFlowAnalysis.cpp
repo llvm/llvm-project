@@ -100,13 +100,16 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       // Query the RegionBranchOpInterface to find potential successor regions.
       // Extract all entry regions and wire all initial entry successor inputs.
       SmallVector<RegionSuccessor, 2> entrySuccessors;
-      regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
+      regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
                                           entrySuccessors);
       for (RegionSuccessor &entrySuccessor : entrySuccessors) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
         registerDependencies(
-            regionInterface.getEntrySuccessorOperands(entrySuccessor),
+            regionInterface.getEntrySuccessorOperands(
+                entrySuccessor.isParent()
+                    ? std::optional<unsigned>()
+                    : entrySuccessor.getSuccessor()->getRegionNumber()),
             entrySuccessor.getSuccessorInputs());
       }
 
@@ -115,16 +118,21 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         // Iterate over all successor region entries that are reachable from the
         // current region.
         SmallVector<RegionSuccessor, 2> successorRegions;
-        regionInterface.getSuccessorRegions(region, successorRegions);
+        regionInterface.getSuccessorRegions(region.getRegionNumber(),
+                                            successorRegions);
         for (RegionSuccessor &successorRegion : successorRegions) {
+          // Determine the current region index (if any).
+          std::optional<unsigned> regionIndex;
+          Region *regionSuccessor = successorRegion.getSuccessor();
+          if (regionSuccessor)
+            regionIndex = regionSuccessor->getRegionNumber();
           // Iterate over all immediate terminator operations and wire the
           // successor inputs with the successor operands of each terminator.
           for (Block &block : region)
             if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
                     block.getTerminator()))
-              registerDependencies(
-                  terminator.getSuccessorOperands(successorRegion),
-                  successorRegion.getSuccessorInputs());
+              registerDependencies(terminator.getSuccessorOperands(regionIndex),
+                                   successorRegion.getSuccessorInputs());
         }
       }
 
