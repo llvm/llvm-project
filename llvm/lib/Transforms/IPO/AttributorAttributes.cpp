@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -12167,9 +12168,19 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     // else ...
     // ```
     //
+    bool SpecializedForAnyCallees = false;
+    bool SpecializedForAllCallees = AllCalleesKnown;
     ICmpInst *LastCmp = nullptr;
+    SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
     for (Function *NewCallee : AssumedCallees) {
+      if (!A.shouldSpecializeCallSiteForCallee(*CB, *NewCallee)) {
+        SkippedAssumedCallees.push_back(NewCallee);
+        SpecializedForAllCallees = false;
+        continue;
+      }
+      SpecializedForAnyCallees = true;
+
       LastCmp = new ICmpInst(IP, llvm::CmpInst::ICMP_EQ, FP, NewCallee);
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
@@ -12198,8 +12209,20 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       NewCalls.push_back({NewCall, RetBC});
     }
 
+    auto AttachCalleeMetadata = [&](CallBase &IndirectCB) {
+      if (!AllCalleesKnown)
+        return ChangeStatus::UNCHANGED;
+      MDBuilder MDB(IndirectCB.getContext());
+      MDNode *Callees = MDB.createCallees(SkippedAssumedCallees);
+      IndirectCB.setMetadata(LLVMContext::MD_callees, Callees);
+      return ChangeStatus::CHANGED;
+    };
+
+    if (!SpecializedForAnyCallees)
+      return AttachCalleeMetadata(*CB);
+
     // Check if we need the fallback indirect call still.
-    if (AllCalleesKnown) {
+    if (SpecializedForAllCallees) {
       LastCmp->replaceAllUsesWith(ConstantInt::getTrue(LastCmp->getContext()));
       LastCmp->eraseFromParent();
       new UnreachableInst(IP->getContext(), IP);
@@ -12209,6 +12232,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       CBClone->setName(CB->getName());
       CBClone->insertBefore(IP);
       NewCalls.push_back({CBClone, nullptr});
+      AttachCalleeMetadata(*CBClone);
     }
 
     // Check if we need a PHI to merge the results.
