@@ -974,6 +974,54 @@ define void @store_is_def() {
   ret void
 }
 
+; TODO: merge src and dest, because any execution path doesn't cause conflicts.
+; Tests that exists modref for both src/dest, but it never conflict on the execution.
+define void @multi_bb_dataflow(i1 %b) {
+; CHECK-LABEL: define void @multi_bb_dataflow
+; CHECK-SAME: (i1 [[B:%.*]]) {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[SRC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[DEST]])
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[SRC]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    br i1 [[B]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[SRC]])
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr nocapture [[SRC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr nocapture [[DEST]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dest = alloca %struct.Foo, align 4
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  %1 = call i32 @use_nocapture(ptr noundef nocapture %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+  br i1 %b, label %bb0, label %bb1
+
+bb0:
+  %2 = call i32 @use_nocapture(ptr noundef nocapture %src)
+  br label %bb2
+
+bb1:
+  %3 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  br label %bb2
+
+bb2:
+  call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %src)
+  call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %dest)
+  ret void
+}
+
+
 ; Optimization failures follow:
 
 ; Tests that a memcpy that doesn't completely overwrite a stack value is a use
@@ -1509,9 +1557,9 @@ define void @alias_src_ref_dest_mod_after_copy() {
 }
 
 ; Tests that the optimization isn't performed when the source and destination
-; have mod ref conflict.
-define void @multi_bb_mod_ref_conflict(i1 %b) {
-; CHECK-LABEL: define void @multi_bb_mod_ref_conflict
+; have mod ref conflict on bb2.
+define void @multi_bb_dataflow_conflict(i1 %b) {
+; CHECK-LABEL: define void @multi_bb_dataflow_conflict
 ; CHECK-SAME: (i1 [[B:%.*]]) {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
@@ -1528,6 +1576,7 @@ define void @multi_bb_mod_ref_conflict(i1 %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @use_nocapture(ptr nocapture noundef [[DEST]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr nocapture [[SRC]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr nocapture [[DEST]])
 ; CHECK-NEXT:    ret void
@@ -1550,6 +1599,7 @@ bb1:
   br label %bb2
 
 bb2:
+  %4 = call i32 @use_nocapture(ptr noundef nocapture %dest)
   call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %src)
   call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %dest)
   ret void
