@@ -10,8 +10,8 @@
 
 
 define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, float %b) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @noop_fdiv_fpmath
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @noop_fdiv_fpmath(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[MD_25ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !0
 ; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -22,8 +22,8 @@ define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, flo
 }
 
 define amdgpu_kernel void @fdiv_fpmath_f32(ptr addrspace(1) %out, float %a, float %b) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -85,8 +85,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32(ptr addrspace(1) %out, float %a, floa
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -148,8 +148,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32(ptr addrspace(1) %out, float %a, floa
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -207,8 +207,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32(ptr addrspace(1) %out, float %a, floa
 }
 
 define amdgpu_kernel void @fdiv_fpmath_f32_flags(ptr addrspace(1) %out, float %a, float %b) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[B]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -277,8 +277,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_flags(ptr addrspace(1) %out, float %a
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_25ULP_NNAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[B]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[B]])
@@ -347,8 +347,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_flags(ptr addrspace(1) %out, float %a
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_25ULP_NNAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_flags(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[B]])
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; DAZ-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -412,8 +412,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_flags(ptr addrspace(1) %out, float %a
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_fpmath(ptr addrspace(1) %out, float %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float 1.000000e+00, [[X]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
@@ -464,8 +464,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath(ptr addrspace(1) %out, float %x) 
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NEG_FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float 1.000000e+00, [[X]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
@@ -516,8 +516,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath(ptr addrspace(1) %out, float %x) 
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NEG_FAST_NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float 1.000000e+00, [[X]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[X]])
@@ -578,8 +578,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath(ptr addrspace(1) %out, float %x) 
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(ptr addrspace(1) %out, float %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -610,8 +610,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(ptr addrspace(1) %out, floa
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NSZ]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[X]])
@@ -642,8 +642,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(ptr addrspace(1) %out, floa
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NSZ]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[MD_1ULP_NINF_NNAN:%.*]] = call nnan ninf float @llvm.amdgcn.rcp.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NINF_NNAN]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_1ULP_NINF:%.*]] = call ninf float @llvm.amdgcn.rcp.f32(float [[X]])
@@ -670,8 +670,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath_flags(ptr addrspace(1) %out, floa
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(ptr addrspace(1) %out,
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_NAN]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -695,8 +695,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(ptr addrspace(1) %out,
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_INF_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_NAN]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[NO_NAN]])
@@ -720,8 +720,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(ptr addrspace(1) %out,
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_INF_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[MD_1ULP_NO_NAN:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_NAN]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NO_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_1ULP_NO_INF:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_INF]])
@@ -746,8 +746,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_knownfinite(ptr addrspace(1) %out,
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_nozero(ptr addrspace(1) %out,
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_ZERO]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -764,8 +764,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nozero(ptr addrspace(1) %out,
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_ZERO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_ZERO]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[NO_ZERO]])
@@ -782,8 +782,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nozero(ptr addrspace(1) %out,
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_ZERO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nozero(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[MD_1ULP_NO_ZERO:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_ZERO]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NO_ZERO]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_1ULP_NO_ZERO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_ZERO_SUB]])
@@ -801,8 +801,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nozero(ptr addrspace(1) %out,
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_nosub(ptr addrspace(1) %out,
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_SUB]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -826,8 +826,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nosub(ptr addrspace(1) %out,
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_PSUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[NO_SUB]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[NO_SUB]])
@@ -851,8 +851,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nosub(ptr addrspace(1) %out,
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_PSUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_nosub(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[MD_1ULP_NO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_SUB]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_1ULP_NO_NSUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[NO_NSUB]])
@@ -877,8 +877,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_nosub(ptr addrspace(1) %out,
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, float %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; IEEE-GOODFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -891,8 +891,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; IEEE-BADFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -905,8 +905,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -924,8 +924,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub(ptr addrspace(1) %out, floa
 
 ; Test if we have an assumption on the output that it's not denormal.
 define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr addrspace(1) %out, float %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; IEEE-GOODFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -941,8 +941,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; IEEE-BADFREXP-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -958,8 +958,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 ; IEEE-BADFREXP-NEXT:    store volatile float [[MD_1ULP_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -983,8 +983,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_assume_nosub_assume_result_nosub(ptr add
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(ptr addrspace(1) %out, <2 x float> %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP1]])
@@ -1055,8 +1055,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(ptr addrspace(1) %ou
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[MD_1ULP_NSZ]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP1]])
@@ -1127,8 +1127,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(ptr addrspace(1) %ou
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[MD_1ULP_NSZ]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; DAZ-NEXT:    [[TMP3:%.*]] = call nnan ninf float @llvm.amdgcn.rcp.f32(float [[TMP1]])
@@ -1175,8 +1175,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_flags(ptr addrspace(1) %ou
 }
 
 define amdgpu_kernel void @fdiv_fpmath_f32_vector(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> [[A]], [[B]]
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-GOODFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> [[A]], [[B]], !fpmath !1
@@ -1237,8 +1237,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_vector(ptr addrspace(1) %out, <2 x fl
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> [[A]], [[B]]
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-BADFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> [[A]], [[B]], !fpmath !1
@@ -1299,8 +1299,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_vector(ptr addrspace(1) %out, <2 x fl
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_vector(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> [[A]], [[B]]
 ; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
 ; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> [[A]], [[B]], !fpmath !1
@@ -1355,8 +1355,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_vector(ptr addrspace(1) %out, <2 x fl
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath(ptr addrspace(1) %out, <2 x float> %x) {
-; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
 ; CHECK-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]], !fpmath !1
@@ -1387,8 +1387,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath(ptr addrspace(1) %out, <2 
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_fpmath_vector_nonsplat(ptr addrspace(1) %out, <2 x float> %x) {
-; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_vector_nonsplat
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_fpmath_vector_nonsplat(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NO_MD:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 2.000000e+00>, [[X]]
 ; CHECK-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    [[AFN_NO_MD:%.*]] = fdiv afn <2 x float> <float 1.000000e+00, float 2.000000e+00>, [[X]]
@@ -1415,8 +1415,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_fpmath_vector_nonsplat(ptr addrspace(1) 
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant(ptr addrspace(1) %out, <2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <2 x float> [[X]], float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[AFN_25ULP:%.*]] = fdiv afn <2 x float> [[X_INSERT]], [[Y]], !fpmath !0
 ; CHECK-NEXT:    store volatile <2 x float> [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 8
@@ -1433,8 +1433,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant(ptr addrs
 }
 
 define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(ptr addrspace(1) %out, <2 x float> %x, <2 x float> %y) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[X_INSERT:%.*]] = insertelement <2 x float> [[X]], float 1.000000e+00, i32 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 1
@@ -1459,8 +1459,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(ptr 
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[ARCP_25ULP]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[X_INSERT:%.*]] = insertelement <2 x float> [[X]], float 1.000000e+00, i32 0
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 1
@@ -1485,8 +1485,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(ptr 
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[ARCP_25ULP]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[X_INSERT:%.*]] = insertelement <2 x float> [[X]], float 1.000000e+00, i32 0
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X_INSERT]], i64 1
@@ -1508,8 +1508,8 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(ptr 
 }
 
 define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rsq_f32_fpmath
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rsq_f32_fpmath(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -1584,8 +1584,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rsq_f32_fpmath
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rsq_f32_fpmath(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -1660,8 +1660,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-BADFREXP-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -1771,8 +1771,8 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 }
 
 define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x) {
-; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags
-; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags(
+; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[TMP1:%.*]] = fcmp nnan ninf contract olt float [[X]], 0x3810000000000000
 ; IEEE-NEXT:    [[TMP2:%.*]] = select nnan ninf contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul nnan ninf contract float [[X]], [[TMP2]]
@@ -1817,8 +1817,8 @@ define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x)
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NINF_NNAN]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = call ninf contract float @llvm.amdgcn.rsq.f32(float [[X]])
@@ -1861,8 +1861,8 @@ define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x)
 }
 
 define float @rsq_f32_missing_contract0(float %x) {
-; IEEE-GOODFREXP-LABEL: define float @rsq_f32_missing_contract0
-; IEEE-GOODFREXP-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define float @rsq_f32_missing_contract0(
+; IEEE-GOODFREXP-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_3ULP]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -1872,8 +1872,8 @@ define float @rsq_f32_missing_contract0(float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-GOODFREXP-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-; IEEE-BADFREXP-LABEL: define float @rsq_f32_missing_contract0
-; IEEE-BADFREXP-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define float @rsq_f32_missing_contract0(
+; IEEE-BADFREXP-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_3ULP]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -1883,8 +1883,8 @@ define float @rsq_f32_missing_contract0(float %x) {
 ; IEEE-BADFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-BADFREXP-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-; DAZ-LABEL: define float @rsq_f32_missing_contract0
-; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define float @rsq_f32_missing_contract0(
+; DAZ-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
 ; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
@@ -1895,8 +1895,8 @@ define float @rsq_f32_missing_contract0(float %x) {
 }
 
 define float @rsq_f32_missing_contract1(float %x) {
-; IEEE-GOODFREXP-LABEL: define float @rsq_f32_missing_contract1
-; IEEE-GOODFREXP-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define float @rsq_f32_missing_contract1(
+; IEEE-GOODFREXP-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_3ULP]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -1906,8 +1906,8 @@ define float @rsq_f32_missing_contract1(float %x) {
 ; IEEE-GOODFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-GOODFREXP-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-; IEEE-BADFREXP-LABEL: define float @rsq_f32_missing_contract1
-; IEEE-BADFREXP-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define float @rsq_f32_missing_contract1(
+; IEEE-BADFREXP-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SQRT_X_3ULP]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -1917,8 +1917,8 @@ define float @rsq_f32_missing_contract1(float %x) {
 ; IEEE-BADFREXP-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP5]], i32 [[TMP4]])
 ; IEEE-BADFREXP-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-; DAZ-LABEL: define float @rsq_f32_missing_contract1
-; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define float @rsq_f32_missing_contract1(
+; DAZ-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
 ; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
@@ -1929,8 +1929,8 @@ define float @rsq_f32_missing_contract1(float %x) {
 }
 
 define float @rsq_f32_flag_merge(float %x) {
-; IEEE-LABEL: define float @rsq_f32_flag_merge
-; IEEE-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-LABEL: define float @rsq_f32_flag_merge(
+; IEEE-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[TMP1:%.*]] = fcmp ninf nsz contract olt float [[X]], 0x3810000000000000
 ; IEEE-NEXT:    [[TMP2:%.*]] = select ninf nsz contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul ninf nsz contract float [[X]], [[TMP2]]
@@ -1939,8 +1939,8 @@ define float @rsq_f32_flag_merge(float %x) {
 ; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fmul ninf nsz contract float [[TMP4]], [[TMP5]]
 ; IEEE-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-; DAZ-LABEL: define float @rsq_f32_flag_merge
-; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define float @rsq_f32_flag_merge(
+; DAZ-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call ninf nsz contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
 ;
@@ -1950,8 +1950,8 @@ define float @rsq_f32_flag_merge(float %x) {
 }
 
 define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofpclass(nan) %no.nan,
-; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite
-; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
+; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite(
+; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_NAN]], 0x3810000000000000
 ; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[NO_NAN]], [[TMP2]]
@@ -1975,8 +1975,8 @@ define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofp
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_NAN]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_INF]])
@@ -2003,8 +2003,8 @@ define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofp
 }
 
 define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nofpclass(zero) %no.zero, float nofpclass(zero sub) %no.zero.sub) {
-; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero
-; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
+; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero(
+; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_ZERO]], 0x3810000000000000
 ; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float 0x4170000000000000, float 1.000000e+00
 ; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[NO_ZERO]], [[TMP2]]
@@ -2016,8 +2016,8 @@ define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nof
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_ZERO]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO_SUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_ZERO_SUB]])
@@ -2036,8 +2036,8 @@ define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nof
 }
 
 define amdgpu_kernel void @rsq_f32_known_nosub(ptr addrspace(1) %out, float nofpclass(sub) %no.sub, float nofpclass(psub) %no.psub, float nofpclass(nsub) %no.nsub) {
-; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub
-; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
+; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub(
+; IEEE-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
 ; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_SUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[NO_PSUB]], 0x3810000000000000
@@ -2056,8 +2056,8 @@ define amdgpu_kernel void @rsq_f32_known_nosub(ptr addrspace(1) %out, float nofp
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_NSUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_SUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[NO_PSUB]])
@@ -2082,8 +2082,8 @@ define amdgpu_kernel void @rsq_f32_known_nosub(ptr addrspace(1) %out, float nofp
 }
 
 define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x) {
-; CHECK-LABEL: define amdgpu_kernel void @rsq_f32_assume_nosub
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define amdgpu_kernel void @rsq_f32_assume_nosub(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
@@ -2101,8 +2101,8 @@ define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x)
 }
 
 define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x float> %x) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -2172,8 +2172,8 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -2243,8 +2243,8 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT_X_NO_MD]]
 ; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
@@ -2314,8 +2314,8 @@ define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x flo
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd(ptr addrspace(1) %out, float %x, float %y, float %denom) {
-; CHECK-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]]
 ; CHECK-NEXT:    [[ARCP1:%.*]] = fdiv arcp float [[Y]], [[DENOM]]
 ; CHECK-NEXT:    store volatile float [[ARCP0]], ptr addrspace(1) [[OUT]], align 4
@@ -2330,8 +2330,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd(ptr addrspace(1) %out, 
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(ptr addrspace(1) %out, float %x, float %y, float %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -2350,8 +2350,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(ptr addrspace(1) %out,
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[DENOM]])
@@ -2370,8 +2370,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(ptr addrspace(1) %out,
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp float [[X]], [[TMP1]]
 ; DAZ-NEXT:    [[TMP2:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
@@ -2388,8 +2388,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp(ptr addrspace(1) %out,
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(ptr addrspace(1) %out, float %x, float %y, float %z, float %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -2416,8 +2416,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(ptr addrspace(1) %o
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[DENOM]])
@@ -2444,8 +2444,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(ptr addrspace(1) %o
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp float [[X]], [[TMP1]]
 ; DAZ-NEXT:    [[TMP2:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
@@ -2467,8 +2467,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_x3(ptr addrspace(1) %o
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(ptr addrspace(1) %out, float %x, float %y, float %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -2481,8 +2481,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(ptr addrspace(1) 
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[DENOM]])
@@ -2495,8 +2495,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(ptr addrspace(1) 
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp float [[X]], [[TMP1]]
 ; DAZ-NEXT:    [[ARCP1:%.*]] = fdiv arcp float [[Y]], [[DENOM]]
@@ -2512,8 +2512,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_25ulp_nomd(ptr addrspace(1) 
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(ptr addrspace(1) %out, float %x, float %y, float %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]]
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2526,8 +2526,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(ptr addrspace(1) 
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]]
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2540,8 +2540,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(ptr addrspace(1) 
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]]
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP1:%.*]] = fmul arcp float [[Y]], [[TMP1]]
@@ -2557,8 +2557,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_nomd_25ulp(ptr addrspace(1) 
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(ptr addrspace(1) %out, float %x, float %y, float %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -2577,8 +2577,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(ptr addrspace(1) %out, 
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[DENOM]])
@@ -2597,8 +2597,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(ptr addrspace(1) %out, 
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp float [[X]], [[TMP1]]
 ; DAZ-NEXT:    [[TMP2:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[DENOM]])
@@ -2615,8 +2615,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp(ptr addrspace(1) %out, 
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1) %out, <2 x float> %x, <2 x float> %y, <2 x float> %denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
@@ -2661,8 +2661,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1)
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
@@ -2707,8 +2707,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1)
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; DAZ-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
@@ -2741,8 +2741,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1)
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) %out, float %x, float %y, float %sqr.denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2762,8 +2762,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) 
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2783,8 +2783,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) 
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp contract float [[X]], [[TMP1]]
@@ -2803,8 +2803,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) 
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrspace(1) %out, <2 x float> %x, <2 x float> %y, <2 x float> %sqr.denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
@@ -2850,8 +2850,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 ; IEEE-GOODFREXP-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
@@ -2897,8 +2897,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 ; IEEE-BADFREXP-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
@@ -2933,8 +2933,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 }
 
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(1) %out, float %x, float %y, float %z, float %sqr.denom) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2962,8 +2962,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[DENOM]])
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
@@ -2991,8 +2991,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
 ; DAZ-NEXT:    [[TMP1:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[DENOM]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = fmul arcp contract float [[X]], [[TMP1]]
@@ -3016,8 +3016,8 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator
-; IEEE-GOODFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator(
+; IEEE-GOODFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3065,8 +3065,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP43]], float [[TMP40]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator
-; IEEE-BADFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator(
+; IEEE-BADFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3114,8 +3114,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP43]], float [[TMP40]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator
-; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator(
+; DAZ-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3160,8 +3160,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float> %arg) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt
-; IEEE-GOODFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(
+; IEEE-GOODFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3171,37 +3171,46 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float>
 ; IEEE-GOODFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-GOODFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP5]])
-; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP6]])
-; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fneg contract afn float [[TMP10]]
-; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
-; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = extractvalue { float, i32 } [[TMP12]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 4.000000e+00)
-; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = extractvalue { float, i32 } [[TMP16]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = extractvalue { float, i32 } [[TMP16]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = fmul contract float [[TMP17]], [[TMP15]]
-; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP18]], [[TMP14]]
-; IEEE-GOODFREXP-NEXT:    [[TMP21:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP19]], i32 [[TMP20]])
-; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP4]])
-; IEEE-GOODFREXP-NEXT:    [[TMP23:%.*]] = extractvalue { float, i32 } [[TMP22]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = extractvalue { float, i32 } [[TMP22]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP25:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP23]])
-; IEEE-GOODFREXP-NEXT:    [[TMP26:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
-; IEEE-GOODFREXP-NEXT:    [[TMP27:%.*]] = extractvalue { float, i32 } [[TMP26]], 0
-; IEEE-GOODFREXP-NEXT:    [[TMP28:%.*]] = extractvalue { float, i32 } [[TMP26]], 1
-; IEEE-GOODFREXP-NEXT:    [[TMP29:%.*]] = fmul contract float [[TMP27]], [[TMP25]]
-; IEEE-GOODFREXP-NEXT:    [[TMP30:%.*]] = sub i32 [[TMP28]], [[TMP24]]
-; IEEE-GOODFREXP-NEXT:    [[TMP31:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP29]], i32 [[TMP30]])
-; IEEE-GOODFREXP-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i64 0
-; IEEE-GOODFREXP-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP11]], i64 1
-; IEEE-GOODFREXP-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP21]], i64 2
-; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
+; IEEE-GOODFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP11:%.*]] = fmul contract afn float [[TMP5]], [[TMP10]]
+; IEEE-GOODFREXP-NEXT:    [[TMP12:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP11]])
+; IEEE-GOODFREXP-NEXT:    [[TMP13:%.*]] = select contract afn i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = fmul contract afn float [[TMP12]], [[TMP13]]
+; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], 0x3810000000000000
+; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = fmul contract afn float [[TMP6]], [[TMP16]]
+; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP17]])
+; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = select contract afn i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
+; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = fmul contract afn float [[TMP18]], [[TMP19]]
+; IEEE-GOODFREXP-NEXT:    [[TMP21:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
+; IEEE-GOODFREXP-NEXT:    [[TMP22:%.*]] = extractvalue { float, i32 } [[TMP21]], 0
+; IEEE-GOODFREXP-NEXT:    [[TMP23:%.*]] = extractvalue { float, i32 } [[TMP21]], 1
+; IEEE-GOODFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP22]])
+; IEEE-GOODFREXP-NEXT:    [[TMP25:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 4.000000e+00)
+; IEEE-GOODFREXP-NEXT:    [[TMP26:%.*]] = extractvalue { float, i32 } [[TMP25]], 0
+; IEEE-GOODFREXP-NEXT:    [[TMP27:%.*]] = extractvalue { float, i32 } [[TMP25]], 1
+; IEEE-GOODFREXP-NEXT:    [[TMP28:%.*]] = fmul contract float [[TMP26]], [[TMP24]]
+; IEEE-GOODFREXP-NEXT:    [[TMP29:%.*]] = sub i32 [[TMP27]], [[TMP23]]
+; IEEE-GOODFREXP-NEXT:    [[TMP30:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP28]], i32 [[TMP29]])
+; IEEE-GOODFREXP-NEXT:    [[TMP31:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP4]])
+; IEEE-GOODFREXP-NEXT:    [[TMP32:%.*]] = extractvalue { float, i32 } [[TMP31]], 0
+; IEEE-GOODFREXP-NEXT:    [[TMP33:%.*]] = extractvalue { float, i32 } [[TMP31]], 1
+; IEEE-GOODFREXP-NEXT:    [[TMP34:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP32]])
+; IEEE-GOODFREXP-NEXT:    [[TMP35:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
+; IEEE-GOODFREXP-NEXT:    [[TMP36:%.*]] = extractvalue { float, i32 } [[TMP35]], 0
+; IEEE-GOODFREXP-NEXT:    [[TMP37:%.*]] = extractvalue { float, i32 } [[TMP35]], 1
+; IEEE-GOODFREXP-NEXT:    [[TMP38:%.*]] = fmul contract float [[TMP36]], [[TMP34]]
+; IEEE-GOODFREXP-NEXT:    [[TMP39:%.*]] = sub i32 [[TMP37]], [[TMP33]]
+; IEEE-GOODFREXP-NEXT:    [[TMP40:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP38]], i32 [[TMP39]])
+; IEEE-GOODFREXP-NEXT:    [[TMP41:%.*]] = insertelement <4 x float> poison, float [[TMP14]], i64 0
+; IEEE-GOODFREXP-NEXT:    [[TMP42:%.*]] = insertelement <4 x float> [[TMP41]], float [[TMP20]], i64 1
+; IEEE-GOODFREXP-NEXT:    [[TMP43:%.*]] = insertelement <4 x float> [[TMP42]], float [[TMP30]], i64 2
+; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP43]], float [[TMP40]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt
-; IEEE-BADFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(
+; IEEE-BADFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3211,37 +3220,46 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float>
 ; IEEE-BADFREXP-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[ARG]], i64 2
 ; IEEE-BADFREXP-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[ARG]], i64 3
-; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP5]])
-; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP6]])
-; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fneg contract afn float [[TMP10]]
-; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
-; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = extractvalue { float, i32 } [[TMP12]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP3]])
-; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP13]])
-; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 4.000000e+00)
-; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = extractvalue { float, i32 } [[TMP16]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float 4.000000e+00)
-; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = fmul contract float [[TMP17]], [[TMP15]]
-; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP18]], [[TMP14]]
-; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP19]], i32 [[TMP20]])
-; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP4]])
-; IEEE-BADFREXP-NEXT:    [[TMP23:%.*]] = extractvalue { float, i32 } [[TMP22]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP4]])
-; IEEE-BADFREXP-NEXT:    [[TMP25:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP23]])
-; IEEE-BADFREXP-NEXT:    [[TMP26:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
-; IEEE-BADFREXP-NEXT:    [[TMP27:%.*]] = extractvalue { float, i32 } [[TMP26]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP28:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float undef)
-; IEEE-BADFREXP-NEXT:    [[TMP29:%.*]] = fmul contract float [[TMP27]], [[TMP25]]
-; IEEE-BADFREXP-NEXT:    [[TMP30:%.*]] = sub i32 [[TMP28]], [[TMP24]]
-; IEEE-BADFREXP-NEXT:    [[TMP31:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP29]], i32 [[TMP30]])
-; IEEE-BADFREXP-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i64 0
-; IEEE-BADFREXP-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP11]], i64 1
-; IEEE-BADFREXP-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP21]], i64 2
-; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
+; IEEE-BADFREXP-NEXT:    [[TMP9:%.*]] = fcmp contract afn olt float [[TMP5]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP10:%.*]] = select contract afn i1 [[TMP9]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP11:%.*]] = fmul contract afn float [[TMP5]], [[TMP10]]
+; IEEE-BADFREXP-NEXT:    [[TMP12:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP11]])
+; IEEE-BADFREXP-NEXT:    [[TMP13:%.*]] = select contract afn i1 [[TMP9]], float 4.096000e+03, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = fmul contract afn float [[TMP12]], [[TMP13]]
+; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = fcmp contract afn olt float [[TMP6]], 0x3810000000000000
+; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = select contract afn i1 [[TMP15]], float 0x4170000000000000, float 1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = fmul contract afn float [[TMP6]], [[TMP16]]
+; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = call contract afn float @llvm.amdgcn.rsq.f32(float [[TMP17]])
+; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = select contract afn i1 [[TMP15]], float -4.096000e+03, float -1.000000e+00
+; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = fmul contract afn float [[TMP18]], [[TMP19]]
+; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP3]])
+; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = extractvalue { float, i32 } [[TMP21]], 0
+; IEEE-BADFREXP-NEXT:    [[TMP23:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP3]])
+; IEEE-BADFREXP-NEXT:    [[TMP24:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP22]])
+; IEEE-BADFREXP-NEXT:    [[TMP25:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 4.000000e+00)
+; IEEE-BADFREXP-NEXT:    [[TMP26:%.*]] = extractvalue { float, i32 } [[TMP25]], 0
+; IEEE-BADFREXP-NEXT:    [[TMP27:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float 4.000000e+00)
+; IEEE-BADFREXP-NEXT:    [[TMP28:%.*]] = fmul contract float [[TMP26]], [[TMP24]]
+; IEEE-BADFREXP-NEXT:    [[TMP29:%.*]] = sub i32 [[TMP27]], [[TMP23]]
+; IEEE-BADFREXP-NEXT:    [[TMP30:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP28]], i32 [[TMP29]])
+; IEEE-BADFREXP-NEXT:    [[TMP31:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[TMP4]])
+; IEEE-BADFREXP-NEXT:    [[TMP32:%.*]] = extractvalue { float, i32 } [[TMP31]], 0
+; IEEE-BADFREXP-NEXT:    [[TMP33:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[TMP4]])
+; IEEE-BADFREXP-NEXT:    [[TMP34:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP32]])
+; IEEE-BADFREXP-NEXT:    [[TMP35:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
+; IEEE-BADFREXP-NEXT:    [[TMP36:%.*]] = extractvalue { float, i32 } [[TMP35]], 0
+; IEEE-BADFREXP-NEXT:    [[TMP37:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float undef)
+; IEEE-BADFREXP-NEXT:    [[TMP38:%.*]] = fmul contract float [[TMP36]], [[TMP34]]
+; IEEE-BADFREXP-NEXT:    [[TMP39:%.*]] = sub i32 [[TMP37]], [[TMP33]]
+; IEEE-BADFREXP-NEXT:    [[TMP40:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP38]], i32 [[TMP39]])
+; IEEE-BADFREXP-NEXT:    [[TMP41:%.*]] = insertelement <4 x float> poison, float [[TMP14]], i64 0
+; IEEE-BADFREXP-NEXT:    [[TMP42:%.*]] = insertelement <4 x float> [[TMP41]], float [[TMP20]], i64 1
+; IEEE-BADFREXP-NEXT:    [[TMP43:%.*]] = insertelement <4 x float> [[TMP42]], float [[TMP30]], i64 2
+; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP43]], float [[TMP40]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt
-; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(
+; DAZ-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3286,8 +3304,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float>
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div(<4 x float> %arg) {
-; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div
-; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div(
+; CHECK-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = fdiv contract afn <4 x float> <float 1.000000e+00, float -1.000000e+00, float 4.000000e+00, float undef>, [[DENOM]]
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
@@ -3298,8 +3316,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div(<4 x float> 
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv(<4 x float> %arg) {
-; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv
-; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv(
+; CHECK-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = fdiv contract <4 x float> <float 1.000000e+00, float -1.000000e+00, float 4.000000e+00, float undef>, [[DENOM]]
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
@@ -3310,8 +3328,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv(<4 x fl
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x float> %arg) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt
-; IEEE-GOODFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(
+; IEEE-GOODFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3356,8 +3374,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 ; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP40]], float [[TMP37]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt
-; IEEE-BADFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(
+; IEEE-BADFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3402,8 +3420,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 ; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP40]], float [[TMP37]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt
-; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(
+; DAZ-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3444,8 +3462,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x fl
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %arg) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp
-; IEEE-GOODFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(
+; IEEE-GOODFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3487,8 +3505,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP37]], float [[TMP34]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp
-; IEEE-BADFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(
+; IEEE-BADFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3530,8 +3548,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP37]], float [[TMP34]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp
-; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(
+; DAZ-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
@@ -3560,8 +3578,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct(<4 x float> %arg) {
-; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct
-; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct(
+; CHECK-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = fdiv arcp contract <4 x float> <float 1.000000e+00, float -1.000000e+00, float 4.000000e+00, float undef>, [[DENOM]]
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
@@ -3572,8 +3590,8 @@ define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct(<4 x fl
 }
 
 define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(<4 x float> %arg) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp
-; IEEE-GOODFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(
+; IEEE-GOODFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[ARG]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[ARG]], i64 2
@@ -3611,8 +3629,8 @@ define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RCP:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RCP]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp
-; IEEE-BADFREXP-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(
+; IEEE-BADFREXP-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[ARG]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[ARG]], i64 2
@@ -3650,8 +3668,8 @@ define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 ; IEEE-BADFREXP-NEXT:    [[PARTIAL_RCP:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RCP]]
 ;
-; DAZ-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp
-; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(
+; DAZ-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[ARG]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[ARG]], i64 1
 ; DAZ-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[ARG]], i64 2
@@ -3674,8 +3692,8 @@ define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp(<4 x float> %ar
 }
 
 define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp_correct(<4 x float> %arg) {
-; CHECK-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp_correct
-; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp_correct(
+; CHECK-SAME: <4 x float> [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PARTIAL_RCP:%.*]] = fdiv arcp <4 x float> <float 1.000000e+00, float -1.000000e+00, float 4.000000e+00, float undef>, [[ARG]]
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RCP]]
 ;
@@ -3685,8 +3703,8 @@ define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp_correct(<4 x fl
 
 ; Make sure we don't crash if a vector square root has a constant vecctor input
 define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float> %x) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_const_denom
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @rsq_f32_vector_const_denom(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[SQRT:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[SQRT]], i64 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
@@ -3721,8 +3739,8 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 ; IEEE-GOODFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP27]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_const_denom
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @rsq_f32_vector_const_denom(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[SQRT:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[SQRT]], i64 0
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
@@ -3757,8 +3775,8 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 ; IEEE-BADFREXP-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP27]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-; DAZ-LABEL: define <4 x float> @rsq_f32_vector_const_denom
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @rsq_f32_vector_const_denom(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[SQRT:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[SQRT]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
@@ -3799,8 +3817,8 @@ define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float
 }
 
 define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> %x) {
-; IEEE-GOODFREXP-LABEL: define <4 x float> @fdiv_constant_f32_vector
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define <4 x float> @fdiv_constant_f32_vector(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 5.000000e-01)
 ; IEEE-GOODFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP3:%.*]] = extractvalue { float, i32 } [[TMP1]], 1
@@ -3839,8 +3857,8 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; IEEE-GOODFREXP-NEXT:    [[CONST_PARTIAL_RCP:%.*]] = insertelement <4 x float> [[TMP35]], float [[TMP32]], i64 3
 ; IEEE-GOODFREXP-NEXT:    ret <4 x float> [[CONST_PARTIAL_RCP]]
 ;
-; IEEE-BADFREXP-LABEL: define <4 x float> @fdiv_constant_f32_vector
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define <4 x float> @fdiv_constant_f32_vector(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[TMP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 5.000000e-01)
 ; IEEE-BADFREXP-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP1]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float 5.000000e-01)
@@ -3879,8 +3897,8 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; IEEE-BADFREXP-NEXT:    [[CONST_PARTIAL_RCP:%.*]] = insertelement <4 x float> [[TMP35]], float [[TMP32]], i64 3
 ; IEEE-BADFREXP-NEXT:    ret <4 x float> [[CONST_PARTIAL_RCP]]
 ;
-; DAZ-LABEL: define <4 x float> @fdiv_constant_f32_vector
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define <4 x float> @fdiv_constant_f32_vector(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.rcp.f32(float 5.000000e-01)
 ; DAZ-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.rcp.f32(float -2.000000e+00)
 ; DAZ-NEXT:    [[TMP3:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 3.200000e+01)
@@ -3914,8 +3932,8 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 }
 
 define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(ptr addrspace(1) %out, float nofpclass(sub) %a, float %b) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -3977,8 +3995,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(ptr addrspace(1) %out, floa
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -4040,8 +4058,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(ptr addrspace(1) %out, floa
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -4099,8 +4117,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(ptr addrspace(1) %out, floa
 }
 
 define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(ptr addrspace(1) %out, float %a, float nofpclass(sub) %b) {
-; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs
-; IEEE-GOODFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
+; IEEE-GOODFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(
+; IEEE-GOODFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-GOODFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -4162,8 +4180,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(ptr addrspace(1) %out, floa
 ; IEEE-GOODFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-GOODFREXP-NEXT:    ret void
 ;
-; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs
-; IEEE-BADFREXP-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
+; IEEE-BADFREXP-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(
+; IEEE-BADFREXP-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
 ; IEEE-BADFREXP-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; IEEE-BADFREXP-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
@@ -4225,8 +4243,8 @@ define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(ptr addrspace(1) %out, floa
 ; IEEE-BADFREXP-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-BADFREXP-NEXT:    ret void
 ;
-; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs
-; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(
+; DAZ-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
 ; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
