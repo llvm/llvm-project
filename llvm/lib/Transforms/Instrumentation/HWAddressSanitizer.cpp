@@ -894,9 +894,8 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   assert(!UsePageAliases);
   const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
 
-  if (InlineFastPath) {
-    // TODO.
-  }
+  if (InlineFastPath)
+    InsertBefore = insertShadowTagCheck(Ptr, InsertBefore).TagMismatchTerm;
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
