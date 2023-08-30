@@ -1800,20 +1800,20 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
     pHi = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
                        ADDI(posits[tid][lvl - 1], c1));
   }
-  // Fills out pIdxBuffer[tid][lvl][0] with [/*memSize =*/4, 0, 0, pHi]
+  // Fills out pIdxBuffer[tid][lvl][0] with [/*memSize =*/4, 0, pLo, pHi]
   builder.create<memref::StoreOp>(loc, c4, sPtrBuf, c0);  // memSize = 4
   builder.create<memref::StoreOp>(loc, c0, sPtrBuf, c1);  // index = 0
   builder.create<memref::StoreOp>(loc, pLo, sPtrBuf, c2); // pLo
   builder.create<memref::StoreOp>(loc, pHi, sPtrBuf, c3); // pHi
 
-  // This is an non empty tensor if 0 < pHi.
-  Value isNonEmpty = CMPI(ult, c0, pHi);
+  // This is an non empty tensor if pLo < pHi.
+  Value isNonEmpty = CMPI(ult, pLo, pHi);
   // The minimal coord must be at the first on ordered level.
   // FIXME: Technically we should load the coord only when the slice is
   // nonempty. though we assume that even on empty sparse tensors, a non-empty
   // ptr/idx buffer is allocated for each level so it would not cause OOB to
   // avoid generating a ifOp here.
-  Value minCrd = genIndexLoad(builder, loc, coordinatesBuffers[tid][0], c0);
+  Value minCrd = genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], pLo);
 
   // FIXME: We need the relative offset related to the base slice.
   Value absOffset = offsetFromMinCoord(builder, loc, minCrd, size, isNonEmpty);
