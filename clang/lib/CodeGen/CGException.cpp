@@ -440,15 +440,6 @@ llvm::Value *CodeGenFunction::getSelectorFromSlot() {
 
 void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
                                        bool KeepInsertionPoint) {
-  // If the exception is being emitted in an OpenMP target region,
-  // and the target is a GPU, we do not support exception handling.
-  // Therefore, we emit a trap which will abort the program, and
-  // prompt a warning indicating that a trap will be emitted.
-  const llvm::Triple &T = Target.getTriple();
-  if (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) {
-    EmitTrapCall(llvm::Intrinsic::trap);
-    return;
-  }
   if (const Expr *SubExpr = E->getSubExpr()) {
     QualType ThrowType = SubExpr->getType();
     if (ThrowType->isObjCObjectPointerType()) {
@@ -618,16 +609,9 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
 }
 
 void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
-  const llvm::Triple &T = Target.getTriple();
-  // If we encounter a try statement on in an OpenMP target region offloaded to
-  // a GPU, we treat it as a basic block.
-  const bool IsTargetDevice =
-      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
-  if (!IsTargetDevice)
-    EnterCXXTryStmt(S);
+  EnterCXXTryStmt(S);
   EmitStmt(S.getTryBlock());
-  if (!IsTargetDevice)
-    ExitCXXTryStmt(S);
+  ExitCXXTryStmt(S);
 }
 
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {

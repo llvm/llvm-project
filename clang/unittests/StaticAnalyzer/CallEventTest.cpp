@@ -81,7 +81,7 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
     }
   )",
                                                          Diags));
-  EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 1\n");
+  EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 2\n");
 }
 
 } // namespace

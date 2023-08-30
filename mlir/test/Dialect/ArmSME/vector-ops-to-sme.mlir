@@ -153,3 +153,54 @@ func.func @transfer_write_2d_zero__non_memref_type(%arg0 : tensor<?x?xi8>) -> te
   %0 = vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi8>, tensor<?x?xi8>
   return %0 : tensor<?x?xi8>
 }
+
+// =============================================================================
+// vector.broadcast
+// =============================================================================
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vec2d_from_i32(
+// CHECK-SAME:                                        %[[SRC:.*]]: i32) {
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[SRC_1D:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
+// CHECK: %[[TILE_ID:.*]] = arm_sme.get_tile_id : i32
+// CHECK: %[[TILE:.*]] = arm_sme.cast_tile_to_vector %[[TILE_ID]] : i32 to vector<[4]x[4]xi32>
+// CHECK: %[[VSCALE:.*]] = vector.vscale
+// CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
+// CHECK: scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
+// CHECK:   %[[C10:.*]] = arm_sme.move_vector_to_tile_slice %[[SRC_1D]], %[[TILE]], %[[TILE_SLICE_INDEX]] : vector<[4]xi32> into vector<[4]x[4]xi32>
+// CHECK: "prevent.dce"(%[[TILE]]) : (vector<[4]x[4]xi32>) -> ()
+func.func @broadcast_vec2d_from_i32(%arg0: i32) {
+  %0 = vector.broadcast %arg0 : i32 to vector<[4]x[4]xi32>
+  "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vec2d_from_vec0d(
+// CHECK-SAME:                                          %[[SRC:.*]]: vector<f32>) {
+// CHECK: %[[SRC_1D:.*]] = vector.broadcast %[[SRC]] : vector<f32> to vector<[4]xf32>
+// CHECK: scf.for
+// CHECK:   arm_sme.move_vector_to_tile_slice %[[SRC_1D]], {{.*}}
+func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) {
+  %0 = vector.broadcast %arg0 : vector<f32> to vector<[4]x[4]xf32>
+  "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_vec2d_from_vec1d(
+// CHECK-SAME:                                          %[[SRC:.*]]: vector<[8]xi16>) {
+// CHECK-NOT: vector.broadcast
+// CHECK: scf.for
+// CHECK:   arm_sme.move_vector_to_tile_slice %[[SRC]], {{.*}}
+func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
+  %0 = vector.broadcast %arg0 : vector<[8]xi16> to vector<[8]x[8]xi16>
+  "prevent.dce"(%0) : (vector<[8]x[8]xi16>) -> ()
+  return
+}
