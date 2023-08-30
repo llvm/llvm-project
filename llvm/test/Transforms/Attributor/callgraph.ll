@@ -596,6 +596,65 @@ cond.end.i:
   ret void
 }
 
+define void @as_cast(ptr %arg) {
+; OWRDL-LABEL: @as_cast(
+; OWRDL-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
+; OWRDL-NEXT:    tail call addrspace(1) void [[FP]]()
+; OWRDL-NEXT:    ret void
+;
+; CWRLD-LABEL: @as_cast(
+; CWRLD-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
+; CWRLD-NEXT:    [[FP_AS0:%.*]] = addrspacecast ptr addrspace(1) [[FP]] to ptr
+; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP_AS0]], @func3
+; CWRLD-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CWRLD:       2:
+; CWRLD-NEXT:    tail call void @func3()
+; CWRLD-NEXT:    br label [[TMP21:%.*]]
+; CWRLD:       3:
+; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP_AS0]], @func4
+; CWRLD-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CWRLD:       5:
+; CWRLD-NEXT:    tail call void @func4()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       6:
+; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP_AS0]], @retI32
+; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CWRLD:       8:
+; CWRLD-NEXT:    call void @retI32()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       9:
+; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP_AS0]], @takeI32
+; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
+; CWRLD:       11:
+; CWRLD-NEXT:    call void @takeI32()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       12:
+; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloat
+; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
+; CWRLD:       14:
+; CWRLD-NEXT:    call void @retFloatTakeFloat()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       15:
+; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloatFloatNoundef
+; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
+; CWRLD:       17:
+; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       18:
+; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
+; CWRLD:       19:
+; CWRLD-NEXT:    tail call void @void()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       20:
+; CWRLD-NEXT:    unreachable
+; CWRLD:       21:
+; CWRLD-NEXT:    ret void
+;
+  %fp = load ptr addrspace(1), ptr %arg, align 8
+  tail call addrspace(1) void %fp()
+  ret void
+}
+
 !0 = !{!1}
 !1 = !{i64 0, i1 false}
 !2 = !{ptr @func3, ptr @func4}
