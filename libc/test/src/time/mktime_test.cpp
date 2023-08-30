@@ -178,7 +178,7 @@ TEST(LlvmLibcMkTime, InvalidYear) {
 }
 
 TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
-  if (sizeof(size_t) != 4)
+  if (sizeof(time_t) != 4)
     return;
   {
     // 2038-01-19 03:14:08 tests overflow of the second in 2038.
