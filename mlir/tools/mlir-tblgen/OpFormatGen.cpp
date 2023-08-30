@@ -2008,19 +2008,19 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         else if (var->isVariadic())
           body << "!" << name << "().empty()";
       })
-      .Case<RegionVariable>([&](RegionVariable *element) {
+      .Case([&](RegionVariable *element) {
         const NamedRegion *var = element->getVar();
         std::string name = op.getGetterName(var->name);
         // TODO: Add a check for optional regions here when ODS supports it.
         body << "!" << name << "().empty()";
       })
-      .Case<TypeDirective>([&](TypeDirective *element) {
+      .Case([&](TypeDirective *element) {
         genOptionalGroupPrinterAnchor(element->getArg(), op, body);
       })
-      .Case<FunctionalTypeDirective>([&](FunctionalTypeDirective *element) {
+      .Case([&](FunctionalTypeDirective *element) {
         genOptionalGroupPrinterAnchor(element->getInputs(), op, body);
       })
-      .Case<AttributeVariable>([&](AttributeVariable *element) {
+      .Case([&](AttributeVariable *element) {
         Attribute attr = element->getVar()->attr;
         body << op.getGetterName(element->getVar()->name) << "Attr()";
         if (attr.isOptional())
@@ -2037,6 +2037,18 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
           return;
         }
         llvm_unreachable("attribute must be optional or default-valued");
+      })
+      .Case([&](CustomDirective *ele) {
+        body << '(';
+        llvm::interleave(
+            ele->getArguments(), body,
+            [&](FormatElement *child) {
+              body << '(';
+              genOptionalGroupPrinterAnchor(child, op, body);
+              body << ')';
+            },
+            " || ");
+        body << ')';
       });
 }
 
@@ -3434,15 +3446,28 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         return verifyOptionalGroupElement(loc, ele->getResults(),
                                           /*isAnchor=*/false);
       })
-      // Literals, whitespace, and custom directives may be used, but they can't
-      // anchor the group.
-      .Case<LiteralElement, WhitespaceElement, CustomDirective,
-            FunctionalTypeDirective, OptionalElement>([&](FormatElement *) {
-        if (isAnchor)
-          return emitError(loc, "only variables and types can be used "
-                                "to anchor an optional group");
+      .Case([&](CustomDirective *ele) {
+        if (!isAnchor)
+          return success();
+        // Verify each child as being valid in an optional group. They are all
+        // potential anchors if the custom directive was marked as one.
+        for (FormatElement *child : ele->getArguments()) {
+          if (isa<RefDirective>(child))
+            continue;
+          if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))
+            return failure();
+        }
         return success();
       })
+      // Literals, whitespace, and custom directives may be used, but they can't
+      // anchor the group.
+      .Case<LiteralElement, WhitespaceElement, OptionalElement>(
+          [&](FormatElement *) {
+            if (isAnchor)
+              return emitError(loc, "only variables and types can be used "
+                                    "to anchor an optional group");
+            return success();
+          })
       .Default([&](FormatElement *) {
         return emitError(loc, "only literals, types, and variables can be "
                               "used within an optional group");

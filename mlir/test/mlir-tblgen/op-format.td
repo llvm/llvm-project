@@ -83,3 +83,10 @@ def OptionalGroupB : TestFormat_Op<[{
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
+
+// CHECK-LABEL: OptionalGroupD::print
+// CHECK-NEXT: if (((getA()) || (getB()))) {
+// CHECK-NEXT:   odsPrinter << "("
+def OptionalGroupD : TestFormat_Op<[{
+  (`(` custom<Custom>($a, $b)^ `)`)? attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<I64>:$a, Optional<I64>:$b)>;
