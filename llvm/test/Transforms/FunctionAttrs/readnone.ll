@@ -10,7 +10,6 @@ define void @bar(ptr readonly %0) {
 ;
 ; ATTRIBUTOR-LABEL: define void @bar(
 ; ATTRIBUTOR-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @foo(ptr nofree readnone captures(none) [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @foo(ptr %0)
@@ -25,7 +24,6 @@ define void @foo(ptr readonly %0) {
 ;
 ; ATTRIBUTOR-LABEL: define void @foo(
 ; ATTRIBUTOR-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    call void @bar(ptr nofree readnone captures(none) [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @bar(ptr %0)

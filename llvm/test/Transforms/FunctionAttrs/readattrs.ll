@@ -308,13 +308,13 @@ define <4 x i32> @test11_2(<4 x ptr> %ptrs) {
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(argmem: read)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test11_2
 ; ATTRIBUTOR-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x ptr> [[PTRS]]) #[[ATTR3]]
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x ptr> [[PTRS]]) #[[ATTR17:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; ATTRIBUTOR-CGSCC: Function Attrs: nosync nounwind memory(argmem: read)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@test11_2
 ; ATTRIBUTOR-CGSCC-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR8:[0-9]+]] {
-; ATTRIBUTOR-CGSCC-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x ptr> [[PTRS]]) #[[ATTR3]]
+; ATTRIBUTOR-CGSCC-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x ptr> [[PTRS]]) #[[ATTR17:[0-9]+]]
 ; ATTRIBUTOR-CGSCC-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test11_1(<4 x ptr> %ptrs)
@@ -332,13 +332,13 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 ; ATTRIBUTOR: Function Attrs: nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test12_2
 ; ATTRIBUTOR-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR8:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x ptr> [[PTRS]])
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x ptr> [[PTRS]]) #[[ATTR18:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; ATTRIBUTOR-CGSCC: Function Attrs: nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@test12_2
 ; ATTRIBUTOR-CGSCC-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR9:[0-9]+]] {
-; ATTRIBUTOR-CGSCC-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x ptr> [[PTRS]])
+; ATTRIBUTOR-CGSCC-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x ptr> [[PTRS]]) #[[ATTR18:[0-9]+]]
 ; ATTRIBUTOR-CGSCC-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test12_1(<4 x ptr> %ptrs)

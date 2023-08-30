@@ -399,7 +399,6 @@ define void @test_recursive_argmem_read(ptr %p) {
 ; ATTRIBUTOR-LABEL: define void @test_recursive_argmem_read
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull readonly captures(none) [[P:%.*]]) #[[ATTR15:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
-; ATTRIBUTOR-NEXT:    call void @test_recursive_argmem_read(ptr nofree readonly captures(none) [[PVAL]]) #[[ATTR15]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %pval = load ptr, ptr %p
@@ -444,7 +443,6 @@ define void @test_recursive_argmem_read_alloca(ptr %p) {
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull readonly captures(none) [[P:%.*]]) #[[ATTR17:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[A:%.*]] = alloca ptr, align 8
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
-; ATTRIBUTOR-NEXT:    call void @test_recursive_argmem_read_alloca(ptr nofree nonnull readonly captures(none) [[A]]) #[[ATTR15]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %a = alloca ptr
@@ -465,7 +463,6 @@ define void @test_scc_argmem_read_1(ptr %p) {
 ; ATTRIBUTOR-LABEL: define void @test_scc_argmem_read_1
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull readonly captures(none) [[P:%.*]]) #[[ATTR15]] {
 ; ATTRIBUTOR-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
-; ATTRIBUTOR-NEXT:    call void @test_scc_argmem_read_2(ptr nofree readonly captures(none) [[PVAL]]) #[[ATTR15]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %pval = load ptr, ptr %p
@@ -483,7 +480,6 @@ define void @test_scc_argmem_read_2(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @test_scc_argmem_read_2
 ; ATTRIBUTOR-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR15]] {
-; ATTRIBUTOR-NEXT:    call void @test_scc_argmem_read_1(ptr nofree readonly captures(none) [[P]]) #[[ATTR15]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @test_scc_argmem_read_1(ptr %p)

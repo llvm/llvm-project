@@ -43,7 +43,7 @@ define internal i32 @sendmsg_rtn_is_norecurse() {
 ; ATTRIBUTOR-LABEL: define internal i32 @sendmsg_rtn_is_norecurse(
 ; ATTRIBUTOR-SAME: ) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1) #[[ATTR4]]
-; ATTRIBUTOR-NEXT:    ret i32 [[RES]]
+; ATTRIBUTOR-NEXT:    ret i32 undef
 ;
   %res = call i32 @llvm.amdgcn.s.sendmsg.rtn(i32 1)
   ret i32 %res

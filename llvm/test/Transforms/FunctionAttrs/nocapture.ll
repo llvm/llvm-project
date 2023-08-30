@@ -371,7 +371,6 @@ define void @readonly_nounwind_not_willreturn(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @readonly_nounwind_not_willreturn
 ; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @external_not_willreturn(ptr %p)
@@ -389,7 +388,6 @@ define void @readonly_nounwind_willreturn(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: mustprogress nosync nounwind willreturn memory(read)
 ; ATTRIBUTOR-LABEL: define void @readonly_nounwind_willreturn
 ; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR24:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @external_willreturn(ptr %p)
@@ -405,7 +403,6 @@ define void @callsite_readonly_nounwind_not_willreturn(ptr %f, ptr %p) {
 ;
 ; ATTRIBUTOR-LABEL: define void @callsite_readonly_nounwind_not_willreturn
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR6:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -423,7 +420,6 @@ define void @callsite_readonly_nounwind_willreturn(ptr %f, ptr %p) {
 ;
 ; ATTRIBUTOR-LABEL: define void @callsite_readonly_nounwind_willreturn
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR8:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -570,7 +566,7 @@ define void @test4_1(ptr %x4_1, i1 %c) {
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define void @test4_1
 ; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X4_1:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test4_2(ptr nofree readnone captures(none) [[X4_1]], ptr nofree readnone [[X4_1]], ptr nofree readnone captures(none) [[X4_1]], i1 [[C]]) #[[ATTR10]]
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test4_2(ptr nofree readnone captures(none) undef, ptr nofree readnone [[X4_1]], ptr nofree readnone captures(none) undef, i1 [[C]]) #[[ATTR10]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -732,7 +728,7 @@ define void @nocaptureLaunder(ptr %p) {
 ; ATTRIBUTOR-LABEL: define void @nocaptureLaunder
 ; ATTRIBUTOR-SAME: (ptr nofree captures(none) [[P:%.*]]) #[[ATTR12:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:
-; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]]) #[[ATTR25:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]]) #[[ATTR24:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    store i8 42, ptr [[B]], align 1
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -754,7 +750,7 @@ define void @captureLaunder(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; ATTRIBUTOR-LABEL: define void @captureLaunder
 ; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
-; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]]) #[[ATTR25]]
+; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]]) #[[ATTR24]]
 ; ATTRIBUTOR-NEXT:    store ptr [[B]], ptr @g2, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -776,7 +772,7 @@ define void @nocaptureStrip(ptr %p) {
 ; ATTRIBUTOR-LABEL: define void @nocaptureStrip
 ; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:
-; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]]) #[[ATTR22]]
+; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]]) #[[ATTR25:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    store i8 42, ptr [[B]], align 1
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -798,7 +794,7 @@ define void @captureStrip(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; ATTRIBUTOR-LABEL: define void @captureStrip
 ; ATTRIBUTOR-SAME: (ptr nofree writeonly [[P:%.*]]) #[[ATTR1]] {
-; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]]) #[[ATTR22]]
+; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]]) #[[ATTR25]]
 ; ATTRIBUTOR-NEXT:    store ptr [[B]], ptr @g3, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
