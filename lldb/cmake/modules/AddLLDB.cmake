@@ -222,7 +222,7 @@ function(add_properties_for_swift_modules target reldir)
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
       string(TOLOWER ${CMAKE_SYSTEM_NAME} platform)
       set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/${platform}")
-      set(SWIFT_INSTALL_RPATH "$ORIGIN/swift/${platform}")
+      set(SWIFT_INSTALL_RPATH "$ORIGIN/${reldir}lib/swift/${platform}")
     endif()
 
     set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
