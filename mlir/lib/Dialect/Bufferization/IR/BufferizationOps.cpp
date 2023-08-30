@@ -963,13 +963,65 @@ struct SkipExtractMetadataOfAlloc : public OpRewritePattern<DeallocOp> {
   }
 };
 
+/// Removes pairs of `bufferization.dealloc` and alloc operations if there is no
+/// other user of the allocated value and the allocating operation can be safely
+/// removed. If the same value is present multiple times, this pattern relies on
+/// other canonicalization patterns to remove the duplicate first.
+///
+/// Example:
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// bufferization.dealloc (%alloc, %arg0, : ...) if (%true, %true)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// bufferization.dealloc (%arg0 : ...) if (%true)
+/// ```
+struct RemoveAllocDeallocPairWhenNoOtherUsers
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs, newConditions;
+    SmallVector<Operation *> toDelete;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (auto allocOp = memref.getDefiningOp<MemoryEffectOpInterface>()) {
+        // Check that it is indeed an allocate effect, that the op has no other
+        // side effects (which would not allow us to remove the op), and that
+        // there are no other users.
+        if (allocOp.getEffectOnValue<MemoryEffects::Allocate>(memref) &&
+            hasSingleEffect<MemoryEffects::Allocate>(allocOp, memref) &&
+            memref.hasOneUse()) {
+          toDelete.push_back(allocOp);
+          continue;
+        }
+      }
+
+      newMemrefs.push_back(memref);
+      newConditions.push_back(cond);
+    }
+
+    if (failed(updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                      rewriter)))
+      return failure();
+
+    for (Operation *op : toDelete)
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
 } // anonymous namespace
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<DeallocRemoveDuplicateDeallocMemrefs,
               DeallocRemoveDuplicateRetainedMemrefs, EraseEmptyDealloc,
-              EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc>(context);
+              EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc,
+              RemoveAllocDeallocPairWhenNoOtherUsers>(context);
 }
 
 //===----------------------------------------------------------------------===//
