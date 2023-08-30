@@ -270,6 +270,8 @@ Improvements to Clang's diagnostics
     source:1:24: note: expression evaluates to ''\n' (0x0A, 10) == U'🌍' (0x1F30D, 127757)'
     1 | static_assert("A\n"[1] == U'🌍');
       |               ~~~~~~~~~^~~~~~~~
+- Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
+  (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
 
 Bug Fixes in This Version
 -------------------------
