@@ -243,7 +243,7 @@ public:
                       PassConfiguration PassConfig)
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
 
-    if (shouldAddDefaultTargetPasses(G->getTargetTriple()))
+    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
       getPassConfig().PostAllocationPasses.push_back(
           [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
   }
