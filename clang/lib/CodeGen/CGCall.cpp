@@ -2094,14 +2094,6 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     addMergableDefaultFunctionAttributes(CodeGenOpts, FuncAttrs);
 }
 
-void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
-  llvm::AttrBuilder FuncAttrs(F.getContext());
-  getDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
-                               /* AttrOnCallSite = */ false, FuncAttrs);
-  // TODO: call GetCPUAndFeaturesAttributes?
-  F.addFnAttrs(FuncAttrs);
-}
-
 /// Apply default attributes to \p F, accounting for merge semantics of
 /// attributes that should not overwrite existing attributes.
 void CodeGenModule::mergeDefaultFunctionDefinitionAttributes(
