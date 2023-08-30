@@ -43,3 +43,5 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 Revert "Revert "[Fuzzer] SetThreadName implementation for Windows" "
   breaks windows build ,fixed in later commits
 Revert "[X86][BF16] Lower FP_EXTEND for vector types under AVX512BF16"
+
+Revert "[X86][BF16] Lower FP_ROUND for vector types under AVX512BF16 "
