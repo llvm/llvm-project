@@ -10,7 +10,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64_32-darwin
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-fuchsia
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-linux
@@ -26,7 +25,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64_be-netbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-fuchsia
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple arm-linux
@@ -135,7 +133,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple tcele
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-linux-android
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-dragonfly
@@ -156,7 +153,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple i686-hurd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-darwin
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-cloudabi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-linux-android
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-linux-openhos

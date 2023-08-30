@@ -34,22 +34,6 @@ public:
   }
 };
 
-// CloudABI Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY CloudABITargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    Builder.defineMacro("__CloudABI__");
-
-    // CloudABI uses ISO/IEC 10646:2012 for wchar_t, char16_t and char32_t.
-    Builder.defineMacro("__STDC_ISO_10646__", "201206L");
-  }
-
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                       const llvm::Triple &Triple, StringRef &PlatformName,
                       VersionTuple &PlatformMinVersion);
