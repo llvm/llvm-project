@@ -1255,11 +1255,11 @@ public:
   /// destroyed by aggressive peephole optimizations that assume that
   /// all uses of a value have been realized in the IR.
   class PeepholeProtection {
-    llvm::Instruction *Inst;
+    llvm::Instruction *Inst = nullptr;
     friend class CodeGenFunction;
 
   public:
-    PeepholeProtection() : Inst(nullptr) {}
+    PeepholeProtection() = default;
   };
 
   /// A non-RAII class containing all the information about a bound
