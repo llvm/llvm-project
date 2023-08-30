@@ -83,7 +83,6 @@ set(SCUDO_HEADERS
   quarantine.h
   release.h
   report.h
-  rss_limit_checker.h
   secondary.h
   size_class_map.h
   stack_depot.h
@@ -113,7 +112,6 @@ set(SCUDO_SOURCES
   mem_map_linux.cpp
   release.cpp
   report.cpp
-  rss_limit_checker.cpp
   string_utils.cpp
   timing.cpp
   )
