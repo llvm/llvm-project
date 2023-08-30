@@ -29,7 +29,7 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
   DynTypedNodeList P = PMap.getParents(*E);
   if (P.size() != 1)
     return false;
-  const Expr *ParentE;
+  const Expr *ParentE = nullptr;
   while ((ParentE = P[0].get<Expr>()) && ParentE->IgnoreParenCasts() == E) {
     P = PMap.getParents(P[0]);
     if (P.size() != 1)

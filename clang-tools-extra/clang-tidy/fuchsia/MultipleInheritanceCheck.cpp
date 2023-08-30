@@ -62,7 +62,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     return false;
 
   // Short circuit the lookup if we have analyzed this record before.
-  bool PreviousIsInterfaceResult;
+  bool PreviousIsInterfaceResult = false;
   if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
     return PreviousIsInterfaceResult;
 

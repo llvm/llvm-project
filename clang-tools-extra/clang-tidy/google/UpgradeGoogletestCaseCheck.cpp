@@ -267,8 +267,8 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method")) {
     ReplacementText = getNewMethodName(Method->getName());
 
-    bool IsInInstantiation;
-    bool IsInTemplate;
+    bool IsInInstantiation = false;
+    bool IsInTemplate = false;
     bool AddFix = true;
     if (const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call")) {
       const auto *Callee = llvm::cast<MemberExpr>(Call->getCallee());

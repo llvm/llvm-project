@@ -480,7 +480,7 @@ bool SignalHandlerCheck::checkFunctionCPP14(
     return true;
   }
 
-  const FunctionDecl *FBody;
+  const FunctionDecl *FBody = nullptr;
   const Stmt *BodyS = FD->getBody(FBody);
   if (!BodyS)
     return false;

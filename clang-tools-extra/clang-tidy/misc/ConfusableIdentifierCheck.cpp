@@ -56,7 +56,7 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   while (Curr < End) {
 
     const char *Prev = Curr;
-    UTF32 CodePoint;
+    UTF32 CodePoint = 0;
     ConversionResult Result = convertUTF8Sequence(
         reinterpret_cast<const UTF8 **>(&Curr),
         reinterpret_cast<const UTF8 *>(End), &CodePoint, strictConversion);
