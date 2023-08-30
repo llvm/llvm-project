@@ -107,6 +107,7 @@ C23 Feature Support
   and the ``__STDC_VERSION__`` macro now expands to ``202311L`` instead of its
   previous placeholder value. Clang continues to accept ``-std=c2x`` and
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
+- Clang now supports `requires c23` for module maps.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
