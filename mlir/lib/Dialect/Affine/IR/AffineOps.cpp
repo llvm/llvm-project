@@ -2379,9 +2379,9 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. AffineForOp only has one region, so zero is the only
 /// valid value for `index`.
-OperandRange
-AffineForOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
-  assert((!index || *index == 0) && "invalid region index");
+OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert((point.isParent() || point == getLoopBody()) &&
+         "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
@@ -2394,14 +2394,15 @@ AffineForOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
 void AffineForOp::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((!index.has_value() || index.value() == 0) && "expected loop region");
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  assert((point.isParent() || point == getLoopBody()) &&
+         "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
   // least one, branch into the body using the iterator arguments. And in cases
   // we know the trip count is zero, it can only branch back to its parent.
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
-  if (!index.has_value() && tripCount.has_value()) {
+  if (point.isParent() && tripCount.has_value()) {
     if (tripCount.value() > 0) {
       regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
       return;
@@ -2414,7 +2415,7 @@ void AffineForOp::getSuccessorRegions(
 
   // From the loop body, if the trip count is one, we can only branch back to
   // the parent.
-  if (index && tripCount && *tripCount == 1) {
+  if (!point.isParent() && tripCount && *tripCount == 1) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -2859,10 +2860,10 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
 /// AffineIfOp has two regions -- `then` and `else`. The flow of data should be
 /// as follows: AffineIfOp -> `then`/`else` -> AffineIfOp
 void AffineIfOp::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is an AffineIfOp, then branching into both `then` and
   // `else` region is valid.
-  if (!index.has_value()) {
+  if (point.isParent()) {
     regions.reserve(2);
     regions.push_back(
         RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
