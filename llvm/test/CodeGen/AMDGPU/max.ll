@@ -1,9 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=pitcairn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=pitcairn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx1210 --amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1210 -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i32:
-; SI: v_max_i32_e32
+; GCN: v_max_i32_e32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sge_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -18,10 +19,10 @@ define amdgpu_kernel void @v_test_imax_sge_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; FUNC-LABEL: {{^}}v_test_imax_sge_v4i32:
-; SI: v_max_i32_e32
-; SI: v_max_i32_e32
-; SI: v_max_i32_e32
-; SI: v_max_i32_e32
+; GCN: v_max_i32_e32
+; GCN: v_max_i32_e32
+; GCN: v_max_i32_e32
+; GCN: v_max_i32_e32
 
 ; These could be merged into one
 ; EG: MAX_INT
@@ -40,7 +41,7 @@ define amdgpu_kernel void @v_test_imax_sge_v4i32(ptr addrspace(1) %out, ptr addr
 }
 
 ; FUNC-LABEL: @s_test_imax_sge_i32
-; SI: s_max_i32
+; GCN: s_max_i32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @s_test_imax_sge_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
@@ -51,7 +52,7 @@ define amdgpu_kernel void @s_test_imax_sge_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 ; FUNC-LABEL: {{^}}s_test_imax_sge_imm_i32:
-; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
+; GCN: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
 define amdgpu_kernel void @s_test_imax_sge_imm_i32(ptr addrspace(1) %out, i32 %a) nounwind {
@@ -64,7 +65,7 @@ define amdgpu_kernel void @s_test_imax_sge_imm_i32(ptr addrspace(1) %out, i32 %a
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i8:
 ; SI: buffer_load_sbyte
 ; SI: buffer_load_sbyte
-; SI: v_max_i32_e32
+; GCN: v_max_i32_e32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sge_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -77,7 +78,7 @@ define amdgpu_kernel void @v_test_imax_sge_i8(ptr addrspace(1) %out, ptr addrspa
 }
 
 ; FUNC-LABEL: {{^}}s_test_imax_sgt_imm_i32:
-; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
+; GCN: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
 define amdgpu_kernel void @s_test_imax_sgt_imm_i32(ptr addrspace(1) %out, i32 %a) nounwind {
@@ -88,8 +89,8 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_i32(ptr addrspace(1) %out, i32 %a
 }
 
 ; FUNC-LABEL: {{^}}s_test_imax_sgt_imm_v2i32:
-; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
-; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
+; GCN: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
+; GCN: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
@@ -101,7 +102,7 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(ptr addrspace(1) %out, <2 x
 }
 
 ; FUNC-LABEL: @v_test_imax_sgt_i32
-; SI: v_max_i32_e32
+; GCN: v_max_i32_e32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sgt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -116,7 +117,7 @@ define amdgpu_kernel void @v_test_imax_sgt_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; FUNC-LABEL: @s_test_imax_sgt_i32
-; SI: s_max_i32
+; GCN: s_max_i32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @s_test_imax_sgt_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
@@ -127,7 +128,7 @@ define amdgpu_kernel void @s_test_imax_sgt_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 ; FUNC-LABEL: @v_test_umax_uge_i32
-; SI: v_max_u32_e32
+; GCN: v_max_u32_e32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_uge_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -142,7 +143,7 @@ define amdgpu_kernel void @v_test_umax_uge_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; FUNC-LABEL: @s_test_umax_uge_i32
-; SI: s_max_u32
+; GCN: s_max_u32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @s_test_umax_uge_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
@@ -153,11 +154,11 @@ define amdgpu_kernel void @s_test_umax_uge_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 ; FUNC-LABEL: {{^}}s_test_umax_uge_v3i32:
-; SI: s_max_u32
-; SI: s_max_u32
-; SI: s_max_u32
-; SI-NOT: s_max_u32
-; SI: s_endpgm
+; GCN: s_max_u32
+; GCN: s_max_u32
+; GCN: s_max_u32
+; GCN-NOT: s_max_u32
+; GCN: s_endpgm
 
 ; EG: MAX_UINT
 ; EG: MAX_UINT
@@ -173,7 +174,7 @@ define amdgpu_kernel void @s_test_umax_uge_v3i32(ptr addrspace(1) %out, <3 x i32
 ; FUNC-LABEL: {{^}}v_test_umax_uge_i8:
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
-; SI: v_max_u32_e32
+; GCN: v_max_u32_e32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_uge_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -186,7 +187,7 @@ define amdgpu_kernel void @v_test_umax_uge_i8(ptr addrspace(1) %out, ptr addrspa
 }
 
 ; FUNC-LABEL: @v_test_umax_ugt_i32
-; SI: v_max_u32_e32
+; GCN: v_max_u32_e32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_ugt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -201,7 +202,7 @@ define amdgpu_kernel void @v_test_umax_ugt_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; FUNC-LABEL: {{^}}s_test_umax_ugt_i32:
-; SI: s_max_u32
+; GCN: s_max_u32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @s_test_umax_ugt_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
@@ -212,8 +213,8 @@ define amdgpu_kernel void @s_test_umax_ugt_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 ; FUNC-LABEL: {{^}}s_test_umax_ugt_imm_v2i32:
-; SI-DAG: s_max_u32 {{s[0-9]+}}, {{s[0-9]+}}, 15
-; SI-DAG: s_max_u32 {{s[0-9]+}}, {{s[0-9]+}}, 23
+; GCN-DAG: s_max_u32 {{s[0-9]+}}, {{s[0-9]+}}, 15
+; GCN-DAG: s_max_u32 {{s[0-9]+}}, {{s[0-9]+}}, 23
 
 ; EG: MAX_UINT {{.*}}literal.{{[xyzw]}}
 ; EG: MAX_UINT {{.*}}literal.{{[xyzw]}}
@@ -233,6 +234,7 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; SI: s_max_u32 [[MAX:s[0-9]+]], [[A16]], [[B16]]
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
+; GFX1210: s_max_u32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(ptr addrspace(1) %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) nounwind {
@@ -257,6 +259,8 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(ptr addrspac
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
 
+; GFX1210: s_max_i32
+
 ; EG: MAX_INT
 define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(ptr addrspace(1) %out, [8 x i32], i16 signext %a, [8 x i32], i16 signext %b) nounwind {
   %a.ext = sext i16 %a to i32
@@ -272,9 +276,9 @@ define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(ptr addrspace
 ; FUNC-LABEL: {{^}}s_test_imax_sge_i16:
 ; SI: s_load_dword
 ; SI: s_load_dword
-; SI: s_sext_i32_i16
-; SI: s_sext_i32_i16
-; SI: s_max_i32
+; GCN: s_sext_i32_i16
+; GCN: s_sext_i32_i16
+; GCN: s_max_i32
 
 ; EG: MAX_INT
 define amdgpu_kernel void @s_test_imax_sge_i16(ptr addrspace(1) %out, [8 x i32], i16 %a, [8 x i32], i16 %b) nounwind {
@@ -286,7 +290,8 @@ define amdgpu_kernel void @s_test_imax_sge_i16(ptr addrspace(1) %out, [8 x i32],
 
 ; 64 bit
 ; FUNC-LABEL: {{^}}test_umax_ugt_i64
-; SI: s_endpgm
+; GFX1210: v_max_u64
+; GCN: s_endpgm
 
 ; EG: SETE_INT
 ; EG: SETGT_UINT
@@ -302,7 +307,8 @@ define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_umax_uge_i64
-; SI: s_endpgm
+; GFX1210: v_max_u64
+; GCN: s_endpgm
 
 ; EG: SETE_INT
 ; EG: SETGT_UINT
@@ -318,7 +324,8 @@ define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_imax_sgt_i64
-; SI: s_endpgm
+; GFX1210: v_max_i64
+; GCN: s_endpgm
 
 ; EG: SETE_INT
 ; EG: SETGT_INT
@@ -334,7 +341,8 @@ define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_imax_sge_i64
-; SI: s_endpgm
+; GFX1210: v_max_i64
+; GCN: s_endpgm
 
 ; EG: SETE_INT
 ; EG: SETGT_INT

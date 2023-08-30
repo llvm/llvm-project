@@ -84,6 +84,10 @@ def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
   let HasExt64BitDPP = 1;
 }
 
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64> {
+  let HasExt64BitDPP = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
 //===----------------------------------------------------------------------===//
@@ -213,6 +217,13 @@ defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
 } // End SchedRW = [WriteDoubleAdd]
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+
+let SubtargetPredicate = isGFX12_10Plus, SchedRW = [WriteDoubleAdd] in {
+defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
+defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
+defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
+defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
+} // End SubtargetPredicate = isGFX12_10Plus, SchedRW = [WriteDoubleAdd]
 
 } // End isReMaterializable = 1
 
@@ -1143,6 +1154,10 @@ defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx12<0x234>;
 
 let SubtargetPredicate = isGFX12_10Plus in {
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx12<0x235>;
+defm V_MIN_U64 : VOP3Only_Realtriple_gfx12<0x318>;
+defm V_MAX_U64 : VOP3Only_Realtriple_gfx12<0x319>;
+defm V_MIN_I64 : VOP3Only_Realtriple_gfx12<0x31a>;
+defm V_MAX_I64 : VOP3Only_Realtriple_gfx12<0x31b>;
 }
 
 //===----------------------------------------------------------------------===//

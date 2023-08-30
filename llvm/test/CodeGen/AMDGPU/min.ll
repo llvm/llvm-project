@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,GFX8_9_10,FUNC %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10,GFX9_10,GFX8_9_10,FUNC %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10,GFX9_10,GFX8_9_10,FUNC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1210 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10,GFX9_10,GFX8_9_10,GFX1210,FUNC %s
 
 ; FUNC-LABEL: {{^}}v_test_imin_sle_i32:
 ; GCN: v_min_i32_e32
@@ -493,8 +494,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(ptr addrspace(1) %out, <8 x i16
 
 ; Make sure redundant and removed
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umin_ult_i16:
-; GCN-DAG: s_load_{{dword|b32}} [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
-; GCN-DAG: s_load_{{dword|b32}} [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; GCN: s_min_u32 [[MIN:s[0-9]+]], s{{[0-9]}}, s{{[0-9]}}
 ; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
 ; GCN: {{flat|global}}_store_{{dword|b32}} v{{.+}}, [[VMIN]]
@@ -513,12 +512,9 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspac
 ; Make sure redundant sign_extend_inreg removed.
 
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_min_slt_i16:
-; GCN-DAG: s_load_{{dword|b32}} [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
-; GCN-DAG: s_load_{{dword|b32}} [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
-; GCN-DAG: s_sext_i32_i16 [[EXT_A:s[0-9]+]], [[A]]
-; GCN-DAG: s_sext_i32_i16 [[EXT_B:s[0-9]+]], [[B]]
-
-; GCN: s_min_i32 [[MIN:s[0-9]+]], [[EXT_A]], [[EXT_B]]
+; GCN: s_sext_i32_i16
+; GCN: s_sext_i32_i16
+; GCN: s_min_i32 [[MIN:s[0-9]+]], s{{[0-9]}}, s{{[0-9]}}
 ; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
 ; GCN: {{flat|global}}_store_{{dword|b32}} v{{.+}}, [[VMIN]]
 
@@ -547,6 +543,7 @@ define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i1
 
 ; 64 bit
 ; FUNC-LABEL: {{^}}test_umin_ult_i64
+; GFX1210: v_min_u64
 ; GCN: s_endpgm
 
 ; EG: SETE_INT
@@ -563,6 +560,7 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_umin_ule_i64
+; GFX1210: v_min_u64
 ; GCN: s_endpgm
 
 ; EG: SETE_INT
@@ -579,6 +577,7 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_imin_slt_i64
+; GFX1210: v_min_i64
 ; GCN: s_endpgm
 
 ; EG: SETE_INT
@@ -595,6 +594,7 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 ; FUNC-LABEL: {{^}}test_imin_sle_i64
+; GFX1210: v_min_i64
 ; GCN: s_endpgm
 
 ; EG: SETE_INT

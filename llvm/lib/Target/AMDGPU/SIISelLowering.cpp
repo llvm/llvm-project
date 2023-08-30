@@ -746,6 +746,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
 
+  if (Subtarget->hasIntMinMax64())
+    setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
+                       Legal);
+
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
