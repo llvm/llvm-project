@@ -87,9 +87,7 @@ define i32 @mustprogress_call_known_functions(ptr %ptr) mustprogress {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; ATTRIBUTOR-LABEL: @mustprogress_call_known_functions(
-; ATTRIBUTOR-NEXT:    call void @mustprogress_readnone() #[[ATTR9:[0-9]+]]
-; ATTRIBUTOR-NEXT:    [[R:%.*]] = call i32 @mustprogress_load(ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR12:[0-9]+]]
-; ATTRIBUTOR-NEXT:    ret i32 [[R]]
+; ATTRIBUTOR-NEXT:    unreachable
 ;
   call void @mustprogress_readnone()
   %r = call i32 @mustprogress_load(ptr %ptr)
@@ -112,7 +110,7 @@ define i64 @mustprogress_mayunwind() mustprogress personality ptr @__gxx_persona
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: @mustprogress_mayunwind(
-; ATTRIBUTOR-NEXT:    [[A:%.*]] = invoke i64 @fn_noread() #[[ATTR13:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[A:%.*]] = invoke i64 @fn_noread() #[[ATTR12:[0-9]+]]
 ; ATTRIBUTOR-NEXT:            to label [[A:%.*]] unwind label [[B:%.*]]
 ; ATTRIBUTOR:       A:
 ; ATTRIBUTOR-NEXT:    ret i64 10
@@ -236,7 +234,6 @@ define void @willreturn_recursion() {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(none)
 ; ATTRIBUTOR-LABEL: @willreturn_recursion(
-; ATTRIBUTOR-NEXT:    tail call void @willreturn_recursion() #[[ATTR9]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   tail call void @willreturn_recursion()
