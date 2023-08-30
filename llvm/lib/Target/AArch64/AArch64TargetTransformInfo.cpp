@@ -197,7 +197,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallerAttrs.requiresSMChange(CalleeAttrs,
                                    /*BodyOverridesInterface=*/true) ||
       CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CalleeAttrs.hasNewZAInterface())
+      CalleeAttrs.hasNewZABody())
     return false;
 
   const TargetMachine &TM = getTLI()->getTargetMachine();
