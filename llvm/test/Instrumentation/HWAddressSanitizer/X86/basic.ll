@@ -112,9 +112,6 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-INLINE-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-INLINE-NEXT:    ret i8 [[B]]
 ;
-
-
-
 entry:
   %b = load i8, ptr %a, align 4
   ret i8 %b
@@ -165,9 +162,6 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; RECOVER-INLINE-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; RECOVER-INLINE-NEXT:    ret i40 [[B]]
 ;
-
-
-
 entry:
   %b = load i40, ptr %a, align 4
   ret i40 %b
@@ -274,9 +268,6 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; RECOVER-INLINE-NEXT:    ret void
 ;
-
-
-
 entry:
   store i8 %b, ptr %a, align 4
   ret void
@@ -327,9 +318,6 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; RECOVER-INLINE-NEXT:    ret void
 ;
-
-
-
 entry:
   store i40 %b, ptr %a, align 4
   ret void
@@ -380,9 +368,6 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; RECOVER-INLINE-NEXT:    ret void
 ;
-
-
-
 entry:
   store i64 %b, ptr %a, align 4
   ret void
