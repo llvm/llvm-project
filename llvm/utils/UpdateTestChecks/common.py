@@ -24,8 +24,10 @@ Version changelog:
 1: Initial version, used by tests that don't specify --version explicitly.
 2: --function-signature is now enabled by default and also checks return
    type/attributes.
+3: Opening parenthesis of function args is kept on the first LABEL line
+   in case arguments are split to a separate SAME line.
 """
-DEFAULT_VERSION = 2
+DEFAULT_VERSION = 3
 
 
 class Regex(object):
@@ -1277,13 +1279,27 @@ def add_checks(
                 )[0]
             func_name_separator = func_dict[checkprefix][func_name].func_name_separator
             if "[[" in args_and_sig:
+                # Captures in label lines are not supported, thus split into a -LABEL
+                # and a separate -SAME line that contains the arguments with captures.
+                args_and_sig_prefix = ""
+                if version >= 3 and args_and_sig.startswith("("):
+                    # Ensure the "(" separating function name and arguments is in the
+                    # label line. This is required in case of function names that are
+                    # prefixes of each other. Otherwise, the label line for "foo" might
+                    # incorrectly match on "foo.specialized".
+                    args_and_sig_prefix = args_and_sig[0]
+                    args_and_sig = args_and_sig[1:]
+
+                # Removing args_and_sig from the label match line requires
+                # func_name_separator to be empty. Otherwise, the match will not work.
+                assert func_name_separator == ""
                 output_lines.append(
                     check_label_format
                     % (
                         checkprefix,
                         funcdef_attrs_and_ret,
                         func_name,
-                        "",
+                        args_and_sig_prefix,
                         func_name_separator,
                     )
                 )

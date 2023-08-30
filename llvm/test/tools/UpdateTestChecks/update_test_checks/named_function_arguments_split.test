@@ -1,7 +1,7 @@
 # REQUIRES: x86-registered-target
 ## Basic test checking that update_test_checks.py works correctly
-# RUN: cp -f %S/Inputs/named_function_arguments_split.ll %t.ll && %update_test_checks %t.ll --version=2
+# RUN: cp -f %S/Inputs/named_function_arguments_split.ll %t.ll && %update_test_checks %t.ll --version=3
 # RUN: diff -u %t.ll %S/Inputs/named_function_arguments_split.ll.expected
 ## Check that running the script again does not change the result:
-# RUN: %update_test_checks %t.ll --version=2
+# RUN: %update_test_checks %t.ll --version=3
 # RUN: diff -u %t.ll %S/Inputs/named_function_arguments_split.ll.expected
