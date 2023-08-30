@@ -99,7 +99,7 @@ const DILineInfoSpecifier specifier() {
 MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
   const Frame &F = arg;
 
-  const uint64_t ExpectedHash = llvm::Function::getGUID(FunctionName);
+  const uint64_t ExpectedHash = IndexedMemProfRecord::getGUID(FunctionName);
   if (F.Function != ExpectedHash) {
     *result_listener << "Hash mismatch";
     return false;
@@ -147,7 +147,7 @@ TEST(MemProf, FillsValue) {
                                                 specifier(), false))
       .Times(1)
       .WillRepeatedly(Return(makeInliningInfo({
-          {"xyz", 10, 5, 30},
+          {"xyz.llvm.123", 10, 5, 30},
           {"abc", 10, 5, 30},
       })));
 
