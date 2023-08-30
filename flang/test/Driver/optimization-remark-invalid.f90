@@ -12,8 +12,8 @@
 ! RUN: %flang %s -O1 -Rpas -c 2>&1 | FileCheck %s --check-prefix=WARN-SUGGEST
 
 ! REGEX-INVALID: error: in pattern '-Rpass=[': brackets ([ ]) not balanced
-! WARN: warning: unknown remark option '-R'
-! WARN-SUGGEST: warning: unknown remark option '-Rpas'; did you mean '-Rpass'?
+! WARN: warning: unknown remark option '-R' [-Wunknown-warning-option]
+! WARN-SUGGEST: warning: unknown remark option '-Rpas'; did you mean '-Rpass'? [-Wunknown-warning-option]
 
 program forttest
 end program forttest
