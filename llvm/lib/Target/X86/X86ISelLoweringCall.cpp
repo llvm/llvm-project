@@ -1270,7 +1270,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
 
   return DAG.getMemcpy(
       Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile*/ false, /*AlwaysInline=*/true,
+      /*Vol=*/{false, false}, /*AlwaysInline=*/true,
       /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
 }
 

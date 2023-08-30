@@ -729,7 +729,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     }
 
     if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst)) {
-      if (TransferInst->isVolatile())
+      if (TransferInst->isAnyVolatile())
         return RejectUser(Inst, "mem transfer inst is volatile");
 
       ConstantInt *Len = dyn_cast<ConstantInt>(TransferInst->getLength());
@@ -1485,7 +1485,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
     MemTransferInst *MI = cast<MemTransferInst>(Intr);
     auto *B = Builder.CreateMemTransferInst(
         ID, MI->getRawDest(), MI->getDestAlign(), MI->getRawSource(),
-        MI->getSourceAlign(), MI->getLength(), MI->isVolatile());
+        MI->getSourceAlign(), MI->getLength(), MI->getVolatility());
 
     for (unsigned I = 0; I != 2; ++I) {
       if (uint64_t Bytes = Intr->getParamDereferenceableBytes(I)) {

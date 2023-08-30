@@ -1649,7 +1649,7 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::memmove: {
     const auto *MTI = cast<MemTransferInst>(II);
     // Don't handle volatile.
-    if (MTI->isVolatile())
+    if (MTI->isAnyVolatile())
       return false;
     if (!MTI->getLength()->getType()->isIntegerTy(32))
       return false;

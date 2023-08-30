@@ -645,7 +645,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     SDValue SizeNode = DAG.getConstant(Size, DL, MVT::i32);
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
-                          /*IsVolatile=*/false,
+                          /*Vol=*/{false, false},
                           /*AlwaysInline=*/false,
                           /*isTailCall=*/false, MachinePointerInfo(),
                           MachinePointerInfo());

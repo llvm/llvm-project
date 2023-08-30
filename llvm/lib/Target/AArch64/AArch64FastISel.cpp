@@ -3480,7 +3480,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::memmove: {
     const auto *MTI = cast<MemTransferInst>(II);
     // Don't handle volatile.
-    if (MTI->isVolatile())
+    if (MTI->isAnyVolatile())
       return false;
 
     // Disable inlining for memmove before calls to ComputeAddress.  Otherwise,
