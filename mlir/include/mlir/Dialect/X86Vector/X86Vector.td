@@ -24,7 +24,6 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 def X86Vector_Dialect : Dialect {
   let name = "x86vector";
   let cppNamespace = "::mlir::x86vector";
-  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
