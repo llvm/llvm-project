@@ -67,6 +67,17 @@ StatefulAwaiter& operator co_await(Awaitable2) {
   return GlobalAwaiter;
 }
 
+struct AlwaysInlineStatefulAwaiter {
+    void* value;
+    bool await_ready() const noexcept { return false; }
+
+    template <typename PromiseType>
+    __attribute__((always_inline))
+    void await_suspend(std::coroutine_handle<PromiseType> h) noexcept {}
+
+    void await_resume() noexcept {}
+};
+
 Task testing() {
     co_await std::suspend_always{};
     co_await StatefulAwaiter{};
@@ -85,6 +96,8 @@ Task testing() {
 
     co_await Awaitable{};
     co_await Awaitable2{};
+
+    co_await AlwaysInlineStatefulAwaiter{};
 }
 
 // CHECK-LABEL: @_Z7testingv
@@ -134,6 +147,10 @@ Task testing() {
 // `operator co_await` which returns a reference;
 // CHECK: call token @llvm.coro.save
 // CHECK: call void @_ZN15StatefulAwaiter13await_suspendIN4Task12promise_typeEEEvSt16coroutine_handleIT_E{{.*}}#[[NOINLINE_ATTR]]
+
+// Check `co_await AlwaysInlineStatefulAwaiter{};` to make sure user can force the await_suspend function to get inlined.
+// CHECK: call token @llvm.coro.save
+// CHECK: call void @_ZN27AlwaysInlineStatefulAwaiter13await_suspendIN4Task12promise_typeEEEvSt16coroutine_handleIT_E{{.*}}#[[NORMAL_ATTR]]
 
 // Check `co_await __promise__.final_suspend();`. We don't emit an blocker here since it is
 // empty.
