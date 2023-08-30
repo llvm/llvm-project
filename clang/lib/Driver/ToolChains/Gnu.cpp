@@ -3102,32 +3102,44 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   std::string SysRoot = computeSysRoot();
   std::string Target = getTripleString();
 
-  auto AddIncludePath = [&](std::string Path) {
+  auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
     std::string Version = detectLibcxxVersion(Path);
     if (Version.empty())
       return false;
 
     // First add the per-target include path if it exists.
-    std::string TargetDir = Path + "/" + Target + "/c++/" + Version;
+    SmallString<128> TargetDir(Path);
+    llvm::sys::path::append(TargetDir, Target, "c++", Version);
     if (D.getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
+    else if (TargetDirRequired)
+      return false;
 
     // Second add the generic one.
-    addSystemInclude(DriverArgs, CC1Args, Path + "/c++/" + Version);
+    SmallString<128> GenericDir(Path);
+    llvm::sys::path::append(GenericDir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, GenericDir);
     return true;
   };
 
-  // Android never uses the libc++ headers installed alongside the toolchain,
-  // which are generally incompatible with the NDK libraries anyway.
-  if (!getTriple().isAndroid())
-    if (AddIncludePath(getDriver().Dir + "/../include"))
-      return;
+  // Android only uses the libc++ headers installed alongside the toolchain if
+  // they contain an Android-specific target include path, otherwise they're
+  // incompatible with the NDK libraries.
+  SmallString<128> DriverIncludeDir(getDriver().Dir);
+  llvm::sys::path::append(DriverIncludeDir, "..", "include");
+  if (AddIncludePath(DriverIncludeDir,
+                     /*TargetDirRequired=*/getTriple().isAndroid()))
+    return;
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
-  if (AddIncludePath(concat(SysRoot, "/usr/local/include")))
+  SmallString<128> UsrLocalIncludeDir(SysRoot);
+  llvm::sys::path::append(UsrLocalIncludeDir, "usr", "local", "include");
+  if (AddIncludePath(UsrLocalIncludeDir))
     return;
-  if (AddIncludePath(concat(SysRoot, "/usr/include")))
+  SmallString<128> UsrIncludeDir(SysRoot);
+  llvm::sys::path::append(UsrIncludeDir, "usr", "include");
+  if (AddIncludePath(UsrIncludeDir))
     return;
 }
 
