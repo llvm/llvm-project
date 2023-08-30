@@ -122,12 +122,18 @@ Modified Compiler Flags
 -----------------------
 
 * ``-Woverriding-t-option`` is renamed to ``-Woverriding-option``.
+* ``-Winterrupt-service-routine`` is renamed to ``-Wexcessive-regsave`` as a generalization
 
 Removed Compiler Flags
 -------------------------
 
 Attribute Changes in Clang
 --------------------------
+- On X86, a warning is now emitted if a function with ``__attribute__((no_caller_saved_registers))``
+  calls a function without ``__attribute__((no_caller_saved_registers))``, and is not compiled with
+  ``-mgeneral-regs-only``
+- On X86, a function with ``__attribute__((interrupt))`` can now call a function without
+  ``__attribute__((no_caller_saved_registers))`` provided that it is compiled with ``-mgeneral-regs-only``
 
 - When a non-variadic function is decorated with the ``format`` attribute,
   Clang now checks that the format string would match the function's parameters'
