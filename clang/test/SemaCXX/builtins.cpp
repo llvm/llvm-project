@@ -13,7 +13,6 @@ void f() {
 
 void a() { __builtin_va_list x, y; ::__builtin_va_copy(x, y); }
 
-// <rdar://problem/10063539>
 template<int (*Compare)(const char *s1, const char *s2)>
 int equal(const char *s1, const char *s2) {
   return Compare(s1, s2) == 0;

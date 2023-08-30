@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s
-// rdar://5914926
 
 struct bork {
   struct bork *next_local;

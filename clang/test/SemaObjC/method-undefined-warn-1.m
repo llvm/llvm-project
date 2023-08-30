@@ -44,8 +44,6 @@
 - (void) cls_meth1 : (int) arg2{}
 @end
 
-
-// rdar://8850818
 @interface Root @end
 
 @interface Foo : Root @end
