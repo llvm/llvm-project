@@ -46,7 +46,9 @@ OptionEnumMapping<
           {readability::IdentifierNamingCheck::CT_CamelSnakeCase,
            "Camel_Snake_Case"},
           {readability::IdentifierNamingCheck::CT_CamelSnakeBack,
-           "camel_Snake_Back"}};
+           "camel_Snake_Back"},
+          {readability::IdentifierNamingCheck::CT_LeadingUpperSnakeCase,
+           "Leading_upper_snake_case"}};
   return {Mapping};
 }
 
@@ -871,6 +873,7 @@ bool IdentifierNamingCheck::matchesStyle(
       llvm::Regex("^[A-Z][a-zA-Z0-9]*$"),
       llvm::Regex("^[A-Z]([a-z0-9]*(_[A-Z])?)*"),
       llvm::Regex("^[a-z]([a-z0-9]*(_[A-Z])?)*"),
+      llvm::Regex("^[A-Z]([a-z0-9_]*[a-z])*$"),
   };
 
   if (!Name.consume_front(Style.Prefix))
@@ -991,6 +994,18 @@ std::string IdentifierNamingCheck::fixupWithCase(
         Fixup += tolower(Word.front());
       }
       Fixup += Word.substr(1).lower();
+    }
+    break;
+
+  case IdentifierNamingCheck::CT_LeadingUpperSnakeCase:
+    for (auto const &Word : Words) {
+      if (&Word != &Words.front()) {
+        Fixup += "_";
+        Fixup += Word.lower();
+      } else {
+        Fixup += toupper(Word.front());
+        Fixup += Word.substr(1).lower();
+      }
     }
     break;
   }
