@@ -374,7 +374,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       }
     }
 
-    assert(GraphSec->getMemProt() == Prot && "MemProt should match");
+    GraphSec->setMemProt(GraphSec->getMemProt() | Prot);
 
     Block *B = nullptr;
     if (Sec.sh_type != ELF::SHT_NOBITS) {
