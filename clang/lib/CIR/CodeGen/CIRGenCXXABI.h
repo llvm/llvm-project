@@ -279,6 +279,9 @@ public:
   /// Emit a single constructor/destructor with the gien type from a C++
   /// constructor Decl.
   virtual void buildCXXStructor(clang::GlobalDecl GD) = 0;
+
+  virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) = 0;
+  virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) = 0;
 };
 
 /// Creates and Itanium-family ABI

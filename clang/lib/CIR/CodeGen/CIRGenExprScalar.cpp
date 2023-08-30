@@ -591,7 +591,10 @@ public:
   mlir::Value VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitCXXThrowExpr(CXXThrowExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCXXThrowExpr(CXXThrowExpr *E) {
+    CGF.buildCXXThrowExpr(E);
+    return nullptr;
+  }
   mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *E) {
     llvm_unreachable("NYI");
   }

@@ -76,6 +76,12 @@ public:
                    isKnownNonNull());
   }
 
+  /// Return address with different element type, but same pointer and
+  /// alignment.
+  Address withElementType(mlir::Type ElemTy) const {
+    return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
+  }
+
   mlir::Value getPointer() const {
     assert(isValid());
     return PointerAndKnownNonNull.getPointer();

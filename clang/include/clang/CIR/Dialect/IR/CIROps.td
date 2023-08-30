@@ -1951,6 +1951,99 @@ def VAArgOp : CIR_Op<"va.arg">,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocException
+//===----------------------------------------------------------------------===//
+
+def AllocException : CIR_Op<"alloc_exception", [
+  AllocaTypesMatchWith<"'allocType' matches pointee type of 'addr'",
+                 "addr", "allocType",
+                 "$_self.cast<PointerType>().getPointee()">]> {
+  let summary = "Defines a scope-local variable";
+  let description = [{
+    Implements a slightly higher level __cxa_allocate_exception:
+
+    `void *__cxa_allocate_exception(size_t thrown_size);`
+
+    If operation fails, program terminates, not throw.
+
+    Example:
+
+    ```mlir
+    // if (b == 0) {
+    //   ...
+    //   throw "...";
+    cir.if %10 {
+        %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
+        ... // store exception content into %11
+        cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>, ...
+    ```
+  }];
+
+  let arguments = (ins TypeAttr:$allocType);
+  let results = (outs Res<CIR_PointerType, "",
+                      [MemAlloc<DefaultResource>]>:$addr);
+
+  let assemblyFormat = [{
+    `(` $allocType `)` `->` type($addr) attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// ThrowOp
+//===----------------------------------------------------------------------===//
+
+def ThrowOp : CIR_Op<"throw",
+                     [HasParent<"FuncOp, ScopeOp, IfOp, SwitchOp, LoopOp">,
+                     Terminator]> {
+  let summary = "(Re)Throws an exception";
+  let description = [{
+    Very similar to __cxa_throw:
+
+    ```
+    void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
+                     void (*dest) (void *));
+    ```
+
+    The absense of arguments for `cir.throw` means it rethrows.
+
+    For the no-rethrow version, it must have at least two operands, the RTTI
+    information, a pointer to the exception object (likely allocated via
+    `cir.cxa.allocate_exception`) and finally an optional dtor, which might
+    run as part of this operation.
+
+    ```mlir
+      // if (b == 0)
+      //   throw "Division by zero condition!";
+      cir.if %10 {
+        %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
+        ...
+        cir.store %13, %11 : // Store string addr for "Division by zero condition!"
+        cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>, @"typeinfo for char const*")
+    ```
+  }];
+
+  let arguments = (ins Optional<AnyType>:$exception_ptr,
+                       OptionalAttr<FlatSymbolRefAttr>:$type_info,
+                       OptionalAttr<FlatSymbolRefAttr>:$dtor);
+
+  let assemblyFormat = [{
+    `(`
+      ($exception_ptr^ `:` type($exception_ptr))?
+      (`,` $type_info^)?
+      (`,` $dtor^)?
+    `)` attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    bool rethrows() { return getNumOperands() == 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
 // These operations are hacks to get around missing features in LLVM's dialect.
