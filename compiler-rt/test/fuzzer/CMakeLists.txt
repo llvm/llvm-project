@@ -22,18 +22,14 @@ if(COMPILER_RT_INCLUDE_TESTS)
   list(APPEND LIBFUZZER_TEST_DEPS FuzzedDataProviderUnitTests)
 endif()
 
-add_custom_target(check-fuzzer)
+set(LIBFUZZER_TESTSUITES)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   # libFuzzer unit tests.
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg.py)
-  add_lit_testsuite(check-fuzzer-unit "Running Fuzzer unit tests"
-    ${CMAKE_CURRENT_BINARY_DIR}/unit
-    DEPENDS ${LIBFUZZER_TEST_DEPS})
-  set_target_properties(check-fuzzer-unit PROPERTIES FOLDER "Compiler-RT Tests")
-  add_dependencies(check-fuzzer check-fuzzer-unit)
+  list(APPEND LIBFUZZER_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit)
 endif()
 
 macro(test_fuzzer stdlib)
@@ -67,16 +63,10 @@ macro(test_fuzzer stdlib)
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py
       )
 
-    add_lit_testsuite(check-fuzzer-${stdlib_name}-${arch}
-      "Running libFuzzer ${stdlib} tests for arch ${arch}"
-      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
-      DEPENDS ${LIBFUZZER_TEST_DEPS})
+    list(APPEND LIBFUZZER_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
     if(TEST_DEPS)
-      add_dependencies(check-fuzzer-${stdlib_name}-${arch} ${TEST_DEPS})
+      list(APPEND LIBFUZZER_TEST_DEPS ${TEST_DEPS})
     endif()
-    set_target_properties(check-fuzzer-${stdlib_name}-${arch}
-        PROPERTIES FOLDER "Compiler-RT Tests")
-    add_dependencies(check-fuzzer check-fuzzer-${stdlib_name}-${arch})
   endforeach()
 endmacro()
 
@@ -88,6 +78,13 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   if(TARGET cxx_static)
     test_fuzzer("static-libc++" DEPS cxx_static)
   endif()
+endif()
+
+if(LIBFUZZER_TESTSUITES)
+  add_lit_testsuite(check-fuzzer "Running libFuzzer tests"
+    ${LIBFUZZER_TESTSUITES}
+    DEPENDS ${LIBFUZZER_TEST_DEPS})
+  set_target_properties(check-fuzzer PROPERTIES FOLDER "Compiler-RT Tests")
 endif()
 
 if (APPLE)
