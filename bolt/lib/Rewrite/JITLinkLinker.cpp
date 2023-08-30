@@ -142,8 +142,8 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
     });
 
     for (auto *Symbol : G.defined_symbols()) {
-      Linker.Symtab.insert(
-          {Symbol->getName().str(), Symbol->getAddress().getValue()});
+      SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
+      Linker.Symtab.insert({Symbol->getName().str(), Info});
     }
 
     return Error::success();
@@ -174,7 +174,8 @@ void JITLinkLinker::loadObject(MemoryBufferRef Obj,
   jitlink::link(std::move(*LG), std::move(Ctx));
 }
 
-std::optional<uint64_t> JITLinkLinker::lookupSymbol(StringRef Name) const {
+std::optional<JITLinkLinker::SymbolInfo>
+JITLinkLinker::lookupSymbolInfo(StringRef Name) const {
   auto It = Symtab.find(Name.data());
   if (It == Symtab.end())
     return std::nullopt;
