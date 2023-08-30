@@ -1187,7 +1187,7 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForDataAddress(uint64_t Address) {
   // So, we walk the CU's and their child DI's manually, looking for the
   // specific global variable.
   for (std::unique_ptr<DWARFUnit> &CU : compile_units()) {
-    if (DWARFDie Die = CU->getVariableForAddress(Address)) {
+    if (CU->getVariableForAddress(Address)) {
       return static_cast<DWARFCompileUnit *>(CU.get());
     }
   }

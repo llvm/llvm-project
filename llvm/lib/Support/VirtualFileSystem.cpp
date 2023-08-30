@@ -1366,7 +1366,7 @@ std::error_code RedirectingFileSystem::isLocal(const Twine &Path_,
   SmallString<256> Path;
   Path_.toVector(Path);
 
-  if (std::error_code EC = makeCanonical(Path))
+  if (makeCanonical(Path))
     return {};
 
   return ExternalFS->isLocal(Path, Result);
