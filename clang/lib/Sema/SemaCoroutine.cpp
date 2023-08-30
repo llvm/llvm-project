@@ -344,6 +344,28 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
 
   Expr *JustAddress = AddressExpr.get();
 
+  // FIXME: Without optimizations, the temporary result from `await_suspend()`
+  // may be put on the coroutine frame since the coroutine frame constructor
+  // will think the temporary variable will escape from the
+  // `coroutine_handle<>::address()` call. This is problematic since the
+  // coroutine should be considered to be suspended after it enters
+  // `await_suspend` so it shouldn't access/update the coroutine frame after
+  // that.
+  //
+  // See https://github.com/llvm/llvm-project/issues/65054 for the report.
+  //
+  // The long term solution may wrap the whole logic about `await-suspend`
+  // into a standalone function. This is similar to the proposed solution
+  // in tryMarkAwaitSuspendNoInline. See the comments there for details.
+  //
+  // The short term solution here is to mark `coroutine_handle<>::address()`
+  // function as always-inline so that the coroutine frame constructor won't
+  // think the temporary result is escaped incorrectly.
+  if (auto *FD = cast<CallExpr>(JustAddress)->getDirectCallee())
+    if (!FD->hasAttr<AlwaysInlineAttr>() && !FD->hasAttr<NoInlineAttr>())
+      FD->addAttr(AlwaysInlineAttr::CreateImplicit(S.getASTContext(),
+                                                   FD->getLocation()));
+
   // Check that the type of AddressExpr is void*
   if (!JustAddress->getType().getTypePtr()->isVoidPointerType())
     S.Diag(cast<CallExpr>(JustAddress)->getCalleeDecl()->getLocation(),
