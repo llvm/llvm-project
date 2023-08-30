@@ -536,6 +536,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Basic/*.h",
+        "include/clang/Driver/Options.h",
     ]),
     copts = [
         "-DHAVE_VCS_VERSION_INC",
@@ -590,12 +591,14 @@ cc_library(
         ":basic_riscv_vector_builtins_gen",
         ":config",
         ":diagnostic_defs_gen",
+        ":driver_options_inc_gen",
         ":sema_attr_gen",
         "//llvm:Core",
         "//llvm:FrontendDebug",
         "//llvm:FrontendOpenMP",
         "//llvm:Instrumentation",
         "//llvm:MC",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
