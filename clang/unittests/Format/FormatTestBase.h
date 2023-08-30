@@ -85,9 +85,11 @@ protected:
                      const std::optional<FormatStyle> &Style = {},
                      const std::vector<tooling::Range> &Ranges = {}) {
     testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Expected.str(),
-              format(Expected, Style, SC_ExpectComplete, Ranges))
-        << "Expected code is not stable";
+    if (Expected != Code) {
+      EXPECT_EQ(Expected.str(),
+                format(Expected, Style, SC_ExpectComplete, Ranges))
+          << "Expected code is not stable";
+    }
     EXPECT_EQ(Expected.str(), format(Code, Style, SC_ExpectComplete, Ranges));
     auto UsedStyle = Style ? Style.value() : getDefaultStyle();
     if (UsedStyle.Language == FormatStyle::LK_Cpp) {
