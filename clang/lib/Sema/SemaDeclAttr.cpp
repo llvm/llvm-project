@@ -5326,7 +5326,8 @@ static void handleNoRandomizeLayoutAttr(Sema &S, Decl *D,
 }
 
 bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
-                                const FunctionDecl *FD) {
+                                const FunctionDecl *FD,
+                                CUDAFunctionTarget CFT) {
   if (Attrs.isInvalid())
     return true;
 
@@ -5425,7 +5426,8 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   // on their host/device attributes.
   if (LangOpts.CUDA) {
     auto *Aux = Context.getAuxTargetInfo();
-    auto CudaTarget = IdentifyCUDATarget(FD);
+    assert(FD || CFT != CFT_InvalidTarget);
+    auto CudaTarget = FD ? IdentifyCUDATarget(FD) : CFT;
     bool CheckHost = false, CheckDevice = false;
     switch (CudaTarget) {
     case CFT_HostDevice:
