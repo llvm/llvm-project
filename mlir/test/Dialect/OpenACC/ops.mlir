@@ -1684,12 +1684,17 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %numGangs = arith.constant 10 : i64
   %numWorkers = arith.constant 10 : i64
 
+  %c20 = arith.constant 20 : i32
+  %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr<i32>
+  %createlocal = acc.create varPtr(%alloc : !llvm.ptr<i32>) -> !llvm.ptr<i32> {implicit = true}
+
   %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
   %pb = acc.present varPtr(%b : memref<10x10xf32>) -> memref<10x10xf32>
   %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
   %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
-  acc.declare dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
+  acc.declare dataOperands(%pa, %pb, %pc, %pd, %createlocal: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>, !llvm.ptr<i32>) {
   }
+
   return
 }
 
