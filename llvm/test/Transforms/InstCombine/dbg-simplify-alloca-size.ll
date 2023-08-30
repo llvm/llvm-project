@@ -7,13 +7,13 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; CHECK-LABEL: @toplevel(
 ; CHECK:  entry:
-; CHECK-NEXT:    %pixels1 = alloca [3 x i8], align 1
+; CHECK-NEXT:    %pixels1 = alloca [4 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %pixels1, metadata ![[MD:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr nonnull %pixels1)
 ; CHECK-NEXT:    ret void
 define dso_local void @toplevel() {
 entry:
-  %pixels = alloca i8, i32 3
+  %pixels = alloca i8, i32 4
   call void @llvm.dbg.declare(metadata ptr %pixels, metadata !11, metadata !DIExpression()), !dbg !12
   call void @foo(ptr %pixels)
   ret void
