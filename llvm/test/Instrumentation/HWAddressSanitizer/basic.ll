@@ -103,15 +103,6 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
 ;
-
-
-
-
-
-
-
-
-
 entry:
   %b = load i8, ptr %a, align 4
   ret i8 %b
@@ -208,15 +199,6 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i16 [[B]]
 ;
-
-
-
-
-
-
-
-
-
 entry:
   %b = load i16, ptr %a, align 4
   ret i16 %b
@@ -313,10 +295,6 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i32 [[B]]
 ;
-
-
-
-
 entry:
   %b = load i32, ptr %a, align 4
   ret i32 %b
@@ -413,10 +391,6 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i64 [[B]]
 ;
-
-
-
-
 entry:
   %b = load i64, ptr %a, align 8
   ret i64 %b
@@ -513,10 +487,6 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i128 [[B]]
 ;
-
-
-
-
 entry:
   %b = load i128, ptr %a, align 16
   ret i128 %b
@@ -559,7 +529,6 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i40 [[B]]
 ;
-
 entry:
   %b = load i40, ptr %a, align 4
   ret i40 %b
@@ -656,10 +625,6 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
-
-
-
 entry:
   store i8 %b, ptr %a, align 4
   ret void
@@ -756,10 +721,6 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
-
-
-
 entry:
   store i16 %b, ptr %a, align 4
   ret void
@@ -856,10 +817,6 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
-
-
-
 entry:
   store i32 %b, ptr %a, align 4
   ret void
@@ -956,10 +913,6 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
-
-
-
 entry:
   store i64 %b, ptr %a, align 8
   ret void
@@ -1056,10 +1009,6 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
-
-
-
 entry:
   store i128 %b, ptr %a, align 16
   ret void
@@ -1102,7 +1051,6 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
 entry:
   store i40 %b, ptr %a, align 4
   ret void
@@ -1145,7 +1093,6 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
-
 entry:
   store i64 %b, ptr %a, align 4
   ret void
@@ -1258,10 +1205,3 @@ entry:
   %b = load i8, ptr addrspace(256) %a, align 4
   ret i8 %b
 }
-
-; CHECK: declare void @__hwasan_init()
-
-; CHECK-NEXT:   call void @__hwasan_init()
-; CHECK-NEXT:   ret void
-; CHECK-NEXT: }
-
