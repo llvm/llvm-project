@@ -952,7 +952,6 @@ private:
                 const double DL = ChainDensity[L];
                 const double DR = ChainDensity[R];
                 // Compare by density and break ties by chain identifiers.
-                return (DL != DR) ? (DL > DR) : (L->Id < R->Id);
                 return std::make_tuple(-DL, L->Id) <
                        std::make_tuple(-DR, R->Id);
               });
@@ -1104,7 +1103,7 @@ private:
 
     // Insert the edges into the queue.
     for (ChainT *ChainPred : HotChains) {
-      for (const auto &[Chain, Edge] : ChainPred->Edges) {
+      for (const auto &[_, Edge] : ChainPred->Edges) {
         // Ignore self-edges.
         if (Edge->isSelfEdge())
           continue;
@@ -1137,9 +1136,9 @@ private:
       ChainT *BestDstChain = BestEdge->dstChain();
 
       // Remove outdated edges from the queue.
-      for (const auto &[Chain, ChainEdge] : BestSrcChain->Edges)
+      for (const auto &[_, ChainEdge] : BestSrcChain->Edges)
         Queue.erase(ChainEdge);
-      for (const auto &[Chain, ChainEdge] : BestDstChain->Edges)
+      for (const auto &[_, ChainEdge] : BestDstChain->Edges)
         Queue.erase(ChainEdge);
 
       // Merge the best pair of chains.
@@ -1148,7 +1147,7 @@ private:
                   BestGain.mergeType());
 
       // Insert newly created edges into the queue.
-      for (const auto &[Chain, Edge] : BestSrcChain->Edges) {
+      for (const auto &[_, Edge] : BestSrcChain->Edges) {
         // Ignore loop edges.
         if (Edge->isSelfEdge())
           continue;
