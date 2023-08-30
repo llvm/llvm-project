@@ -160,6 +160,9 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-symbolizer now treats invalid input as an address for which source
+  information is not found.
+
 Changes to LLDB
 ---------------------------------
 
