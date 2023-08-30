@@ -25,11 +25,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-forward.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-#endif //LLDB_ENABLE_SWIFT
-
 #include <memory>
 #include <optional>
 
@@ -663,12 +658,6 @@ public:
 
       CompilerType valobj_type = valobj_sp->GetCompilerType();
 
-#ifdef LLDB_ENABLE_SWIFT
-      if (SwiftASTContext::IsGenericType(valobj_type)) {
-        valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-      }
-#endif // LLDB_ENABLE_SWIFT
-
       lldb_private::DataExtractor data;
 
       Status extract_error;
@@ -1077,8 +1066,8 @@ public:
                                      "system: %s", status.AsCString());
         return;
       }
-      persistent_state =
-          target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+      persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
+          lldb::eLanguageTypeSwift);
 #endif // LLDB_ENABLE_SWIFT
     } else {
       auto type_system_or_err =
