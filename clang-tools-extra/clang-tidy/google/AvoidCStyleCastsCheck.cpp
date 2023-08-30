@@ -62,7 +62,8 @@ static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
         CastExpr->getSubExprAsWritten()->getBeginLoc());
-  } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+  }
+  if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
     return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
                                          CastExpr->getLParenLoc());
   } else
