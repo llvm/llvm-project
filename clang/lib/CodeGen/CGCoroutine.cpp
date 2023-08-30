@@ -139,36 +139,6 @@ static bool memberCallExpressionCanThrow(const Expr *E) {
   return true;
 }
 
-/// Return true when the coroutine handle may escape from the await-suspend
-/// (`awaiter.await_suspend(std::coroutine_handle)` expression).
-/// Return false only when the coroutine wouldn't escape in the await-suspend
-/// for sure.
-///
-/// While it is always safe to return true, return falses can bring better
-/// performances.
-///
-/// See https://github.com/llvm/llvm-project/issues/56301 and
-/// https://reviews.llvm.org/D157070 for the example and the full discussion.
-///
-/// FIXME: It will be much better to perform such analysis in the middle end.
-/// See the comments in `CodeGenFunction::EmitCall` for example.
-static bool MayCoroHandleEscape(CoroutineSuspendExpr const &S) {
-  CXXRecordDecl *Awaiter =
-      S.getCommonExpr()->getType().getNonReferenceType()->getAsCXXRecordDecl();
-
-  // Return true conservatively if the awaiter type is not a record type.
-  if (!Awaiter)
-    return true;
-
-  // In case the awaiter type is empty, the suspend wouldn't leak the coroutine
-  // handle.
-  //
-  // TODO: We can improve this by looking into the implementation of
-  // await-suspend and see if the coroutine handle is passed to foreign
-  // functions.
-  return !Awaiter->field_empty();
-}
-
 // Emit suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -229,11 +199,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
   CGF.CurCoro.InSuspendBlock = true;
-  CGF.CurCoro.MayCoroHandleEscape = MayCoroHandleEscape(S);
   auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
   CGF.CurCoro.InSuspendBlock = false;
-  CGF.CurCoro.MayCoroHandleEscape = false;
-
   if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
     // Veto suspension if requested by bool returning await_suspend.
     BasicBlock *RealSuspendBlock =
