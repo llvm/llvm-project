@@ -8108,6 +8108,15 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
         return false;
       }
     }
+    if (IsProcedurePointer(parser::GetLastName(dataRef).symbol) &&
+        !FindSymbol(*name)) {
+      // Unknown target of procedure pointer must be an external procedure
+      Symbol &symbol{MakeSymbol(
+          context().globalScope(), name->source, Attrs{Attr::EXTERNAL})};
+      Resolve(*name, symbol);
+      ConvertToProcEntity(symbol);
+      return false;
+    }
   }
   Walk(expr);
   return false;
