@@ -2833,6 +2833,45 @@ bool ShuffleVectorInst::isInterleaveMask(
   return true;
 }
 
+/// Try to lower a vector shuffle as a bit rotation.
+///
+/// Look for a repeated rotation pattern in each sub group.
+/// Returns an element-wise left bit rotation amount or -1 if failed.
+static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
+  int NumElts = Mask.size();
+  assert((NumElts % NumSubElts) == 0 && "Illegal shuffle mask");
+
+  int RotateAmt = -1;
+  for (int i = 0; i != NumElts; i += NumSubElts) {
+    for (int j = 0; j != NumSubElts; ++j) {
+      int M = Mask[i + j];
+      if (M < 0)
+        continue;
+      if (M < i || M >= i + NumSubElts)
+        return -1;
+      int Offset = (NumSubElts - (M - (i + j))) % NumSubElts;
+      if (0 <= RotateAmt && Offset != RotateAmt)
+        return -1;
+      RotateAmt = Offset;
+    }
+  }
+  return RotateAmt;
+}
+
+bool ShuffleVectorInst::isBitRotateMask(
+    ArrayRef<int> Mask, unsigned EltSizeInBits, unsigned MinSubElts,
+    unsigned MaxSubElts, unsigned &NumSubElts, unsigned &RotateAmt) {
+  for (NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
+    int EltRotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
+    if (EltRotateAmt < 0)
+      continue;
+    RotateAmt = EltRotateAmt * EltSizeInBits;
+    return true;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class
 //===----------------------------------------------------------------------===//
