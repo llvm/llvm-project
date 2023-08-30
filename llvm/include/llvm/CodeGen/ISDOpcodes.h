@@ -1544,6 +1544,12 @@ inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
 }
 
+/// Return true if this is a setcc instruction that performs an equality
+/// comparison when used with floating point operands.
+inline bool isFPEqualitySetCC(CondCode Code) {
+  return Code == SETOEQ || Code == SETONE || Code == SETUEQ || Code == SETUNE;
+}
+
 /// Return true if the specified condition returns true if the two operands to
 /// the condition are equal. Note that if one of the two operands is a NaN,
 /// this value is meaningless.
