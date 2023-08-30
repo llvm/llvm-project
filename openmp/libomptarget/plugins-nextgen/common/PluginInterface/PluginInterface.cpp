@@ -449,8 +449,9 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
           IsNumThreadsFromUser) {
         // Enough parallelism for teams and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
-        assert(TripCountNumBlocks >= DefaultNumBlocks &&
-               "Expected sufficient outer parallelism.");
+        assert(IsNumThreadsFromUser ||
+               TripCountNumBlocks >= DefaultNumBlocks &&
+                   "Expected sufficient outer parallelism.");
       } else if (LoopTripCount >= DefaultNumBlocks * MinThreads) {
         // Enough parallelism for teams, limit threads.
 
