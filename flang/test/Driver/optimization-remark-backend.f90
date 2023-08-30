@@ -9,8 +9,9 @@
 ! Check full -Rpass-analysis message is emitted
 ! RUN: %flang %s -O1 -Rpass-analysis %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
-! MISSED:   remark: {{[0-9]+}} virtual registers copies {{.*}} total copies cost generated in function
+! MISSED:   remark: {{[0-9]+}} virtual registers copies {{.*}} total copies cost generated in function [-Rpass-missed=regalloc]
 ! ANALYSIS: remark: BasicBlock:
+! ANALYSIS: [-Rpass-analysis=asm-printer]
 
 program forttest
     implicit none

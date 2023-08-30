@@ -957,6 +957,19 @@ public:
 
     std::string msg;
     llvm::raw_string_ostream msgStream(msg);
+
+    if (diagInfo.isLocationAvailable()) {
+      // Clang contains a SourceManager class which handles loading
+      // and caching of source files into memory and it can be used to
+      // query SourceLocation data. The SourceLocation data is what is
+      // needed here as it contains the full include stack which gives
+      // line and column number as well as file name and location.
+      // Since Flang doesn't have SourceManager, send file name and absolute
+      // path through msgStream, to use for printing.
+      msgStream << diagInfo.getLocationStr() << ";;"
+                << diagInfo.getAbsolutePath() << ";;";
+    }
+
     msgStream << diagInfo.getMsg();
 
     // Emit message.
