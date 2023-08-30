@@ -38,12 +38,8 @@ public:
   class ExceptionInfo {
   public:
     using Throwables = llvm::SmallSet<const Type *, 2>;
-    static ExceptionInfo createUnknown() {
-      return ExceptionInfo(State::Unknown);
-    }
-    static ExceptionInfo createNonThrowing() {
-      return ExceptionInfo(State::Throwing);
-    }
+    static ExceptionInfo createUnknown() { return {State::Unknown}; }
+    static ExceptionInfo createNonThrowing() { return {State::Throwing}; }
 
     /// By default the exception situation is unknown and must be
     /// clarified step-wise.

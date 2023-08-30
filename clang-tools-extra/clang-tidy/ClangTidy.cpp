@@ -242,11 +242,11 @@ public:
 private:
   SourceLocation getLocation(StringRef FilePath, unsigned Offset) {
     if (FilePath.empty())
-      return SourceLocation();
+      return {};
 
     auto File = SourceMgr.getFileManager().getFile(FilePath);
     if (!File)
-      return SourceLocation();
+      return {};
 
     FileID ID = SourceMgr.getOrCreateFileID(*File, SrcMgr::C_User);
     return SourceMgr.getLocForStartOfFile(ID).getLocWithOffset(Offset);

@@ -43,7 +43,7 @@ static SourceLocation findStartOfIndirection(SourceLocation Start,
   while (Indirections-- != 0) {
     Start = findPreviousAnyTokenKind(Start, SM, LangOpts, tok::star, tok::amp);
     if (Start.isInvalid() || Start.isMacroID())
-      return SourceLocation();
+      return {};
   }
   return Start;
 }
