@@ -848,7 +848,6 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     // have folded the argument; in the case of TypeParamInquiry,
     // try to get the type of the parameter itself.
     if (const auto *expr{args[0] ? args[0]->UnwrapExpr() : nullptr}) {
-      std::optional<DynamicType> dyType;
       if (const auto *inquiry{UnwrapExpr<TypeParamInquiry>(*expr)}) {
         if (const auto *typeSpec{inquiry->parameter().GetType()}) {
           if (const auto *intrinType{typeSpec->AsIntrinsic()}) {
