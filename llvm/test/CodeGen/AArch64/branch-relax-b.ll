@@ -44,16 +44,16 @@ define void @relax_b_spill() {
 ; CHECK-NEXT:     // %bb.4:                               // %entry
 ; CHECK-NEXT:             str     [[SPILL_REGISTER:x[0-9]+]], [sp,
 ; CHECK-SAME:                                                       -16]!
-; CHECK-NEXT:             adrp    [[SPILL_REGISTER:x[0-9]+]], .LBB1_5
-; CHECK-NEXT:             add     [[SPILL_REGISTER:x[0-9]+]], [[SPILL_REGISTER:x[0-9]+]], :lo12:.LBB1_5
-; CHECK-NEXT:             br      [[SPILL_REGISTER:x[0-9]+]]
+; CHECK-NEXT:             adrp    [[SPILL_REGISTER]], .LBB1_5
+; CHECK-NEXT:             add     [[SPILL_REGISTER]], [[SPILL_REGISTER]], :lo12:.LBB1_5
+; CHECK-NEXT:             br      [[SPILL_REGISTER]]
 ; CHECK-NEXT:     .LBB1_1:                                // %iftrue
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             .zero   2048
 ; CHECK-NEXT:             //NO_APP
 ; CHECK-NEXT:             b       .LBB1_3
 ; CHECK-NEXT:     .LBB1_5:                                // %iffalse
-; CHECK-NEXT:             ldr     [[SPILL_REGISTER:x[0-9]+]], [sp], 
+; CHECK-NEXT:             ldr     [[SPILL_REGISTER]], [sp], 
 ; CHECK-SAME:                                                        16
 ; CHECK-NEXT:     // %bb.2:                               // %iffalse
 ; CHECK-NEXT:             //APP
@@ -132,6 +132,44 @@ iffalse:
   call void asm sideeffect "# reg use $0", "{x26}"(i64 %x26)
   call void asm sideeffect "# reg use $0", "{x27}"(i64 %x27)
   call void asm sideeffect "# reg use $0", "{x28}"(i64 %x28)
+  ret void
+}
+
+define void @relax_b_x16_taken() {
+; CHECK-LABEL:    relax_b_x16_taken:                      // @relax_b_x16_taken
+; COM: Pre-commit to record the behavior of relaxing an unconditional
+; COM: branch across which x16 is taken.
+; CHECK:          // %bb.0:                               // %entry
+; CHECK-NEXT:             //APP
+; CHECK-NEXT:             mov     x16, #1
+; CHECK-NEXT:             //NO_APP
+; CHECK-NEXT:             cbnz    x16, .LBB2_1
+; CHECK-NEXT:     // %bb.3:                               // %entry
+; CHECK-NEXT:             adrp    [[SCAVENGED_REGISTER2:x[0-9]+]], .LBB2_2
+; CHECK-NEXT:             add     [[SCAVENGED_REGISTER2]], [[SCAVENGED_REGISTER2]], :lo12:.LBB2_2
+; CHECK-NEXT:             br      [[SCAVENGED_REGISTER2]]
+; CHECK-NEXT:     .LBB2_1:                                // %iftrue
+; CHECK-NEXT:             //APP
+; CHECK-NEXT:             .zero   2048
+; CHECK-NEXT:             //NO_APP
+; CHECK-NEXT:             ret
+; CHECK-NEXT:     .LBB2_2:                                // %iffalse
+; CHECK-NEXT:             //APP
+; CHECK-NEXT:             // reg use x16
+; CHECK-NEXT:             //NO_APP
+; CHECK-NEXT:             ret
+entry:
+  %x16 = call i64 asm sideeffect "mov x16, 1", "={x16}"()
+
+  %cmp = icmp eq i64 %x16, 0
+  br i1 %cmp, label %iffalse, label %iftrue
+
+iftrue:
+  call void asm sideeffect ".space 2048", ""()
+  ret void
+
+iffalse:
+  call void asm sideeffect "# reg use $0", "{x16}"(i64 %x16)
   ret void
 }
 
