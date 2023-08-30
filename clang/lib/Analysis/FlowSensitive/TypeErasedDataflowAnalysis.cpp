@@ -21,6 +21,7 @@
 #include "clang/AST/ASTDumper.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
@@ -58,6 +59,7 @@ static bool isLoopHead(const CFGBlock &B) {
       case Stmt::WhileStmtClass:
       case Stmt::DoStmtClass:
       case Stmt::ForStmtClass:
+      case Stmt::CXXForRangeStmtClass:
         return true;
       default:
         return false;
@@ -105,6 +107,12 @@ public:
     auto *Cond = S->getCond();
     if (Cond != nullptr)
       return extendFlowCondition(*Cond);
+    return {nullptr, false};
+  }
+
+  TerminatorVisitorRetTy VisitCXXForRangeStmt(const CXXForRangeStmt *) {
+    // Don't do anything special for CXXForRangeStmt, because the condition
+    // (being implicitly generated) isn't visible from the loop body.
     return {nullptr, false};
   }
 
