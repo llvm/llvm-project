@@ -242,6 +242,17 @@ class F3R_np<bits<5> opc, string OpcStr> :
 // Three operand long
 
 /// FL3R_L2RUS multiclass - Define a normal FL3R/FL2RUS pattern in one shot.
+multiclass FL3R_L2RUS<bits<9> opc1, bits<9> opc2, string OpcStr,
+                      SDNode OpNode> {
+  def _l3r: _FL3R<opc1, (outs GRRegs:$dst), (ins GRRegs:$b, GRRegs:$c),
+                  !strconcat(OpcStr, " $dst, $b, $c"),
+                  [(set GRRegs:$dst, (OpNode GRRegs:$b, GRRegs:$c))]>;
+  def _l2rus : _FL2RUS<opc2, (outs GRRegs:$dst), (ins GRRegs:$b, i32imm:$c),
+                       !strconcat(OpcStr, " $dst, $b, $c"),
+                       [(set GRRegs:$dst, (OpNode GRRegs:$b, immUs:$c))]>;
+}
+
+/// FL3R_L2RUS multiclass - Define a normal FL3R/FL2RUS pattern in one shot.
 multiclass FL3R_L2RBITP<bits<9> opc1, bits<9> opc2, string OpcStr,
                         SDNode OpNode> {
   def _l3r: _FL3R<opc1, (outs GRRegs:$dst), (ins GRRegs:$b, GRRegs:$c),
@@ -293,6 +304,14 @@ multiclass FU6_LU6_np<bits<10> opc, string OpcStr> {
   def _u6: _FU6<opc, (outs), (ins i32imm:$a), !strconcat(OpcStr, " $a"), []>;
   def _lu6: _FLU6<opc, (outs), (ins i32imm:$a), !strconcat(OpcStr, " $a"), []>;
 }
+
+// Two operand short
+
+class F2R_np<bits<6> opc, string OpcStr> :
+  _F2R<opc, (outs GRRegs:$dst), (ins GRRegs:$b),
+       !strconcat(OpcStr, " $dst, $b"), []>;
+
+// Two operand long
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
