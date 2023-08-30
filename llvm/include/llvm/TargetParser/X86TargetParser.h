@@ -164,9 +164,9 @@ void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
 ProcessorFeatures getKeyFeature(CPUKind Kind);
 
 /// Fill in the features that \p CPU supports into \p Features.
-/// "+" will be append in front of each feature if IfNeedPlus is true.
+/// "+" will be append in front of each feature if NeedPlus is true.
 void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features,
-                       bool IfNeedPlus = false);
+                       bool NeedPlus = false);
 
 /// Set or clear entries in \p Features that are implied to be enabled/disabled
 /// by the provided \p Feature.
