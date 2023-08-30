@@ -269,7 +269,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Check if we can succesfully rewrite all declarations of the constructor.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      ReferenceTypeLoc RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
       if (RefTL.isNull()) {
         // We cannot rewrite this instance. The type is probably hidden behind
         // some `typedef`. Do not offer a fix-it in this case.
@@ -279,7 +279,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Rewrite all declarations.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      ReferenceTypeLoc RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
       TypeLoc ValueTL = RefTL.getPointeeLoc();
       CharSourceRange TypeRange = CharSourceRange::getTokenRange(
