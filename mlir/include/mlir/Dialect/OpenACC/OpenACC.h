@@ -46,7 +46,7 @@
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
   mlir::acc::DataOp, mlir::acc::EnterDataOp, mlir::acc::ExitDataOp,            \
       mlir::acc::UpdateOp, mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,   \
-      mlir::acc::DeclareExitOp
+      mlir::acc::DeclareExitOp, mlir::acc::DeclareOp
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_OPS
 
