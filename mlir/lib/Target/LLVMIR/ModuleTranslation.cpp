@@ -912,9 +912,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (std::optional<StringRef> section = func.getSection())
     llvmFunc->setSection(*section);
 
-  if (auto armStreaming = func.getArmStreaming())
+  if (func.getArmStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
-  else if (auto armLocallyStreaming = func.getArmLocallyStreaming())
+  else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
 
   // First, create all blocks so we can jump to them.

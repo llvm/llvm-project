@@ -283,7 +283,7 @@ ArrayRef<int64_t> TensorType::getShape() const {
 
 TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  if (auto unrankedTy = llvm::dyn_cast<UnrankedTensorType>(*this)) {
+  if (llvm::dyn_cast<UnrankedTensorType>(*this)) {
     if (shape)
       return RankedTensorType::get(*shape, elementType);
     return UnrankedTensorType::get(elementType);
@@ -370,7 +370,7 @@ ArrayRef<int64_t> BaseMemRefType::getShape() const {
 
 BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                          Type elementType) const {
-  if (auto unrankedTy = llvm::dyn_cast<UnrankedMemRefType>(*this)) {
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this)) {
     if (!shape)
       return UnrankedMemRefType::get(elementType, getMemorySpace());
     MemRefType::Builder builder(*shape, elementType);
