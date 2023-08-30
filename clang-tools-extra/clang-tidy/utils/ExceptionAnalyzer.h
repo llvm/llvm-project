@@ -78,7 +78,7 @@ public:
     /// possible to catch multiple exception types by one 'catch' if they
     /// are a subclass of the 'catch'ed exception type.
     /// Returns 'true' if some exceptions were filtered, otherwise 'false'.
-    bool filterByCatch(const Type *BaseClass, const ASTContext &Context);
+    bool filterByCatch(const Type *HandlerTy, const ASTContext &Context);
 
     /// Filter the set of thrown exception type against a set of ignored
     /// types that shall not be considered in the exception analysis.
