@@ -307,9 +307,6 @@ void InitHeaderSearch::AddDefaultCPlusPlusIncludePaths(
       break;
     }
     break;
-  case llvm::Triple::DragonFly:
-    AddPath("/usr/include/c++/5.0", CXXSystem, false);
-    break;
   default:
     break;
   }
@@ -319,6 +316,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     const llvm::Triple &triple) {
   switch (triple.getOS()) {
   case llvm::Triple::AIX:
+  case llvm::Triple::DragonFly:
   case llvm::Triple::ELFIAMCU:
   case llvm::Triple::Emscripten:
   case llvm::Triple::FreeBSD:
