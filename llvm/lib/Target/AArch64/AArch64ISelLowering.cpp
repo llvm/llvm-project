@@ -24971,7 +24971,15 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   EVT VT = Op.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
-  SDValue Mask = convertFixedMaskToScalableVector(Load->getMask(), DAG);
+  SDValue Mask = Load->getMask();
+  // If this is an extending load and the mask type is not the same as
+  // load's type then we have to extend the mask type.
+  if (VT.getScalarSizeInBits() > Mask.getValueType().getScalarSizeInBits()) {
+    assert(Load->getExtensionType() != ISD::NON_EXTLOAD &&
+           "Incorrect mask type");
+    Mask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Mask);
+  }
+  Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
   SDValue PassThru;
   bool IsPassThruZeroOrUndef = false;
