@@ -3241,15 +3241,15 @@ void RewriteInstance::emitAndLink() {
   Linker->loadObject(ObjectMemBuffer->getMemBufferRef(),
                      [this](auto MapSection) { mapFileSections(MapSection); });
 
-  MCAsmLayout FinalLayout(
-      static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
-
   // Update output addresses based on the new section map and
   // layout. Only do this for the object created by ourselves.
-  updateOutputValues(FinalLayout);
+  updateOutputValues(*Linker);
 
-  if (opts::UpdateDebugSections)
+  if (opts::UpdateDebugSections) {
+    MCAsmLayout FinalLayout(
+        static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
     DebugInfoRewriter->updateLineTableOffsets(FinalLayout);
+  }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->link(*BC, ToolPath, *Linker, [this](auto MapSection) {
@@ -3644,7 +3644,7 @@ void RewriteInstance::mapAllocatableSections(
   }
 }
 
-void RewriteInstance::updateOutputValues(const MCAsmLayout &Layout) {
+void RewriteInstance::updateOutputValues(const BOLTLinker &Linker) {
   if (auto MapSection = BC->getUniqueSectionByName(AddressMap::SectionName)) {
     auto Map = AddressMap::parse(MapSection->getOutputContents(), *BC);
     BC->setIOAddressMap(std::move(Map));
@@ -3652,7 +3652,7 @@ void RewriteInstance::updateOutputValues(const MCAsmLayout &Layout) {
   }
 
   for (BinaryFunction *Function : BC->getAllBinaryFunctions())
-    Function->updateOutputValues(Layout);
+    Function->updateOutputValues(Linker);
 }
 
 void RewriteInstance::patchELFPHDRTable() {
