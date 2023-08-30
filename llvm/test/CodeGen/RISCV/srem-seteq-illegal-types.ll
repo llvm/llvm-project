@@ -662,9 +662,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32MV-NEXT:    li a0, 85
-; RV32MV-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32MV-NEXT:    vmv.v.x v0, a0
-; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32MV-NEXT:    vmv.s.x v0, a0
 ; RV32MV-NEXT:    vmv.v.i v10, 1
 ; RV32MV-NEXT:    vmerge.vim v10, v10, -1, v0
 ; RV32MV-NEXT:    vand.vv v8, v8, v10

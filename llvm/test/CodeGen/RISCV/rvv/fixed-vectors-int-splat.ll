@@ -822,11 +822,9 @@ define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
 ; LMULMAX2-RV32-NEXT:    addi a0, a0, 32
 ; LMULMAX2-RV32-NEXT:    vle64.v v14, (a0)
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.x v16, a2
 ; LMULMAX2-RV32-NEXT:    li a0, 85
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a0
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a0
+; LMULMAX2-RV32-NEXT:    vmv.v.x v16, a2
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v16, v16, a1, v0
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vadd.vv v14, v14, v16
