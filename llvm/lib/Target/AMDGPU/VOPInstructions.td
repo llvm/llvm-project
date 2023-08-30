@@ -60,7 +60,10 @@ class VOPD_Component<bits<5> OpIn, string vOPDName> {
   string VOPDName = "v_dual_" # !substr(vOPDName, 2);
   bits<5> VOPDOp = OpIn;
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
-  bit CanBeVOPD3X = !and(!le(VOPDOp, VOPD3X_Max_Index), !ne(vOPDName, "v_bitop2_b32"));
+  bit CanBeVOPD3X = !and(!le(VOPDOp, VOPD3X_Max_Index),
+                         !and(!ne(vOPDName, "v_bitop2_b32"),
+                              !and(!ne(vOPDName, "v_max_i32"),
+                                   !ne(vOPDName, "v_min_i32"))));
 }
 
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
