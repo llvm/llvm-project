@@ -92,7 +92,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 
     if (!BT)
       BT.reset(
-          new BuiltinBug(this, "Result of operation is garbage or undefined"));
+          new BugType(this, "Result of operation is garbage or undefined"));
 
     SmallString<256> sbuf;
     llvm::raw_svector_ostream OS(sbuf);

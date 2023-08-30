@@ -322,7 +322,7 @@ bool ento::shouldRegisterExplodedGraphViewer(const CheckerManager &mgr) {
 namespace {
 
 class ReportStmts : public Checker<check::PreStmt<Stmt>> {
-  BuiltinBug BT_stmtLoc{this, "Statement"};
+  BugType BT_stmtLoc{this, "Statement"};
 
 public:
   void checkPreStmt(const Stmt *S, CheckerContext &C) const {
