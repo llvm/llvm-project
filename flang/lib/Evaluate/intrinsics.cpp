@@ -2221,7 +2221,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (dummy[*dimArg].optionality == Optionality::required) {
         if (const Symbol *whole{
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
-          if (IsOptional(*whole) || IsAllocatableOrPointer(*whole)) {
+          if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
               messages.Say(
                   "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_port_en_US);

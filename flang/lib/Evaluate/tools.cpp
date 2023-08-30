@@ -1158,7 +1158,8 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
 bool IsAllocatableOrPointerObject(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
-  return (sym && semantics::IsAllocatableOrPointer(sym->GetUltimate())) ||
+  return (sym &&
+             semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate())) ||
       evaluate::IsObjectPointer(expr, context);
 }
 
@@ -1388,15 +1389,37 @@ bool IsProcedure(const Scope &scope) {
   return symbol && IsProcedure(*symbol);
 }
 
+bool IsProcedurePointer(const Symbol &original) {
+  const Symbol &symbol{GetAssociationRoot(original)};
+  return IsPointer(symbol) && IsProcedure(symbol);
+}
+
+bool IsProcedurePointer(const Symbol *symbol) {
+  return symbol && IsProcedurePointer(*symbol);
+}
+
+bool IsObjectPointer(const Symbol *original) {
+  if (original) {
+    const Symbol &symbol{GetAssociationRoot(*original)};
+    return IsPointer(symbol) && !IsProcedure(symbol);
+  } else {
+    return false;
+  }
+}
+
+bool IsAllocatableOrObjectPointer(const Symbol *original) {
+  if (original) {
+    const Symbol &symbol{GetAssociationRoot(*original)};
+    return IsAllocatable(symbol) || (IsPointer(symbol) && !IsProcedure(symbol));
+  } else {
+    return false;
+  }
+}
+
 const Symbol *FindCommonBlockContaining(const Symbol &original) {
   const Symbol &root{GetAssociationRoot(original)};
   const auto *details{root.detailsIf<ObjectEntityDetails>()};
   return details ? details->commonBlock() : nullptr;
-}
-
-bool IsProcedurePointer(const Symbol &original) {
-  const Symbol &symbol{GetAssociationRoot(original)};
-  return IsPointer(symbol) && IsProcedure(symbol);
 }
 
 // 3.11 automatic data object
@@ -1516,14 +1539,14 @@ bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeAssumedShape() &&
-      !semantics::IsAllocatableOrPointer(ultimate);
+      !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsDeferredShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeDeferredShape() &&
-      semantics::IsAllocatableOrPointer(ultimate);
+      semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsFunctionResult(const Symbol &original) {

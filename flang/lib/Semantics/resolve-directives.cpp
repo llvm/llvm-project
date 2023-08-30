@@ -1113,7 +1113,7 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &lastName{GetLastName(designator)};
-              if (!IsAllocatableOrPointer(*lastName.symbol)) {
+              if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
                 context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "
                     "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
