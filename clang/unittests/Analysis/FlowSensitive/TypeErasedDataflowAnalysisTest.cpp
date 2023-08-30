@@ -1612,4 +1612,21 @@ TEST_F(TopTest, TopUnusedBeforeLoopHeadJoinsToTop) {
 
       });
 }
+
+TEST_F(TopTest, ForRangeStmtConverges) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      int Ints[10];
+      bool B = false;
+      for (int I : Ints)
+        B = true;
+    }
+  )";
+  runDataflow(Code,
+              [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+                 const AnalysisOutputs &) {
+                // No additional expectations. We're only checking that the
+                // analysis converged.
+              });
+}
 } // namespace
