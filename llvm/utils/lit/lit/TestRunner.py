@@ -1102,10 +1102,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
-        if litConfig.echo_all_commands:
-            f.write("@echo on\n")
-        else:
-            f.write("@echo off\n")
+        f.write("@echo on\n")
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
@@ -1115,8 +1112,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
-        if litConfig.echo_all_commands:
-            f.write(b"set -x;" if mode == "wb" else "set -x;")
+        f.write(b"set -x;" if mode == "wb" else "set -x;")
         if sys.version_info > (3, 0) and mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
@@ -2086,7 +2082,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
         status = Test.FLAKYPASS
 
     # Form the output log.
-    output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % ("\n".join(script), exitCode)
+    output = f"Exit Code: {exitCode}\n"
 
     if timeoutInfo is not None:
         output += """Timeout: %s\n""" % (timeoutInfo,)
