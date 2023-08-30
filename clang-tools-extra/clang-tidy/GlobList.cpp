@@ -39,7 +39,7 @@ static llvm::Regex consumeGlob(StringRef &GlobList) {
     RegexText.push_back(C);
   }
   RegexText.push_back('$');
-  return {RegexText};
+  return {RegexText.str()};
 }
 
 GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
