@@ -145,13 +145,12 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
     // PPC, after backend supports IEEE 128-bit style libcalls.
     if (getTriple().isPPC64() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
-        F128Builtins.find(BuiltinID) != F128Builtins.end())
+        F128Builtins.contains(BuiltinID))
       Name = F128Builtins[BuiltinID];
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
-             AIXLongDouble64Builtins.find(BuiltinID) !=
-                 AIXLongDouble64Builtins.end())
+             AIXLongDouble64Builtins.contains(BuiltinID))
       Name = AIXLongDouble64Builtins[BuiltinID];
     else
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
