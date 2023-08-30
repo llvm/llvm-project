@@ -8,8 +8,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @a = common global [2048 x i32] zeroinitializer, align 16
 
 define void @example1(i32 %n) nounwind uwtable ssp {
-; CHECK-LABEL: define void @example1
-; CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define void @example1(
+; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N4:%.*]] = shl i32 [[N]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N4]], -4
@@ -60,9 +60,3 @@ exit:
   ret void
 }
 
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-;.
