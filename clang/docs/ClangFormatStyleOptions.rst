@@ -1549,14 +1549,14 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     x = (char *__capability)&y;
-    int function(void) __ununsed;
+    int function(void) __unused;
     void only_writes_to_buffer(char *__output buffer);
 
   In the .clang-format configuration file, this can be configured like:
 
   .. code-block:: yaml
 
-    AttributeMacros: ['__capability', '__output', '__ununsed']
+    AttributeMacros: ['__capability', '__output', '__unused']
 
 .. _BinPackArguments:
 
