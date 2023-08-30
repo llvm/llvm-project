@@ -357,12 +357,7 @@ public:
     return *this;
   }
 
-  /// In the particular case where the vector has a single dimension that we
-  /// drop, return the scalar element type.
-  // TODO: unify once we have a VectorType that supports 0-D.
-  operator Type() {
-    if (shape.empty())
-      return elementType;
+  operator VectorType() {
     return VectorType::get(shape, elementType, scalableDims);
   }
 

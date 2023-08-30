@@ -2216,7 +2216,7 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
       return failure();
     if (mask.size() != 1)
       return failure();
-    Type resType = VectorType::Builder(v1VectorType).setShape({1});
+    VectorType resType = VectorType::Builder(v1VectorType).setShape({1});
     if (llvm::cast<IntegerAttr>(mask[0]).getInt() == 0)
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
                                                        shuffleOp.getV1());
