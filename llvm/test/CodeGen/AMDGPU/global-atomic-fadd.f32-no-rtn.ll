@@ -147,7 +147,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
 define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspace(1) inreg %ptr, float %data) #0 {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
-  ; GFX90A_GFX940-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; GFX90A_GFX940-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
   ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
@@ -156,11 +156,11 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX940-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64 = SI_PS_LIVE
-  ; GFX90A_GFX940-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[SI_PS_LIVE]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[SI_PS_LIVE]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.1
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.1 (%ir-block.5):
-  ; GFX90A_GFX940-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; GFX90A_GFX940-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec
   ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[COPY4]].sub1
@@ -188,30 +188,23 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_2]]
   ; GFX90A_GFX940-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
-  ; GFX90A_GFX940-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.2
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT: bb.2 (%ir-block.36):
-  ; GFX90A_GFX940-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX90A_GFX940-NEXT: bb.2 (%ir-block.35):
+  ; GFX90A_GFX940-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %1
   ; GFX90A_GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR killed [[V_MOV_B32_e32_1]], [[COPY8]], [[COPY3]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
-  ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.4
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT: bb.3.Flow:
-  ; GFX90A_GFX940-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.5
-  ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT: bb.4 (%ir-block.38):
-  ; GFX90A_GFX940-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX90A_GFX940-NEXT:   successors: %bb.4(0x80000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.3
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT: bb.5 (%ir-block.39):
+  ; GFX90A_GFX940-NEXT: bb.4 (%ir-block.37):
+  ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic
   ret void
