@@ -1276,7 +1276,6 @@ public:
   /// on the function more conservative.  But it's unsafe to call this on a
   /// function which relies on particular fast-math attributes for correctness.
   /// It's up to you to ensure that this is safe.
-  void addDefaultFunctionDefinitionAttributes(llvm::Function &F);
   void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
                                                 bool WillInternalize);
 
