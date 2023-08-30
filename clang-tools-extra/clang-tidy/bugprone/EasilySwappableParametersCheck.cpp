@@ -479,7 +479,7 @@ struct MixData {
     return *this;
   }
 
-  template <class F> MixData withCommonTypeTransformed(F &&Func) const {
+  template <typename F> MixData withCommonTypeTransformed(const F &Func) const {
     if (CommonType.isNull())
       return *this;
 
