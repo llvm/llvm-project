@@ -65,11 +65,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
-
-    # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
+    libc.src.stdlib.abort
 
     # Only implemented in the test suite
     libc.src.stdlib.malloc

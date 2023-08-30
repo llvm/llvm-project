@@ -90,6 +90,7 @@ atof           |check|
 atol           |check|
 atoll          |check|
 exit           |check|    |check|
+abort          |check|    |check|
 labs           |check|
 llabs          |check|
 div            |check|
