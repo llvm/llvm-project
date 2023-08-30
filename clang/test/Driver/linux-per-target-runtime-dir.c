@@ -9,7 +9,7 @@
 // CHECK-PER-TARGET-RUNTIME: "-cc1"
 // CHECK-PER-TARGET-RUNTIME: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-PER-TARGET-RUNTIME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "{{.*}}/../include/c++/v1"
+// CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-PER-TARGET-RUNTIME: "--sysroot=[[SYSROOT]]"
 // CHECK-PER-TARGET-RUNTIME: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux-gnu"
