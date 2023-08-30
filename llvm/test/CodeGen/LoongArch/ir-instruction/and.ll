@@ -369,20 +369,15 @@ define i64 @and_i64_0xff000(i64 %a) {
   ret i64 %b
 }
 
-;; This case is not optimized to `bstrpick + slli`,
-;; since the immediate -2048 can be composed via
-;; a single `addi.w $rx, $zero, -2048`.
 define i64 @and_i64_minus_2048(i64 %a) {
 ; LA32-LABEL: and_i64_minus_2048:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a2, $zero, -2048
-; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    bstrins.w $a0, $zero, 10, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_minus_2048:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a1, $zero, -2048
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 10, 0
 ; LA64-NEXT:    ret
   %b = and i64 %a, -2048
   ret i64 %b
@@ -425,20 +420,15 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
   ret i64 %i
 }
 
-;; TODO: this can be codegened to bstrins.[wd] $a0, $zero, 23, 16.
 define i64 @and_i64_0xffffffffff00ffff(i64 %a) {
 ; LA32-LABEL: and_i64_0xffffffffff00ffff:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a2, -4081
-; LA32-NEXT:    ori $a2, $a2, 4095
-; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    bstrins.w $a0, $zero, 23, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xffffffffff00ffff:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, -4081
-; LA64-NEXT:    ori $a1, $a1, 4095
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 23, 16
 ; LA64-NEXT:    ret
   %b = and i64 %a, 18446744073692839935
   ret i64 %b
