@@ -222,10 +222,21 @@ func.func @roundf_func(%a: f32) -> f32 {
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64)
 func.func @powf_func(%a: f64, %b: f64) ->f64 {
-  // CHECK-DAG: [[LOG:%.+]] = math.log [[ARG0]]
-  // CHECK-DAG: [[MULT:%.+]] = arith.mulf [[LOG]], [[ARG1]]
+  // CHECK-DAG = [[CST0:%.+]] = arith.constant 0.000000e+00
+  // CHECK-DAG: [[TWO:%.+]] = arith.constant 2.000000e+00
+  // CHECK-DAG: [[NEGONE:%.+]] = arith.constant -1.000000e+00
+  // CHECK-DAG: [[SQR:%.+]] = arith.mulf [[ARG0]], [[ARG0]]
+  // CHECK-DAG: [[HALF:%.+]] = arith.divf [[ARG1]], [[TWO]] 
+  // CHECK-DAG: [[LOG:%.+]] = math.log [[SQR]]
+  // CHECK-DAG: [[MULT:%.+]] = arith.mulf [[HALF]], [[LOG]]
   // CHECK-DAG: [[EXPR:%.+]] = math.exp [[MULT]]
-  // CHECK: return [[EXPR]]
+  // CHECK-DAG: [[NEGEXPR:%.+]] = arith.mulf [[EXPR]], [[NEGONE]]
+  // CHECK-DAG: [[REMF:%.+]] = arith.remf [[ARG1]], [[TWO]]
+  // CHECK-DAG: [[CMPNEG:%.+]] = arith.cmpf olt, [[ARG0]]
+  // CHECK-DAG: [[CMPZERO:%.+]] = arith.cmpf one, [[REMF]]
+  // CHECK-DAG: [[AND:%.+]] = arith.andi [[CMPZERO]], [[CMPNEG]]
+  // CHECK-DAG: [[SEL:%.+]] = arith.select [[AND]], [[NEGEXPR]], [[EXPR]]
+  // CHECK: return [[SEL]]
   %ret = math.powf %a, %b : f64
   return %ret : f64
 }
