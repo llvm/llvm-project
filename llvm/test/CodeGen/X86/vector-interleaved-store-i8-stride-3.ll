@@ -1088,10 +1088,9 @@ define void @store_i8_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm2
 ; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
 ; AVX512BW-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm3, %zmm3, %zmm4
-; AVX512BW-NEXT:    vpshufb %zmm4, %zmm2, %zmm2
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm6, %zmm5, %zmm5
-; AVX512BW-NEXT:    vpshufb %zmm4, %zmm5, %zmm4
+; AVX512BW-NEXT:    vpshufb %zmm3, %zmm2, %zmm2
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm6, %zmm5, %zmm4
+; AVX512BW-NEXT:    vpshufb %zmm3, %zmm4, %zmm4
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vpshufb %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, 128(%rcx)
