@@ -179,6 +179,9 @@ Bug Fixes in This Version
 - Clang now prints unnamed members in diagnostic messages instead of giving an
   empty ''. Fixes
   (`#63759 <https://github.com/llvm/llvm-project/issues/63759>`_)
+- Fix crash in __builtin_strncmp and related builtins when the size value
+  exceeded the maximum value representable by int64_t. Fixes
+  (`#64876 <https://github.com/llvm/llvm-project/issues/64876>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
