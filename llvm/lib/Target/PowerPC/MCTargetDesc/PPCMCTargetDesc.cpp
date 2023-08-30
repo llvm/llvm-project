@@ -148,9 +148,10 @@ public:
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
       // On AIX, we have a region handle (symbol@m) and the variable offset
-      // (symbol@{gd|le}) for TLS variables, depending on the TLS model.
+      // (symbol@{gd|ie|le}) for TLS variables, depending on the TLS model.
       if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
            << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
