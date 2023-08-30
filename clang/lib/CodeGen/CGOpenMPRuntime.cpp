@@ -6385,7 +6385,6 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
   }
   if (isOpenMPSimdDirective(Dir->getDirectiveKind()))
     UpperBound = 1;
-  return;
 }
 
 const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
@@ -10015,8 +10014,6 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
 
   for (auto *ref : GeneratedRefs)
     CGM.addCompilerUsedGlobal(ref);
-
-  return;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
