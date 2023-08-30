@@ -187,7 +187,7 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 /// Returns true if braces where added.
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
-    SourceLocation InitialLoc, SourceLocation EndLocHint) {
+    SourceLocation StartLoc, SourceLocation EndLocHint) {
 
   while (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
@@ -214,20 +214,20 @@ bool BracesAroundStatementsCheck::checkStmt(
       getTokenKind(StmtBeginLoc, SM, Context) == tok::l_brace)
     return false;
 
-  if (!InitialLoc.isValid())
+  if (StartLoc.isInvalid())
     return false;
 
-  // Convert InitialLoc to file location, if it's on the same macro expansion
+  // Convert StartLoc to file location, if it's on the same macro expansion
   // level as the start of the statement. We also need file locations for
   // Lexer::getLocForEndOfToken working properly.
-  InitialLoc = Lexer::makeFileCharRange(
-                   CharSourceRange::getCharRange(InitialLoc, S->getBeginLoc()),
-                   SM, Context->getLangOpts())
-                   .getBegin();
-  if (InitialLoc.isInvalid())
+  StartLoc = Lexer::makeFileCharRange(
+                 CharSourceRange::getCharRange(StartLoc, S->getBeginLoc()), SM,
+                 Context->getLangOpts())
+                 .getBegin();
+  if (StartLoc.isInvalid())
     return false;
-  SourceLocation StartLoc =
-      Lexer::getLocForEndOfToken(InitialLoc, 0, SM, Context->getLangOpts());
+  StartLoc =
+      Lexer::getLocForEndOfToken(StartLoc, 0, SM, Context->getLangOpts());
 
   // StartLoc points at the location of the opening brace to be inserted.
   SourceLocation EndLoc;
