@@ -177,7 +177,7 @@ class DeclFinderASTVisitor
 public:
   DeclFinderASTVisitor(const StringRef &Name,
                        const StmtGeneratedVarNameMap *GeneratedDecls)
-      : Name(Name), GeneratedDecls(GeneratedDecls), Found(false) {}
+      : Name(Name), GeneratedDecls(GeneratedDecls) {}
 
   /// Attempts to find any usages of variables name Name in Body, returning
   /// true when it is used in Body. This includes the generated loop variables
@@ -195,7 +195,7 @@ private:
   /// GeneratedDecls keeps track of ForStmts which have been transformed,
   /// mapping each modified ForStmt to the variable generated in the loop.
   const StmtGeneratedVarNameMap *GeneratedDecls;
-  bool Found;
+  bool Found = false;
 
   bool VisitForStmt(clang::ForStmt *);
   bool VisitNamedDecl(clang::NamedDecl *);
@@ -375,9 +375,9 @@ private:
   /// ArraySubscriptExpressions.
   UsageResult Usages;
   llvm::SmallSet<SourceLocation, 8> UsageLocations;
-  bool OnlyUsedAsIndex;
+  bool OnlyUsedAsIndex = true;
   /// The DeclStmt for an alias to the container element.
-  const DeclStmt *AliasDecl;
+  const DeclStmt *AliasDecl = nullptr;
   Confidence ConfidenceLevel;
   /// A list of expressions on which ContainerExpr depends.
   ///
@@ -388,16 +388,16 @@ private:
 
   /// The parent-in-waiting. Will become the real parent once we traverse down
   /// one level in the AST.
-  const Stmt *NextStmtParent;
+  const Stmt *NextStmtParent = nullptr;
   /// The actual parent of a node when Visit*() calls are made. Only the
   /// parentage of DeclStmt's to possible iteration/selection statements is of
   /// importance.
-  const Stmt *CurrStmtParent;
+  const Stmt *CurrStmtParent = nullptr;
 
   /// \see aliasUseRequired().
-  bool ReplaceWithAliasUse;
+  bool ReplaceWithAliasUse = false;
   /// \see aliasFromForInit().
-  bool AliasFromForInit;
+  bool AliasFromForInit = false;
 };
 
 struct TUTrackingInfo {

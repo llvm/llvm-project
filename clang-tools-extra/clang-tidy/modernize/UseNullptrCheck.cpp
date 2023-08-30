@@ -111,8 +111,7 @@ StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
 class MacroArgUsageVisitor : public RecursiveASTVisitor<MacroArgUsageVisitor> {
 public:
   MacroArgUsageVisitor(SourceLocation CastLoc, const SourceManager &SM)
-      : CastLoc(CastLoc), SM(SM), Visited(false), CastFound(false),
-        InvalidFound(false) {
+      : CastLoc(CastLoc), SM(SM) {
     assert(CastLoc.isFileID());
   }
 
@@ -170,9 +169,9 @@ private:
   SourceLocation CastLoc;
   const SourceManager &SM;
 
-  bool Visited;
-  bool CastFound;
-  bool InvalidFound;
+  bool Visited = false;
+  bool CastFound = false;
+  bool InvalidFound = false;
 };
 
 /// Looks for implicit casts as well as sequences of 0 or more explicit
@@ -191,8 +190,7 @@ public:
   CastSequenceVisitor(ASTContext &Context, ArrayRef<StringRef> NullMacros,
                       ClangTidyCheck &Check)
       : SM(Context.getSourceManager()), Context(Context),
-        NullMacros(NullMacros), Check(Check), FirstSubExpr(nullptr),
-        PruneSubtree(false) {}
+        NullMacros(NullMacros), Check(Check) {}
 
   bool TraverseStmt(Stmt *S) {
     // Stop traversing down the tree if requested.
@@ -471,8 +469,8 @@ private:
   ASTContext &Context;
   ArrayRef<StringRef> NullMacros;
   ClangTidyCheck &Check;
-  Expr *FirstSubExpr;
-  bool PruneSubtree;
+  Expr *FirstSubExpr = nullptr;
+  bool PruneSubtree = false;
 };
 
 } // namespace

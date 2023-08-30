@@ -45,7 +45,7 @@ class UpgradeGoogletestCasePPCallback : public PPCallbacks {
 public:
   UpgradeGoogletestCasePPCallback(UpgradeGoogletestCaseCheck *Check,
                                   Preprocessor *PP)
-      : ReplacementFound(false), Check(Check), PP(PP) {}
+      : Check(Check), PP(PP) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *) override {
@@ -112,7 +112,7 @@ private:
           CharSourceRange::getTokenRange(Loc, Loc), *Replacement);
   }
 
-  bool ReplacementFound;
+  bool ReplacementFound = false;
   UpgradeGoogletestCaseCheck *Check;
   Preprocessor *PP;
 };
