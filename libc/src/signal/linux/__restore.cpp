@@ -10,8 +10,9 @@
 // strongly control the options this file is compiled with. __restore_rt cannot
 // make any stack allocations so we must ensure this.
 
-#include "include/sys/syscall.h"
 #include "src/__support/OSUtil/syscall.h"
+
+#include <sys/syscall.h>
 
 namespace __llvm_libc {
 
