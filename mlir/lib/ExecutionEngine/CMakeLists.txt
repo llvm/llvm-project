@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
   SparseTensorRuntime.cpp
+  SyclRuntimeWrappers.cpp
   ExecutionEngine.cpp
   Float16bits.cpp
   RocmRuntimeWrappers.cpp
@@ -342,7 +343,7 @@ if(LLVM_ENABLE_PIC)
       message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
     endif()
 
-    add_mlir_library(sycl-runtime
+    add_mlir_library(mlir_sycl_runtime
       SHARED
       SyclRuntimeWrappers.cpp
 
@@ -353,14 +354,14 @@ if(LLVM_ENABLE_PIC)
     if(NOT CXX_HAS_FRTTI_FLAG)
       message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
     endif()
-    target_compile_options (sycl-runtime PUBLIC -fexceptions -frtti)
+    target_compile_options (mlir_sycl_runtime PUBLIC -fexceptions -frtti)
 
-    target_include_directories(sycl-runtime PRIVATE
+    target_include_directories(mlir_sycl_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
     )
 
-    target_link_libraries(sycl-runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
+    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
 
-    set_property(TARGET sycl-runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
   endif()
 endif()
