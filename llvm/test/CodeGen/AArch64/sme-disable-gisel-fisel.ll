@@ -135,15 +135,25 @@ define double @locally_streaming_caller_normal_callee(double %x) nounwind noinli
 }
 
 define double @normal_caller_to_locally_streaming_callee(double %x) nounwind noinline optnone {
-; CHECK-COMMON-LABEL: normal_caller_to_locally_streaming_callee:
-; CHECK-COMMON:       // %bb.0:
-; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    bl locally_streaming_caller_normal_callee
-; CHECK-COMMON-NEXT:    adrp x8, .LCPI3_0
-; CHECK-COMMON-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
-; CHECK-COMMON-NEXT:    fadd d0, d0, d1
-; CHECK-COMMON-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-COMMON-NEXT:    ret
+; CHECK-FISEL-LABEL: normal_caller_to_locally_streaming_callee:
+; CHECK-FISEL:       // %bb.0:
+; CHECK-FISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FISEL-NEXT:    bl locally_streaming_caller_normal_callee
+; CHECK-FISEL-NEXT:    adrp x8, .LCPI3_0
+; CHECK-FISEL-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
+; CHECK-FISEL-NEXT:    fadd d0, d0, d1
+; CHECK-FISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FISEL-NEXT:    ret
+;
+; CHECK-GISEL-LABEL: normal_caller_to_locally_streaming_callee:
+; CHECK-GISEL:       // %bb.0:
+; CHECK-GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GISEL-NEXT:    bl locally_streaming_caller_normal_callee
+; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
+; CHECK-GISEL-NEXT:    fmov d1, x8
+; CHECK-GISEL-NEXT:    fadd d0, d0, d1
+; CHECK-GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GISEL-NEXT:    ret
   %call = call double  @locally_streaming_caller_normal_callee(double %x) "aarch64_pstate_sm_body";
   %add = fadd double %call, 4.200000e+01
   ret double %add;
