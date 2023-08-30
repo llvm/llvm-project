@@ -499,6 +499,10 @@ protected:
   /// targeting.
   bool isAlignedAllocationUnavailable() const;
 
+  /// Return true if c++14 sized deallocation functions are not implemented in
+  /// the c++ standard library of the deployment target we are targeting.
+  bool isSizedDeallocationUnavailable() const;
+
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;

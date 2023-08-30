@@ -2338,7 +2338,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "kind": "FunctionDecl",
 // CHECK-NEXT:         "name": "operator delete",
 // CHECK-NEXT:         "type": {
-// CHECK-NEXT:          "qualType": "void (void *) noexcept"
+// CHECK-NEXT:          "qualType": "void (void *, unsigned long) noexcept"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
