@@ -18,7 +18,7 @@ define dso_local void @func1() {
   br i1 %1, label %2, label %3
 
 2:                                                ; preds = %0
-  call void @func2()
+  call void @func2(i1 false)
   br label %3
 
 3:                                                ; preds = %2, %0
@@ -27,14 +27,48 @@ define dso_local void @func1() {
 }
 
 declare void @func3()
-declare void @func4()
-
-define dso_local void @func2() {
-; CHECK-LABEL: @func2(
-; CHECK-NEXT:    call void @func4()
+define internal void @func4() {
+; CHECK-LABEL: @func4(
+; CHECK-NEXT:    call void @func3()
 ; CHECK-NEXT:    ret void
 ;
-  call void @func4()
+  call void @func3()
+  ret void
+}
+define internal void @internal_good() {
+; CHECK-LABEL: @internal_good(
+; CHECK-NEXT:    call void @void(ptr @func4)
+; CHECK-NEXT:    ret void
+;
+  call void @void(ptr @func4)
+  ret void
+}
+
+define dso_local void @func2(i1 %c) {
+; UPTO2-LABEL: @func2(
+; UPTO2-NEXT:    [[F:%.*]] = select i1 [[C:%.*]], ptr @internal_good, ptr @func4
+; UPTO2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[F]], @func4
+; UPTO2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; UPTO2:       2:
+; UPTO2-NEXT:    call void @func4()
+; UPTO2-NEXT:    br label [[TMP6:%.*]]
+; UPTO2:       3:
+; UPTO2-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; UPTO2:       4:
+; UPTO2-NEXT:    call void @internal_good()
+; UPTO2-NEXT:    br label [[TMP6]]
+; UPTO2:       5:
+; UPTO2-NEXT:    unreachable
+; UPTO2:       6:
+; UPTO2-NEXT:    ret void
+;
+; LIMI0-LABEL: @func2(
+; LIMI0-NEXT:    [[F:%.*]] = select i1 [[C:%.*]], ptr @internal_good, ptr @func4
+; LIMI0-NEXT:    call void [[F]](), !callees !0
+; LIMI0-NEXT:    ret void
+;
+  %f = select i1 %c, ptr @internal_good, ptr @func4
+  call void %f()
   ret void
 }
 
@@ -61,7 +95,7 @@ define void @func5(i32 %0) {
 ; LIMI0-LABEL: @func5(
 ; LIMI0-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; LIMI0-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr @func4, ptr @func3
-; LIMI0-NEXT:    call void [[TMP3]](), !callees !0
+; LIMI0-NEXT:    call void [[TMP3]](), !callees !1
 ; LIMI0-NEXT:    ret void
 ;
   %2 = icmp ne i32 %0, 0
@@ -151,7 +185,7 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
 ; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !1
+; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !2
 ; LIMI0-NEXT:    ret i32 [[CALL]]
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -214,7 +248,7 @@ define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
 ; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !2
+; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees !3
 ; LIMI0-NEXT:    ret i32 [[CALL]]
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -489,6 +523,8 @@ define void @func6() {
   ret void
 }
 
+; Cannot be internal_good as it is internal and we see all uses.
+; Can be func4 since it escapes.
 define void @func7(ptr %unknown) {
 ; UPTO2-LABEL: @func7(
 ; UPTO2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[UNKNOWN:%.*]], @func3
@@ -507,7 +543,7 @@ define void @func7(ptr %unknown) {
 ; UPTO2-NEXT:    ret void
 ;
 ; LIMI0-LABEL: @func7(
-; LIMI0-NEXT:    call void [[UNKNOWN:%.*]](), !callees !0
+; LIMI0-NEXT:    call void [[UNKNOWN:%.*]](), !callees !1
 ; LIMI0-NEXT:    ret void
 ;
   call void %unknown(), !callees !2
@@ -528,7 +564,7 @@ define void @undef_in_callees() {
 ;
 ; LIMI0-LABEL: @undef_in_callees(
 ; LIMI0-NEXT:  cond.end.i:
-; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !5
+; LIMI0-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !6
 ; LIMI0-NEXT:    ret void
 ;
 cond.end.i:
@@ -566,6 +602,9 @@ cond.end.i:
 ; These ones are added because of the callees metadata.
 ; DOT-DAG: Node[[FUNC7]] -> Node[[FUNC3]];
 ; DOT-DAG: Node[[FUNC7]] -> Node[[FUNC4]];
+
+; UTC_ARGS: --enable
+
 ;.
 ; UNLIM: [[META0:![0-9]+]] = !{!1}
 ; UNLIM: [[META1:![0-9]+]] = !{i64 0, i1 false}
@@ -577,12 +616,13 @@ cond.end.i:
 ; LIMI2: [[META3:![0-9]+]] = !{i64 0, i1 false}
 ; LIMI2: [[META4:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;.
-; LIMI0: [[META0:![0-9]+]] = !{ptr @func3, ptr @func4}
-; LIMI0: [[META1:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
-; LIMI0: [[META2:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void}
-; LIMI0: [[META3:![0-9]+]] = !{!4}
-; LIMI0: [[META4:![0-9]+]] = !{i64 0, i1 false}
-; LIMI0: [[META5:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI0: [[META0:![0-9]+]] = !{ptr @func4, ptr @internal_good}
+; LIMI0: [[META1:![0-9]+]] = !{ptr @func3, ptr @func4}
+; LIMI0: [[META2:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
+; LIMI0: [[META3:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; LIMI0: [[META4:![0-9]+]] = !{!5}
+; LIMI0: [[META5:![0-9]+]] = !{i64 0, i1 false}
+; LIMI0: [[META6:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT: {{.*}}
