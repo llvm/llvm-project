@@ -381,7 +381,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
     Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
       auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+      if (PathBR->getInterestingnessKind(RetSym)) {
         std::string SBuf;
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
@@ -397,7 +397,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
     Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
       auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+      if (PathBR->getInterestingnessKind(RetSym)) {
         std::string SBuf;
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
@@ -431,7 +431,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         } else {
           Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
             auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-            if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+            if (PathBR->getInterestingnessKind(Handle)) {
               std::string SBuf;
               llvm::raw_string_ostream OS(SBuf);
               OS << "Handle released through " << ParamDiagIdx
@@ -445,7 +445,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
         Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
           auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+          if (PathBR->getInterestingnessKind(Handle)) {
             std::string SBuf;
             llvm::raw_string_ostream OS(SBuf);
             OS << "Handle allocated through " << ParamDiagIdx
@@ -459,7 +459,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
         Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
           auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+          if (PathBR->getInterestingnessKind(Handle)) {
             std::string SBuf;
             llvm::raw_string_ostream OS(SBuf);
             OS << "Unowned handle allocated through " << ParamDiagIdx

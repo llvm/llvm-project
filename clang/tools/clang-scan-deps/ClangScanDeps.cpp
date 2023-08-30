@@ -263,8 +263,8 @@ public:
         OutputFile.str(),
         ErrorFile.str(),
     };
-    if (const int RC = llvm::sys::ExecuteAndWait(
-            ClangBinaryPath, PrintResourceDirArgs, {}, Redirects)) {
+    if (llvm::sys::ExecuteAndWait(ClangBinaryPath, PrintResourceDirArgs, {},
+                                  Redirects)) {
       auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
       llvm::errs() << ErrorBuf.get()->getBuffer();
       return "";
