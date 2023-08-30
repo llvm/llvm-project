@@ -1947,7 +1947,7 @@ public:
     Walk(std::get<AccBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenACC();
-    Walk(std::get<std::optional<DoConstruct>>(x.t));
+    Walk(std::get<DoConstruct>(x.t));
   }
   void Unparse(const AccBeginLoopDirective &x) {
     Walk(std::get<AccLoopDirective>(x.t));

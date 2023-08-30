@@ -263,4 +263,9 @@ program openacc_loop_validity
   do i = 1, N
   end do
 
+  !$acc loop
+  do i = 1, N
+  end do
+  !$acc end loop
+
 end program openacc_loop_validity
