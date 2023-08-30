@@ -30,8 +30,7 @@ define i8 @and_not_shl(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SHIFT]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %op1_p2 = icmp ule i8 %x, 5
   call void @llvm.assume(i1 %op1_p2)
@@ -48,8 +47,7 @@ define i8 @and_not_shl_1(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SHIFT]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], 48
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %op1_p2 = icmp ule i8 %x, 4
   call void @llvm.assume(i1 %op1_p2)

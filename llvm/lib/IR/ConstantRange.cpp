@@ -1477,6 +1477,13 @@ ConstantRange::shl(const ConstantRange &Other) const {
   }
 
   APInt OtherMax = Other.getUnsignedMax();
+  if (isAllNegative() && OtherMax.ule(Min.countl_one())) {
+    // For negative numbers, if the shift does not overflow in a signed sense,
+    // a larger shift will make the number smaller.
+    Max <<= Other.getUnsignedMin();
+    Min <<= OtherMax;
+    return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
+  }
 
   // There's overflow!
   if (OtherMax.ugt(Max.countl_zero()))
