@@ -32,7 +32,7 @@ private:
 
   struct UsingDeclContext {
     explicit UsingDeclContext(const UsingDecl *FoundUsingDecl)
-        : FoundUsingDecl(FoundUsingDecl), IsUsed(false) {}
+        : FoundUsingDecl(FoundUsingDecl) {}
     // A set saves all UsingShadowDecls introduced by a UsingDecl. A UsingDecl
     // can introduce multiple UsingShadowDecls in some cases (such as
     // overloaded functions).
@@ -42,7 +42,7 @@ private:
     // The source range of the UsingDecl.
     CharSourceRange UsingDeclRange;
     // Whether the UsingDecl is used.
-    bool IsUsed;
+    bool IsUsed = false;
   };
 
   std::vector<UsingDeclContext> Contexts;

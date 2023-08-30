@@ -101,8 +101,7 @@ public:
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), &*DiagOpts)),
         Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
               DiagPrinter),
-        SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes),
-        TotalFixes(0), AppliedFixes(0), WarningsAsErrors(0) {
+        SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
     DiagOpts->ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
@@ -299,9 +298,9 @@ private:
   llvm::StringMap<Replacements> FileReplacements;
   ClangTidyContext &Context;
   FixBehaviour ApplyFixes;
-  unsigned TotalFixes;
-  unsigned AppliedFixes;
-  unsigned WarningsAsErrors;
+  unsigned TotalFixes = 0U;
+  unsigned AppliedFixes = 0U;
+  unsigned WarningsAsErrors = 0U;
 };
 
 class ClangTidyASTConsumer : public MultiplexConsumer {
