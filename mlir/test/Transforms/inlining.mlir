@@ -227,6 +227,18 @@ func.func @func_with_block_args_location_callee2(%arg0 : i32) {
   return
 }
 
+// CHECK-LABEL: func @func_with_block_args_location_callee3
+func.func @func_with_block_args_location_callee3(%arg0 : i32) {
+  "test.dummy_op"() ({
+    // Call cannot be inlined because "test.dummy" may not support unstructured
+    // control flow in its body.
+    // CHECK: call @func_with_block_args_location
+    call @func_with_block_args_location(%arg0) : (i32) -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
 // Check that we can handle argument and result attributes.
 test.conversion_func_op @handle_attr_callee_fn_multi_arg(%arg0 : i16, %arg1 : i16 {"test.handle_argument"}) -> (i16 {"test.handle_result"}, i16) {
   %0 = arith.addi %arg0, %arg1 : i16
