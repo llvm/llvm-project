@@ -37,18 +37,6 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                 children.append(accessor[idx])
             return children
 
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            return self.GetAddress()
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all child values of a lldb.SBValue object.'''
             return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
