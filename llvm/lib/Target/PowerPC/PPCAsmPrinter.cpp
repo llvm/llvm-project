@@ -826,17 +826,17 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return Expr;
   };
   auto GetVKForMO = [&](const MachineOperand &MO) {
-    // For TLS local-exec accesses on AIX, we have one TOC entry for the symbol
-    // (with the variable offset), which is differentiated by MO_TPREL_FLAG.
+    // For TLS initial-exec and local-exec accesses on AIX, we have one TOC
+    // entry for the symbol (with the variable offset), which is differentiated
+    // by MO_TPREL_FLAG.
     if (MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) {
-      // TODO: Update the query and the comment above to add a check for initial
-      // exec when this TLS model is supported on AIX in the future, as both
-      // local-exec and initial-exec can use MO_TPREL_FLAG.
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
       if (Model == TLSModel::LocalExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
-      llvm_unreachable("Only expecting local-exec accesses!");
+      if (Model == TLSModel::InitialExec)
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
     // the variable offset and the other for the region handle). They are

@@ -356,9 +356,9 @@ namespace llvm {
     /// ADDIS_TLSGD_L_ADDR until after register assignment.
     GET_TLS_ADDR,
 
-    /// %x3 = GET_TPOINTER - Used for the local-exec TLS model on 32-bit AIX,
-    /// produces a call to .__get_tpointer to retrieve the thread pointer
-    /// At the end of the call, the thread pointer is found in R3.
+    /// %x3 = GET_TPOINTER - Used for the local- and initial-exec TLS model on
+    /// 32-bit AIX, produces a call to .__get_tpointer to retrieve the thread
+    /// pointer. At the end of the call, the thread pointer is found in R3.
     GET_TPOINTER,
 
     /// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that

@@ -3251,8 +3251,8 @@ def GETtlsTpointer32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
                           "GETtlsTpointer32AIX",
                           [(set i32:$rD, (PPCgetTpointer))]>;
 
-// The following pattern matches local-exec TLS accesses on 32-bit AIX.
-// PPCaddTls is used in local-exec accesses in order to:
+// The following pattern matches local- and initial-exec TLS accesses on 32-bit AIX.
+// PPCaddTls is used in local- and initial-exec accesses in order to:
 //   - Get the address of a variable (add the variable offset to the thread
 //     pointer, retrieved by calling .__get_tpointer).
 //   - Create an opportunity to optimize the user of the loaded address.
