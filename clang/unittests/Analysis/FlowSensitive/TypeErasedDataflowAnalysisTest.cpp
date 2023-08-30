@@ -153,9 +153,9 @@ TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
 
 // Regression test for joins of bool-typed lvalue expressions. The first loop
 // results in two passes through the code that follows. Each pass results in a
-// different `ReferenceValue` for the pointee of `v`. Then, the second loop
+// different `StorageLocation` for the pointee of `v`. Then, the second loop
 // causes a join at the loop head where the two environments map expresssion
-// `*v` to different `ReferenceValue`s.
+// `*v` to different `StorageLocation`s.
 //
 // An earlier version crashed for this condition (for boolean-typed lvalues), so
 // this test only verifies that the analysis runs successfully, without
