@@ -607,7 +607,7 @@ DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
 Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
   auto owner = llvm::cast<DenseElementsAttr>(getFromOpaquePointer(base));
   Type eltTy = owner.getElementType();
-  if (auto intEltTy = llvm::dyn_cast<IntegerType>(eltTy))
+  if (llvm::dyn_cast<IntegerType>(eltTy))
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   if (llvm::isa<IndexType>(eltTy))
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));

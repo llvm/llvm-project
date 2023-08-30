@@ -309,8 +309,7 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
-      if (std::optional<Attribute> inherentAttr =
-              getInherentAttr(attr.getName()))
+      if (getInherentAttr(attr.getName()))
         setInherentAttr(attr.getName(), attr.getValue());
       else
         discardableAttrs.push_back(attr);
@@ -327,8 +326,7 @@ void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
-      if (std::optional<Attribute> inherentAttr =
-              getInherentAttr(attr.getName()))
+      if (getInherentAttr(attr.getName()))
         setInherentAttr(attr.getName(), attr.getValue());
       else
         discardableAttrs.push_back(attr);
