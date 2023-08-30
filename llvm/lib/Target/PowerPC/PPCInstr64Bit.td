@@ -1958,8 +1958,8 @@ def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
 def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
           (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
 
-// The following pattern matches 64-bit local-exec TLS accesses on AIX.
-// PPCaddTls is used in local-exec accesses in order to:
+// The following pattern matches 64-bit local- and initial-exec TLS accesses on AIX.
+// PPCaddTls is used in local- and initial-exec accesses in order to:
 //   - Get the address of a variable (adding the variable offset to the thread
 //     pointer in r13).
 //   - Create an opportunity to optimize the user of the loaded address.
