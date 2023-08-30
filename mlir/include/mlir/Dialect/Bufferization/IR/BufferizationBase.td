@@ -72,6 +72,7 @@ def Bufferization_Dialect : Dialect {
         kEscapeAttrName = "bufferization.escape";
   }];
   let hasOperationAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
 }
 
 #endif // BUFFERIZATION_BASE
