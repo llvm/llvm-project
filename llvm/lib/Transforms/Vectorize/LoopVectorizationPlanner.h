@@ -116,12 +116,6 @@ public:
     InsertPt = IP;
   }
 
-  /// Insert and return the specified instruction.
-  VPInstruction *insert(VPInstruction *I) const {
-    BB->insert(I, InsertPt);
-    return I;
-  }
-
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
