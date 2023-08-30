@@ -1052,11 +1052,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
-  VPInstruction *clone() const {
-    SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands, DL, Name);
-  }
-
   unsigned getOpcode() const { return Opcode; }
 
   /// Generate the instruction.
