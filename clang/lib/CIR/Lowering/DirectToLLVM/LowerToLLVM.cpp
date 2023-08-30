@@ -1278,8 +1278,9 @@ public:
 
     // Check for missing funcionalities.
     if (!init.has_value()) {
-      op.emitError() << "uninitialized globals are not yet supported.";
-      return mlir::failure();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(op, llvmType, isConst,
+                                                        linkage, symbol, mlir::Attribute());
+      return mlir::success();
     }
 
     // Initializer is a constant array: convert it to a compatible llvm init.
