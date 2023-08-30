@@ -945,15 +945,15 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vmv.v.i v12, 7
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a3, a2, 4
-; RV64-NEXT:    add a2, a3, a2
-; RV64-NEXT:    add a2, sp, a2
-; RV64-NEXT:    addi a2, a2, 16
-; RV64-NEXT:    vs4r.v v12, (a2) # Unknown-size Folded Spill
-; RV64-NEXT:    vmv.s.x v16, a1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a2, a1, 4
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 16
+; RV64-NEXT:    vs4r.v v12, (a1) # Unknown-size Folded Spill
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.i v16, 1
 ; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add a1, sp, a1

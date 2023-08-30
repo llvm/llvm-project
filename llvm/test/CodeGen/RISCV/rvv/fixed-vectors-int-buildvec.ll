@@ -696,18 +696,18 @@ define void @buildvec_vid_step1o2_add3_v4i16(ptr %z0, ptr %z1, ptr %z2, ptr %z3,
 ; CHECK-NEXT:    vsrl.vi v8, v8, 1
 ; CHECK-NEXT:    vadd.vi v8, v8, 3
 ; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    vse16.v v8, (a4)
-; CHECK-NEXT:    vmv.v.i v8, 3
-; CHECK-NEXT:    vmv.v.i v9, 4
+; CHECK-NEXT:    vmv.v.i v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vse16.v v9, (a5)
+; CHECK-NEXT:    vse16.v v8, (a5)
 ; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v9, a0
 ; CHECK-NEXT:    vse16.v v8, (a6)
 ; CHECK-NEXT:    ret
   store <4 x i16> <i16 3, i16 3, i16 4, i16 4>, ptr %z0
