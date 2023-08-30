@@ -35,7 +35,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept 
+void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
     void *__ex = __cxa_allocate_exception(size);
     (void)__cxa_init_primary_exception(__ex, tinfo, dest);
