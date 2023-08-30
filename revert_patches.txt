@@ -45,3 +45,5 @@ Revert "Revert "[Fuzzer] SetThreadName implementation for Windows" "
 Revert "[X86][BF16] Lower FP_EXTEND for vector types under AVX512BF16"
 
 Revert "[X86][BF16] Lower FP_ROUND for vector types under AVX512BF16 "
+
+Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
