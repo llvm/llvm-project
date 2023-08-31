@@ -129,7 +129,8 @@ public:
     return *PreprocessorOpts;
   }
 
-  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
+  AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
+  const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
 };
 
 /// The base class of CompilerInvocation with value semantics.
