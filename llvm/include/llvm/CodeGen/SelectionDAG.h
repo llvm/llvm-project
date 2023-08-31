@@ -731,6 +731,7 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
+  SDValue getJumpTableDebugInfo(int JTI, SDValue Chain, const SDLoc &DL);
   SDValue getConstantPool(const Constant *C, EVT VT,
                           MaybeAlign Align = std::nullopt, int Offs = 0,
                           bool isT = false, unsigned TargetFlags = 0);
