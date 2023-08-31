@@ -337,13 +337,7 @@
 /llvm/**/Frontend/OpenACC/ @llvm/pr-subscribers-openacc
 /llvm/unittests/Frontend/OpenACCTest.cpp @llvm/pr-subscribers-openacc
 /mlir/test/Target/LLVMIR/openacc-llvm.mlir @llvm/pr-subscribers-openacc
-/mlir/test/Dialect/OpenACC @llvm/pr-subscribers-openacc
-/mlir/**/Dialect/OpenACC/ @llvm/pr-subscribers-openacc
-/mlir/**/Conversion/OpenACCToSCF/ @llvm/pr-subscribers-openacc
-/mlir/lib/Target/LLVMIR/Dialect/OpenACC/ @llvm/pr-subscribers-openacc
-/mlir/lib/Conversion/OpenACCToSCF @llvm/pr-subscribers-openacc
-/mlir/lib/Conversion/OpenACCToSCF/OpenACCToSCF.cpp @llvm/pr-subscribers-openacc
-/mlir/lib/Dialect/OpenACC/ @llvm/pr-subscribers-openacc
+/mlir/**/*OpenACC @llvm/pr-subscribers-openacc
 
 # arm
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
