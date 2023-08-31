@@ -605,21 +605,6 @@ void *_mlir_ciface_createCheckedSparseTensorReader(
   return static_cast<void *>(reader);
 }
 
-// FIXME: update `SparseTensorCodegenPass` to use
-// `_mlir_ciface_getSparseTensorReaderDimSizes` instead.
-void _mlir_ciface_copySparseTensorReaderDimSizes(
-    void *p, StridedMemRefType<index_type, 1> *dimSizesRef) {
-  assert(p);
-  SparseTensorReader &reader = *static_cast<SparseTensorReader *>(p);
-  ASSERT_NO_STRIDE(dimSizesRef);
-  const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
-  ASSERT_USIZE_EQ(dimSizesRef, reader.getRank());
-  index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
-  const index_type *fileSizes = reader.getDimSizes();
-  for (uint64_t d = 0; d < dimRank; ++d)
-    dimSizes[d] = fileSizes[d];
-}
-
 void _mlir_ciface_getSparseTensorReaderDimSizes(
     StridedMemRefType<index_type, 1> *out, void *p) {
   assert(out && p);
@@ -643,10 +628,8 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
-// FIXME: This function name is weird; should rename to
-// "sparseTensorReaderReadToBuffers".
 #define IMPL_GETNEXT(VNAME, V, CNAME, C)                                       \
-  bool _mlir_ciface_getSparseTensorReaderRead##CNAME##VNAME(                   \
+  bool _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(          \
       void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,                   \
       StridedMemRefType<C, 1> *cref, StridedMemRefType<V, 1> *vref) {          \
     assert(p);                                                                 \
@@ -694,9 +677,6 @@ void *_mlir_ciface_newSparseTensorFromReader(
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
-  //
-  // FIXME(wrengr): Really need to define a separate x-macro for handling
-  // all this. (Or ideally some better, entirely-different approach)
 #define CASE(p, c, v, P, C, V)                                                 \
   if (posTp == OverheadType::p && crdTp == OverheadType::c &&                  \
       valTp == PrimaryType::v)                                                 \
@@ -906,15 +886,6 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
 #undef IMPL_CONVERTFROMMLIRSPARSETENSOR
-
-// FIXME: update `SparseTensorCodegenPass` to use
-// `_mlir_ciface_createCheckedSparseTensorReader` instead.
-void *createSparseTensorReader(char *filename) {
-  SparseTensorReader *reader = new SparseTensorReader(filename);
-  reader->openFile();
-  reader->readHeader();
-  return static_cast<void *>(reader);
-}
 
 index_type getSparseTensorReaderRank(void *p) {
   return static_cast<SparseTensorReader *>(p)->getRank();
