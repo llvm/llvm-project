@@ -52,17 +52,23 @@
 using namespace llvm;
 using namespace llvm::gi;
 
-#define DEBUG_TYPE "gicombiner-matchtable-emitter"
+#define DEBUG_TYPE "gicombiner-emitter"
 
-extern cl::list<std::string> SelectedCombiners;
-extern cl::opt<bool> StopAfterParse;
-extern cl::OptionCategory GICombinerEmitterCat;
-
-static cl::opt<bool> DebugCXXPreds(
-    "gicombiner-matchtable-debug-cxxpreds",
+namespace {
+cl::OptionCategory
+    GICombinerEmitterCat("Options for -gen-global-isel-combiner");
+cl::opt<bool> StopAfterParse(
+    "gicombiner-stop-after-parse",
+    cl::desc("Stop processing after parsing rules and dump state"),
+    cl::cat(GICombinerEmitterCat));
+cl::list<std::string>
+    SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
+                      cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
+cl::opt<bool> DebugCXXPreds(
+    "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
-namespace {
+
 constexpr StringLiteral CXXApplyPrefix = "GICXXCustomAction_CombineApply";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
 constexpr StringLiteral PatFragClassName = "GICombinePatFrag";
@@ -3488,6 +3494,5 @@ static void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS) {
   }
 }
 
-static TableGen::Emitter::Opt X("gen-global-isel-combiner-matchtable",
-                                EmitGICombiner,
-                                "Generate GlobalISel combiner Match Table");
+static TableGen::Emitter::Opt X("gen-global-isel-combiner", EmitGICombiner,
+                                "Generate GlobalISel Combiner");
