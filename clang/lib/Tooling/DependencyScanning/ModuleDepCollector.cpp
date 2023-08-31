@@ -98,7 +98,7 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
   CI.getCodeGenOpts().DwarfDebugFlags.clear();
-  if (!CI.getLangOpts()->ModulesCodegen) {
+  if (!CI.getLangOpts().ModulesCodegen) {
     CI.getCodeGenOpts().DebugCompilationDir.clear();
     CI.getCodeGenOpts().CoverageCompilationDir.clear();
     CI.getCodeGenOpts().CoverageDataFile.clear();
@@ -117,7 +117,7 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
   CI.getFrontendOpts().ObjCMTAction = FrontendOptions::ObjCMT_None;
   CI.getFrontendOpts().MTMigrateDir.clear();
-  CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
+  CI.getLangOpts().ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
   // Inputs

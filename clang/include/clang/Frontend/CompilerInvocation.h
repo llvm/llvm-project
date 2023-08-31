@@ -101,8 +101,8 @@ public:
   CompilerInvocationRefBase &operator=(CompilerInvocationRefBase &&X);
   ~CompilerInvocationRefBase();
 
-  LangOptions *getLangOpts() { return LangOpts.get(); }
-  const LangOptions *getLangOpts() const { return LangOpts.get(); }
+  LangOptions &getLangOpts() { return *LangOpts; }
+  const LangOptions &getLangOpts() const { return *LangOpts; }
 
   TargetOptions &getTargetOpts() { return *TargetOpts.get(); }
   const TargetOptions &getTargetOpts() const { return *TargetOpts.get(); }

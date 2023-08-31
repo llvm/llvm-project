@@ -88,7 +88,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   // introduced by the patch is parsed and nothing else.
   // We don't run PP directly over the patch cotents to test production
   // behaviour.
-  auto Bounds = Lexer::ComputePreamble(ModifiedContents, *CI->getLangOpts());
+  auto Bounds = Lexer::ComputePreamble(ModifiedContents, CI->getLangOpts());
   auto Clang =
       prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
                               llvm::MemoryBuffer::getMemBufferCopy(
@@ -588,7 +588,7 @@ TEST(PreamblePatch, ModifiedBounds) {
     ASSERT_TRUE(CI);
 
     const auto ExpectedBounds =
-        Lexer::ComputePreamble(Case.Modified, *CI->getLangOpts());
+        Lexer::ComputePreamble(Case.Modified, CI->getLangOpts());
     EXPECT_EQ(PP.modifiedBounds().Size, ExpectedBounds.Size);
     EXPECT_EQ(PP.modifiedBounds().PreambleEndsAtStartOfLine,
               ExpectedBounds.PreambleEndsAtStartOfLine);
