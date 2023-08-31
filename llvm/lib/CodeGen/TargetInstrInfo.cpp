@@ -1610,7 +1610,7 @@ std::string TargetInstrInfo::createMIROperandComment(
   assert(Op.isImm() && "Expected flag operand to be an immediate");
   // Pretty print the inline asm operand descriptor.
   unsigned Flag = Op.getImm();
-  unsigned Kind = InlineAsm::getKind(Flag);
+  InlineAsm::Kind Kind = InlineAsm::getKind(Flag);
   OS << InlineAsm::getKindName(Kind);
 
   unsigned RCID = 0;
