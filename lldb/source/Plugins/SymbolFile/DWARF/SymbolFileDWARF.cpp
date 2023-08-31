@@ -115,8 +115,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(SymbolFileDWARF::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return SymbolFileDWARF::GetPluginNameStatic();
   }
 
   PluginProperties() {
