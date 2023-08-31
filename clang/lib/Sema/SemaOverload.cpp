@@ -6697,17 +6697,19 @@ void Sema::AddOverloadCandidate(
   }
 
   // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      // Skip the check for callers that are implicit members, because in this
-      // case we may not yet know what the member's target is; the target is
-      // inferred for the member automatically, based on the bases and fields of
-      // the class.
-      if (!Caller->isImplicit() && !IsAllowedCUDACall(Caller, Function)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+  if (getLangOpts().CUDA) {
+    const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    // Skip the check for callers that are implicit members, because in this
+    // case we may not yet know what the member's target is; the target is
+    // inferred for the member automatically, based on the bases and fields of
+    // the class.
+    if (!(Caller && Caller->isImplicit()) &&
+        !IsAllowedCUDACall(Caller, Function)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
+  }
 
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -7219,12 +7221,11 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      if (!IsAllowedCUDACall(Caller, Method)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+    if (!IsAllowedCUDACall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -12495,10 +12496,12 @@ private:
       return false;
 
     if (FunctionDecl *FunDecl = dyn_cast<FunctionDecl>(Fn)) {
-      if (S.getLangOpts().CUDA)
-        if (FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true))
-          if (!Caller->isImplicit() && !S.IsAllowedCUDACall(Caller, FunDecl))
-            return false;
+      if (S.getLangOpts().CUDA) {
+        FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
+        if (!(Caller && Caller->isImplicit()) &&
+            !S.IsAllowedCUDACall(Caller, FunDecl))
+          return false;
+      }
       if (FunDecl->isMultiVersion()) {
         const auto *TA = FunDecl->getAttr<TargetAttr>();
         if (TA && !TA->isDefaultVersion())
