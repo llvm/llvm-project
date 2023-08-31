@@ -358,6 +358,65 @@ mlir::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   return mlir::success();
 }
 
+/// Expand hlfir.assign of a scalar RHS to array LHS into a loop nest
+/// of element-by-element assignments:
+///   hlfir.assign %cst to %0 : f32, !fir.ref<!fir.array<6x6xf32>>
+/// into:
+///   fir.do_loop %arg0 = %c1 to %c6 step %c1 unordered {
+///     fir.do_loop %arg1 = %c1 to %c6 step %c1 unordered {
+///       %1 = hlfir.designate %0 (%arg1, %arg0)  :
+///       (!fir.ref<!fir.array<6x6xf32>>, index, index) -> !fir.ref<f32>
+///       hlfir.assign %cst to %1 : f32, !fir.ref<f32>
+///     }
+///   }
+class BroadcastAssignBufferization
+    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+private:
+public:
+  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::AssignOp assign,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
+    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
+  if (assign.isAllocatableAssignment())
+    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
+
+  mlir::Value rhs = assign.getRhs();
+  if (!fir::isa_trivial(rhs.getType()))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's RHS is not a trivial scalar");
+
+  hlfir::Entity lhs{assign.getLhs()};
+  if (!lhs.isArray())
+    return rewriter.notifyMatchFailure(assign,
+                                       "AssignOp's LHS is not an array");
+
+  mlir::Type eleTy = lhs.getFortranElementType();
+  if (!fir::isa_trivial(eleTy))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's LHS data type is not trivial");
+
+  mlir::Location loc = assign->getLoc();
+  fir::FirOpBuilder builder(rewriter, assign.getOperation());
+  builder.setInsertionPoint(assign);
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, shape);
+  hlfir::LoopNest loopNest =
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+  auto arrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+  builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+  rewriter.eraseOp(assign);
+  return mlir::success();
+}
+
 class OptimizedBufferizationPass
     : public hlfir::impl::OptimizedBufferizationBase<
           OptimizedBufferizationPass> {
@@ -371,7 +430,14 @@ public:
     config.enableRegionSimplification = false;
 
     mlir::RewritePatternSet patterns(context);
+    // TODO: right now the patterns are non-conflicting,
+    // but it might be better to run this pass on hlfir.assign
+    // operations and decide which transformation to apply
+    // at one place (e.g. we may use some heuristics and
+    // choose different optimization strategies).
+    // This requires small code reordering in ElementalAssignBufferization.
     patterns.insert<ElementalAssignBufferization>(context);
+    patterns.insert<BroadcastAssignBufferization>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             func, std::move(patterns), config))) {
