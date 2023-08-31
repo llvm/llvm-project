@@ -30,43 +30,27 @@
 #endif
 
 #ifdef __need___va_list
-#ifndef __GNUC_VA_LIST
-#define __GNUC_VA_LIST
-typedef __builtin_va_list __gnuc_va_list;
-#endif
+#include <__stdarg___gnuc_va_list.h>
 #undef __need___va_list
 #endif /* defined(__need___va_list) */
 
 #ifdef __need_va_list
-#ifndef _VA_LIST
-typedef __builtin_va_list va_list;
-#define _VA_LIST
-#endif
+#include <__stdarg_va_list.h>
 #undef __need_va_list
 #endif /* defined(__need_va_list) */
 
 #ifdef __need_va_arg
-/* FIXME: This is using the placeholder dates Clang produces for these macros
-   in C2x mode; switch to the correct values once they've been published. */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
-/* C2x does not require the second parameter for va_start. */
-#define va_start(ap, ...) __builtin_va_start(ap, 0)
-#else
-/* Versions before C2x do require the second parameter. */
-#define va_start(ap, param) __builtin_va_start(ap, param)
-#endif
-#define va_end(ap)          __builtin_va_end(ap)
-#define va_arg(ap, type)    __builtin_va_arg(ap, type)
+#include <__stdarg_va_arg.h>
 #undef __need_va_arg
 #endif /* defined(__need_va_arg) */
 
 #ifdef __need___va_copy
-#define __va_copy(d,s) __builtin_va_copy(d,s)
+#include <__stdarg___va_copy.h>
 #undef __need___va_copy
 #endif /* defined(__need___va_copy) */
 
 #ifdef __need_va_copy
-#define va_copy(dest, src)  __builtin_va_copy(dest, src)
+#include <__stdarg_va_copy.h>
 #undef __need_va_copy
 #endif /* defined(__need_va_copy) */
 
