@@ -346,3 +346,349 @@ define i1 @cmpxchg_i64_acquire_acquire_reti1(ptr %ptr, i64 %cmp, i64 %val) nounw
   %res = extractvalue { i64, i1 } %tmp, 1
   ret i1 %res
 }
+
+define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
+; LA64-LABEL: cmpxchg_i8_monotonic_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    andi $a1, $a1, 255
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
+; LA64-NEXT:    andi $a2, $a2, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a3
+; LA64-NEXT:    ori $a4, $zero, 255
+; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    addi.w $a3, $a3, 0
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a4, $a0, 0
+; LA64-NEXT:    and $a5, $a4, $a3
+; LA64-NEXT:    bne $a5, $a1, .LBB12_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB12_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a5, $a4, $a3
+; LA64-NEXT:    or $a5, $a5, $a2
+; LA64-NEXT:    sc.w $a5, $a0, 0
+; LA64-NEXT:    beqz $a5, .LBB12_1
+; LA64-NEXT:    b .LBB12_4
+; LA64-NEXT:  .LBB12_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB12_4:
+; LA64-NEXT:    ret
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
+  ret void
+}
+
+define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
+; LA64-LABEL: cmpxchg_i16_monotonic_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
+; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
+; LA64-NEXT:    lu12i.w $a4, 15
+; LA64-NEXT:    ori $a4, $a4, 4095
+; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    addi.w $a3, $a3, 0
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a4, $a0, 0
+; LA64-NEXT:    and $a5, $a4, $a3
+; LA64-NEXT:    bne $a5, $a1, .LBB13_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB13_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a5, $a4, $a3
+; LA64-NEXT:    or $a5, $a5, $a2
+; LA64-NEXT:    sc.w $a5, $a0, 0
+; LA64-NEXT:    beqz $a5, .LBB13_1
+; LA64-NEXT:    b .LBB13_4
+; LA64-NEXT:  .LBB13_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB13_4:
+; LA64-NEXT:    ret
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
+  ret void
+}
+
+define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
+; LA64-LABEL: cmpxchg_i32_monotonic_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB14_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB14_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.w $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB14_1
+; LA64-NEXT:    b .LBB14_4
+; LA64-NEXT:  .LBB14_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB14_4:
+; LA64-NEXT:    ret
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
+  ret void
+}
+
+define void @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
+; LA64-LABEL: cmpxchg_i64_monotonic_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.d $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB15_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB15_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.d $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB15_1
+; LA64-NEXT:    b .LBB15_4
+; LA64-NEXT:  .LBB15_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB15_4:
+; LA64-NEXT:    ret
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
+  ret void
+}
+
+define i8 @cmpxchg_i8_monotonic_monotonic_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind {
+; LA64-LABEL: cmpxchg_i8_monotonic_monotonic_reti8:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    ori $a4, $zero, 255
+; LA64-NEXT:    sll.w $a4, $a4, $a3
+; LA64-NEXT:    andi $a2, $a2, 255
+; LA64-NEXT:    addi.w $a4, $a4, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a3
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    andi $a1, $a1, 255
+; LA64-NEXT:    sll.w $a1, $a1, $a3
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a4
+; LA64-NEXT:    bne $a6, $a1, .LBB16_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB16_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a6, $a5, $a4
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
+; LA64-NEXT:    beqz $a6, .LBB16_1
+; LA64-NEXT:    b .LBB16_4
+; LA64-NEXT:  .LBB16_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB16_4:
+; LA64-NEXT:    srl.w $a0, $a5, $a3
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
+  %res = extractvalue { i8, i1 } %tmp, 0
+  ret i8 %res
+}
+
+define i16 @cmpxchg_i16_monotonic_monotonic_reti16(ptr %ptr, i16 %cmp, i16 %val) nounwind {
+; LA64-LABEL: cmpxchg_i16_monotonic_monotonic_reti16:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
+; LA64-NEXT:    slli.d $a4, $a0, 3
+; LA64-NEXT:    sll.w $a3, $a3, $a4
+; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
+; LA64-NEXT:    addi.w $a3, $a3, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a4
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
+; LA64-NEXT:    sll.w $a1, $a1, $a4
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a3
+; LA64-NEXT:    bne $a6, $a1, .LBB17_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB17_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a6, $a5, $a3
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
+; LA64-NEXT:    beqz $a6, .LBB17_1
+; LA64-NEXT:    b .LBB17_4
+; LA64-NEXT:  .LBB17_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB17_4:
+; LA64-NEXT:    srl.w $a0, $a5, $a4
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
+  %res = extractvalue { i16, i1 } %tmp, 0
+  ret i16 %res
+}
+
+define i32 @cmpxchg_i32_monotonic_monotonic_reti32(ptr %ptr, i32 %cmp, i32 %val) nounwind {
+; LA64-LABEL: cmpxchg_i32_monotonic_monotonic_reti32:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB18_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB18_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.w $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB18_1
+; LA64-NEXT:    b .LBB18_4
+; LA64-NEXT:  .LBB18_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB18_4:
+; LA64-NEXT:    move $a0, $a3
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
+  %res = extractvalue { i32, i1 } %tmp, 0
+  ret i32 %res
+}
+
+define i64 @cmpxchg_i64_monotonic_monotonic_reti64(ptr %ptr, i64 %cmp, i64 %val) nounwind {
+; LA64-LABEL: cmpxchg_i64_monotonic_monotonic_reti64:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.d $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB19_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB19_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.d $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB19_1
+; LA64-NEXT:    b .LBB19_4
+; LA64-NEXT:  .LBB19_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB19_4:
+; LA64-NEXT:    move $a0, $a3
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
+  %res = extractvalue { i64, i1 } %tmp, 0
+  ret i64 %res
+}
+
+define i1 @cmpxchg_i8_monotonic_monotonic_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind {
+; LA64-LABEL: cmpxchg_i8_monotonic_monotonic_reti1:
+; LA64:       # %bb.0:
+; LA64-NEXT:    andi $a1, $a1, 255
+; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    ori $a4, $zero, 255
+; LA64-NEXT:    sll.w $a4, $a4, $a3
+; LA64-NEXT:    sll.w $a1, $a1, $a3
+; LA64-NEXT:    andi $a2, $a2, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a3
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    addi.w $a3, $a4, 0
+; LA64-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a3
+; LA64-NEXT:    bne $a6, $a1, .LBB20_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB20_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a6, $a5, $a3
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
+; LA64-NEXT:    beqz $a6, .LBB20_1
+; LA64-NEXT:    b .LBB20_4
+; LA64-NEXT:  .LBB20_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB20_4:
+; LA64-NEXT:    and $a0, $a5, $a4
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    xor $a0, $a1, $a0
+; LA64-NEXT:    sltui $a0, $a0, 1
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
+  %res = extractvalue { i8, i1 } %tmp, 1
+  ret i1 %res
+}
+
+define i1 @cmpxchg_i16_monotonic_monotonic_reti1(ptr %ptr, i16 %cmp, i16 %val) nounwind {
+; LA64-LABEL: cmpxchg_i16_monotonic_monotonic_reti1:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
+; LA64-NEXT:    slli.d $a4, $a0, 3
+; LA64-NEXT:    sll.w $a3, $a3, $a4
+; LA64-NEXT:    sll.w $a1, $a1, $a4
+; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
+; LA64-NEXT:    sll.w $a2, $a2, $a4
+; LA64-NEXT:    addi.w $a2, $a2, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    addi.w $a4, $a3, 0
+; LA64-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a5, $a0, 0
+; LA64-NEXT:    and $a6, $a5, $a4
+; LA64-NEXT:    bne $a6, $a1, .LBB21_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB21_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    andn $a6, $a5, $a4
+; LA64-NEXT:    or $a6, $a6, $a2
+; LA64-NEXT:    sc.w $a6, $a0, 0
+; LA64-NEXT:    beqz $a6, .LBB21_1
+; LA64-NEXT:    b .LBB21_4
+; LA64-NEXT:  .LBB21_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB21_4:
+; LA64-NEXT:    and $a0, $a5, $a3
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    xor $a0, $a1, $a0
+; LA64-NEXT:    sltui $a0, $a0, 1
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
+  %res = extractvalue { i16, i1 } %tmp, 1
+  ret i1 %res
+}
+
+define i1 @cmpxchg_i32_monotonic_monotonic_reti1(ptr %ptr, i32 %cmp, i32 %val) nounwind {
+; LA64-LABEL: cmpxchg_i32_monotonic_monotonic_reti1:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.w $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB22_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB22_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.w $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB22_1
+; LA64-NEXT:    b .LBB22_4
+; LA64-NEXT:  .LBB22_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB22_4:
+; LA64-NEXT:    addi.w $a0, $a1, 0
+; LA64-NEXT:    xor $a0, $a3, $a0
+; LA64-NEXT:    sltui $a0, $a0, 1
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
+  %res = extractvalue { i32, i1 } %tmp, 1
+  ret i1 %res
+}
+
+define i1 @cmpxchg_i64_monotonic_monotonic_reti1(ptr %ptr, i64 %cmp, i64 %val) nounwind {
+; LA64-LABEL: cmpxchg_i64_monotonic_monotonic_reti1:
+; LA64:       # %bb.0:
+; LA64-NEXT:  .LBB23_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    ll.d $a3, $a0, 0
+; LA64-NEXT:    bne $a3, $a1, .LBB23_3
+; LA64-NEXT:  # %bb.2: # in Loop: Header=BB23_1 Depth=1
+; LA64-NEXT:    dbar 0
+; LA64-NEXT:    move $a4, $a2
+; LA64-NEXT:    sc.d $a4, $a0, 0
+; LA64-NEXT:    beqz $a4, .LBB23_1
+; LA64-NEXT:    b .LBB23_4
+; LA64-NEXT:  .LBB23_3:
+; LA64-NEXT:    dbar 1792
+; LA64-NEXT:  .LBB23_4:
+; LA64-NEXT:    xor $a0, $a3, $a1
+; LA64-NEXT:    sltui $a0, $a0, 1
+; LA64-NEXT:    ret
+  %tmp = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
+  %res = extractvalue { i64, i1 } %tmp, 1
+  ret i1 %res
+}
