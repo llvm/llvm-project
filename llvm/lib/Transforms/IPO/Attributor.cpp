@@ -175,6 +175,10 @@ static cl::opt<bool> SimplifyAllLoads("attributor-simplify-all-loads",
                                       cl::desc("Try to simplify all loads."),
                                       cl::init(true));
 
+static cl::opt<bool> CloseWorldAssumption(
+    "attributor-assume-closed-world", cl::Hidden,
+    cl::desc("Should a closed world be assumed, or not. Default if not set."));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -1055,6 +1059,21 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
                     << "\n");
 
   return HasChanged;
+}
+
+Attributor::Attributor(SetVector<Function *> &Functions,
+                       InformationCache &InfoCache,
+                       AttributorConfig Configuration)
+    : Allocator(InfoCache.Allocator), Functions(Functions),
+      InfoCache(InfoCache), Configuration(Configuration) {
+  if (!isClosedWorldModule())
+    return;
+  for (Function *Fn : Functions)
+    if (Fn->hasAddressTaken(/*PutOffender=*/nullptr,
+                            /*IgnoreCallbackUses=*/false,
+                            /*IgnoreAssumeLikeCalls=*/true,
+                            /*IgnoreLLVMUsed=*/true))
+      InfoCache.IndirectlyCallableFunctions.push_back(Fn);
 }
 
 bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
@@ -3251,6 +3270,12 @@ InformationCache::FunctionInfo::~FunctionInfo() {
     It.getSecond()->~InstructionVectorTy();
 }
 
+const ArrayRef<Function *>
+InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
+  assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
+  return IndirectlyCallableFunctions;
+}
+
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {
@@ -3584,6 +3609,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       UsedAssumedInformation);
   (void)Success;
   assert(Success && "Expected the check call to be successful!");
+}
+
+bool Attributor::isClosedWorldModule() const {
+  if (CloseWorldAssumption.getNumOccurrences())
+    return CloseWorldAssumption;
+  return isModulePass() && Configuration.IsClosedWorldModule;
 }
 
 /// Helpers to ease debugging through output streams and print calls.
