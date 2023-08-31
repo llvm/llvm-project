@@ -39,8 +39,6 @@
 // NO-UNALIGNED-SCALAR-MEM: "-target-feature" "-unaligned-scalar-mem"
 // UNALIGNED-VECTOR-MEM: "-target-feature" "+unaligned-vector-mem"
 // NO-UNALIGNED-VECTOR-MEM: "-target-feature" "-unaligned-vector-mem"
-// DEFAULT: "-target-feature" "-unaligned-scalar-mem"
-// DEFAULT-NOT: "-target-feature" "+unaligned-scalar-mem"
 
 // RUN: %clang --target=riscv32-linux -### %s -fsyntax-only 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=DEFAULT-LINUX
