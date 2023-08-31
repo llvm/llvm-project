@@ -57,6 +57,90 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "PPCGenRegisterInfo.inc"
 
+/// stripRegisterPrefix - This method strips the character prefix from a
+/// register name so that only the number is left.  Used by for linux asm.
+const char *PPC::stripRegisterPrefix(const char *RegName) {
+  switch (RegName[0]) {
+    case 'a':
+      if (RegName[1] == 'c' && RegName[2] == 'c')
+	return RegName + 3;
+      break;
+    case 'f':
+      if (RegName[1] == 'p')
+	return RegName + 2;
+      [[fallthrough]];
+    case 'r':
+    case 'v':
+      if (RegName[1] == 's') {
+	if (RegName[2] == 'p')
+	  return RegName + 3;
+	return RegName + 2;
+      }
+      return RegName + 1;
+    case 'c':
+      if (RegName[1] == 'r')
+	return RegName + 2;
+      break;
+    case 'w':
+      // For wacc and wacc_hi
+      if (RegName[1] == 'a' && RegName[2] == 'c' && RegName[3] == 'c') {
+	if (RegName[4] == '_')
+	  return RegName + 7;
+	else
+	  return RegName + 4;
+      }
+      break;
+    case 'd':
+      // For dmr, dmrp, dmrrow, dmrrowp
+      if (RegName[1] == 'm' && RegName[2] == 'r') {
+	if (RegName[3] == 'r' && RegName[4] == 'o' && RegName[5] == 'w' &&
+	    RegName[6] == 'p')
+	  return RegName + 7;
+	else if (RegName[3] == 'r' && RegName[4] == 'o' && RegName[5] == 'w')
+	  return RegName + 6;
+	else if (RegName[3] == 'p')
+	  return RegName + 4;
+	else
+	  return RegName + 3;
+      }
+      break;
+  }
+
+  return RegName;
+}
+
+/// getRegNumForOperand - some operands use different numbering schemes
+/// for the same registers. For example, a VSX instruction may have any of
+/// vs0-vs63 allocated whereas an Altivec instruction could only have
+/// vs32-vs63 allocated (numbered as v0-v31). This function returns the actual
+/// register number needed for the opcode/operand number combination.
+/// The operand number argument will be useful when we need to extend this
+/// to instructions that use both Altivec and VSX numbering (for different
+/// operands).
+unsigned PPC::getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
+                                  unsigned OpNo) {
+  int16_t regClass = Desc.operands()[OpNo].RegClass;
+  switch (regClass) {
+    // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
+    // VSX32-VSX63 during encoding/disassembling
+    case PPC::VSSRCRegClassID:
+    case PPC::VSFRCRegClassID:
+      if (PPC::isVFRegister(Reg))
+	return PPC::VSX32 + (Reg - PPC::VF0);
+      break;
+    // We store VSL0-VSL31, V0-V31 in MCOperand and it should be VSL0-VSL31,
+    // VSX32-VSX63 during encoding/disassembling
+    case PPC::VSRCRegClassID:
+      if (PPC::isVRRegister(Reg))
+	return PPC::VSX32 + (Reg - PPC::V0);
+      break;
+    // Other RegClass doesn't need mapping
+    default:
+      break;
+  }
+  return Reg;
+}
+
 PPCTargetStreamer::PPCTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
 // Pin the vtable to this file.
