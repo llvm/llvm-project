@@ -50,7 +50,6 @@ private:
 
   unsigned XLen = 32;
   unsigned ZvlLen = 0;
-  MVT XLenVT = MVT::i32;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
@@ -127,8 +126,14 @@ public:
     return hasStdExtZfhOrZfhmin() || HasStdExtZfbfmin;
   }
   bool is64Bit() const { return IsRV64; }
-  MVT getXLenVT() const { return XLenVT; }
-  unsigned getXLen() const { return XLen; }
+  MVT getXLenVT() const {
+    return MVT::getIntegerVT(getXLen());
+  }
+  unsigned getXLen() const {
+    assert((XLen == 32 || XLen == 64) &&
+           "unexpected xlen");
+    return XLen;
+  }
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
