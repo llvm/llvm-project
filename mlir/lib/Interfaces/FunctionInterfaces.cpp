@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 
 using namespace mlir;
 
@@ -14,7 +14,7 @@ using namespace mlir;
 // Tablegen Interface Definitions
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/FunctionOpInterfaces.cpp.inc"
+#include "mlir/Interfaces/FunctionInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Function Arguments and Results.
@@ -315,36 +315,6 @@ void function_interface_impl::eraseFunctionResults(
 
   // Update the function type.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-}
-
-TypeRange function_interface_impl::insertTypesInto(
-    TypeRange oldTypes, ArrayRef<unsigned> indices, TypeRange newTypes,
-    SmallVectorImpl<Type> &storage) {
-  assert(indices.size() == newTypes.size() &&
-         "mismatch between indice and type count");
-  if (indices.empty())
-    return oldTypes;
-
-  auto fromIt = oldTypes.begin();
-  for (auto it : llvm::zip(indices, newTypes)) {
-    const auto toIt = oldTypes.begin() + std::get<0>(it);
-    storage.append(fromIt, toIt);
-    storage.push_back(std::get<1>(it));
-    fromIt = toIt;
-  }
-  storage.append(fromIt, oldTypes.end());
-  return storage;
-}
-
-TypeRange function_interface_impl::filterTypesOut(
-    TypeRange types, const BitVector &indices, SmallVectorImpl<Type> &storage) {
-  if (indices.none())
-    return types;
-
-  for (unsigned i = 0, e = types.size(); i < e; ++i)
-    if (!indices[i])
-      storage.emplace_back(types[i]);
-  return storage;
 }
 
 //===----------------------------------------------------------------------===//

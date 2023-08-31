@@ -70,6 +70,7 @@ add_mlir_library(MLIRTestDialect
   MLIRDialect
   MLIRDLTIDialect
   MLIRFuncDialect
+  MLIRFunctionInterfaces
   MLIRFuncTransforms
   MLIRIR
   MLIRInferIntRangeInterface

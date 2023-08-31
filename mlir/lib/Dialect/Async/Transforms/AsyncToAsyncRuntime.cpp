@@ -161,16 +161,15 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // We treat TokenType as state update marker to represent side-effects of
   // async computations
-  bool isStateful = isa<TokenType>(func.getCallableResults().front());
+  bool isStateful = isa<TokenType>(func.getResultTypes().front());
 
   std::optional<Value> retToken;
   if (isStateful)
     retToken.emplace(builder.create<RuntimeCreateOp>(TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
-  ArrayRef<Type> resValueTypes = isStateful
-                                     ? func.getCallableResults().drop_front()
-                                     : func.getCallableResults();
+  ArrayRef<Type> resValueTypes =
+      isStateful ? func.getResultTypes().drop_front() : func.getResultTypes();
   for (auto resType : resValueTypes)
     retValues.emplace_back(
         builder.create<RuntimeCreateOp>(resType).getResult());
