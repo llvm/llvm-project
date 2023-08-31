@@ -60,7 +60,6 @@ static_assert(!HasContainsR<InputRangeNotSentinelEqualityComparableWith, int>);
 
 static std::vector<int> comparable_data;
 
-// clang-format off
 template <class Iter, class Sent = Iter>
 constexpr void test_iterators() {
   using ValueT = std::iter_value_t<Iter>;
