@@ -1000,6 +1000,13 @@ void AMDGPUPassConfig::addIRPasses() {
   if (TM.getOptLevel() > CodeGenOpt::None)
     addPass(createInferAddressSpacesPass());
 
+  // Run atomic optimizer before Atomic Expand
+  if ((TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+      (TM.getOptLevel() >= CodeGenOpt::Less) &&
+      (AMDGPUAtomicOptimizerStrategy != ScanOptions::None)) {
+    addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
+  }
+
   addPass(createAtomicExpandPass());
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
@@ -1123,11 +1130,6 @@ bool GCNPassConfig::addPreISel() {
 
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createAMDGPULateCodeGenPreparePass());
-
-  if ((TM->getOptLevel() >= CodeGenOpt::Less) &&
-      (AMDGPUAtomicOptimizerStrategy != ScanOptions::None)) {
-    addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
-  }
 
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createSinkingPass());
