@@ -37,13 +37,6 @@ Phabricator has a tool called *Arcanist* to upload patches from
 the command line. To get you set up, follow the
 `Arcanist Quick Start`_ instructions.
 
-You may need to apply a fix to your arcanist repo in order to submit a patch:
-
-.. code-block:: console
-
-  % cd arcanist
-  % git am <path/to/llvm-project>/llvm/utils/phabricator/*.patch
-
 You can learn more about how to use arc to interact with
 Phabricator in the `Arcanist User Guide`_.
 The basic way of creating a revision for the current commit in your local
