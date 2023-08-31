@@ -1024,7 +1024,7 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
         if (auto designator{evaluate::AsGenericExpr(symbol)}) {
           auto restorer{messages_.SetLocation(symbol.name())};
           context_.set_location(symbol.name());
-          CheckInitialTarget(
+          CheckInitialDataPointerTarget(
               context_, *designator, *object->init(), DEREF(scope_));
         }
       }
@@ -1033,28 +1033,36 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
         // C1519 - must be nonelemental external or module procedure,
         // or an unrestricted specific intrinsic function.
         const Symbol &ultimate{(*proc->init())->GetUltimate()};
+        bool checkTarget{true};
         if (ultimate.attrs().test(Attr::INTRINSIC)) {
-          if (const auto intrinsic{
-                  context_.intrinsics().IsSpecificIntrinsicFunction(
-                      ultimate.name().ToString())};
+          if (auto intrinsic{context_.intrinsics().IsSpecificIntrinsicFunction(
+                  ultimate.name().ToString())};
               !intrinsic || intrinsic->isRestrictedSpecific) { // C1030
             context_.Say(
                 "Intrinsic procedure '%s' is not an unrestricted specific "
                 "intrinsic permitted for use as the initializer for procedure "
                 "pointer '%s'"_err_en_US,
                 ultimate.name(), symbol.name());
+            checkTarget = false;
           }
-        } else if (!ultimate.attrs().test(Attr::EXTERNAL) &&
-            ultimate.owner().kind() != Scope::Kind::Module) {
+        } else if ((!ultimate.attrs().test(Attr::EXTERNAL) &&
+                       ultimate.owner().kind() != Scope::Kind::Module) ||
+            IsDummy(ultimate) || IsPointer(ultimate)) {
           context_.Say("Procedure pointer '%s' initializer '%s' is neither "
                        "an external nor a module procedure"_err_en_US,
               symbol.name(), ultimate.name());
+          checkTarget = false;
         } else if (IsElementalProcedure(ultimate)) {
           context_.Say("Procedure pointer '%s' cannot be initialized with the "
-                       "elemental procedure '%s"_err_en_US,
+                       "elemental procedure '%s'"_err_en_US,
               symbol.name(), ultimate.name());
-        } else {
-          // TODO: Check the "shalls" in the 15.4.3.6 paragraphs 7-10.
+          checkTarget = false;
+        }
+        if (checkTarget) {
+          SomeExpr lhs{evaluate::ProcedureDesignator{symbol}};
+          SomeExpr rhs{evaluate::ProcedureDesignator{**proc->init()}};
+          CheckPointerAssignment(context_, lhs, rhs,
+              GetProgramUnitOrBlockConstructContaining(symbol));
         }
       }
     }
@@ -1148,6 +1156,9 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
+  const Symbol *interface {
+    details.procInterface() ? &details.procInterface()->GetUltimate() : nullptr
+  };
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
         (symbol.attrs().test(Attr::INTENT_IN) ||
@@ -1160,20 +1171,19 @@ void CheckHelper::CheckProcEntity(
       messages_.Say(
           "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);
     }
-    const Symbol *interface {
-      details.procInterface()
-    };
-    if (!symbol.attrs().test(Attr::INTRINSIC) &&
-        (IsElementalProcedure(symbol) ||
-            (interface && !interface->attrs().test(Attr::INTRINSIC) &&
-                IsElementalProcedure(*interface)))) {
+    if (interface && IsElementalProcedure(*interface)) {
       // There's no explicit constraint or "shall" that we can find in the
       // standard for this check, but it seems to be implied in multiple
       // sites, and ELEMENTAL non-intrinsic actual arguments *are*
       // explicitly forbidden.  But we allow "PROCEDURE(SIN)::dummy"
       // because it is explicitly legal to *pass* the specific intrinsic
       // function SIN as an actual argument.
-      messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
+      if (interface->attrs().test(Attr::INTRINSIC)) {
+        messages_.Say(
+            "A dummy procedure should not have an ELEMENTAL intrinsic as its interface"_port_en_US);
+      } else {
+        messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
+      }
     }
   } else if (symbol.attrs().test(Attr::INTENT_IN) ||
       symbol.attrs().test(Attr::INTENT_OUT) ||
@@ -1183,35 +1193,35 @@ void CheckHelper::CheckProcEntity(
   } else if (IsOptional(symbol)) {
     messages_.Say("OPTIONAL attribute may apply only to a dummy "
                   "argument"_err_en_US); // C849
-  } else if (symbol.owner().IsDerivedType()) {
-    if (!symbol.attrs().test(Attr::POINTER)) { // C756
-      const auto &name{symbol.name()};
-      messages_.Say(name,
-          "Procedure component '%s' must have POINTER attribute"_err_en_US,
-          name);
-    }
-    CheckPassArg(symbol, details.procInterface(), details);
-  }
-  if (IsPointer(symbol)) {
+  } else if (IsPointer(symbol)) {
     CheckPointerInitialization(symbol);
-    if (const Symbol * interface{details.procInterface()}) {
-      const Symbol &ultimate{interface->GetUltimate()};
-      if (ultimate.attrs().test(Attr::INTRINSIC)) {
-        if (const auto intrinsic{
-                context_.intrinsics().IsSpecificIntrinsicFunction(
-                    ultimate.name().ToString())};
-            !intrinsic || intrinsic->isRestrictedSpecific) { // C1515
+    if (interface) {
+      if (interface->attrs().test(Attr::INTRINSIC)) {
+        auto intrinsic{context_.intrinsics().IsSpecificIntrinsicFunction(
+            interface->name().ToString())};
+        if (!intrinsic || intrinsic->isRestrictedSpecific) { // C1515
           messages_.Say(
               "Intrinsic procedure '%s' is not an unrestricted specific "
               "intrinsic permitted for use as the definition of the interface "
               "to procedure pointer '%s'"_err_en_US,
-              ultimate.name(), symbol.name());
+              interface->name(), symbol.name());
+        } else if (IsElementalProcedure(*interface)) {
+          messages_.Say(
+              "Procedure pointer '%s' should not have an ELEMENTAL intrinsic as its interface"_port_en_US,
+              symbol.name()); // C1517
         }
       } else if (IsElementalProcedure(*interface)) {
         messages_.Say("Procedure pointer '%s' may not be ELEMENTAL"_err_en_US,
             symbol.name()); // C1517
       }
     }
+    if (symbol.owner().IsDerivedType()) {
+      CheckPassArg(symbol, interface, details);
+    }
+  } else if (symbol.owner().IsDerivedType()) {
+    const auto &name{symbol.name()};
+    messages_.Say(name,
+        "Procedure component '%s' must have POINTER attribute"_err_en_US, name);
   }
   CheckExternal(symbol);
 }

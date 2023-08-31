@@ -1324,23 +1324,26 @@ bool IsPureProcedure(const Scope &scope) {
   return symbol && IsPureProcedure(*symbol);
 }
 
+bool IsExplicitlyImpureProcedure(const Symbol &original) {
+  // An ENTRY is IMPURE if its containing subprogram is so
+  return DEREF(GetMainEntry(&original.GetUltimate()))
+      .attrs()
+      .test(Attr::IMPURE);
+}
+
 bool IsElementalProcedure(const Symbol &original) {
   // An ENTRY is elemental if its containing subprogram is
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
-  if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->procInterface()}) {
-      // procedure with an elemental interface, ignoring the elemental
-      // aspect of intrinsic functions
-      return !procInterface->attrs().test(Attr::INTRINSIC) &&
-          IsElementalProcedure(*procInterface);
-    }
-  } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return !details->symbol().attrs().test(Attr::INTRINSIC) &&
-        IsElementalProcedure(details->symbol());
-  } else if (!IsProcedure(symbol)) {
+  if (IsProcedure(symbol)) {
+    auto &foldingContext{symbol.owner().context().foldingContext()};
+    auto restorer{foldingContext.messages().DiscardMessages()};
+    auto proc{evaluate::characteristics::Procedure::Characterize(
+        symbol, foldingContext)};
+    return proc &&
+        proc->attrs.test(evaluate::characteristics::Procedure::Attr::Elemental);
+  } else {
     return false;
   }
-  return symbol.attrs().test(Attr::ELEMENTAL);
 }
 
 bool IsFunction(const Symbol &symbol) {
