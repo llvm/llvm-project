@@ -62,12 +62,21 @@ Error DWARFLinkerImpl::link() {
   if (Error Err = validateAndUpdateOptions())
     return Err;
 
-  std::optional<dwarf::FormParams> Format;
-  std::optional<support::endianness> Endianess;
+  dwarf::FormParams GlobalFormat = {GlobalData.getOptions().TargetDWARFVersion,
+                                    0, dwarf::DwarfFormat::DWARF32};
+  support::endianness GlobalEndianness = support::endian::system_endianness();
+
+  if (TheDwarfEmitter) {
+    GlobalEndianness = TheDwarfEmitter->getTargetTriple().isLittleEndian()
+                           ? support::endianness::little
+                           : support::endianness::big;
+  }
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
-    if (Context->InputDWARFFile.Dwarf.get() == nullptr)
+    if (Context->InputDWARFFile.Dwarf.get() == nullptr) {
+      Context->setOutputFormat(Context->getFormParams(), GlobalEndianness);
       continue;
+    }
 
     if (GlobalData.getOptions().Verbose) {
       outs() << "OBJECT: " << Context->InputDWARFFile.FileName << "\n";
@@ -86,26 +95,23 @@ Error DWARFLinkerImpl::link() {
     if (GlobalData.getOptions().VerifyInputDWARF)
       verifyInput(Context->InputDWARFFile);
 
-    for (const std::unique_ptr<DWARFUnit> &OrigCU :
-         Context->InputDWARFFile.Dwarf->compile_units()) {
-      if (!Format)
-        Format = OrigCU.get()->getFormParams();
-    }
+    if (!TheDwarfEmitter)
+      GlobalEndianness = Context->getEndianness();
+    GlobalFormat.AddrSize =
+        std::max(GlobalFormat.AddrSize, Context->getFormParams().AddrSize);
 
-    if (!Endianess)
-      Endianess = Context->InputDWARFFile.Dwarf->isLittleEndian()
-                      ? support::endianness::little
-                      : support::endianness::big;
+    Context->setOutputFormat(Context->getFormParams(), GlobalEndianness);
   }
 
-  if (!Format)
-    Format = {GlobalData.getOptions().TargetDWARFVersion, 8,
-              dwarf::DwarfFormat::DWARF32};
-  Format->Version = GlobalData.getOptions().TargetDWARFVersion;
-  if (!Endianess)
-    Endianess = support::endianness::little;
+  if (GlobalFormat.AddrSize == 0) {
+    if (TheDwarfEmitter)
+      GlobalFormat.AddrSize =
+          TheDwarfEmitter->getTargetTriple().isArch32Bit() ? 4 : 8;
+    else
+      GlobalFormat.AddrSize = 8;
+  }
 
-  CommonSections.setOutputFormat(*Format, *Endianess);
+  CommonSections.setOutputFormat(GlobalFormat, GlobalEndianness);
 
   // Set parallel options.
   if (GlobalData.getOptions().Threads == 0)
@@ -350,7 +356,7 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
       // Add this module.
       Unit = std::make_unique<CompileUnit>(
           GlobalData, *CU, UniqueUnitID.fetch_add(1), ModuleName, *ErrOrObj,
-          getUnitForOffset);
+          getUnitForOffset, CU->getFormParams(), getEndianness());
     }
   }
 
@@ -403,7 +409,7 @@ Error DWARFLinkerImpl::LinkContext::link() {
           !isClangModuleRef(CUDie, PCMFile, 0, true).first) {
         CompileUnits.emplace_back(std::make_unique<CompileUnit>(
             GlobalData, *OrigCU, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
-            getUnitForOffset));
+            getUnitForOffset, OrigCU->getFormParams(), getEndianness()));
 
         // Preload line table, as it can't be loaded asynchronously.
         CompileUnits.back()->loadLineTable();
@@ -710,10 +716,9 @@ void DWARFLinkerImpl::LinkContext::emitFDE(uint32_t CIEOffset,
 }
 
 Error DWARFLinkerImpl::LinkContext::cloneAndEmitPaperTrails() {
-
-  CompileUnits.emplace_back(
-      std::make_unique<CompileUnit>(GlobalData, UniqueUnitID.fetch_add(1), "",
-                                    InputDWARFFile, getUnitForOffset));
+  CompileUnits.emplace_back(std::make_unique<CompileUnit>(
+      GlobalData, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
+      getUnitForOffset, Format, Endianness));
 
   CompileUnit &CU = *CompileUnits.back();
 
