@@ -277,5 +277,5 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
 std::string Fortran::lower::mangle::globalNamelistDescriptorName(
     const Fortran::semantics::Symbol &sym) {
   std::string name = mangleName(sym);
-  return IsAllocatableOrPointer(sym) ? name : name + ".desc"s;
+  return IsAllocatableOrObjectPointer(&sym) ? name : name + ".desc"s;
 }
