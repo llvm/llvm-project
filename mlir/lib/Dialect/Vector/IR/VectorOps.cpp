@@ -685,7 +685,7 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
   auto lhsType = llvm::cast<VectorType>(types[0]);
   auto rhsType = llvm::cast<VectorType>(types[1]);
   auto maskElementType = parser.getBuilder().getI1Type();
-  std::array<Type, 2> maskTypes = {
+  std::array<VectorType, 2> maskTypes = {
       VectorType::Builder(lhsType).setElementType(maskElementType),
       VectorType::Builder(rhsType).setElementType(maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
