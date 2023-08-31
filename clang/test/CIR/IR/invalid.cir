@@ -507,3 +507,18 @@ module {
   } dtor {}
   // expected-error@+1 {{custom op 'cir.global' dtor region must have exactly one block}}
 }
+
+// -----
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+module {
+  cir.global "private" constant internal @".str" = #cir.const_array<"Division by zero condition!\00" : !cir.array<!u8i x 28>> : !cir.array<!u8i x 28> {alignment = 1 : i64}
+  cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+  cir.func @_Z8divisionii() {
+    %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
+    %12 = cir.get_global @".str" : cir.ptr <!cir.array<!u8i x 28>>
+    %13 = cir.cast(array_to_ptrdecay, %12 : !cir.ptr<!cir.array<!u8i x 28>>), !cir.ptr<!u8i>
+    cir.store %13, %11 : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
+    cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>) // expected-error {{'type_info' symbol attribute missing}}
+  }
+}
