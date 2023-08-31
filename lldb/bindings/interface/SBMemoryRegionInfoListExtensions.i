@@ -1,5 +1,3 @@
-STRING_EXTENSION_OUTSIDE(SBMemoryRegionInfoList)
-
 %extend lldb::SBMemoryRegionInfoList {
 #ifdef SWIGPYTHON
     // operator== is a free function, which swig does not handle, so we inject

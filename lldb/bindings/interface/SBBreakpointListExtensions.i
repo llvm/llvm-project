@@ -1,5 +1,3 @@
-STRING_EXTENSION_OUTSIDE(SBBreakpointList)
-
 %extend lldb::SBBreakpointList {
 #ifdef SWIGPYTHON
     // operator== is a free function, which swig does not handle, so we inject

@@ -1,5 +1,3 @@
-STRING_EXTENSION_OUTSIDE(SBListener)
-
 %extend lldb::SBListener {
 #ifdef SWIGPYTHON
     // operator== is a free function, which swig does not handle, so we inject
