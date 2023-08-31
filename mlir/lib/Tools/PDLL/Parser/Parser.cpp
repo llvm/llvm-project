@@ -2342,7 +2342,7 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
           TypeSwitch<const ast::Node *, LogicalResult>(constraint.constraint)
               .Case<ast::AttrConstraintDecl, ast::ValueConstraintDecl,
                     ast::ValueRangeConstraintDecl>([&](const auto *cst) {
-                if (auto *typeConstraintExpr = cst->getTypeExpr()) {
+                if (cst->getTypeExpr()) {
                   return this->emitError(
                       constraint.referenceLoc,
                       "type constraints are not permitted on variables with "

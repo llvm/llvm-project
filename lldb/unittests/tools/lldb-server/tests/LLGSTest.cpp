@@ -24,8 +24,9 @@ using namespace llvm;
 TEST_F(TestBase, LaunchModePreservesEnvironment) {
   putenv(const_cast<char *>("LLDB_TEST_MAGIC_VARIABLE=LLDB_TEST_MAGIC_VALUE"));
 
-  auto ClientOr = TestClient::launch(getLogFileName(),
-                                     {getInferiorPath("environment_check")});
+  auto ClientOr = TestClient::launchCustom(
+      getLogFileName(),
+      /* disable_stdio */ true, {}, {getInferiorPath("environment_check")});
   ASSERT_THAT_EXPECTED(ClientOr, Succeeded());
   auto &Client = **ClientOr;
 
@@ -56,8 +57,9 @@ TEST_F(TestBase, DS_TEST(DebugserverEnv)) {
 }
 
 TEST_F(TestBase, LLGS_TEST(vAttachRichError)) {
-  auto ClientOr = TestClient::launch(getLogFileName(),
-                                     {getInferiorPath("environment_check")});
+  auto ClientOr = TestClient::launchCustom(
+      getLogFileName(),
+      /* disable_stdio */ true, {}, {getInferiorPath("environment_check")});
   ASSERT_THAT_EXPECTED(ClientOr, Succeeded());
   auto &Client = **ClientOr;
 

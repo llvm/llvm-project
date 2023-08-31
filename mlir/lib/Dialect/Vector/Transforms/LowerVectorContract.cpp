@@ -89,21 +89,20 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
                          PatternRewriter &rewriter) {
   if (index == -1)
     return val;
-  Type lowType = VectorType::Builder(type).dropDim(0);
+  Type lowType = type.getRank() > 1 ? VectorType::Builder(type).dropDim(0)
+                                    : type.getElementType();
   // At extraction dimension?
   if (index == 0)
     return rewriter.create<vector::ExtractOp>(loc, lowType, val, pos);
   // Unroll leading dimensions.
   VectorType vType = cast<VectorType>(lowType);
-  Type resType = VectorType::Builder(type).dropDim(index);
-  auto resVectorType = cast<VectorType>(resType);
+  VectorType resType = VectorType::Builder(type).dropDim(index);
   Value result = rewriter.create<arith::ConstantOp>(
-      loc, resVectorType, rewriter.getZeroAttr(resVectorType));
-  for (int64_t d = 0, e = resVectorType.getDimSize(0); d < e; d++) {
+      loc, resType, rewriter.getZeroAttr(resType));
+  for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
     Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, d);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
-    result =
-        rewriter.create<vector::InsertOp>(loc, resVectorType, load, result, d);
+    result = rewriter.create<vector::InsertOp>(loc, resType, load, result, d);
   }
   return result;
 }
@@ -120,13 +119,13 @@ static Value reshapeStore(Location loc, Value val, Value result,
   if (index == 0)
     return rewriter.create<vector::InsertOp>(loc, type, val, result, pos);
   // Unroll leading dimensions.
-  Type lowType = VectorType::Builder(type).dropDim(0);
-  VectorType vType = cast<VectorType>(lowType);
-  Type insType = VectorType::Builder(vType).dropDim(0);
+  VectorType lowType = VectorType::Builder(type).dropDim(0);
+  Type insType = lowType.getRank() > 1 ? VectorType::Builder(lowType).dropDim(0)
+                                       : lowType.getElementType();
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, result, d);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, lowType, result, d);
     Value ins = rewriter.create<vector::ExtractOp>(loc, insType, val, d);
-    Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
+    Value sto = reshapeStore(loc, ins, ext, lowType, index - 1, pos, rewriter);
     result = rewriter.create<vector::InsertOp>(loc, type, sto, result, d);
   }
   return result;

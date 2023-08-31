@@ -81,7 +81,7 @@ struct NarrowingPattern : OpRewritePattern<SourceOp> {
       return newElemTy;
 
     if (auto shapedTy = dyn_cast<ShapedType>(origTy))
-      if (auto elemTy = dyn_cast<IntegerType>(shapedTy.getElementType()))
+      if (dyn_cast<IntegerType>(shapedTy.getElementType()))
         return shapedTy.clone(shapedTy.getShape(), newElemTy);
 
     return failure();
@@ -113,9 +113,9 @@ public:
   /// wrapper when `op` is either `arith.extsi` or `arith.extui`, and failure
   /// otherwise.
   static FailureOr<ExtensionOp> from(Operation *op) {
-    if (auto sext = dyn_cast_or_null<arith::ExtSIOp>(op))
+    if (dyn_cast_or_null<arith::ExtSIOp>(op))
       return ExtensionOp{op, ExtensionKind::Sign};
-    if (auto zext = dyn_cast_or_null<arith::ExtUIOp>(op))
+    if (dyn_cast_or_null<arith::ExtUIOp>(op))
       return ExtensionOp{op, ExtensionKind::Zero};
 
     return failure();

@@ -2865,7 +2865,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if (const auto *operand = llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
+    if ([[maybe_unused]] const auto *operand =
+            llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }

@@ -1670,7 +1670,7 @@ template <class Emitter>
 std::optional<unsigned>
 ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   // Make sure we don't accidentally register the same decl twice.
-  if (const auto *VD =
+  if ([[maybe_unused]]  const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
     assert(!Locals.contains(VD));

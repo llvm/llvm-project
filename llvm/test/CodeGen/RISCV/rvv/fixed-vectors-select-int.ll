@@ -8,7 +8,7 @@ define <1 x i1> @select_v1i1(i1 zeroext %c, <1 x i1> %a, <1 x i1> %b) {
 ; CHECK-LABEL: select_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
@@ -24,7 +24,7 @@ define <1 x i1> @selectcc_v1i1(i1 signext %a, i1 signext %b, <1 x i1> %c, <1 x i
 ; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9

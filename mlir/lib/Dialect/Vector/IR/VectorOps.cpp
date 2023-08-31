@@ -685,7 +685,7 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
   auto lhsType = llvm::cast<VectorType>(types[0]);
   auto rhsType = llvm::cast<VectorType>(types[1]);
   auto maskElementType = parser.getBuilder().getI1Type();
-  std::array<Type, 2> maskTypes = {
+  std::array<VectorType, 2> maskTypes = {
       VectorType::Builder(lhsType).setElementType(maskElementType),
       VectorType::Builder(rhsType).setElementType(maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
@@ -2216,7 +2216,7 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
       return failure();
     if (mask.size() != 1)
       return failure();
-    Type resType = VectorType::Builder(v1VectorType).setShape({1});
+    VectorType resType = VectorType::Builder(v1VectorType).setShape({1});
     if (llvm::cast<IntegerAttr>(mask[0]).getInt() == 0)
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
                                                        shuffleOp.getV1());
@@ -5821,8 +5821,8 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 }
 
 void WarpExecuteOnLane0Op::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (index) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }

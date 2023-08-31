@@ -6822,16 +6822,16 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   TemplateArgumentListInfo NewTemplateArgs;
   NestedNameSpecifierLoc NewNestedNameSpec;
   if (T->isConstrained()) {
+    assert(TL.getConceptReference());
     NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
         TL.getConceptNameLoc(), T->getTypeConstraintConcept()));
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
     typedef TemplateArgumentLocContainerIterator<AutoTypeLoc> ArgIterator;
-    if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
-                                                ArgIterator(TL,
-                                                            TL.getNumArgs()),
-                                                NewTemplateArgs))
+    if (getDerived().TransformTemplateArguments(
+            ArgIterator(TL, 0), ArgIterator(TL, TL.getNumArgs()),
+            NewTemplateArgs))
       return QualType();
 
     if (TL.getNestedNameSpecifierLoc()) {
@@ -6859,15 +6859,19 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
 
   AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
-  NewTL.setNestedNameSpecifierLoc(NewNestedNameSpec);
-  NewTL.setTemplateKWLoc(TL.getTemplateKWLoc());
-  NewTL.setConceptNameLoc(TL.getConceptNameLoc());
-  NewTL.setFoundDecl(TL.getFoundDecl());
-  NewTL.setLAngleLoc(TL.getLAngleLoc());
-  NewTL.setRAngleLoc(TL.getRAngleLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
-  for (unsigned I = 0; I < NewTL.getNumArgs(); ++I)
-    NewTL.setArgLocInfo(I, NewTemplateArgs.arguments()[I].getLocInfo());
+
+  if (T->isConstrained()) {
+    DeclarationNameInfo DNI = DeclarationNameInfo(
+        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
+        TL.getConceptNameLoc(),
+        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName());
+    auto *CR = ConceptReference::Create(
+        SemaRef.Context, NewNestedNameSpec, TL.getTemplateKWLoc(), DNI,
+        TL.getFoundDecl(), TL.getTypePtr()->getTypeConstraintConcept(),
+        ASTTemplateArgumentListInfo::Create(SemaRef.Context, NewTemplateArgs));
+    NewTL.setConceptReference(CR);
+  }
 
   return Result;
 }

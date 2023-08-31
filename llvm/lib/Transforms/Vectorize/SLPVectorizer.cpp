@@ -228,6 +228,17 @@ static bool isVectorLikeInstWithConstOps(Value *V) {
   return isConstant(I->getOperand(2));
 }
 
+#if !defined(NDEBUG)
+/// Print a short descriptor of the instruction bundle suitable for debug output.
+static std::string shortBundleName(ArrayRef<Value *> VL) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  OS << "n=" << VL.size() << " [" << *VL.front() << ", ..]";
+  OS.flush();
+  return Result;
+}
+#endif
+
 /// \returns true if all of the instructions in \p VL are in the same block or
 /// false otherwise.
 static bool allSameBlock(ArrayRef<Value *> VL) {
@@ -7435,8 +7446,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // node. Cost is 0.
         LLVM_DEBUG(
             dbgs()
-            << "SLP: perfect diamond match for gather bundle that starts with "
-            << *VL.front() << ".\n");
+            << "SLP: perfect diamond match for gather bundle "
+            << shortBundleName(VL) << ".\n");
         // Restore the mask for previous partially matched values.
         for (auto [I, V] : enumerate(E->Scalars)) {
           if (isa<PoisonValue>(V)) {
@@ -7462,8 +7473,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           GatheredScalars[I] = PoisonValue::get(ScalarTy);
       }
       LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
-                        << " entries for bundle that starts with "
-                        << *VL.front() << ".\n";);
+                        << " entries for bundle "
+                        << shortBundleName(VL) << ".\n");
       if (Entries.size() == 1)
         Estimator.add(Entries.front(), Mask);
       else
@@ -8577,8 +8588,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           E->isSame(TE.Scalars)) {
         // Some gather nodes might be absolutely the same as some vectorizable
         // nodes after reordering, need to handle it.
-        LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle that starts with "
-                          << *TE.Scalars[0] << ".\n"
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle "
+                          << shortBundleName(TE.Scalars) << ".\n"
                           << "SLP: Current total cost = " << Cost << "\n");
         continue;
       }
@@ -8586,9 +8597,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
     Cost += C;
-    LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
-                      << " for bundle that starts with " << *TE.Scalars[0]
-                      << ".\n"
+    LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
+                      << shortBundleName(TE.Scalars) << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
 
@@ -9961,8 +9971,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         // node. Cost is 0.
         LLVM_DEBUG(
             dbgs()
-            << "SLP: perfect diamond match for gather bundle that starts with "
-            << *E->Scalars.front() << ".\n");
+            << "SLP: perfect diamond match for gather bundle "
+            << shortBundleName(E->Scalars) << ".\n");
         // Restore the mask for previous partially matched values.
         if (Entries.front()->ReorderIndices.empty() &&
             ((Entries.front()->ReuseShuffleIndices.empty() &&
@@ -14084,8 +14094,7 @@ private:
                                    bool IsCmpSelMinMax, unsigned ReduxWidth,
                                    FastMathFlags FMF) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    Value *FirstReducedVal = ReducedVals.front();
-    Type *ScalarTy = FirstReducedVal->getType();
+    Type *ScalarTy = ReducedVals.front()->getType();
     FixedVectorType *VectorTy = FixedVectorType::get(ScalarTy, ReduxWidth);
     InstructionCost VectorCost = 0, ScalarCost;
     // If all of the reduced values are constant, the vector cost is 0, since
@@ -14159,7 +14168,7 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << VectorCost - ScalarCost
-                      << " for reduction that starts with " << *FirstReducedVal
+                      << " for reduction of " << shortBundleName(ReducedVals)
                       << " (It is a splitting reduction)\n");
     return VectorCost - ScalarCost;
   }

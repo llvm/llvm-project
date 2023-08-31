@@ -2957,7 +2957,8 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 
 static SDValue findVSplat(SDValue N) {
   SDValue Splat = N;
-  if (Splat.getOpcode() != RISCVISD::VMV_V_X_VL ||
+  if ((Splat.getOpcode() != RISCVISD::VMV_V_X_VL &&
+       Splat.getOpcode() != RISCVISD::VMV_S_X_VL) ||
       !Splat.getOperand(0).isUndef())
     return SDValue();
   assert(Splat.getNumOperands() == 3 && "Unexpected number of operands");

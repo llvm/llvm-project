@@ -2165,9 +2165,10 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     case Intrinsic::aarch64_neon_uaddlv: {
       MVT VT = Op.getOperand(1).getValueType().getSimpleVT();
       unsigned BitWidth = Known.getBitWidth();
-      if (VT == MVT::v8i8) {
-        assert(BitWidth >= 16 && "Unexpected width!");
-        APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+      if (VT == MVT::v8i8 || VT == MVT::v16i8) {
+        unsigned Bound = (VT == MVT::v8i8) ?  11 : 12;
+        assert(BitWidth >= Bound && "Unexpected width!");
+        APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - Bound);
         Known.Zero |= Mask;
       }
       break;
@@ -24970,7 +24971,15 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   EVT VT = Op.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
-  SDValue Mask = convertFixedMaskToScalableVector(Load->getMask(), DAG);
+  SDValue Mask = Load->getMask();
+  // If this is an extending load and the mask type is not the same as
+  // load's type then we have to extend the mask type.
+  if (VT.getScalarSizeInBits() > Mask.getValueType().getScalarSizeInBits()) {
+    assert(Load->getExtensionType() != ISD::NON_EXTLOAD &&
+           "Incorrect mask type");
+    Mask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Mask);
+  }
+  Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
   SDValue PassThru;
   bool IsPassThruZeroOrUndef = false;

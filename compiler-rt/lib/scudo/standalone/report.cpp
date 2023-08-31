@@ -36,18 +36,6 @@ private:
 
 inline void NORETURN trap() { __builtin_trap(); }
 
-void NORETURN reportSoftRSSLimit(uptr RssLimitMb) {
-  ScopedErrorReport Report;
-  Report.append("Soft RSS limit of %zu MB exhausted, current RSS is %zu MB\n",
-                RssLimitMb, GetRSS() >> 20);
-}
-
-void NORETURN reportHardRSSLimit(uptr RssLimitMb) {
-  ScopedErrorReport Report;
-  Report.append("Hard RSS limit of %zu MB exhausted, current RSS is %zu MB\n",
-                RssLimitMb, GetRSS() >> 20);
-}
-
 // This could potentially be called recursively if a CHECK fails in the reports.
 void NORETURN reportCheckFailed(const char *File, int Line,
                                 const char *Condition, u64 Value1, u64 Value2) {

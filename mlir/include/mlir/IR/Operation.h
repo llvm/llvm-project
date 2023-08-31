@@ -542,7 +542,7 @@ public:
   /// value. Otherwise, add a new attribute with the specified name/value.
   void setAttr(StringAttr name, Attribute value) {
     if (getPropertiesStorageSize()) {
-      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+      if (getInherentAttr(name)) {
         setInherentAttr(name, value);
         return;
       }

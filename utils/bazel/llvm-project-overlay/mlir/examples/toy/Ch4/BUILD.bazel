@@ -97,6 +97,7 @@ cc_binary(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:CastInterfaces",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",

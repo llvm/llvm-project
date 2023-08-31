@@ -3712,7 +3712,7 @@ bool areTilesAndTiledDimsAllConstant(OpTy op) {
 }
 
 Speculation::Speculatability PackOp::getSpeculatability() {
-  if (auto paddingValue = getPaddingValue())
+  if (getPaddingValue())
     return Speculation::Speculatable;
 
   // The verifier rejects already operations if we can statically prove that the

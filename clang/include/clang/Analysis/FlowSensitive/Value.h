@@ -83,8 +83,8 @@ private:
 /// transitivity. It does *not* include comparison of `Properties`.
 ///
 /// Computes equivalence for these subclasses:
-/// * ReferenceValue, PointerValue -- pointee locations are equal. Does not
-///   compute deep equality of `Value` at said location.
+/// * PointerValue -- pointee locations are equal. Does not compute deep
+///   equality of `Value` at said location.
 /// * TopBoolValue -- both are `TopBoolValue`s.
 ///
 /// Otherwise, falls back to pointer equality.

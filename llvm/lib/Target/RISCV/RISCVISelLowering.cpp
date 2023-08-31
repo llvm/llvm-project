@@ -3622,12 +3622,8 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
   bool HasPassthru = Passthru && !Passthru.isUndef();
   if (!HasPassthru && !Passthru)
     Passthru = DAG.getUNDEF(VT);
-  if (VT.isFloatingPoint()) {
-    // If VL is 1, we could use vfmv.s.f.
-    if (isOneConstant(VL))
-      return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, Passthru, Scalar, VL);
+  if (VT.isFloatingPoint())
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Passthru, Scalar, VL);
-  }
 
   MVT XLenVT = Subtarget.getXLenVT();
 
@@ -3640,12 +3636,6 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
     unsigned ExtOpc =
         isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
-    ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
-    // If VL is 1 and the scalar value won't benefit from immediate, we could
-    // use vmv.s.x.
-    if (isOneConstant(VL) &&
-        (!Const || isNullConstant(Scalar) || !isInt<5>(Const->getSExtValue())))
-      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
     return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
   }
 
@@ -3698,20 +3688,10 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
                        DAG.getConstant(0, DL, XLenVT));
   }
 
-  if (VT.isFloatingPoint()) {
-    // TODO: Use vmv.v.i for appropriate constants
-    // Use M1 or smaller to avoid over constraining register allocation
-    const MVT M1VT = getLMUL1VT(VT);
-    auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
-    SDValue Result = DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, InnerVT,
-                                 DAG.getUNDEF(InnerVT), Scalar, VL);
-    if (VT != InnerVT)
-      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                           DAG.getUNDEF(VT),
-                           Result, DAG.getConstant(0, DL, XLenVT));
-    return Result;
-  }
 
+  if (VT.isFloatingPoint())
+    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT,
+                       DAG.getUNDEF(VT), Scalar, VL);
 
   // Avoid the tricky legalization cases by falling back to using the
   // splat code which already handles it gracefully.
@@ -3727,24 +3707,8 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
   unsigned ExtOpc =
     isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
   Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
-  // We use a vmv.v.i if possible.  We limit this to LMUL1.  LMUL2 or
-  // higher would involve overly constraining the register allocator for
-  // no purpose.
-  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar)) {
-    if (!isNullConstant(Scalar) && isInt<5>(Const->getSExtValue()) &&
-        VT.bitsLE(getLMUL1VT(VT)))
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
-  }
-  // Use M1 or smaller to avoid over constraining register allocation
-  const MVT M1VT = getLMUL1VT(VT);
-  auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
-  SDValue Result = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, InnerVT,
-                               DAG.getUNDEF(InnerVT), Scalar, VL);
-  if (VT != InnerVT)
-    Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                         DAG.getUNDEF(VT),
-                         Result, DAG.getConstant(0, DL, XLenVT));
-  return Result;
+  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT,
+                     DAG.getUNDEF(VT), Scalar, VL);
 }
 
 // Is this a shuffle extracts either the even or odd elements of a vector?
@@ -4260,6 +4224,58 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
   return Res;
 }
 
+// Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
+// reinterpret it as a shuffle of v2i32 where the two i32s are bit rotated, and
+// lower it as a vror.vi (if legal with zvbb enabled).
+static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
+                                           SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
+  SDLoc DL(SVN);
+
+  EVT VT = SVN->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned NumSubElts, RotateAmt;
+  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
+                                          NumElts, NumSubElts, RotateAmt))
+    return SDValue();
+  MVT RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
+                                  NumElts / NumSubElts);
+
+  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
+  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::ROTL,
+                                                               RotateVT))
+    return SDValue();
+
+  // If we just create the shift amount with
+  //
+  // DAG.getConstant(RotateAmt, DL, RotateVT)
+  //
+  // then for e64 we get a weird bitcasted build_vector on RV32 that we're
+  // unable to detect as a splat during pattern matching. So directly lower it
+  // to a vmv.v.x which gets matched to vror.vi.
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, RotateVT, Subtarget);
+  SDValue VL =
+      getDefaultVLOps(RotateVT, ContainerVT, DL, DAG, Subtarget).second;
+  SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
+
+  SDValue Rotate;
+  // A rotate of an i16 by 8 bits either direction is equivalent to a byteswap,
+  // so canonicalize to vrev8.
+  if (RotateVT.getScalarType() == MVT::i16 && RotateAmt == 8) {
+    Rotate = DAG.getNode(ISD::BSWAP, DL, RotateVT, Op);
+  } else {
+    SDValue RotateAmtSplat = DAG.getNode(
+        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+        DAG.getConstant(RotateAmt, DL, Subtarget.getXLenVT()), VL);
+    RotateAmtSplat =
+        convertFromScalableVector(RotateVT, RotateAmtSplat, DAG, Subtarget);
+    Rotate = DAG.getNode(ISD::ROTL, DL, RotateVT, Op, RotateAmtSplat);
+  }
+
+  return DAG.getBitcast(VT, Rotate);
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -4269,6 +4285,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  // Lower to a vror.vi of a larger element type if possible. Do this before we
+  // promote i1s to i8s.
+  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+    return V;
 
   if (VT.getVectorElementType() == MVT::i1) {
     if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
@@ -13329,6 +13350,8 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(N);
 
   // Helper to call SimplifyDemandedBits on an operand of N where only some low
   // bits are demanded. N will be added to the Worklist if it was not deleted.
@@ -13359,8 +13382,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Hi = DAG.getUNDEF(MVT::i32);
       return DCI.CombineTo(N, Lo, Hi);
     }
-
-    SDLoc DL(N);
 
     // It's cheaper to materialise two 32-bit integers than to load a double
     // from the constant pool and transfer it to integer registers through the
@@ -13695,7 +13716,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     }
     EVT IndexVT = Index.getValueType();
-    MVT XLenVT = Subtarget.getXLenVT();
     // RISC-V indexed loads only support the "unsigned unscaled" addressing
     // mode, so anything else must be manually legalized.
     bool NeedsIdxLegalization =
@@ -13917,14 +13937,38 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
+  case RISCVISD::VFMV_V_F_VL: {
+    const MVT VT = N->getSimpleValueType(0);
+    SDValue Passthru = N->getOperand(0);
+    SDValue Scalar = N->getOperand(1);
+    SDValue VL = N->getOperand(2);
+
+    // If VL is 1, we can use vfmv.s.f.
+    if (isOneConstant(VL))
+      return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, Passthru, Scalar, VL);
+    break;
+  }
   case RISCVISD::VMV_V_X_VL: {
+    const MVT VT = N->getSimpleValueType(0);
+    SDValue Passthru = N->getOperand(0);
+    SDValue Scalar = N->getOperand(1);
+    SDValue VL = N->getOperand(2);
+
     // Tail agnostic VMV.V.X only demands the vector element bitwidth from the
     // scalar input.
-    unsigned ScalarSize = N->getOperand(1).getValueSizeInBits();
-    unsigned EltWidth = N->getValueType(0).getScalarSizeInBits();
-    if (ScalarSize > EltWidth && N->getOperand(0).isUndef())
+    unsigned ScalarSize = Scalar.getValueSizeInBits();
+    unsigned EltWidth = VT.getScalarSizeInBits();
+    if (ScalarSize > EltWidth && Passthru.isUndef())
       if (SimplifyDemandedLowBitsHelper(1, EltWidth))
         return SDValue(N, 0);
+
+    // If VL is 1 and the scalar value won't benefit from immediate, we can
+    // use vmv.s.x.  Do this only if legal to avoid breaking i64 sext(i32)
+    // patterns on rv32..
+    ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
+    if (isOneConstant(VL) && EltWidth <= Subtarget.getXLen() &&
+        (!Const || Const->isZero() || !isInt<5>(Const->getSExtValue())))
+      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;
   }
@@ -13945,6 +13989,32 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return Src.getOperand(0);
       // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
     }
+    [[fallthrough]];
+  }
+  case RISCVISD::VMV_S_X_VL: {
+    const MVT VT = N->getSimpleValueType(0);
+    SDValue Passthru = N->getOperand(0);
+    SDValue Scalar = N->getOperand(1);
+    SDValue VL = N->getOperand(2);
+
+    // Use M1 or smaller to avoid over constraining register allocation
+    const MVT M1VT = getLMUL1VT(VT);
+    if (M1VT.bitsLT(VT) && Passthru.isUndef()) {
+      SDValue Result =
+        DAG.getNode(N->getOpcode(), DL, M1VT, Passthru, Scalar, VL);
+      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                           Result, DAG.getConstant(0, DL, XLenVT));
+      return Result;
+    }
+
+    // We use a vmv.v.i if possible.  We limit this to LMUL1.  LMUL2 or
+    // higher would involve overly constraining the register allocator for
+    // no purpose.
+    if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
+        Const && !Const->isZero() && isInt<5>(Const->getSExtValue()) &&
+        VT.bitsLE(getLMUL1VT(VT)) && Passthru.isUndef())
+      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
+
     break;
   }
   case ISD::INTRINSIC_VOID:

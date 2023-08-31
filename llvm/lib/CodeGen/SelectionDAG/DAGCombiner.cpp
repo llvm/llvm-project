@@ -14460,6 +14460,16 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     return DAG.getBuildVector(VT, DL, TruncOps);
   }
 
+  // trunc (splat_vector x) -> splat_vector (trunc x)
+  if (N0.getOpcode() == ISD::SPLAT_VECTOR &&
+      (!LegalTypes || TLI.isTypeLegal(VT.getScalarType())) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, VT))) {
+    SDLoc DL(N);
+    EVT SVT = VT.getScalarType();
+    return DAG.getSplatVector(
+        VT, DL, DAG.getNode(ISD::TRUNCATE, DL, SVT, N0->getOperand(0)));
+  }
+
   // Fold a series of buildvector, bitcast, and truncate if possible.
   // For example fold
   //   (2xi32 trunc (bitcast ((4xi32)buildvector x, x, y, y) 2xi64)) to

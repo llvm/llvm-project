@@ -73,12 +73,12 @@ public:
                    bool BodyOverridesInterface = false) const;
 
   // Interfaces to query PSTATE.ZA
-  bool hasNewZAInterface() const { return Bitmask & ZA_New; }
+  bool hasNewZABody() const { return Bitmask & ZA_New; }
   bool hasSharedZAInterface() const { return Bitmask & ZA_Shared; }
   bool hasPrivateZAInterface() const { return !hasSharedZAInterface(); }
   bool preservesZA() const { return Bitmask & ZA_Preserved; }
   bool hasZAState() const {
-    return hasNewZAInterface() || hasSharedZAInterface();
+    return hasNewZABody() || hasSharedZAInterface();
   }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
