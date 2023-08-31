@@ -14,7 +14,6 @@
 #include "RISCVCustomBehaviour.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCV.h"
-#include "RISCVInstrInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
