@@ -13,7 +13,7 @@
 
 #include "AMDGPUCustomBehaviour.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/WithColor.h"
