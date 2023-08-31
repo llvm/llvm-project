@@ -214,7 +214,7 @@ template <bool Invert, typename Packet> struct Process {
     // restrict to a single thread to avoid one thread dropping the lock, then
     // an unrelated warp claiming the lock, then a second thread in this warp
     // dropping the lock again.
-    clear_nth(lock, index, rpc::is_first_lane(lane_mask));
+    clear_nth(lock, index, gpu::is_first_lane(lane_mask));
     gpu::sync_lane(lane_mask);
   }
 
@@ -546,7 +546,7 @@ template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
       continue;
     }
 
-    if (is_first_lane(lane_mask)) {
+    if (gpu::is_first_lane(lane_mask)) {
       process.packet[index].header.opcode = opcode;
       process.packet[index].header.mask = lane_mask;
     }
