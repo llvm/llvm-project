@@ -11,6 +11,7 @@ module m
     type(c_ptr) cp
     type(c_funptr) cfp
     real notATarget
+    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface
     procedure(sin), pointer :: pptr
     real, target :: arr(3)
     type(hasLen(1)), target :: clen

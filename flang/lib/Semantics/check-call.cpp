@@ -1430,7 +1430,7 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
               whole->name());
         } else if (context.ShouldWarn(
                        common::UsageWarning::TransferSizePresence) &&
-            IsAllocatableOrPointer(*whole)) {
+            IsAllocatableOrObjectPointer(whole)) {
           messages.Say(
               "SIZE= argument that is allocatable or pointer must be present at execution; parenthesize to silence this warning"_warn_en_US);
         }

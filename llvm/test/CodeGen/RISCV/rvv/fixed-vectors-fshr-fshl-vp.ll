@@ -522,408 +522,216 @@ define <16 x i32> @fshl_v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 
 
 declare <2 x i64> @llvm.vp.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>, <2 x i1>, i32)
 define <2 x i64> @fshr_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshr_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v11, v10, a1, v0.t
-; RV32-NEXT:    vsrl.vv v9, v9, v11, v0.t
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v11, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vxor.vv v10, v10, v11, v0.t
-; RV32-NEXT:    vand.vx v10, v10, a1, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v10, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshr_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vand.vx v11, v10, a1, v0.t
-; RV64-NEXT:    vsrl.vv v9, v9, v11, v0.t
-; RV64-NEXT:    vnot.v v10, v10, v0.t
-; RV64-NEXT:    vand.vx v10, v10, a1, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v10, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshr_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
+; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vnot.v v10, v10, v0.t
+; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.vp.fshr.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %res
 }
 
 declare <2 x i64> @llvm.vp.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>, <2 x i1>, i32)
 define <2 x i64> @fshl_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshl_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vand.vx v11, v10, a1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v11, v0.t
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v11, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vxor.vv v10, v10, v11, v0.t
-; RV32-NEXT:    vand.vx v10, v10, a1, v0.t
-; RV32-NEXT:    vsrl.vi v9, v9, 1, v0.t
-; RV32-NEXT:    vsrl.vv v9, v9, v10, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshl_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vand.vx v11, v10, a1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v11, v0.t
-; RV64-NEXT:    vnot.v v10, v10, v0.t
-; RV64-NEXT:    vand.vx v10, v10, a1, v0.t
-; RV64-NEXT:    vsrl.vi v9, v9, 1, v0.t
-; RV64-NEXT:    vsrl.vv v9, v9, v10, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshl_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v11, v0.t
+; CHECK-NEXT:    vnot.v v10, v10, v0.t
+; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v9, v9, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.vp.fshl.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %res
 }
 
 declare <4 x i64> @llvm.vp.fshr.v4i64(<4 x i64>, <4 x i64>, <4 x i64>, <4 x i1>, i32)
 define <4 x i64> @fshr_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshr_v4i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vand.vx v14, v12, a1, v0.t
-; RV32-NEXT:    vsrl.vv v10, v10, v14, v0.t
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v14, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vxor.vv v12, v12, v14, v0.t
-; RV32-NEXT:    vand.vx v12, v12, a1, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v12, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshr_v4i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV64-NEXT:    vand.vx v14, v12, a1, v0.t
-; RV64-NEXT:    vsrl.vv v10, v10, v14, v0.t
-; RV64-NEXT:    vnot.v v12, v12, v0.t
-; RV64-NEXT:    vand.vx v12, v12, a1, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v12, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshr_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
+; CHECK-NEXT:    vsrl.vv v10, v10, v14, v0.t
+; CHECK-NEXT:    vnot.v v12, v12, v0.t
+; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    ret
   %res = call <4 x i64> @llvm.vp.fshr.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %res
 }
 
 declare <4 x i64> @llvm.vp.fshl.v4i64(<4 x i64>, <4 x i64>, <4 x i64>, <4 x i1>, i32)
 define <4 x i64> @fshl_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshl_v4i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vand.vx v14, v12, a1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v14, v0.t
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v14, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vxor.vv v12, v12, v14, v0.t
-; RV32-NEXT:    vand.vx v12, v12, a1, v0.t
-; RV32-NEXT:    vsrl.vi v10, v10, 1, v0.t
-; RV32-NEXT:    vsrl.vv v10, v10, v12, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshl_v4i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV64-NEXT:    vand.vx v14, v12, a1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v14, v0.t
-; RV64-NEXT:    vnot.v v12, v12, v0.t
-; RV64-NEXT:    vand.vx v12, v12, a1, v0.t
-; RV64-NEXT:    vsrl.vi v10, v10, 1, v0.t
-; RV64-NEXT:    vsrl.vv v10, v10, v12, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshl_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v14, v0.t
+; CHECK-NEXT:    vnot.v v12, v12, v0.t
+; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
+; CHECK-NEXT:    vsrl.vi v10, v10, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v10, v10, v12, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    ret
   %res = call <4 x i64> @llvm.vp.fshl.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %res
 }
 
 declare <7 x i64> @llvm.vp.fshr.v7i64(<7 x i64>, <7 x i64>, <7 x i64>, <7 x i1>, i32)
 define <7 x i64> @fshr_v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshr_v7i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV32-NEXT:    vsrl.vv v12, v12, v20, v0.t
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vmv.v.i v20, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vxor.vv v16, v16, v20, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshr_v7i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV64-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV64-NEXT:    vsrl.vv v12, v12, v20, v0.t
-; RV64-NEXT:    vnot.v v16, v16, v0.t
-; RV64-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshr_v7i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
+; CHECK-NEXT:    vsrl.vv v12, v12, v20, v0.t
+; CHECK-NEXT:    vnot.v v16, v16, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
   %res = call <7 x i64> @llvm.vp.fshr.v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> %m, i32 %evl)
   ret <7 x i64> %res
 }
 
 declare <7 x i64> @llvm.vp.fshl.v7i64(<7 x i64>, <7 x i64>, <7 x i64>, <7 x i1>, i32)
 define <7 x i64> @fshl_v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshl_v7i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v20, v0.t
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vmv.v.i v20, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vxor.vv v16, v16, v20, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV32-NEXT:    vsrl.vi v12, v12, 1, v0.t
-; RV32-NEXT:    vsrl.vv v12, v12, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshl_v7i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV64-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v20, v0.t
-; RV64-NEXT:    vnot.v v16, v16, v0.t
-; RV64-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV64-NEXT:    vsrl.vi v12, v12, 1, v0.t
-; RV64-NEXT:    vsrl.vv v12, v12, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshl_v7i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v20, v0.t
+; CHECK-NEXT:    vnot.v v16, v16, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v12, v12, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
   %res = call <7 x i64> @llvm.vp.fshl.v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> %m, i32 %evl)
   ret <7 x i64> %res
 }
 
 declare <8 x i64> @llvm.vp.fshr.v8i64(<8 x i64>, <8 x i64>, <8 x i64>, <8 x i1>, i32)
 define <8 x i64> @fshr_v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshr_v8i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV32-NEXT:    vsrl.vv v12, v12, v20, v0.t
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vmv.v.i v20, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vxor.vv v16, v16, v20, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshr_v8i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV64-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV64-NEXT:    vsrl.vv v12, v12, v20, v0.t
-; RV64-NEXT:    vnot.v v16, v16, v0.t
-; RV64-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshr_v8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
+; CHECK-NEXT:    vsrl.vv v12, v12, v20, v0.t
+; CHECK-NEXT:    vnot.v v16, v16, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
   %res = call <8 x i64> @llvm.vp.fshr.v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %res
 }
 
 declare <8 x i64> @llvm.vp.fshl.v8i64(<8 x i64>, <8 x i64>, <8 x i64>, <8 x i1>, i32)
 define <8 x i64> @fshl_v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshl_v8i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV32-NEXT:    vsll.vv v8, v8, v20, v0.t
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vmv.v.i v20, -1
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vxor.vv v16, v16, v20, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV32-NEXT:    vsrl.vi v12, v12, 1, v0.t
-; RV32-NEXT:    vsrl.vv v12, v12, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshl_v8i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 63
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV64-NEXT:    vand.vx v20, v16, a1, v0.t
-; RV64-NEXT:    vsll.vv v8, v8, v20, v0.t
-; RV64-NEXT:    vnot.v v16, v16, v0.t
-; RV64-NEXT:    vand.vx v16, v16, a1, v0.t
-; RV64-NEXT:    vsrl.vi v12, v12, 1, v0.t
-; RV64-NEXT:    vsrl.vv v12, v12, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshl_v8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 63
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v20, v0.t
+; CHECK-NEXT:    vnot.v v16, v16, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v12, v12, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
   %res = call <8 x i64> @llvm.vp.fshl.v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %res
 }
 
 declare <16 x i64> @llvm.vp.fshr.v16i64(<16 x i64>, <16 x i64>, <16 x i64>, <16 x i1>, i32)
 define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshr_v16i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 3
-; RV32-NEXT:    sub sp, sp, a2
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vle64.v v24, (a0)
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; RV32-NEXT:    li a0, 63
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vand.vx v8, v24, a0, v0.t
-; RV32-NEXT:    vsrl.vv v16, v16, v8, v0.t
-; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.i v8, -1
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vxor.vv v8, v24, v8, v0.t
-; RV32-NEXT:    vand.vx v8, v8, a0, v0.t
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vsll.vi v24, v24, 1, v0.t
-; RV32-NEXT:    vsll.vv v8, v24, v8, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshr_v16i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a2, a2, 3
-; RV64-NEXT:    sub sp, sp, a2
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV64-NEXT:    vle64.v v24, (a0)
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; RV64-NEXT:    li a0, 63
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV64-NEXT:    vand.vx v8, v24, a0, v0.t
-; RV64-NEXT:    vsrl.vv v16, v16, v8, v0.t
-; RV64-NEXT:    vnot.v v8, v24, v0.t
-; RV64-NEXT:    vand.vx v8, v8, a0, v0.t
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vsll.vi v24, v24, 1, v0.t
-; RV64-NEXT:    vsll.vv v8, v24, v8, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshr_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    li a0, 63
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vand.vx v8, v24, a0, v0.t
+; CHECK-NEXT:    vsrl.vv v16, v16, v8, v0.t
+; CHECK-NEXT:    vnot.v v8, v24, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsll.vi v24, v24, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v24, v8, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
   %res = call <16 x i64> @llvm.vp.fshr.v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %res
 }
 
 declare <16 x i64> @llvm.vp.fshl.v16i64(<16 x i64>, <16 x i64>, <16 x i64>, <16 x i1>, i32)
 define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: fshl_v16i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 3
-; RV32-NEXT:    sub sp, sp, a2
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vle64.v v24, (a0)
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; RV32-NEXT:    vmv8r.v v16, v8
-; RV32-NEXT:    li a0, 63
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vand.vx v8, v24, a0, v0.t
-; RV32-NEXT:    vsll.vv v8, v16, v8, v0.t
-; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.i v16, -1
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vxor.vv v16, v24, v16, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a0, v0.t
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vsrl.vi v24, v24, 1, v0.t
-; RV32-NEXT:    vsrl.vv v16, v24, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: fshl_v16i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a2, a2, 3
-; RV64-NEXT:    sub sp, sp, a2
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV64-NEXT:    vle64.v v24, (a0)
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; RV64-NEXT:    vmv8r.v v16, v8
-; RV64-NEXT:    li a0, 63
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV64-NEXT:    vand.vx v8, v24, a0, v0.t
-; RV64-NEXT:    vsll.vv v8, v16, v8, v0.t
-; RV64-NEXT:    vnot.v v16, v24, v0.t
-; RV64-NEXT:    vand.vx v16, v16, a0, v0.t
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vsrl.vi v24, v24, 1, v0.t
-; RV64-NEXT:    vsrl.vv v16, v24, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    ret
+; CHECK-LABEL: fshl_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    li a0, 63
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vand.vx v8, v24, a0, v0.t
+; CHECK-NEXT:    vsll.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vnot.v v16, v24, v0.t
+; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsrl.vi v24, v24, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v16, v24, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
   %res = call <16 x i64> @llvm.vp.fshl.v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %res
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32: {{.*}}
+; RV64: {{.*}}

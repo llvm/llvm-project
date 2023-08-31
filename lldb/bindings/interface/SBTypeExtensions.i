@@ -2,6 +2,24 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeMember {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
+        def __len__(self):
+            pass
+
+        def __iter__(self):
+            pass
+
         name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
         byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
@@ -13,6 +31,32 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMember, lldb::eDescriptionLevelBrief)
 }
 
 STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeMemberFunction, lldb::eDescriptionLevelBrief)
+
+%extend lldb::SBTypeMemberFunction {
+#ifdef SWIGPYTHON
+    // operator== is a free function, which swig does not handle, so we inject
+    // our own equality operator here
+    %pythoncode%{
+      def __eq__(self, other):
+        return not self.__ne__(other)
+
+      def __int__(self):
+        pass
+
+      def __hex__(self):
+        pass
+
+      def __oct__(self):
+        pass
+
+      def __len__(self):
+        pass
+
+      def __iter__(self):
+        pass
+    %}
+#endif
+}
 
 STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 
@@ -27,6 +71,24 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
                     template_args.append(self.GetTemplateArgumentType(i))
                 return template_args
             return None
+
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
+        def __len__(self):
+            return self.GetByteSize()
+
+        def __iter__(self):
+            pass
 
         module = property(GetModule, None, doc='''A read only property that returns the module in which type is defined.''')
         name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
@@ -121,6 +183,18 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeList {
 #ifdef SWIGPYTHON
     %pythoncode%{
+    def __eq__(self, other):
+        return not self.__ne__(other)
+
+    def __int__(self):
+        pass
+
+    def __hex__(self):
+        pass
+
+    def __oct__(self):
+        pass
+
     def __iter__(self):
         '''Iterate over all types in a lldb.SBTypeList object.'''
         return lldb_iter(self, 'GetSize', 'GetTypeAtIndex')

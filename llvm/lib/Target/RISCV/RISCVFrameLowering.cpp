@@ -773,7 +773,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (FirstSPAdjustAmount)
     StackSize = FirstSPAdjustAmount;
 
-  if (RVFI->isPushable(MF) && MBBI->getOpcode() == RISCV::CM_POP) {
+  if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
+      MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space.
     unsigned PushStack = RVFI->getRVPushRegs() * (STI.getXLen() / 8);

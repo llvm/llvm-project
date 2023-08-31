@@ -1577,7 +1577,7 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
     llvm::sys::fs::UniqueID ID;
-    if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
     }
 

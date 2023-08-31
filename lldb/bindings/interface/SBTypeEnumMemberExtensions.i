@@ -2,6 +2,26 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeEnumMember {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
+        def __iter__(self):
+            '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
+            return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')
+
+        def __len__(self):
+            '''Return the number of members in a lldb.SBTypeEnumMemberList object.'''
+            return self.GetSize()
+
         name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
         type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
         signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
@@ -13,6 +33,18 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeEnumMemberList {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            pass
+
+        def __hex__(self):
+            pass
+
+        def __oct__(self):
+            pass
+
         def __iter__(self):
             '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
             return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')

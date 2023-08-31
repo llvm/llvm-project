@@ -202,8 +202,12 @@ class GuardWideningImpl {
   /// expensive as computing one of the two. If \p InsertPt is true then
   /// actually generate the resulting expression, make it available at \p
   /// InsertPt and return it in \p Result (else no change to the IR is made).
-  bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
-                       Value *&Result);
+  std::optional<Value *> mergeChecks(Value *Cond0, Value *Cond1,
+                                     Instruction *InsertPt);
+
+  /// Generate the logical AND of \p Cond0 and \p Cond1 and make it available at
+  /// \p InsertPt
+  Value *hoistChecks(Value *Cond0, Value *Cond1, Instruction *InsertPt);
 
   /// Adds freeze to Orig and push it as far as possible very aggressively.
   /// Also replaces all uses of frozen instruction with frozen version.
@@ -269,15 +273,18 @@ class GuardWideningImpl {
   /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
   /// computing only one of the two expressions?
   bool isWideningCondProfitable(Value *Cond0, Value *Cond1) {
-    Value *ResultUnused;
-    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused);
+    return mergeChecks(Cond0, Cond1, /*InsertPt=*/nullptr).has_value();
   }
 
   /// Widen \p ToWiden to fail if \p NewCondition is false
   void widenGuard(Instruction *ToWiden, Value *NewCondition) {
-    Value *Result;
     Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
-    widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result);
+    auto MergedCheck =
+        mergeChecks(getCondition(ToWiden), NewCondition, InsertPt);
+    Value *Result = MergedCheck ? *MergedCheck
+                                : hoistChecks(getCondition(ToWiden),
+                                              NewCondition, InsertPt);
+
     if (isGuardAsWidenableBranch(ToWiden)) {
       setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
       return;
@@ -654,10 +661,12 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
   return Result;
 }
 
-bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
-                                        Instruction *InsertPt, Value *&Result) {
+std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
+                                                      Value *Cond1,
+                                                      Instruction *InsertPt) {
   using namespace llvm::PatternMatch;
 
+  Value *Result = nullptr;
   {
     // L >u C0 && L >u C1  ->  L >u max(C0, C1)
     ConstantInt *RHS0, *RHS1;
@@ -686,7 +695,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
             makeAvailableAt(LHS, InsertPt);
             Result = new ICmpInst(InsertPt, Pred, LHS, NewRHS, "wide.chk");
           }
-          return true;
+          return Result;
         }
       }
     }
@@ -697,7 +706,6 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     if (parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
         combineRangeChecks(Checks, CombinedChecks)) {
       if (InsertPt) {
-        Result = nullptr;
         for (auto &RC : CombinedChecks) {
           makeAvailableAt(RC.getCheckInst(), InsertPt);
           if (Result)
@@ -710,21 +718,19 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
         Result->setName("wide.chk");
         Result = freezeAndPush(Result, InsertPt);
       }
-      return true;
+      return Result;
     }
   }
-
-  // Base case -- just logical-and the two conditions together.
-
-  if (InsertPt) {
-    makeAvailableAt(Cond0, InsertPt);
-    makeAvailableAt(Cond1, InsertPt);
-    Cond1 = freezeAndPush(Cond1, InsertPt);
-    Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
-  }
-
   // We were not able to compute Cond0 AND Cond1 for the price of one.
-  return false;
+  return std::nullopt;
+}
+
+Value *GuardWideningImpl::hoistChecks(Value *Cond0, Value *Cond1,
+                                      Instruction *InsertPt) {
+  makeAvailableAt(Cond0, InsertPt);
+  makeAvailableAt(Cond1, InsertPt);
+  Cond1 = freezeAndPush(Cond1, InsertPt);
+  return BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
 }
 
 bool GuardWideningImpl::parseRangeChecks(

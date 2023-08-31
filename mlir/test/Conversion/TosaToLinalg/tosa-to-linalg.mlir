@@ -551,6 +551,14 @@ func.func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: arith.extf
   %0 = tosa.cast %arg0 : (tensor<1xf16>) -> tensor<1xf32>
 
+  // CHECK: linalg.generic
+  // CHECK: arith.constant -1.280000e+02
+  // CHECK: arith.constant 1.270000e+02
+  // CHECK: math.roundeven
+  // CHECK: arith.minf
+  // CHECK: arith.maxf
+  // CHECK: arith.fptosi
+  %1 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xi8>
   return
 }
 

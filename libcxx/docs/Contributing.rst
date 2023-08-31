@@ -34,6 +34,123 @@ This will ensure that you work in a direction that the project endorses and will
 contribution as directional questions can be raised early. Including a WIP patch is not mandatory, but
 it can be useful to ground the discussion in something concrete.
 
+Coding standards
+================
+
+In general, libc++ follows the
+`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
+There are some deviations from these standards.
+
+Libc++ uses ``__ugly_names``. These names are reserved for implementations, so
+users may not use them in their own applications. When using a name like ``T``,
+a user may have defined a macro that changes the meaning of ``T``. By using
+``__ugly_names`` we avoid that problem. Other standard libraries and compilers
+use these names too. To avoid common clashes with other uglified names used in
+other implementations (e.g. system headers), the test in
+``libcxx/test/libcxx/system_reserved_names.gen.py`` contains the list of
+reserved names that can't be used.
+
+Unqualified function calls are susceptible to
+`argument-dependent lookup (ADL) <https://en.cppreference.com/w/cpp/language/adl>`_.
+This means calling ``move(UserType)`` might not call ``std::move``. Therefore,
+function calls must use qualified names to avoid ADL. Some functions in the
+standard library `require ADL usage <http://eel.is/c++draft/contents#3>`_.
+Names of classes, variables, concepts, and type aliases are not subject to ADL.
+They don't need to be qualified.
+
+Function overloading also applies to operators. Using ``&user_object`` may call
+a user-defined ``operator&``. Use ``std::addressof`` instead. Similarly, to
+avoid invoking a user-defined ``operator,``, make sure to cast the result to
+``void`` when using the ``,``. For example:
+
+.. code-block:: cpp
+
+    for (; __first1 != __last1; ++__first1, (void)++__first2) {
+      ...
+    }
+
+In general, try to follow the style of existing code. There are a few
+exceptions:
+
+- ``_VSTD::foo`` is no longer used in new code. Use ``std::foo`` instead.
+- ``_LIBCPP_INLINE_VISIBILITY`` is no longer used in new code. Use
+  ``_LIBCPP_HIDE_FROM_ABI`` instead.
+- Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
+  by libc++ accept alias declarations in all standard modes.
+
+Other tips are:
+
+- Keep the number of formatting changes in patches minimal.
+- Provide separate patches for style fixes and for bug fixes or features. Keep in
+  mind that large formatting patches may cause merge conflicts with other patches
+  under review. In general, we prefer to avoid large reformatting patches.
+- Keep patches self-contained. Large and/or complicated patches are harder to
+  review and take a significant amount of time. It's fine to have multiple
+  patches to implement one feature if the feature can be split into
+  self-contained sub-tasks.
+
+
+Resources
+=========
+
+Libc++ specific
+---------------
+
+- ``libcxx/include/__config`` -- this file contains the commonly used
+  macros in libc++. Libc++ supports all C++ language versions. Newer versions
+  of the Standard add new features. For example, making functions ``constexpr``
+  in C++20 is done by using ``_LIBCPP_CONSTEXPR_SINCE_CXX20``. This means the
+  function is ``constexpr`` in C++20 and later. The Standard does not allow
+  making this available in C++17 or earlier, so we use a macro to implement
+  this requirement.
+- ``libcxx/test/support/test_macros.h`` -- similar to the above, but for the
+  test suite.
+
+
+ISO C++ Standard
+----------------
+
+Libc++ implements the library part of the ISO C++ standard. The official
+publication must be bought from ISO or your national body. This is not
+needed to work on libc++, there are other free resources available.
+
+- The `LaTeX sources <https://github.com/cplusplus/draft>`_  used to
+  create the official C++ standard. This can be used to create your own
+  unofficial build of the standard.
+
+- An `HTML rendered version of the draft <https://eel.is/c++draft/>`_  is
+  available. This is the most commonly used place to look for the
+  wording of the standard.
+
+- An `alternative <https://github.com/timsong-cpp/cppwp>`_ is available.
+  This link has both recent and historic versions of the standard.
+
+- When implementing features, there are
+  `general requirements <https://eel.is/c++draft/#library>`_.
+  Most papers use this
+  `jargon <http://eel.is/c++draft/structure#specifications>`_
+  to describe how library functions work.
+
+- The `WG21 redirect service <https://wg21.link/>`_ is a tool to quickly locate
+  papers, issues, and wording in the standard.
+
+- The `paper trail <https://github.com/cplusplus/papers/issues>`_ of
+  papers is publicly available, including the polls taken. It
+  contains links to the minutes of paper's discussion. Per ISO rules,
+  these minutes are only accessible by members of the C++ committee.
+
+- `Feature-Test Macros and Policies
+  <https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations>`_
+  contains information about feature-test macros in C++.
+  It contains a list with all feature-test macros, their versions, and the paper
+  that introduced them.
+
+- `cppreference <https://en.cppreference.com/w/>`_ is a good resource
+  for the usage of C++ library and language features. It's easier to
+  read than the C++ Standard, but it lacks details needed to properly implement
+  library features.
+
+
 Pre-commit check list
 =====================
 

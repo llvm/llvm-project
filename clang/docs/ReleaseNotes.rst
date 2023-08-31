@@ -59,10 +59,6 @@ sections with improvements to Clang's support for those languages.
 C++ Language Changes
 --------------------
 
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Sized deallocation is enabled by default in C++14 onwards.
-
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -166,6 +162,7 @@ sections with improvements to Clang's support for those languages.
   and the ``__STDC_VERSION__`` macro now expands to ``202311L`` instead of its
   previous placeholder value. Clang continues to accept ``-std=c2x`` and
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
+- Clang now supports `requires c23` for module maps.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -180,12 +177,18 @@ Modified Compiler Flags
 -----------------------
 
 * ``-Woverriding-t-option`` is renamed to ``-Woverriding-option``.
+* ``-Winterrupt-service-routine`` is renamed to ``-Wexcessive-regsave`` as a generalization
 
 Removed Compiler Flags
 -------------------------
 
 Attribute Changes in Clang
 --------------------------
+- On X86, a warning is now emitted if a function with ``__attribute__((no_caller_saved_registers))``
+  calls a function without ``__attribute__((no_caller_saved_registers))``, and is not compiled with
+  ``-mgeneral-regs-only``
+- On X86, a function with ``__attribute__((interrupt))`` can now call a function without
+  ``__attribute__((no_caller_saved_registers))`` provided that it is compiled with ``-mgeneral-regs-only``
 
 - When a non-variadic function is decorated with the ``format`` attribute,
   Clang now checks that the format string would match the function's parameters'
@@ -214,6 +217,9 @@ Improvements to Clang's diagnostics
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier.
+- Clang now warns on unused variables declared and initialized in condition
+  expressions.
+  (`#61681: <https://github.com/llvm/llvm-project/issues/61681>`_)
 
 Bug Fixes in This Version
 -------------------------
@@ -248,6 +254,9 @@ Bug Fixes in This Version
   (`#64876 <https://github.com/llvm/llvm-project/issues/64876>`_)
 - Fixed an assertion if a function has cleanups and fatal erors.
   (`#48974 <https://github.com/llvm/llvm-project/issues/48974>`_)
+- Clang now emits an error if it is not possible to deduce array size for a
+  variable with incomplete array type.
+  (`#37257 <https://github.com/llvm/llvm-project/issues/37257>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -288,6 +297,10 @@ Bug Fixes to C++ Support
 - Fix a crash when an immediate invocation is not a constant expression
   and appear in an implicit cast.
   (`#64949 <https://github.com/llvm/llvm-project/issues/64949>`_).
+
+- Fix crash when parsing ill-formed lambda trailing return type. Fixes:
+  (`#64962 <https://github.com/llvm/llvm-project/issues/64962>`_) and
+  (`#28679 <https://github.com/llvm/llvm-project/issues/28679>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

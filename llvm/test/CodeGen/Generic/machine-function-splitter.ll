@@ -602,6 +602,33 @@ cold2:                                            ; preds = %0
   ret i32 %4
 }
 
+define void @foo20(i1 zeroext %0) !prof !14 !section_prefix !15 {
+;; Check that blocks containing or targeted by asm goto aren't split.
+; MFS-DEFAULTS-LABEL:        foo20
+; MFS-DEFAULTS-AARCH64-NOT:  foo20.cold:
+; MFS-DEFAULTS-X86:          .section        .text.split.foo20
+; MFS-DEFAULTS-X86:          foo20.cold:
+; MFS-DEFAULTS-X86-DAG:      # %cold_asm
+; MFS-DEFAULTS-X86-DAG:      # %cold_asm_target
+
+  br i1 %0, label %hot, label %cold_asm, !prof !17
+
+hot:
+  %2 = call i32 @bar()
+  ret void
+
+cold_asm:
+    callbr void asm sideeffect "nop", "!i"() #3
+          to label %asm.fallthrough [label %cold_asm_target]
+
+asm.fallthrough:
+    br label %cold_asm_target
+
+cold_asm_target:
+  %3 = call i32 @baz()
+  ret void
+}
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()
