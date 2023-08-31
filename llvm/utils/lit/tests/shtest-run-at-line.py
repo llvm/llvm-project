@@ -28,21 +28,28 @@
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/basic.txt
 
 # CHECK:      Command Output (stdout)
-# CHECK:      $ ":" "RUN: at line 1"
-# CHECK-NEXT: $ "true"
-# CHECK-NEXT: $ ":" "RUN: at line 2"
-# CHECK-NEXT: $ "false"
+# CHECK-NEXT: --
+# CHECK-NEXT: # RUN: at line 1
+# CHECK-NEXT: true
+# CHECK-NEXT: # executed command: true
+# CHECK-NEXT: # RUN: at line 2
+# CHECK-NEXT: false
+# CHECK-NEXT: # executed command: false
 # CHECK-NOT:  RUN
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/line-continuation.txt
 
 # CHECK:      Command Output (stdout)
-# CHECK:      $ ":" "RUN: at line 1"
-# CHECK-NEXT: $ ":" "first" "line" "continued" "to" "second" "line"
-# CHECK-NEXT: $ ":" "RUN: at line 3"
-# CHECK-NEXT: $ "echo" "foo bar"
-# CHECK-NEXT: $ "FileCheck" "{{.*}}"
-# CHECK-NEXT: $ ":" "RUN: at line 5"
-# CHECK-NEXT: $ "echo" "foo baz"
-# CHECK-NEXT: $ "FileCheck" "{{.*}}"
+# CHECK-NEXT: --
+# CHECK-NEXT: # RUN: at line 1
+# CHECK-NEXT: : first line continued to second line
+# CHECK-NEXT: # executed command: : first line continued to second line
+# CHECK-NEXT: # RUN: at line 3
+# CHECK-NEXT: echo 'foo bar' | FileCheck {{.*}}
+# CHECK-NEXT: # executed command: echo 'foo bar'
+# CHECK-NEXT: # executed command: FileCheck {{.*}}
+# CHECK-NEXT: # RUN: at line 5
+# CHECK-NEXT: echo 'foo baz' | FileCheck {{.*}}
+# CHECK-NEXT: # executed command: echo 'foo baz'
+# CHECK-NEXT: # executed command: FileCheck {{.*}}
 # CHECK-NOT:  RUN

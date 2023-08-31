@@ -8,6 +8,7 @@ import re
 import stat
 import pathlib
 import platform
+import shlex
 import shutil
 import tempfile
 import threading
@@ -55,6 +56,14 @@ kDevNull = "/dev/null"
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
 kPdbgRegex = "%dbg\\(([^)'\"]*)\\)(.*)"
+
+
+def buildPdbgCommand(msg, cmd):
+    res = f"%dbg({msg}) {cmd}"
+    assert re.match(
+        kPdbgRegex, res
+    ), f"kPdbgRegex expected to match actual %dbg usage: {res}"
+    return res
 
 
 class ShellEnvironment(object):
@@ -340,12 +349,12 @@ def executeBuiltinExport(cmd, shenv):
 
 
 def executeBuiltinEcho(cmd, shenv):
-    """Interpret a redirected echo command"""
+    """Interpret a redirected echo or @echo command"""
     opened_files = []
     stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
     if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
         raise InternalShellError(
-            cmd, "stdin and stderr redirects not supported for echo"
+            cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
         )
 
     # Some tests have un-redirected echo commands to help debug test failures.
@@ -692,6 +701,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "cd": executeBuiltinCd,
         "export": executeBuiltinExport,
         "echo": executeBuiltinEcho,
+        "@echo": executeBuiltinEcho,
         "mkdir": executeBuiltinMkdir,
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
@@ -919,7 +929,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
         if proc_not_counts[i] % 2:
-            res = not res
+            res = 1 if res == 0 else 0
         elif proc_not_counts[i] > 1:
             res = 1 if res != 0 else 0
 
@@ -982,19 +992,58 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     return exitCode
 
 
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
+def formatOutput(title, data, limit=None):
+    if not data.strip():
+        return ""
+    if not limit is None and len(data) > limit:
+        data = data[:limit] + "\n...\n"
+        msg = "data was truncated"
+    else:
+        msg = ""
+    ndashes = 30
+    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
+    return out
+
+# Normally returns out, err, exitCode, timeoutInfo.
+#
+# If debug is True (the normal lit behavior), err is empty, and out contains an
+# execution trace, including stdout and stderr shown per command executed.
+#
+# If debug is False (set by some custom lit test formats that call this
+# function), out contains only stdout from the script, err contains only stderr
+# from the script, and there is no execution trace.
+def executeScriptInternal(test, litConfig, tmpBase, commands, cwd,
+                          debug=True):
     cmds = []
     for i, ln in enumerate(commands):
+        # Within lit, we try to always add '%dbg(...)' to command lines in order
+        # to maximize debuggability.  However, custom lit test formats might not
+        # always add it, so add a generic debug message in that case.
         match = re.match(kPdbgRegex, ln)
         if match:
+            dbg = match.group(1)
             command = match.group(2)
-            ln = commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
+        else:
+            dbg = "command line"
+            command = ln
+        if debug:
+            ln = f"@echo '# {dbg}' "
+            if command:
+                ln += f"&& @echo {shlex.quote(command.lstrip())} && {command}"
+            else:
+                ln += "has no command after substitutions"
+        else:
+            ln = command
         try:
             cmds.append(
                 ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
             )
         except:
-            return lit.Test.Result(Test.FAIL, "shell parser error on: %r" % ln)
+            return lit.Test.Result(
+                Test.FAIL, f"shell parser error on {dbg}: {command.lstrip()}\n"
+            )
 
     cmd = cmds[0]
     for c in cmds[1:]:
@@ -1014,8 +1063,42 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 
     out = err = ""
     for i, result in enumerate(results):
-        # Write the command line run.
-        out += "$ %s\n" % (" ".join('"%s"' % s for s in result.command.args),)
+        if not debug:
+            out += result.stdout
+            err += result.stderr
+            continue
+
+        # The purpose of an "@echo" command is merely to add a debugging message
+        # directly to lit's output.  It is used internally by lit's internal
+        # shell and is not currently documented for use in lit tests.  However,
+        # if someone misuses it (e.g., both "echo" and "@echo" complain about
+        # stdin redirection), produce the normal execution trace to facilitate
+        # debugging.
+        if (
+            result.command.args[0] == "@echo"
+            and result.exitCode == 0
+            and not result.stderr
+            and not result.outputFiles
+            and not result.timeoutReached
+        ):
+            out += result.stdout
+            continue
+
+        # Write the command line that was run.  Properly quote it.  Leading
+        # "!" commands should not be quoted as that would indicate they are not
+        # the builtins.
+        out += "# executed command: "
+        nLeadingBangs = next(
+            (i for i, cmd in enumerate(result.command.args) if cmd != "!"),
+            len(result.command.args),
+        )
+        out += "! " * nLeadingBangs
+        out += " ".join(
+            shlex.quote(str(s))
+            for i, s in enumerate(result.command.args)
+            if i >= nLeadingBangs
+        )
+        out += "\n"
 
         # If nothing interesting happened, move on.
         if (
@@ -1030,22 +1113,16 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
-            if data.strip():
-                out += "# redirected output from %r:\n" % (name,)
-                data = to_string(data.decode("utf-8", errors="replace"))
-                if len(data) > 1024:
-                    out += data[:1024] + "\n...\n"
-                    out += "note: data was truncated\n"
-                else:
-                    out += data
-                out += "\n"
-
+            data = to_string(data.decode("utf-8", errors="replace"))
+            out += formatOutput(
+                f"redirected output from '{name}'", data, limit=1024
+            )
         if result.stdout.strip():
-            out += "# command output:\n%s\n" % (result.stdout,)
+            out += formatOutput("command stdout", result.stdout)
         if result.stderr.strip():
-            out += "# command stderr:\n%s\n" % (result.stderr,)
+            out += formatOutput("command stderr", result.stderr)
         if not result.stdout.strip() and not result.stderr.strip():
-            out += "note: command had no output on stdout or stderr\n"
+            out += "# note: command had no output on stdout or stderr\n"
 
         # Show the error conditions:
         if result.exitCode != 0:
@@ -1055,9 +1132,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 codeStr = hex(int(result.exitCode & 0xFFFFFFFF)).rstrip("L")
             else:
                 codeStr = str(result.exitCode)
-            out += "error: command failed with exit status: %s\n" % (codeStr,)
+            out += "# error: command failed with exit status: %s\n" % (codeStr,)
         if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
-            out += "error: command reached timeout: %s\n" % (
+            out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
 
@@ -1833,13 +1910,7 @@ class IntegratedTestKeywordParser(object):
         if not output or not output[-1].add_continuation(line_number, keyword, line):
             if output is None:
                 output = []
-            pdbg = "%dbg({keyword} at line {line_number})".format(
-                keyword=keyword, line_number=line_number
-            )
-            assert re.match(
-                kPdbgRegex + "$", pdbg
-            ), "kPdbgRegex expected to match actual %dbg usage"
-            line = "{pdbg} {real_command}".format(pdbg=pdbg, real_command=line)
+            line = buildPdbgCommand(f"{keyword} at line {line_number}", line)
             output.append(CommandDirective(line_number, line_number, keyword, line))
         return output
 
@@ -2104,6 +2175,8 @@ def executeShTest(
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
 
     script = list(preamble_commands)
+    script = [buildPdbgCommand(f"preamble command line", ln) for ln in script]
+
     parsed = parseIntegratedTestScript(test, require_script=not script)
     if isinstance(parsed, lit.Test.Result):
         return parsed
