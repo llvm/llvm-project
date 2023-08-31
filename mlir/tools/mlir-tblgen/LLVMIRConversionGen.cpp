@@ -211,7 +211,7 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
   std::vector<int64_t> llvmArgIndices =
       record.getValueAsListOfInts("llvmArgIndices");
   if (llvmArgIndices.empty())
-    append_range(llvmArgIndices, seq<int64_t>(0, op.getNumArgs()));
+    append_range(llvmArgIndices, to_vector(seq<int64_t>(0, op.getNumArgs())));
   if (llvmArgIndices.size() != static_cast<size_t>(op.getNumArgs())) {
     return emitError(
         record,
