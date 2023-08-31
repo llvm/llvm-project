@@ -429,11 +429,20 @@ void AIX::addClangTargetOptions(
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const {
-  // Add linker option -u__llvm_profile_runtime to cause runtime
-  // initialization to occur.
-  if (needsProfileRT(Args))
+  if (needsProfileRT(Args)) {
+    // Add linker option -u__llvm_profile_runtime to cause runtime
+    // initialization to occur.
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+
+    if (const auto *A =
+            Args.getLastArgNoClaim(options::OPT_fprofile_update_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "atomic" || Val == "prefer-atomic")
+        CmdArgs.push_back("-latomic");
+    }
+  }
+
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 
