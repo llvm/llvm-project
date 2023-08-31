@@ -16,7 +16,6 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a6, $a4, $a3
 ; LA64-NEXT:    move $a5, $a4
@@ -29,8 +28,6 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB0_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b acquire
@@ -50,7 +47,6 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a6, $a4, $a2
 ; LA64-NEXT:    move $a5, $a4
@@ -63,8 +59,6 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB1_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b acquire
@@ -103,7 +97,6 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a6, $a4, $a3
 ; LA64-NEXT:    move $a5, $a4
@@ -116,8 +109,6 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB4_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b acquire
@@ -137,7 +128,6 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a6, $a4, $a2
 ; LA64-NEXT:    move $a5, $a4
@@ -150,8 +140,6 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sc.w $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB5_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b acquire
@@ -192,7 +180,6 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    andi $a4, $a2, 24
 ; LA64-NEXT:    xori $a4, $a4, 56
 ; LA64-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a5, $a0, 0
 ; LA64-NEXT:    and $a7, $a5, $a3
 ; LA64-NEXT:    move $a6, $a5
@@ -207,8 +194,6 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB8_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a5, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b acquire
@@ -231,7 +216,6 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a5, $a0, 0
 ; LA64-NEXT:    and $a7, $a5, $a4
 ; LA64-NEXT:    move $a6, $a5
@@ -246,8 +230,6 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB9_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a5, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b acquire
@@ -288,7 +270,6 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    andi $a4, $a2, 24
 ; LA64-NEXT:    xori $a4, $a4, 56
 ; LA64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a5, $a0, 0
 ; LA64-NEXT:    and $a7, $a5, $a3
 ; LA64-NEXT:    move $a6, $a5
@@ -303,8 +284,6 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB12_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a5, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b acquire
@@ -327,7 +306,6 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a5, $a0, 0
 ; LA64-NEXT:    and $a7, $a5, $a4
 ; LA64-NEXT:    move $a6, $a5
@@ -342,8 +320,6 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB13_1
 ; LA64-NEXT:  # %bb.4:
-; LA64-NEXT:    dbar 1792
-; LA64-NEXT:  # %bb.5:
 ; LA64-NEXT:    srl.w $a0, $a5, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b acquire
