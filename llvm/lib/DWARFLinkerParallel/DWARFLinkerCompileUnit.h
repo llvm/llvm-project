@@ -47,15 +47,18 @@ public:
 
   CompileUnit(LinkingGlobalData &GlobalData, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
-              OffsetToUnitTy UnitFromOffset)
+              OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
+              support::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         getUnitFromOffset(UnitFromOffset), Stage(Stage::CreatedNotLoaded) {
     UnitName = File.FileName;
+    setOutputFormat(Format, Endianess);
   }
 
   CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
-              OffsetToUnitTy UnitFromOffset)
+              OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
+              support::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         OrigUnit(&OrigUnit), getUnitFromOffset(UnitFromOffset),
         Stage(Stage::CreatedNotLoaded) {
@@ -63,7 +66,7 @@ public:
     if (!CUDie)
       return;
 
-    setOutputFormat(OrigUnit);
+    setOutputFormat(Format, Endianess);
 
     Language = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language), 0);
     if (const char *CUName = CUDie.getName(DINameKind::ShortName))
