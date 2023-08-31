@@ -2,23 +2,25 @@
 ! and -Rpass-analysis)
 ! loop-delete isn't enabled at O0 so we use at least O1
 
+! DEFINE: %{output} = -emit-llvm -o /dev/null 2>&1
+
 ! Check that we can override -Rpass= with -Rno-pass.
-! RUN: %flang_fc1 %s -O1 -Rpass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=REMARKS
-! RUN: %flang_fc1 %s -O1 -Rpass -Rno-pass -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=NO-REMARKS
+! RUN: %flang_fc1 %s -O1 -Rpass %{output} | FileCheck %s --check-prefix=REMARKS
+! RUN: %flang_fc1 %s -O1 -Rpass -Rno-pass  %{output} | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check -Rno-pass, -Rno-pass-analysis, -Rno-pass-missed nothing emitted
-! RUN: %flang %s -O1 -Rno-pass -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-missed -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-analysis -c 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass -S %{output} | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass-missed -S %{output}  | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O1 -Rno-pass-analysis -S %{output} | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check full -Rpass message is emitted
-! RUN: %flang %s -O1 -Rpass -c 2>&1 | FileCheck %s
+! RUN: %flang %s -O1 -Rpass  -S %{output} | FileCheck %s
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O1 -Rpass-missed -c 2>&1 | FileCheck %s --check-prefix=REMARKS-MISSED
+! RUN: %flang %s -O1 -Rpass-missed  -S %{output} | FileCheck %s --check-prefix=REMARKS-MISSED
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O1 -Rpass-analysis -c 2>&1 | FileCheck %s --check-prefix=REMARKS-ANALYSIS
+! RUN: %flang %s -O1 -Rpass-analysis  -S %{output} | FileCheck %s --check-prefix=REMARKS-ANALYSIS
 
 ! CHECK: remark: Loop deleted because it is invariant
 ! REMARKS-MISSED: {{.*}} will not be inlined into {{.*}} because its definition is unavailable
