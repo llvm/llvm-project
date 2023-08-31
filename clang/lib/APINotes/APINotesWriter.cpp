@@ -94,7 +94,7 @@ public:
   llvm::DenseMap<
       ContextTableKey,
       llvm::SmallVector<std::pair<VersionTuple, GlobalVariableInfo>, 1>>
-    GlobalVariables;
+      GlobalVariables;
 
   /// Information about global functions.
   ///
@@ -102,7 +102,7 @@ public:
   llvm::DenseMap<
       ContextTableKey,
       llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>, 1>>
-    GlobalFunctions;
+      GlobalFunctions;
 
   /// Information about enumerators.
   ///
@@ -373,8 +373,7 @@ public:
 
   std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &OS, key_type_ref,
                                                   data_type_ref) {
-    uint32_t KeyLength =
-        sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
+    uint32_t KeyLength = sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
     uint32_t DataLength = sizeof(uint32_t);
 
     llvm::support::endian::Writer writer(OS, llvm::support::little);

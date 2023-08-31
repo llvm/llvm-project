@@ -746,13 +746,13 @@ class ContextID {
 public:
   unsigned Value;
 
-  explicit ContextID(unsigned value) : Value(value) { }
+  explicit ContextID(unsigned value) : Value(value) {}
 };
 
 enum class ContextKind : uint8_t {
   ObjCClass = 0,
   ObjCProtocol = 1,
-  Namespace = 2
+  Namespace = 2,
 };
 
 struct Context {
