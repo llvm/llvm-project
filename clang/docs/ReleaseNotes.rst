@@ -218,6 +218,8 @@ Non-comprehensive list of changes in this release
   For scalable vectors, e.g., SVE or RISC-V V, the number of elements is not known at compile-time and is
   determined at runtime.
 
+* Added ``#pragma clang fp reciprocal``.
+
 New Compiler Flags
 ------------------
 

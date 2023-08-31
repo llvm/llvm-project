@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
 
 void test_0(int *List, int Length) {
-/* expected-error@+1 {{missing option; expected 'contract', 'reassociate' or 'exceptions'}} */
+/* expected-error@+1 {{missing option; expected 'contract', 'reassociate', 'reciprocal', or 'exceptions'}} */
 #pragma clang fp
   for (int i = 0; i < Length; i++) {
     List[i] = i;
   }
 }
 void test_1(int *List, int Length) {
-/* expected-error@+1 {{invalid option 'blah'; expected 'contract', 'reassociate' or 'exceptions'}} */
+/* expected-error@+1 {{invalid option 'blah'; expected 'contract', 'reassociate', 'reciprocal', or 'exceptions'}} */
 #pragma clang fp blah
   for (int i = 0; i < Length; i++) {
     List[i] = i;
