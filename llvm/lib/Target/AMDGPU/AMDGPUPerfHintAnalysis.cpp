@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -24,11 +24,15 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
-using namespace llvm;
+namespace llvm {
+extern cl::opt<unsigned> EvictInterferenceCutoff;
+}
 
+using namespace llvm;
 #define DEBUG_TYPE "amdgpu-perf-hint"
 
 static cl::opt<unsigned>
@@ -280,7 +284,6 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
       }
     }
   }
-
   return &FI;
 }
 
@@ -288,9 +291,34 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
   const Module &M = *F.getParent();
   DL = &M.getDataLayout();
 
+  bool Changed = false;
+
+  // To avoid extreme long compiles restrict register allocator's eviction
+  // algorithm if an extra large basic block is found.
+  // Set EvictInterferenceCutoff = 1 if:
+  //  - The function has a basic block with more than 8000 instructions AND
+  //  - The function has more than 600 calls to @llvm.amdgcn.raw.buffer.store.v4i32 calls.
+
+  unsigned MaxInstCount = 0;
+  for (auto &B : F)
+    MaxInstCount = std::max(MaxInstCount, (unsigned)B.size());
+  if (MaxInstCount > 8000) {
+    Function *BufferStore = Intrinsic::getDeclaration(
+        F.getParent(), Intrinsic::amdgcn_raw_buffer_store,
+        FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4));
+    unsigned BufferStoreCnt =
+        llvm::count_if(BufferStore->users(), [&F](User *U) {
+          return (cast<CallInst>(U)->getParent()->getParent() == &F);
+        });
+    if (BufferStoreCnt > 600) {
+      EvictInterferenceCutoff = 1;
+      Changed = true;
+    }
+  }
+
   if (F.hasFnAttribute("amdgpu-wave-limiter") &&
       F.hasFnAttribute("amdgpu-memory-bound"))
-    return false;
+    return Changed;
 
   const AMDGPUPerfHintAnalysis::FuncInfo *Info = visit(F);
 
@@ -300,7 +328,6 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
                     << " LSMInst cost: " << Info->LSMInstCost << '\n'
                     << " TotalInst cost: " << Info->InstCost << '\n');
 
-  bool Changed = false;
 
   if (isMemBound(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
