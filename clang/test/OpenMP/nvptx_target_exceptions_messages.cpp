@@ -34,7 +34,7 @@ T FA() {
 #pragma omp declare target
 struct S {
   int a;
-  S(int a) : a(a) { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+  S(int a) : a(a) { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
 };
 
 int foo() { return 0; }
@@ -57,7 +57,7 @@ int maini1() {
     static long aaa = 23;
     a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}
     if (!a)
-      throw "Error"; // expected-error {{cannot use 'throw' with exceptions disabled}}
+      throw "Error"; // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
   }
   } catch(...) {
   }
@@ -67,14 +67,14 @@ int maini1() {
 int baz3() { return 2 + baz2(); }
 int baz2() {
 #pragma omp target
-  try { // expected-error {{cannot use 'try' with exceptions disabled}}
+  try { // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'catch' block is ignored}}
   ++c;
   } catch (...) {
   }
   return 2 + baz3();
 }
 
-int baz1() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+int baz1() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
 
 int foobar1();
 int foobar2();
@@ -85,7 +85,7 @@ int (*B)() = &foobar2;
 #pragma omp end declare target
 
 int foobar1() { throw 1; }
-int foobar2() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+int foobar2() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
 
 
 int foobar3();
@@ -95,7 +95,7 @@ int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any 
 int (*D)() = C; // expected-note {{used here}}
                 // host-note@-1 {{used here}}
 #pragma omp end declare target
-int foobar3() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
+int foobar3() { throw 1; } // expected-warning {{target 'nvptx64-unknown-unknown' does not support exception handling; 'throw' is assumed to be never reached}}
 
 // Check no infinite recursion in deferred diagnostic emitter.
 long E = (long)&E;
