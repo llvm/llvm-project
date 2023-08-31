@@ -1624,6 +1624,11 @@ public:
   void handleAMDGPUWavesPerEUAttr(llvm::Function *F,
                                   const AMDGPUWavesPerEUAttr *A);
 
+  llvm::Constant *
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
+                        const VarDecl *D,
+                        ForDefinition_t IsForDefinition = NotForDefinition);
+
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
@@ -1645,11 +1650,6 @@ private:
   // is responsible for performing such mangled name updates.
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD,
                                StringRef &CurName);
-
-  llvm::Constant *
-  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
-                        const VarDecl *D,
-                        ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder,
