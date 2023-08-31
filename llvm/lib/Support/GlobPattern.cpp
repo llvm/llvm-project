@@ -145,7 +145,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
 
   SmallVector<std::string, 1> SubPats;
   if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
-    return Err;
+    return std::move(Err);
   for (StringRef SubPat : SubPats) {
     auto SubGlobOrErr = SubGlobPattern::create(SubPat);
     if (!SubGlobOrErr)
