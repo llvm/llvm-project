@@ -134,13 +134,13 @@ def testBuildFuncOp():
                 ),
                 visibility="nested",
             )
-            # CHECK: Name is: some_func
+            # CHECK: Name is: "some_func"
             print("Name is: ", f.name)
 
             # CHECK: Type is: (tensor<2x3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
             print("Type is: ", f.type)
 
-            # CHECK: Visibility is: nested
+            # CHECK: Visibility is: "nested"
             print("Visibility is: ", f.visibility)
 
             try:
