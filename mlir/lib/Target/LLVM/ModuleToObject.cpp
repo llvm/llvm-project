@@ -212,7 +212,7 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     auto libs = loadBitcodeFiles(*llvmModule, *targetMachine);
     if (!libs)
       return std::nullopt;
-    if (libs->size())
+    if (!libs->empty())
       if (failed(linkFiles(*llvmModule, std::move(*libs))))
         return std::nullopt;
     handleModulePostLink(*llvmModule, *targetMachine);
