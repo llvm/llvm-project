@@ -162,8 +162,9 @@ constexpr void test_iterators() {
     // declared with 'nodiscard' attribute [-Werror,-Wunused-result]
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wunused-result"
-    int a[] = {1, 9, 0, 13, 25};
-    std::ranges::contains(a, a + 5, -13, [&](int i) { return i * -1; });
+    ValueT a[] = {1, 9, 0, 13, 25};
+    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
+    std::ranges::contains(whole.begin(), whole.end(), 12);
     #pragma clang diagnostic pop
   }
 
