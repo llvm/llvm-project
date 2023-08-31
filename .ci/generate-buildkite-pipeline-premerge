@@ -291,9 +291,6 @@ if [[ -n "${ph_target_phid:-}" ]]; then
   agents: ${SERVICE_AGENTS}
   artifact_paths:
   - artifacts/**/*
-  env:
-    # Temporary disabled before switching pipelines.
-    ph_dry_run_report: '1'
   commands:
   - export SRC=\$\${BUILDKITE_BUILD_PATH}/llvm-premerge-checks
   - rm -rf \$\${SRC}
