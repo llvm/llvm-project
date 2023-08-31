@@ -218,7 +218,7 @@
 /clang/ @llvm/pr-subscribers-clang
 
 # testing-tools
-/llvm/include//llvm/FileCheck/ @llvm/pr-subscribers-testing-tools
+/llvm/include/llvm/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/lib/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/test/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/unittests/FileCheck/ @llvm/pr-subscribers-testing-tools
@@ -332,24 +332,6 @@
 /mlir/test/Target/LLVMIR/openacc-llvm.mlir @llvm/pr-subscribers-openacc
 /mlir/**/*OpenACC @llvm/pr-subscribers-openacc
 
-# arm
-/llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
-/llvm/lib/Target/ARM @llvm/pr-subscribers-arm
-/llvm/test/CodeGen/ARM @llvm/pr-subscribers-arm
-/clang/lib/Basic/Targets/ARM* @llvm/pr-subscribers-arm
-/clang/lib/Driver/ToolChains/Arch/ARM.* @llvm/pr-subscribers-arm
-/clang/lib/CodeGen/Targets/ARM.cpp @llvm/pr-subscribers-arm
-/clang/include/clang/Basic/BuiltinsARM* @llvm/pr-subscribers-arm
-
-# AArch64
-/llvm/include/llvm/IR/IntrinsicsAArch64.td @llvm/pr-subscribers-AArch64
-/llvm/lib/Target/AArch64 @llvm/pr-subscribers-AArch64
-/llvm/test/CodeGen/AArch64 @llvm/pr-subscribers-AArch64
-/clang/lib/Basic/Targets/AArch64* @llvm/pr-subscribers-AArch64
-/clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
-/clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
-/clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
-
 # flang-runtime
 /flang/runtime/ @llvm/pr-subscribers-flang-runtime
 
@@ -372,36 +354,12 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
 /llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
 
-# loongarch
-/llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
-/llvm/lib/Target/LoongArch @llvm/pr-subscribers-loongarch
-/llvm/test/CodeGen/LoongArch @llvm/pr-subscribers-loongarch
-/clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
-/clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
-/clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
-/clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
-
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
 /llvm/lib/Transforms/Utils/SCCPSolver.cpp @llvm/pr-subscribers-function-specialization
 /llvm/include/llvm/Transforms/IPO/FunctionSpecialization.h @llvm/pr-subscribers-function-specialization
 /llvm/lib/Transforms/IPO/FunctionSpecialization.cpp @llvm/pr-subscribers-function-specialization
 /llvm/test/Transforms/FunctionSpecialization/* @llvm/pr-subscribers-function-specialization
-
-# x86
-/llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
-/llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
-/llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
-/llvm/test/MC/X86/ @llvm/pr-subscribers-x86
-/llvm/test/MC/Disassembler/X86 @llvm/pr-subscribers-x86
-/llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
-/llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
-/clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
-/clang/lib/Driver/ToolChains/Arch/X86.* @llvm/pr-subscribers-x86
-/clang/lib/CodeGen/Targets/X86.* @llvm/pr-subscribers-x86
-/clang/lib/Headers/ @llvm/pr-subscribers-x86
-/clang/test/CodeGen/X86/ @llvm/pr-subscribers-x86
-/clang/include/clang/Basic/BuiltinsX86* @llvm/pr-subscribers-x86
 
 # libc
 libc/** @llvm/pr-subscribers-libc
@@ -425,4 +383,46 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/lib/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
 /llvm/include/llvm/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
 /llvm/unittests/Frontend/OpenMP* @llvm/pr-subscribers-flang-openmp
+
+# arm
+/llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
+/llvm/lib/Target/ARM @llvm/pr-subscribers-arm
+/llvm/test/CodeGen/ARM @llvm/pr-subscribers-arm
+/clang/lib/Basic/Targets/ARM* @llvm/pr-subscribers-arm
+/clang/lib/Driver/ToolChains/Arch/ARM.* @llvm/pr-subscribers-arm
+/clang/lib/CodeGen/Targets/ARM.cpp @llvm/pr-subscribers-arm
+/clang/include/clang/Basic/BuiltinsARM* @llvm/pr-subscribers-arm
+
+# AArch64
+/llvm/include/llvm/IR/IntrinsicsAArch64.td @llvm/pr-subscribers-AArch64
+/llvm/lib/Target/AArch64 @llvm/pr-subscribers-AArch64
+/llvm/test/CodeGen/AArch64 @llvm/pr-subscribers-AArch64
+/clang/lib/Basic/Targets/AArch64* @llvm/pr-subscribers-AArch64
+/clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
+/clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
+/clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
+
+# loongarch
+/llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
+/llvm/lib/Target/LoongArch @llvm/pr-subscribers-loongarch
+/llvm/test/CodeGen/LoongArch @llvm/pr-subscribers-loongarch
+/clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
+/clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
+/clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
+/clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
+
+# x86
+/llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
+/llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
+/llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
+/llvm/test/MC/X86/ @llvm/pr-subscribers-x86
+/llvm/test/MC/Disassembler/X86 @llvm/pr-subscribers-x86
+/llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
+/llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
+/clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
+/clang/lib/Driver/ToolChains/Arch/X86.* @llvm/pr-subscribers-x86
+/clang/lib/CodeGen/Targets/X86.* @llvm/pr-subscribers-x86
+/clang/lib/Headers/ @llvm/pr-subscribers-x86
+/clang/test/CodeGen/X86/ @llvm/pr-subscribers-x86
+/clang/include/clang/Basic/BuiltinsX86* @llvm/pr-subscribers-x86
 
