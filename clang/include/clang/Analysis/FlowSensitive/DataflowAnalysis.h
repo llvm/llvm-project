@@ -85,14 +85,6 @@ public:
 
   explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
 
-  /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
-  explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(
-            Context,
-            {ApplyBuiltinTransfer
-                 ? DataflowAnalysisContext::Options{}
-                 : std::optional<DataflowAnalysisContext::Options>()}) {}
-
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
       : TypeErasedDataflowAnalysis(Options), Context(Context) {}

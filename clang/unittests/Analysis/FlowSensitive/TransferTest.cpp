@@ -1418,9 +1418,7 @@ TEST(TransferTest, BaseClassInitializer) {
       checkDataflow<NoopAnalysis>(
           AnalysisInputs<NoopAnalysis>(
               Code, cxxConstructorDecl(ofClass(hasName("B"))),
-              [](ASTContext &C, Environment &) {
-                return NoopAnalysis(C, /*ApplyBuiltinTransfer=*/true);
-              })
+              [](ASTContext &C, Environment &) { return NoopAnalysis(C); })
               .withASTBuildArgs(
                   {"-fsyntax-only", "-fno-delayed-template-parsing",
                    "-std=" + std::string(LangStandard::getLangStandardForKind(
