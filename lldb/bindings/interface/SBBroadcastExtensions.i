@@ -1,6 +1,4 @@
-STRING_EXTENSION_OUTSIDE(SBBreakpointName)
-
-%extend lldb::SBBreakpointName {
+%extend lldb::SBBroadcaster {
 #ifdef SWIGPYTHON
     %pythoncode%{
     # operator== is a free function, which swig does not handle, so we inject

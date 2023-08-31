@@ -3,6 +3,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeCategory, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeCategory {
 #ifdef SWIGPYTHON
         %pythoncode %{
+            # operator== is a free function, which swig does not handle, so we inject
+            # our own equality operator here
+            def __eq__(self, other):
+                return not self.__ne__(other)
+
 
             class formatters_access_class(object):
                 '''A helper object that will lazily hand out formatters for a specific category.'''
