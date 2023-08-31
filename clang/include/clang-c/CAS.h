@@ -23,6 +23,7 @@
 #include "clang-c/CXErrorCode.h"
 #include "clang-c/CXString.h"
 #include "clang-c/Platform.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
