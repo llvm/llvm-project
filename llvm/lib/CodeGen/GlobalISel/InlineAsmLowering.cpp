@@ -380,7 +380,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Add information to the INLINEASM instruction to know about this
         // output.
-        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
+        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind::Mem, 1);
         OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
         Inst.addImm(OpFlags);
         ArrayRef<Register> SourceRegs =
@@ -406,8 +406,8 @@ bool InlineAsmLowering::lowerInlineAsm(
         // Add information to the INLINEASM instruction to know that this
         // register is set.
         unsigned Flag = InlineAsm::getFlagWord(
-            OpInfo.isEarlyClobber ? InlineAsm::Kind_RegDefEarlyClobber
-                                  : InlineAsm::Kind_RegDef,
+            OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
+                                  : InlineAsm::Kind::RegDef,
             OpInfo.Regs.size());
         if (OpInfo.Regs.front().isVirtual()) {
           // Put the register class of the virtual registers in the flag word.
@@ -470,7 +470,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         }
 
         // Add Flag and input register operand (In) to Inst. Tie In to Def.
-        unsigned UseFlag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+        unsigned UseFlag = InlineAsm::getFlagWord(InlineAsm::Kind::RegUse, 1);
         unsigned Flag = InlineAsm::getFlagWordForMatchingOp(UseFlag, DefIdx);
         Inst.addImm(Flag);
         Inst.addReg(In);
@@ -502,7 +502,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Add information to the INLINEASM node to know about this input.
         unsigned OpFlags =
-            InlineAsm::getFlagWord(InlineAsm::Kind_Imm, Ops.size());
+            InlineAsm::getFlagWord(InlineAsm::Kind::Imm, Ops.size());
         Inst.addImm(OpFlags);
         Inst.add(Ops);
         break;
@@ -520,7 +520,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         unsigned ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
+        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind::Mem, 1);
         OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
         Inst.addImm(OpFlags);
         ArrayRef<Register> SourceRegs =
@@ -563,7 +563,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         return false;
       }
 
-      unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, NumRegs);
+      unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind::RegUse, NumRegs);
       if (OpInfo.Regs.front().isVirtual()) {
         // Put the register class of the virtual registers in the flag word.
         const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
@@ -581,7 +581,7 @@ bool InlineAsmLowering::lowerInlineAsm(
       unsigned NumRegs = OpInfo.Regs.size();
       if (NumRegs > 0) {
         unsigned Flag =
-            InlineAsm::getFlagWord(InlineAsm::Kind_Clobber, NumRegs);
+            InlineAsm::getFlagWord(InlineAsm::Kind::Clobber, NumRegs);
         Inst.addImm(Flag);
 
         for (Register Reg : OpInfo.Regs) {

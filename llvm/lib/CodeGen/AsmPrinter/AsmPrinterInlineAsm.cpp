@@ -380,7 +380,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
     if (!MO.isImm())
       continue;
     unsigned Flags = MO.getImm();
-    if (InlineAsm::getKind(Flags) == InlineAsm::Kind_Clobber) {
+    if (InlineAsm::getKind(Flags) == InlineAsm::Kind::Clobber) {
       Register Reg = MI->getOperand(I + 1).getReg();
       if (!TRI->isAsmClobberable(*MF, Reg))
         RestrRegs.push_back(Reg);

@@ -3779,14 +3779,14 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     switch (InlineAsm::getKind(Flags)) {
     default:
       llvm_unreachable("Bad flags!");
-    case InlineAsm::Kind_RegUse:
-    case InlineAsm::Kind_Imm:
-    case InlineAsm::Kind_Mem:
+    case InlineAsm::Kind::RegUse:
+    case InlineAsm::Kind::Imm:
+    case InlineAsm::Kind::Mem:
       i += NumVals;
       break;
-    case InlineAsm::Kind_Clobber:
-    case InlineAsm::Kind_RegDef:
-    case InlineAsm::Kind_RegDefEarlyClobber: {
+    case InlineAsm::Kind::Clobber:
+    case InlineAsm::Kind::RegDef:
+    case InlineAsm::Kind::RegDefEarlyClobber: {
       for (; NumVals; --NumVals, ++i) {
         Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
         if (Reg != PPC::LR && Reg != PPC::LR8)

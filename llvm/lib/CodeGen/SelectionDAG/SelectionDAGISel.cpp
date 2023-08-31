@@ -2107,8 +2107,8 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       // Add this to the output node.
       unsigned NewFlags =
           InlineAsm::isMemKind(Flags)
-              ? InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size())
-              : InlineAsm::getFlagWord(InlineAsm::Kind_Func, SelOps.size());
+              ? InlineAsm::getFlagWord(InlineAsm::Kind::Mem, SelOps.size())
+              : InlineAsm::getFlagWord(InlineAsm::Kind::Func, SelOps.size());
       NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
       Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);
