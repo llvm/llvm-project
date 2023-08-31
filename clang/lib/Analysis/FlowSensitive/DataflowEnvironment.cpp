@@ -918,7 +918,7 @@ void Environment::dump(raw_ostream &OS) const {
 
   OS << "ExprToVal:\n";
   for (auto [E, V] : ExprToVal)
-    OS << "  [" << E << ", " << V << "]\n";
+    OS << "  [" << E << ", " << V << ": " << *V << "]\n";
 
   OS << "LocToVal:\n";
   for (auto [L, V] : LocToVal) {
