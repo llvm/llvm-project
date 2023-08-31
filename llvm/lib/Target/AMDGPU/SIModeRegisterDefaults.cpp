@@ -77,7 +77,7 @@ static constexpr uint32_t HWNearestTiesToEven = FP_ROUND_ROUND_TO_NEAREST;
 static constexpr uint32_t HWTowardPositive = FP_ROUND_ROUND_TO_INF;
 static constexpr uint32_t HWTowardNegative = FP_ROUND_ROUND_TO_NEGINF;
 
-constexpr uint64_t AMDGPU::FltRoundConversionTable =
+const uint64_t AMDGPU::FltRoundConversionTable =
     encodeFltRoundsTableSame(TowardZeroF32_TowardZeroF64, HWTowardZero) |
     encodeFltRoundsTableSame(NearestTiesToEvenF32_NearestTiesToEvenF64,
                              HWNearestTiesToEven) |
