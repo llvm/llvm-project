@@ -34,8 +34,6 @@ public:
   enum class Kind {
     Scalar,
     Record,
-    // Deprecated synonym for `Record`
-    Aggregate = Record,
   };
 
   StorageLocation(Kind LocKind, QualType Type) : LocKind(LocKind), Type(Type) {
@@ -154,9 +152,6 @@ public:
 private:
   FieldToLoc Children;
 };
-
-/// Deprecated synonym for `RecordStorageLocation`.
-using AggregateStorageLocation = RecordStorageLocation;
 
 } // namespace dataflow
 } // namespace clang
