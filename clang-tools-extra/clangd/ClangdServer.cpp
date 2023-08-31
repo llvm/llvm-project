@@ -83,7 +83,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
 
     auto &PP = ASTCtx.getPreprocessor();
     auto &CI = ASTCtx.getCompilerInvocation();
-    if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+    if (auto Loc = Stdlib->add(CI.getLangOpts(), PP.getHeaderSearchInfo()))
       indexStdlib(CI, std::move(*Loc));
 
     // FIndex outlives the UpdateIndexCallbacks.
@@ -105,7 +105,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     // This task is owned by Tasks, which outlives the TUScheduler and
     // therefore the UpdateIndexCallbacks.
     // We must be careful that the references we capture outlive TUScheduler.
-    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+    auto Task = [LO(CI.getLangOpts()), Loc(std::move(Loc)),
                  CI(std::make_unique<CompilerInvocation>(CI)),
                  // External values that outlive ClangdServer
                  TFS(&TFS),

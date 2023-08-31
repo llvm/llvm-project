@@ -52,12 +52,12 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
       createInvocation(CheckArgs, std::move(Opts));
   if (!CInvok)
     return false;
-  if (CInvok->getLangOpts()->Modules) {
+  if (CInvok->getLangOpts().Modules) {
     Diags->Report(diag::warn_clang_cache_disabled_caching)
         << "-fmodules is enabled";
     return false;
   }
-  if (CInvok->getLangOpts()->AsmPreprocessor) {
+  if (CInvok->getLangOpts().AsmPreprocessor) {
     Diags->Report(diag::warn_clang_cache_disabled_caching)
         << "assembler language mode is enabled";
     return false;

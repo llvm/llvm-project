@@ -563,7 +563,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     return addToFileList(FM, *FE).moveInto(Ref);
   };
 
-  for (StringRef FilePath : NewInvocation.getLangOpts()->NoSanitizeFiles) {
+  for (StringRef FilePath : NewInvocation.getLangOpts().NoSanitizeFiles) {
     if (Error E = addFile(FilePath))
       return std::move(E);
   }
