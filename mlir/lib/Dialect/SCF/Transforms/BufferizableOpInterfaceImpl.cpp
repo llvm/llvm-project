@@ -10,6 +10,8 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -99,43 +101,86 @@ struct ConditionOpInterface
   }
 };
 
+/// Return the unique scf.yield op. If there are multiple or no scf.yield ops,
+/// return an empty op.
+static scf::YieldOp getUniqueYieldOp(scf::ExecuteRegionOp executeRegionOp) {
+  scf::YieldOp result;
+  for (Block &block : executeRegionOp.getRegion()) {
+    if (auto yieldOp = dyn_cast<scf::YieldOp>(block.getTerminator())) {
+      if (result)
+        return {};
+      result = yieldOp;
+    }
+  }
+  return result;
+}
+
 /// Bufferization of scf.execute_region. Can be analyzed, but bufferization not
 /// fully implemented at the moment.
 struct ExecuteRegionOpInterface
-    : public BufferizableOpInterface::ExternalModel<ExecuteRegionOpInterface,
-                                                    scf::ExecuteRegionOp> {
+    : public OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel<
+          ExecuteRegionOpInterface, scf::ExecuteRegionOp> {
+
+  static bool supportsUnstructuredControlFlow() { return true; }
+
+  bool isWritable(Operation *op, Value value,
+                  const AnalysisState &state) const {
+    return true;
+  }
+
+  LogicalResult verifyAnalysis(Operation *op,
+                               const AnalysisState &state) const {
+    auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
+    // TODO: scf.execute_region with multiple yields are not supported.
+    if (!getUniqueYieldOp(executeRegionOp))
+      return op->emitOpError("op without unique scf.yield is not supported");
+    const auto &options =
+        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
+    // allow-return-allocs is required for ops with multiple blocks.
+    if (options.allowReturnAllocs ||
+        executeRegionOp.getRegion().getBlocks().size() == 1)
+      return success();
+    return op->emitOpError(
+        "op cannot be bufferized without allow-return-allocs");
+  }
+
   AliasingOpOperandList
   getAliasingOpOperands(Operation *op, Value value,
                         const AnalysisState &state) const {
+    if (auto bbArg = dyn_cast<BlockArgument>(value))
+      return getAliasingBranchOpOperands(op, bbArg, state);
+
     // ExecuteRegionOps do not have tensor OpOperands. The yielded value can be
     // any SSA value that is in scope. To allow for use-def chain traversal
     // through ExecuteRegionOps in the analysis, the corresponding yield value
     // is considered to be aliasing with the result.
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
-    size_t resultNum = std::distance(op->getOpResults().begin(),
-                                     llvm::find(op->getOpResults(), value));
-    // TODO: Support multiple blocks.
-    assert(executeRegionOp.getRegion().getBlocks().size() == 1 &&
-           "expected exactly 1 block");
-    auto yieldOp = dyn_cast<scf::YieldOp>(
-        executeRegionOp.getRegion().front().getTerminator());
-    assert(yieldOp && "expected scf.yield terminator in scf.execute_region");
+    auto it = llvm::find(op->getOpResults(), value);
+    assert(it != op->getOpResults().end() && "invalid value");
+    size_t resultNum = std::distance(op->getOpResults().begin(), it);
+    auto yieldOp = getUniqueYieldOp(executeRegionOp);
+    // Note: If there is no unique scf.yield op, `verifyAnalysis` will fail.
+    if (!yieldOp)
+      return {};
     return {{&yieldOp->getOpOperand(resultNum), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
-    assert(executeRegionOp.getRegion().getBlocks().size() == 1 &&
-           "only 1 block supported");
-    auto yieldOp =
-        cast<scf::YieldOp>(executeRegionOp.getRegion().front().getTerminator());
+    auto yieldOp = getUniqueYieldOp(executeRegionOp);
     TypeRange newResultTypes(yieldOp.getResults());
 
     // Create new op and move over region.
     auto newOp =
         rewriter.create<scf::ExecuteRegionOp>(op->getLoc(), newResultTypes);
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
+
+    // Bufferize every block.
+    for (Block &block : newOp.getRegion())
+      if (failed(bufferization::bufferizeBlockSignature(&block, rewriter,
+                                                        options)))
+        return failure();
 
     // Update all uses of the old op.
     rewriter.setInsertionPointAfter(newOp);
