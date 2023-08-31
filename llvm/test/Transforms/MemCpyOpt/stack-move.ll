@@ -605,7 +605,7 @@ bb1:
 
 bb2:
   call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %dest)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false); 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
   %1 = call i32 @use_nocapture(ptr noundef nocapture %dest)
 
   ret void
@@ -897,11 +897,9 @@ bb0:
 
 bb1:
   %2 = call i32 @use_nocapture(ptr noundef nocapture %src)
-  ; %3 = call i32 @use_writeonly(ptr noundef nocapture %dest)
   br label %bb2
 
 bb2:
-  ; %4 = call i32 @use_nocapture(ptr noundef nocapture %src)
   call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %src)
   call void @llvm.lifetime.end.p0(i64 12, ptr nocapture %dest)
   ret void
