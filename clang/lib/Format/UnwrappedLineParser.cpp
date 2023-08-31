@@ -581,7 +581,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           ProbablyBracedList =
               ProbablyBracedList ||
               (NextTok->is(tok::l_brace) && LBraceStack.back().PrevTok &&
-               LBraceStack.back().PrevTok->is(tok::identifier));
+               LBraceStack.back().PrevTok->isOneOf(tok::identifier,
+                                                   tok::greater));
 
           ProbablyBracedList =
               ProbablyBracedList ||
