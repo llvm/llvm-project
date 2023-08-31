@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_FRACTION_H
 
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/MathExtras.h"
 
 namespace mlir {
