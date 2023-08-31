@@ -8,13 +8,11 @@
 
 // test sized operator delete replacement.
 
-// TODO(mordante) fix this test after updating clang in Docker
-// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
-// XFAIL: apple-clang
 
-// Sized deallocation was added in macOS 10.12 and aligned OSes.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+// default. It is only enabled when -fsized-deallocation is given.
+// XFAIL: clang, apple-clang
 
 #include <new>
 #include <cstddef>

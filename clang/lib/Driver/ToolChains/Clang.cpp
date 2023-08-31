@@ -7088,8 +7088,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   Args.addOptInFlag(CmdArgs, options::OPT_frelaxed_template_template_args,
                     options::OPT_fno_relaxed_template_template_args);
 
-  // -fsized-deallocation is on by default in C++14 onwards and otherwise off
-  // by default.
+  // -fsized-deallocation is off by default, as it is an ABI-breaking change for
+  // most platforms.
   Args.addOptInFlag(CmdArgs, options::OPT_fsized_deallocation,
                     options::OPT_fno_sized_deallocation);
 
