@@ -162,9 +162,6 @@ Improvements to Clang's diagnostics
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier.
-- Clang now warns on unused variables declared and initialized in condition
-  expressions.
-  (`#61681: <https://github.com/llvm/llvm-project/issues/61681>`_)
 
 Bug Fixes in This Version
 -------------------------

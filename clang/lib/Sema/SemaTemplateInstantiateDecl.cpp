@@ -5353,7 +5353,7 @@ void Sema::BuildVariableInstantiation(
   // will have been deferred.
   if (!NewVar->isInvalidDecl() &&
       NewVar->getDeclContext()->isFunctionOrMethod() &&
-      OldVar->getType()->isDependentType() && !OldVar->isImplicit())
+      OldVar->getType()->isDependentType())
     DiagnoseUnusedDecl(NewVar);
 }
 
