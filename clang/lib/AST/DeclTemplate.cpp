@@ -697,17 +697,15 @@ bool TemplateTypeParmDecl::isParameterPack() const {
   return getTypeForDecl()->castAs<TemplateTypeParmType>()->isParameterPack();
 }
 
-void TemplateTypeParmDecl::setTypeConstraint(NestedNameSpecifierLoc NNS,
-    DeclarationNameInfo NameInfo, NamedDecl *FoundDecl, ConceptDecl *CD,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    Expr *ImmediatelyDeclaredConstraint) {
+void TemplateTypeParmDecl::setTypeConstraint(
+    ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint) {
   assert(HasTypeConstraint &&
          "HasTypeConstraint=true must be passed at construction in order to "
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>()) TypeConstraint(NNS, NameInfo,
-      FoundDecl, CD, ArgsAsWritten, ImmediatelyDeclaredConstraint);
+  new (getTrailingObjects<TypeConstraint>())
+      TypeConstraint(Loc, ImmediatelyDeclaredConstraint);
   TypeConstraintInitialized = true;
 }
 
@@ -1554,7 +1552,8 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
                    createBuiltinTemplateParameterList(C, DC, BTK)),
       BTK(BTK) {}
 
-void TypeConstraint::print(llvm::raw_ostream &OS, PrintingPolicy Policy) const {
+void ConceptReference::print(llvm::raw_ostream &OS,
+                             const PrintingPolicy &Policy) const {
   if (NestedNameSpec)
     NestedNameSpec.getNestedNameSpecifier()->print(OS, Policy);
   ConceptName.printName(OS, Policy);
