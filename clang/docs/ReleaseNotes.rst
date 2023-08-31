@@ -328,7 +328,9 @@ Attribute Changes in Clang
   the flag ``-Wunsafe-buffer-usage`` is enabled.
 - ``__declspec`` attributes can now be used together with the using keyword. Before
   the attributes on ``__declspec`` was ignored, while now it will be forwarded to the
-  point where the alias is used.
+  point where the alias is used. Note, some incorrect uses of ``__declspec`` on a
+  ``using`` declaration were being silently ignored and will now be appropriately
+  diagnosed as ignoring the attribute.
 - Introduced a new ``USR`` (unified symbol resolution) clause inside of the
   existing ``__attribute__((external_source_symbol))`` attribute. Clang's indexer
   uses the optional USR value when indexing Clang's AST. This value is expected
