@@ -3669,8 +3669,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Copy a Z register pair by copying the individual sub-registers.
-  if (AArch64::ZPR2RegClass.contains(DestReg) &&
-      AArch64::ZPR2RegClass.contains(SrcReg)) {
+  if ((AArch64::ZPR2RegClass.contains(DestReg) ||
+       AArch64::ZPR2StridedOrContiguousRegClass.contains(DestReg)) &&
+      (AArch64::ZPR2RegClass.contains(SrcReg) ||
+       AArch64::ZPR2StridedOrContiguousRegClass.contains(SrcReg))) {
     assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -3690,8 +3692,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Copy a Z register quad by copying the individual sub-registers.
-  if (AArch64::ZPR4RegClass.contains(DestReg) &&
-      AArch64::ZPR4RegClass.contains(SrcReg)) {
+  if ((AArch64::ZPR4RegClass.contains(DestReg) ||
+       AArch64::ZPR4StridedOrContiguousRegClass.contains(DestReg)) &&
+      (AArch64::ZPR4RegClass.contains(SrcReg) ||
+       AArch64::ZPR4StridedOrContiguousRegClass.contains(SrcReg))) {
     assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
@@ -4022,7 +4026,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Twov2d;
       Offset = false;
-    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4044,7 +4049,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Fourv2d;
       Offset = false;
-    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4178,7 +4184,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Twov2d;
       Offset = false;
-    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4200,7 +4207,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Fourv2d;
       Offset = false;
-    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
