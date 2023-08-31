@@ -1,27 +1,27 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-native %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-native %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
 // RUN: cat %t/test.o.casid | FileCheck %s --check-prefix=NATIVE_FILENAME
 // NATIVE_FILENAME: CASID:Jllvmcas://{{.*}}
 //
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-verify %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-verify %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
 // RUN: cat %t/test.o.casid | FileCheck %s --check-prefix=VERIFY_FILENAME
 // VERIFY_FILENAME: CASID:Jllvmcas://{{.*}}
 //
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-casid %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-casid %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
 // RUN: not cat %t/test.o.casid
 //
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-native %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-native %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
 // RUN: not cat %t/test.o.casid
 //
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-verify %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-verify %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
 // RUN: not cat %t/test.o.casid
 //
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-mc --filetype=obj --cas-backend --cas=/tmp/cas --mccas-casid %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
+// RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-casid %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o -
 // RUN: not cat %t/test.o.casid
 
 	.section	__TEXT,__text,regular,pure_instructions
