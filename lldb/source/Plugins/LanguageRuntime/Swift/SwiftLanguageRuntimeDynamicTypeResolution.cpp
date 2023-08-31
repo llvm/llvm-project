@@ -2022,27 +2022,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     return false;
 
   Flags type_info(payload_type.GetTypeInfo());
-  if (type_info.AllSet(eTypeIsSwift | eTypeIsClass)) {
-    lldb::addr_t old_box_value = box_value;
-    box_value = m_process.ReadPointerFromMemory(box_value, error);
-    if (box_value == LLDB_INVALID_ADDRESS)
-      return false;
-
-    DataExtractor data(&box_value, m_process.GetAddressByteSize(),
-                       m_process.GetByteOrder(),
-                       m_process.GetAddressByteSize());
-    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-        "_", data, m_process, payload_type));
-    if (!valobj_sp)
-      return false;
-
-    if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                  address, value_type))
-      return false;
-
-    address.SetRawAddress(old_box_value);
-    return true;
-  } else if (type_info.AllSet(eTypeIsSwift | eTypeIsProtocol)) {
+  if (type_info.AllSet(eTypeIsSwift) &&
+      type_info.AnySet(eTypeIsClass | eTypeIsProtocol)) {
     ExecutionContext exe_ctx = in_value.GetExecutionContextRef();
     ValueObjectSP valobj_sp = ValueObjectMemory::Create(
         exe_ctx.GetBestExecutionContextScope(), "_", box_value, payload_type);
