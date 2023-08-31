@@ -15,8 +15,8 @@
 #ifndef MLIR_IR_FUNCTIONIMPLEMENTATION_H_
 #define MLIR_IR_FUNCTIONIMPLEMENTATION_H_
 
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 
 namespace mlir {
 
