@@ -4293,15 +4293,22 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, RotateVT, Subtarget);
   SDValue VL =
       getDefaultVLOps(RotateVT, ContainerVT, DL, DAG, Subtarget).second;
-  SDValue RotateAmtSplat = DAG.getNode(
-      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-      DAG.getConstant(RotateAmt, DL, Subtarget.getXLenVT()), VL);
-  RotateAmtSplat =
-      convertFromScalableVector(RotateVT, RotateAmtSplat, DAG, Subtarget);
+  SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
 
-  SDValue Rotate =
-      DAG.getNode(ISD::ROTL, DL, RotateVT,
-                  DAG.getBitcast(RotateVT, SVN->getOperand(0)), RotateAmtSplat);
+  SDValue Rotate;
+  // A rotate of an i16 by 8 bits either direction is equivalent to a byteswap,
+  // so canonicalize to vrev8.
+  if (RotateVT.getScalarType() == MVT::i16 && RotateAmt == 8) {
+    Rotate = DAG.getNode(ISD::BSWAP, DL, RotateVT, Op);
+  } else {
+    SDValue RotateAmtSplat = DAG.getNode(
+        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+        DAG.getConstant(RotateAmt, DL, Subtarget.getXLenVT()), VL);
+    RotateAmtSplat =
+        convertFromScalableVector(RotateVT, RotateAmtSplat, DAG, Subtarget);
+    Rotate = DAG.getNode(ISD::ROTL, DL, RotateVT, Op, RotateAmtSplat);
+  }
+
   return DAG.getBitcast(VT, Rotate);
 }
 
