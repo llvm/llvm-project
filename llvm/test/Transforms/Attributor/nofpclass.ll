@@ -2248,7 +2248,7 @@ define float @fadd_known_positive_normal_dapz(float nofpclass(ninf nnorm nzero) 
 define internal float @returns_fence(float %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define internal float @returns_fence
-; TUNIT-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[RET:%.*]] = call float @llvm.arithmetic.fence.f32(float [[ARG]]) #[[ATTR20]]
 ; TUNIT-NEXT:    ret float [[RET]]
 ;
@@ -2267,7 +2267,7 @@ define internal float @refine_callsite_attribute(float nofpclass(inf) %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define internal float @refine_callsite_attribute
 ; TUNIT-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    [[FUNC0:%.*]] = call float @returns_fence(float nofpclass(nan) [[ARG]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FUNC0:%.*]] = call float @returns_fence(float nofpclass(nan inf) [[ARG]]) #[[ATTR17]]
 ; TUNIT-NEXT:    [[RET:%.*]] = call float @llvm.arithmetic.fence.f32(float [[FUNC0]]) #[[ATTR20]]
 ; TUNIT-NEXT:    ret float [[RET]]
 ;
