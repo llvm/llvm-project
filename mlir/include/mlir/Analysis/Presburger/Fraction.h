@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_FRACTION_H
 
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/MathExtras.h"
 
 namespace mlir {
@@ -142,6 +143,23 @@ inline Fraction &operator/=(Fraction &x, const Fraction &y) {
 inline Fraction &operator*=(Fraction &x, const Fraction &y) {
   x = x * y;
   return x;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
+  x.print(os);
+  return os;
+}
+
+inline Fraction operator/(const Fraction &x, const Fraction &y) {
+  return Fraction(x.num * y.den, x.den * y.num);
+}
+
+inline Fraction operator+(const Fraction &x, const Fraction &y) {
+  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
+}
+
+inline Fraction operator-(const Fraction &x, const Fraction &y) {
+  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
