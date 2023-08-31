@@ -2,6 +2,178 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+zvfh,+f,+d -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfh,+f,+d -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
+define <4 x i32> @insertelt_v4i32_0(<4 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v4i32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+  %b = insertelement <4 x i32> %a, i32 %y, i32 0
+  ret <4 x i32> %b
+}
+
+define <4 x i32> @insertelt_v4i32_3(<4 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v4i32_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vslideup.vi v8, v9, 3
+; CHECK-NEXT:    ret
+  %b = insertelement <4 x i32> %a, i32 %y, i32 3
+  ret <4 x i32> %b
+}
+
+define <4 x i32> @insertelt_v4i32_idx(<4 x i32> %a, i32 %y, i32 zeroext %idx) {
+; CHECK-LABEL: insertelt_v4i32_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, a1, 1
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vx v8, v9, a1
+; CHECK-NEXT:    ret
+  %b = insertelement <4 x i32> %a, i32 %y, i32 %idx
+  ret <4 x i32> %b
+}
+
+define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v32i32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+  %b = insertelement <32 x i32> %a, i32 %y, i32 0
+  ret <32 x i32> %b
+}
+
+; FIXME: Should only require an m2 slideup
+define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v32i32_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vsetivli zero, 5, e32, m8, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v16, 4
+; CHECK-NEXT:    ret
+  %b = insertelement <32 x i32> %a, i32 %y, i32 4
+  ret <32 x i32> %b
+}
+
+define <32 x i32> @insertelt_v32i32_31(<32 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v32i32_31:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v16, 31
+; CHECK-NEXT:    ret
+  %b = insertelement <32 x i32> %a, i32 %y, i32 31
+  ret <32 x i32> %b
+}
+
+define <32 x i32> @insertelt_v32i32_idx(<32 x i32> %a, i32 %y, i32 zeroext %idx) {
+; CHECK-LABEL: insertelt_v32i32_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    addi a0, a1, 1
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v8, v16, a1
+; CHECK-NEXT:    ret
+  %b = insertelement <32 x i32> %a, i32 %y, i32 %idx
+  ret <32 x i32> %b
+}
+
+define <64 x i32> @insertelt_v64i32_0(<64 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v64i32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
+  %b = insertelement <64 x i32> %a, i32 %y, i32 0
+  ret <64 x i32> %b
+}
+
+define <64 x i32> @insertelt_v64i32_63(<64 x i32> %a, i32 %y) {
+; CHECK-LABEL: insertelt_v64i32_63:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v24, 31
+; CHECK-NEXT:    ret
+  %b = insertelement <64 x i32> %a, i32 %y, i32 63
+  ret <64 x i32> %b
+}
+
+define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx) {
+; RV32-LABEL: insertelt_v64i32_idx:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -384
+; RV32-NEXT:    .cfi_def_cfa_offset 384
+; RV32-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    addi s0, sp, 384
+; RV32-NEXT:    .cfi_def_cfa s0, 0
+; RV32-NEXT:    andi sp, sp, -128
+; RV32-NEXT:    andi a1, a1, 63
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    mv a2, sp
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    addi a3, sp, 128
+; RV32-NEXT:    li a4, 32
+; RV32-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
+; RV32-NEXT:    vse32.v v16, (a3)
+; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    sw a0, 0(a1)
+; RV32-NEXT:    vle32.v v8, (a2)
+; RV32-NEXT:    vle32.v v16, (a3)
+; RV32-NEXT:    addi sp, s0, -384
+; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 384
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_v64i32_idx:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -384
+; RV64-NEXT:    .cfi_def_cfa_offset 384
+; RV64-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    addi s0, sp, 384
+; RV64-NEXT:    .cfi_def_cfa s0, 0
+; RV64-NEXT:    andi sp, sp, -128
+; RV64-NEXT:    andi a1, a1, 63
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    mv a2, sp
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    addi a3, sp, 128
+; RV64-NEXT:    li a4, 32
+; RV64-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
+; RV64-NEXT:    vse32.v v16, (a3)
+; RV64-NEXT:    vse32.v v8, (a2)
+; RV64-NEXT:    sw a0, 0(a1)
+; RV64-NEXT:    vle32.v v8, (a2)
+; RV64-NEXT:    vle32.v v16, (a3)
+; RV64-NEXT:    addi sp, s0, -384
+; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 384
+; RV64-NEXT:    ret
+  %b = insertelement <64 x i32> %a, i32 %y, i32 %idx
+  ret <64 x i32> %b
+}
+
 ; FIXME: This codegen needs to be improved. These tests previously asserted
 ; type legalizing the i64 type on RV32.
 
