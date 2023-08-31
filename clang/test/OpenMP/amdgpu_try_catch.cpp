@@ -1,4 +1,4 @@
-// REQUIRES: amdgpu-registered-target
+// REQUIRES: amdgpu-registered-target, staticanalyzer
 
 /**
  * The first four lines test that a warning is produced when enabling 
