@@ -35,18 +35,13 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
     auto loc = op.getLoc();
     auto type = op.getType();
 
-    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
-
     Value real =
         rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
     Value imag =
         rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
-    Value realSqr =
-        rewriter.create<arith::MulFOp>(loc, real, real, fmf.getValue());
-    Value imagSqr =
-        rewriter.create<arith::MulFOp>(loc, imag, imag, fmf.getValue());
-    Value sqNorm =
-        rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr, fmf.getValue());
+    Value realSqr = rewriter.create<arith::MulFOp>(loc, real, real);
+    Value imagSqr = rewriter.create<arith::MulFOp>(loc, imag, imag);
+    Value sqNorm = rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr);
 
     rewriter.replaceOpWithNewOp<math::SqrtOp>(op, sqNorm);
     return success();
