@@ -205,6 +205,9 @@ Bug Fixes in This Version
 - Clang's ``-Wunused-private-field`` no longer warns on fields whose type is
   declared with ``[[maybe_unused]]``.
   (`#61334 <https://github.com/llvm/llvm-project/issues/61334>`_)
+- For function multi-versioning using the ``target`` or ``target_clones``
+  attributes, remove comdat for internal linkage functions.
+  (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
