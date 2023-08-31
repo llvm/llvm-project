@@ -4,11 +4,17 @@
 ; RUN: | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-ibm-aix -stop-after=finalize-isel \
 ; RUN: | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
+; RUN: -min-jump-table-entries=4 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
+; RUN: -ppc-min-jump-table-entries=4 | FileCheck %s -check-prefix=JT
 
-; CHECK:   jumpTable:
-; CHECK-NEXT:   kind:            label-difference32
-; CHECK-NEXT:   entries:
-; CHECK-NEXT:     - id:              0
+; JT:   jumpTable:
+; JT-NEXT:   kind:            label-difference32
+; JT-NEXT:   entries:
+; JT-NEXT:     - id:              0
+
+; CHECK-NOT: jumpTable:
 
 define signext i32 @jt(i32 signext %a, i32 signext %b) {
 entry:
