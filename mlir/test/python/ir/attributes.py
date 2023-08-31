@@ -21,7 +21,7 @@ def testParsePrint():
     assert t.context is ctx
     ctx = None
     gc.collect()
-    # CHECK: hello
+    # CHECK: "hello"
     print(str(t))
     # CHECK: StringAttr("hello")
     print(repr(t))
@@ -290,25 +290,14 @@ def testStringAttr():
         sattr = StringAttr(Attribute.parse('"stringattr"'))
         # CHECK: sattr value: stringattr
         print("sattr value:", sattr.value)
-        # CHECK: sattr value_bytes: b'stringattr'
-        print("sattr value_bytes:", sattr.value_bytes)
-        # CHECK: sattr str: stringattr
-        print("sattr str:", str(sattr))
-
-        typed_sattr = StringAttr(Attribute.parse('"stringattr" : i32'))
-        # CHECK: typed_sattr value: stringattr
-        print("typed_sattr value:", typed_sattr.value)
-        # CHECK: typed_sattr str: stringattr
-        print("typed_sattr str:", str(typed_sattr))
+        # CHECK: sattr value: b'stringattr'
+        print("sattr value:", sattr.value_bytes)
 
         # Test factory methods.
-        # CHECK: default_get: StringAttr("foobar")
-        print("default_get:", repr(StringAttr.get("foobar")))
-        # CHECK: typed_get: StringAttr("12345" : i32)
-        print(
-            "typed_get:",
-            repr(StringAttr.get_typed(IntegerType.get_signless(32), "12345")),
-        )
+        # CHECK: default_get: "foobar"
+        print("default_get:", StringAttr.get("foobar"))
+        # CHECK: typed_get: "12345" : i32
+        print("typed_get:", StringAttr.get_typed(IntegerType.get_signless(32), "12345"))
 
 
 # CHECK-LABEL: TEST: testNamedAttr
@@ -317,8 +306,8 @@ def testNamedAttr():
     with Context():
         a = Attribute.parse('"stringattr"')
         named = a.get_named("foobar")  # Note: under the small object threshold
-        # CHECK: attr: StringAttr("stringattr")
-        print("attr:", repr(named.attr))
+        # CHECK: attr: "stringattr"
+        print("attr:", named.attr)
         # CHECK: name: foobar
         print("name:", named.name)
         # CHECK: named: NamedAttribute(foobar="stringattr")
