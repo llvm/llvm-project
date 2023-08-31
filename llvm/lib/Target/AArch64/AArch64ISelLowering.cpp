@@ -6626,7 +6626,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // Insert the SMSTART if this is a locally streaming function and
   // make sure it is Glued to the last CopyFromReg value.
   if (IsLocallyStreaming) {
-    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
     Chain =
         changeStreamingMode(DAG, DL, /*Enable*/ true, DAG.getRoot(), Glue,
                             DAG.getConstant(0, DL, MVT::i64), /*Entry*/ true);
