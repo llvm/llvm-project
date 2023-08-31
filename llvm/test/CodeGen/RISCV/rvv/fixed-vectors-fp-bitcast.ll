@@ -157,40 +157,28 @@ define <1 x half> @bitcast_i16_v1f16(i16 %a) {
 ; CHECK-LABEL: bitcast_i16_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = bitcast i16 %a to <1 x half>
   ret <1 x half> %b
 }
 
 define <2 x half> @bitcast_i32_v2f16(i32 %a) {
-; RV32-FP-LABEL: bitcast_i32_v2f16:
-; RV32-FP:       # %bb.0:
-; RV32-FP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-FP-NEXT:    vmv.s.x v8, a0
-; RV32-FP-NEXT:    ret
-;
-; RV64-FP-LABEL: bitcast_i32_v2f16:
-; RV64-FP:       # %bb.0:
-; RV64-FP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-FP-NEXT:    vmv.v.x v8, a0
-; RV64-FP-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
   %b = bitcast i32 %a to <2 x half>
   ret <2 x half> %b
 }
 
 define <1 x float> @bitcast_i32_v1f32(i32 %a) {
-; RV32-FP-LABEL: bitcast_i32_v1f32:
-; RV32-FP:       # %bb.0:
-; RV32-FP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-FP-NEXT:    vmv.s.x v8, a0
-; RV32-FP-NEXT:    ret
-;
-; RV64-FP-LABEL: bitcast_i32_v1f32:
-; RV64-FP:       # %bb.0:
-; RV64-FP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-FP-NEXT:    vmv.v.x v8, a0
-; RV64-FP-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
   %b = bitcast i32 %a to <1 x float>
   ret <1 x float> %b
 }
