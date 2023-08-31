@@ -52,6 +52,7 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
