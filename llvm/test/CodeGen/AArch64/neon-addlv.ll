@@ -177,3 +177,21 @@ entry:
   %0 = and i32 %vaddlv.i, 65535
   ret i32 %0
 }
+
+define dso_local <8 x i8> @bar(<8 x i8> noundef %a) local_unnamed_addr #0 {
+; CHECK-LABEL: bar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #3
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %0 = trunc i32 %vaddlv.i to i16
+  %vecinit.i = insertelement <8 x i16> undef, i16 %0, i64 0
+  %vecinit7.i = shufflevector <8 x i16> %vecinit.i, <8 x i16> poison, <8 x i32> zeroinitializer
+  %vrshrn_n2 = tail call <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16> %vecinit7.i, i32 3)
+  ret <8 x i8> %vrshrn_n2
+}
+
+declare <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16>, i32)
