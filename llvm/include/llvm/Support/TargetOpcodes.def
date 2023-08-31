@@ -226,6 +226,10 @@ HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
+// Provides information about what jump table the following indirect branch is
+// using.
+HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.

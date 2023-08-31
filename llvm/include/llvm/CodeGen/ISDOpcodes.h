@@ -1049,6 +1049,10 @@ enum NodeType {
   /// is the jumptable index, the last one is the jumptable entry index.
   BR_JT,
 
+  /// JUMP_TABLE_DEBUG_INFO - Jumptable debug info. The first operand is the
+  /// chain, the second is the jumptable index.
+  JUMP_TABLE_DEBUG_INFO,
+
   /// BRCOND - Conditional branch.  The first operand is the chain, the
   /// second is the condition, the third is the block to branch to if the
   /// condition is true.  If the type of the condition is not i1, then the

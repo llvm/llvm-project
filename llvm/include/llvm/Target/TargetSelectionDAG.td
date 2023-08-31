@@ -650,6 +650,9 @@ def readcyclecounter : SDNode<"ISD::READCYCLECOUNTER", SDTIntLeaf,
 def membarrier : SDNode<"ISD::MEMBARRIER", SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
 
+def jump_table_debug_info : SDNode<"ISD::JUMP_TABLE_DEBUG_INFO", SDTNone,
+                        [SDNPHasChain]>;
+
 def atomic_fence : SDNode<"ISD::ATOMIC_FENCE" , SDTAtomicFence,
                           [SDNPHasChain, SDNPSideEffect]>;
 
