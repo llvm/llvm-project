@@ -14,7 +14,9 @@
 #ifndef LLVM_CLANG_AST_ASTCONCEPT_H
 #define LLVM_CLANG_AST_ASTCONCEPT_H
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -107,10 +109,18 @@ struct ASTConstraintSatisfaction final :
   Rebuild(const ASTContext &C, const ASTConstraintSatisfaction &Satisfaction);
 };
 
-/// \brief Common data class for constructs that reference concepts with
-/// template arguments.
+/// A reference to a concept and its template args, as it appears in the code.
+///
+/// Examples:
+///   template <int X> requires is_even<X> int half = X/2;
+///                             ~~~~~~~~~~ (in ConceptSpecializationExpr)
+///
+///   std::input_iterator auto I = Container.begin();
+///   ~~~~~~~~~~~~~~~~~~~ (in AutoTypeLoc)
+///
+///   template <std::derives_from<Expr> T> void dump();
+///             ~~~~~~~~~~~~~~~~~~~~~~~ (in TemplateTypeParmDecl)
 class ConceptReference {
-protected:
   // \brief The optional nested name specifier used when naming the concept.
   NestedNameSpecifierLoc NestedNameSpec;
 
@@ -134,7 +144,6 @@ protected:
   /// concept.
   const ASTTemplateArgumentListInfo *ArgsAsWritten;
 
-public:
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
                    ConceptDecl *NamedConcept,
@@ -143,8 +152,15 @@ public:
         ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
         NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
 
-  ConceptReference()
-      : FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
+public:
+  static ConceptReference *
+  Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
+         SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
+         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten) {
+    return new (C) ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo,
+                                    FoundDecl, NamedConcept, ArgsAsWritten);
+  }
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
     return NestedNameSpec;
@@ -157,6 +173,26 @@ public:
   }
 
   SourceLocation getTemplateKWLoc() const { return TemplateKWLoc; }
+
+  SourceLocation getLocation() const { return getConceptNameLoc(); }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    // Note that if the qualifier is null the template KW must also be null.
+    if (auto QualifierLoc = getNestedNameSpecifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return getConceptNameInfo().getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getTemplateArgsAsWritten() &&
+                   getTemplateArgsAsWritten()->getRAngleLoc().isValid()
+               ? getTemplateArgsAsWritten()->getRAngleLoc()
+               : getConceptNameInfo().getEndLoc();
+  }
+
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(getBeginLoc(), getEndLoc());
+  }
 
   NamedDecl *getFoundDecl() const {
     return FoundDecl;
@@ -175,22 +211,30 @@ public:
   bool hasExplicitTemplateArgs() const {
     return ArgsAsWritten != nullptr;
   }
+
+  void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 };
 
-class TypeConstraint : public ConceptReference {
+/// Models the abbreviated syntax to constrain a template type parameter:
+///   template <convertible_to<string> T> void print(T object);
+///             ~~~~~~~~~~~~~~~~~~~~~~
+/// Semantically, this adds an "immediately-declared constraint" with extra arg:
+///    requires convertible_to<T, string>
+///
+/// In the C++ grammar, a type-constraint is also used for auto types:
+///    convertible_to<string> auto X = ...;
+/// We do *not* model these as TypeConstraints, but AutoType(Loc) directly.
+class TypeConstraint {
   /// \brief The immediately-declared constraint expression introduced by this
   /// type-constraint.
   Expr *ImmediatelyDeclaredConstraint = nullptr;
+  ConceptReference *ConceptRef;
 
 public:
-  TypeConstraint(NestedNameSpecifierLoc NNS,
-                 DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-                 ConceptDecl *NamedConcept,
-                 const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                 Expr *ImmediatelyDeclaredConstraint) :
-      ConceptReference(NNS, /*TemplateKWLoc=*/SourceLocation(), ConceptNameInfo,
-                       FoundDecl, NamedConcept, ArgsAsWritten),
-      ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint) {}
+  TypeConstraint(ConceptReference *ConceptRef,
+                 Expr *ImmediatelyDeclaredConstraint)
+      : ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint),
+        ConceptRef(ConceptRef) {}
 
   /// \brief Get the immediately-declared constraint expression introduced by
   /// this type-constraint, that is - the constraint expression that is added to
@@ -199,7 +243,41 @@ public:
     return ImmediatelyDeclaredConstraint;
   }
 
-  void print(llvm::raw_ostream &OS, PrintingPolicy Policy) const;
+  ConceptReference *getConceptReference() const { return ConceptRef; }
+
+  // FIXME: Instead of using these concept related functions the callers should
+  // directly work with the corresponding ConceptReference.
+  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+
+  SourceLocation getConceptNameLoc() const {
+    return ConceptRef->getConceptNameLoc();
+  }
+
+  bool hasExplicitTemplateArgs() const {
+    return ConceptRef->hasExplicitTemplateArgs();
+  }
+
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return ConceptRef->getTemplateArgsAsWritten();
+  }
+
+  SourceLocation getTemplateKWLoc() const {
+    return ConceptRef->getTemplateKWLoc();
+  }
+
+  NamedDecl *getFoundDecl() const { return ConceptRef->getFoundDecl(); }
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return ConceptRef->getNestedNameSpecifierLoc();
+  }
+
+  const DeclarationNameInfo &getConceptNameInfo() const {
+    return ConceptRef->getConceptNameInfo();
+  }
+
+  void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const {
+    ConceptRef->print(OS, Policy);
+  }
 };
 
 } // clang
