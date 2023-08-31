@@ -182,9 +182,6 @@ void FlagParser::RegisterHandler(const char *name, FlagHandlerBase *handler,
   ++n_flags_;
 }
 
-FlagParser::FlagParser() : n_flags_(0), buf_(nullptr), pos_(0) {
-  flags_ =
-      (Flag *)GetGlobalLowLevelAllocator().Allocate(sizeof(Flag) * kMaxFlags);
-}
+FlagParser::FlagParser() : n_flags_(0), buf_(nullptr), pos_(0) {}
 
 }  // namespace __sanitizer

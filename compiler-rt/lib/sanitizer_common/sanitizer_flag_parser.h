@@ -163,7 +163,7 @@ class FlagParser {
     const char *name;
     const char *desc;
     FlagHandlerBase *handler;
-  } *flags_;
+  } flags_[kMaxFlags];
   int n_flags_;
 
   const char *buf_;
