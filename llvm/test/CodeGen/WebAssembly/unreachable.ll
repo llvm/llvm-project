@@ -41,7 +41,6 @@ define void @trap_unreach() {
 ; CHECK:         .functype trap_unreach () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call void @llvm.trap()
   unreachable
@@ -99,7 +98,6 @@ define i32 @i32_sig_match_unreach() {
 ; CHECK:         .functype i32_sig_match_unreach () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_func_i32
-; CHECK-NEXT:    drop
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call i32 @ext_func_i32()
