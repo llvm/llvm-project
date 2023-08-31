@@ -70,6 +70,8 @@ def note_consteval_address_accessible : Note<
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "subobject %0 is not initialized">;
+def note_constexpr_uninitialized_base : Note<
+  "constructor of base class %0 is not called">;
 def note_constexpr_static_local : Note<
   "control flows through the definition of a %select{static|thread_local}0 variable">;
 def note_constexpr_subobject_declared_here : Note<
