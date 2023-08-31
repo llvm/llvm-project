@@ -1,6 +1,6 @@
 // RUN: %clang -std=c17 %s -o %t && %run %t
 /// Test __isoc23_* for glibc 2.38+.
-// RUN: %clang -std=c23 %s -o %t && %run %t
+// RUN: %clang -std=c2x %s -o %t && %run %t
 
 #include <assert.h>
 #include <stdarg.h>
