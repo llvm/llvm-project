@@ -58,6 +58,9 @@ template <typename F> auto catchAll(F &&func) {
 
 } // namespace
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+
 struct SpirvModule {
   ze_module_handle_t module = nullptr;
   ~SpirvModule();
@@ -72,6 +75,8 @@ std::mutex mutexLock;
 SpirvModule::~SpirvModule() {
   L0_SAFE_CALL(zeModuleDestroy(SpirvModule::module));
 }
+
+#pragma clang diagnostic pop
 
 struct ParamDesc {
   void *data;
