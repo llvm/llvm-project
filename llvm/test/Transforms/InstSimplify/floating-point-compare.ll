@@ -656,8 +656,7 @@ define i1 @assume_nan_ord(float %x) {
 ; CHECK-LABEL: @assume_nan_ord(
 ; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %uno = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno)
@@ -681,8 +680,7 @@ define i1 @assume_nan_uno(float %x) {
 ; CHECK-LABEL: @assume_nan_uno(
 ; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], 1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %uno = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %uno)
@@ -1525,10 +1523,7 @@ define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
 define i1 @ogt_zero_fabs_select_negone_or_pinf(i1 %cond) {
 ; CHECK-LABEL: @ogt_zero_fabs_select_negone_or_pinf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float 0x7FF0000000000000
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
-; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[ONE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %select = select i1 %cond, float -1.0, float 0x7FF0000000000000
@@ -1540,10 +1535,7 @@ entry:
 define i1 @ogt_zero_fabs_select_one_or_ninf(i1 %cond) {
 ; CHECK-LABEL: @ogt_zero_fabs_select_one_or_ninf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float 1.000000e+00, float 0xFFF0000000000000
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
-; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[ONE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %select = select i1 %cond, float 1.0, float 0xFFF0000000000000
