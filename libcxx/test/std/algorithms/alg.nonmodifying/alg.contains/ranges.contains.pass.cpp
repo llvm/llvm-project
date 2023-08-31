@@ -144,6 +144,29 @@ constexpr void test_iterators() {
     }
   }
 
+  { // check that the projections are used
+    int a[] = {1, 9, 0, 13, 25};
+    {
+      bool ret = std::ranges::contains(a, a + 5, -13, [&](int i) { return i * -1; });
+      assert(ret);
+    }
+    {
+      auto range = std::ranges::subrange(a, a + 5);
+      bool ret = std::ranges::contains(range, -13, [&](int i) { return i * -1; });
+      assert(ret);
+    }
+  }
+
+  { // check the nodiscard extension
+    // use #pragma around to suppress error: ignoring return value of function
+    // declared with 'nodiscard' attribute [-Werror,-Wunused-result]
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-result"
+    int a[] = {1, 9, 0, 13, 25};
+    std::ranges::contains(a, a + 5, -13, [&](int i) { return i * -1; });
+    #pragma clang diagnostic pop
+  }
+
   if (!std::is_constant_evaluated())
     comparable_data.clear();
 }
