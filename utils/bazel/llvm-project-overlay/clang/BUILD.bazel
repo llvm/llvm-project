@@ -536,8 +536,9 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Basic/*.h",
-        "include/clang/Driver/Options.h",
-    ]),
+    ]) + [
+        "include/clang/Driver/Options.h"
+    ],
     copts = [
         "-DHAVE_VCS_VERSION_INC",
         "$(STACK_FRAME_UNLIMITED)",
