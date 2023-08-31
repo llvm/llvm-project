@@ -143,7 +143,7 @@ public:
 
     return 0;
   }
-  unsigned getELEN() const {
+  unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
   }
