@@ -194,7 +194,6 @@ constexpr bool test() {
     int projection_count = 0;
     // count invocations of the projection
     {
-      projection_count = 0;
       bool ret = std::ranges::contains(a, a + 5, 0,
                                 [&](int i) { ++projection_count; return i; });
       assert(ret);
