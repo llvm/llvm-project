@@ -27,6 +27,7 @@ struct basic_string {
 
   bool empty() const;
   size_type size() const;
+  size_type length() const;
 
   _Type& append(const C *s);
   _Type& append(const C *s, size_type n);
