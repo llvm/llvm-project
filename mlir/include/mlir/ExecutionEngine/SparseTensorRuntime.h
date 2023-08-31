@@ -125,9 +125,6 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 /// Constructs a new SparseTensorReader object, opens the file, reads the
 /// header, and validates that the actual contents of the file match
 /// the expected `dimShapeRef` and `valTp`.
-//
-// FIXME: update `SparseTensorCodegenPass` to use
-// `_mlir_ciface_createCheckedSparseTensorReader` instead.
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_createCheckedSparseTensorReader(
     char *filename, StridedMemRefType<index_type, 1> *dimShapeRef,
     PrimaryType valTp);
@@ -141,14 +138,6 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
     StridedMemRefType<index_type, 1> *lvl2dimRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp);
-
-/// SparseTensorReader method to copy the dimension-sizes into the
-/// provided memref.
-//
-// FIXME: update `SparseTensorCodegenPass` to use
-// `_mlir_ciface_getSparseTensorReaderDimSizes` instead.
-MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_copySparseTensorReaderDimSizes(
-    void *p, StridedMemRefType<index_type, 1> *dref);
 
 /// SparseTensorReader method to obtain direct access to the
 /// dimension-sizes array.
@@ -168,7 +157,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
 /// sorted.
 #define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
-      _mlir_ciface_getSparseTensorReaderRead##CNAME##VNAME(                    \
+      _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
           void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,               \
           StridedMemRefType<C, 1> *iref, StridedMemRefType<V, 1> *vref)        \
           MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_GETNEXT)
@@ -285,11 +274,6 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
       V **pValues, uint64_t **pCoordinates);
 MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 #undef DECL_CONVERTFROMMLIRSPARSETENSOR
-
-/// Creates a SparseTensorReader for reading a sparse tensor from a file with
-/// the given file name. This opens the file and read the header meta data based
-/// of the sparse tensor format derived from the suffix of the file name.
-MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorReader(char *filename);
 
 /// Returns the rank of the sparse tensor being read.
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);

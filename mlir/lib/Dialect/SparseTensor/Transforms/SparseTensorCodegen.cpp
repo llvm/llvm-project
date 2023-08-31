@@ -1372,7 +1372,7 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
       return failure();
 
     // Implement the NewOp(filename) as follows:
-    //   %reader = @getSparseTensorReader(%filename)
+    //   %reader = @createCheckedSparseTensorReader(%filename)
     //   %nse = @getSparseTensorNSE(%reader)
     //   %coo = bufferization.alloc_tensor an ordered COO with
     //          dst dim ordering, size_hint = %nse
@@ -1383,15 +1383,23 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
     //   update storage specifier
     //   @delSparseTensorReader(%reader)
 
-    // Create a sparse tensor reader.
-    const Value fileName = op.getSource();
+    // Allocate `SparseTensorReader` and perform all initial setup that
+    // does not depend on lvlSizes (nor dimToLvl, lvlToDim, etc).
     const Type opaqueTp = getOpaquePointerType(rewriter);
-    // FIXME: use `createCheckedSparseTensorReader` instead, because
-    // `createSparseTensorReader` is unsafe.
-    Value reader = createFuncCall(rewriter, loc, "createSparseTensorReader",
-                                  {opaqueTp}, {fileName}, EmitCInterface::Off)
-                       .getResult(0);
-
+    const Value fileName = op.getSource();
+    SmallVector<Value> dimShapeValues;
+    for (const DynSize sh : dstTp.getDimShape()) {
+      const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
+      dimShapeValues.push_back(constantIndex(rewriter, loc, s));
+    }
+    Value dimShapeBuffer = allocaBuffer(rewriter, loc, dimShapeValues);
+    Value valTp =
+        constantPrimaryTypeEncoding(rewriter, loc, dstTp.getElementType());
+    Value reader =
+        createFuncCall(rewriter, loc, "createCheckedSparseTensorReader",
+                       opaqueTp, {fileName, dimShapeBuffer, valTp},
+                       EmitCInterface::On)
+            .getResult(0);
     const Type indexTp = rewriter.getIndexType();
     const Dimension dimRank = dstTp.getDimRank();
     const Level lvlRank = dstTp.getLvlRank();
@@ -1400,18 +1408,18 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
     // the sparse tensor reader.
     SmallVector<Value> dynSizes;
     if (dstTp.hasDynamicDimShape()) {
-      // FIXME: call `getSparseTensorReaderDimSizes` instead, because
-      // `copySparseTensorReaderDimSizes` copies the memref over,
-      // instead of just accessing the reader's memory directly.
-      Value dimSizes = genAlloca(rewriter, loc, dimRank, indexTp);
-      createFuncCall(rewriter, loc, "copySparseTensorReaderDimSizes", {},
-                     {reader, dimSizes}, EmitCInterface::On);
+      auto memTp = MemRefType::get({ShapedType::kDynamic}, indexTp);
+      Value dimSizesBuffer =
+          createFuncCall(rewriter, loc, "getSparseTensorReaderDimSizes", memTp,
+                         reader, EmitCInterface::On)
+              .getResult(0);
       for (const auto &d : llvm::enumerate(dstTp.getDimShape()))
         if (ShapedType::isDynamic(d.value()))
           dynSizes.push_back(rewriter.create<memref::LoadOp>(
-              loc, dimSizes, constantIndex(rewriter, loc, d.index())));
+              loc, dimSizesBuffer, constantIndex(rewriter, loc, d.index())));
     }
 
+    // Get the number of stored entries.
     Value nse = createFuncCall(rewriter, loc, "getSparseTensorReaderNSE",
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
@@ -1422,10 +1430,6 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
     MutSparseTensorDescriptor desc(dstTp, fields);
 
     // Construct the `dimToLvl` buffer for handing off to the runtime library.
-    // FIXME: This code is (mostly) copied from the SparseTensorConversion.cpp
-    // handling of `NewOp`, and only handles permutations.  Fixing this
-    // requires waiting for wrengr to finish redoing the CL that handles
-    // all dim<->lvl stuff more robustly.
     SmallVector<Value> dimToLvlValues(dimRank);
     if (!dstTp.isIdentity()) {
       const auto dimToLvl = dstTp.getDimToLvl();
@@ -1449,9 +1453,7 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
     const Type boolTp = rewriter.getIntegerType(1);
     const Type elemTp = dstTp.getElementType();
     const Type crdTp = dstTp.getCrdType();
-    // FIXME: This function name is weird; should rename to
-    // "sparseTensorReaderReadToBuffers".
-    SmallString<32> readToBuffersFuncName{"getSparseTensorReaderRead",
+    SmallString<32> readToBuffersFuncName{"getSparseTensorReaderReadToBuffers",
                                           overheadTypeFunctionSuffix(crdTp),
                                           primaryTypeFunctionSuffix(elemTp)};
     Value isSorted =
