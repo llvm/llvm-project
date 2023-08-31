@@ -73,6 +73,11 @@ mlir::Value getVarPtr(mlir::Operation *accDataEntryOp);
 std::optional<mlir::acc::DataClause>
 getDataClause(mlir::Operation *accDataEntryOp);
 
+/// Used to find out whether data operation is implicit.
+/// Returns false if not a data operation or if it is a data operation without
+/// implicit flag.
+bool getImplicitFlag(mlir::Operation *accDataEntryOp);
+
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
   return StringLiteral("acc.declare");
