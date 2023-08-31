@@ -26268,6 +26268,7 @@ TEST_F(FormatTest, RemoveParentheses) {
 
   Style.RemoveParentheses = FormatStyle::RPS_MultipleParentheses;
   verifyFormat("int x __attribute__((aligned(16))) = 0;", Style);
+  verifyFormat("decltype((foo->bar)) baz;", Style);
   verifyFormat("class __declspec(dllimport) X {};",
                "class __declspec((dllimport)) X {};", Style);
   verifyFormat("int x = (({ 0; }));", "int x = ((({ 0; })));", Style);
