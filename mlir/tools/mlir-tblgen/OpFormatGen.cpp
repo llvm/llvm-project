@@ -953,7 +953,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
 /// Generate the parser for a custom directive.
 static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
                                      bool useProperties,
-                                     StringRef opCppClassName) {
+                                     StringRef opCppClassName,
+                                     bool isOptional = false) {
   body << "  {\n";
 
   // Preprocess the directive variables.
@@ -1011,14 +1012,19 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
     }
   }
 
-  body << "    if (parse" << dir->getName() << "(parser";
+  body << "    auto odsResult = parse" << dir->getName() << "(parser";
   for (FormatElement *param : dir->getArguments()) {
     body << ", ";
     genCustomParameterParser(param, body);
   }
+  body << ");\n";
 
-  body << "))\n"
-       << "      return ::mlir::failure();\n";
+  if (isOptional) {
+    body << "    if (!odsResult) return {};\n"
+         << "    if (::mlir::failed(*odsResult)) return ::mlir::failure();\n";
+  } else {
+    body << "    if (odsResult) return ::mlir::failure();\n";
+  }
 
   // After parsing, add handling for any of the optional constructs.
   for (FormatElement *param : dir->getArguments()) {
@@ -1273,6 +1279,14 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
           body << llvm::formatv(regionEnsureSingleBlockParserCode,
                                 region->name);
       }
+    } else if (auto *custom = dyn_cast<CustomDirective>(firstElement)) {
+      body << "  if (auto result = [&]() -> ::mlir::OptionalParseResult {\n";
+      genCustomDirectiveParser(custom, body, useProperties, opCppClassName,
+                               /*isOptional=*/true);
+      body << "    return ::mlir::success();\n"
+           << "  }(); result.has_value() && ::mlir::failed(*result)) {\n"
+           << "    return ::mlir::failure();\n"
+           << "  } else if (result.has_value()) {\n";
     }
 
     genElementParsers(firstElement, thenElements.drop_front(),
