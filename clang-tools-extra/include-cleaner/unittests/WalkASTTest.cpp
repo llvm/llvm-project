@@ -528,5 +528,16 @@ TEST(WalkAST, InitializerList) {
        const char* s = "";
        auto sx = ^{s};)cpp");
 }
+
+TEST(WalkAST, Concepts) {
+  std::string Concept = "template<typename T> concept $explicit^Foo = true;";
+  testWalk(Concept, "template<typename T>concept Bar = ^Foo<T> && true;");
+  testWalk(Concept, "template<^Foo T>void func() {}");
+  testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
+  testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
+  testWalk(Concept, "void func(^Foo auto x) {}");
+  // FIXME: Foo should be explicitly referenced.
+  testWalk("template<typename T> concept Foo = true;", "void func() { ^Foo auto x = 1; }");
+}
 } // namespace
 } // namespace clang::include_cleaner
