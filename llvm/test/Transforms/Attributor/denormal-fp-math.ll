@@ -6,8 +6,7 @@ declare void @call_of_mystery()
 
 ; Should infer to ieee,ieee/default
 define internal void @leaf_dynamic_dynamic_from_ieee_ieee() #0 {
-; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_ieee_ieee() {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -17,8 +16,7 @@ define internal void @leaf_dynamic_dynamic_from_ieee_ieee() #0 {
 
 ; Should infer to ieee,ieee/default
 define internal void @leaf_recursive_dynamic_dynamic_from_ieee_ieee() #0 {
-; CHECK-LABEL: define internal void @leaf_recursive_dynamic_dynamic_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-LABEL: define internal void @leaf_recursive_dynamic_dynamic_from_ieee_ieee() {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    call void @leaf_recursive_dynamic_dynamic_from_ieee_ieee()
 ; CHECK-NEXT:    ret void
@@ -30,8 +28,7 @@ define internal void @leaf_recursive_dynamic_dynamic_from_ieee_ieee() #0 {
 
 ; Should strip denormal-fp-math for default ieee
 define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_ieee_ieee() #1 {
-; CHECK-LABEL: define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-LABEL: define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_ieee_ieee() {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -42,7 +39,7 @@ define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_d
 ; Should infer to preserve-sign,preserve-sign
 define internal void @leaf_dynamic_dynamic_from_daz_daz() #0 {
 ; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_daz_daz
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -54,7 +51,7 @@ define internal void @leaf_dynamic_dynamic_from_daz_daz() #0 {
 ; could theoretically refine to denormal-fp-math-f32=preserve-sign,preserve-sign
 define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_daz_daz() #1 {
 ; CHECK-LABEL: define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_daz_daz
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -65,7 +62,7 @@ define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_d
 ; Leave this alone, must stay dynamic,dynamic
 define internal void @leaf_dynamic_dynamic_from_daz_daz_and_ieee_ieee() #0 {
 ; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_daz_daz_and_ieee_ieee
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -87,7 +84,7 @@ define internal void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_d
 ; Leave as dynamic,dynamic
 define void @externally_visible_dynamic_dynamic_from_ieee_ieee() #0 {
 ; CHECK-LABEL: define void @externally_visible_dynamic_dynamic_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -98,7 +95,7 @@ define void @externally_visible_dynamic_dynamic_from_ieee_ieee() #0 {
 ; Should infer to positive-zero,positive-zero
 define internal void @leaf_dynamic_dynamic_from_dapz_dapz() #0 {
 ; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_dapz_dapz
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -108,8 +105,7 @@ define internal void @leaf_dynamic_dynamic_from_dapz_dapz() #0 {
 
 ; ieee,ieee entry point
 define void @func_ieee_ieee() #2 {
-; CHECK-LABEL: define void @func_ieee_ieee
-; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-LABEL: define void @func_ieee_ieee() {
 ; CHECK-NEXT:    call void @leaf_dynamic_dynamic_from_ieee_ieee()
 ; CHECK-NEXT:    call void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_ieee_ieee()
 ; CHECK-NEXT:    call void @leaf_dynamic_dynamic_from_daz_daz_and_ieee_ieee()
@@ -158,7 +154,7 @@ define void @func_default_is_ieee_ieee() {
 ; preserve-sign,preserve-sign entry point
 define void @func_daz_daz() #3 {
 ; CHECK-LABEL: define void @func_daz_daz
-; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @leaf_dynamic_dynamic_from_daz_daz()
 ; CHECK-NEXT:    call void @leaf_dynamic_dynamic_from_daz_daz_and_ieee_ieee()
 ; CHECK-NEXT:    call void @leaf_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic__dynamic_dynamic_from_daz_daz_and_ieee_ieee()
@@ -177,7 +173,7 @@ define void @func_daz_daz() #3 {
 ; positive-zero,positive-zero entry point
 define void @func_dapz_dapz() #4 {
 ; CHECK-LABEL: define void @func_dapz_dapz
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @leaf_dynamic_dynamic_from_dapz_dapz()
 ; CHECK-NEXT:    ret void
 ;
@@ -189,7 +185,7 @@ define void @func_dapz_dapz() #4 {
 ; realistic case and we don't bother trying to handle it.
 define internal void @leaf_f64_dynamic_f64_dynamic__f32_daz_f32_daz_from__daz_daz() #5 {
 ; CHECK-LABEL: define internal void @leaf_f64_dynamic_f64_dynamic__f32_daz_f32_daz_from__daz_daz
-; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -199,8 +195,7 @@ define internal void @leaf_f64_dynamic_f64_dynamic__f32_daz_f32_daz_from__daz_da
 
 ; -> ieee,ieee
 define internal void @leaf_dynamic_ieee_from_ieee_ieee() #6 {
-; CHECK-LABEL: define internal void @leaf_dynamic_ieee_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+; CHECK-LABEL: define internal void @leaf_dynamic_ieee_from_ieee_ieee() {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -210,8 +205,7 @@ define internal void @leaf_dynamic_ieee_from_ieee_ieee() #6 {
 
 ; -> ieee,ieee
 define internal void @leaf_ieee_dynamic_from_ieee_ieee() #7 {
-; CHECK-LABEL: define internal void @leaf_ieee_dynamic_from_ieee_ieee
-; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+; CHECK-LABEL: define internal void @leaf_ieee_dynamic_from_ieee_ieee() {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -222,7 +216,7 @@ define internal void @leaf_ieee_dynamic_from_ieee_ieee() #7 {
 ; Specialize the f64 mode to ieee,ieee but leave f32 as dynamic,dynamic
 define internal void @leaf_dynamic_dynamic_from_f64_ieee_f32_dynamic() #0 {
 ; CHECK-LABEL: define internal void @leaf_dynamic_dynamic_from_f64_ieee_f32_dynamic
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -243,7 +237,7 @@ define void @func_f64_ieee_f64_ieee__f32_dynamic_f32_dynamic() #1 {
 ; -> preserve-sign,ieee.
 define internal void @leaf_daz_dynamic_from_dynamic_ieee() #8 {
 ; CHECK-LABEL: define internal void @leaf_daz_dynamic_from_dynamic_ieee
-; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -253,7 +247,7 @@ define internal void @leaf_daz_dynamic_from_dynamic_ieee() #8 {
 
 define void @dynamic_ieee() #6 {
 ; CHECK-LABEL: define void @dynamic_ieee
-; CHECK-SAME: () #[[ATTR6]] {
+; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @leaf_daz_dynamic_from_dynamic_ieee()
 ; CHECK-NEXT:    ret void
 ;
@@ -284,7 +278,7 @@ define internal void @leaf_dynamic_from_dynamic() {
 ; Leave unchanged as preserve-sign,preserve-sign
 define internal void @leaf_daz_daz_from_dynamic() #3 {
 ; CHECK-LABEL: define internal void @leaf_daz_daz_from_dynamic
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -294,7 +288,7 @@ define internal void @leaf_daz_daz_from_dynamic() #3 {
 
 define void @dynamic_dynamic() #0 {
 ; CHECK-LABEL: define void @dynamic_dynamic
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @leaf_ieee_ieee_from_dynamic()
 ; CHECK-NEXT:    call void @leaf_daz_daz_from_dynamic()
 ; CHECK-NEXT:    call void @leaf_dynamic_from_dynamic()
@@ -308,7 +302,7 @@ define void @dynamic_dynamic() #0 {
 
 define internal void @leaf_ieee_f64_daz_f32() #9 {
 ; CHECK-LABEL: define internal void @leaf_ieee_f64_daz_f32
-; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -318,7 +312,7 @@ define internal void @leaf_ieee_f64_daz_f32() #9 {
 
 define internal void @leaf_ieee_f64_daz_f32_from_ieee_f64_dynamic_f32() #10 {
 ; CHECK-LABEL: define internal void @leaf_ieee_f64_daz_f32_from_ieee_f64_dynamic_f32
-; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -341,7 +335,7 @@ define void @ieee_f64_dynamic_f32() #1 {
 ; => "preserve-sign,positive-zero" + "denormal-fp-math-f32"="ieee,positive-zero"
 define internal void @leaf_daz_dynamic_dynamic_dapz_from_daz_dapz_ieee_dapz() #11 {
 ; CHECK-LABEL: define internal void @leaf_daz_dynamic_dynamic_dapz_from_daz_dapz_ieee_dapz
-; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
 ; CHECK-NEXT:    ret void
 ;
@@ -351,7 +345,7 @@ define internal void @leaf_daz_dynamic_dynamic_dapz_from_daz_dapz_ieee_dapz() #1
 
 define void @daz_dapz_ieee_dapz() #12 {
 ; CHECK-LABEL: define void @daz_dapz_ieee_dapz
-; CHECK-SAME: () #[[ATTR12:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR9]] {
 ; CHECK-NEXT:    call void @leaf_daz_dynamic_dynamic_dapz_from_daz_dapz_ieee_dapz()
 ; CHECK-NEXT:    ret void
 ;
@@ -373,17 +367,14 @@ attributes #10 = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp
 attributes #11 = { "denormal-fp-math"="preserve-sign,dynamic" "denormal-fp-math-f32"="dynamic,positive-zero" }
 attributes #12 = { "denormal-fp-math"="preserve-sign,positive-zero" "denormal-fp-math-f32"="ieee,positive-zero" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "denormal-fp-math"="dynamic,dynamic" }
+; CHECK: attributes #[[ATTR0]] = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 ; CHECK: attributes #[[ATTR1]] = { "denormal-fp-math-f32"="dynamic,dynamic" }
-; CHECK: attributes #[[ATTR2]] = { "denormal-fp-math"="ieee,ieee" }
-; CHECK: attributes #[[ATTR3]] = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-; CHECK: attributes #[[ATTR4]] = { "denormal-fp-math"="positive-zero,positive-zero" }
-; CHECK: attributes #[[ATTR5]] = { "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+; CHECK: attributes #[[ATTR2]] = { "denormal-fp-math"="dynamic,dynamic" }
+; CHECK: attributes #[[ATTR3]] = { "denormal-fp-math"="positive-zero,positive-zero" }
+; CHECK: attributes #[[ATTR4]] = { "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+; CHECK: attributes #[[ATTR5]] = { "denormal-fp-math"="preserve-sign,ieee" }
 ; CHECK: attributes #[[ATTR6]] = { "denormal-fp-math"="dynamic,ieee" }
-; CHECK: attributes #[[ATTR7]] = { "denormal-fp-math"="ieee,dynamic" }
-; CHECK: attributes #[[ATTR8]] = { "denormal-fp-math"="preserve-sign,dynamic" }
-; CHECK: attributes #[[ATTR9]] = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-; CHECK: attributes #[[ATTR10]] = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
-; CHECK: attributes #[[ATTR11]] = { "denormal-fp-math"="preserve-sign,dynamic" "denormal-fp-math-f32"="dynamic,positive-zero" }
-; CHECK: attributes #[[ATTR12]] = { "denormal-fp-math"="preserve-sign,positive-zero" "denormal-fp-math-f32"="ieee,positive-zero" }
+; CHECK: attributes #[[ATTR7]] = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+; CHECK: attributes #[[ATTR8]] = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
+; CHECK: attributes #[[ATTR9]] = { "denormal-fp-math"="preserve-sign,positive-zero" "denormal-fp-math-f32"="ieee,positive-zero" }
 ;.
