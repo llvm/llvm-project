@@ -230,18 +230,56 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* Improved code sequence of materializing 64-bit immediate numbers, expanding
+  ``is.fpclass`` intrinsic and forwarding stores.
+* Implemented DFP instructions (for use via inline asm).
+* Improved code gen for vector add.
+* Added ability to show statistics of number of entries in the TOC.
+* Added Binary Coded Decimal Assist instructions (for use via inline asm).
+* Added basic support for vector functions in GlobalISel.
+* Added additional X-Form load and store instruction generation for TLS accesses.
+* PPC64LE backend is added to JITLink.
+* Added various bug fixes and optimizations.
+* Added function pointer alignment to the DataLayout for Power, which lets us
+  make more informed choices about what this alignment defaults to for various 
+  purposes (e.g., C++ pointers to member). If the target ABI uses function
+  descriptor objects, this is the alignment we would emit the descriptor with.
+  Otherwise, a function pointer points to a global entry point, so this is at
+  least the alignment for code on Power (i.e., 4-bytes).
+
+AIX Support/improvements:
+
+
 * A new option ``-mxcoff-roptr`` is added to ``clang`` and ``llc``. When this
   option is present, constant objects with relocatable address values are put
-  into the RO data section. This option should be used with the ``-fdata-sections``
-  option, and is not supported with ``-fno-data-sections``. The option is
-  only supported on AIX.
-* On AIX, teach the profile runtime to check for a build-id string; such string
-  can be created by the -mxcoff-build-id option.
+  into the RO data section. This option should be used with the
+  ``-fdata-sections`` option, and is not supported with ``-fno-data-sections``.
+
+* Taught the profile runtime to check for a build-id string. Build-id strings
+  can be created via the ``-mxcoff-build-id`` option.
+
 * Removed ``-ppc-quadword-atomics`` which only affected lock-free quadword
   atomics on AIX. Now backend generates lock-free quadword atomics code on AIX
   by default. To support lock-free quadword atomics in libatomic, the OS level
   must be at least AIX 7.2 TL5 SP3 with libc++.rte of version 17.1.1 or above
   installed.
+
+* Integrated assembler is enabled by default on AIX.
+* System assembler is always used to compile assembly files on AIX.
+* Added support for local-exec TLS.
+* Added a new option, ``--traceback-table``, to ``llvm-objdump`` to print out
+  the traceback table information for XCOFF object files.
+* Added ``llvm-ar`` object mode options ``-X32``, ``-X64``, ``-X32-64``,
+  and ``-Xany``.
+* Changed the default name of the text-section csect to be an empty string
+  instead of ``.text``. This change does not affect the behaviour
+  of the program.
+* Fixed a problem when the personality routine for the legacy AIX ``xlclang++``
+  compiler uses the stack slot to pass the exception object to the landing pad.
+  Runtime routine ``__xlc_exception_handle()`` invoked by the landing pad to
+  retrieve the exception object now skips frames not associated with functions
+  that are C++ EH-aware because the compiler sometimes generates a wrapper of
+  ``__xlc_exception_handle()`` for optimization purposes.
 
 Changes to the RISC-V Backend
 -----------------------------

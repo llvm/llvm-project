@@ -273,6 +273,10 @@ Non-comprehensive list of changes in this release
   types. This allows access to ``llvm.nearbyint`` for arbitrary
   floating-point and vector of floating-point types.
 - Clang AST matcher now matches concept declarations with `conceptDecl`.
+- Clang now supports more GCC stdio builtins: ``__builtin_vprintf``, ``__builtin_vfprintf``,
+  ``__builtin_fscanf``, ``__builtin_scanf``, ``__builtin_sscanf``, ``__builtin_vfscanf``,
+  ``__builtin_vscanf``, ``__builtin_vsscanf``.
+
 
 New Compiler Flags
 ------------------
@@ -293,7 +297,11 @@ New Compiler Flags
 - ``-print-multi-flags-experimental`` prints the flags used for multilib
   selection. See `the multilib docs <https://clang.llvm.org/docs/Multilib.html>`_
   for more details.
-
+- ``-maix32`` and ``-maix64`` are new GCC compatibility flags that select the
+  bitmode to target on AIX.
+- ``-p`` is a new GCC compatibility flag for AIX and Linux which works
+  similarly to ``-pg`` by writing profile information, but targets the ``prof``
+  tool as opposed to the ``gprof`` tool.
 
 Deprecated Compiler Flags
 -------------------------
@@ -713,6 +721,14 @@ Bug Fixes in This Version
   The current solution may bring performance regressions if the awaiters have
   non-static data members. See
   `#64945 <https://github.com/llvm/llvm-project/issues/64945>`_ for details.
+- Clang now correctly diagnoses ``function_needs_feature`` when always_inline
+  callee has incompatible target features with caller.
+- Removed the linking of libraries when ``-r`` is passed to the driver on AIX.
+- Fixed an Itanium ABI bug where we force exactly two-byte alignment on member
+  functions to reserve a bit in function pointers for identifying pointers to
+  virtual member functions even if the target required a greater function
+  alignment and/or did not have function pointers which point to function entry
+  points (i.e., uses function descriptor objects instead).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -991,10 +1007,19 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
-- Add an AIX-only link-time option, `-mxcoff-build-id=0xHEXSTRING`, to allow users
-  to embed a hex id in their binary such that it's readable by the program itself.
-  This option is an alternative to the `--build-id=0xHEXSTRING` GNU linker option
-  which is currently not supported by the AIX linker.
+- Enabled ThinLTO support. Minimum OS requirement is AIX 7.2 TL5 SP6 or
+  the upcoming AIX 7.3 TL2.
+
+- Enabled integrated assembler (``-f[no-]integrated-as``) for LTO. LTO now
+  defaults to the integrated assembler.
+
+- Enabled Clang-based instrumented profiling
+  (``-fprofile-instr-[generate|use]``).
+
+- Added an AIX-only link-time option, ``-mxcoff-build-id=0xHEXSTRING``, to allow
+  users to embed a hex id in their binary such that it's readable by the program
+  itself. This option is an alternative to the ``--build-id=0xHEXSTRING`` GNU
+  linker option, which is currently not supported by the AIX linker.
 
 - Introduced the ``-mxcoff-roptr`` option to place constant objects with
   relocatable address values in the read-only data section. This option should
@@ -1002,6 +1027,14 @@ AIX Support
   ``-fno-data-sections``. When ``-mxcoff-roptr`` is in effect at link time,
   read-only data sections with relocatable address values that resolve to
   imported symbols are made writable.
+
+- Implemented the ``-frecord-command-line`` option on AIX, which saves the
+  command-line options used from compiling a source file to the corresponding
+  object file or binary file.
+
+- Added a new linker option, ``-K``, that is used to align the header, text,
+  data, and loader sections of the output file so that each section begins on
+  a page boundary.
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
@@ -1018,6 +1051,11 @@ AVR Support
   overflows on AVR (where ``sizeof(int) == sizeof(unsigned short)``).  The type
   of ``USHRT_MAX`` is now ``unsigned int`` instead of ``int``, as required by
   the C standard.
+
+PowerPC Support
+^^^^^^^^^^^^^^^
+- Clang now emits errors when it detects incompatible target features for
+  PowerPC builtins.
 
 DWARF Support in Clang
 ----------------------
