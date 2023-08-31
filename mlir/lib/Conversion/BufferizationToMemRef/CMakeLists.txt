@@ -9,6 +9,7 @@ add_mlir_conversion_library(MLIRBufferizationToMemRef
 
   LINK_LIBS PUBLIC
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRSCFDialect
   MLIRFuncDialect
   MLIRArithDialect
