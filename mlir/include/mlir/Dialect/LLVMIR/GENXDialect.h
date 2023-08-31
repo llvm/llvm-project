@@ -24,7 +24,12 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/LLVMIR/GENXOpsEnums.h.inc"
+
 ///// Ops /////
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/GENXOpsAttributes.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/GENXOps.h.inc"
 
