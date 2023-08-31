@@ -1108,8 +1108,7 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
 
 template <typename DescTy>
 ChangeStatus
-Attributor::updateAttrMap(const IRPosition &IRP,
-                          const ArrayRef<DescTy> &AttrDescs,
+Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
                           function_ref<bool(const DescTy &, AttributeSet,
                                             AttributeMask &, AttrBuilder &)>
                               CB) {
@@ -1216,9 +1215,8 @@ void Attributor::getAttrs(const IRPosition &IRP,
     getAttrsFromAssumes(IRP, AK, Attrs);
 }
 
-ChangeStatus
-Attributor::removeAttrs(const IRPosition &IRP,
-                        const ArrayRef<Attribute::AttrKind> &AttrKinds) {
+ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
+                                     ArrayRef<Attribute::AttrKind> AttrKinds) {
   auto RemoveAttrCB = [&](const Attribute::AttrKind &Kind, AttributeSet AttrSet,
                           AttributeMask &AM, AttrBuilder &) {
     if (!AttrSet.hasAttribute(Kind))
@@ -1243,7 +1241,7 @@ ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
 }
 
 ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
-                                       const ArrayRef<Attribute> &Attrs,
+                                       ArrayRef<Attribute> Attrs,
                                        bool ForceReplace) {
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AddAttrCB = [&](const Attribute &Attr, AttributeSet AttrSet,
@@ -2006,7 +2004,7 @@ bool Attributor::checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
 static bool checkForAllInstructionsImpl(
     Attributor *A, InformationCache::OpcodeInstMapTy &OpcodeInstMap,
     function_ref<bool(Instruction &)> Pred, const AbstractAttribute *QueryingAA,
-    const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
+    const AAIsDead *LivenessAA, ArrayRef<unsigned> Opcodes,
     bool &UsedAssumedInformation, bool CheckBBLivenessOnly = false,
     bool CheckPotentiallyDead = false) {
   for (unsigned Opcode : Opcodes) {
@@ -2036,7 +2034,7 @@ static bool checkForAllInstructionsImpl(
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const Function *Fn,
                                          const AbstractAttribute *QueryingAA,
-                                         const ArrayRef<unsigned> &Opcodes,
+                                         ArrayRef<unsigned> Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
                                          bool CheckPotentiallyDead) {
@@ -2061,7 +2059,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const AbstractAttribute &QueryingAA,
-                                         const ArrayRef<unsigned> &Opcodes,
+                                         ArrayRef<unsigned> Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
                                          bool CheckPotentiallyDead) {
