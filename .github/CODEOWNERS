@@ -411,3 +411,18 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/**/Format/ @llvm/pr-subscribers-clang-format
 /clang/tools/clang-format/ @llvm/pr-subscribers-clang-format
 
+# flang-openmp
+/flang/test/**/OpenMP/ @llvm/pr-subscribers-flang-openmp
+/flang/lib/Lower/OpenMP.cpp @llvm/pr-subscribers-flang-openmp
+/flang/lib/Semantics/resolve-directives.cpp @llvm/pr-subscribers-flang-openmp
+/flang/lib/Semantics/check-omp-structure.cpp @llvm/pr-subscribers-flang-openmp
+/flang/lib/Optimizer/Transforms/OMP* @llvm/pr-subscribers-flang-openmp
+/flang/test/Fir/convert-to-llvm-openmp-and-fir.fir @llvm/pr-subscribers-flang-openmp
+/flang/test/Lower/OpenMP @llvm/pr-subscribers-flang-openmp
+/flang/test/Transforms/omp* @llvm/pr-subscribers-flang-openmp
+/mlir/**/*OpenMP* @llvm/pr-subscribers-flang-openmp
+/mlir/test/Target/LLVMIR/openmp* @llvm/pr-subscribers-flang-openmp
+/llvm/lib/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
+/llvm/include/llvm/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
+/llvm/unittests/Frontend/OpenMP* @llvm/pr-subscribers-flang-openmp
+
