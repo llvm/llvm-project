@@ -102,23 +102,23 @@ TEST(ContainsN, Two) {
 
 TEST(CompilerInvocationTest, DeepCopyConstructor) {
   CompilerInvocation A;
-  A.getAnalyzerOpts()->Config["Key"] = "Old";
+  A.getAnalyzerOpts().Config["Key"] = "Old";
 
   CompilerInvocation B(A);
-  B.getAnalyzerOpts()->Config["Key"] = "New";
+  B.getAnalyzerOpts().Config["Key"] = "New";
 
-  ASSERT_EQ(A.getAnalyzerOpts()->Config["Key"], "Old");
+  ASSERT_EQ(A.getAnalyzerOpts().Config["Key"], "Old");
 }
 
 TEST(CompilerInvocationTest, DeepCopyAssignment) {
   CompilerInvocation A;
-  A.getAnalyzerOpts()->Config["Key"] = "Old";
+  A.getAnalyzerOpts().Config["Key"] = "Old";
 
   CompilerInvocation B;
   B = A;
-  B.getAnalyzerOpts()->Config["Key"] = "New";
+  B.getAnalyzerOpts().Config["Key"] = "New";
 
-  ASSERT_EQ(A.getAnalyzerOpts()->Config["Key"], "Old");
+  ASSERT_EQ(A.getAnalyzerOpts().Config["Key"], "Old");
 }
 
 // Boolean option with a keypath that defaults to true.
@@ -982,8 +982,8 @@ TEST_F(CommandLineTest, RoundTrip) {
               Contains(std::make_pair(std::string("XY=AB"), false)));
   ASSERT_EQ(Invocation.getPreprocessorOpts().ImplicitPCHInclude, "a.pch");
 
-  ASSERT_EQ(Invocation.getAnalyzerOpts()->Config["ctu-import-threshold"], "42");
-  ASSERT_TRUE(Invocation.getAnalyzerOpts()->UnoptimizedCFG);
+  ASSERT_EQ(Invocation.getAnalyzerOpts().Config["ctu-import-threshold"], "42");
+  ASSERT_TRUE(Invocation.getAnalyzerOpts().UnoptimizedCFG);
 
   ASSERT_TRUE(Invocation.getMigratorOpts().NoNSAllocReallocError);
 
