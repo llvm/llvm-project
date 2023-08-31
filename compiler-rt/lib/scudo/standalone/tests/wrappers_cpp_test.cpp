@@ -24,6 +24,18 @@
 #define SKIP_MISMATCH_TESTS 0
 #endif
 
+void operator delete(void *, size_t) noexcept;
+void operator delete[](void *, size_t) noexcept;
+
+extern "C" {
+#ifndef SCUDO_ENABLE_HOOKS_TESTS
+#define SCUDO_ENABLE_HOOKS_TESTS 0
+#endif
+
+#if (SCUDO_ENABLE_HOOKS_TESTS == 1) && (SCUDO_ENABLE_HOOKS == 0)
+#error "Hooks tests should have hooks enabled as well!"
+#endif
+
 struct AllocContext {
   void *Ptr;
   size_t Size;
@@ -34,10 +46,7 @@ struct DeallocContext {
 static AllocContext AC;
 static DeallocContext DC;
 
-void operator delete(void *, size_t) noexcept;
-void operator delete[](void *, size_t) noexcept;
-
-extern "C" {
+#if (SCUDO_ENABLE_HOOKS_TESTS == 1)
 __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
                                                                   size_t Size) {
   AC.Ptr = Ptr;
@@ -46,60 +55,81 @@ __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
 __attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
   DC.Ptr = Ptr;
 }
+#endif // (SCUDO_ENABLE_HOOKS_TESTS == 1)
 }
-// Note that every Cxx allocation function in the test binary will be fulfilled
-// by Scudo. See the comment in the C counterpart of this file.
 
-template <typename T> static void testCxxNew() {
-  T *P = new T;
-  EXPECT_NE(P, nullptr);
-  EXPECT_EQ(P, AC.Ptr);
-  EXPECT_EQ(sizeof(T), AC.Size);
-  memset(P, 0x42, sizeof(T));
-  EXPECT_DEATH(delete[] P, "");
-  delete P;
-  EXPECT_EQ(P, DC.Ptr);
-  EXPECT_DEATH(delete P, "");
+class ScudoWrappersCppTest : public Test {
+protected:
+  void SetUp() override {
+    if (SCUDO_ENABLE_HOOKS && !SCUDO_ENABLE_HOOKS_TESTS)
+      printf("Hooks are enabled but hooks tests are disabled.\n");
+  }
 
-  P = new T;
-  EXPECT_NE(P, nullptr);
-  memset(P, 0x42, sizeof(T));
-  operator delete(P, sizeof(T));
-  EXPECT_EQ(P, DC.Ptr);
+  void verifyAllocHookPtr(UNUSED void *Ptr) {
+    if (SCUDO_ENABLE_HOOKS_TESTS)
+      EXPECT_EQ(Ptr, AC.Ptr);
+  }
+  void verifyAllocHookSize(UNUSED size_t Size) {
+    if (SCUDO_ENABLE_HOOKS_TESTS)
+      EXPECT_EQ(Size, AC.Size);
+  }
+  void verifyDeallocHookPtr(UNUSED void *Ptr) {
+    if (SCUDO_ENABLE_HOOKS_TESTS)
+      EXPECT_EQ(Ptr, DC.Ptr);
+  }
 
-  P = new (std::nothrow) T;
-  EXPECT_EQ(P, AC.Ptr);
-  EXPECT_EQ(sizeof(T), AC.Size);
-  EXPECT_NE(P, nullptr);
-  memset(P, 0x42, sizeof(T));
-  delete P;
-  EXPECT_EQ(P, DC.Ptr);
+  template <typename T> void testCxxNew() {
+    T *P = new T;
+    EXPECT_NE(P, nullptr);
+    verifyAllocHookPtr(P);
+    verifyAllocHookSize(sizeof(T));
+    memset(P, 0x42, sizeof(T));
+    EXPECT_DEATH(delete[] P, "");
+    delete P;
+    verifyDeallocHookPtr(P);
+    EXPECT_DEATH(delete P, "");
 
-  const size_t N = 16U;
-  T *A = new T[N];
-  EXPECT_NE(A, nullptr);
-  EXPECT_EQ(A, AC.Ptr);
-  EXPECT_EQ(sizeof(T) * N, AC.Size);
-  memset(A, 0x42, sizeof(T) * N);
-  EXPECT_DEATH(delete A, "");
-  delete[] A;
-  EXPECT_EQ(A, DC.Ptr);
-  EXPECT_DEATH(delete[] A, "");
+    P = new T;
+    EXPECT_NE(P, nullptr);
+    memset(P, 0x42, sizeof(T));
+    operator delete(P, sizeof(T));
+    verifyDeallocHookPtr(P);
 
-  A = new T[N];
-  EXPECT_NE(A, nullptr);
-  memset(A, 0x42, sizeof(T) * N);
-  operator delete[](A, sizeof(T) * N);
-  EXPECT_EQ(A, DC.Ptr);
+    P = new (std::nothrow) T;
+    verifyAllocHookPtr(P);
+    verifyAllocHookSize(sizeof(T));
+    EXPECT_NE(P, nullptr);
+    memset(P, 0x42, sizeof(T));
+    delete P;
+    verifyDeallocHookPtr(P);
 
-  A = new (std::nothrow) T[N];
-  EXPECT_EQ(A, AC.Ptr);
-  EXPECT_EQ(sizeof(T) * N, AC.Size);
-  EXPECT_NE(A, nullptr);
-  memset(A, 0x42, sizeof(T) * N);
-  delete[] A;
-  EXPECT_EQ(A, DC.Ptr);
-}
+    const size_t N = 16U;
+    T *A = new T[N];
+    EXPECT_NE(A, nullptr);
+    verifyAllocHookPtr(A);
+    verifyAllocHookSize(sizeof(T) * N);
+    memset(A, 0x42, sizeof(T) * N);
+    EXPECT_DEATH(delete A, "");
+    delete[] A;
+    verifyDeallocHookPtr(A);
+    EXPECT_DEATH(delete[] A, "");
+
+    A = new T[N];
+    EXPECT_NE(A, nullptr);
+    memset(A, 0x42, sizeof(T) * N);
+    operator delete[](A, sizeof(T) * N);
+    verifyDeallocHookPtr(A);
+
+    A = new (std::nothrow) T[N];
+    verifyAllocHookPtr(A);
+    verifyAllocHookSize(sizeof(T) * N);
+    EXPECT_NE(A, nullptr);
+    memset(A, 0x42, sizeof(T) * N);
+    delete[] A;
+    verifyDeallocHookPtr(A);
+  }
+};
+using ScudoWrappersCppDeathTest = ScudoWrappersCppTest;
 
 class Pixel {
 public:
@@ -109,7 +139,10 @@ public:
   Color C = Color::Red;
 };
 
-TEST(ScudoWrappersCppDeathTest, New) {
+// Note that every Cxx allocation function in the test binary will be fulfilled
+// by Scudo. See the comment in the C counterpart of this file.
+
+TEST_F(ScudoWrappersCppDeathTest, New) {
   if (getenv("SKIP_TYPE_MISMATCH") || SKIP_MISMATCH_TESTS) {
     printf("Skipped type mismatch tests.\n");
     return;
@@ -150,7 +183,7 @@ static void stressNew() {
   }
 }
 
-TEST(ScudoWrappersCppTest, ThreadedNew) {
+TEST_F(ScudoWrappersCppTest, ThreadedNew) {
   // TODO: Investigate why libc sometimes crashes with tag missmatch in
   // __pthread_clockjoin_ex.
   std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
@@ -172,7 +205,7 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
 }
 
 #if !SCUDO_FUCHSIA
-TEST(ScudoWrappersCppTest, AllocAfterFork) {
+TEST_F(ScudoWrappersCppTest, AllocAfterFork) {
   // This test can fail flakily when ran as a part of large number of
   // other tests if the maxmimum number of mappings allowed is low.
   // We tried to reduce the number of iterations of the loops with
