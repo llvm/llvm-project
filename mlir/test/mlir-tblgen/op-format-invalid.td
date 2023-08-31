@@ -389,7 +389,7 @@ def OptionalInvalidJ : TestFormat_Op<[{
 def OptionalInvalidK : TestFormat_Op<[{
   ($arg^)
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
-// CHECK: error: only variables and types can be used to anchor an optional group
+// CHECK: error: only variable length operands can be used within an optional group
 def OptionalInvalidL : TestFormat_Op<[{
   (custom<MyDirective>($arg)^)?
 }]>, Arguments<(ins I64:$arg)>;
