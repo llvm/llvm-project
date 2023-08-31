@@ -9,6 +9,7 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //     requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
 //     constexpr bool ranges::contains(I first, S last, const T& value, Proj proj = {});       // since C++23
@@ -108,6 +109,7 @@ constexpr void test_iterators() {
   if (!std::is_constant_evaluated())
     comparable_data.clear();
 }
+
 template <class ElementT>
 class TriviallyComparable {
   ElementT el_;
@@ -160,7 +162,7 @@ constexpr bool test() {
       assert(projection_count == 3);
     }
     {
-      int a[] ={1, 9, 0, 13, 25};
+      int a[] = {1, 9, 0, 13, 25};
       int projection_count = 0;
       auto range = std::ranges::subrange(a, a + 5);
       auto ret = std::ranges::contains(range, 0, [&](int i) { ++projection_count; return i; });

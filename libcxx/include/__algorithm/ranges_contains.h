@@ -48,6 +48,7 @@ struct __fn {
   }
 };
 } // namespace __contains
+
 inline namespace __cpo {
 inline constexpr auto contains = __contains::__fn{};
 } // namespace __cpo
