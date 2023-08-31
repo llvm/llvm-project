@@ -2,7 +2,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=NOSFB %s
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=SFB %s
+; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND %s
+; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+experimental-zicond \
+; RUN:   -verify-machineinstrs < %s | FileCheck -check-prefixes=SFB,ZICOND %s
 
 ; The sifive-7-series can predicate a mv.
 
@@ -91,13 +93,18 @@ define signext i32 @test4(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    and a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test4:
-; SFB:       # %bb.0:
-; SFB-NEXT:    beqz a1, .LBB3_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    li a0, 0
-; SFB-NEXT:  .LBB3_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test4:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    beqz a1, .LBB3_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    li a0, 0
+; NOZICOND-NEXT:  .LBB3_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test4:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    czero.nez a0, a0, a1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 %x, i32 0
   ret i32 %b
@@ -112,13 +119,18 @@ define signext i32 @test5(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    and a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test5:
-; SFB:       # %bb.0:
-; SFB-NEXT:    bnez a1, .LBB4_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    li a0, 0
-; SFB-NEXT:  .LBB4_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test5:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    bnez a1, .LBB4_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    li a0, 0
+; NOZICOND-NEXT:  .LBB4_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test5:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    czero.eqz a0, a0, a1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 0, i32 %x
   ret i32 %b
