@@ -488,6 +488,7 @@ public:
     // we've got a record type.
     if (S->getType()->isRecordType()) {
       auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
+      Env.setValue(*S, InitialVal);
       copyRecord(InitialVal.getLoc(), Env.getResultObjectLocation(*S), Env);
     }
 
