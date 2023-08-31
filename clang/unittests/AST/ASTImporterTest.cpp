@@ -7711,6 +7711,47 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportConstructorUsingShadow) {
   CheckAST(ToTU, ToC);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportFunctionDeclBitShouldNotOverwriteCtorDeclBits) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"s(
+        struct A {
+          A() : m() {}
+          int m;
+        };
+
+        A foo() { A a; return a; }
+        A bar() { return {}; }
+      )s",
+      Lang_CXX17,
+      R"s(
+        struct A {
+          A() : m() {}
+          int m;
+        };
+        A baz() { return {}; }
+      )s",
+      Lang_CXX17, "A");
+
+  auto HasCtorInit =
+      hasAnyConstructorInitializer(cxxCtorInitializer(isMemberInitializer()));
+  auto ImpMoveCtor =
+      cxxConstructorDecl(isMoveConstructor(), isImplicit(), HasCtorInit);
+
+  auto *FromImpMoveCtor = FirstDeclMatcher<CXXConstructorDecl>().match(
+      From, ImpMoveCtor);
+  auto *ToImpMoveCtor = FirstDeclMatcher<CXXConstructorDecl>().match(
+      To, ImpMoveCtor);
+
+  EXPECT_TRUE(FromImpMoveCtor->getNumCtorInitializers() == 1);
+  EXPECT_FALSE(FromImpMoveCtor->FriendConstraintRefersToEnclosingTemplate());
+
+  EXPECT_TRUE(ToImpMoveCtor->getNumCtorInitializers() == 1);
+  EXPECT_FALSE(ToImpMoveCtor->FriendConstraintRefersToEnclosingTemplate());
+  EXPECT_TRUE(*ToImpMoveCtor->init_begin());
+}
+
 AST_MATCHER_P(UsingShadowDecl, hasIntroducerDecl, internal::Matcher<NamedDecl>,
               InnerMatcher) {
   return InnerMatcher.matches(*Node.getIntroducer(), Finder, Builder);
