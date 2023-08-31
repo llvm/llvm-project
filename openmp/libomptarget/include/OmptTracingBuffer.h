@@ -69,6 +69,38 @@ public:
    */
   enum TRStatus { TR_init, TR_ready, TR_released };
 
+  /*
+   * Metadata capturing the state of a buffer of trace records. Once a
+   * buffer is allocated by an OpenMP worker thread, trace records are
+   * carved out from that buffer by that same OpenMP thread alone. Thus
+   * the allocated buffer is thread-specific from the allocation/population
+   * standpoint. But it may be manipulated by helper threads.
+   *
+   * Id, Start, and TotalBytes are not changed once set.
+   * RemainingBytes could be written multiple times but only by the same
+   * thread. But Cursor and isFull can be read/written more than
+   * once by an OpenMP worker thread and helper threads. Hence, accesses of
+   * this 2nd set of locations need to be atomic or synchronized.
+   */
+  struct Buffer {
+    uint64_t Id;           // Unique identifier of the buffer
+    void *Start;           // Start of allocated space for trace records
+    size_t TotalBytes;     // Total number of bytes in the allocated space
+    size_t RemainingBytes; // Total number of unused bytes
+                           // corresponding to Cursor
+    std::atomic<void *> Cursor; // Address of the last trace record carved out
+    std::atomic<bool> isFull;   // true if no more trace records can be
+                              // accomodated, otherwise false
+    Buffer(uint64_t id, void *st, void *cr, size_t bytes, size_t rem,
+           bool is_full)
+        : Id(id), Start(st), TotalBytes(bytes), RemainingBytes(rem), Cursor(cr),
+          isFull(is_full) {}
+    Buffer() = delete;
+    Buffer(const Buffer &) = delete;
+    Buffer &operator=(const Buffer &) = delete;
+  };
+  using BufPtr = std::shared_ptr<Buffer>;
+
 private:
   // Internal variable for tracking threads to wait for flush
   uint32_t ThreadFlushTracker;
@@ -76,35 +108,6 @@ private:
   // Internal variable for tracking threads shutting down
   uint32_t ThreadShutdownTracker;
 
-  /*
-   * Metadata capturing the state of a buffer of trace records. Once a
-   * buffer is allocated, trace records are carved out by the OpenMP
-   * threads.
-   *
-   * Id, Start, and TotalBytes are not changed once set. But Cursor,
-   * RemainingBytes, and isFull can be read/written more than
-   * once. Hence, accesses of the 2nd set of locations need to be
-   * synchronized.
-   */
-  struct Buffer {
-    uint64_t Id;           // Unique identifier of the buffer
-    void *Start;           // Start of allocated space for trace records
-    void *Cursor;          // Address of the last trace record carved out
-    size_t TotalBytes;     // Total number of bytes in the allocated space
-    size_t RemainingBytes; // Total number of unused bytes
-                           // corresponding to Cursor
-    bool isFull;           // true if no more trace records can be accomodated,
-                           // otherwise false
-    Buffer(uint64_t id, void *st, void *cr, size_t bytes, size_t rem,
-           bool is_full)
-        : Id(id), Start(st), Cursor(cr), TotalBytes(bytes), RemainingBytes(rem),
-          isFull(is_full) {}
-    Buffer() = delete;
-    Buffer(const Buffer &) = delete;
-    Buffer &operator=(const Buffer &) = delete;
-  };
-
-  using BufPtr = std::shared_ptr<Buffer>;
   using MapId2Buf = std::map<uint64_t, BufPtr>;
 
   // Map from id to corresponding buffer. The ids are assigned in
@@ -116,7 +119,7 @@ private:
   // tool is expected to access only the OMPT record.
   struct TraceRecord {
     ompt_record_ompt_t TR;
-    TRStatus TRState;
+    std::atomic<TRStatus> TRState;
   };
 
   /*

@@ -35,72 +35,97 @@ static uint64_t get_and_inc_buf_id() { return buf_id++; }
 static uint64_t get_and_inc_flush_id() { return flush_id++; }
 static uint64_t get_flush_id() { return flush_id; }
 
+// Thread-specific pointer to the buffer allocated last by this thread.
+static thread_local OmptTracingBufferMgr::BufPtr BufPtrTL = nullptr;
+
 /*
  * Used by OpenMP threads for assigning space for a trace record. If
- * there is no space in the last buffer allocated, the last buffer is
- * marked full and scheduled for flushing. Otherwise, space is
- * assigned for a trace record and the new cursor returned.
+ * there is no space in the last buffer allocated by this thread, the
+ * last buffer is marked full and scheduled for flushing. Otherwise,
+ * space is assigned for a trace record and the new cursor returned.
+ * Since the memory allocated by a thread is used by that thread alone
+ * for creating trace records, a lock need not be held. In the less
+ * common branch when memory is allocated, a lock needs to be acquired
+ * for updating shared metadata. The common path of allocating a trace
+ * record from an existing buffer proceeds without locking.
  */
 void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
-  // TODO Currently, we are serializing assignment of space for new
-  // trace records as well as allocation of new buffers. This can be
-  // changed by maintaining thread local info
-  size_t rec_size = getTRSize();
-  void *to_be_flushed_cursor = nullptr;
-  BufPtr to_be_flushed_buf = nullptr;
-  std::unique_lock<std::mutex> lck(BufferMgrMutex);
-  if (!Id2BufferMap.empty()) {
+  size_t RecSize = getTRSize();
+
+  // If the buffer fills up, it will be scheduled for flushing with the
+  // following cursor.
+  void *ToBeFlushedCursor = nullptr;
+  BufPtr ToBeFlushedBuf = nullptr;
+
+  // Thread local buffer pointer should be non-null once an allocation
+  // has been done by this thread.
+  if (BufPtrTL != nullptr) {
+    void *OldCursor = BufPtrTL->Cursor.load(std::memory_order_acquire);
     // Try to assign a trace record from the last allocated buffer
-    BufPtr buf = Id2BufferMap.rbegin()->second;
-    if (rec_size <= buf->RemainingBytes) {
-      // This is the new cursor
-      assert((char *)buf->Start + buf->TotalBytes - buf->RemainingBytes ==
-             (char *)buf->Cursor + rec_size);
-      buf->Cursor = (char *)buf->Start + buf->TotalBytes - buf->RemainingBytes;
-      buf->RemainingBytes -= rec_size;
+    if (RecSize <= BufPtrTL->RemainingBytes) {
+      assert((char *)BufPtrTL->Start + BufPtrTL->TotalBytes -
+                 BufPtrTL->RemainingBytes ==
+             (char *)OldCursor + RecSize);
+      BufPtrTL->RemainingBytes -= RecSize;
 
-      initTraceRecordMetaData(buf->Cursor);
+      // Note the trace record status must be initialized before setting
+      // the cursor, ensuring that a helper thread always sees an initialized
+      // trace record status.
+      void *NewCursor = (char *)OldCursor + RecSize;
+      initTraceRecordMetaData(NewCursor);
+      BufPtrTL->Cursor.store(NewCursor, std::memory_order_release);
 
-      DP("Assigned %lu bytes at %p in existing buffer %p\n", rec_size,
-         buf->Cursor, buf->Start);
-      return buf->Cursor;
+      DP("Assigned %lu bytes at %p in existing buffer %p\n", RecSize, NewCursor,
+         BufPtrTL->Start);
+      return NewCursor;
     } else {
-      to_be_flushed_cursor = buf->Cursor;
-      to_be_flushed_buf = buf;
-      buf->isFull = true; // no space for any more trace records
+      ToBeFlushedCursor = OldCursor;
+      ToBeFlushedBuf = BufPtrTL;
+
+      // Mark that no space is present for any more trace records.
+      // The following is atomic but there is no logical order between when
+      // it is set here and when it is checked by a helper thread. That works
+      // because the helper thread uses this info to decide whether a buffer
+      // can be scheduled for removal. In the worst case, the buffer will be
+      // removed late.
+      BufPtrTL->isFull.store(true, std::memory_order_release);
     }
   }
-  void *buffer = nullptr;
-  size_t total_bytes;
+  void *NewBuffer = nullptr;
+  size_t TotalBytes = 0;
   // TODO Move the buffer allocation to a helper thread
-  llvm::omp::target::ompt::ompt_callback_buffer_request(0 /* device_num */,
-                                                        &buffer, &total_bytes);
+  llvm::omp::target::ompt::ompt_callback_buffer_request(
+      0 /* TODO device_num */, &NewBuffer, &TotalBytes);
 
   // TODO Instead of asserting, turn OFF tracing
-  assert(total_bytes >= rec_size && "Buffer is too small");
-  assert(buffer != nullptr && "Buffer request function failed");
+  assert(TotalBytes >= RecSize && "Buffer is too small");
+  assert(NewBuffer != nullptr && "Buffer request function failed");
 
-  uint64_t new_buf_id = get_and_inc_buf_id();
+  uint64_t NewBufId = get_and_inc_buf_id();
   auto new_buf = std::make_shared<Buffer>(
-      new_buf_id, /*Start=*/buffer, /*Cursor=*/buffer, total_bytes,
-      /*RemainingBytes=*/total_bytes - rec_size,
+      NewBufId, /*Start=*/NewBuffer, /*Cursor=*/NewBuffer, TotalBytes,
+      /*RemainingBytes=*/TotalBytes - RecSize,
       /*isFull=*/false);
 
-  initTraceRecordMetaData(new_buf->Cursor);
+  // Initialize trace record status before publishing it to helper threads.
+  initTraceRecordMetaData(new_buf->Cursor.load(std::memory_order_acquire));
+  BufPtrTL = new_buf;
 
-  assert(Id2BufferMap.find(new_buf_id) == Id2BufferMap.end());
-  Id2BufferMap[new_buf_id] = new_buf;
-
+  // Make this trace record visible to helper threads by adding to shared
+  // metadata.
+  std::unique_lock<std::mutex> lck(BufferMgrMutex);
+  assert(Id2BufferMap.find(NewBufId) == Id2BufferMap.end());
+  Id2BufferMap[NewBufId] = new_buf;
   lck.unlock();
 
-  // Schedule this buffer for flushing till this cursor
-  if (to_be_flushed_cursor)
-    setComplete(to_be_flushed_cursor, to_be_flushed_buf);
+  // Schedule the full buffer for flushing till the corresponding cursor.
+  if (ToBeFlushedCursor)
+    setComplete(ToBeFlushedCursor, ToBeFlushedBuf);
 
-  DP("Assigned %lu bytes at %p in new buffer with id %lu\n", rec_size, buffer,
-     new_buf_id);
+  DP("Assigned %lu bytes at %p in new buffer with id %lu\n", RecSize, NewBuffer,
+     NewBufId);
 
-  return buffer;
+  return NewBuffer;
 }
 
 /*
@@ -363,16 +388,17 @@ void OmptTracingBufferMgr::dispatchBufferOwnedCallback(
 }
 
 void OmptTracingBufferMgr::initTraceRecordMetaData(void *Rec) {
-  TraceRecord *TR = static_cast<TraceRecord *>(Rec);
-  TR->TRState = TR_init;
+  setTRStatus(Rec, TR_init);
 }
 
 void OmptTracingBufferMgr::setTRStatus(void *Rec, TRStatus Status) {
-  static_cast<TraceRecord *>(Rec)->TRState = Status;
+  TraceRecord *TR = static_cast<TraceRecord *>(Rec);
+  TR->TRState.store(Status, std::memory_order_release);
 }
 
 OmptTracingBufferMgr::TRStatus OmptTracingBufferMgr::getTRStatus(void *Rec) {
-  return static_cast<TraceRecord *>(Rec)->TRState;
+  return static_cast<TraceRecord *>(Rec)->TRState.load(
+      std::memory_order_acquire);
 }
 
 void *OmptTracingBufferMgr::getNextTR(void *Rec) {
@@ -387,8 +413,7 @@ bool OmptTracingBufferMgr::isBufferFull(const FlushInfo &flush_info) {
 }
 
 void *OmptTracingBufferMgr::getBufferCursor(BufPtr buf) {
-  std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  return buf->Cursor;
+  return buf->Cursor.load(std::memory_order_acquire);
 }
 
 /*
@@ -547,9 +572,10 @@ int OmptTracingBufferMgr::flushAllBuffers(ompt_device_t *device) {
       continue;
     }
     // This buffer has not been flushed yet
-    uint64_t flush_id = addNewFlushEntry(curr_buf, curr_buf->Cursor);
+    void *CurrBufCursor = getBufferCursor(curr_buf);
+    uint64_t flush_id = addNewFlushEntry(curr_buf, CurrBufCursor);
     DP("flushAllBuffers: Added new id %lu cursor %p buf %p\n", flush_id,
-       curr_buf->Cursor, curr_buf->Start);
+       CurrBufCursor, curr_buf->Start);
 
     flush_lock.unlock();
     buf_lock.unlock();
