@@ -88,8 +88,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
 
   if (std::optional<std::string> Path = getRuntimePath())
     getLibraryPaths().push_back(*Path);
-  for (const auto &Path : getStdlibPaths())
-    addIfExists(getFilePaths(), Path);
+  if (std::optional<std::string> Path = getStdlibPath())
+    getFilePaths().push_back(*Path);
   for (const auto &Path : getArchSpecificLibPaths())
     addIfExists(getFilePaths(), Path);
 }
@@ -677,11 +677,12 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
   return Args.MakeArgString(getCompilerRT(Args, Component, Type));
 }
 
-std::optional<std::string> ToolChain::getRuntimePath() const {
+std::optional<std::string>
+ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
-      [this](const llvm::Triple &Triple) -> std::optional<std::string> {
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "lib", Triple.str());
+      [&](const llvm::Triple &Triple) -> std::optional<std::string> {
+    SmallString<128> P(BaseDir);
+    llvm::sys::path::append(P, Triple.str());
     if (getVFS().exists(P))
       return std::string(P);
     return {};
@@ -725,13 +726,16 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   return {};
 }
 
-ToolChain::path_list ToolChain::getStdlibPaths() const {
-  path_list Paths;
-  SmallString<128> P(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", getTripleString());
-  Paths.push_back(std::string(P.str()));
+std::optional<std::string> ToolChain::getRuntimePath() const {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, "lib");
+  return getTargetSubDirPath(P);
+}
 
-  return Paths;
+std::optional<std::string> ToolChain::getStdlibPath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib");
+  return getTargetSubDirPath(P);
 }
 
 ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {

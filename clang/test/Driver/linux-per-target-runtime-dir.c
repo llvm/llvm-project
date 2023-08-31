@@ -14,6 +14,21 @@
 // CHECK-PER-TARGET-RUNTIME: "--sysroot=[[SYSROOT]]"
 // CHECK-PER-TARGET-RUNTIME: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux-gnu"
 
+// RUN: %clang --target=aarch64-unknown-linux-android21 -print-file-name=libc++.so 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_android_libcxx_tree/usr/bin \
+// RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-ANDROID21 %s
+// CHECK-LIBCXX-ANDROID21: ..{{/|\\}}lib{{/|\\}}aarch64-unknown-linux-android21{{/|\\}}libc++.so
+
+// RUN: %clang --target=aarch64-unknown-linux-android23 -print-file-name=libc++.so 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_android_libcxx_tree/usr/bin \
+// RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-ANDROID23 %s
+// CHECK-LIBCXX-ANDROID23: ..{{/|\\}}lib{{/|\\}}aarch64-unknown-linux-android{{/|\\}}libc++.so
+
+// RUN: %clang --target=aarch64-unknown-linux-android -print-file-name=libc++.so 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_android_libcxx_tree/usr/bin \
+// RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-ANDROID %s
+// CHECK-LIBCXX-ANDROID: ..{{/|\\}}lib{{/|\\}}aarch64-unknown-linux-android{{/|\\}}libc++.so
+
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

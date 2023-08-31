@@ -18,5 +18,9 @@
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
 // RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID-DIR -DDIR=%/t2/bin %s
 
+// RUN: %clang -target aarch64-none-linux-android21 -ccc-install-dir %/t2/bin \
+// RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
+// RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID-DIR -DDIR=%/t2/bin %s
+
 // ANDROID-DIR: "-internal-isystem" "[[DIR]][[SEP:/|\\\\]]..[[SEP]]include[[SEP]]aarch64-none-linux-android[[SEP]]c++[[SEP]]v1"
 // ANDROID-DIR-SAME: "-internal-isystem" "[[DIR]][[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"

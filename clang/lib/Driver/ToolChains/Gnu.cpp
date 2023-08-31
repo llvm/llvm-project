@@ -3100,7 +3100,6 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
-  std::string Target = getTripleString();
 
   auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
     std::string Version = detectLibcxxVersion(Path);
@@ -3108,11 +3107,17 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
       return false;
 
     // First add the per-target include path if it exists.
-    SmallString<128> TargetDir(Path);
-    llvm::sys::path::append(TargetDir, Target, "c++", Version);
-    if (D.getVFS().exists(TargetDir))
-      addSystemInclude(DriverArgs, CC1Args, TargetDir);
-    else if (TargetDirRequired)
+    bool TargetDirExists = false;
+    std::optional<std::string> TargetIncludeDir = getTargetSubDirPath(Path);
+    if (TargetIncludeDir) {
+      SmallString<128> TargetDir(*TargetIncludeDir);
+      llvm::sys::path::append(TargetDir, "c++", Version);
+      if (D.getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir);
+        TargetDirExists = true;
+      }
+    }
+    if (TargetDirRequired && !TargetDirExists)
       return false;
 
     // Second add the generic one.
