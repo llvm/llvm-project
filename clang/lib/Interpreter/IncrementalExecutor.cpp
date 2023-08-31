@@ -92,19 +92,12 @@ llvm::Error IncrementalExecutor::runCtors() const {
 llvm::Expected<llvm::orc::ExecutorAddr>
 IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                       SymbolNameKind NameKind) const {
-  using namespace llvm::orc;
-  auto SO = makeJITDylibSearchOrder({&Jit->getMainJITDylib(),
-                                     Jit->getPlatformJITDylib().get(),
-                                     Jit->getProcessSymbolsJITDylib().get()});
+  auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
+                                      : Jit->lookup(Name);
 
-  ExecutionSession &ES = Jit->getExecutionSession();
-
-  auto SymOrErr =
-      ES.lookup(SO, (NameKind == LinkerName) ? ES.intern(Name)
-                                             : Jit->mangleAndIntern(Name));
-  if (auto Err = SymOrErr.takeError())
-    return std::move(Err);
-  return SymOrErr->getAddress();
+  if (!Sym)
+    return Sym.takeError();
+  return Sym;
 }
 
 } // end namespace clang
