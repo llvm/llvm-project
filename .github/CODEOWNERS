@@ -262,14 +262,7 @@
 
 # github-workflow
 /.github/workflows/ @llvm/pr-subscribers-github-workflow
-/flang/ @llvm/ps-subscribers-flang
-/flang/runtime/ @llvm/pr-subscribers-flang-runtime
-/flang/**/Parser @llvm/pr-subscribers-flang-parser
-/flang/**/Evaluate/ @llvm/pr-subscribers-flang-semantics
-/flang/**/Semantics/ @llvm/pr-subscribers-flang-semantics
-/flang/**/Lower/ @llvm/pr-subscribers-flang-fir-hlfir
-/flang/**/Optimizer/ @llvm/pr-subscribers-flang-fir-hlfir
-/flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
+
 # flang-driver
 /flang/tools/flang-driver @llvm/pr-subscribers-flang-driver
 /flang/unittests/Frontend @llvm/pr-subscribers-flang-driver
@@ -356,4 +349,21 @@
 /clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
 /clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
+
+# flang-runtime
+/flang/runtime/ @llvm/pr-subscribers-flang-runtime
+
+# flang-parser
+/flang/**/Parser/ @llvm/pr-subscribers-flang-parser
+
+# flang-semantics
+/flang/**/Evaluate/ @llvm/pr-subscribers-flang-semantics
+/flang/**/Semantics/ @llvm/pr-subscribers-flang-semantics
+
+# flang-fir-hlfir
+/flang/**/Lower/ @llvm/pr-subscribers-flang-fir-hlfir
+/flang/**/Optimizer/ @llvm/pr-subscribers-flang-fir-hlfir
+
+# flang-codegen
+flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
