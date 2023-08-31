@@ -3752,18 +3752,19 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   DenseMap<CallBase *, std::unique_ptr<SmallPtrSet<Function *, 8>>>
       IndirectCalleeTrackingMap;
   if (MaxSpecializationPerCB.getNumOccurrences()) {
-    AC.IndirectCalleeSpecializationCallback = [&](Attributor &, CallBase &CB,
-                                                  Function &Callee) {
-      if (MaxSpecializationPerCB == 0)
-        return false;
-      auto &Set = IndirectCalleeTrackingMap[&CB];
-      if (!Set)
-        Set = std::make_unique<SmallPtrSet<Function *, 8>>();
-      if (Set->size() >= MaxSpecializationPerCB)
-        return Set->contains(&Callee);
-      Set->insert(&Callee);
-      return true;
-    };
+    AC.IndirectCalleeSpecializationCallback =
+        [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
+            Function &Callee) {
+          if (MaxSpecializationPerCB == 0)
+            return false;
+          auto &Set = IndirectCalleeTrackingMap[&CB];
+          if (!Set)
+            Set = std::make_unique<SmallPtrSet<Function *, 8>>();
+          if (Set->size() >= MaxSpecializationPerCB)
+            return Set->contains(&Callee);
+          Set->insert(&Callee);
+          return true;
+        };
   }
 
   Attributor A(Functions, InfoCache, AC);
