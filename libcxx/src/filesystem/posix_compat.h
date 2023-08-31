@@ -322,8 +322,8 @@ inline int statvfs(const wchar_t *p, StatVFS *buf) {
 
 inline wchar_t* getcwd([[maybe_unused]] wchar_t* in_buf, [[maybe_unused]] size_t in_size) {
   // Only expected to be used with us allocating the buffer.
-  _LIBCPP_ASSERT(in_buf == nullptr, "Windows getcwd() assumes in_buf==nullptr");
-  _LIBCPP_ASSERT(in_size == 0, "Windows getcwd() assumes in_size==0");
+  _LIBCPP_ASSERT_UNCATEGORIZED(in_buf == nullptr, "Windows getcwd() assumes in_buf==nullptr");
+  _LIBCPP_ASSERT_UNCATEGORIZED(in_size == 0, "Windows getcwd() assumes in_size==0");
 
   size_t buff_size = MAX_PATH + 10;
   std::unique_ptr<wchar_t, decltype(&::free)> buff(static_cast<wchar_t*>(malloc(buff_size * sizeof(wchar_t))), &::free);
