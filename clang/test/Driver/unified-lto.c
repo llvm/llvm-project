@@ -6,7 +6,7 @@
 // UNIT: "-flto-unit"
 // NOUNIT-NOT: "-flto-unit"
 
-// RUN: %clang --target=x86_64-sie-prospero -### %s -funified-lto 2>&1 | FileCheck --check-prefix=NOUNILTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -### %s -funified-lto 2>&1 | FileCheck --check-prefix=NOUNILTO %s
 // NOUNILTO: clang: warning: argument unused during compilation: '-funified-lto'
 // NOUNILTO: "-cc1"
 // NOUNILTO-NOT: "-funified-lto
