@@ -12,12 +12,6 @@
 
 #include <__config_site>
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    define _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#  endif
-#endif
-
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif
