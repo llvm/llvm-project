@@ -8329,6 +8329,7 @@ cc_binary(
     srcs = ["tools/mlir-lsp-server/mlir-lsp-server.cpp"],
     includes = ["include"],
     deps = [
+        ":AllExtensions",
         ":AllPassesAndDialects",
         ":BytecodeWriter",
         ":IR",
