@@ -16,6 +16,10 @@
 /compiler-rt/lib/interception/ @llvm/pr-subscribers-sanitizer
 /compiler-rt/lib/*san* @llvm/pr-subscribers-sanitizer
 /compiler-rt/test/*san* @llvm/pr-subscribers-sanitizer
+/compiler-rt/lib/fuzzer/ @llvm/pr-subscribers-sanitizer
+/compiler-rt/test/fuzzer/ @llvm/pr-subscribers-sanitizer
+/compiler-rt/lib/scudo/ @llvm/pr-subscribers-sanitizer
+/compiler-rt/test/scudo/ @llvm/pr-subscribers-sanitizer
 
 # xray
 /llvm/tools/llvm-xray/ @llvm/pr-subscribers-xray
