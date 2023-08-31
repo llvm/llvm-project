@@ -4350,10 +4350,9 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k1
-; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    kmovw %k0, %ecx
-; KNL-NEXT:    testb $1, %al
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb $2, %al
 ; KNL-NEXT:    movl $42, %eax
 ; KNL-NEXT:    movl $99, %edx
 ; KNL-NEXT:    cmovel %edx, %eax
@@ -4365,10 +4364,9 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; SKX-LABEL: PR39665_c_ray:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
-; SKX-NEXT:    kshiftrb $1, %k0, %k1
-; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    kmovd %k0, %ecx
-; SKX-NEXT:    testb $1, %al
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    testb $2, %al
 ; SKX-NEXT:    movl $42, %eax
 ; SKX-NEXT:    movl $99, %edx
 ; SKX-NEXT:    cmovel %edx, %eax
