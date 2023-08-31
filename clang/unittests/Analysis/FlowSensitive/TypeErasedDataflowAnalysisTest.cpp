@@ -78,7 +78,9 @@ runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
 TEST(DataflowAnalysisTest, NoopAnalysis) {
   auto BlockStates = llvm::cantFail(
       runAnalysis<NoopAnalysis>("void target() {}", [](ASTContext &C) {
-        return NoopAnalysis(C, false);
+        return NoopAnalysis(C,
+                            // Don't use builtin transfer function.
+                            DataflowAnalysisOptions{std::nullopt});
       }));
   EXPECT_EQ(BlockStates.size(), 2u);
   EXPECT_TRUE(BlockStates[0].has_value());
@@ -130,7 +132,8 @@ public:
   explicit NonConvergingAnalysis(ASTContext &Context)
       : DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice>(
             Context,
-            /*ApplyBuiltinTransfer=*/false) {}
+            // Don't apply builtin transfer function.
+            DataflowAnalysisOptions{std::nullopt}) {}
 
   static NonConvergingLattice initialElement() { return {0}; }
 
@@ -811,7 +814,7 @@ protected:
             AnalysisInputs<NoopAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return NoopAnalysis(Context, true);
+                  return NoopAnalysis(Context);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
