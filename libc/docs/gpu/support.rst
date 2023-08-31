@@ -136,4 +136,5 @@ stdio.h
 Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
+nanosleep      |check|
 =============  =========  ============

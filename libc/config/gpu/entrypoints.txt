@@ -98,6 +98,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.clock
+    libc.src.time.nanosleep
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_reset
