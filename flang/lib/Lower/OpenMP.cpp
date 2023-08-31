@@ -26,6 +26,7 @@
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using DeclareTargetCapturePair =
@@ -3094,17 +3095,6 @@ static void genOmpAtomicUpdateStatement(
   if (rightHandClauseList)
     genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList, hint,
                                           memoryOrder);
-  auto atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
-      currentLocation, lhsAddr, hint, memoryOrder);
-
-  //// Generate body of Atomic Update operation
-  // If an argument for the region is provided then create the block with that
-  // argument. Also update the symbol's address with the argument mlir value.
-  llvm::SmallVector<mlir::Type> varTys = {varType};
-  llvm::SmallVector<mlir::Location> locs = {currentLocation};
-  firOpBuilder.createBlock(&atomicUpdateOp.getRegion(), {}, varTys, locs);
-  mlir::Value val =
-      fir::getBase(atomicUpdateOp.getRegion().front().getArgument(0));
   const auto *varDesignator =
       std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
           &assignmentStmtVariable.u);
@@ -3117,21 +3107,96 @@ static void genOmpAtomicUpdateStatement(
          "Array references as atomic update variable");
   assert(name && name->symbol &&
          "No symbol attached to atomic update variable");
-  converter.bindSymbol(*name->symbol, val);
-  // Set the insert for the terminator operation to go at the end of the
-  // block.
-  mlir::Block &block = atomicUpdateOp.getRegion().back();
-  firOpBuilder.setInsertionPointToEnd(&block);
+  if (Fortran::semantics::IsAllocatableOrPointer(name->symbol->GetUltimate()))
+    converter.bindSymbol(*name->symbol, lhsAddr);
 
+  //  Lowering is in two steps :
+  //  subroutine sb
+  //    integer :: a, b
+  //    !$omp atomic update
+  //      a = a + b
+  //  end subroutine
+  //
+  //  1. Lower to scf.execute_region_op
+  //
+  //  func.func @_QPsb() {
+  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
+  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
+  //    %2 = scf.execute_region -> i32 {
+  //      %3 = fir.load %0 : !fir.ref<i32>
+  //      %4 = fir.load %1 : !fir.ref<i32>
+  //      %5 = arith.addi %3, %4 : i32
+  //      scf.yield %5 : i32
+  //    }
+  //    return
+  //  }
+  auto tempOp =
+      firOpBuilder.create<mlir::scf::ExecuteRegionOp>(currentLocation, varType);
+  firOpBuilder.createBlock(&tempOp.getRegion());
+  mlir::Block &block = tempOp.getRegion().back();
+  firOpBuilder.setInsertionPointToEnd(&block);
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
       *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
   mlir::Value convertResult =
       firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
   // Insert the terminator: YieldOp.
-  firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
-  // Reset the insert point to before the terminator.
+  firOpBuilder.create<mlir::scf::YieldOp>(currentLocation, convertResult);
   firOpBuilder.setInsertionPointToStart(&block);
+
+  //  2. Create the omp.atomic.update Operation using the Operations in the
+  //     temporary scf.execute_region Operation.
+  //
+  //  func.func @_QPsb() {
+  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
+  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
+  //    %2 = fir.load %1 : !fir.ref<i32>
+  //    omp.atomic.update   %0 : !fir.ref<i32> {
+  //    ^bb0(%arg0: i32):
+  //      %3 = fir.load %1 : !fir.ref<i32>
+  //      %4 = arith.addi %arg0, %3 : i32
+  //      omp.yield(%3 : i32)
+  //    }
+  //    return
+  //  }
+  mlir::Value updateVar = converter.getSymbolAddress(*name->symbol);
+  if (auto decl = updateVar.getDefiningOp<hlfir::DeclareOp>())
+    updateVar = decl.getBase();
+
+  firOpBuilder.setInsertionPointAfter(tempOp);
+  auto atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
+      currentLocation, updateVar, hint, memoryOrder);
+
+  llvm::SmallVector<mlir::Type> varTys = {varType};
+  llvm::SmallVector<mlir::Location> locs = {currentLocation};
+  firOpBuilder.createBlock(&atomicUpdateOp.getRegion(), {}, varTys, locs);
+  mlir::Value val =
+      fir::getBase(atomicUpdateOp.getRegion().front().getArgument(0));
+
+  llvm::SmallVector<mlir::Operation *> ops;
+  for (mlir::Operation &op : tempOp.getRegion().getOps())
+    ops.push_back(&op);
+
+  // SCF Yield is converted to OMP Yield. All other operations are copied
+  for (mlir::Operation *op : ops) {
+    if (auto y = mlir::dyn_cast<mlir::scf::YieldOp>(op)) {
+      firOpBuilder.setInsertionPointToEnd(&atomicUpdateOp.getRegion().front());
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, y.getResults());
+      op->erase();
+    } else {
+      op->remove();
+      atomicUpdateOp.getRegion().front().push_back(op);
+    }
+  }
+
+  // Remove the load and replace all uses of load with the block argument
+  for (mlir::Operation &op : atomicUpdateOp.getRegion().getOps()) {
+    fir::LoadOp y = mlir::dyn_cast<fir::LoadOp>(&op);
+    if (y && y.getMemref() == updateVar)
+      y.getRes().replaceAllUsesWith(val);
+  }
+
+  tempOp.erase();
 }
 
 static void
