@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-diagnostics --pass-pipeline="builtin.module(func.func(convert-bufferization-to-memref))" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -verify-diagnostics --pass-pipeline="builtin.module(func.func(bufferization-lower-deallocations))" -split-input-file %s | FileCheck %s
 
 // CHECK-NOT: func @deallocHelper
 // CHECK-LABEL: func @conversion_dealloc_simple
