@@ -613,7 +613,7 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
-      if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
+      if (dyn_cast<MemRefType>(operand.getType())) {
         MemRefDescriptor desc(llvmOperand);
         llvmOperand = desc.alignedPtr(builder, loc);
       } else if (isa<UnrankedMemRefType>(operand.getType())) {

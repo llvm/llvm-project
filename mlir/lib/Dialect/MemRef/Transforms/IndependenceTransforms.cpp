@@ -152,7 +152,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
       // This may have to be revised in the future; e.g., there may be ops that
       // do not support non-identity layout maps.
       for (OpOperand &operand : user->getOpOperands()) {
-        if (auto castOp =
+        if ([[maybe_unused]] auto castOp =
                 operand.get().getDefiningOp<UnrealizedConversionCastOp>()) {
           rewriter.updateRootInPlace(
               user, [&]() { operand.set(conversion->getOperand(0)); });

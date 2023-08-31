@@ -347,7 +347,7 @@ struct FuncOpInterface
     SmallVector<Type> argTypes;
     for (const auto &it : llvm::enumerate(funcType.getInputs())) {
       Type argType = it.value();
-      if (auto tensorType = dyn_cast<TensorType>(argType)) {
+      if (dyn_cast<TensorType>(argType)) {
         argTypes.push_back(
             getBufferizedFunctionArgType(funcOp, it.index(), options));
         continue;

@@ -373,7 +373,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 
 #ifndef NDEBUG
 static std::string getNodeName(CallOpInterface op) {
-  if (auto sym = llvm::dyn_cast_if_present<SymbolRefAttr>(op.getCallableForCallee()))
+  if (llvm::dyn_cast_if_present<SymbolRefAttr>(op.getCallableForCallee()))
     return debugString(op);
   return "_unnamed_callee_";
 }
