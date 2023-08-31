@@ -1763,7 +1763,6 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
 }
 
 void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
-  CHECK(attrs_);
   if (CheckAndSet(Attr::BIND_C)) {
     if (x.v) {
       bindName_ = EvaluateExpr(*x.v);
@@ -1771,7 +1770,6 @@ void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
   }
 }
 bool AttrsVisitor::Pre(const parser::IntentSpec &x) {
-  CHECK(attrs_);
   CheckAndSet(IntentSpecToAttr(x));
   return false;
 }
@@ -1787,6 +1785,7 @@ bool AttrsVisitor::Pre(const parser::Pass &x) {
 
 // C730, C743, C755, C778, C1543 say no attribute or prefix repetitions
 bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
+  CHECK(attrs_);
   if (attrs_->test(attrName)) {
     Say(currStmtSource().value(),
         "Attribute '%s' cannot be used more than once"_warn_en_US,
@@ -1799,6 +1798,7 @@ bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
 // See if attrName violates a constraint cause by a conflict.  attr1 and attr2
 // name attributes that cannot be used on the same declaration
 bool AttrsVisitor::HaveAttrConflict(Attr attrName, Attr attr1, Attr attr2) {
+  CHECK(attrs_);
   if ((attrName == attr1 && attrs_->test(attr2)) ||
       (attrName == attr2 && attrs_->test(attr1))) {
     Say(currStmtSource().value(),
@@ -1819,7 +1819,6 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
 }
 bool AttrsVisitor::CheckAndSet(Attr attrName) {
-  CHECK(attrs_);
   if (IsConflictingAttr(attrName) || IsDuplicateAttr(attrName)) {
     return false;
   }
@@ -3285,11 +3284,12 @@ bool InterfaceVisitor::Pre(const parser::ProcedureStmt &x) {
 
 bool InterfaceVisitor::Pre(const parser::GenericStmt &) {
   genericInfo_.emplace(/*isInterface*/ false);
-  return true;
+  return BeginAttrs();
 }
 void InterfaceVisitor::Post(const parser::GenericStmt &x) {
-  if (auto &accessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)}) {
-    SetExplicitAttr(*GetGenericInfo().symbol, AccessSpecToAttr(*accessSpec));
+  auto attrs{EndAttrs()};
+  if (Symbol * symbol{GetGenericInfo().symbol}) {
+    SetExplicitAttrs(*symbol, attrs);
   }
   const auto &names{std::get<std::list<parser::Name>>(x.t)};
   AddSpecificProcs(names, ProcedureKind::Procedure);
