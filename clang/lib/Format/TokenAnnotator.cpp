@@ -3097,6 +3097,76 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
+// Returns the name of a function with no return type, e.g. a constructor or
+// destructor.
+static FormatToken *getFunctionName(const AnnotatedLine &Line) {
+  for (FormatToken *Tok = Line.getFirstNonComment(), *Name = nullptr; Tok;
+       Tok = Tok->getNextNonComment()) {
+    // Skip C++11 attributes both before and after the function name.
+    if (Tok->is(tok::l_square) && Tok->is(TT_AttributeSquare)) {
+      Tok = Tok->MatchingParen;
+      if (!Tok)
+        break;
+      continue;
+    }
+
+    // Make sure the name is followed by a pair of parentheses.
+    if (Name)
+      return Tok->is(tok::l_paren) && Tok->MatchingParen ? Name : nullptr;
+
+    // Skip keywords that may precede the constructor/destructor name.
+    if (Tok->isOneOf(tok::kw_friend, tok::kw_inline, tok::kw_virtual,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_explicit)) {
+      continue;
+    }
+
+    // A qualified name may start from the global namespace.
+    if (Tok->is(tok::coloncolon)) {
+      Tok = Tok->Next;
+      if (!Tok)
+        break;
+    }
+
+    // Skip to the unqualified part of the name.
+    while (Tok->startsSequence(tok::identifier, tok::coloncolon)) {
+      assert(Tok->Next);
+      Tok = Tok->Next->Next;
+      if (!Tok)
+        return nullptr;
+    }
+
+    // Skip the `~` if a destructor name.
+    if (Tok->is(tok::tilde)) {
+      Tok = Tok->Next;
+      if (!Tok)
+        break;
+    }
+
+    // Make sure the name is not already annotated, e.g. as NamespaceMacro.
+    if (Tok->isNot(tok::identifier) || Tok->isNot(TT_Unknown))
+      break;
+
+    Name = Tok;
+  }
+
+  return nullptr;
+}
+
+// Checks if Tok is a constructor/destructor name qualified by its class name.
+static bool isCtorOrDtorName(const FormatToken *Tok) {
+  assert(Tok && Tok->is(tok::identifier));
+  const auto *Prev = Tok->Previous;
+
+  if (Prev && Prev->is(tok::tilde))
+    Prev = Prev->Previous;
+
+  if (!Prev || !Prev->endsSequence(tok::coloncolon, tok::identifier))
+    return false;
+
+  assert(Prev->Previous);
+  return Prev->Previous->TokenText == Tok->TokenText;
+}
+
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
   for (auto &Child : Line.Children)
     annotate(*Child);
@@ -3117,6 +3187,14 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   ExpressionParser ExprParser(Style, Keywords, Line);
   ExprParser.parse();
 
+  if (Style.isCpp()) {
+    auto *Tok = getFunctionName(Line);
+    if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
+                Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
+    }
+  }
+
   if (Line.startsWith(TT_ObjCMethodSpecifier))
     Line.Type = LT_ObjCMethodDecl;
   else if (Line.startsWith(TT_ObjCDecl))
@@ -3133,6 +3211,10 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
                                       const AnnotatedLine &Line) {
   assert(Current.Previous);
+
+  if (Current.is(TT_FunctionDeclarationName))
+    return true;
+
   if (!Current.Tok.getIdentifierInfo())
     return false;
 
@@ -3313,9 +3395,11 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   bool LineIsFunctionDeclaration = false;
   for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
        Tok = Tok->Next) {
+    if (Tok->Previous->EndsCppAttributeGroup)
+      AfterLastAttribute = Tok;
     if (isFunctionDeclarationName(Style.isCpp(), *Tok, Line)) {
       LineIsFunctionDeclaration = true;
-      Tok->setType(TT_FunctionDeclarationName);
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
       if (AfterLastAttribute &&
           mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
         AfterLastAttribute->MustBreakBefore = true;
@@ -3323,8 +3407,6 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       }
       break;
     }
-    if (Tok->Previous->EndsCppAttributeGroup)
-      AfterLastAttribute = Tok;
   }
 
   if (Style.isCpp() && !LineIsFunctionDeclaration) {
