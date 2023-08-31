@@ -371,6 +371,20 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
     OS << " selected";
 }
 
+void TextNodeDumper::Visit(const ConceptReference *R) {
+  if (!R) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> ConceptReference";
+    return;
+  }
+
+  OS << "ConceptReference";
+  dumpPointer(R);
+  dumpSourceRange(R->getSourceRange());
+  OS << ' ';
+  dumpBareDeclRef(R->getNamedConcept());
+}
+
 void TextNodeDumper::Visit(const concepts::Requirement *R) {
   if (!R) {
     ColorScope Color(OS, ShowColors, NullColor);

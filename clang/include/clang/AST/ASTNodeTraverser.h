@@ -252,6 +252,10 @@ public:
     });
   }
 
+  void Visit(const ConceptReference *R) {
+    getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(R); });
+  }
+
   void Visit(const APValue &Value, QualType Ty) {
     getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(Value, Ty); });
   }
@@ -288,6 +292,8 @@ public:
       Visit(C);
     else if (const auto *T = N.get<TemplateArgument>())
       Visit(*T);
+    else if (const auto *CR = N.get<ConceptReference>())
+      Visit(CR);
   }
 
   void dumpDeclContext(const DeclContext *DC) {
