@@ -23,11 +23,11 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1009,26 +1009,6 @@ void spirv::FuncOp::build(OpBuilder &builder, OperationState &state,
                      builder.getAttr<spirv::FunctionControlAttr>(control));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
-}
-
-// CallableOpInterface
-Region *spirv::FuncOp::getCallableRegion() {
-  return isExternal() ? nullptr : &getBody();
-}
-
-// CallableOpInterface
-ArrayRef<Type> spirv::FuncOp::getCallableResults() {
-  return getFunctionType().getResults();
-}
-
-// CallableOpInterface
-::mlir::ArrayAttr spirv::FuncOp::getCallableArgAttrs() {
-  return getArgAttrs().value_or(nullptr);
-}
-
-// CallableOpInterface
-::mlir::ArrayAttr spirv::FuncOp::getCallableResAttrs() {
-  return getResAttrs().value_or(nullptr);
 }
 
 //===----------------------------------------------------------------------===//

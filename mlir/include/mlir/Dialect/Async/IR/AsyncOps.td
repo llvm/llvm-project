@@ -20,7 +20,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 
@@ -105,8 +105,7 @@ def Async_ExecuteOp :
 }
 
 def Async_FuncOp : Async_Op<"func",
-    [CallableOpInterface, FunctionOpInterface,
-     IsolatedFromAbove, OpAsmOpInterface]> {
+    [FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
@@ -154,7 +153,7 @@ def Async_FuncOp : Async_Op<"func",
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
-    // CallableOpInterface
+    // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the region on the current operation that is callable. This may
@@ -162,27 +161,6 @@ def Async_FuncOp : Async_Op<"func",
     /// function.
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr
                                                               : &getBody(); }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ArrayRef<Type> getCallableResults() { return getFunctionType()
-                                                    .getResults(); }
-
-    /// Returns the argument attributes for all callable region arguments or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-
-    /// Returns the result attributes for all callable region results or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
-    }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this async function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
