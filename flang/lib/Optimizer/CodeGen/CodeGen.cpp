@@ -2892,6 +2892,42 @@ struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   }
 };
 
+// Check if attr's type is compatible with ty.
+//
+// This is done by comparing attr's element type, converted to LLVM type,
+// with ty's element type.
+//
+// Only integer and floating point (including complex) attributes are
+// supported. Also, attr is expected to have a TensorType and ty is expected
+// to be of LLVMArrayType. If any of the previous conditions is false, then
+// the specified attr and ty are not supported by this function and are
+// assumed to be compatible.
+static inline bool attributeTypeIsCompatible(mlir::MLIRContext *ctx,
+                                             mlir::Attribute attr,
+                                             mlir::Type ty) {
+  // Get attr's LLVM element type.
+  if (!attr)
+    return true;
+  auto intOrFpEleAttr = mlir::dyn_cast<mlir::DenseIntOrFPElementsAttr>(attr);
+  if (!intOrFpEleAttr)
+    return true;
+  auto tensorTy = mlir::dyn_cast<mlir::TensorType>(intOrFpEleAttr.getType());
+  if (!tensorTy)
+    return true;
+  mlir::Type attrEleTy =
+      mlir::LLVMTypeConverter(ctx).convertType(tensorTy.getElementType());
+
+  // Get ty's element type.
+  auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(ty);
+  if (!arrTy)
+    return true;
+  mlir::Type eleTy = arrTy.getElementType();
+  while ((arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(eleTy)))
+    eleTy = arrTy.getElementType();
+
+  return attrEleTy == eleTy;
+}
+
 /// Lower `fir.global` operation to `llvm.global` operation.
 /// `fir.insert_on_range` operations are replaced with constant dense attribute
 /// if they are applied on the full range.
@@ -2906,6 +2942,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
       tyAttr = tyAttr.cast<mlir::LLVM::LLVMPointerType>().getElementType();
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
+    assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
