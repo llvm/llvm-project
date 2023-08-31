@@ -301,12 +301,8 @@ public:
     return Invocation->getHeaderSearchOptsPtr();
   }
 
-  LangOptions &getLangOpts() {
-    return *Invocation->getLangOpts();
-  }
-  const LangOptions &getLangOpts() const {
-    return *Invocation->getLangOpts();
-  }
+  LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
+  const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
