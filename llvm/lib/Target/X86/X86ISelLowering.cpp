@@ -11214,6 +11214,7 @@ static SDValue lowerShuffleAsByteRotate(const SDLoc &DL, MVT VT, SDValue V1,
 /// rotate* of the vector lanes.
 static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
                                     SDValue V2, ArrayRef<int> Mask,
+                                    const APInt &Zeroable,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
   assert((VT.getScalarType() == MVT::i32 || VT.getScalarType() == MVT::i64) &&
@@ -11225,11 +11226,40 @@ static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
 
   SDValue Lo = V1, Hi = V2;
   int Rotation = matchShuffleAsElementRotate(Lo, Hi, Mask);
-  if (Rotation <= 0)
+  if (0 < Rotation)
+    return DAG.getNode(X86ISD::VALIGN, DL, VT, Lo, Hi,
+                       DAG.getTargetConstant(Rotation, DL, MVT::i8));
+
+  // See if we can use VALIGN as a cross-lane version of VSHLDQ/VSRLDQ.
+  // TODO: Pull this out as a matchShuffleAsElementShift helper?
+  // TODO: We can probably make this more aggressive and use shift-pairs like
+  // lowerShuffleAsByteShiftMask.
+  unsigned NumElts = Mask.size();
+  unsigned ZeroLo = Zeroable.countr_one();
+  unsigned ZeroHi = Zeroable.countl_one();
+  assert((ZeroLo + ZeroHi) < NumElts && "Zeroable shuffle detected");
+  if (!ZeroLo && !ZeroHi)
     return SDValue();
 
-  return DAG.getNode(X86ISD::VALIGN, DL, VT, Lo, Hi,
-                     DAG.getTargetConstant(Rotation, DL, MVT::i8));
+  if (ZeroLo) {
+    SDValue Src = Mask[ZeroLo] < (int)NumElts ? V1 : V2;
+    int Low = Mask[ZeroLo] < (int)NumElts ? 0 : NumElts;
+    if (isSequentialOrUndefInRange(Mask, ZeroLo, NumElts - ZeroLo, Low))
+      return DAG.getNode(X86ISD::VALIGN, DL, VT, Src,
+                         getZeroVector(VT, Subtarget, DAG, DL),
+                         DAG.getTargetConstant(NumElts - ZeroLo, DL, MVT::i8));
+  }
+
+  if (ZeroHi) {
+    SDValue Src = Mask[0] < (int)NumElts ? V1 : V2;
+    int Low = Mask[0] < (int)NumElts ? 0 : NumElts;
+    if (isSequentialOrUndefInRange(Mask, 0, NumElts - ZeroHi, Low + ZeroHi))
+      return DAG.getNode(X86ISD::VALIGN, DL, VT,
+                         getZeroVector(VT, Subtarget, DAG, DL), Src,
+                         DAG.getTargetConstant(ZeroHi, DL, MVT::i8));
+  }
+
+  return SDValue();
 }
 
 /// Try to lower a vector shuffle as a byte shift sequence.
@@ -12625,7 +12655,7 @@ static SDValue lowerV2I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Subtarget.hasSSSE3()) {
     if (Subtarget.hasVLX())
       if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v2i64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
         return Rotate;
 
     if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v2i64, V1, V2, Mask,
@@ -12940,7 +12970,7 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Subtarget.hasSSSE3()) {
     if (Subtarget.hasVLX())
       if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v4i32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
         return Rotate;
 
     if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v4i32, V1, V2, Mask,
@@ -15674,7 +15704,7 @@ static SDValue lowerV4I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have VLX support, we can use VALIGN or VEXPAND.
   if (Subtarget.hasVLX()) {
     if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v4i64, V1, V2, Mask,
-                                              Subtarget, DAG))
+                                              Zeroable, Subtarget, DAG))
       return Rotate;
 
     if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v4i64, Zeroable, Mask, V1, V2,
@@ -15936,7 +15966,7 @@ static SDValue lowerV8I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have VLX support, we can use VALIGN or EXPAND.
   if (Subtarget.hasVLX()) {
     if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v8i32, V1, V2, Mask,
-                                              Subtarget, DAG))
+                                              Zeroable, Subtarget, DAG))
       return Rotate;
 
     if (SDValue V = lowerShuffleToEXPAND(DL, MVT::v8i32, Zeroable, Mask, V1, V2,
@@ -16585,7 +16615,7 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use VALIGN.
   if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v8i64, V1, V2, Mask,
-                                            Subtarget, DAG))
+                                            Zeroable, Subtarget, DAG))
     return Rotate;
 
   // Try to use PALIGNR.
@@ -16669,7 +16699,7 @@ static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use VALIGN.
   if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v16i32, V1, V2, Mask,
-                                            Subtarget, DAG))
+                                            Zeroable, Subtarget, DAG))
     return Rotate;
 
   // Try to use byte rotation instructions.

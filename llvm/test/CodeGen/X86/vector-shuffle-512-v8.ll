@@ -1665,19 +1665,11 @@ define <8 x i64> @shuffle_v8i64_6caa87e5(<8 x i64> %a, <8 x i64> %b) {
 }
 
 define <8 x i64> @shuffle_v8i64_34567zzz(<8 x i64> %a, <8 x i64> %b) {
-; AVX512F-LABEL: shuffle_v8i64_34567zzz:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,4,5,6,7,13,14,15]
-; AVX512F-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512F-32-LABEL: shuffle_v8i64_34567zzz:
-; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,0,4,0,5,0,6,0,7,0,13,0,14,0,15,0]
-; AVX512F-32-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
-; AVX512F-32-NEXT:    retl
+; ALL-LABEL: shuffle_v8i64_34567zzz:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm0[3,4,5,6,7],zmm1[0,1,2]
+; ALL-NEXT:    ret{{[l|q]}}
   %valign = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 8, i32 8>
   ret <8 x i64> %valign
 }
@@ -1685,9 +1677,8 @@ define <8 x i64> @shuffle_v8i64_34567zzz(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i64> @shuffle_v8i64_zz012345(<8 x i64> %a, <8 x i64> %b) {
 ; ALL-LABEL: shuffle_v8i64_zz012345:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movb $-4, %al
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm1[6,7],zmm0[0,1,2,3,4,5]
 ; ALL-NEXT:    ret{{[l|q]}}
   %valign = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
   ret <8 x i64> %valign
