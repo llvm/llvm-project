@@ -2186,7 +2186,7 @@ void SampleProfileMatcher::countProfileMismatches(
     const Function &F, const FunctionSamples &FS,
     const std::map<LineLocation, StringRef> &IRAnchors,
     const std::map<LineLocation, StringSet<>> &ProfileAnchors) {
-  bool IsFuncHashMismatch = false;
+  [[maybe_unused]] bool IsFuncHashMismatch = false;
   if (FunctionSamples::ProfileIsProbeBased) {
     TotalFuncHashSamples += FS.getTotalSamples();
     TotalProfiledFunc++;
