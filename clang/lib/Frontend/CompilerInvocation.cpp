@@ -145,7 +145,7 @@ CompilerInvocationRefBase::CompilerInvocationRefBase(
       DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
       HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
       PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())),
-      AnalyzerOpts(new AnalyzerOptions(*X.getAnalyzerOpts())) {}
+      AnalyzerOpts(new AnalyzerOptions(X.getAnalyzerOpts())) {}
 
 CompilerInvocationRefBase::CompilerInvocationRefBase(
     CompilerInvocationRefBase &&X) = default;
@@ -4808,7 +4808,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseCASArgs(Res.getCASOpts(), Args, Diags);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
-  ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Res.getCASOpts(), Diags,
