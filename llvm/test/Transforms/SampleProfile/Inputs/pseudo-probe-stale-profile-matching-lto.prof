@@ -23,4 +23,5 @@ main:6822:0
  !CFGChecksum: 1125988587804525
 bar:2401:2401
  1: 2401
- !CFGChecksum: 4294967295
+# Orignal CFGChecksum is 4294967295
+ !CFGChecksum: 123
