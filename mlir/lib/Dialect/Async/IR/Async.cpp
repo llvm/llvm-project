@@ -38,8 +38,9 @@ void AsyncDialect::initialize() {
 
 constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
-OperandRange ExecuteOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBodyRegion() && "invalid region index");
+OperandRange
+ExecuteOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
+  assert(index && *index == 0 && "invalid region index");
   return getBodyOperands();
 }
 
@@ -52,10 +53,11 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
   return getValueOrTokenType(lhs) == getValueOrTokenType(rhs);
 }
 
-void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
+void ExecuteOp::getSuccessorRegions(std::optional<unsigned> index,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
-  if (point == getBodyRegion()) {
+  if (index) {
+    assert(*index == 0 && "invalid region index");
     regions.push_back(RegionSuccessor(getBodyResults()));
     return;
   }

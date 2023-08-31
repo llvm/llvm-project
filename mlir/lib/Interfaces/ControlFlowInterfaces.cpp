@@ -84,18 +84,18 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
-static InFlightDiagnostic &printRegionEdgeName(InFlightDiagnostic &diag,
-                                               RegionBranchPoint sourceNo,
-                                               RegionBranchPoint succRegionNo) {
+static InFlightDiagnostic &
+printRegionEdgeName(InFlightDiagnostic &diag, std::optional<unsigned> sourceNo,
+                    std::optional<unsigned> succRegionNo) {
   diag << "from ";
-  if (Region *region = sourceNo.getRegionOrNull())
-    diag << "Region #" << region->getRegionNumber();
+  if (sourceNo)
+    diag << "Region #" << sourceNo.value();
   else
     diag << "parent operands";
 
   diag << " to ";
-  if (Region *region = succRegionNo.getRegionOrNull())
-    diag << "Region #" << region->getRegionNumber();
+  if (succRegionNo)
+    diag << "Region #" << succRegionNo.value();
   else
     diag << "parent results";
   return diag;
@@ -107,24 +107,28 @@ static InFlightDiagnostic &printRegionEdgeName(InFlightDiagnostic &diag,
 /// inputs that flow from `sourceIndex' to the given region, or std::nullopt if
 /// the exact type match verification is not necessary (e.g., if the Op verifies
 /// the match itself).
-static LogicalResult
-verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
-                         function_ref<FailureOr<TypeRange>(RegionBranchPoint)>
-                             getInputsTypesForRegion) {
+static LogicalResult verifyTypesAlongAllEdges(
+    Operation *op, std::optional<unsigned> sourceNo,
+    function_ref<FailureOr<TypeRange>(std::optional<unsigned>)>
+        getInputsTypesForRegion) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
-  regionInterface.getSuccessorRegions(sourcePoint, successors);
+  regionInterface.getSuccessorRegions(sourceNo, successors);
 
   for (RegionSuccessor &succ : successors) {
-    FailureOr<TypeRange> sourceTypes = getInputsTypesForRegion(succ);
+    std::optional<unsigned> succRegionNo;
+    if (!succ.isParent())
+      succRegionNo = succ.getSuccessor()->getRegionNumber();
+
+    FailureOr<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
     if (failed(sourceTypes))
       return failure();
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
     if (sourceTypes->size() != succInputsTypes.size()) {
       InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
-      return printRegionEdgeName(diag, sourcePoint, succ)
+      return printRegionEdgeName(diag, sourceNo, succRegionNo)
              << ": source has " << sourceTypes->size()
              << " operands, but target successor needs "
              << succInputsTypes.size();
@@ -136,7 +140,7 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
       Type inputType = std::get<1>(typesIdx.value());
       if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
         InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
-        return printRegionEdgeName(diag, sourcePoint, succ)
+        return printRegionEdgeName(diag, sourceNo, succRegionNo)
                << ": source type #" << typesIdx.index() << " " << sourceType
                << " should match input type #" << typesIdx.index() << " "
                << inputType;
@@ -150,13 +154,13 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
 LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
-  auto inputTypesFromParent = [&](RegionBranchPoint regionNo) -> TypeRange {
+  auto inputTypesFromParent =
+      [&](std::optional<unsigned> regionNo) -> TypeRange {
     return regionInterface.getEntrySuccessorOperands(regionNo).getTypes();
   };
 
   // Verify types along control flow edges originating from the parent.
-  if (failed(verifyTypesAlongAllEdges(op, RegionBranchPoint::parent(),
-                                      inputTypesFromParent)))
+  if (failed(verifyTypesAlongAllEdges(op, std::nullopt, inputTypesFromParent)))
     return failure();
 
   auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
@@ -172,7 +176,8 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   };
 
   // Verify types along control flow edges originating from each region.
-  for (Region &region : op->getRegions()) {
+  for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
+    Region &region = op->getRegion(regionNo);
 
     // Since there can be multiple terminators implementing the
     // `RegionBranchTerminatorOpInterface`, all should have the same operand
@@ -190,7 +195,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
       continue;
 
     auto inputTypesForRegion =
-        [&](RegionBranchPoint succRegionNo) -> FailureOr<TypeRange> {
+        [&](std::optional<unsigned> succRegionNo) -> FailureOr<TypeRange> {
       std::optional<OperandRange> regionReturnOperands;
       for (RegionBranchTerminatorOpInterface regionReturnOp : regionReturnOps) {
         auto terminatorOperands =
@@ -206,7 +211,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
         if (!areTypesCompatible(regionReturnOperands->getTypes(),
                                 terminatorOperands.getTypes())) {
           InFlightDiagnostic diag = op->emitOpError(" along control flow edge");
-          return printRegionEdgeName(diag, region, succRegionNo)
+          return printRegionEdgeName(diag, regionNo, succRegionNo)
                  << " operands mismatch between return-like terminators";
         }
       }
@@ -215,7 +220,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
       return TypeRange(regionReturnOperands->getTypes());
     };
 
-    if (failed(verifyTypesAlongAllEdges(op, region, inputTypesForRegion)))
+    if (failed(verifyTypesAlongAllEdges(op, regionNo, inputTypesForRegion)))
       return failure();
   }
 
@@ -232,24 +237,24 @@ static bool isRegionReachable(Region *begin, Region *r) {
   visited[begin->getRegionNumber()] = true;
 
   // Retrieve all successors of the region and enqueue them in the worklist.
-  SmallVector<Region *> worklist;
-  auto enqueueAllSuccessors = [&](Region *region) {
+  SmallVector<unsigned> worklist;
+  auto enqueueAllSuccessors = [&](unsigned index) {
     SmallVector<RegionSuccessor> successors;
-    op.getSuccessorRegions(region, successors);
+    op.getSuccessorRegions(index, successors);
     for (RegionSuccessor successor : successors)
       if (!successor.isParent())
-        worklist.push_back(successor.getSuccessor());
+        worklist.push_back(successor.getSuccessor()->getRegionNumber());
   };
-  enqueueAllSuccessors(begin);
+  enqueueAllSuccessors(begin->getRegionNumber());
 
   // Process all regions in the worklist via DFS.
   while (!worklist.empty()) {
-    Region *nextRegion = worklist.pop_back_val();
-    if (nextRegion == r)
+    unsigned nextRegion = worklist.pop_back_val();
+    if (nextRegion == r->getRegionNumber())
       return true;
-    if (visited[nextRegion->getRegionNumber()])
+    if (visited[nextRegion])
       continue;
-    visited[nextRegion->getRegionNumber()] = true;
+    visited[nextRegion] = true;
     enqueueAllSuccessors(nextRegion);
   }
 

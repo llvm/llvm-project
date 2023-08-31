@@ -45,9 +45,9 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   // this region predecessor that correspond to the input values of `region`. If
   // an index could not be found, std::nullopt is returned instead.
   auto getOperandIndexIfPred =
-      [&](RegionBranchPoint pred) -> std::optional<unsigned> {
+      [&](std::optional<unsigned> predIndex) -> std::optional<unsigned> {
     SmallVector<RegionSuccessor, 2> successors;
-    branch.getSuccessorRegions(pred, successors);
+    branch.getSuccessorRegions(predIndex, successors);
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() != region)
         continue;
@@ -75,27 +75,28 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   };
 
   // Check branches from the parent operation.
-  auto branchPoint = RegionBranchPoint::parent();
-  if (region)
-    branchPoint = region;
-
+  std::optional<unsigned> regionIndex;
+  if (region) {
+    // Determine the actual region number from the passed region.
+    regionIndex = region->getRegionNumber();
+  }
   if (std::optional<unsigned> operandIndex =
-          getOperandIndexIfPred(/*predIndex=*/RegionBranchPoint::parent())) {
+          getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
     collectUnderlyingAddressValues(
-        branch.getEntrySuccessorOperands(branchPoint)[*operandIndex], maxDepth,
+        branch.getEntrySuccessorOperands(regionIndex)[*operandIndex], maxDepth,
         visited, output);
   }
   // Check branches from each child region.
   Operation *op = branch.getOperation();
-  for (Region &region : op->getRegions()) {
-    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(region)) {
-      for (Block &block : region) {
+  for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
+    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
+      for (Block &block : op->getRegion(i)) {
         // Try to determine possible region-branch successor operands for the
         // current region.
         if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
                 block.getTerminator())) {
           collectUnderlyingAddressValues(
-              term.getSuccessorOperands(branchPoint)[*operandIndex], maxDepth,
+              term.getSuccessorOperands(regionIndex)[*operandIndex], maxDepth,
               visited, output);
         } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
