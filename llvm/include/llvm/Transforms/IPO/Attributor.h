@@ -118,6 +118,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -3948,6 +3949,14 @@ struct AAIsDead
   using Base = StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute>;
   AAIsDead(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return isa<Function>(IRP.getAnchorValue()) &&
+             !cast<Function>(IRP.getAnchorValue()).isDeclaration();
+    return true;
+  }
+
   /// State encoding bits. A set bit in the state means the property holds.
   enum {
     HAS_NO_EFFECT = 1 << 0,
@@ -6134,6 +6143,45 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
 
   // No address space which indicates the associated value is dead.
   static const int32_t NoAddressSpace = -1;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for llvm::GlobalValue information interference.
+struct AAGlobalValueInfo
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAGlobalValueInfo(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() != IRPosition::IRP_FLOAT)
+      return false;
+    auto *GV = dyn_cast<GlobalValue>(&IRP.getAnchorValue());
+    if (!GV)
+      return false;
+    return GV->hasLocalLinkage();
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAGlobalValueInfo &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Return true iff \p U is a potential use of the associated global value.
+  virtual bool isPotentialUse(const Use &U) const = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAGlobalValueInfo"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAGlobalValueInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
 
   /// Unique ID (due to the unique address)
   static const char ID;
