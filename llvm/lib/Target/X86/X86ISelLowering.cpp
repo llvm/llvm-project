@@ -53455,7 +53455,8 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
   return true;
 }
 
-static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
+                          const X86Subtarget &Subtarget) {
   // Only handle test patterns.
   if (!isNullConstant(N->getOperand(1)))
     return SDValue();
@@ -53493,7 +53494,6 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
 
   // If we're extracting from a avx512 bool vector and comparing against zero,
   // then try to just bitcast the vector to an integer to use TEST/BT directly.
-  // TODO: Handle v2i1/v4i1 bool vector cases.
   // (and (extract_elt (kshiftr vXi1, C), 0), 1) -> (and (bc vXi1), 1<<C)
   if (Op.getOpcode() == ISD::AND && isOneConstant(Op.getOperand(1)) &&
       Op.hasOneUse() && onlyZeroFlagUsed(SDValue(N, 0))) {
@@ -53502,16 +53502,16 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
         isNullConstant(Src.getOperand(1)) &&
         Src.getOperand(0).getValueType().getScalarType() == MVT::i1) {
       SDValue BoolVec = Src.getOperand(0);
+      unsigned ShAmt = 0;
+      if (BoolVec.getOpcode() == X86ISD::KSHIFTR) {
+        ShAmt = BoolVec.getConstantOperandVal(1);
+        BoolVec = BoolVec.getOperand(0);
+      }
+      BoolVec = widenMaskVector(BoolVec, false, Subtarget, DAG, dl);
       EVT VecVT = BoolVec.getValueType();
       unsigned BitWidth = VecVT.getVectorNumElements();
       EVT BCVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
       if (TLI.isTypeLegal(VecVT) && TLI.isTypeLegal(BCVT)) {
-        unsigned ShAmt = 0;
-        if (BoolVec.getOpcode() == X86ISD::KSHIFTR &&
-            BoolVec.getConstantOperandAPInt(1).ult(BitWidth)) {
-          ShAmt = BoolVec.getConstantOperandVal(1);
-          BoolVec = BoolVec.getOperand(0);
-        }
         APInt Mask = APInt::getOneBitSet(BitWidth, ShAmt);
         Op = DAG.getBitcast(BCVT, BoolVec);
         Op = DAG.getNode(ISD::AND, dl, BCVT, Op,
@@ -55800,7 +55800,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::BLENDV:      return combineSelect(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
-  case X86ISD::CMP:         return combineCMP(N, DAG);
+  case X86ISD::CMP:         return combineCMP(N, DAG, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, DCI, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
