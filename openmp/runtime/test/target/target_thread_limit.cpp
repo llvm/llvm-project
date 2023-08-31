@@ -18,15 +18,13 @@ int main(void) {
 #pragma omp target thread_limit(tl)
   {
     printf("\ntarget: thread_limit = %d", omp_get_thread_limit());
+    int count = 0;
 // OMP51: target: thread_limit = 4
 // check whether thread_limit is honoured
-#pragma omp parallel
-    { printf("\ntarget: parallel"); }
-// OMP51: target: parallel
-// OMP51: target: parallel
-// OMP51: target: parallel
-// OMP51: target: parallel
-// OMP51-NOT: target: parallel
+#pragma omp parallel reduction(+:count)
+    { count++; }
+    printf("\ntarget: parallel: count = %d", count);
+// OMP51: target: parallel: count = {{(1|2|3|4)$}}
 
 // check whether num_threads is honoured
 #pragma omp parallel num_threads(2)
@@ -70,13 +68,12 @@ int main(void) {
 #pragma omp target thread_limit(3)
   {
     printf("\nsecond target: thread_limit = %d", omp_get_thread_limit());
+    int count = 0;
 // OMP51: second target: thread_limit = 3
-#pragma omp parallel
-    { printf("\nsecond target: parallel"); }
-    // OMP51: second target: parallel
-    // OMP51: second target: parallel
-    // OMP51: second target: parallel
-    // OMP51-NOT: second target: parallel
+#pragma omp parallel reduction(+:count)
+    { count++; }
+    printf("\nsecond target: parallel: count = %d", count);
+    // OMP51: second target: parallel: count = {{(1|2|3)$}}
   }
 
   // confirm that thread_limit's effects are limited to target region
