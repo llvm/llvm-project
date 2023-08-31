@@ -1,4 +1,4 @@
-// REQUIRES: nvptx-registered-target
+// REQUIRES: nvptx-registered-target, staticanalyzer
 
 /**
  * The first four lines test that a warning is produced when enabling 
