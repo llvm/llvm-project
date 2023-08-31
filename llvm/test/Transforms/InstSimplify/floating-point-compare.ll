@@ -1587,9 +1587,7 @@ define float @fast_square_must_be_positive_daz(float %arg, float %arg1) #0 {
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
 ; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
 ; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = fcmp olt float [[I3]], 0.000000e+00
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], float 0.000000e+00, float [[I3]]
-; CHECK-NEXT:    ret float [[I5]]
+; CHECK-NEXT:    ret float [[I3]]
 ;
 bb:
   %i = fmul float %arg, %arg
@@ -1607,9 +1605,7 @@ define float @fast_square_must_be_positive_daz_nnan(float %arg, float %arg1) #0 
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
 ; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
 ; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = fcmp nnan olt float [[I3]], 0.000000e+00
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], float 0.000000e+00, float [[I3]]
-; CHECK-NEXT:    ret float [[I5]]
+; CHECK-NEXT:    ret float [[I3]]
 ;
 bb:
   %i = fmul float %arg, %arg
@@ -1627,9 +1623,7 @@ define float @must_be_olt_negative_constant_daz(float %arg, float %arg1) #0 {
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
 ; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
 ; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = fcmp olt float [[I3]], -1.000000e+00
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], float 0.000000e+00, float [[I3]]
-; CHECK-NEXT:    ret float [[I5]]
+; CHECK-NEXT:    ret float [[I3]]
 ;
 bb:
   %i = fmul float %arg, %arg
@@ -1647,9 +1641,7 @@ define float @must_be_olt_negative_constant_daz_nnan(float %arg, float %arg1) #0
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
 ; CHECK-NEXT:    [[I2:%.*]] = fmul float [[ARG1:%.*]], [[ARG1]]
 ; CHECK-NEXT:    [[I3:%.*]] = fadd float [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = fcmp nnan olt float [[I3]], -1.000000e+00
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], float 0.000000e+00, float [[I3]]
-; CHECK-NEXT:    ret float [[I5]]
+; CHECK-NEXT:    ret float [[I3]]
 ;
 bb:
   %i = fmul float %arg, %arg
