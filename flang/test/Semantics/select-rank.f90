@@ -109,7 +109,8 @@ contains
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 3))
     !ERROR: The value of the selector must be between zero and 15
     RANK(-1)
-      print *, "rank: -ve"
+      print *, "rank: negative"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == -1))
     END SELECT
    end subroutine
@@ -119,8 +120,8 @@ contains
    integer :: i,j
    integer, dimension(..), pointer :: arg
    integer, pointer :: arg2
-   !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
    select RANK(arg)
+   !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
    RANK (*)
       print *, arg(1:1)
    RANK (1)
@@ -146,13 +147,10 @@ contains
       print *, "Now it's rank 2 "
     RANK (*)
       print *, "Going for another rank"
-      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     !ERROR: Not more than one of the selectors of SELECT RANK statement may be '*'
     RANK (*)
       print *, "This is Wrong"
-      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
-      j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     END SELECT
    end subroutine
 

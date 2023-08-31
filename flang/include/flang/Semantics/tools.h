@@ -179,8 +179,13 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &,
 const Symbol *HasImpureFinal(const Symbol &);
 bool IsInBlankCommon(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->IsAssumedSize();
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    return object->IsAssumedSize();
+  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
+    return assoc->IsAssumedSize();
+  } else {
+    return false;
+  }
 }
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
