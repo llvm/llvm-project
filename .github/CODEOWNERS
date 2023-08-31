@@ -367,3 +367,47 @@
 # flang-codegen
 flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
+# globalisel
+/llvm/**/GlobalISel/ @llvm/pr-subscribers-globalisel
+/llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
+/llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
+
+# loongarch
+/llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
+/llvm/lib/Target/LoongArch @llvm/pr-subscribers-loongarch
+/llvm/test/CodeGen/LoongArch @llvm/pr-subscribers-loongarch
+/clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
+/clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
+/clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
+/clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
+
+# function-specialization
+/llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
+/llvm/lib/Transforms/Utils/SCCPSolver.cpp @llvm/pr-subscribers-function-specialization
+/llvm/include/llvm/Transforms/IPO/FunctionSpecialization.h @llvm/pr-subscribers-function-specialization
+/llvm/lib/Transforms/IPO/FunctionSpecialization.cpp @llvm/pr-subscribers-function-specialization
+/llvm/test/Transforms/FunctionSpecialization/* @llvm/pr-subscribers-function-specialization
+
+# x86
+/llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
+/llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
+/llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
+/llvm/test/MC/X86/ @llvm/pr-subscribers-x86
+/llvm/test/MC/Disassembler/X86 @llvm/pr-subscribers-x86
+/llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
+/llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
+/clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
+/clang/lib/Driver/ToolChains/Arch/X86.* @llvm/pr-subscribers-x86
+/clang/lib/CodeGen/Targets/X86.* @llvm/pr-subscribers-x86
+/clang/lib/Headers/ @llvm/pr-subscribers-x86
+/clang/test/CodeGen/X86/ @llvm/pr-subscribers-x86
+/clang/include/clang/Basic/BuiltinsX86* @llvm/pr-subscribers-x86
+
+# libc
+libc/** @llvm/pr-subscribers-libc
+utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
+
+# clang-format
+/clang/**/Format/ @llvm/pr-subscribers-clang-format
+/clang/tools/clang-format/ @llvm/pr-subscribers-clang-format
+
