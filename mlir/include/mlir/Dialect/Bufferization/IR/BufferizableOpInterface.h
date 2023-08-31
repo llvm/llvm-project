@@ -411,6 +411,10 @@ struct TraversalConfig {
   /// Specifies whether OpOperands with a different type that are not the result
   /// of a CastOpInterface op should be followed.
   bool followSameTypeOrCastsOnly = false;
+
+  /// Specifies whether already visited values should be visited again.
+  /// (Note: This can result in infinite looping.)
+  bool revisitAlreadyVisitedValues = false;
 };
 
 /// AnalysisState provides a variety of helper functions for dealing with
