@@ -2797,6 +2797,7 @@ cc_library(
         ":DWARFLinker",
         ":DebugInfoDWARF",
         ":MC",
+        ":Object",
         ":Support",
         ":Target",
         ":TargetParser",
