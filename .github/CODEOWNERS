@@ -166,9 +166,10 @@
 /mlir/**/Bytecode/ @llvm/pr-subscribers-mlir-core
 /mlir/**/Complex/ @llvm/pr-subscribers-mlir-complex
 /mlir/**/ControlFlow/ @llvm/pr-subscribers-mlir-cf
+/mlir/**/Conversion/OpenACCToSCF/ @llvm/pr-subscribers-openacc
 /mlir/**/DLTI/ @llvm/pr-subscribers-mlir-dlti
 /mlir/**/Debug/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Dialect/OpenACC//mlir/**/Conversion/OpenACCToSCF/ @llvm/pr-subscribers-openacc
+/mlir/**/Dialect/OpenACC/ @llvm/pr-subscribers-openacc
 /mlir/**/EmitC/ @llvm/pr-subscribers-mlir-emitc
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
 /mlir/**/IR/ @llvm/pr-subscribers-mlir-core @llvm/pr-subscribers-mlir-core @llvm/pr-subscribers-mlir-core
