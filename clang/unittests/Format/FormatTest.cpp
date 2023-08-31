@@ -20651,6 +20651,15 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "});",
                Style);
 
+  Style.Cpp11BracedListStyle = false;
+  verifyFormat("struct test demo[] = {\n"
+               "  { 56,    23, \"hello\" },\n"
+               "  { -1, 93463, \"world\" },\n"
+               "  {  7,     5,    \"!!\" }\n"
+               "};",
+               Style);
+  Style.Cpp11BracedListStyle = true;
+
   Style.ColumnLimit = 0;
   verifyFormat(
       "test demo[] = {\n"
@@ -20881,6 +20890,15 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "{\"dy\", \"sign\"}},\n"
                "});",
                Style);
+
+  Style.Cpp11BracedListStyle = false;
+  verifyFormat("struct test demo[] = {\n"
+               "  { 56, 23,    \"hello\" },\n"
+               "  { -1, 93463, \"world\" },\n"
+               "  { 7,  5,     \"!!\"    }\n"
+               "};",
+               Style);
+  Style.Cpp11BracedListStyle = true;
 
   Style.ColumnLimit = 0;
   verifyFormat(
