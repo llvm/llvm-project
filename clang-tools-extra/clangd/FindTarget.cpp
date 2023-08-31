@@ -10,6 +10,7 @@
 #include "AST.h"
 #include "HeuristicResolver.h"
 #include "support/Logger.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -257,7 +258,7 @@ public:
         Outer.add(CE->getCalleeDecl(), Flags);
       }
       void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
-        Outer.add(E->getNamedConcept(), Flags);
+        Outer.add(E->getConceptReference(), Flags);
       }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
@@ -532,6 +533,10 @@ public:
         add(USD, Flags);
     }
   }
+
+  void add(const ConceptReference *CR, RelSet Flags) {
+    add(CR->getNamedConcept(), Flags);
+  }
 };
 
 } // namespace
@@ -561,6 +566,8 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(CBS->getTypeSourceInfo()->getType(), Flags);
   else if (const ObjCProtocolLoc *PL = N.get<ObjCProtocolLoc>())
     Finder.add(PL->getProtocol(), Flags);
+  else if (const ConceptReference *CR = N.get<ConceptReference>())
+    Finder.add(CR, Flags);
   return Finder.takeDecls();
 }
 
@@ -1056,11 +1063,8 @@ public:
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
   }
 
-  bool VisitConceptReference(ConceptReference *ConceptRef) {
-    Out(ReferenceLoc{ConceptRef->getNestedNameSpecifierLoc(),
-                     ConceptRef->getConceptNameLoc(),
-                     /*IsDecl=*/false,
-                     {ConceptRef->getNamedConcept()}});
+  bool VisitConceptReference(const ConceptReference *CR) {
+    visitNode(DynTypedNode::create(*CR));
     return true;
   }
 
@@ -1109,6 +1113,11 @@ private:
                            PL->getLocation(),
                            /*IsDecl=*/false,
                            {PL->getProtocol()}}};
+    if (const ConceptReference *CR = N.get<ConceptReference>())
+      return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
+                           CR->getConceptNameLoc(),
+                           /*IsDecl=*/false,
+                           {CR->getNamedConcept()}}};
 
     // We do not have location information for other nodes (QualType, etc)
     return {};
