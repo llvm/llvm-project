@@ -169,13 +169,19 @@ define <1 x i8> @reverse_v1i8(<1 x i8> %a) {
 }
 
 define <2 x i8> @reverse_v2i8(<2 x i8> %a) {
-; CHECK-LABEL: reverse_v2i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
+; NO-ZVBB-LABEL: reverse_v2i8:
+; NO-ZVBB:       # %bb.0:
+; NO-ZVBB-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    ret
+;
+; ZVBB-LABEL: reverse_v2i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVBB-NEXT:    vror.vi v8, v8, 8
+; ZVBB-NEXT:    ret
   %res = call <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
   ret <2 x i8> %res
 }
@@ -258,13 +264,19 @@ define <1 x i16> @reverse_v1i16(<1 x i16> %a) {
 }
 
 define <2 x i16> @reverse_v2i16(<2 x i16> %a) {
-; CHECK-LABEL: reverse_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
+; NO-ZVBB-LABEL: reverse_v2i16:
+; NO-ZVBB:       # %bb.0:
+; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    ret
+;
+; ZVBB-LABEL: reverse_v2i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVBB-NEXT:    vror.vi v8, v8, 16
+; ZVBB-NEXT:    ret
   %res = call <2 x i16> @llvm.experimental.vector.reverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %res
 }
@@ -332,13 +344,19 @@ define <1 x i32> @reverse_v1i32(<1 x i32> %a) {
 }
 
 define <2 x i32> @reverse_v2i32(<2 x i32> %a) {
-; CHECK-LABEL: reverse_v2i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
+; NO-ZVBB-LABEL: reverse_v2i32:
+; NO-ZVBB:       # %bb.0:
+; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    ret
+;
+; ZVBB-LABEL: reverse_v2i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; ZVBB-NEXT:    vror.vi v8, v8, 32
+; ZVBB-NEXT:    ret
   %res = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %a)
   ret <2 x i32> %res
 }
@@ -572,13 +590,19 @@ define <1 x half> @reverse_v1f16(<1 x half> %a) {
 }
 
 define <2 x half> @reverse_v2f16(<2 x half> %a) {
-; CHECK-LABEL: reverse_v2f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
+; NO-ZVBB-LABEL: reverse_v2f16:
+; NO-ZVBB:       # %bb.0:
+; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    ret
+;
+; ZVBB-LABEL: reverse_v2f16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVBB-NEXT:    vror.vi v8, v8, 16
+; ZVBB-NEXT:    ret
   %res = call <2 x half> @llvm.experimental.vector.reverse.v2f16(<2 x half> %a)
   ret <2 x half> %res
 }
@@ -646,13 +670,19 @@ define <1 x float> @reverse_v1f32(<1 x float> %a) {
 }
 
 define <2 x float> @reverse_v2f32(<2 x float> %a) {
-; CHECK-LABEL: reverse_v2f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    ret
+; NO-ZVBB-LABEL: reverse_v2f32:
+; NO-ZVBB:       # %bb.0:
+; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    ret
+;
+; ZVBB-LABEL: reverse_v2f32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; ZVBB-NEXT:    vror.vi v8, v8, 32
+; ZVBB-NEXT:    ret
   %res = call <2 x float> @llvm.experimental.vector.reverse.v2f32(<2 x float> %a)
   ret <2 x float> %res
 }
