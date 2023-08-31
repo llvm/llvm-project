@@ -66,3 +66,15 @@ llvm.func @genx.sub_group_shuffle() {
   %16 = genx.sub_group_shuffle XOR %15, %0 : f64 -> f64
   llvm.return
 }
+
+llvm.func @genx.atomic.cmpxchg.global.i32(%ptr : !llvm.ptr<i32, 1>, %cmp : i32, %val : i32) -> i32 {
+  // CHECK: call i32 @_Z12atom_cmpxchgPU8CLglobalViii(ptr addrspace(1) %0, i32 %1, i32 %2)
+  %res = genx.atomic.cmpxchg %ptr, %cmp, %val : (!llvm.ptr<i32, 1>, i32, i32) -> i32
+  llvm.return %res : i32
+}
+
+llvm.func @genx.atomic.cmpxchg.shared.u64(%ptr : !llvm.ptr<i64, 3>, %cmp : i64, %val : i64) -> i64 {
+  // CHECK: call i64 @_Z12atom_cmpxchgPU7CLlocalVlll(ptr addrspace(3) %0, i64 %1, i64 %2)
+  %res = genx.atomic.cmpxchg %ptr, %cmp, %val : (!llvm.ptr<i64, 3>, i64, i64) -> i64
+  llvm.return %res : i64
+}

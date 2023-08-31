@@ -65,3 +65,10 @@ func.func @genx.sub_group_shuffle() {
   %16 = genx.sub_group_shuffle XOR %15, %0 : f64 -> f64
   llvm.return
 }
+
+llvm.func @genx.atomic.cmpxchg.i32(%ptr : !llvm.ptr<i32>, %cmp : i32, %val : i32) -> i32 {
+  // CHECK: [[RES:%.*]] = genx.atomic.cmpxchg %arg0, %arg1, %arg2 : (!llvm.ptr<i32>, i32, i32) -> i32
+  // CHECK-NEXT: llvm.return [[RES]] : i32
+  %res = genx.atomic.cmpxchg %ptr, %cmp, %val : (!llvm.ptr<i32>, i32, i32) -> i32
+  llvm.return %res : i32
+}
