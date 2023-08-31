@@ -394,11 +394,12 @@ mlir::LogicalResult ThrowOp::verify() {
   if (rethrows())
     return success();
 
-  if (getNumOperands() == 1)
+  if (getNumOperands() == 1) {
+    if (!getTypeInfo())
+      return emitOpError() << "'type_info' symbol attribute missing";
     return success();
+  }
 
-  return emitOpError() << "expected zero (rethrow) or at least both "
-                          "exception_ptr and type_info";
   return failure();
 }
 

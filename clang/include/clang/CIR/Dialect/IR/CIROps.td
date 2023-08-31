@@ -1987,6 +1987,7 @@ def AllocException : CIR_Op<"alloc_exception", [
     `(` $allocType `)` `->` type($addr) attr-dict
   }];
 
+  // Constraints verified elsewhere.
   let hasVerifier = 0;
 }
 
