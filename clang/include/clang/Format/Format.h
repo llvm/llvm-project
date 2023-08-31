@@ -2421,9 +2421,8 @@ struct FormatStyle {
 
   /// Indent goto labels.
   ///
-  /// When ``false``, goto labels are flushed left.
   /// \code
-  ///    true:                                  false:
+  ///    GLI_Indent:                            GLI_None:
   ///    int f() {                      vs.     int f() {
   ///      if (foo()) {                           if (foo()) {
   ///      label1:                              label1:
@@ -2432,9 +2431,25 @@ struct FormatStyle {
   ///    label2:                                label2:
   ///      return 1;                              return 1;
   ///    }                                      }
+  ///
+  ///    GLI_HalfIndent:
+  ///    int f() {
+  ///      if (foo()) {
+  ///      label1:
+  ///        bar();
+  ///      }
+  ///    label2:
+  ///      return 1;
+  ///    }
   /// \endcode
   /// \version 10
-  bool IndentGotoLabels;
+  enum GotoLabelIndentation {
+    GLI_None,   // Do not indent goto labels.
+    GLI_Indent, // Indent goto labels at the same level as the surrounding code.
+    GLI_HalfIndent, // Indent goto labels at a half indent level.
+  };
+
+  GotoLabelIndentation IndentGotoLabels;
 
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {
@@ -4335,17 +4350,15 @@ struct FormatStyle {
           InEmptyParentheses(false), Other(false) {}
 
     SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
-        bool InEmptyParentheses, bool Other)
+                         bool InEmptyParentheses, bool Other)
         : InConditionalStatements(InConditionalStatements),
-          InCStyleCasts(InCStyleCasts),
-          InEmptyParentheses(InEmptyParentheses),
+          InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
       return InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
-             InEmptyParentheses == R.InEmptyParentheses &&
-             Other == R.Other;
+             InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
     bool operator!=(const SpacesInParensCustom &R) const {
       return !(*this == R);
