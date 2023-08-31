@@ -18,6 +18,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
+#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ProcessStructReader.h"
@@ -2042,23 +2043,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     address.SetRawAddress(old_box_value);
     return true;
   } else if (type_info.AllSet(eTypeIsSwift | eTypeIsProtocol)) {
-    SwiftASTContext::ProtocolInfo protocol_info;
-    if (!SwiftASTContext::GetProtocolTypeInfo(payload_type, protocol_info))
-      return false;
-    auto ptr_size = m_process.GetAddressByteSize();
-    std::vector<uint8_t> buffer(ptr_size * protocol_info.m_num_storage_words,
-                                0);
-    for (uint32_t idx = 0; idx < protocol_info.m_num_storage_words; idx++) {
-      lldb::addr_t word = m_process.ReadUnsignedIntegerFromMemory(
-          box_value + idx * ptr_size, ptr_size, 0, error);
-      if (error.Fail())
-        return false;
-      memcpy(&buffer[idx * ptr_size], &word, ptr_size);
-    }
-    DataExtractor data(&buffer[0], buffer.size(), m_process.GetByteOrder(),
-                       m_process.GetAddressByteSize());
-    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-        "_", data, m_process, payload_type));
+    ExecutionContext exe_ctx = in_value.GetExecutionContextRef();
+    ValueObjectSP valobj_sp = ValueObjectMemory::Create(
+        exe_ctx.GetBestExecutionContextScope(), "_", box_value, payload_type);
     if (!valobj_sp)
       return false;
 
