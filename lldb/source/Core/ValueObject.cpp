@@ -245,10 +245,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
     SetValueFormat(DataVisualization::GetFormat(*this, eNoDynamicValues));
     SetSummaryFormat(
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
-#if LLDB_ENABLE_PYTHON
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
-#endif
   }
 
   return any_change;
@@ -1240,7 +1238,7 @@ bool ValueObject::DumpPrintableRepresentation(
     Stream &s, ValueObjectRepresentationStyle val_obj_display,
     Format custom_format, PrintableRepresentationSpecialCases special,
     bool do_dump_error) {
-    
+
   // If the ValueObject has an error, we might end up dumping the type, which
   // is useful, but if we don't even have a type, then don't examine the object
   // further as that's not meaningful, only the error is.
@@ -2868,15 +2866,15 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
-  // type.  We don't know how to fetch more data for all the ConstResult types, 
+  // type.  We don't know how to fetch more data for all the ConstResult types,
   // so we can't guarantee this will work:
   Status error;
   CompilerType my_type = GetCompilerType();
 
-  ExecutionContextScope *exe_scope 
+  ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope) 
+  if (compiler_type.GetByteSize(exe_scope)
       <= GetCompilerType().GetByteSize(exe_scope)) {
         return DoCast(compiler_type);
   }
