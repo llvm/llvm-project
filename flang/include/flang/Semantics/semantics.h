@@ -177,6 +177,7 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  void UpdateScopeIndex(Scope &, parser::CharBlock);
 
   bool IsInModuleFile(parser::CharBlock) const;
 
@@ -242,6 +243,13 @@ public:
   CommonBlockList GetCommonBlocks() const;
 
 private:
+  struct ScopeIndexComparator {
+    bool operator()(parser::CharBlock, parser::CharBlock) const;
+  };
+  using ScopeIndex =
+      std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
+  ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
+
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
@@ -261,6 +269,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
