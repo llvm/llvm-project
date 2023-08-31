@@ -504,7 +504,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, raw_ostream *OS) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
-    if (std::optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
+    if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (OS && !DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(
