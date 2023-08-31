@@ -215,6 +215,8 @@ public:
   }
 
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
+  void dump() const;
+  void dump(llvm::raw_ostream &) const;
 };
 
 /// Models the abbreviated syntax to constrain a template type parameter:
