@@ -264,14 +264,11 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
 
 Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
                                 Level lvl) {
-  Value crd = C_IDX(0);
   // A load on the coordinates array yields the coordinate.
   const Value mem = coordinatesBuffers[tid][lvl];
   /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   const Value pos = posits[tid][lvl];
-  const Value off = genIndexLoad(builder, loc, mem, pos);
-  // Linearized the coordinates within the same collapse reassociation.
-  crd = ADDI(crd, off);
+  const Value crd = genIndexLoad(builder, loc, mem, pos);
   return crd;
 }
 
@@ -317,9 +314,10 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
   // Index-reduction related fields.
   this->dependentLvlMap.assign(
-      numTensors, std::vector<std::vector<std::pair<TensorId, Level>>>());
+      numTensors, std::vector<std::vector<std::pair<TensorLevel, unsigned>>>());
   this->slicePosBuffer.assign(numTensors, std::vector<std::vector<Value>>());
-  this->sliceSizes.assign(numTensors, std::vector<std::vector<Value>>());
+  this->sliceMeta.assign(
+      numTensors, std::vector<std::vector<std::pair<Value, unsigned>>>());
   this->sliceStack.assign(numTensors, std::vector<SliceInfo>());
   this->levelReducedDep.assign(numTensors, std::vector<unsigned>());
 
@@ -367,10 +365,10 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
     // Slice-driven loops related initialization.
     levelReducedDep[tid].assign(lvlRank, 0);
-    dependentLvlMap[tid].assign(lvlRank,
-                                std::vector<std::pair<TensorId, Level>>());
+    dependentLvlMap[tid].assign(
+        lvlRank, std::vector<std::pair<TensorLevel, unsigned>>());
     slicePosBuffer[tid].assign(lvlRank, std::vector<Value>());
-    sliceSizes[tid].assign(lvlRank, std::vector<Value>());
+    sliceMeta[tid].assign(lvlRank, std::vector<std::pair<Value, unsigned>>());
     sliceStack[tid].emplace_back(/*minCrd=*/Value(),
                                  /*offset=*/Value(), /*isNonEmpty*/ Value(),
                                  std::nullopt, 0);
@@ -380,8 +378,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
         unsigned depends = dependentLvlMap[tid][l].size();
         if (depends == 0)
           continue;
-        // We need `depends - 1` slices to fully  the affine expression.
-        sliceSizes[tid][l].assign(depends - 1, nullptr);
+        sliceMeta[tid][l].assign(depends, std::make_pair(nullptr, 0));
+        // We need `depends - 1` slices to fully reduce the affine expression.
         slicePosBuffer[tid][l].assign(depends - 1, nullptr);
       }
     }
@@ -502,15 +500,20 @@ void LoopEmitter::initializeLoopEmit(
     Level lvlRank = SparseTensorType(rtp).getLvlRank();
     for (Level lvl = 0; lvl < lvlRank; lvl++) {
       if (!dependentLvlMap[t][lvl].empty()) {
-        ArrayRef<std::pair<TensorId, Level>> depLvls = dependentLvlMap[t][lvl];
+        ArrayRef<std::pair<TensorLevel, unsigned>> depLvls =
+            dependentLvlMap[t][lvl];
         // Needs at least two operands to form a non-trivial affine expression.
-        assert(depLvls.size() > 1);
+        assert(depLvls.size() == sliceMeta[t][lvl].size());
 
         Value size = c0;
-        for (unsigned e = depLvls.size() - 1; e >= 1; e--) {
-          auto [dt, dd] = depLvls[e];
-          size = ADDI(size, lvlSizes[dt][dd]);
-          sliceSizes[t][lvl][e - 1] = size;
+        for (int e = depLvls.size() - 1; e >= 0; e--) {
+          auto [dt, dl] = unpackTensorLevel(depLvls[e].first);
+          unsigned stride = depLvls[e].second;
+          Value stridedSize = lvlSizes[dt][dl];
+          if (stride != 1)
+            stridedSize = MULI(stridedSize, C_IDX(stride));
+          size = ADDI(size, stridedSize);
+          sliceMeta[t][lvl][e] = std::make_pair(size, stride);
         }
       }
     }
@@ -729,8 +732,9 @@ Value LoopEmitter::genWhileLoopConditions(OpBuilder &builder, Location loc,
       // crdHi is a loop invariant, hosit the computation outside the loop.
       if (llvm::isa_and_nonnull<scf::WhileOp>(loop))
         builder.setInsertionPoint(loop);
-      crdHi = ADDI(getMostRecentSliceOnLvl(tid, lvl).offset,
-                   sliceSizes[tid][lvl].back());
+      auto [size, stride] = sliceMeta[tid][lvl].back();
+      assert(stride == 1 && "Not yet implemented");
+      crdHi = ADDI(getMostRecentSliceOnLvl(tid, lvl).offset, size);
     }
     assert(crdHi);
     return genSparseReducedAffineCond(builder, loc,
@@ -984,7 +988,7 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<TensorLvlCond> sparseConds,
   if (sparseConds.size() > 1)
     return false;
 
-  // We also need a while loop for levels with affine index expression for
+  // We also need a while loop for levels with affine index expression and
   // non-unique levels when deduplication is required.
   if (sparseConds.size() == 1) {
     auto [tid, lvl] = unpackTensorLevel(sparseConds.back().first);
@@ -1042,7 +1046,9 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     if (isDenseCond(loopCondKind) && isAffineIdxCond(loopCondKind)) {
       bool unReduc = isAffineIdxUnRedCond(loopCondKind);
       assert(unReduc == !depFullyReduced(tid, lvl));
-      hi = sliceSizes[tid][lvl][sliceStack[tid].back().depth - 1];
+      auto [size, stride] = sliceMeta[tid][lvl][sliceStack[tid].back().depth];
+      assert(stride == 1 && "Not yet implemented");
+      hi = size;
       if (unReduc) {
         // Adjust for loop hi for dense slice-driven loop.
         hi = SUBI(lvlSizes[tid][lvl], hi);
@@ -1215,6 +1221,8 @@ void LoopEmitter::enterTensorsAtDenseLvls(
       SliceInfo &info = sliceStack[tid].back();
       // Pushes sliced dense loop info to tell LoopEmitter how to exit it.
       sliceInfo.emplace_back(tid, lvl, /*fullyReduced=*/!unReduc);
+      // FIXME: The offset and position iterator need to be adjusted when the
+      // slice is strided.
       if (unReduc) {
         assert(*info.slicedOnLvl == lvl);
         // Update the slice information as we enter the new loop.
@@ -1361,7 +1369,9 @@ void LoopEmitter::forwardsReducedSliceLevelTreeIt(OpBuilder &builder,
   while (curLvl < leafLvl && isDenseDLT(lvlTypes[tid][curLvl])) {
     // One step forward in parent level results in forwarding `slice.size` step
     // in child dense level.
-    fcnt = MULI(sliceSizes[tid][curLvl].back(), fcnt);
+    auto [size, stride] = sliceMeta[tid][curLvl].back();
+    assert(stride == 1 && "Not yet implemented");
+    fcnt = MULI(size, fcnt);
     curLvl++;
   }
 
@@ -1420,7 +1430,18 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       // TODO: support coiterating multiple slices
       assert(loopInfo.trivialTidLvls.empty() &&
              loopInfo.sliceDrivenInfo.size() == 1);
-      genSliceNextInduction(builder, loc, whileOp, tid, lvl, operands, o);
+      auto [nxNonEmpty, nxMinCrd, nxAbsOffset] =
+          genSliceNextInduction(builder, loc, tid, lvl);
+      // Update while loop induction operands.
+      operands.push_back(nxNonEmpty);
+      operands.push_back(nxMinCrd);
+      operands.push_back(nxAbsOffset);
+
+      // Update the slice stack.
+      SliceInfo &info = sliceStack[tid].back();
+      info.isNonEmpty = whileOp.getResult(o++);
+      info.minCrd = whileOp.getResult(o++);
+      info.offset = whileOp.getResult(o++);
       continue;
     }
 
@@ -1566,7 +1587,10 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
     Value size, TensorId tid, Level lvl, ValueRange userReduc,
     LoopBodyBuilder bodyBuilder) {
   Value c1 = C_IDX(1);
-  Value sliceHi = ADDI(offset, sliceSizes[tid][lvl].back());
+  auto [sliceSz, stride] = sliceMeta[tid][lvl].back();
+  assert(stride == 1 && "Not yet implemented");
+  Value sliceHi = ADDI(offset, sliceSz);
+
   SmallVector<Value> reduc{posLo}; // loop lower bounds
   const unsigned numMetaReduc = reduc.size();
 
@@ -1663,6 +1687,8 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
     reduc.back() = ADDI(reduc.back(), C_IDX(1));
   };
 
+  // FIXME: Need special handling when the previous unresolved slice is strided:
+  // We probably need to filter out coordinates that is not on stride.
   if (firstResLvl.has_value()) {
     // Overwrite position when the first level is fully resolved.
     pos = posits[firstResLvl->first][firstResLvl->second];
@@ -1694,10 +1720,13 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
               // non-consecutive segments.
               builder.create<memref::StoreOp>(loc, iterArgs.back(), sPtrBuf,
                                               ADDI(iv, c2).getResult());
+
+              auto [size, stride] = sliceMeta[tid][firstLvl].back();
+              assert(stride == 1 && "Not yet implemented");
               ValueRange itArgs =
                   genSliceLvlTraverseLoop(
-                      builder, loc, loopLo, loopHi, offset,
-                      sliceSizes[tid][firstLvl].back(), tid, firstLvl, iterArgs,
+                      builder, loc, loopLo, loopHi, offset, size, tid, firstLvl,
+                      iterArgs,
                       [&](OpBuilder &builder, Location, Value iv,
                           MutableArrayRef<Value> reduc) {
                         ip = builder.saveInsertionPoint();
@@ -1710,8 +1739,9 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
       } else if (isDenseDLT(lvlTypes[tid][firstLvl])) {
         assert(firstLvl == 0); // This must be the first level.
         Value lb = frontSlice.offset;
-        Value sliceSz =
-            sliceSizes[tid][*frontSlice.slicedOnLvl][frontSlice.depth - 1];
+        auto [sliceSz, stride] =
+            sliceMeta[tid][*frontSlice.slicedOnLvl][frontSlice.depth];
+        assert(stride == 1 && "Not yet implemented");
         Value ub = ADDI(lb, sliceSz);
         outerMost = builder.create<scf::ForOp>(
             loc, lb, ub, c1, innerArgs,
@@ -1735,7 +1765,8 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
       Level sliceLvl = *slice->slicedOnLvl;
       assert(isDenseDLT(lvlTypes[tid][sliceLvl]));
       Value offset = slice->offset;
-      Value sliceSz = sliceSizes[tid][sliceLvl][slice->depth - 1];
+      auto [sliceSz, stride] = sliceMeta[tid][sliceLvl][slice->depth];
+      assert(stride == 1 && "Not yet implemented");
       lbs.push_back(offset);
       ubs.push_back(ADDI(offset, sliceSz));
       steps.push_back(c1);
@@ -1788,7 +1819,8 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
                                  lvl, /*depth=*/1);
     return;
   }
-  Value size = sliceSizes[tid][lvl][0];
+  auto [nxSz, stride] = sliceMeta[tid][lvl][1];
+  assert(stride == 1 && "Not yet implemented");
   Value sPtrBuf = slicePosBuffer[tid][lvl][0];
   Value pHi, pLo;
   if (lvl == 0) {
@@ -1816,7 +1848,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
   Value minCrd = genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], pLo);
 
   // FIXME: We need the relative offset related to the base slice.
-  Value absOffset = offsetFromMinCoord(builder, loc, minCrd, size, isNonEmpty);
+  Value absOffset = offsetFromMinCoord(builder, loc, minCrd, nxSz, isNonEmpty);
   sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, lvl,
                                /*depth=*/1);
 }
@@ -1845,7 +1877,12 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
                                           TensorId tid, Level lvl) {
   Value c0 = C_IDX(0), c1 = C_IDX(1), c2 = C_IDX(2);
   unsigned depth = levelReducedDep[tid][lvl];
-  Value size = sliceSizes[tid][lvl][depth]; // Dense slice begin is trivial
+  // TODO: handle case when the current slice stride is not one.
+  assert(sliceMeta[tid][lvl][depth].second == 1 && "Not yet implemented");
+
+  // The remaining slice size after reduction.
+  Value remSz = sliceMeta[tid][lvl][depth + 1].first;
+  // Dense slice begin is trivial
   if (isDenseDLT(lvlTypes[tid][lvl])) {
     sliceStack[tid].emplace_back(c0, c0, constantI1(builder, loc, false), lvl,
                                  depth + 1);
@@ -1941,7 +1978,7 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   builder.create<memref::StoreOp>(loc, result[2], sPtrBuf, c0);
   builder.create<memref::StoreOp>(loc, c0, sPtrBuf, c1);
   // FIXME: we need the relative offset related to the base slice.
-  Value absOffset = offsetFromMinCoord(builder, loc, minCrd, size, isNonEmpty);
+  Value absOffset = offsetFromMinCoord(builder, loc, minCrd, remSz, isNonEmpty);
   sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, lvl, depth + 1);
 }
 
@@ -2005,9 +2042,12 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
     // TODO: Maybe using allocaScopeOp inside the loop to resolve the issue?
     for (Level curLevel = lvl;
          curLevel >= 1 && !lvlFullyResolved(tid, curLevel - 1); curLevel--) {
-      auto depth = remDepOnLevel(tid, curLevel - 1);
-      assert(sliceSizes[tid][lvl].size() >= depth);
-      Value sz = *(sliceSizes[tid][lvl].rbegin() + depth - 1);
+      // We only handle cases when all the previously unresolved levels are
+      // fully reduced.
+      assert(depFullyReduced(tid, curLevel - 1));
+      assert(!sliceMeta[tid][curLevel - 1].empty());
+      auto [sz, stride] = sliceMeta[tid][curLevel - 1].back();
+      assert(stride == 1 && "Not yet implemented");
       bufSize = MULI(bufSize, sz);
     }
     // For a triple of [pLo, pHi, pPtr]. Note that we can not compress pHi
@@ -2042,18 +2082,15 @@ void LoopEmitter::invalidateSliceIterIdx(OpBuilder &builder, Location loc,
   }
 }
 
-void LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
-                                        const Operation *op, TensorId tid,
-                                        Level lvl,
-                                        SmallVectorImpl<Value> &operands,
-                                        unsigned &retIdx) {
+std::tuple<Value, Value, Value>
+LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
+                                   TensorId tid, Level lvl) {
   if (!isCompressedDLT(lvlTypes[tid][lvl]))
     llvm_unreachable("TODO");
 
   // else generate code to compute next non empty slice.
   Value c0 = C_IDX(0), c1 = C_IDX(1), c2 = C_IDX(2);
 
-  auto whileOp = llvm::cast<scf::WhileOp>(op);
   SliceInfo &info = sliceStack[tid].back();
   assert(info.slicedOnLvl == lvl);
   //
@@ -2182,9 +2219,12 @@ void LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
     builder.setInsertionPointAfter(forOp.loops.front());
     // minOffset = minCrd + 1 >= size ? minCrd + 1 - size : c0
     Value tmp = ADDI(forOp.results.front(), c1);
-    Value minOffset = SUBI(tmp, sliceSizes[tid][lvl][info.depth - 1]);
-    Value p = CMPI(uge, tmp, sliceSizes[tid][lvl][info.depth - 1]);
+    auto [size, stride] = sliceMeta[tid][lvl][info.depth];
+    assert(stride == 1 && "Not yet implemented");
+    Value minOffset = SUBI(tmp, size);
+    Value p = CMPI(uge, tmp, size);
     minOffset = SELECT(p, minOffset, c0);
+
     SmallVector<Value, 3> yields;
     yields.assign(forOp.results.begin(), forOp.results.end());
     yields.push_back(minOffset);
@@ -2200,7 +2240,9 @@ void LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
   Value maxPred = CMPI(ugt, minOffset, nxOffset);
   Value nextAbsOffset = SELECT(maxPred, minOffset, nxOffset);
 
-  Value sliceUB = ADDI(nextAbsOffset, sliceSizes[tid][lvl][info.depth - 1]);
+  auto [size, stride] = sliceMeta[tid][lvl][info.depth];
+  assert(stride == 1 && "Not yet implemented");
+  Value sliceUB = ADDI(nextAbsOffset, size);
 
   // FIXME: this only works if there is only one parent.
   assert(info.depth - 1 == 0);
@@ -2211,15 +2253,7 @@ void LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
   assert(info.depth - 1 == 0);
   Value nextRelOffset = nextAbsOffset;
   nextRelOffset = SELECT(nextNonEmpty, nextRelOffset, c0);
-
-  operands.push_back(nextNonEmpty);
-  operands.push_back(nextMinCrd);
-  operands.push_back(nextAbsOffset); // we push the absolute offset.
-
-  // Update the slice stack.
-  info.isNonEmpty = whileOp.getResult(retIdx++);
-  info.minCrd = whileOp.getResult(retIdx++);
-  info.offset = whileOp.getResult(retIdx++);
+  return std::make_tuple(nextNonEmpty, nextMinCrd, nextAbsOffset);
 }
 
 #undef CMPI
