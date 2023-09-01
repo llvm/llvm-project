@@ -75,7 +75,7 @@ void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
       if (IsPush)
         FuncInfo.StackOut = true;
 
-      if (MIB->isStore(It) && !IsPush && !IsRipAddr)
+      if (MIB->mayStore(It) && !IsPush && !IsRipAddr)
         FuncInfo.HeapOut = true;
 
       if (IsRipAddr)
