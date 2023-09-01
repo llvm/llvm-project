@@ -128,6 +128,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1460,6 +1461,10 @@ struct AttributorConfig {
   IPOAmendableCBTy IPOAmendableCB;
 };
 
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
+
 /// The fixpoint analysis framework that orchestrates the attribute deduction.
 ///
 /// The Attributor provides a general abstract analysis framework (guided
@@ -1570,6 +1575,9 @@ struct Attributor {
 
     bool ShouldUpdateAA;
     if (!shouldInitialize<AAType>(IRP, ShouldUpdateAA))
+      return nullptr;
+
+    if (!DebugCounter::shouldExecute(NumAbstractAttributes))
       return nullptr;
 
     // No matching attribute found, create one.
