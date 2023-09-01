@@ -13,7 +13,7 @@
 ; CHECK-DAG: %[[#FPPointerType:]] = OpTypePointer CrossWorkgroup %[[#Float]]
 ; CHECK-DAG: %[[#Pointer:]] = OpVariable %[[#PointerType]] CrossWorkgroup
 ; CHECK-DAG: %[[#FPPointer:]] = OpVariable %[[#FPPointerType]] CrossWorkgroup
-; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 1109917696
+; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42
 
 @ui = common dso_local addrspace(1) global i32 0, align 4
 @f = common dso_local local_unnamed_addr addrspace(1) global float 0.000000e+00, align 4
