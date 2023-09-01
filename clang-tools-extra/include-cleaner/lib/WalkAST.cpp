@@ -241,6 +241,11 @@ public:
     return true;
   }
 
+  bool VisitConceptReference(const ConceptReference *CR) {
+    report(CR->getConceptNameLoc(), CR->getFoundDecl());
+    return true;
+  }
+
   // Report a reference from explicit specializations to the specialized
   // template. Implicit ones are filtered out by RAV and explicit instantiations
   // are already traversed through typelocs.
