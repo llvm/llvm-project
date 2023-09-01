@@ -2,7 +2,6 @@
 #include "SwiftBasicTypes.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
