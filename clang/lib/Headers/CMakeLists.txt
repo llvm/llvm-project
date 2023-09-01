@@ -318,11 +318,13 @@ set(openmp_wrapper_files
 )
 
 set(llvm_libc_wrapper_files
+  llvm_libc_wrappers/assert.h
   llvm_libc_wrappers/stdio.h
   llvm_libc_wrappers/stdlib.h
   llvm_libc_wrappers/string.h
   llvm_libc_wrappers/ctype.h
   llvm_libc_wrappers/inttypes.h
+  llvm_libc_wrappers/time.h
 )
 
 include(GetClangResourceDir)
