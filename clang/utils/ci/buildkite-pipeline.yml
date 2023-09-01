@@ -20,7 +20,6 @@ steps:
   - label: "Format"
     commands:
       - "clang/utils/ci/run-buildbot check-format"
-
     agents:
       queue: "linux"
     retry:
@@ -28,8 +27,6 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
     timeout_in_minutes: 120
-
-  - wait
 
   - label: "Building and testing clang (Linux)"
     commands:

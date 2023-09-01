@@ -544,19 +544,18 @@ def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
 def store_hi16_#as : StoreHi16 <truncstorei16, i16>;
 def truncstorei8_hi16_#as : StoreHi16<truncstorei8, i8>;
 def truncstorei16_hi16_#as : StoreHi16<truncstorei16, i16>;
-
 } // End let IsStore = 1, AddressSpaces = ...
 
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
-def atomic_store_8_#as : PatFrag<(ops node:$ptr, node:$val),
-                                 (atomic_store_8 node:$ptr, node:$val)>;
-def atomic_store_16_#as : PatFrag<(ops node:$ptr, node:$val),
-                                  (atomic_store_16 node:$ptr, node:$val)>;
-def atomic_store_32_#as : PatFrag<(ops node:$ptr, node:$val),
-                                  (atomic_store_32 node:$ptr, node:$val)>;
-def atomic_store_64_#as : PatFrag<(ops node:$ptr, node:$val),
-                                  (atomic_store_64 node:$ptr, node:$val)>;
-}
+def atomic_store_8_#as : PatFrag<(ops node:$val, node:$ptr),
+                                 (atomic_store_8 node:$val, node:$ptr)>;
+def atomic_store_16_#as : PatFrag<(ops node:$val, node:$ptr),
+                                  (atomic_store_16 node:$val, node:$ptr)>;
+def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
+                                  (atomic_store_32 node:$val, node:$ptr)>;
+def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
+                                  (atomic_store_64 node:$val, node:$ptr)>;
+} // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 
 multiclass noret_op {

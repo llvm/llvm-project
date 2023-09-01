@@ -2199,22 +2199,21 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    kshiftlw $1, %k2, %k2
 ; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    kmovw %k0, %edi
 ; KNL-NEXT:    xorl %eax, %eax
-; KNL-NEXT:    testb $2, %cl
+; KNL-NEXT:    testb $1, %dil
 ; KNL-NEXT:    movl $0, %ecx
 ; KNL-NEXT:    je LBB85_2
 ; KNL-NEXT:  ## %bb.1:
-; KNL-NEXT:    movzwl 2(%rsi), %ecx
+; KNL-NEXT:    movzwl (%rsi), %ecx
 ; KNL-NEXT:  LBB85_2:
-; KNL-NEXT:    kmovw %k0, %edi
-; KNL-NEXT:    testb $1, %dil
+; KNL-NEXT:    testb $2, %dil
 ; KNL-NEXT:    je LBB85_4
 ; KNL-NEXT:  ## %bb.3:
-; KNL-NEXT:    movzwl (%rsi), %eax
+; KNL-NEXT:    movzwl 2(%rsi), %eax
 ; KNL-NEXT:  LBB85_4:
-; KNL-NEXT:    movw %ax, (%rdx)
-; KNL-NEXT:    movw %cx, 2(%rdx)
+; KNL-NEXT:    movw %ax, 2(%rdx)
+; KNL-NEXT:    movw %cx, (%rdx)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_concat_v2i1:
@@ -2248,22 +2247,21 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-NEXT:    kshiftrb $7, %k2, %k2
 ; SKX-NEXT:    korw %k1, %k2, %k1
 ; SKX-NEXT:    kandw %k1, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    kmovd %k0, %edi
 ; SKX-NEXT:    xorl %eax, %eax
-; SKX-NEXT:    testb $2, %cl
+; SKX-NEXT:    testb $1, %dil
 ; SKX-NEXT:    movl $0, %ecx
 ; SKX-NEXT:    je LBB85_2
 ; SKX-NEXT:  ## %bb.1:
-; SKX-NEXT:    movzwl 2(%rsi), %ecx
+; SKX-NEXT:    movzwl (%rsi), %ecx
 ; SKX-NEXT:  LBB85_2:
-; SKX-NEXT:    kmovd %k0, %edi
-; SKX-NEXT:    testb $1, %dil
+; SKX-NEXT:    testb $2, %dil
 ; SKX-NEXT:    je LBB85_4
 ; SKX-NEXT:  ## %bb.3:
-; SKX-NEXT:    movzwl (%rsi), %eax
+; SKX-NEXT:    movzwl 2(%rsi), %eax
 ; SKX-NEXT:  LBB85_4:
-; SKX-NEXT:    movw %ax, (%rdx)
-; SKX-NEXT:    movw %cx, 2(%rdx)
+; SKX-NEXT:    movw %ax, 2(%rdx)
+; SKX-NEXT:    movw %cx, (%rdx)
 ; SKX-NEXT:    retq
   %tmp = load <2 x half>, ptr %arg, align 8
   %tmp3 = fcmp fast olt <2 x half> %tmp, <half 0xH4600, half 0xH4600>

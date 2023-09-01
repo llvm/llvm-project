@@ -818,8 +818,15 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
 }
 #endif
 
-/// Compute all the imports for the given module in the Index.
-void llvm::ComputeCrossModuleImportForModule(
+/// Compute all the imports for the given module using the Index.
+///
+/// \p isPrevailing is a callback that will be called with a global value's GUID
+/// and summary and should return whether the module corresponding to the
+/// summary contains the linker-prevailing copy of that value.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+static void ComputeCrossModuleImportForModuleForTest(
     StringRef ModulePath,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
@@ -840,9 +847,12 @@ void llvm::ComputeCrossModuleImportForModule(
 #endif
 }
 
-// Mark all external summaries in Index for import into the given module.
-// Used for distributed builds using a distributed index.
-void llvm::ComputeCrossModuleImportForModuleFromIndex(
+/// Mark all external summaries in \p Index for import into the given module.
+/// Used for testing the case of distributed builds using a distributed index.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+static void ComputeCrossModuleImportForModuleFromIndexForTest(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList) {
   for (const auto &GlobalList : Index) {
@@ -1459,7 +1469,7 @@ Expected<bool> FunctionImporter::importFunctions(
   return ImportedCount;
 }
 
-static bool doImportingForModule(
+static bool doImportingForModuleForTest(
     Module &M, function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
                    isPrevailing) {
   if (SummaryFile.empty())
@@ -1479,11 +1489,11 @@ static bool doImportingForModule(
   // when testing distributed backend handling via the opt tool, when
   // we have distributed indexes containing exactly the summaries to import.
   if (ImportAllIndex)
-    ComputeCrossModuleImportForModuleFromIndex(M.getModuleIdentifier(), *Index,
-                                               ImportList);
+    ComputeCrossModuleImportForModuleFromIndexForTest(M.getModuleIdentifier(),
+                                                      *Index, ImportList);
   else
-    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), isPrevailing,
-                                      *Index, ImportList);
+    ComputeCrossModuleImportForModuleForTest(M.getModuleIdentifier(),
+                                             isPrevailing, *Index, ImportList);
 
   // Conservatively mark all internal values as promoted. This interface is
   // only used when doing importing via the function importing pass. The pass
@@ -1531,7 +1541,7 @@ PreservedAnalyses FunctionImportPass::run(Module &M,
   auto isPrevailing = [](GlobalValue::GUID, const GlobalValueSummary *) {
     return true;
   };
-  if (!doImportingForModule(M, isPrevailing))
+  if (!doImportingForModuleForTest(M, isPrevailing))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

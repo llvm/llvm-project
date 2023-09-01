@@ -558,14 +558,13 @@ exit:                                             ; preds = %for.body
 }
 
 ; Make sure that if there are several reductions in the loop, the order of invariant stores sank outside of the loop is preserved
-; FIXME: This tests currently shows incorrect behavior and it will fixed in the following patch
 ; See https://github.com/llvm/llvm-project/issues/64047
 define void @reduc_add_mul_store_same_ptr(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_add_mul_store_same_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
 ;
 entry:
@@ -619,14 +618,13 @@ exit:
 }
 
 ; Same as above but storing is done to two different pointers and they can be aliased
-; FIXME: This tests currently shows incorrect behavior and it will fixed in the following patch
 define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_add_mul_store_different_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
-; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst2, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
 ;
 entry:
   br label %for.body

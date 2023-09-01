@@ -492,8 +492,8 @@ def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
 def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
-def : Pat<(atomic_store_64 ADDRrr:$dst, i64:$val), (STXrr ADDRrr:$dst, $val)>;
-def : Pat<(atomic_store_64 ADDRri:$dst, i64:$val), (STXri ADDRri:$dst, $val)>;
+def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
+def : Pat<(atomic_store_64 i64:$val, ADDRri:$dst), (STXri ADDRri:$dst, $val)>;
 
 } // Predicates = [Is64Bit]
 

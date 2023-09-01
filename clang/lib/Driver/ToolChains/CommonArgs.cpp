@@ -566,7 +566,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    x86::getX86TargetFeatures(D, Triple, Args, Features, ForAS);
+    x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
     hexagon::getHexagonTargetFeatures(D, Triple, Args, Features);
@@ -722,6 +722,12 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   else if (IsThinLTO && IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine("-bdbg:thinlto")));
 
+  // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
+  // LowerMatrixIntrinsicsPass, which is transitively called by
+  // buildThinLTODefaultPipeline under EnableMatrix.
+  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())

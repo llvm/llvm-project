@@ -1230,6 +1230,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
   if (!CellDescs.isRectangular())
     return;
 
+  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
@@ -1247,7 +1248,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
       do {
         const FormatToken *Previous = Changes[Next->Index].Tok->Previous;
         if (Previous && Previous->isNot(TT_LineComment)) {
-          Changes[Next->Index].Spaces = 0;
+          Changes[Next->Index].Spaces = BracePadding;
           Changes[Next->Index].NewlinesBefore = 0;
         }
         Next = Next->NextColumnElement;
@@ -1280,7 +1281,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
           NetWidth;
       if (Changes[CellIter->Index].NewlinesBefore == 0) {
         Changes[CellIter->Index].Spaces = (CellWidth - (ThisWidth + NetWidth));
-        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : 0;
+        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : BracePadding;
       }
       alignToStartOfCell(CellIter->Index, CellIter->EndIndex);
       for (const auto *Next = CellIter->NextColumnElement; Next;
@@ -1289,7 +1290,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
             calculateCellWidth(Next->Index, Next->EndIndex, true) + NetWidth;
         if (Changes[Next->Index].NewlinesBefore == 0) {
           Changes[Next->Index].Spaces = (CellWidth - ThisWidth);
-          Changes[Next->Index].Spaces += (i > 0) ? 1 : 0;
+          Changes[Next->Index].Spaces += (i > 0) ? 1 : BracePadding;
         }
         alignToStartOfCell(Next->Index, Next->EndIndex);
       }
@@ -1303,12 +1304,13 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   if (!CellDescs.isRectangular())
     return;
 
+  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
   // The first cell needs to be against the left brace.
   if (Changes[CellIter->Index].NewlinesBefore == 0)
-    Changes[CellIter->Index].Spaces = 0;
+    Changes[CellIter->Index].Spaces = BracePadding;
   else
     Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
   ++CellIter;
@@ -1321,7 +1323,8 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     if (Changes[CellIter->Index].NewlinesBefore == 0) {
       Changes[CellIter->Index].Spaces =
           MaxNetWidth - ThisNetWidth +
-          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1
+                                                             : BracePadding);
     }
     auto RowCount = 1U;
     auto Offset = std::distance(Cells.begin(), CellIter);
@@ -1335,7 +1338,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
       if (Changes[Next->Index].NewlinesBefore == 0) {
         Changes[Next->Index].Spaces =
             MaxNetWidth - ThisNetWidth +
-            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : BracePadding);
       }
       ++RowCount;
     }

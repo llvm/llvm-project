@@ -4129,7 +4129,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     // compare isn't a complete class test. e.g. > 1.0 implies fcPositive, but
     // isn't implementable as a class call.
     if (C->isNegative() && !C->isNegZero()) {
-      FPClassTest Interested = fcPositive | fcNan;
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
 
       // FIXME: This assert won't always hold if we depend on the context
       // instruction above
@@ -4210,11 +4210,13 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // TODO: Could fold this with above if there were a matcher which returned all
   // classes in a non-splat vector.
   if (match(RHS, m_AnyZeroFP())) {
-    FPClassTest Interested = FMF.noNaNs() ? fcPositive : fcPositive | fcNan;
-
     switch (Pred) {
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
+      if (!FMF.noNaNs())
+        Interested |= fcNan;
+
       KnownFPClass Known = computeLHSClass(Interested);
 
       // Positive or zero X >= 0.0 --> true
@@ -4226,6 +4228,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     }
     case FCmpInst::FCMP_UGE:
     case FCmpInst::FCMP_OLT: {
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
       KnownFPClass Known = computeLHSClass(Interested);
 
       // Positive or zero or nan X >= 0.0 --> true

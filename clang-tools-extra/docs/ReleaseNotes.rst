@@ -113,6 +113,10 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
+- Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
+  if any :program:`clang-tidy` subprocess exits with a non-zero code or if
+  exporting fixes fails.
+
 New checks
 ^^^^^^^^^^
 
@@ -248,7 +252,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
-  detect comparison between string and empty string literals.
+  detect comparison between string and empty string literals and support
+  ``length()`` method as an alternative to ``size()``.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper

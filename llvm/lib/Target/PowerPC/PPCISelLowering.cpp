@@ -3779,14 +3779,14 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     switch (InlineAsm::getKind(Flags)) {
     default:
       llvm_unreachable("Bad flags!");
-    case InlineAsm::Kind_RegUse:
-    case InlineAsm::Kind_Imm:
-    case InlineAsm::Kind_Mem:
+    case InlineAsm::Kind::RegUse:
+    case InlineAsm::Kind::Imm:
+    case InlineAsm::Kind::Mem:
       i += NumVals;
       break;
-    case InlineAsm::Kind_Clobber:
-    case InlineAsm::Kind_RegDef:
-    case InlineAsm::Kind_RegDefEarlyClobber: {
+    case InlineAsm::Kind::Clobber:
+    case InlineAsm::Kind::RegDef:
+    case InlineAsm::Kind::RegDefEarlyClobber: {
       for (; NumVals; --NumVals, ++i) {
         Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
         if (Reg != PPC::LR && Reg != PPC::LR8)
@@ -11045,14 +11045,14 @@ SDValue PPCTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
     SmallVector<SDValue, 4> Ops{
         N->getOperand(0),
         DAG.getConstant(Intrinsic::ppc_atomic_store_i128, dl, MVT::i32)};
-    SDValue Val = N->getOperand(2);
+    SDValue Val = N->getOperand(1);
     SDValue ValLo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, Val);
     SDValue ValHi = DAG.getNode(ISD::SRL, dl, MVT::i128, Val,
                                 DAG.getConstant(64, dl, MVT::i32));
     ValHi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, ValHi);
     Ops.push_back(ValLo);
     Ops.push_back(ValHi);
-    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(2));
     return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops, MemVT,
                                    N->getMemOperand());
   }

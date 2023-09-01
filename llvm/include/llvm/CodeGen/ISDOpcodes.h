@@ -1049,6 +1049,10 @@ enum NodeType {
   /// is the jumptable index, the last one is the jumptable entry index.
   BR_JT,
 
+  /// JUMP_TABLE_DEBUG_INFO - Jumptable debug info. The first operand is the
+  /// chain, the second is the jumptable index.
+  JUMP_TABLE_DEBUG_INFO,
+
   /// BRCOND - Conditional branch.  The first operand is the chain, the
   /// second is the condition, the third is the block to branch to if the
   /// condition is true.  If the type of the condition is not i1, then the
@@ -1542,6 +1546,12 @@ inline bool isUnsignedIntSetCC(CondCode Code) {
 /// comparison when used with integer operands.
 inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
+}
+
+/// Return true if this is a setcc instruction that performs an equality
+/// comparison when used with floating point operands.
+inline bool isFPEqualitySetCC(CondCode Code) {
+  return Code == SETOEQ || Code == SETONE || Code == SETUEQ || Code == SETUNE;
 }
 
 /// Return true if the specified condition returns true if the two operands to
