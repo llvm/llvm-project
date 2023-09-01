@@ -3,23 +3,6 @@ STRING_EXTENSION_OUTSIDE(SBData)
 %extend lldb::SBData {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
-        def __len__(self):
-            return self.GetByteSize()
-
-        def __iter__(self):
-            pass
 
         class read_data_helper:
             def __init__(self, sbdata, readerfunc, item_size):

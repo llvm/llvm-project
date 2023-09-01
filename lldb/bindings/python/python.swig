@@ -106,21 +106,6 @@ def lldb_iter(obj, getsize, getelem):
     elem = getattr(obj, getelem)
     for i in range(size()):
         yield elem(i)
-
-def __int__(self):
-  pass
-
-def __hex__(self):
-  pass
-
-def __oct__(self):
-  pass
-
-def __len__(self):
-  pass
-
-def __iter__(self):
-  pass
 %}
 
 %include <std_string.i>
