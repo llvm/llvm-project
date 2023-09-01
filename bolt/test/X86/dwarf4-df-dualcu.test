@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir %t
 ; RUN: cd %t
-;; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-main.s \
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-main.s \
 ; RUN: -split-dwarf-file=main.dwo -o main.o
 ; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-helper.s \
 ; RUN: -split-dwarf-file=helper.dwo -o helper.o
@@ -12,7 +12,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
 ; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo &> maindwo.txt
-; RUN cat maindwo.txt | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
+; RUN: cat maindwo.txt | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
 ; RUN: not llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> mainddwodwo.txt
 ; RUN: cat mainddwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo &> helperdwo.txt
