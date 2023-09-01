@@ -459,6 +459,14 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
 /clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
 
+# DirectX
+/llvm/include/llvm/IR/IntrinsicsDirectX.td @llvm/pr-subscribers-DirectX
+/llvm/lib/Target/DirectX/ @llvm/pr-subscribers-DirectX
+/llvm/test/CodeGen/DirectX/ @llvm/pr-subscribers-DirectX
+/llvm/tools/dxil-dis @llvm/pr-subscribers-DirectX
+/llvm/test/tools/dxil-dis @llvm/pr-subscribers-DirectX
+/clang/lib/Basic/Targets/DirectX* @llvm/pr-subscribers-DirectX
+
 # loongarch
 /llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
 /llvm/lib/Target/LoongArch/ @llvm/pr-subscribers-loongarch
