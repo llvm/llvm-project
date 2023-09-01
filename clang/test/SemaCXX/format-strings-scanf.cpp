@@ -29,6 +29,8 @@ union bag {
 
 void test(void) {
     bag b;
+    // expected-warning@+2 {{format specifies type 'char *' but the argument has type 'bool *'}}
+    // expected-warning@+1 {{format specifies type 'unsigned char *' but the argument has type 'bool *'}}
     scan("%hhi %hhu %hhi %hhu", &b.sc, &b.uc, &b.b, &b.b);
     scan("%hi %hu", &b.ss, &b.us);
     scan("%i %u", &b.si, &b.ui);

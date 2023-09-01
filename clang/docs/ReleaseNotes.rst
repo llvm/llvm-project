@@ -205,6 +205,9 @@ Bug Fixes in This Version
 - For function multi-versioning using the ``target`` or ``target_clones``
   attributes, remove comdat for internal linkage functions.
   (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
+- Clang now reports ``-Wformat`` for bool value and char specifier confusion
+  in scanf. Fixes
+  (`#64987 <https://github.com/llvm/llvm-project/issues/64987>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
