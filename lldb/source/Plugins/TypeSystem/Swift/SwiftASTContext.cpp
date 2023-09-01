@@ -210,28 +210,19 @@ CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
   return {weak_from_this(), swift_type};
 }
 
-swift::Type TypeSystemSwiftTypeRef::GetSwiftType(CompilerType compiler_type) {
-  auto ts =
-      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts)
-    return {};
-
-  // FIXME: Suboptimal performance, because the ConstString is looked up again.
-  ConstString mangled_name(
-      reinterpret_cast<const char *>(compiler_type.GetOpaqueQualType()));
-  if (auto *swift_ast_context = ts->GetSwiftASTContext())
-    return swift_ast_context->ReconstructType(mangled_name);
-  return {};
-}
-
 swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
   if (compiler_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
     return reinterpret_cast<swift::TypeBase *>(
         compiler_type.GetOpaqueQualType());
-  if (auto ts = compiler_type.GetTypeSystem()
-                    .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-    return ts->GetSwiftType(compiler_type);
 
+  // FIXME: Suboptimal performance, because the ConstString is looked up again.
+  if (auto ts = compiler_type.GetTypeSystem()
+      .dyn_cast_or_null<TypeSystemSwiftTypeRef>()) {
+    ConstString mangled_name(
+        reinterpret_cast<const char *>(compiler_type.GetOpaqueQualType()));
+    if (auto *swift_ast_context = ts->GetSwiftASTContext())
+      return swift_ast_context->ReconstructType(mangled_name);
+  }
   return {};
 }
 
