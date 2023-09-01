@@ -282,9 +282,9 @@ function(add_link_opts target_name)
         # ld64's implementation of -dead_strip breaks tools that use plugins.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
-      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
-        # Solaris 11.4.
+        # Solaris 11.4.  GNU ld ignores it, but warns every time.
         include(LLVMCheckLinkerFlag)
         llvm_check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
@@ -1281,7 +1281,10 @@ function(export_executable_symbols target)
     # the size of the exported symbol table, but on other platforms we can do
     # it without any trouble.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
-    if (APPLE)
+    # CMake doesn't set CMAKE_EXE_EXPORTS_${lang}_FLAG on Solaris, so
+    # ENABLE_EXPORTS has no effect.  While Solaris ld defaults to -rdynamic
+    # behaviour, GNU ld needs it.
+    if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "SunOS")
       set_property(TARGET ${target} APPEND_STRING PROPERTY
         LINK_FLAGS " -rdynamic")
     endif()

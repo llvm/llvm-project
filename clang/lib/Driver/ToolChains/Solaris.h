@@ -32,12 +32,15 @@ public:
                     const char *LinkingOutput) const override;
 };
 
+bool isLinkerGnuLd(const ToolChain &TC, const llvm::opt::ArgList &Args);
+
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("solaris::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
+  std::string getLinkerPath(const llvm::opt::ArgList &Args) const;
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
@@ -64,10 +67,7 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
-  const char *getDefaultLinker() const override {
-    // clang currently uses Solaris ld-only options.
-    return "/usr/bin/ld";
-  }
+  const char *getDefaultLinker() const override;
 
 protected:
   Tool *buildAssembler() const override;
