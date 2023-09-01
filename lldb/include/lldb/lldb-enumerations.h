@@ -729,7 +729,6 @@ enum SectionType {
   eSectionTypeELFRelocationEntries, ///< Elf SHT_REL or SHT_REL section
   eSectionTypeELFDynamicLinkInfo,   ///< Elf SHT_DYNAMIC section
   eSectionTypeEHFrame,
-  eSectionTypeSwiftModules,
   eSectionTypeARMexidx,
   eSectionTypeARMextab,
   eSectionTypeCompactUnwind, ///< compact unwind section in Mach-O,
