@@ -749,4 +749,10 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+
+def warn_android_unversioned_fallback : Warning<
+  "Using unversioned Android target directory %0 for target %1. Unversioned"
+  " directories will not be used in Clang 19. Provide a versioned directory"
+  " for the target version or lower instead.">,
+  InGroup<DiagGroup<"android-unversioned-fallback">>;
 }
