@@ -2444,8 +2444,7 @@ define <2 x i1> @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan_
 
 define i1 @test_class_is_zero_nozero_src(float nofpclass(zero) %arg) {
 ; CHECK-LABEL: @test_class_is_zero_nozero_src(
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp oeq float [[ARG:%.*]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 96)
   ret i1 %class
@@ -2578,8 +2577,7 @@ define i1 @test_class_is_neginf_or_nopinf_src(float nofpclass(pinf) %arg) {
 
 define i1 @test_class_is_neginf_noninf_src(float nofpclass(ninf) %arg) {
 ; CHECK-LABEL: @test_class_is_neginf_noninf_src(
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp oeq float [[ARG:%.*]], 0xFFF0000000000000
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 4)
   ret i1 %class
@@ -2604,8 +2602,7 @@ define i1 @test_class_is_posinf_noninf_src(float nofpclass(ninf) %arg) {
 
 define i1 @test_class_is_posinf_nopinf_src(float nofpclass(pinf) %arg) {
 ; CHECK-LABEL: @test_class_is_posinf_nopinf_src(
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp oeq float [[ARG:%.*]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 512)
   ret i1 %class
@@ -2733,8 +2730,7 @@ define i1 @test_class_is_nan_assume_uno(float %x) {
 ; CHECK-LABEL: @test_class_is_nan_assume_uno(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ord = fcmp uno float %x, 0.0
   call void @llvm.assume(i1 %ord)
