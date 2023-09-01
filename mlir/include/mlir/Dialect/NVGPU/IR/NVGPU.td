@@ -192,6 +192,15 @@ def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "w
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def NVGPU_WarpgroupResult : NVGPU_Type<"WarpgroupResult", "warpgroup.result", []> {
+  let parameters = (ins "Type":$tensor);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let description = [{
+    It is fragmented result matrix from `nvgpu.wargroup.mma`.
+    [See the details of register fragment layout for accumulator matrix D](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVGPU Op Definitions
 //===----------------------------------------------------------------------===//
@@ -664,5 +673,44 @@ def NVGPU_GenerateGmmaDescriptorOp : NVGPU_Op<"wgmma.generate.descriptor", []> {
   let hasVerifier = 1;
 }
 
+def NVGPU_WarpgroupMmaOp : NVGPU_Op<"wargroup.mma"> {
+  let description = [{
+    The `nvgpu.wargroup.mma` op performs the warpgroup-level (4 warps) 
+    matrix-multiply-and-accumulate (mma) operation that results in 
+    `nvvm.wgmma.mma_async`. 
+    
+    The operands are `descriptorA` and `descriptorB` that are wgmma matrix 
+    descriptors that shows the properties of the matrix in shared memory. The 
+    results are thread-level ownership to the warpgroup-level mma operation 
+    shape. The shape is deduced from the descriptor types and output vector.
+
+    The Op corresponds multiple `nvvm.wgmma.mma_async` operations to complete the 
+    given shape. As the the instruction `nvvm.wgmma.async` is an asyncronous, 
+    this Op groups the `nvvm.wgmma.async` and surrounds them between 
+    `wgmma.fence.aligned` and `wgmma.commit.group.sync.aligned`, 
+    `wgmma.wait.group.sync.aligned` Ops.
+
+    Example:
+    ```mlir
+      %res = nvgpu.wargroup.mma %wgmmaDescA, %wgmmaDescB, %acc: 
+                    !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
+                    !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
+                    vector<128x128xf32> -> !nvgpu.warpgroup.result<tensor = ...>
+    ```
+  }];
+
+  let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA, 
+                       NVGPU_WarpgroupMatrixDescriptor:$descriptorB,                        
+                       AnyVector:$matrixC,
+                       DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
+                       OptionalAttr<UnitAttr>:$transposeA,
+                       OptionalAttr<UnitAttr>:$transposeB);
+  let results = (outs Variadic<NVGPU_WarpgroupResult>:$matrixD);
+  let assemblyFormat = [{    
+    $descriptorA`,` $descriptorB`,` $matrixC (`,` `group` `=` $waitGroup^ )? attr-dict
+    `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
+  }];
+  let hasVerifier = 1;
+}
 
 #endif // NVGPU

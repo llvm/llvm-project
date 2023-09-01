@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -33,6 +34,10 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+
+/// Number of bits that needs to excluded when building matrix descriptor for
+/// wgmma operations.
+constexpr int exclude4LSB = 4;
 
 /// GPU has 32 bit registers, this function truncates values when larger width
 /// is not needed.
@@ -984,10 +989,9 @@ struct NVGPUGenerateGmmaDescriptorLowering
                                          shiftLeft(val, startBit));
     };
 
-    int ex4LSB = 4;
     int64_t sizeN = op.getTensorMap().getType().getTensor().getDimSize(0);
-    uint64_t strideDimVal = (layout << 3) >> ex4LSB;
-    uint64_t leadDimVal = (sizeN * layout) >> ex4LSB;
+    uint64_t strideDimVal = (layout << 3) >> exclude4LSB;
+    uint64_t leadDimVal = (sizeN * layout) >> exclude4LSB;
     uint64_t offsetVal = 0;
 
     Value strideDim = makeConst(strideDimVal);
@@ -1141,6 +1145,164 @@ struct NVGPUTmaCreateDescriptorOpLowering
   }
 };
 
+struct NVGPUWarpgroupMmaOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaOp> {
+  using ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult getWgmmaShape(int64_t sizeM, int64_t sizeN, Type inputElemType,
+                              int &wgmmaShapeM, int &wgmmaShapeN,
+                              int &wgmmaShapeK) const {
+    wgmmaShapeM = 64;
+    wgmmaShapeN = sizeN;
+    if (inputElemType.isTF32()) {
+      wgmmaShapeK = 8;
+    } else if (inputElemType.isF16() || inputElemType.isBF16()) {
+      wgmmaShapeK = 16;
+    } else if (inputElemType.isFloat8E4M3FN() || inputElemType.isFloat8E5M2() ||
+               inputElemType.isInteger(16)) {
+      wgmmaShapeK = 32;
+    } else if (inputElemType.isInteger(1)) {
+      wgmmaShapeK = 256;
+    } else {
+      return failure();
+    }
+    LLVM_DEBUG(DBGS() << "Generating wgmma.mma.async shape[m = " << wgmmaShapeM
+                      << ", n = " << wgmmaShapeN << ", k = " << wgmmaShapeK
+                      << "]\n");
+    return success();
+  }
+
+  Value generateNVVMWgmmaOp(MLIRContext *ctx,
+                            ConversionPatternRewriter &rewriter, Location loc,
+                            int m, int n, int k, Type resultStructType,
+                            Value inout, Value descriptorA,
+                            Value descriptorB) const {
+    TypeRange resultTypes = {resultStructType};
+    auto shape = NVVM::MMAShapeAttr::get(ctx, m, n, k);
+    auto scaleOut = NVVM::WGMMAScaleOutAttr::get(ctx, NVVM::WGMMAScaleOut::one);
+    auto scaleIn = NVVM::WGMMAScaleInAttr::get(ctx, NVVM::WGMMAScaleIn::one);
+    auto layoutA = NVVM::MMALayoutAttr::get(ctx, NVVM::MMALayout::row);
+    auto layoutB = NVVM::MMALayoutAttr::get(ctx, NVVM::MMALayout::col);
+    // todo input type
+    auto itype = NVVM::WGMMATypesAttr::get(ctx, NVVM::WGMMATypes::f16);
+    auto overflow =
+        NVVM::MMAIntOverflowAttr::get(ctx, NVVM::MMAIntOverflow::wrapped);
+    Value res = rewriter.create<NVVM::WgmmaMmaAsyncOp>(
+        loc, resultTypes, inout, descriptorA, descriptorB, shape, itype, itype,
+        scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
+    return res;
+  }
+
+  static Type buildOutputStructType(MLIRContext *ctx, Type outElemType,
+                                    int sizeN) {
+    int outputElements = 0;
+    if (outElemType.isF32() || outElemType.isInteger(32))
+      outputElements = sizeN / 2;
+    if (outElemType.isF16())
+      outputElements = sizeN / 4;
+    SmallVector<Type> structBody;
+    for (int i = 0; i < outputElements; i++)
+      structBody.push_back(outElemType);
+    return LLVM::LLVMStructType::getLiteral(ctx, structBody);
+  }
+
+  LogicalResult
+  matchAndRewrite(nvgpu::WarpgroupMmaOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> wgmmaResults;
+
+    int64_t sizeM = op.getMatrixC().getType().getDimSize(0);
+    int64_t sizeN = op.getMatrixC().getType().getDimSize(1);
+    int64_t sizeK = op.getDescriptorA().getType().getTensor().getDimSize(1);
+
+    LLVM_DEBUG(DBGS() << "===--- GEMM D[" << sizeM << "][" << sizeN << "] += A["
+                      << sizeM << "][" << sizeK << "] * B[" << sizeK << "]["
+                      << sizeN << "] ---===\n");
+
+    int wgmmaShapeM, wgmmaShapeN, wgmmaShapeK;
+    if (failed(getWgmmaShape(sizeM, sizeN, rewriter.getF16Type(), wgmmaShapeM,
+                             wgmmaShapeN, wgmmaShapeK))) {
+      return failure();
+    }
+
+    Value descriptorA = adaptor.getDescriptorA();
+    Value descriptorB = adaptor.getDescriptorB();
+
+    //  Generate wgmma group
+
+    auto loc = op->getLoc();
+    Type outElemType = op.getMatrixC().getType().getElementType();
+    Type stype = buildOutputStructType(op->getContext(), outElemType, sizeN);
+    MemRefType typeTensorA = op.getDescriptorA().getType().getTensor();
+    MemRefType typeTensorB = op.getDescriptorB().getType().getTensor();
+
+    auto makeAdd = [&](Value lhs, Value rhs) -> Value {
+      return rewriter.create<LLVM::AddOp>(loc, lhs.getType(), lhs, rhs);
+    };
+
+    auto iterateDescA = [&](Value desc, int iterM, int iterN,
+                            int iterK) -> Value {
+      // todo : Handle column major
+      int byte = typeTensorA.getElementTypeBitWidth() / 8;
+      int tileShapeA = typeTensorA.getDimSize(1);
+      int incrementVal =
+          ((wgmmaShapeK * iterK) + (sizeK * tileShapeA * iterM)) * byte;
+      incrementVal = incrementVal >> exclude4LSB;
+      LLVM_DEBUG(DBGS() << "\t\t[m: " << iterM << " n: " << iterN << " k: "
+                        << iterK << "] [wgmma descriptors] Descriptor A + "
+                        << incrementVal << " | \t ");
+      return incrementVal
+                 ? makeAdd(desc, makeI64Const(rewriter, op, incrementVal))
+                 : desc;
+    };
+
+    auto iterateDescB = [&](Value desc, int iterM, int iterN,
+                            int iterK) -> Value {
+      // todo : Handle row major
+      int byte = typeTensorB.getElementTypeBitWidth() / 8;
+      int incrementVal = typeTensorB.getDimSize(0) * wgmmaShapeK * iterK * byte;
+      incrementVal = incrementVal >> exclude4LSB;
+      LLVM_DEBUG(DBGSE() << "Descriptor B + " << incrementVal << "\n");
+      return incrementVal
+                 ? makeAdd(desc, makeI64Const(rewriter, op, incrementVal))
+                 : desc;
+    };
+
+    rewriter.create<NVVM::WgmmaFenceAlignedOp>(loc);
+    for (int iterM = 0; iterM < (sizeM / wgmmaShapeM); iterM++) {
+      Value undefOp = rewriter.create<LLVM::UndefOp>(loc, stype);
+      Value inout = undefOp;
+      LLVM_DEBUG(DBGS() << " D[" << (iterM * wgmmaShapeM) << ":"
+                        << (iterM * wgmmaShapeM) + wgmmaShapeM << "][" << 0
+                        << ":" << wgmmaShapeN << "] += \n");
+      for (int iterK = 0; iterK < (sizeK / wgmmaShapeK); iterK++) {
+        Value descA = iterateDescA(descriptorA, iterM, 0, iterK);
+        Value descB = iterateDescB(descriptorB, iterM, 0, iterK);
+        LLVM_DEBUG(DBGS() << "\t wgmma."
+                          << "m" << wgmmaShapeM << "n" << wgmmaShapeN << "k"
+                          << wgmmaShapeK << "(A[" << (iterM * wgmmaShapeM)
+                          << ":" << (iterM * wgmmaShapeM) + wgmmaShapeM << "]["
+                          << (iterK * wgmmaShapeK) << ":"
+                          << (iterK * wgmmaShapeK + wgmmaShapeK) << "] * "
+                          << " B[" << (iterK * wgmmaShapeK) << ":"
+                          << (iterK * wgmmaShapeK + wgmmaShapeK) << "][" << 0
+                          << ":" << wgmmaShapeN << "])\n");
+        inout = generateNVVMWgmmaOp(op->getContext(), rewriter, loc,
+                                    wgmmaShapeM, wgmmaShapeN, wgmmaShapeK,
+                                    stype, inout, descA, descB);
+      }
+      wgmmaResults.push_back(inout);
+    }
+
+    rewriter.create<NVVM::WgmmaGroupSyncAlignedOp>(loc);
+    rewriter.create<NVVM::WgmmaWaitGroupSyncOp>(loc, op.getWaitGroup());
+
+    ValueRange myres(wgmmaResults);
+    rewriter.replaceOp(op, myres);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -1156,6 +1318,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateGmmaDescriptorLowering,   // nvgpu.wgmma.generate.descriptor
+      NVGPUWarpgroupMmaOpLowering,           // nvgpu.wargroup.mma
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);

@@ -221,3 +221,64 @@ func.func @async_cp_size_invalid_f64(
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf64> to memref<3x16x128xf64, 3>
   return
 }
+
+// -----
+
+!accMatrixStruct = !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32)>
+!tResult = !nvgpu.warpgroup.result<tensor = !accMatrixStruct>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x121xf16, 3>>
+
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %D: vector<128x128xf32>) {
+  // expected-error @+1 {{'nvgpu.wargroup.mma' op 2nd dim matrix-B ( 121 ) != 2nd dim matrix-C ( 128 )}}  
+  %0:2 = nvgpu.wargroup.mma %descA, %descB, %D: !tDescA, !tDescB, vector<128x128xf32> -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!accMatrixStruct = !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32)>
+!tResult = !nvgpu.warpgroup.result<tensor = !accMatrixStruct>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_wrong_accumulator(%descA: !tDescA, %descB: !tDescB, %D: vector<128xf32>) {
+  // expected-error @+1 {{'nvgpu.wargroup.mma' op has input matrices A, B and D, they must be 2 dimensional}}  
+  %0:2 = nvgpu.wargroup.mma %descA, %descB, %D: !tDescA, !tDescB, vector<128xf32> -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!accMatrixStruct = !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32)>
+!tResult = !nvgpu.warpgroup.result<tensor = !accMatrixStruct>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x128xf32, 3>>
+func.func @warpgroup_mma_wrong_datatypes(%descA: !tDescA, %descB: !tDescB, %D: vector<128x128xf32>) {
+  // expected-error @+1 {{'nvgpu.wargroup.mma' op 'f32' += 'f16' * 'f32', it is not supported.}}  
+  %0:2 = nvgpu.wargroup.mma %descA, %descB, %D: !tDescA, !tDescB, vector<128x128xf32> -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!accMatrixStruct = !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32)>
+!tResult = !nvgpu.warpgroup.result<tensor = !accMatrixStruct>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x512xf16, 3>>
+func.func @warpgroup_mma_wrong_large_shape(%descA: !tDescA, %descB: !tDescB, %D: vector<128x512xf32>) {
+  // expected-error @+1 {{'nvgpu.wargroup.mma' op has input type 'memref<64x512xf16, 3>' n is set to 512, it is not supported}}  
+  %0:2 = nvgpu.wargroup.mma %descA, %descB, %D: !tDescA, !tDescB, vector<128x512xf32> -> !tResult, !tResult
+  return
+}
