@@ -3,6 +3,9 @@
 ; Generic code is covered by ../basic.ll, only the x86_64 specific code is
 ; tested here.
 ;
+; RUN: opt < %s -passes=hwasan -S | FileCheck %s
+; RUN: opt < %s -passes=hwasan -hwasan-inline-fast-path-checks=0 -S | FileCheck %s --check-prefixes=NOFASTPATH
+; RUN: opt < %s -passes=hwasan -hwasan-inline-fast-path-checks=1 -S | FileCheck %s --check-prefixes=FASTPATH
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=ABORT
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=RECOVER
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-instrument-with-calls=0 -S | FileCheck %s  --check-prefixes=ABORT-INLINE
@@ -12,6 +15,33 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @test_load8(ptr %a) sanitize_hwaddress {
+; CHECK-LABEL: define i8 @test_load8
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_load1(i64 [[TMP0]])
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
+; CHECK-NEXT:    ret i8 [[B]]
+;
+; NOFASTPATH-LABEL: define i8 @test_load8
+; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOFASTPATH-NEXT:  entry:
+; NOFASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; NOFASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_load1(i64 [[TMP0]])
+; NOFASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
+; NOFASTPATH-NEXT:    ret i8 [[B]]
+;
+; FASTPATH-LABEL: define i8 @test_load8
+; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; FASTPATH-NEXT:  entry:
+; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_load1(i64 [[TMP0]])
+; FASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
+; FASTPATH-NEXT:    ret i8 [[B]]
+;
 ; ABORT-LABEL: define i8 @test_load8
 ; ABORT-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ABORT-NEXT:  entry:
@@ -118,6 +148,33 @@ entry:
 }
 
 define i40 @test_load40(ptr %a) sanitize_hwaddress {
+; CHECK-LABEL: define i40 @test_load40
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP0]], i64 5)
+; CHECK-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
+; CHECK-NEXT:    ret i40 [[B]]
+;
+; NOFASTPATH-LABEL: define i40 @test_load40
+; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
+; NOFASTPATH-NEXT:  entry:
+; NOFASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; NOFASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP0]], i64 5)
+; NOFASTPATH-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
+; NOFASTPATH-NEXT:    ret i40 [[B]]
+;
+; FASTPATH-LABEL: define i40 @test_load40
+; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
+; FASTPATH-NEXT:  entry:
+; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP0]], i64 5)
+; FASTPATH-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
+; FASTPATH-NEXT:    ret i40 [[B]]
+;
 ; ABORT-LABEL: define i40 @test_load40
 ; ABORT-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-NEXT:  entry:
@@ -168,6 +225,33 @@ entry:
 }
 
 define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
+; CHECK-LABEL: define void @test_store8
+; CHECK-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_store1(i64 [[TMP0]])
+; CHECK-NEXT:    store i8 [[B]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+; NOFASTPATH-LABEL: define void @test_store8
+; NOFASTPATH-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; NOFASTPATH-NEXT:  entry:
+; NOFASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; NOFASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_store1(i64 [[TMP0]])
+; NOFASTPATH-NEXT:    store i8 [[B]], ptr [[A]], align 4
+; NOFASTPATH-NEXT:    ret void
+;
+; FASTPATH-LABEL: define void @test_store8
+; FASTPATH-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; FASTPATH-NEXT:  entry:
+; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_store1(i64 [[TMP0]])
+; FASTPATH-NEXT:    store i8 [[B]], ptr [[A]], align 4
+; FASTPATH-NEXT:    ret void
+;
 ; ABORT-LABEL: define void @test_store8
 ; ABORT-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-NEXT:  entry:
@@ -274,6 +358,33 @@ entry:
 }
 
 define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
+; CHECK-LABEL: define void @test_store40
+; CHECK-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 5)
+; CHECK-NEXT:    store i40 [[B]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+; NOFASTPATH-LABEL: define void @test_store40
+; NOFASTPATH-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
+; NOFASTPATH-NEXT:  entry:
+; NOFASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; NOFASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 5)
+; NOFASTPATH-NEXT:    store i40 [[B]], ptr [[A]], align 4
+; NOFASTPATH-NEXT:    ret void
+;
+; FASTPATH-LABEL: define void @test_store40
+; FASTPATH-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
+; FASTPATH-NEXT:  entry:
+; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 5)
+; FASTPATH-NEXT:    store i40 [[B]], ptr [[A]], align 4
+; FASTPATH-NEXT:    ret void
+;
 ; ABORT-LABEL: define void @test_store40
 ; ABORT-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-NEXT:  entry:
@@ -324,6 +435,33 @@ entry:
 }
 
 define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
+; CHECK-LABEL: define void @test_store_unaligned
+; CHECK-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 8)
+; CHECK-NEXT:    store i64 [[B]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+; NOFASTPATH-LABEL: define void @test_store_unaligned
+; NOFASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; NOFASTPATH-NEXT:  entry:
+; NOFASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; NOFASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 8)
+; NOFASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 4
+; NOFASTPATH-NEXT:    ret void
+;
+; FASTPATH-LABEL: define void @test_store_unaligned
+; FASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; FASTPATH-NEXT:  entry:
+; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 8)
+; FASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 4
+; FASTPATH-NEXT:    ret void
+;
 ; ABORT-LABEL: define void @test_store_unaligned
 ; ABORT-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-NEXT:  entry:
