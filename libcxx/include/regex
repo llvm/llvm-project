@@ -1459,7 +1459,7 @@ struct __state
     _LIBCPP_INLINE_VISIBILITY
     __state()
         : __do_(0), __first_(nullptr), __current_(nullptr), __last_(nullptr),
-          __node_(nullptr), __flags_() {}
+          __node_(nullptr), __flags_(), __at_first_(false) {}
 };
 
 // __node
