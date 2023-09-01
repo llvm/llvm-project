@@ -2179,10 +2179,18 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     switch (Opc) {
     case ISD::SMIN:
-      // TODO: Add KnownBits::sle/slt handling.
+      if (std::optional<bool> IsSLE = KnownBits::sle(Known0, Known1))
+        return TLO.CombineTo(Op, *IsSLE ? Op0 : Op1);
+      if (std::optional<bool> IsSLT = KnownBits::slt(Known0, Known1))
+        return TLO.CombineTo(Op, *IsSLT ? Op0 : Op1);
+      Known = KnownBits::smin(Known0, Known1);
       break;
     case ISD::SMAX:
-      // TODO: Add KnownBits::sge/sgt handling.
+      if (std::optional<bool> IsSGE = KnownBits::sge(Known0, Known1))
+        return TLO.CombineTo(Op, *IsSGE ? Op0 : Op1);
+      if (std::optional<bool> IsSGT = KnownBits::sgt(Known0, Known1))
+        return TLO.CombineTo(Op, *IsSGT ? Op0 : Op1);
+      Known = KnownBits::smax(Known0, Known1);
       break;
     case ISD::UMIN:
       if (std::optional<bool> IsULE = KnownBits::ule(Known0, Known1))
