@@ -496,7 +496,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
             "[GetMemberVariableOffset] asked to resolve offset for member %s",
             member_name.str().c_str());
 
-  // Using the module context for RemoteAST is cheaper bit only safe
+  // Using the module context for RemoteAST is cheaper but only safe
   // when there is no dynamic type resolution involved.
   // If this is already in the expression context, ask RemoteAST.
   if (instance_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
@@ -2234,8 +2234,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
 
 static bool IsIndirectEnumCase(ValueObject &valobj) {
   return (valobj.GetLanguageFlags() &
-          SwiftASTContext::LanguageFlags::eIsIndirectEnumCase) ==
-         SwiftASTContext::LanguageFlags::eIsIndirectEnumCase;
+          TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase) ==
+         TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
 }
 
 static bool CouldHaveDynamicValue(ValueObject &in_value) {
