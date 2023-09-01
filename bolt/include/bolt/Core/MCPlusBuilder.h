@@ -613,11 +613,11 @@ public:
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
-  virtual bool isLoad(const MCInst &Inst) const {
+  virtual bool mayLoad(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).mayLoad();
   }
 
-  virtual bool isStore(const MCInst &Inst) const {
+  virtual bool mayStore(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).mayStore();
   }
 
