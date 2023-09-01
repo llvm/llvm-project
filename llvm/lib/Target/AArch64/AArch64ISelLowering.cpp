@@ -23017,19 +23017,20 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   // Check ExtractLow's user.
   if (HasFoundMULLow) {
     SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
-    if (ExtractLowUser->getOpcode() != N->getOpcode())
+    if (ExtractLowUser->getOpcode() != N->getOpcode()) {
       HasFoundMULLow = false;
-
-    if (ExtractLowUser->getOperand(0) == ExtractLow) {
-      if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(1);
-      else
-        HasFoundMULLow = false;
     } else {
-      if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(0);
-      else
-        HasFoundMULLow = false;
+      if (ExtractLowUser->getOperand(0) == ExtractLow) {
+        if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(1);
+        else
+          HasFoundMULLow = false;
+      } else {
+        if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(0);
+        else
+          HasFoundMULLow = false;
+      }
     }
   }
 
