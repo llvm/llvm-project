@@ -10,11 +10,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define half @fadda_v4f16(half %start, <4 x half> %a) {
 ; CHECK-LABEL: fadda_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[2]
+; CHECK-NEXT:    mov z1.h, z1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %res = call half @llvm.vector.reduce.fadd.v4f16(half %start, <4 x half> %a)
   ret half %res
@@ -23,11 +26,22 @@ define half @fadda_v4f16(half %start, <4 x half> %a) {
 define half @fadda_v8f16(half %start, <8 x half> %a) {
 ; CHECK-LABEL: fadda_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[2]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[4]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[5]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[6]
+; CHECK-NEXT:    mov z1.h, z1.h[7]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %res = call half @llvm.vector.reduce.fadd.v8f16(half %start, <8 x half> %a)
   ret half %res
@@ -36,13 +50,38 @@ define half @fadda_v8f16(half %start, <8 x half> %a) {
 define half @fadda_v16f16(half %start, ptr %a) {
 ; CHECK-LABEL: fadda_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[2]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[4]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[5]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[6]
+; CHECK-NEXT:    mov z1.h, z1.h[7]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[2]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[4]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[5]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov z2.h, z1.h[6]
+; CHECK-NEXT:    mov z1.h, z1.h[7]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %op = load <16 x half>, ptr %a
   %res = call half @llvm.vector.reduce.fadd.v16f16(half %start, <16 x half> %op)
@@ -52,11 +91,10 @@ define half @fadda_v16f16(half %start, ptr %a) {
 define float @fadda_v2f32(float %start, <2 x float> %a) {
 ; CHECK-LABEL: fadda_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov z1.s, z1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %res = call float @llvm.vector.reduce.fadd.v2f32(float %start, <2 x float> %a)
   ret float %res
@@ -65,11 +103,14 @@ define float @fadda_v2f32(float %start, <2 x float> %a) {
 define float @fadda_v4f32(float %start, <4 x float> %a) {
 ; CHECK-LABEL: fadda_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov z2.s, z1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov z2.s, z1.s[2]
+; CHECK-NEXT:    mov z1.s, z1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %res = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %a)
   ret float %res
@@ -78,13 +119,22 @@ define float @fadda_v4f32(float %start, <4 x float> %a) {
 define float @fadda_v8f32(float %start, ptr %a) {
 ; CHECK-LABEL: fadda_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov z2.s, z1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov z2.s, z1.s[2]
+; CHECK-NEXT:    mov z1.s, z1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    mov z2.s, z1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov z2.s, z1.s[2]
+; CHECK-NEXT:    mov z1.s, z1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %op = load <8 x float>, ptr %a
   %res = call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %op)
@@ -104,11 +154,10 @@ define double @fadda_v1f64(double %start, <1 x double> %a) {
 define double @fadda_v2f64(double %start, <2 x double> %a) {
 ; CHECK-LABEL: fadda_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda d0, p0, d0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fadd.v2f64(double %start, <2 x double> %a)
   ret double %res
@@ -117,13 +166,14 @@ define double @fadda_v2f64(double %start, <2 x double> %a) {
 define double @fadda_v4f64(double %start, ptr %a) {
 ; CHECK-LABEL: fadda_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fadda d0, p0, d0, z1.d
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    fadda d0, p0, d0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %op = load <4 x double>, ptr %a
   %res = call double @llvm.vector.reduce.fadd.v4f64(double %start, <4 x double> %op)
