@@ -1459,7 +1459,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      if (Subtarget->isSVEAvailable())
+        setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
@@ -1519,9 +1520,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
-    // NEON doesn't support across-vector reductions, but SVE does.
-    for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
-      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+    if (Subtarget->isSVEAvailable()) {
+      // NEON doesn't support across-vector reductions, but SVE does.
+      for (auto VT :
+           {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
+        setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+    }
 
     if (!Subtarget->isNeonAvailable()) {
       setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
@@ -1879,7 +1883,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
   setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
   setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT,
+                     StreamingSVE ? Expand : Custom);
   setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -2298,7 +2303,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
-    MAKE_CASE(AArch64ISD::OBSCURE_COPY)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -7159,6 +7163,10 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::changeStreamingMode(
     SelectionDAG &DAG, SDLoc DL, bool Enable,
     SDValue Chain, SDValue InGlue, SDValue PStateSM, bool Entry) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  FuncInfo->setHasStreamingModeChanges(true);
+
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
@@ -7501,11 +7509,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
           return ArgReg.Reg == VA.getLocReg();
         });
       } else {
-        // Add an extra level of indirection for streaming mode changes by
-        // using a pseudo copy node that cannot be rematerialised between a
-        // smstart/smstop and the call by the simple register coalescer.
-        if (RequiresSMChange && isa<FrameIndexSDNode>(Arg))
-          Arg = DAG.getNode(AArch64ISD::OBSCURE_COPY, DL, MVT::i64, Arg);
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
@@ -23008,19 +23011,20 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   // Check ExtractLow's user.
   if (HasFoundMULLow) {
     SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
-    if (ExtractLowUser->getOpcode() != N->getOpcode())
+    if (ExtractLowUser->getOpcode() != N->getOpcode()) {
       HasFoundMULLow = false;
-
-    if (ExtractLowUser->getOperand(0) == ExtractLow) {
-      if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(1);
-      else
-        HasFoundMULLow = false;
     } else {
-      if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(0);
-      else
-        HasFoundMULLow = false;
+      if (ExtractLowUser->getOperand(0) == ExtractLow) {
+        if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(1);
+        else
+          HasFoundMULLow = false;
+      } else {
+        if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(0);
+        else
+          HasFoundMULLow = false;
+      }
     }
   }
 

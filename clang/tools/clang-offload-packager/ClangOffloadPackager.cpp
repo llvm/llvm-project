@@ -126,11 +126,11 @@ static Error bundleImages() {
         ImageBinary.StringData[Key] = Value;
       }
     }
-    std::unique_ptr<MemoryBuffer> Buffer = OffloadBinary::write(ImageBinary);
-    if (Buffer->getBufferSize() % OffloadBinary::getAlignment() != 0)
+    llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
+    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
       return createStringError(inconvertibleErrorCode(),
                                "Offload binary has invalid size alignment");
-    OS << Buffer->getBuffer();
+    OS << Buffer;
   }
 
   if (Error E = writeFile(OutputFile,

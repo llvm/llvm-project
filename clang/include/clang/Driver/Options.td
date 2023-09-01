@@ -1469,6 +1469,17 @@ defm autolink : BoolFOption<"autolink",
           "Disable generation of linker directives for automatic library linking">,
   PosFlag<SetTrue>>;
 
+let Flags = [TargetSpecific] in {
+defm auto_import : BoolFOption<"auto-import",
+  CodeGenOpts<"AutoImport">, DefaultTrue,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "MinGW specific. Disable support for automatic dllimport in code generation "
+          "and linking">,
+  PosFlag<SetTrue, [], [], "MinGW specific. Enable code generation support for "
+          "automatic dllimport, and enable support for it in the linker. "
+          "Enabled by default.">>;
+} // let Flags = [TargetSpecific]
+
 // In the future this option will be supported by other offloading
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.

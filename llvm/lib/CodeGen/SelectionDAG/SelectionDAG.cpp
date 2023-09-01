@@ -5519,15 +5519,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
     const APInt &Val = C->getAPIntValue();
     switch (Opcode) {
-    case ISD::UINT_TO_FP:
-    case ISD::SINT_TO_FP: {
-      APFloat apf(EVTToAPFloatSemantics(VT),
-                  APInt::getZero(VT.getSizeInBits()));
-      (void)apf.convertFromAPInt(Val,
-                                 Opcode==ISD::SINT_TO_FP,
-                                 APFloat::rmNearestTiesToEven);
-      return getConstantFP(apf, DL, VT);
-    }
     case ISD::BITCAST:
       if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
         return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
@@ -5538,24 +5529,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
         return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
       break;
-    case ISD::FP16_TO_FP:
-    case ISD::BF16_TO_FP: {
-      bool Ignored;
-      APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
-                                            : APFloat::BFloat(),
-                  (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
-
-      // This can return overflow, underflow, or inexact; we don't care.
-      // FIXME need to be more flexible about rounding mode.
-      (void)FPV.convert(EVTToAPFloatSemantics(VT),
-                        APFloat::rmNearestTiesToEven, &Ignored);
-      return getConstantFP(FPV, DL, VT);
-    }
-    case ISD::STEP_VECTOR: {
-      if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
-        return V;
-      break;
-    }
     }
   }
 
@@ -5563,17 +5536,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N1)) {
     APFloat V = C->getValueAPF();    // make copy
     switch (Opcode) {
-    case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT: {
-      bool ignored;
-      APSInt IntVal(VT.getSizeInBits(), Opcode == ISD::FP_TO_UINT);
-      // FIXME need to be more flexible about rounding mode.
-      APFloat::opStatus s =
-          V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored);
-      if (s == APFloat::opInvalidOp) // inexact is OK, in fact usual
-        break;
-      return getConstant(IntVal, DL, VT);
-    }
     case ISD::BITCAST:
       if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
         return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
@@ -5584,16 +5546,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
         return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       break;
-    case ISD::FP_TO_FP16:
-    case ISD::FP_TO_BF16: {
-      bool Ignored;
-      // This can return overflow, underflow, or inexact; we don't care.
-      // FIXME need to be more flexible about rounding mode.
-      (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
-                                                : APFloat::BFloat(),
-                      APFloat::rmNearestTiesToEven, &Ignored);
-      return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
-    }
     }
   }
 
@@ -5611,12 +5563,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::FP_TO_FP16:
+  case ISD::FP_TO_BF16:
   case ISD::TRUNCATE:
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:
+  case ISD::FP16_TO_FP:
+  case ISD::BF16_TO_FP:
   case ISD::ABS:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -5624,7 +5580,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::CTPOP: {
+  case ISD::CTPOP:
+  case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
       return Fold;
@@ -6121,6 +6078,31 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       case ISD::CTTZ_ZERO_UNDEF:
         return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
+      case ISD::UINT_TO_FP:
+      case ISD::SINT_TO_FP: {
+        APFloat apf(EVTToAPFloatSemantics(VT),
+                    APInt::getZero(VT.getSizeInBits()));
+        (void)apf.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
+                                   APFloat::rmNearestTiesToEven);
+        return getConstantFP(apf, DL, VT);
+      }
+      case ISD::FP16_TO_FP:
+      case ISD::BF16_TO_FP: {
+        bool Ignored;
+        APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
+                                              : APFloat::BFloat(),
+                    (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
+
+        // This can return overflow, underflow, or inexact; we don't care.
+        // FIXME need to be more flexible about rounding mode.
+        (void)FPV.convert(EVTToAPFloatSemantics(VT),
+                          APFloat::rmNearestTiesToEven, &Ignored);
+        return getConstantFP(FPV, DL, VT);
+      }
+      case ISD::STEP_VECTOR:
+        if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
+          return V;
+        break;
       }
     }
 
@@ -6159,6 +6141,27 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         (void)V.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
                         &ignored);
         return getConstantFP(V, DL, VT);
+      }
+      case ISD::FP_TO_SINT:
+      case ISD::FP_TO_UINT: {
+        bool ignored;
+        APSInt IntVal(VT.getSizeInBits(), Opcode == ISD::FP_TO_UINT);
+        // FIXME need to be more flexible about rounding mode.
+        APFloat::opStatus s =
+            V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored);
+        if (s == APFloat::opInvalidOp) // inexact is OK, in fact usual
+          break;
+        return getConstant(IntVal, DL, VT);
+      }
+      case ISD::FP_TO_FP16:
+      case ISD::FP_TO_BF16: {
+        bool Ignored;
+        // This can return overflow, underflow, or inexact; we don't care.
+        // FIXME need to be more flexible about rounding mode.
+        (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
+                                                  : APFloat::BFloat(),
+                        APFloat::rmNearestTiesToEven, &Ignored);
+        return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       }
       }
     }
