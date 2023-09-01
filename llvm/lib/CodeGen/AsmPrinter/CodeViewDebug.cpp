@@ -3545,6 +3545,7 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           break;
         case MachineJumpTableInfo::EK_Inline:
         case MachineJumpTableInfo::EK_LabelDifference32:
+        case MachineJumpTableInfo::EK_LabelDifference64:
           // Ask the AsmPrinter.
           std::tie(Base, BaseOffset, Branch, EntrySize) =
               Asm->getCodeViewJumpTableInfo(JumpTableIndex, &BranchMI, Branch);
