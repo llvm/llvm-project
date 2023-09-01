@@ -149,16 +149,6 @@ common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
 
 Expr<SomeType> Parenthesize(Expr<SomeType> &&);
 
-Expr<SomeReal> GetComplexPart(
-    const Expr<SomeComplex> &, bool isImaginary = false);
-Expr<SomeReal> GetComplexPart(Expr<SomeComplex> &&, bool isImaginary = false);
-
-template <int KIND>
-Expr<SomeComplex> MakeComplex(Expr<Type<TypeCategory::Real, KIND>> &&re,
-    Expr<Type<TypeCategory::Real, KIND>> &&im) {
-  return AsCategoryExpr(ComplexConstructor<KIND>{std::move(re), std::move(im)});
-}
-
 template <typename A> constexpr bool IsNumericCategoryExpr() {
   if constexpr (common::HasMember<A, TypelessExpression>) {
     return false;
