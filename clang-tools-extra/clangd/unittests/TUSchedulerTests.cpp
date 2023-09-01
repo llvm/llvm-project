@@ -1307,7 +1307,7 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
   ASSERT_THAT(BlockForDiags(PI), testing::Pair("1", "3"));
 
   UnblockPreamble.notify();
-  S.blockUntilIdle(timeoutSeconds(5));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(5)));
 
   // Make sure that we have eventual consistency.
   EXPECT_THAT(Collector.diagVersions().back(), Pair(PI.Version, PI.Version));
@@ -1316,7 +1316,7 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
   PI.Version = "4";
   PI.Contents = "#define FOO\n" + PI.Version;
   S.update(File, PI, WantDiagnostics::No);
-  S.blockUntilIdle(timeoutSeconds(5));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(5)));
   EXPECT_THAT(Collector.diagVersions().back(), Pair("3", "3"));
 }
 
