@@ -11,16 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_FUNCTIONINTERFACES_TD_
-#define MLIR_IR_FUNCTIONINTERFACES_TD_
+#ifndef MLIR_INTERFACES_FUNCTIONINTERFACES_TD_
+#define MLIR_INTERFACES_FUNCTIONINTERFACES_TD_
 
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // FunctionOpInterface
 //===----------------------------------------------------------------------===//
 
-def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
+def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
+    Symbol, CallableOpInterface
+  ]> {
   let cppNamespace = "::mlir";
   let description = [{
     This interfaces provides support for interacting with operations that
@@ -60,53 +63,6 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
     }],
     "void", "setFunctionTypeAttr", (ins "::mlir::TypeAttr":$type)>,
 
-    InterfaceMethod<[{
-      Get the array of argument attribute dictionaries. The method should return
-      an array attribute containing only dictionary attributes equal in number
-      to the number of function arguments. Alternatively, the method can return
-      null to indicate that the function has no argument attributes.
-    }],
-    "::mlir::ArrayAttr", "getArgAttrsAttr">,
-    InterfaceMethod<[{
-      Get the array of result attribute dictionaries. The method should return
-      an array attribute containing only dictionary attributes equal in number
-      to the number of function results. Alternatively, the method can return
-      null to indicate that the function has no result attributes.
-    }],
-    "::mlir::ArrayAttr", "getResAttrsAttr">,
-    InterfaceMethod<[{
-      Set the array of argument attribute dictionaries.
-    }],
-    "void", "setArgAttrsAttr", (ins "::mlir::ArrayAttr":$attrs)>,
-    InterfaceMethod<[{
-      Set the array of result attribute dictionaries.
-    }],
-    "void", "setResAttrsAttr", (ins "::mlir::ArrayAttr":$attrs)>,
-    InterfaceMethod<[{
-      Remove the array of argument attribute dictionaries. This is the same as
-      setting all argument attributes to an empty dictionary. The method should
-      return the removed attribute.
-    }],
-    "::mlir::Attribute", "removeArgAttrsAttr">,
-    InterfaceMethod<[{
-      Remove the array of result attribute dictionaries. This is the same as
-      setting all result attributes to an empty dictionary. The method should
-      return the removed attribute.
-    }],
-    "::mlir::Attribute", "removeResAttrsAttr">,
-
-    InterfaceMethod<[{
-      Returns the function argument types based exclusively on
-      the type (to allow for this method may be called on function
-      declarations).
-    }],
-    "::llvm::ArrayRef<::mlir::Type>", "getArgumentTypes">,
-    InterfaceMethod<[{
-      Returns the function result types based exclusively on
-      the type (to allow for this method may be called on function
-      declarations).
-    }],
-    "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
     InterfaceMethod<[{
       Returns a clone of the function type with the given argument and
       result types.
@@ -376,9 +332,9 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
       ArrayRef<unsigned> argIndices, TypeRange argTypes,
       ArrayRef<unsigned> resultIndices, TypeRange resultTypes) {
       SmallVector<Type> argStorage, resultStorage;
-      TypeRange newArgTypes = function_interface_impl::insertTypesInto(
+      TypeRange newArgTypes = insertTypesInto(
           $_op.getArgumentTypes(), argIndices, argTypes, argStorage);
-      TypeRange newResultTypes = function_interface_impl::insertTypesInto(
+      TypeRange newResultTypes = insertTypesInto(
           $_op.getResultTypes(), resultIndices, resultTypes, resultStorage);
       return $_op.cloneTypeWith(newArgTypes, newResultTypes);
     }
@@ -389,21 +345,21 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
     Type getTypeWithoutArgsAndResults(
       const BitVector &argIndices, const BitVector &resultIndices) {
       SmallVector<Type> argStorage, resultStorage;
-      TypeRange newArgTypes = function_interface_impl::filterTypesOut(
+      TypeRange newArgTypes = filterTypesOut(
           $_op.getArgumentTypes(), argIndices, argStorage);
-      TypeRange newResultTypes = function_interface_impl::filterTypesOut(
+      TypeRange newResultTypes = filterTypesOut(
           $_op.getResultTypes(), resultIndices, resultStorage);
       return $_op.cloneTypeWith(newArgTypes, newResultTypes);
     }
     Type getTypeWithoutArgs(const BitVector &argIndices) {
       SmallVector<Type> argStorage;
-      TypeRange newArgTypes = function_interface_impl::filterTypesOut(
+      TypeRange newArgTypes = filterTypesOut(
           $_op.getArgumentTypes(), argIndices, argStorage);
       return $_op.cloneTypeWith(newArgTypes, $_op.getResultTypes());
     }
     Type getTypeWithoutResults(const BitVector &resultIndices) {
       SmallVector<Type> resultStorage;
-      TypeRange newResultTypes = function_interface_impl::filterTypesOut(
+      TypeRange newResultTypes = filterTypesOut(
           $_op.getResultTypes(), resultIndices, resultStorage);
       return $_op.cloneTypeWith($_op.getArgumentTypes(), newResultTypes);
     }
@@ -604,4 +560,4 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
   let verify = "return function_interface_impl::verifyTrait(cast<ConcreteOp>($_op));";
 }
 
-#endif // MLIR_IR_FUNCTIONINTERFACES_TD_
+#endif // MLIR_INTERFACES_FUNCTIONINTERFACES_TD_

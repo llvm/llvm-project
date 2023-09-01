@@ -18,6 +18,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 
@@ -75,17 +77,6 @@ void eraseFunctionResults(FunctionOpInterface op,
 
 /// Set a FunctionOpInterface operation's type signature.
 void setFunctionType(FunctionOpInterface op, Type newType);
-
-/// Insert a set of `newTypes` into `oldTypes` at the given `indices`. If any
-/// types are inserted, `storage` is used to hold the new type list. The new
-/// type list is returned. `indices` must be sorted by increasing index.
-TypeRange insertTypesInto(TypeRange oldTypes, ArrayRef<unsigned> indices,
-                          TypeRange newTypes, SmallVectorImpl<Type> &storage);
-
-/// Filters out any elements referenced by `indices`. If any types are removed,
-/// `storage` is used to hold the new type list. Returns the new type list.
-TypeRange filterTypesOut(TypeRange types, const BitVector &indices,
-                         SmallVectorImpl<Type> &storage);
 
 //===----------------------------------------------------------------------===//
 // Function Argument Attribute.
@@ -245,6 +236,6 @@ LogicalResult verifyTrait(ConcreteOp op) {
 // Tablegen Interface Declarations
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/FunctionOpInterfaces.h.inc"
+#include "mlir/Interfaces/FunctionInterfaces.h.inc"
 
 #endif // MLIR_IR_FUNCTIONINTERFACES_H
