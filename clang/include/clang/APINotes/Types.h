@@ -10,6 +10,7 @@
 #define LLVM_CLANG_APINOTES_TYPES_H
 
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
 #include <optional>
@@ -748,6 +749,16 @@ struct Context {
   ContextKind kind;
 
   Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
+};
+
+/// A temporary reference to an Objective-C selector, suitable for
+/// referencing selector data on the stack.
+///
+/// Instances of this struct do not store references to any of the
+/// data they contain; it is up to the user to ensure that the data
+/// referenced by the identifier list persists.
+struct ObjCSelectorRef {
+  llvm::ArrayRef<llvm::StringRef> Identifiers;
 };
 } // namespace api_notes
 } // namespace clang
