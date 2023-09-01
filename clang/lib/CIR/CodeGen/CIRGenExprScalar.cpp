@@ -589,7 +589,7 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
-    llvm_unreachable("NYI");
+    return buildNullValue(E->getType(), CGF.getLoc(E->getSourceRange()));
   }
   mlir::Value VisitCXXThrowExpr(CXXThrowExpr *E) {
     CGF.buildCXXThrowExpr(E);
