@@ -427,6 +427,14 @@ Improvements to Clang's diagnostics
   (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
   with GCC.
 
+Improvements to Clang's time-trace
+----------------------------------
+- Two time-trace scope variables are added. A time trace scope variable of
+  ``ParseDeclarationOrFunctionDefinition`` with the function's source location
+  is added to record the time spent parsing the function's declaration or
+  definition. Another time trace scope variable of ``ParseFunctionDefinition``
+  is also added to record the name of the defined function.
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
