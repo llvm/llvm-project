@@ -22,12 +22,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(1)
 ; KNL-NEXT:    fcmovne %st(3), %st
-<<<<<<< HEAD
-; KNL-NEXT:    kmovw %k0, %eax
-=======
 ; KNL-NEXT:    kshiftrw $1, %k0, %k1
 ; KNL-NEXT:    kmovw %k1, %eax
->>>>>>> parent of 239ab16ec121 ([X86] combineCMP - attempt to simplify KSHIFTR mask element extractions when just comparing against zero)
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(2)
 ; KNL-NEXT:    fcmovne %st(4), %st
@@ -62,12 +58,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st
-<<<<<<< HEAD
-; SKX-NEXT:    kmovd %k0, %eax
-=======
 ; SKX-NEXT:    kshiftrb $1, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
->>>>>>> parent of 239ab16ec121 ([X86] combineCMP - attempt to simplify KSHIFTR mask element extractions when just comparing against zero)
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
 ; SKX-NEXT:    fcmovne %st(4), %st
