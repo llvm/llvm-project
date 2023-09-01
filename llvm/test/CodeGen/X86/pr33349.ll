@@ -11,27 +11,35 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $2, %k0, %k1
+; KNL-NEXT:    kshiftrw $1, %k1, %k2
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld1
 ; KNL-NEXT:    fldz
 ; KNL-NEXT:    fld %st(0)
 ; KNL-NEXT:    fcmovne %st(2), %st
-; KNL-NEXT:    testb $2, %al
+; KNL-NEXT:    kmovw %k2, %eax
+; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(1)
 ; KNL-NEXT:    fcmovne %st(3), %st
+<<<<<<< HEAD
 ; KNL-NEXT:    kmovw %k0, %eax
+=======
+; KNL-NEXT:    kshiftrw $1, %k0, %k1
+; KNL-NEXT:    kmovw %k1, %eax
+>>>>>>> parent of 239ab16ec121 ([X86] combineCMP - attempt to simplify KSHIFTR mask element extractions when just comparing against zero)
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(2)
 ; KNL-NEXT:    fcmovne %st(4), %st
-; KNL-NEXT:    testb $2, %al
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fxch %st(3)
 ; KNL-NEXT:    fcmovne %st(4), %st
 ; KNL-NEXT:    fstp %st(4)
 ; KNL-NEXT:    fxch %st(3)
-; KNL-NEXT:    fstpt 10(%rdi)
-; KNL-NEXT:    fxch %st(1)
 ; KNL-NEXT:    fstpt (%rdi)
+; KNL-NEXT:    fxch %st(1)
+; KNL-NEXT:    fstpt 10(%rdi)
 ; KNL-NEXT:    fxch %st(1)
 ; KNL-NEXT:    fstpt 30(%rdi)
 ; KNL-NEXT:    fstpt 20(%rdi)
@@ -43,27 +51,35 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovd2m %xmm0, %k0
 ; SKX-NEXT:    kshiftrb $2, %k0, %k1
+; SKX-NEXT:    kshiftrb $1, %k1, %k2
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld1
 ; SKX-NEXT:    fldz
 ; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st
-; SKX-NEXT:    testb $2, %al
+; SKX-NEXT:    kmovd %k2, %eax
+; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st
+<<<<<<< HEAD
 ; SKX-NEXT:    kmovd %k0, %eax
+=======
+; SKX-NEXT:    kshiftrb $1, %k0, %k1
+; SKX-NEXT:    kmovd %k1, %eax
+>>>>>>> parent of 239ab16ec121 ([X86] combineCMP - attempt to simplify KSHIFTR mask element extractions when just comparing against zero)
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
 ; SKX-NEXT:    fcmovne %st(4), %st
-; SKX-NEXT:    testb $2, %al
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fxch %st(3)
 ; SKX-NEXT:    fcmovne %st(4), %st
 ; SKX-NEXT:    fstp %st(4)
 ; SKX-NEXT:    fxch %st(3)
-; SKX-NEXT:    fstpt 10(%rdi)
-; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt (%rdi)
+; SKX-NEXT:    fxch %st(1)
+; SKX-NEXT:    fstpt 10(%rdi)
 ; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt 30(%rdi)
 ; SKX-NEXT:    fstpt 20(%rdi)
