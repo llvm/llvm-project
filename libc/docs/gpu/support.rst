@@ -130,7 +130,7 @@ fopen          |check|    |check|
 fread          |check|    |check|
 =============  =========  ============
 
-stdio.h
+time.h
 --------
 
 =============  =========  ============
@@ -138,4 +138,14 @@ Function Name  Available  RPC Required
 =============  =========  ============
 clock          |check|
 nanosleep      |check|
+=============  =========  ============
+
+assert.h
+--------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+assert         |check|    |check|
+__assert_fail  |check|    |check|
 =============  =========  ============

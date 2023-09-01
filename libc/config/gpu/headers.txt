@@ -1,4 +1,5 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.assert
     libc.include.ctype
     libc.include.string
     libc.include.inttypes

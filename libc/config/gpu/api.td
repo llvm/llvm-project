@@ -3,6 +3,38 @@ include "config/public_api.td"
 include "spec/stdc.td"
 include "spec/posix.td"
 include "spec/gpu_ext.td"
+include "spec/gnu_ext.td"
+include "spec/llvm_libc_ext.td"
+
+def AssertMacro : MacroDef<"assert"> {
+  let Defn = [{
+    #undef assert
+
+    #ifdef NDEBUG
+    #define assert(e) (void)0
+    #else
+
+    #define assert(e)  \
+      ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
+    #endif
+  }];
+}
+
+def StaticAssertMacro : MacroDef<"static_assert"> {
+  let Defn = [{
+    #ifndef __cplusplus
+    #undef static_assert
+    #define static_assert _Static_assert
+    #endif
+  }];
+}
+
+def AssertAPI : PublicAPI<"assert.h"> {
+  let Macros = [
+    AssertMacro,
+    StaticAssertMacro,
+  ];
+}
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
