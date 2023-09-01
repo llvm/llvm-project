@@ -796,6 +796,9 @@ private:
                                : 1;
     }
 
+    uint64_t NumWavesInGroup =
+        (NumThreads - 1) / GenericDevice.getWarpSize() + 1;
+
     if (isBigJumpLoopMode()) {
       uint64_t NumGroups = 1;
       // Cannot assert a non-zero tripcount. Instead, launch with 1 team if the
@@ -808,7 +811,7 @@ private:
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
       if (NumTeamsEnvVar > 0 && NumTeamsEnvVar <= GenericDevice.getBlockLimit())
         NumGroups = std::min(static_cast<uint64_t>(NumTeamsEnvVar), NumGroups);
-      // Honor num_teams clause but lower it if tripcount dictates to
+      // Honor num_teams clause but lower it if tripcount dictates.
       else if (NumTeamsClause[0] > 0 &&
                NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
         NumGroups =
@@ -817,10 +820,7 @@ private:
         // num_teams clause is not specified. Choose lower of tripcount-based
         // num-groups and a value that maximizes occupancy. At this point, aim
         // to have 16 wavefronts in a CU.
-        // TODO: This logic needs to be moved to the AMDGPU plugin.
-        uint64_t NumWavesInGroup = NumThreads / GenericDevice.getWarpSize();
-        uint64_t MaxOccupancyFactor =
-            NumWavesInGroup ? (16 / NumWavesInGroup) : 16;
+        uint64_t MaxOccupancyFactor = 16 / NumWavesInGroup;
         NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
       }
       return NumGroups;
@@ -887,9 +887,21 @@ private:
       }
     }
     // If the loops are long running we rather reuse blocks than spawn too many.
-    uint32_t PreferredNumBlocks = std::min(uint32_t(TripCountNumBlocks),
-                                           GenericDevice.getDefaultNumBlocks());
-    return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
+    // Additionally, under an env-var, adjust the number of teams based on the
+    // number of wave-slots in a CU that we aim to occupy.
+    uint64_t AdjustedNumBlocks = GenericDevice.getDefaultNumBlocks();
+    if (GenericDevice.getOMPXAdjustNumTeamsForSmallBlockSize()) {
+      uint64_t DefaultNumWavesInGroup =
+          (GenericDevice.getDefaultNumThreads() - 1) /
+              GenericDevice.getWarpSize() +
+          1;
+      AdjustedNumBlocks =
+          (AdjustedNumBlocks * DefaultNumWavesInGroup) / NumWavesInGroup;
+    }
+    uint64_t PreferredNumBlocks =
+        std::min(TripCountNumBlocks, AdjustedNumBlocks);
+    return std::min(PreferredNumBlocks,
+                    (uint64_t)GenericDevice.getBlockLimit());
   }
 };
 
@@ -2207,6 +2219,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 6),
         OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 2000),
         OMPX_SmallBlockSize("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 8),
+        OMPX_AdjustNumTeamsForSmallBlockSize("LIBOMPTARGET_AMDGPU_ADJUST_TEAMS",
+                                             0),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -2240,6 +2254,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   virtual uint32_t getOMPXSmallBlockSize() const override {
     return OMPX_SmallBlockSize;
+  }
+  virtual uint32_t getOMPXAdjustNumTeamsForSmallBlockSize() const override {
+    return OMPX_AdjustNumTeamsForSmallBlockSize;
   }
 
   /// Initialize the device, its resources and get its properties.
@@ -3201,6 +3218,11 @@ private:
   /// Envar specifying a value till which the blocksize can be adjusted if the
   /// tripcount is low.
   UInt32Envar OMPX_SmallBlockSize;
+
+  /// Envar to allow adjusting number of teams after small tripcount
+  /// optimization. The default 0 means no adjustment of number of teams is
+  /// done.
+  UInt32Envar OMPX_AdjustNumTeamsForSmallBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are
