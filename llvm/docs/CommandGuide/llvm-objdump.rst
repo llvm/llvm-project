@@ -179,6 +179,15 @@ OPTIONS
   * ``att``: x86 only (default). Print in the AT&T syntax.
   * ``intel``: x86 only. Print in the intel syntax.
 
+
+.. option::  --disassembler-color=<mode>
+
+  Enable or disable disassembler color output.
+
+  * ``off``: Disable disassembler color output.
+  * ``on``: Enable disassembler color output.
+  * ``terminal``: Enable disassembler color output if the terminal supports it (default).
+
 .. option:: --mcpu=<cpu-name>
 
   Target a specific CPU type for disassembly. Specify ``--mcpu=help`` to display
