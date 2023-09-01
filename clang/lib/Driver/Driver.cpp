@@ -4953,7 +4953,12 @@ void Driver::BuildJobs(Compilation &C) const {
       // already been warned about.
       if (!IsCLMode() || !A->getOption().matches(options::OPT_UNKNOWN)) {
         if (A->getOption().hasFlag(options::TargetSpecific) &&
-            !A->isIgnoredTargetSpecific() && !HasAssembleJob) {
+            !A->isIgnoredTargetSpecific() && !HasAssembleJob &&
+            // When for example -### or -v is used
+            // without a file, target specific options are not
+            // consumed/validated.
+            // Instead emitting an error emit a warning instead.
+            !C.getActions().empty()) {
           Diag(diag::err_drv_unsupported_opt_for_target)
               << A->getSpelling() << getTargetTriple();
         } else {
