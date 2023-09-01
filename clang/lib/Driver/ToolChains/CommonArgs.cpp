@@ -22,6 +22,7 @@
 #include "HIPAMD.h"
 #include "Hexagon.h"
 #include "MSP430.h"
+#include "Solaris.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
@@ -993,9 +994,11 @@ static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
 static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs,
                                     StringRef Sanitizer) {
+  bool LinkerIsGnuLd = solaris::isLinkerGnuLd(TC, Args);
+
   // Solaris ld defaults to --export-dynamic behaviour but doesn't support
   // the option, so don't try to pass it.
-  if (TC.getTriple().getOS() == llvm::Triple::Solaris)
+  if (TC.getTriple().getOS() == llvm::Triple::Solaris && !LinkerIsGnuLd)
     return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
@@ -1011,11 +1014,14 @@ void tools::addAsNeededOption(const ToolChain &TC,
                               bool as_needed) {
   assert(!TC.getTriple().isOSAIX() &&
          "AIX linker does not support any form of --as-needed option yet.");
+  bool LinkerIsGnuLd = solaris::isLinkerGnuLd(TC, Args);
 
   // While the Solaris 11.2 ld added --as-needed/--no-as-needed as aliases
   // for the native forms -z ignore/-z record, they are missing in Illumos,
   // so always use the native form.
-  if (TC.getTriple().isOSSolaris()) {
+  // GNU ld doesn't support -z ignore/-z record, so don't use them even on
+  // Solaris.
+  if (TC.getTriple().isOSSolaris() && !LinkerIsGnuLd) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back(as_needed ? "ignore" : "record");
   } else {

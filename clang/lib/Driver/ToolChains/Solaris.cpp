@@ -16,6 +16,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -47,6 +48,13 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {
+  // Only used if targetting Solaris.
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  return UseLinker == "bfd" || UseLinker == "gld";
+}
+
 static bool getPIE(const ArgList &Args, const ToolChain &TC) {
   if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static) ||
       Args.hasArg(options::OPT_r))
@@ -59,6 +67,32 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
   return A->getOption().matches(options::OPT_pie);
 }
 
+// FIXME: Need to handle CLANG_DEFAULT_LINKER here?
+std::string solaris::Linker::getLinkerPath(const ArgList &Args) const {
+  const ToolChain &ToolChain = getToolChain();
+  if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
+    StringRef UseLinker = A->getValue();
+    if (!UseLinker.empty()) {
+      if (llvm::sys::path::is_absolute(UseLinker) &&
+          llvm::sys::fs::can_execute(UseLinker))
+        return std::string(UseLinker);
+
+      // Accept 'bfd' and 'gld' as aliases for the GNU linker.
+      if (UseLinker == "bfd" || UseLinker == "gld")
+        // FIXME: Could also use /usr/bin/gld here.
+        return "/usr/gnu/bin/ld";
+
+      // Accept 'ld' as alias for the default linker
+      if (UseLinker != "ld")
+        ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
+            << A->getAsString(Args);
+    }
+  }
+
+  // getDefaultLinker() always returns an absolute path.
+  return ToolChain.getDefaultLinker();
+}
+
 void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -66,9 +100,11 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   const bool IsPIE = getPIE(Args, getToolChain());
   ArgStringList CmdArgs;
+  bool LinkerIsGnuLd = isLinkerGnuLd(getToolChain(), Args);
 
-  // Demangle C++ names in errors
-  CmdArgs.push_back("-C");
+  // Demangle C++ names in errors.  GNU ld already defaults to --demangle.
+  if (!LinkerIsGnuLd)
+    CmdArgs.push_back("-C");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
     CmdArgs.push_back("-e");
@@ -76,8 +112,12 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsPIE) {
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back("type=pie");
+    if (LinkerIsGnuLd) {
+      CmdArgs.push_back("-pie");
+    } else {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("type=pie");
+    }
   }
 
   if (Args.hasArg(options::OPT_static)) {
@@ -93,6 +133,42 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // anything for pthreads. Claim argument to avoid warning.
     Args.ClaimAllArgs(options::OPT_pthread);
     Args.ClaimAllArgs(options::OPT_pthreads);
+  }
+
+  if (LinkerIsGnuLd) {
+    // Set the correct linker emulation for 32- and 64-bit Solaris.
+    const toolchains::Solaris &ToolChain =
+        static_cast<const toolchains::Solaris &>(getToolChain());
+    const llvm::Triple::ArchType Arch = ToolChain.getArch();
+
+    switch (Arch) {
+    case llvm::Triple::x86:
+      CmdArgs.push_back("-m");
+      CmdArgs.push_back("elf_i386_sol2");
+      break;
+    case llvm::Triple::x86_64:
+      CmdArgs.push_back("-m");
+      CmdArgs.push_back("elf_x86_64_sol2");
+      break;
+    case llvm::Triple::sparc:
+      CmdArgs.push_back("-m");
+      CmdArgs.push_back("elf32_sparc_sol2");
+      break;
+    case llvm::Triple::sparcv9:
+      CmdArgs.push_back("-m");
+      CmdArgs.push_back("elf64_sparc_sol2");
+      break;
+    default:
+      break;
+    }
+
+    if (Args.hasArg(options::OPT_rdynamic))
+      CmdArgs.push_back("-export-dynamic");
+
+    CmdArgs.push_back("--eh-frame-hdr");
+  } else {
+    // -rdynamic is a no-op with Solaris ld.  Claim argument to avoid warning.
+    Args.ClaimAllArgs(options::OPT_rdynamic);
   }
 
   if (Output.isFilename()) {
@@ -183,7 +259,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       // in Illumos.
       if (getToolChain().getTriple().getArch() == llvm::Triple::x86_64 &&
           (SA.needsAsanRt() || SA.needsStatsRt() ||
-           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime()))) {
+           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())) &&
+          !LinkerIsGnuLd) {
         CmdArgs.push_back("-z");
         CmdArgs.push_back("relax=transtls");
       }
@@ -210,7 +287,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
+  const char *Exec = Args.MakeArgString(getLinkerPath(Args));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
 }
@@ -269,6 +346,13 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
   }
   Res |= SanitizerKind::Vptr;
   return Res;
+}
+
+const char *Solaris::getDefaultLinker() const {
+  // FIXME: Only handle Solaris ld and GNU ld here.
+  return llvm::StringSwitch<const char *>(CLANG_DEFAULT_LINKER)
+      .Cases("bfd", "gld", "/usr/gnu/bin/ld")
+      .Default("/usr/bin/ld");
 }
 
 Tool *Solaris::buildAssembler() const {
