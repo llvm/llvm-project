@@ -321,10 +321,7 @@ static_library("builtins") {
       "i386/umoddi3.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "i386/chkstk.S",
-        "i386/chkstk2.S",
-      ]
+      sources += [ "i386/chkstk.S" ]
     }
   } else if (current_cpu == "x64") {
     sources -= [
