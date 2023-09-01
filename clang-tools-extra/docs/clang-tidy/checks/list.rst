@@ -210,6 +210,7 @@ Clang-Tidy Checks
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
    :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
+   :doc:`google-cpp-init-class-members <google/cpp-init-class-members>`, "Yes"
    :doc:`google-default-arguments <google/default-arguments>`,
    :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`google-global-names-in-headers <google/global-names-in-headers>`,

@@ -148,6 +148,13 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`google-cpp-init-class-members
+  <clang-tidy/checks/google/cpp-init-class-members>` check.
+
+  Checks that class members are initialized. This checker aims to completely
+  eliminate UUM (Use of Uninitialized Memory) bugs caused by uninitialized
+  class members.
+
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.
 

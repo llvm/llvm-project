@@ -16,6 +16,7 @@
 #include "AvoidNSObjectNewCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
+#include "CppInitClassMembersCheck.h"
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
@@ -43,6 +44,8 @@ class GoogleModule : public ClangTidyModule {
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");
+    CheckFactories.registerCheck<CppInitClassMembersCheck>(
+        "google-cpp-init-class-members");
     CheckFactories.registerCheck<DefaultArgumentsCheck>(
         "google-default-arguments");
     CheckFactories.registerCheck<ExplicitConstructorCheck>(
