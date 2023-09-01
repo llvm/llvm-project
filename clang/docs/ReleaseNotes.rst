@@ -127,6 +127,9 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
+* ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang`` has been removed.
+  It has not been needed to enable ``-ftrivial-auto-var-init=zero`` since Clang 16.
+
 Attribute Changes in Clang
 --------------------------
 - On X86, a warning is now emitted if a function with ``__attribute__((no_caller_saved_registers))``
