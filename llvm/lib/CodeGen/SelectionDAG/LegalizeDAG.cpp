@@ -1043,7 +1043,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE:
     Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(2).getValueType());
+                                    Node->getOperand(1).getValueType());
     break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
@@ -3080,11 +3080,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE: {
     // There is no libcall for atomic store; fake it with ATOMIC_SWAP.
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 cast<AtomicSDNode>(Node)->getMemoryVT(),
-                                 Node->getOperand(0),
-                                 Node->getOperand(1), Node->getOperand(2),
-                                 cast<AtomicSDNode>(Node)->getMemOperand());
+    SDValue Swap = DAG.getAtomic(
+        ISD::ATOMIC_SWAP, dl, cast<AtomicSDNode>(Node)->getMemoryVT(),
+        Node->getOperand(0), Node->getOperand(2), Node->getOperand(1),
+        cast<AtomicSDNode>(Node)->getMemOperand());
     Results.push_back(Swap.getValue(1));
     break;
   }

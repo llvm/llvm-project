@@ -31168,8 +31168,8 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       SDValue Chain;
       if (Subtarget.hasSSE1()) {
-        SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
-                                       Node->getOperand(2));
+        SDValue SclToVec =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Node->getVal());
         MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
         SclToVec = DAG.getBitcast(StVT, SclToVec);
         SDVTList Tys = DAG.getVTList(MVT::Other);
@@ -31183,9 +31183,8 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
         int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
         MachinePointerInfo MPI =
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-        Chain =
-            DAG.getStore(Node->getChain(), dl, Node->getOperand(2), StackPtr,
-                         MPI, MaybeAlign(), MachineMemOperand::MOStore);
+        Chain = DAG.getStore(Node->getChain(), dl, Node->getVal(), StackPtr,
+                             MPI, MaybeAlign(), MachineMemOperand::MOStore);
         SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
         SDValue LdOps[] = {Chain, StackPtr};
         SDValue Value = DAG.getMemIntrinsicNode(
@@ -31214,11 +31213,9 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   // Convert seq_cst store -> xchg
   // Convert wide store -> swap (-> cmpxchg8b/cmpxchg16b)
   // FIXME: 16-byte ATOMIC_SWAP isn't actually hooked up at the moment.
-  SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                               Node->getMemoryVT(),
-                               Node->getOperand(0),
-                               Node->getOperand(1), Node->getOperand(2),
-                               Node->getMemOperand());
+  SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl, Node->getMemoryVT(),
+                               Node->getOperand(0), Node->getOperand(2),
+                               Node->getOperand(1), Node->getMemOperand());
   return Swap.getValue(1);
 }
 
