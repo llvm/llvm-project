@@ -36,7 +36,7 @@ function(add_lldb_unittest test_name)
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 
   # BEGIN Swift Mods
-  if(SWIFT_SWIFT_PARSER)
+  if(SWIFT_BUILD_SWIFT_SYNTAX)
     add_properties_for_swift_modules(${test_name} "../")
   endif()
 # END Swift Mods
