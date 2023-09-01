@@ -55,6 +55,9 @@ protected:
   /// True if we are printing marked up assembly.
   bool UseMarkup = false;
 
+  /// True if we are printing colored assembly.
+  bool UseColor = false;
+
   /// True if we prefer aliases (e.g. nop) to raw mnemonics.
   bool PrintAliases = true;
 
@@ -84,6 +87,35 @@ public:
                 const MCRegisterInfo &mri) : MAI(mai), MII(mii), MRI(mri) {}
 
   virtual ~MCInstPrinter();
+
+  enum class Markup {
+    Immediate,
+    Register,
+    Target,
+    Memory,
+  };
+
+  class WithMarkup {
+  public:
+    [[nodiscard]] WithMarkup(raw_ostream &OS, Markup M, bool EnableMarkup,
+                             bool EnableColor);
+    ~WithMarkup();
+
+    template <typename T> WithMarkup &operator<<(T &O) {
+      OS << O;
+      return *this;
+    }
+
+    template <typename T> WithMarkup &operator<<(const T &O) {
+      OS << O;
+      return *this;
+    }
+
+  private:
+    raw_ostream &OS;
+    bool EnableMarkup;
+    bool EnableColor;
+  };
 
   /// Customize the printer according to a command line option.
   /// @return true if the option is recognized and applied.
@@ -115,6 +147,11 @@ public:
 
   bool getUseMarkup() const { return UseMarkup; }
   void setUseMarkup(bool Value) { UseMarkup = Value; }
+
+  bool getUseColor() const { return UseColor; }
+  void setUseColor(bool Value) { UseColor = Value; }
+
+  WithMarkup markup(raw_ostream &OS, Markup M) const;
 
   /// Utility functions to make adding mark ups simpler.
   StringRef markup(StringRef s) const;
