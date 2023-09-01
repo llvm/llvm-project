@@ -607,7 +607,7 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     if (BlocksToDuplicate.empty())
       continue;
 
-    // Apply the the duplication
+    // Apply the duplication
     ModifiedFunction = true;
     DuplicationsDynamicCount += BB->getExecutionCount();
     auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);
