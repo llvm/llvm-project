@@ -58,6 +58,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
