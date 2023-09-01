@@ -3964,10 +3964,7 @@ TEST(TransferTest, LoopDereferencingChangingPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
@@ -3989,10 +3986,7 @@ TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
