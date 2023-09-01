@@ -139,20 +139,6 @@ bool TypeCategoryMap::Get(KeyType name, ValueSP &entry) {
   return true;
 }
 
-bool TypeCategoryMap::Get(uint32_t pos, ValueSP &entry) {
-  std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  MapIterator iter = m_map.begin();
-  MapIterator end = m_map.end();
-  while (pos > 0) {
-    iter++;
-    pos--;
-    if (iter == end)
-      return false;
-  }
-  entry = iter->second;
-  return false;
-}
-
 bool TypeCategoryMap::AnyMatches(
     const FormattersMatchCandidate &candidate_type,
     TypeCategoryImpl::FormatCategoryItems items, bool only_enabled,
