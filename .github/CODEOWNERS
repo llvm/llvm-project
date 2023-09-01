@@ -364,6 +364,23 @@
 # flang-codegen
 flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
+# hlsl
+/clang/test/ParserHLSL/ @llvm/pr-subscribers-hlsl
+/clang/test/SemaHLSL/ @llvm/pr-subscribers-hlsl
+/clang/test/AST/HLSL/ @llvm/pr-subscribers-hlsl
+/clang/test/CodeGenHLSL/ @llvm/pr-subscribers-hlsl
+/clang/cmake/caches/HLSL.cmake @llvm/pr-subscribers-hlsl
+/clang/include/clang/Basic/HLSL*.h @llvm/pr-subscribers-hlsl
+/clang/include/clang/Sema/HLSL*.h @llvm/pr-subscribers-hlsl
+/clang/docs/HLSL/ @llvm/pr-subscribers-hlsl
+/clang/lib/Driver/ToolChains/HLSL* @llvm/pr-subscribers-hlsl
+/clang/lib/Parse/ParseHLSL.cpp @llvm/pr-subscribers-hlsl
+/clang/lib/Sema/HLSLExternalSemaSource.cpp @llvm/pr-subscribers-hlsl
+/clang/lib/Sema/SemaHLSL.cpp @llvm/pr-subscribers-hlsl
+/clang/lib/CodeGen/CGHLSLRuntime.* @llvm/pr-subscribers-hlsl
+/llvm/include/llvm/Frontend/HLSL/ @llvm/pr-subscribers-hlsl
+/llvm/lib/Frontend/HLSL/ @llvm/pr-subscribers-hlsl
+
 # globalisel
 /llvm/**/GlobalISel/ @llvm/pr-subscribers-globalisel
 /llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
