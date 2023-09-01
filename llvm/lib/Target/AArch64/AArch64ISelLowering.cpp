@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -24764,7 +24765,8 @@ bool AArch64TargetLowering::shouldLocalize(
     llvm_unreachable("Unexpected remat cost");
   };
 
-  switch (MI.getOpcode()) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
   case TargetOpcode::G_GLOBAL_VALUE: {
     // On Darwin, TLS global vars get selected into function calls, which
     // we don't want localized, as they can get moved into the middle of a
@@ -24774,14 +24776,37 @@ bool AArch64TargetLowering::shouldLocalize(
       return false;
     return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
+  case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
-    auto *CI = MI.getOperand(1).getCImm();
+    const ConstantInt *CI;
+    unsigned AdditionalCost = 0;
+
+    if (Opc == TargetOpcode::G_CONSTANT)
+      CI = MI.getOperand(1).getCImm();
+    else {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      // We try to estimate cost of 32/64b fpimms, as they'll likely be
+      // materialized as integers.
+      if (Ty.getScalarSizeInBits() != 32 && Ty.getScalarSizeInBits() != 64)
+        break;
+      auto APF = MI.getOperand(1).getFPImm()->getValueAPF();
+      bool OptForSize =
+          MF.getFunction().hasOptSize() || MF.getFunction().hasMinSize();
+      if (isFPImmLegal(APF, EVT::getFloatingPointVT(Ty.getScalarSizeInBits()),
+                       OptForSize))
+        return true; // Constant should be cheap.
+      CI =
+          ConstantInt::get(MF.getFunction().getContext(), APF.bitcastToAPInt());
+      // FP materialization also costs an extra move, from gpr to fpr.
+      AdditionalCost = 1;
+    }
     APInt Imm = CI->getValue();
     InstructionCost Cost = TTI->getIntImmCost(
         Imm, CI->getType(), TargetTransformInfo::TCK_CodeSize);
     assert(Cost.isValid() && "Expected a valid imm cost");
 
     unsigned RematCost = *Cost.getValue();
+    RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);
     // Don't pass UINT_MAX sentinal value to hasAtMostUserInstrs().
