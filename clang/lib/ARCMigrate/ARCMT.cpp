@@ -505,7 +505,7 @@ public:
 MigrationProcess::RewriteListener::~RewriteListener() { }
 
 MigrationProcess::MigrationProcess(
-    const CompilerInvocation &CI,
+    CompilerInvocation &CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *diagClient, StringRef outputDir)
     : OrigCI(CI), PCHContainerOps(std::move(PCHContainerOps)),
