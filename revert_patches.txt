@@ -51,6 +51,3 @@ Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 Revert "[CUDA][HIP] Fix overloading resolution in global variable initializer "
 Revert "[Parser] Parse string literal arguments of 'avail"
    needs Dave's restores to land
-
-Revert "AMDGPU: Implement llvm.get.rounding"  
-  breaks win builds

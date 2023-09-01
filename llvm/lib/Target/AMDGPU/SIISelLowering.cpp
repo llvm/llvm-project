@@ -755,6 +755,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      Custom);
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
+  setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
@@ -3541,6 +3542,77 @@ SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({VectorAddress, CopyFromSP.getValue(1)}, SL);
 }
 
+SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  assert(Op.getValueType() == MVT::i32);
+
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  SDValue GetRoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
+
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, SL, MVT::i32);
+  SDValue GetReg = DAG.getNode(ISD::INTRINSIC_W_CHAIN, SL, Op->getVTList(),
+                               Op.getOperand(0), IntrinID, GetRoundBothImm);
+
+  // There are two rounding modes, one for f32 and one for f64/f16. We only
+  // report in the standard value range if both are the same.
+  //
+  // The raw values also differ from the expected FLT_ROUNDS values. Nearest
+  // ties away from zero is not supported, and the other values are rotated by
+  // 1.
+  //
+  // If the two rounding modes are not the same, report a target defined value.
+
+  // Mode register rounding mode fields:
+  //
+  // [1:0] Single-precision round mode.
+  // [3:2] Double/Half-precision round mode.
+  //
+  // 0=nearest even; 1= +infinity; 2= -infinity, 3= toward zero.
+  //
+  //             Hardware   Spec
+  // Toward-0        3        0
+  // Nearest Even    0        1
+  // +Inf            1        2
+  // -Inf            2        3
+  //  NearestAway0  N/A       4
+  //
+  // We have to handle 16 permutations of a 4-bit value, so we create a 64-bit
+  // table we can index by the raw hardware mode.
+  //
+  // (trunc (FltRoundConversionTable >> MODE.fp_round)) & 0xf
+
+  SDValue BitTable =
+      DAG.getConstant(AMDGPU::FltRoundConversionTable, SL, MVT::i64);
+
+  SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+  SDValue RoundModeTimesNumBits =
+      DAG.getNode(ISD::SHL, SL, MVT::i32, GetReg, Two);
+
+  // TODO: We could possibly avoid a 64-bit shift and use a simpler table if we
+  // knew only one mode was demanded.
+  SDValue TableValue =
+      DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+  SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+
+  SDValue EntryMask = DAG.getConstant(0xf, SL, MVT::i32);
+  SDValue TableEntry =
+      DAG.getNode(ISD::AND, SL, MVT::i32, TruncTable, EntryMask);
+
+  // There's a gap in the 4-bit encoded table and actual enum values, so offset
+  // if it's an extended value.
+  SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+  SDValue IsStandardValue =
+      DAG.getSetCC(SL, MVT::i1, TableEntry, Four, ISD::SETULT);
+  SDValue EnumOffset = DAG.getNode(ISD::ADD, SL, MVT::i32, TableEntry, Four);
+  SDValue Result = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
+                               TableEntry, EnumOffset);
+
+  return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5050,6 +5122,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::STACKSAVE:
     return LowerSTACKSAVE(Op, DAG);
+  case ISD::GET_ROUNDING:
+    return lowerGET_ROUNDING(Op, DAG);
   }
   return SDValue();
 }
