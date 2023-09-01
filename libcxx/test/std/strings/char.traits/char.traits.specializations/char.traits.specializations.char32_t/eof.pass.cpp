@@ -17,10 +17,9 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::char_traits<char32_t>::int_type i = std::char_traits<char32_t>::eof();
-    ((void)i); // Prevent unused warning
+int main(int, char**) {
+  std::char_traits<char32_t>::int_type i = std::char_traits<char32_t>::eof();
+  ((void)i); // Prevent unused warning
 
-    return 0;
+  return 0;
 }
