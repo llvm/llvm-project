@@ -63,8 +63,6 @@ public:
 
   bool Get(KeyType name, ValueSP &entry);
 
-  bool Get(uint32_t pos, ValueSP &entry);
-
   void ForEach(ForEachCallback callback);
 
   lldb::TypeCategoryImplSP GetAtIndex(uint32_t);
