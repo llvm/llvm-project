@@ -36,132 +36,12 @@
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/ExecutionEngine/Float16bits.h"
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
+#include "mlir/ExecutionEngine/SparseTensor/Attributes.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 
-#if defined(__cplusplus) && defined(__has_cpp_attribute) &&                    \
-    __has_cpp_attribute(gsl::Pointer)
-#define MLIR_SPARSETENSOR_GSL_POINTER [[gsl::Pointer]]
-#else
-#define MLIR_SPARSETENSOR_GSL_POINTER
-#endif
-
 namespace mlir {
 namespace sparse_tensor {
-
-namespace detail {
-
-/// Checks whether the `perm` array is a permutation of `[0 .. size)`.
-inline bool isPermutation(uint64_t size, const uint64_t *perm) {
-  assert(perm && "Got nullptr for permutation");
-  std::vector<bool> seen(size, false);
-  for (uint64_t i = 0; i < size; ++i) {
-    const uint64_t j = perm[i];
-    if (j >= size || seen[j])
-      return false;
-    seen[j] = true;
-  }
-  for (uint64_t i = 0; i < size; ++i)
-    if (!seen[i])
-      return false;
-  return true;
-}
-
-/// Wrapper around `isPermutation` to ensure consistent error messages.
-inline void assertIsPermutation(uint64_t size, const uint64_t *perm) {
-#ifndef NDEBUG
-  if (!isPermutation(size, perm))
-    MLIR_SPARSETENSOR_FATAL("Not a permutation of [0..%" PRIu64 ")\n", size);
-#endif
-}
-
-/// A non-owning class for capturing the knowledge that `isPermutation`
-/// is true, to avoid needing to assert it repeatedly.
-class MLIR_SPARSETENSOR_GSL_POINTER [[nodiscard]] PermutationRef final {
-public:
-  /// Asserts `isPermutation` and returns the witness to that being true.
-  explicit PermutationRef(uint64_t size, const uint64_t *perm)
-      : permSize(size), perm(perm) {
-    assertIsPermutation(size, perm);
-  }
-
-  uint64_t size() const { return permSize; }
-
-  const uint64_t *data() const { return perm; }
-
-  const uint64_t &operator[](uint64_t i) const {
-    assert(i < permSize && "index is out of bounds");
-    return perm[i];
-  }
-
-  /// Constructs a pushforward array of values.  This method is the inverse
-  /// of `permute` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> pushforward(const std::vector<T> &values) const {
-    return pushforward(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> pushforward(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    pushforward(size, values, out.data());
-    return out;
-  }
-
-  // NOTE: This form of the method is required by `toMLIRSparseTensor`,
-  // so it can reuse the `out` buffer for each iteration of a loop.
-  template <typename T>
-  inline void pushforward(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = values[i];
-  }
-
-  // NOTE: this is only needed by `toMLIRSparseTensor`, which in
-  // turn only needs it as a vector to hand off to `newSparseTensor`.
-  // Otherwise we would want the result to be an owning-permutation,
-  // to retain the knowledge that `isPermutation` is true.
-  //
-  /// Constructs the inverse permutation.  This is equivalent to calling
-  /// `pushforward` with `std::iota` for the values.
-  inline std::vector<uint64_t> inverse() const {
-    std::vector<uint64_t> out(permSize);
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = i;
-    return out;
-  }
-
-  /// Constructs a permuted array of values.  This method is the inverse
-  /// of `pushforward` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> permute(const std::vector<T> &values) const {
-    return permute(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> permute(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    permute(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void permute(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[i] = values[perm[i]];
-  }
-
-private:
-  const uint64_t permSize;
-  const uint64_t *const perm; // non-owning pointer.
-};
-
-} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // This forward decl is sufficient to split `SparseTensorStorageBase` into
@@ -662,6 +542,8 @@ private:
   /// the previous position and smaller than `coordinates[lvl].capacity()`).
   void appendPos(uint64_t lvl, uint64_t pos, uint64_t count = 1) {
     ASSERT_COMPRESSED_LVL(lvl);
+    // TODO: we'd like to recover the nicer error message:
+    // "Position value is too large for the P-type"
     positions[lvl].insert(positions[lvl].end(), count,
                           detail::checkOverflowCast<P>(pos));
   }
@@ -678,6 +560,8 @@ private:
   void appendCrd(uint64_t lvl, uint64_t full, uint64_t crd) {
     const auto dlt = getLvlType(lvl); // Avoid redundant bounds checking.
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt)) {
+      // TODO: we'd like to recover the nicer error message:
+      // "Coordinate value is too large for the C-type"
       coordinates[lvl].push_back(detail::checkOverflowCast<C>(crd));
     } else { // Dense level.
       ASSERT_DENSE_DLT(dlt);
@@ -701,6 +585,8 @@ private:
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
     assert(pos < coordinates[lvl].size() && "Position is out of bounds");
+    // TODO: we'd like to recover the nicer error message:
+    // "Coordinate value is too large for the C-type"
     coordinates[lvl][pos] = detail::checkOverflowCast<C>(crd);
   }
 
