@@ -40,29 +40,29 @@
 ! With plain -Rpass, -Rpass-missed or -Rpass-analysis, we expect remarks related to 2 opportunities (loop vectorisation / loop delete and load hoisting).
 ! Once we start filtering, this is reduced to 1 one of the loop passes.
 
-! PASS-REGEX-LOOP-ONLY-NOT:     remark: hoisting load
-! PASS-REGEX-LOOP-ONLY:         remark: Loop deleted because it is invariant
+! PASS-REGEX-LOOP-ONLY-NOT:     optimization-remark.f90:77:7: remark: hoisting load [-Rpass=licm]
+! PASS-REGEX-LOOP-ONLY:         optimization-remark.f90:83:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
 
-! MISSED-REGEX-LOOP-ONLY-NOT:   remark: failed to hoist load with loop-invariant address because load is conditionally executed
-! MISSED-REGEX-LOOP-ONLY:       remark: loop not vectorized
+! MISSED-REGEX-LOOP-ONLY-NOT:   optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
+! MISSED-REGEX-LOOP-ONLY:       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
 
 
-! ANALYSIS-REGEX-LOOP-ONLY:     remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-! ANALYSIS-REGEX-LOOP-ONLY:     Unknown data dependence.
-! ANALYSIS-REGEX-LOOP-ONLY-NOT: remark:{{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}}
+! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! ANALYSIS-REGEX-LOOP-ONLY:     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
+! ANALYSIS-REGEX-LOOP-ONLY-NOT: remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
 
-! PASS:                         remark: hoisting load
-! PASS:                         remark: Loop deleted because it is invariant
+! PASS:                         optimization-remark.f90:77:7: remark: hoisting load [-Rpass=licm]
+! PASS:                         optimization-remark.f90:83:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
 
-! MISSED:                       remark: failed to hoist load with loop-invariant address because load is conditionally executed
-! MISSED:                       remark: loop not vectorized
-! MISSED-NOT:                   remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-! MISSED-NOT:                   Unknown data dependence.
+! MISSED:                       optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
+! MISSED:                       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+! MISSED-NOT:                   optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! MISSED-NOT:                   Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
 
-! ANALYSIS:                     remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-! ANALYSIS:                     Unknown data dependence.
-! ANALYSIS:                     remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}}
-! ANALYSIS-NOT:                 remark: failed to hoist load with loop-invariant address because load is conditionally executed
+! ANALYSIS:                     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! ANALYSIS:                     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
+! ANALYSIS:                     remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
+! ANALYSIS-NOT:                 optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
 
 subroutine swap_real(a1, a2)
    implicit none

@@ -267,6 +267,21 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       diags, args, clang::driver::options::OPT_Rpass_analysis_EQ,
       /*remarkOptName=*/"pass-analysis");
 
+  if (opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo) {
+    // If the user requested a flag that requires source locations available in
+    // the backend, make sure that the backend tracks source location
+    // information.
+    bool needLocTracking = !opts.OptRecordFile.empty() ||
+                           !opts.OptRecordPasses.empty() ||
+                           !opts.OptRecordFormat.empty() ||
+                           opts.OptimizationRemark.hasValidPattern() ||
+                           opts.OptimizationRemarkMissed.hasValidPattern() ||
+                           opts.OptimizationRemarkAnalysis.hasValidPattern();
+
+    if (needLocTracking)
+      opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
+  }
+
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
