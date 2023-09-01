@@ -76,6 +76,8 @@ TEST(IncludeCleaner, StdlibUnused) {
   auto TU = TestTU::withCode(R"cpp(
     #include <list>
     #include <queue>
+    #include <vector> // IWYU pragma: keep
+    #include <string> // IWYU pragma: export
     std::list<int> x;
   )cpp");
   // Layout of std library impl is not relevant.
@@ -84,10 +86,13 @@ TEST(IncludeCleaner, StdlibUnused) {
     namespace std {
       template <typename> class list {};
       template <typename> class queue {};
+      template <typename> class vector {};
     }
   )cpp";
   TU.AdditionalFiles["list"] = "#include <bits>";
   TU.AdditionalFiles["queue"] = "#include <bits>";
+  TU.AdditionalFiles["vector"] = "#include <bits>";
+  TU.AdditionalFiles["string"] = "#include <bits>";
   TU.ExtraArgs = {"-isystem", testRoot()};
   auto AST = TU.build();
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
