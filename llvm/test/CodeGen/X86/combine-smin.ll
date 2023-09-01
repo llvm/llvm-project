@@ -10,11 +10,8 @@
 define i8 @test_i8_knownbits(i8 %a) {
 ; CHECK-LABEL: test_i8_knownbits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $-128, %dil
-; CHECK-NEXT:    movzbl %dil, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $-128, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %x = or i8 %a, -128
