@@ -1229,6 +1229,19 @@ Attributor::removeAttrs(const IRPosition &IRP,
   return updateAttrMap<Attribute::AttrKind>(IRP, AttrKinds, RemoveAttrCB);
 }
 
+ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
+                                     ArrayRef<StringRef> Attrs) {
+  auto RemoveAttrCB = [&](StringRef Attr, AttributeSet AttrSet,
+                          AttributeMask &AM, AttrBuilder &) -> bool {
+    if (!AttrSet.hasAttribute(Attr))
+      return false;
+    AM.addAttribute(Attr);
+    return true;
+  };
+
+  return updateAttrMap<StringRef>(IRP, Attrs, RemoveAttrCB);
+}
+
 ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
                                        const ArrayRef<Attribute> &Attrs,
                                        bool ForceReplace) {
@@ -3388,6 +3401,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every function can track active assumptions.
     getOrCreateAAFor<AAAssumptionInfo>(FPos);
+
+    // If we're not using a dynamic mode for float, there's nothing worthwhile
+    // to infer. This misses the edge case denormal-fp-math="dynamic" and
+    // denormal-fp-math-f32=something, but that likely has no real world use.
+    DenormalMode Mode = F.getDenormalMode(APFloat::IEEEsingle());
+    if (Mode.Input == DenormalMode::Dynamic ||
+        Mode.Output == DenormalMode::Dynamic)
+      getOrCreateAAFor<AADenormalFPMath>(FPos);
 
     // Return attributes are only appropriate if the return type is non void.
     Type *ReturnType = F.getReturnType();
