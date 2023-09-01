@@ -19,10 +19,8 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& lhs, const S& rhs, bool x)
-{
-    assert((lhs != rhs) == x);
+TEST_CONSTEXPR_CXX20 void test(const S& lhs, const S& rhs, bool x) {
+  assert((lhs != rhs) == x);
 }
 
 template <class S>
@@ -54,8 +52,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
