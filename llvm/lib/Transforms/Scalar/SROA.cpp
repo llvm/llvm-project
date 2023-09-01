@@ -121,6 +121,14 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+
+/// The maximum number of alloca slices allowed when splitting.
+static cl::opt<int>
+    SROAMaxAllocaSlices("sroa-max-alloca-slices", cl::init(1024),
+                        cl::desc("Maximum number of alloca slices allowed "
+                                 "after which splitting is not attempted"),
+                        cl::Hidden);
+
 namespace {
 
 /// Calculate the fragment of a variable to use when slicing a store
@@ -4959,6 +4967,9 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
+    return {Changed, CFGChanged};
+
+  if (std::distance(AS.begin(), AS.end()) > SROAMaxAllocaSlices)
     return {Changed, CFGChanged};
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
