@@ -4191,13 +4191,16 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
     return SDValue();
 
   unsigned ViaEltSize = std::max((uint64_t)8, PowerOf2Ceil(NumElts));
-  MVT ViaVT = MVT::getVectorVT(MVT::getIntegerVT(ViaEltSize), 1);
-  MVT ViaBitVT = MVT::getVectorVT(MVT::i1, ViaVT.getScalarSizeInBits());
+  EVT ViaVT = EVT::getVectorVT(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), ViaEltSize), 1);
+  EVT ViaBitVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i1, ViaVT.getScalarSizeInBits());
 
   // If we don't have zvbb or the larger element type > ELEN, the operation will
   // be illegal.
   if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::BITREVERSE,
-                                                               ViaVT))
+                                                               ViaVT) ||
+      !Subtarget.getTargetLowering()->isTypeLegal(ViaBitVT))
     return SDValue();
 
   // If the bit vector doesn't fit exactly into the larger element type, we need
