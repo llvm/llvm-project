@@ -125,6 +125,12 @@ private:
   DWARFUnitVector &getDWOUnits(bool Lazy = false);
 
   std::unique_ptr<const DWARFObject> DObj;
+  /// Can be optionally set by tools that work with .dwo/.dwp files to reference
+  /// main binary debug information. Usefull for accessing .debug_ranges and
+  /// .debug_addr section.
+  std::unique_ptr<const DWARFObject> MainBinaryDObj = nullptr;
+  /// DWARFContext for main binary.
+  std::unique_ptr<DWARFContext> MainBinaryDICtx = nullptr;
 
   // When set parses debug_info.dwo/debug_abbrev.dwo manually and populates CU
   // Index, and TU Index for DWARF5.
@@ -144,6 +150,13 @@ public:
   DWARFContext &operator=(DWARFContext &) = delete;
 
   const DWARFObject &getDWARFObj() const { return *DObj; }
+
+  const DWARFObject *getMainBinaryDWARFObj() const {
+    return MainBinaryDObj.get();
+  }
+  const DWARFContext *getDWARFContextMainBinary() const {
+    return MainBinaryDICtx.get();
+  }
 
   static bool classof(const DIContext *DICtx) {
     return DICtx->getKind() == CK_DWARF;
@@ -477,6 +490,17 @@ public:
   /// Sets whether CU/TU should be populated manually. TU Index populated
   /// manually only for DWARF5.
   void setParseCUTUIndexManually(bool PCUTU) { ParseCUTUIndexManually = PCUTU; }
+
+  /// Sets the object corresponding to the main binary to which the .dwo/.dwp
+  /// file belongs.
+  void setMainBinaryObjAndCreateContext(
+      const object::ObjectFile &Obj,
+      ProcessDebugRelocations RelocAction = ProcessDebugRelocations::Process,
+      const LoadedObjectInfo *L = nullptr,
+      std::function<void(Error)> RecoverableErrorHandler =
+          WithColor::defaultErrorHandler,
+      std::function<void(Error)> WarningHandler =
+          WithColor::defaultWarningHandler);
 
 private:
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,

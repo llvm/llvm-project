@@ -366,8 +366,11 @@ Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
                                   DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
   assert(!DieArray.empty());
-  DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
-                                IsLittleEndian, getAddressByteSize());
+  DWARFDataExtractor RangesData(isDWOUnit() && Context.getMainBinaryDWARFObj()
+                                    ? *Context.getMainBinaryDWARFObj()
+                                    : Context.getDWARFObj(),
+                                *RangeSection, IsLittleEndian,
+                                getAddressByteSize());
   uint64_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
   return RangeList.extract(RangesData, &ActualRangeListOffset);
 }

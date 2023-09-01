@@ -154,6 +154,11 @@ static std::array<std::optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets;
 static alias DumpDebugFrameAlias("eh-frame", desc("Alias for --debug-frame"),
                                  NotHidden, cat(SectionCategory),
                                  aliasopt(DumpDebugFrame));
+static cl::opt<std::string>
+    MainBinary("main-binary",
+               desc("Specifies the main binary for cases when .dwo/.dwp file "
+                    "is processed."),
+               cl::init(""), cat(DwarfDumpCategory));
 static list<std::string>
     ArchFilters("arch",
                 desc("Dump debug information for the specified CPU "
@@ -714,6 +719,9 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          HandlerFn HandleObj, raw_ostream &OS) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
+  std::unique_ptr<MemoryBuffer> MainBuffer = nullptr;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MainBuffOrErr = nullptr;
+  std::unique_ptr<Binary> MainBin = nullptr;
   error(Filename, BinOrErr.takeError());
 
   bool Result = true;
@@ -727,6 +735,19 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
           *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
           RecoverableErrorHandler);
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
+      if (!MainBinary.empty()) {
+        MainBuffOrErr = MemoryBuffer::getFileOrSTDIN(MainBinary);
+        error(MainBinary, MainBuffOrErr.getError());
+        MainBuffer = std::move(MainBuffOrErr.get());
+        Expected<std::unique_ptr<Binary>> MainBinOrErr =
+            object::createBinary(*MainBuffer);
+        error(MainBinary, MainBinOrErr.takeError());
+        MainBin = std::move(MainBinOrErr.get());
+        if (auto *Obj = dyn_cast<ObjectFile>(MainBin.get()))
+          DICtx->setMainBinaryObjAndCreateContext(
+              *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr,
+              RecoverableErrorHandler);
+      }
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
     }

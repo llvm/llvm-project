@@ -47,8 +47,8 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,7 +56,9 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -1004,21 +1006,47 @@ void DWARFContext::dump(
                  DObj->getAbbrevDWOSection()))
     getDebugAbbrevDWO()->dump(OS);
 
+  std::unordered_map<uint64_t, DWARFUnit *> DwoIDToDUMap;
+  auto SetSections = [&](DWARFUnit &U) -> void {
+    std::optional<uint64_t> DWOID = U.getDWOId();
+    if (U.isDWOUnit() && DWOID) {
+      auto MapIter = DwoIDToDUMap.find(*DWOID);
+      if (MapIter != DwoIDToDUMap.end()) {
+        DWARFDie UnitDie = MapIter->second->getUnitDIE();
+        std::optional<uint64_t> RangeBase = UnitDie.getRangesBaseAttribute();
+        if (U.getVersion() < 5 && RangeBase)
+          U.setRangesSection(&MainBinaryDObj->getRangesSection(), *RangeBase);
+        if (std::optional<uint64_t> AddrBase =
+                MapIter->second->getAddrOffsetSectionBase())
+          U.setAddrOffsetSection(&MainBinaryDObj->getAddrSection(), *AddrBase);
+      }
+    }
+  };
   auto dumpDebugInfo = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
-      for (const auto &U : Units)
+      for (const auto &U : Units) {
+        SetSections(*U);
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
+      }
     else
-      for (const auto &U : Units)
+      for (const auto &U : Units) {
+        SetSections(*U);
         U->dump(OS, DumpOpts);
+      }
   };
   if ((DumpType & DIDT_DebugInfo)) {
     if (Explicit || getNumCompileUnits())
       dumpDebugInfo(".debug_info", info_section_units());
-    if (ExplicitDWO || getNumDWOCompileUnits())
+    if (ExplicitDWO || getNumDWOCompileUnits()) {
+      if (MainBinaryDObj) {
+        for (const auto &U : MainBinaryDICtx->compile_units())
+          if (std::optional<uint64_t> DWOID = U->getDWOId())
+            DwoIDToDUMap.insert({*DWOID, U.get()});
+      }
       dumpDebugInfo(".debug_info.dwo", dwo_info_section_units());
+    }
   }
 
   auto dumpDebugType = [&](const char *Name, unit_iterator_range Units) {
@@ -2427,4 +2455,16 @@ uint8_t DWARFContext::getCUAddrSize() {
   // them independently, not to enable varying the address size.
   auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
+}
+
+void DWARFContext::setMainBinaryObjAndCreateContext(
+    const object::ObjectFile &Obj, ProcessDebugRelocations RelocAction,
+    const LoadedObjectInfo *L,
+    std::function<void(Error)> RecoverableErrorHandler,
+    std::function<void(Error)> WarningHandler) {
+  MainBinaryDObj = std::make_unique<DWARFObjInMemory>(
+      Obj, L, RecoverableErrorHandler, WarningHandler, RelocAction);
+  MainBinaryDICtx =
+      DWARFContext::create(Obj, DWARFContext::ProcessDebugRelocations::Process,
+                           nullptr, "", RecoverableErrorHandler);
 }
