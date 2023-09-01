@@ -436,7 +436,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 }
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexOpt &result) const {
-  Matrix output(0, domainPoly.getNumVars() + 1);
+  Matrix<MPInt> output(0, domainPoly.getNumVars() + 1);
   output.reserveRows(result.lexopt.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
