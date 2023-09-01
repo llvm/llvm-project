@@ -108,7 +108,7 @@
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
 
 # mlir-async
-/mlir/GPU @llvm/pr-subscribers-mlir-async
+/mlir/GPU/ @llvm/pr-subscribers-mlir-async
 
 # mlir-irdl
 /mlir/**/IRDL/ @llvm/pr-subscribers-mlir-irdl
@@ -117,10 +117,10 @@
 /mlir/**/Index/ @llvm/pr-subscribers-mlir-index
 
 # mlir-llvm
-/mlir/**/LLVM @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
-/mlir/linalg @llvm/pr-subscribers-mlir-linalg
+/mlir/linalg/ @llvm/pr-subscribers-mlir-linalg
 
 # mlir-mlprogram
 /mlir/**/MLProgram/** @llvm/pr-subscribers-mlir-mlprogram
@@ -141,7 +141,7 @@
 /mlir/**/OpenMP/ @llvm/pr-subscribers-mlir-openmp
 
 # mlir-pdl
-/mlir/**/PDL @llvm/pr-subscribers-mlir-pdl
+/mlir/**/PDL/ @llvm/pr-subscribers-mlir-pdl
 
 # mlir-quant
 /mlir/**/Quant/ @llvm/pr-subscribers-mlir-quant
@@ -168,10 +168,10 @@
 /mlir/**/UB/ @llvm/pr-subscribers-mlir-ub
 
 # mlir-vector
-/mlir/**/*Vector @llvm/pr-subscribers-mlir-vector
+/mlir/**/*Vector/ @llvm/pr-subscribers-mlir-vector
 
 # mlir-execution-engine
-/mlir/ExecutionEngine @llvm/pr-subscribers-mlir-execution-engine
+/mlir/ExecutionEngine/ @llvm/pr-subscribers-mlir-execution-engine
 
 # coroutines
 /clang/docs/DebuggingCoroutines.rst @llvm/pr-subscribers-coroutines
@@ -220,7 +220,7 @@
 /llvm/lib/MCA/ @llvm/pr-subscribers-llvm-mca
 
 # vectorizers
-/llvm/lib/Transforms/Vectorize @llvm/pr-subscribers-vectorizers
+/llvm/lib/Transforms/Vectorize/ @llvm/pr-subscribers-vectorizers
 
 # clang
 /clang/ @llvm/pr-subscribers-clang
@@ -231,9 +231,9 @@
 /llvm/test/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/unittests/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/utils/lit/ @llvm/pr-subscribers-testing-tools
-/llvm/utils/split-file @llvm/pr-subscribers-testing-tools
-/llvm/utils/not @llvm/pr-subscribers-testing-tools
-/llvm/utils/count @llvm/pr-subscribers-testing-tools
+/llvm/utils/split-file/ @llvm/pr-subscribers-testing-tools
+/llvm/utils/not/ @llvm/pr-subscribers-testing-tools
+/llvm/utils/count/ @llvm/pr-subscribers-testing-tools
 /llvm/utils/FileCheck/ @llvm/pr-subscribers-testing-tools
 /llvm/docs/CommandGuide/FileCheck.rst @llvm/pr-subscribers-testing-tools
 /llvm/docs/CommandGuide/lit.rst @llvm/pr-subscribers-testing-tools
@@ -241,30 +241,30 @@
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
 
 # debug-info
-/llvm/include/llvm/DebugInfo @llvm/pr-subscribers-debug-info
-/llvm/lib/DebugInfo @llvm/pr-subscribers-debug-info
-/llvm/tools/dsymutil @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-debuginfo-analyzer @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-dwarfdump @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-dwarfutil @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-dwp @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-gsymutil @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-pdbutil @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-debuginfod @llvm/pr-subscribers-debug-info
-/llvm/tools/llvm-debuginfod-find @llvm/pr-subscribers-debug-info
-/llvm/lib/CodeGen/AsmPrinter @llvm/pr-subscribers-debug-info
+/llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
+/llvm/lib/DebugInfo/ @llvm/pr-subscribers-debug-info
+/llvm/tools/dsymutil/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-debuginfo-analyzer/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-dwarfdump/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-dwarfutil/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-dwp/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-gsymutil/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-pdbutil/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-debuginfod/ @llvm/pr-subscribers-debug-info
+/llvm/tools/llvm-debuginfod-find/ @llvm/pr-subscribers-debug-info
+/llvm/lib/CodeGen/AsmPrinter/ @llvm/pr-subscribers-debug-info
 /clang/lib/CodeGen/CGDebugInfo.cpp @llvm/pr-subscribers-debug-info
 /llvm/include/llvm/BinaryFormat/Dwarf.* @llvm/pr-subscribers-debug-info
-/llvm/test/DebugInfo @llvm/pr-subscribers-debug-info
-/llvm/test/tools/dsymutil @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-debuginfo-analyzer @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-debuginfod @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-debuginfod-find @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-dwarfdump @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-dwarfutil @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-dwp @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-gsymutil @llvm/pr-subscribers-debug-info
-/llvm/test/tools/llvm-pdbuti @llvm/pr-subscribers-debug-info
+/llvm/test/DebugInfo/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/dsymutil/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-debuginfo-analyzer/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-debuginfod/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-debuginfod-find/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-dwarfdump/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-dwarfutil/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-dwp/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-gsymutil/ @llvm/pr-subscribers-debug-info
+/llvm/test/tools/llvm-pdbuti/ @llvm/pr-subscribers-debug-info
 /llvm/lib/IR/Debug*.cpp @llvm/pr-subscribers-debug-info
 /llvm/include/llvm/IR/Debug*.h @llvm/pr-subscribers-debug-info
 
@@ -272,16 +272,16 @@
 /.github/workflows/ @llvm/pr-subscribers-github-workflow
 
 # flang-driver
-/flang/tools/flang-driver @llvm/pr-subscribers-flang-driver
-/flang/unittests/Frontend @llvm/pr-subscribers-flang-driver
-/flang/lib/FrontendTool @llvm/pr-subscribers-flang-driver
-/flang/lib/Frontend @llvm/pr-subscribers-flang-driver
-/flang/include/flang/Frontend @llvm/pr-subscribers-flang-driver
-/flang/include/flang/FrontendTool @llvm/pr-subscribers-flang-driver
-/flang/test/Driver @llvm/pr-subscribers-flang-driver
+/flang/tools/flang-driver/ @llvm/pr-subscribers-flang-driver
+/flang/unittests/Frontend/ @llvm/pr-subscribers-flang-driver
+/flang/lib/FrontendTool/ @llvm/pr-subscribers-flang-driver
+/flang/lib/Frontend/ @llvm/pr-subscribers-flang-driver
+/flang/include/flang/Frontend/ @llvm/pr-subscribers-flang-driver
+/flang/include/flang/FrontendTool/ @llvm/pr-subscribers-flang-driver
+/flang/test/Driver/ @llvm/pr-subscribers-flang-driver
 
 # m68k
-/llvm/lib/Target/M68k @llvm/pr-subscribers-m68k
+/llvm/lib/Target/M68k/ @llvm/pr-subscribers-m68k
 /clang/lib/Basic/Targets/M68k.* @llvm/pr-subscribers-m68k
 /clang/lib/CodeGen/Targets/M68k.cpp @llvm/pr-subscribers-m68k
 
@@ -344,7 +344,7 @@
 /llvm/**/Frontend/OpenACC/ @llvm/pr-subscribers-openacc
 /llvm/unittests/Frontend/OpenACCTest.cpp @llvm/pr-subscribers-openacc
 /mlir/test/Target/LLVMIR/openacc-llvm.mlir @llvm/pr-subscribers-openacc
-/mlir/**/*OpenACC @llvm/pr-subscribers-openacc
+/mlir/**/*OpenACC/ @llvm/pr-subscribers-openacc
 
 # flang-runtime
 /flang/runtime/ @llvm/pr-subscribers-flang-runtime
@@ -390,18 +390,18 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /flang/lib/Semantics/check-omp-structure.cpp @llvm/pr-subscribers-flang-openmp
 /flang/lib/Optimizer/Transforms/OMP* @llvm/pr-subscribers-flang-openmp
 /flang/test/Fir/convert-to-llvm-openmp-and-fir.fir @llvm/pr-subscribers-flang-openmp
-/flang/test/Lower/OpenMP @llvm/pr-subscribers-flang-openmp
+/flang/test/Lower/OpenMP/ @llvm/pr-subscribers-flang-openmp
 /flang/test/Transforms/omp* @llvm/pr-subscribers-flang-openmp
 /mlir/**/*OpenMP* @llvm/pr-subscribers-flang-openmp
 /mlir/test/Target/LLVMIR/openmp* @llvm/pr-subscribers-flang-openmp
-/llvm/lib/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
-/llvm/include/llvm/Frontend/OpenMP @llvm/pr-subscribers-flang-openmp
+/llvm/lib/Frontend/OpenMP/ @llvm/pr-subscribers-flang-openmp
+/llvm/include/llvm/Frontend/OpenMP/ @llvm/pr-subscribers-flang-openmp
 /llvm/unittests/Frontend/OpenMP* @llvm/pr-subscribers-flang-openmp
 
 # arm
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
-/llvm/lib/Target/ARM @llvm/pr-subscribers-arm
-/llvm/test/CodeGen/ARM @llvm/pr-subscribers-arm
+/llvm/lib/Target/ARM/ @llvm/pr-subscribers-arm
+/llvm/test/CodeGen/ARM/ @llvm/pr-subscribers-arm
 /clang/lib/Basic/Targets/ARM* @llvm/pr-subscribers-arm
 /clang/lib/Driver/ToolChains/Arch/ARM.* @llvm/pr-subscribers-arm
 /clang/lib/CodeGen/Targets/ARM.cpp @llvm/pr-subscribers-arm
@@ -409,8 +409,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # AArch64
 /llvm/include/llvm/IR/IntrinsicsAArch64.td @llvm/pr-subscribers-AArch64
-/llvm/lib/Target/AArch64 @llvm/pr-subscribers-AArch64
-/llvm/test/CodeGen/AArch64 @llvm/pr-subscribers-AArch64
+/llvm/lib/Target/AArch64/ @llvm/pr-subscribers-AArch64
+/llvm/test/CodeGen/AArch64/ @llvm/pr-subscribers-AArch64
 /clang/lib/Basic/Targets/AArch64* @llvm/pr-subscribers-AArch64
 /clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
@@ -418,8 +418,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # loongarch
 /llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
-/llvm/lib/Target/LoongArch @llvm/pr-subscribers-loongarch
-/llvm/test/CodeGen/LoongArch @llvm/pr-subscribers-loongarch
+/llvm/lib/Target/LoongArch/ @llvm/pr-subscribers-loongarch
+/llvm/test/CodeGen/LoongArch/ @llvm/pr-subscribers-loongarch
 /clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
 /clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
@@ -430,7 +430,7 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
 /llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
 /llvm/test/MC/X86/ @llvm/pr-subscribers-x86
-/llvm/test/MC/Disassembler/X86 @llvm/pr-subscribers-x86
+/llvm/test/MC/Disassembler/X86/ @llvm/pr-subscribers-x86
 /llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
 /llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
 /clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
