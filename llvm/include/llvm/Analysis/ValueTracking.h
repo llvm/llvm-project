@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
@@ -228,6 +229,10 @@ Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
                                                 const Function &F, Value *LHS,
                                                 Value *RHS,
+                                                bool LookThroughSrc = true);
+std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
+                                                const Function &F, Value *LHS,
+                                                const APFloat *ConstRHS,
                                                 bool LookThroughSrc = true);
 
 struct KnownFPClass {
@@ -470,6 +475,28 @@ KnownFPClass computeKnownFPClass(
     const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
     const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
     bool UseInstrInfo = true);
+
+/// Wrapper to account for known fast math flags at the use instruction.
+inline KnownFPClass computeKnownFPClass(
+    const Value *V, FastMathFlags FMF, const DataLayout &DL,
+    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
+    const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
+    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
+    bool UseInstrInfo = true) {
+  if (FMF.noNaNs())
+    InterestedClasses &= ~fcNan;
+  if (FMF.noInfs())
+    InterestedClasses &= ~fcInf;
+
+  KnownFPClass Result = computeKnownFPClass(V, DL, InterestedClasses, Depth,
+                                            TLI, AC, CxtI, DT, UseInstrInfo);
+
+  if (FMF.noNaNs())
+    Result.KnownFPClasses &= ~fcNan;
+  if (FMF.noInfs())
+    Result.KnownFPClasses &= ~fcInf;
+  return Result;
+}
 
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0. Users should use caution when considering PreserveSign
