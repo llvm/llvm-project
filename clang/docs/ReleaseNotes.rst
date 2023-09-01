@@ -292,6 +292,9 @@ Arm and AArch64 Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+- Fixed an assertion failure that occurred due to a failure to propagate
+  ``MSInheritanceAttr`` attributes to class template instantiations created
+  for explicit template instantiation declarations.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
