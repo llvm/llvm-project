@@ -1838,7 +1838,7 @@ static bool findBiarchMultilibs(const Driver &D,
 
   StringRef Suff64 = "/64";
   // Solaris uses platform-specific suffixes instead of /64.
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     switch (TargetTriple.getArch()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -2220,7 +2220,7 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
 void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     const llvm::Triple &TargetTriple, SmallVectorImpl<std::string> &Prefixes,
     StringRef SysRoot) {
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     // Solaris is a special case.
     // The GCC installation is under
     //   /usr/gcc/<major>.<minor>/lib/gcc/<triple>/<major>.<minor>.<patch>/
@@ -2422,7 +2422,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   using std::begin;
   using std::end;
 
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     static const char *const SolarisLibDirs[] = {"/lib"};
     static const char *const SolarisSparcV8Triples[] = {
         "sparc-sun-solaris2.11"};

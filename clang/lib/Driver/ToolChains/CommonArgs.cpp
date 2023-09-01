@@ -998,7 +998,7 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
 
   // Solaris ld defaults to --export-dynamic behaviour but doesn't support
   // the option, so don't try to pass it.
-  if (TC.getTriple().getOS() == llvm::Triple::Solaris && !LinkerIsGnuLd)
+  if (TC.getTriple().isOSSolaris() && !LinkerIsGnuLd)
     return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
