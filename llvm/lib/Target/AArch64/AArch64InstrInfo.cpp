@@ -8538,7 +8538,11 @@ bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
     // scalable values, such as 'pfalse' or 'ptrue', which result in different
     // results when the runtime vector length is different.
     const MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (any_of(MI.operands(), [&MRI](const MachineOperand &MO) {
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    if (any_of(MI.operands(), [&MRI, &MFI](const MachineOperand &MO) {
+          if (MO.isFI() &&
+              MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector)
+            return true;
           if (!MO.isReg())
             return false;
 
