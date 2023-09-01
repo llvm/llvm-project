@@ -17,12 +17,10 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-
 template <class C>
-TEST_CONSTEXPR_CXX20 void test_contiguous ( const C &c )
-{
-    for ( std::size_t i = 0; i < c.size(); ++i )
-        assert ( *(c.begin() + static_cast<typename C::difference_type>(i)) == *(std::addressof(*c.begin()) + i));
+TEST_CONSTEXPR_CXX20 void test_contiguous(const C& c) {
+  for (std::size_t i = 0; i < c.size(); ++i)
+    assert(*(c.begin() + static_cast<typename C::difference_type>(i)) == *(std::addressof(*c.begin()) + i));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -53,8 +51,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

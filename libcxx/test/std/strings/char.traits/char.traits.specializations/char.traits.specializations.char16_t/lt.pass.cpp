@@ -17,9 +17,8 @@
 #include <string>
 #include <cassert>
 
-int main(int, char**)
-{
-    assert(!std::char_traits<char16_t>::lt(u'a', u'a'));
-    assert( std::char_traits<char16_t>::lt(u'A', u'a'));
-    return 0;
+int main(int, char**) {
+  assert(!std::char_traits<char16_t>::lt(u'a', u'a'));
+  assert(std::char_traits<char16_t>::lt(u'A', u'a'));
+  return 0;
 }

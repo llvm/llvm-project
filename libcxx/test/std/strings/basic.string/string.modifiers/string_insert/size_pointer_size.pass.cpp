@@ -20,31 +20,24 @@
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::size_type pos, const typename S::value_type* str,
-     typename S::size_type n, S expected)
-{
-    const typename S::size_type old_size = s.size();
-    S s0 = s;
-    if (pos <= old_size)
-    {
-        s.insert(pos, str, n);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+test(S s, typename S::size_type pos, const typename S::value_type* str, typename S::size_type n, S expected) {
+  const typename S::size_type old_size = s.size();
+  S s0                                 = s;
+  if (pos <= old_size) {
+    s.insert(pos, str, n);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.insert(pos, str, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > old_size);
-            assert(s == s0);
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.insert(pos, str, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > old_size);
+      assert(s == s0);
     }
+  }
 #endif
 }
 
@@ -391,8 +384,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test<std::string>();
 #if TEST_STD_VER >= 11
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();

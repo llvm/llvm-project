@@ -20,22 +20,18 @@
 #include "test_allocator.h"
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test(S s, SV sv, S expected)
-{
-    s.assign(sv);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == expected);
+TEST_CONSTEXPR_CXX20 void test(S s, SV sv, S expected) {
+  s.assign(sv);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == expected);
 }
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-testAlloc(S s, SV sv, const typename S::allocator_type& a)
-{
-    s.assign(sv);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == sv);
-    assert(s.get_allocator() == a);
+TEST_CONSTEXPR_CXX20 void testAlloc(S s, SV sv, const typename S::allocator_type& a) {
+  s.assign(sv);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == sv);
+  assert(s.get_allocator() == a);
 }
 
 template <class S>
@@ -59,8 +55,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("12345678901234567890"), SV(), S());
   test(S("12345678901234567890"), SV("12345"), S("12345"));
   test(S("12345678901234567890"), SV("1234567890"), S("1234567890"));
-  test(S("12345678901234567890"), SV("12345678901234567890"),
-        S("12345678901234567890"));
+  test(S("12345678901234567890"), SV("12345678901234567890"), S("12345678901234567890"));
 
   using A = typename S::allocator_type;
 
@@ -79,8 +74,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

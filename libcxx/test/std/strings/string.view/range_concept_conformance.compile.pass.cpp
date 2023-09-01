@@ -15,8 +15,6 @@
 #include <concepts>
 #include <ranges>
 
-
-
 static_assert(std::same_as<std::ranges::iterator_t<std::string_view>, std::string_view::iterator>);
 static_assert(std::ranges::common_range<std::string_view>);
 static_assert(std::ranges::random_access_range<std::string_view>);

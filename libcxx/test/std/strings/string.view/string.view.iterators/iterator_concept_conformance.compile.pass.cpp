@@ -16,9 +16,9 @@
 
 #include "test_macros.h"
 
-using iterator = std::string_view::iterator;
-using const_iterator = std::string_view::const_iterator;
-using reverse_iterator = std::string_view::reverse_iterator;
+using iterator               = std::string_view::iterator;
+using const_iterator         = std::string_view::const_iterator;
+using reverse_iterator       = std::string_view::reverse_iterator;
 using const_reverse_iterator = std::string_view::const_reverse_iterator;
 
 static_assert(std::contiguous_iterator<iterator>);
