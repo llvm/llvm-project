@@ -243,6 +243,9 @@ public:
     virtual const swift::reflection::TypeInfo *
     GetTypeInfo(const swift::reflection::TypeRef *type_ref,
                 swift::remote::TypeInfoProvider *provider) = 0;
+    virtual const swift::reflection::TypeInfo *
+    GetTypeInfoFromInstance(lldb::addr_t instance,
+                            swift::remote::TypeInfoProvider *provider) = 0;
     virtual swift::remote::MemoryReader &GetReader() = 0;
     virtual const swift::reflection::TypeRef *
     LookupSuperclass(const swift::reflection::TypeRef *tr) = 0;
@@ -255,6 +258,10 @@ public:
     ProjectExistentialAndUnwrapClass(
         swift::remote::RemoteAddress existential_addess,
         const swift::reflection::TypeRef &existential_tr) = 0;
+    virtual llvm::Optional<int32_t>
+    ProjectEnumValue(swift::remote::RemoteAddress enum_addr,
+                     const swift::reflection::TypeRef *enum_type_ref,
+                     swift::remote::TypeInfoProvider *provider) = 0;
     virtual const swift::reflection::TypeRef *
     ReadTypeFromMetadata(lldb::addr_t metadata_address,
                          bool skip_artificial_subclasses = false) = 0;
