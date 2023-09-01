@@ -125,7 +125,8 @@ DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
     MLIRContext *ctx, TypeID interfaceKind, StringRef interfaceName) {
   for (auto *dialect : ctx->getLoadedDialects()) {
 #ifndef NDEBUG
-  dialect->handleUseOfUndefinedPromisedInterface(interfaceKind, interfaceName);
+    dialect->handleUseOfUndefinedPromisedInterface(interfaceKind,
+                                                   interfaceName);
 #endif
     if (auto *interface = dialect->getRegisteredInterface(interfaceKind)) {
       interfaces.insert(interface);
@@ -243,8 +244,9 @@ void DialectRegistry::applyExtensions(Dialect *dialect) const {
     extension.apply(ctx, requiredDialects);
   };
 
-  for (const auto &extension : extensions)
-    applyExtension(*extension);
+  // Note: Additional extensions may be added while applying an extension.
+  for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
+    applyExtension(*extensions[i]);
 }
 
 void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
@@ -264,8 +266,9 @@ void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
     extension.apply(ctx, requiredDialects);
   };
 
-  for (const auto &extension : extensions)
-    applyExtension(*extension);
+  // Note: Additional extensions may be added while applying an extension.
+  for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
+    applyExtension(*extensions[i]);
 }
 
 bool DialectRegistry::isSubsetOf(const DialectRegistry &rhs) const {
