@@ -159,10 +159,14 @@ Here is an example for creating a Pull Request with the GitHub CLI:
   # Don't forget clang-format
   git clang-format
 
+  # and don't forget running your tests
+  ninja check-llvm
+
   # Commit, use a good commit message
   git commit file.cpp
 
   # Create the PR, select to use your own fork when prompted.
+  # If you don't have a fork, gh will create one for you.
   gh pr create
 
   # If you get any review comments, come back to the branch and
@@ -183,8 +187,19 @@ Here is an example for creating a Pull Request with the GitHub CLI:
   # you have all the latest changes.
   git rebase -i origin/main
 
+  # If this PR is older and you get a lot of new commits with the
+  # rebase, you might want to re-run tests and make sure nothing
+  # broke.
+  ninja check-llvm
+
   # Now merge it
   gh pr merge --squash --delete
+
+
+See more in-depth information about how to contribute in the following documentation:
+
+* :doc:`Contributing`
+* :doc:`MyFirstTypoFix`
 
 Releases
 ========
