@@ -30,6 +30,7 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
 
   const bool IsArch32Bit = getToolChain().getTriple().isArch32Bit();
@@ -37,6 +38,11 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // Only support 32 and 64 bit.
   if (!IsArch32Bit && !IsArch64Bit)
     llvm_unreachable("Unsupported bit width value.");
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
 
   // Specify the mode in which the as(1) command operates.
   if (IsArch32Bit) {
