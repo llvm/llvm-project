@@ -20,7 +20,12 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "nvgpu-to-nvvm"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define DBGSE() (llvm::dbgs())
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTNVGPUTONVVMPASS
@@ -980,9 +985,14 @@ struct NVGPUGenerateGmmaDescriptorLowering
     };
 
     int ex4LSB = 4;
-    Value strideDim = makeConst((layout << 3) >> ex4LSB);
     int64_t sizeN = op.getTensorMap().getType().getTensor().getDimSize(0);
-    Value leadDim = makeConst((sizeN * layout) >> ex4LSB);
+    uint64_t strideDimVal = (layout << 3) >> ex4LSB;
+    uint64_t leadDimVal = (sizeN * layout) >> ex4LSB;
+    uint64_t offsetVal = 0;
+
+    Value strideDim = makeConst(strideDimVal);
+    Value leadDim = makeConst(leadDimVal);
+
     Value baseAddr = getStridedElementPtr(
         op->getLoc(), cast<MemRefType>(op.getTensor().getType()),
         adaptor.getTensor(), {}, rewriter);
@@ -996,13 +1006,21 @@ struct NVGPUGenerateGmmaDescriptorLowering
     // // [62,64)  swizzle type
     dsc = insertBit(dsc, makeConst(swizzle), startSwizzleBit);
     // // [49,52)  base_offset
-    dsc = insertBit(dsc, makeConst(0), startOffsetBit);
+    dsc = insertBit(dsc, makeConst(offsetVal), startOffsetBit);
     // // [32,46)  stride
     dsc = insertBit(dsc, strideDim, startStrideBit);
     // // [16,30)  leading dimension
     dsc = insertBit(dsc, leadDim, startLeadBit);
     // // [0,14)   start_address
     dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
+
+    LLVM_DEBUG(DBGS() << "Generating wgmma.descriptor: "
+                      << "leading_off:" << leadDimVal << "\t"
+                      << "stride_off :" << strideDimVal << "\t"
+                      << "base_offset:" << offsetVal << "\t"
+                      << "layout_type:" << swizzle << " ("
+                      << nvgpu::stringifyTensorMapSwizzleKind(swizzleKind)
+                      << ")\n start_addr :  " << baseAddr << "\n");
 
     rewriter.replaceOp(op, dsc);
     return success();
