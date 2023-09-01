@@ -25,10 +25,10 @@ using namespace mlir::detail;
 
 constexpr int64_t ShapedType::kDynamic;
 
-int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
+int64_t ShapedType::getMinNumElements(ArrayRef<int64_t> shape) {
   int64_t num = 1;
-  for (int64_t dim : shape) {
-    num *= dim;
+  for (ShapeDim dim : shape) {
+    num *= dim.minSize();
     assert(num >= 0 && "integer overflow in element count computation");
   }
   return num;

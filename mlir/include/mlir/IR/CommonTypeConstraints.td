@@ -459,7 +459,7 @@ class VectorOfRankAndType<list<int> allowedRanks,
 class IsVectorOfLengthPred<list<int> allowedLengths> :
   And<[IsVectorTypePred,
        Or<!foreach(allowedlength, allowedLengths,
-                   CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
+                   CPred<[{::llvm::cast<::mlir::VectorType>($_self).getMinNumElements()
                            == }]
                          # allowedlength>)>]>;
 
@@ -477,7 +477,7 @@ class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
 class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
   And<[IsScalableVectorTypePred,
        Or<!foreach(allowedlength, allowedLengths,
-                   CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
+                   CPred<[{::llvm::cast<::mlir::VectorType>($_self).getMinNumElements()
                            == }]
                          # allowedlength>)>]>;
 

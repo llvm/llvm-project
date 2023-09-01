@@ -44,20 +44,25 @@ def ArmSME_Dialect : Dialect {
 
 class SMETileType<Type datatype, list<int> dims, string description>
   : ShapedContainerType<[datatype],
-      And<[IsVectorOfRankPred<[2]>, allDimsScalableVectorTypePred,
-           IsVectorOfShape<dims>]>,
+      And<[IsVectorOfRankPred<[2]>, IsVectorOfShape<dims>]>,
   description>;
 
-def nxnxv16i8  : SMETileType<I8,   [16, 16], "vector<[16]x[16]xi8>">;
-def nxnxv8i16  : SMETileType<I16,  [8,  8 ], "vector<[8]x[8]xi16>">;
-def nxnxv4i32  : SMETileType<I32,  [4,  4 ], "vector<[4]x[4]xi32>">;
-def nxnxv2i64  : SMETileType<I64,  [2,  2 ], "vector<[2]x[2]xi64>">;
-def nxnxv1i128 : SMETileType<I128, [1,  1 ], "vector<[1]x[1]xi128>">;
 
-def nxnxv8f16  : SMETileType<F16,  [8,  8 ], "vector<[8]x[8]xf16>">;
-def nxnxv8bf16 : SMETileType<BF16, [8,  8 ], "vector<[8]x[8]xbf16>">;
-def nxnxv4f32  : SMETileType<F32,  [4,  4 ], "vector<[4]x[4]xf32>">;
-def nxnxv2f64  : SMETileType<F64,  [2,  2 ], "vector<[2]x[2]xf64>">;
+class DimOfSize<int size> {
+  int scalable = !sub(0, size);
+  int fixed = size;
+}
+
+def nxnxv16i8  : SMETileType<I8,   [DimOfSize<16>.scalable, DimOfSize<16>.scalable], "vector<[16]x[16]xi8>">;
+def nxnxv8i16  : SMETileType<I16,  [DimOfSize<8>.scalable, DimOfSize<8>.scalable], "vector<[8]x[8]xi16>">;
+def nxnxv4i32  : SMETileType<I32,  [DimOfSize<4>.scalable, DimOfSize<4>.scalable], "vector<[4]x[4]xi32>">;
+def nxnxv2i64  : SMETileType<I64,  [DimOfSize<2>.scalable, DimOfSize<2>.scalable], "vector<[2]x[2]xi64>">;
+def nxnxv1i128 : SMETileType<I128, [DimOfSize<1>.scalable, DimOfSize<1>.scalable], "vector<[1]x[1]xi128>">;
+
+def nxnxv8f16  : SMETileType<F16,  [DimOfSize<8>.scalable, DimOfSize<8>.scalable], "vector<[8]x[8]xf16>">;
+def nxnxv8bf16 : SMETileType<BF16, [DimOfSize<8>.scalable, DimOfSize<8>.scalable], "vector<[8]x[8]xbf16>">;
+def nxnxv4f32  : SMETileType<F32,  [DimOfSize<4>.scalable, DimOfSize<4>.scalable], "vector<[4]x[4]xf32>">;
+def nxnxv2f64  : SMETileType<F64,  [DimOfSize<2>.scalable, DimOfSize<2>.scalable], "vector<[2]x[2]xf64>">;
 
 def SMETile : AnyTypeOf<[nxnxv16i8, nxnxv8i16, nxnxv4i32, nxnxv2i64, nxnxv1i128,
                          nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64]>;
@@ -421,8 +426,7 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
       "tile", "vector",
       "VectorType::get("
         "::llvm::cast<mlir::VectorType>($_self).getShape().drop_front(),"
-        "::llvm::cast<mlir::VectorType>($_self).getElementType(),"
-        "/*scalableDims=*/{true})">,
+        "::llvm::cast<mlir::VectorType>($_self).getElementType())">,
 ]> {
   let summary = "Move 1-D scalable vector to slice of 2-D tile";
   let description = [{

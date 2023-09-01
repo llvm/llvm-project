@@ -1064,7 +1064,7 @@ bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
                                          bool &detectedSplat) {
   size_t storageWidth = getDenseElementStorageWidth(type.getElementType());
   size_t rawBufferWidth = rawBuffer.size() * CHAR_BIT;
-  int64_t numElements = type.getNumElements();
+  int64_t numElements = type.getMinNumElements();
 
   // The initializer is always a splat if the result type has a single element.
   detectedSplat = numElements == 1;
@@ -1268,7 +1268,7 @@ Type DenseElementsAttr::getElementType() const {
 }
 
 int64_t DenseElementsAttr::getNumElements() const {
-  return getType().getNumElements();
+  return getType().getMinNumElements();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1318,7 +1318,7 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    ArrayRef<char> data) {
-  assert(type.hasStaticShape() && "type must have static shape");
+  assert(!type.hasDynamicShape() && "type cannot have dynamic shape");
   bool isSplat = false;
   bool isValid = isValidRawBuffer(type, data, isSplat);
   assert(isValid);

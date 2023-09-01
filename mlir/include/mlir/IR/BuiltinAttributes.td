@@ -850,7 +850,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
              "expected sparse indices to be 64-bit integer values");
       assert((::llvm::isa<RankedTensorType, VectorType>(type)) &&
              "type must be ranked tensor or vector");
-      assert(type.hasStaticShape() && "type must have static shape");
+      assert(!type.hasDynamicShape() && "type cannot have dynamic shape");
       return $_get(type.getContext(), type,
                    ::llvm::cast<DenseIntElementsAttr>(indices), values);
     }]>,

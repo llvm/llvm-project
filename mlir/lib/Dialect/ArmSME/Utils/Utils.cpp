@@ -39,7 +39,8 @@ bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
     return false;
 
   unsigned minNumElts = arm_sme::getSMETileSliceMinNumElts(elemType);
-  if (vType.getShape() != ArrayRef<int64_t>({minNumElts, minNumElts}))
+  if (vType.getShape() != ArrayRef<int64_t>{ShapeDim::scalable(minNumElts),
+                                            ShapeDim::scalable(minNumElts)})
     return false;
 
   return true;

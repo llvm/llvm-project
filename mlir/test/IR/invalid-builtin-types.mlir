@@ -125,12 +125,12 @@ func.func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 
 // -----
 
-// expected-error @+1 {{vector types must have positive constant sizes}}
+// expected-error @+1 {{vector type must have non-zero sizes}}
 func.func @zero_vector_type() -> vector<0xi32>
 
 // -----
 
-// expected-error @+1 {{vector types must have positive constant sizes}}
+// expected-error @+1 {{vector type must have non-zero sizes}}
 func.func @zero_in_vector_type() -> vector<1x0xi32>
 
 // -----

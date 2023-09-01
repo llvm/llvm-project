@@ -115,12 +115,8 @@ struct TransferReadPermutationLowering
     // Apply the reverse transpose to deduce the type of the transfer_read.
     ArrayRef<int64_t> originalShape = op.getVectorType().getShape();
     SmallVector<int64_t> newVectorShape(originalShape.size());
-    ArrayRef<bool> originalScalableDims = op.getVectorType().getScalableDims();
-    SmallVector<bool> newScalableDims(originalShape.size());
-    for (const auto &pos : llvm::enumerate(permutation)) {
+    for (const auto &pos : llvm::enumerate(permutation))
       newVectorShape[pos.value()] = originalShape[pos.index()];
-      newScalableDims[pos.value()] = originalScalableDims[pos.index()];
-    }
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
@@ -129,8 +125,8 @@ struct TransferReadPermutationLowering
                          : ArrayAttr();
 
     // Generate new transfer_read operation.
-    VectorType newReadType = VectorType::get(
-        newVectorShape, op.getVectorType().getElementType(), newScalableDims);
+    VectorType newReadType =
+        VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
@@ -350,14 +346,12 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
 
     SmallVector<int64_t> newShape(
         originalVecType.getShape().take_back(reducedShapeRank));
-    SmallVector<bool> newScalableDims(
-        originalVecType.getScalableDims().take_back(reducedShapeRank));
     // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
     if (newShape.empty())
       return rewriter.notifyMatchFailure(op, "rank-reduced vector is 0-d");
 
-    VectorType newReadType = VectorType::get(
-        newShape, originalVecType.getElementType(), newScalableDims);
+    VectorType newReadType =
+        VectorType::get(newShape, originalVecType.getElementType());
     ArrayAttr newInBoundsAttr =
         op.getInBounds()
             ? rewriter.getArrayAttr(
@@ -495,7 +489,7 @@ struct VectorLoadToMemrefLoadLowering
   LogicalResult matchAndRewrite(vector::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
     auto vecType = loadOp.getVectorType();
-    if (vecType.getNumElements() != 1)
+    if (vecType.getMinNumElements() != 1)
       return rewriter.notifyMatchFailure(loadOp, "not a single element vector");
 
     auto memrefLoad = rewriter.create<memref::LoadOp>(
@@ -514,7 +508,7 @@ struct VectorStoreToMemrefStoreLowering
   LogicalResult matchAndRewrite(vector::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
     auto vecType = storeOp.getVectorType();
-    if (vecType.getNumElements() != 1)
+    if (vecType.getMinNumElements() != 1)
       return rewriter.notifyMatchFailure(storeOp, "not single element vector");
 
     Value extracted;

@@ -54,8 +54,8 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     A shape is a list of sizes corresponding to the dimensions of the container.
     If the number of dimensions in the shape is unknown, the shape is "unranked".
     If the number of dimensions is known, the shape "ranked". The sizes of the
-    dimensions of the shape must be positive, or kDynamic (in which case the
-    size of the dimension is dynamic, or not statically known).
+    fixed dimensions are positive, scalable dimensions are negative, and unknown
+    dimensions are kDynamic.
   }];
   let methods = [
     InterfaceMethod<[{
@@ -89,21 +89,53 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr int64_t kDynamic =
-        std::numeric_limits<int64_t>::min();
+    static constexpr int64_t kDynamic = ShapeDim::kDynamic();
 
     /// Whether the given dimension size indicates a dynamic dimension.
     static constexpr bool isDynamic(int64_t dValue) {
-      return dValue == kDynamic;
+      return ShapeDim(dValue).isDynamic();
+    }
+
+    /// Whether the given dimension is scalable (i.e. will be scaled a runtime
+    /// multiplier).
+    static constexpr bool isScalable(int64_t dValue) {
+      return ShapeDim(dValue).isScalable();
     }
 
     /// Whether the given shape has any size that indicates a dynamic dimension.
     static bool isDynamicShape(ArrayRef<int64_t> dSizes) {
-      return any_of(dSizes, [](int64_t dSize) { return isDynamic(dSize); });
+      return any_of(dSizes, [](ShapeDim dSize) { return dSize.isDynamic(); });
     }
 
+    /// Whether the given shape has any size that indicates a scalable dimension.
+    /// If any size is dynamic, the overall shape is considered dynamic, not
+    /// scalable.
+    static bool isScalableShape(ArrayRef<int64_t> dSizes) {
+      bool hasScalableDims = false;
+      for (ShapeDim dim: dSizes) {
+        if (dim.isDynamic()) return false;
+        hasScalableDims |= dim.isScalable();
+      }
+      return hasScalableDims;
+    }
+
+    /// Whether all dimensions of the shape have a static size (i.e.
+    /// not dynamic or scalable).
+    static bool isStaticShape(ArrayRef<int64_t> dSizes) {
+       return all_of(dSizes, [](ShapeDim dSize) { return dSize.isFixed(); });
+    }
+
+    /// Return the minimum number of elements a shape could hold. For dynamic
+    /// shapes this is always zero. For scalable shapes this is the number of
+    /// elements when the runtime multiplier is one.
+    static int64_t getMinNumElements(ArrayRef<int64_t> shape);
+
     /// Return the number of elements present in the given shape.
-    static int64_t getNumElements(ArrayRef<int64_t> shape);
+    /// Requires: isStaticShape.
+    static int64_t getNumElements(ArrayRef<int64_t> shape) {
+      assert(isStaticShape(shape));
+      return getMinNumElements(shape);
+    }
 
     /// Return a clone of this type with the given new shape and element type.
     /// The returned type is ranked, even if this type is unranked.
@@ -138,10 +170,18 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       return $_type.getShape().size();
     }
 
+    /// Return the minimum number of elements this type can hold. If this has
+    /// a dynamic shape that will be zero. If this has a scalable this is the
+    /// number of elements when the runtime multiplier is one.
+    int64_t getMinNumElements() const {
+      return ::mlir::ShapedType::getMinNumElements($_type.getShape());
+    }
+
     /// If it has static shape, return the number of elements. Otherwise, abort.
     int64_t getNumElements() const {
-      assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
-      return ::mlir::ShapedType::getNumElements($_type.getShape());
+      assert(hasStaticShape()
+        && "cannot get number of elements for scalable/dynamic size");
+      return getMinNumElements();
     }
 
     /// Returns true if this dimension has a dynamic size (for ranked types);
@@ -151,17 +191,32 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       return ::mlir::ShapedType::isDynamic($_type.getShape()[idx]);
     }
 
-    /// Returns if this type has a static shape, i.e. if the type is ranked and
-    /// all dimensions have known size (>= 0).
-    bool hasStaticShape() const {
-      return $_type.hasRank() &&
-             !::mlir::ShapedType::isDynamicShape($_type.getShape());
+    /// Returns true if this dimension has a scalable size (for ranked types);
+    /// aborts for unranked types.
+    bool isScalableDim(unsigned idx) const {
+      assert(idx < getRank() && "invalid index for shaped type");
+      return ::mlir::ShapedType::isScalable($_type.getShape()[idx]);
     }
 
-    /// Returns if this type has a static shape and the shape is equal to
-    /// `shape` return true.
-    bool hasStaticShape(::llvm::ArrayRef<int64_t> shape) const {
-      return hasStaticShape() && $_type.getShape() == shape;
+    /// Returns if this type has a static shape, i.e. if the type is ranked and
+    /// all dimensions have known size at runtime.
+    bool hasStaticShape() const {
+      return $_type.hasRank() &&
+        ::mlir::ShapedType::isStaticShape($_type.getShape());
+    }
+
+    /// Returns if this type has a scalable shape, i.e. if the type is ranked
+    /// and any dimension is scalable (but not dynamic).
+    bool hasScalableShape() const {
+      return $_type.hasRank() &&
+        ::mlir::ShapedType::isScalableShape($_type.getShape());
+    }
+
+    /// Returns if this type has a dynamic shape, i.e. if the type is ranked
+    /// and any dimension is dynamic.
+    bool hasDynamicShape() const {
+      return $_type.hasRank() &&
+        ::mlir::ShapedType::isDynamicShape($_type.getShape());
     }
 
     /// If this is a ranked type, return the number of dimensions with dynamic
@@ -170,9 +225,28 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       return llvm::count_if($_type.getShape(), ::mlir::ShapedType::isDynamic);
     }
 
-    /// If this is ranked type, return the size of the specified dimension.
-    /// Otherwise, abort.
+    /// If this is a ranked type, return the number of dimensions with scalable
+    /// size. Otherwise, abort.
+    int64_t getNumScalableDims() const {
+      return llvm::count_if($_type.getShape(), ::mlir::ShapedType::isScalable);
+    }
+
+    /// Deprecated. Using getDim() and explicitly querying for dim.fixedSize(),
+    /// dim.scalableSize(), dim.minSize(), or comparing with
+    /// ShapeDim::kDynamic() is preferred.
+    /// Gets the size of a dimension. For dynamic dimensions this returns
+    /// kDynamic, for scalable dimensions the min size, or the size for fixed
+    /// dimensions.
     int64_t getDimSize(unsigned idx) const {
+      ::mlir::ShapeDim dim = getDim(idx);
+      if (dim.isDynamic())
+        return dim;
+      return dim.minSize();
+    }
+
+    /// If this is a ranked type, return the specified dimension.
+    /// Otherwise, abort.
+    ShapeDim getDim(unsigned idx) const {
       assert(idx < getRank() && "invalid index for shaped type");
       return $_type.getShape()[idx];
     }
@@ -181,7 +255,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     /// dimensions, given its `index` within the shape.
     unsigned getDynamicDimIndex(unsigned index) const {
       assert(index < getRank() && "invalid index");
-      assert(::mlir::ShapedType::isDynamic(getDimSize(index)) && "invalid index");
+      assert(::mlir::ShapedType::isDynamic(getDim(index)) && "invalid index");
       return llvm::count_if($_type.getShape().take_front(index),
                             ::mlir::ShapedType::isDynamic);
     }

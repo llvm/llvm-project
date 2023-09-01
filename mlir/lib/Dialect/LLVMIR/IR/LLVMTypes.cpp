@@ -957,7 +957,7 @@ llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
   return llvm::TypeSwitch<Type, llvm::ElementCount>(type)
       .Case([](VectorType ty) {
         if (ty.isScalable())
-          return llvm::ElementCount::getScalable(ty.getNumElements());
+          return llvm::ElementCount::getScalable(ty.getMinNumElements());
         return llvm::ElementCount::getFixed(ty.getNumElements());
       })
       .Case([](LLVMFixedVectorType ty) {
@@ -995,16 +995,17 @@ Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
 
   // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
   // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, {isScalable});
+  return VectorType::create(isScalable ? ShapeDim::scalable(numElements)
+                                       : ShapeDim::fixed(numElements),
+                            elementType);
 }
 
 Type mlir::LLVM::getVectorType(Type elementType,
                                const llvm::ElementCount &numElements) {
   if (numElements.isScalable())
     return getVectorType(elementType, numElements.getKnownMinValue(),
-                         /*isScalable=*/true);
-  return getVectorType(elementType, numElements.getFixedValue(),
-                       /*isScalable=*/false);
+                         /*isScalable*/ true);
+  return getVectorType(elementType, numElements.getFixedValue());
 }
 
 Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
@@ -1028,9 +1029,7 @@ Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
   if (useLLVM)
     return LLVMScalableVectorType::get(elementType, numElements);
 
-  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
-  // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, /*scalableDims=*/true);
+  return VectorType::create(ShapeDim::scalable(numElements), elementType);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {

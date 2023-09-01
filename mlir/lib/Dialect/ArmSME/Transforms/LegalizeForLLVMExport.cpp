@@ -199,8 +199,7 @@ struct LoadTileSliceToArmSMELowering
     auto one = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI1Type(),
         rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
-                                  /*scalableDims=*/{true});
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type());
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);
@@ -275,8 +274,7 @@ struct StoreTileSliceToArmSMELowering
     auto one = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI1Type(),
         rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
-                                  /*scalableDims=*/{true});
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type());
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     Value tileI32 = castTileIDToI32(tile, loc, rewriter);
@@ -341,8 +339,7 @@ struct MoveVectorToTileSliceToArmSMELowering
     auto one = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI1Type(),
         rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
-                                  /*scalableDims=*/{true});
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type());
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);

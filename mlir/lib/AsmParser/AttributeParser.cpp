@@ -560,7 +560,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   }
 
   // Handle the case where no elements were parsed.
-  if (!hexStorage && storage.empty() && type.getNumElements()) {
+  if (!hexStorage && storage.empty() && type.getMinNumElements()) {
     p.emitError(loc) << "parsed zero elements, but type (" << type
                      << ") expected at least 1";
     return nullptr;
@@ -1059,8 +1059,9 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
     return nullptr;
   }
 
-  if (!sType.hasStaticShape())
-    return (emitError("elements literal type must have static shape"), nullptr);
+  if (sType.hasDynamicShape())
+    return (emitError("elements literal type cannot have dynamic dims"),
+            nullptr);
 
   return sType;
 }
@@ -1134,7 +1135,7 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   auto valuesEltType = type.getElementType();
   ShapedType valuesType =
       valuesParser.getShape().empty()
-          ? RankedTensorType::get({indicesType.getDimSize(0)}, valuesEltType)
+          ? RankedTensorType::get({indicesType.getDim(0)}, valuesEltType)
           : RankedTensorType::get(valuesParser.getShape(), valuesEltType);
   auto values = valuesParser.getAttr(valuesLoc, valuesType);
 

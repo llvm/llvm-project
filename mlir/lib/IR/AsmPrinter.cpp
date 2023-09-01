@@ -2341,7 +2341,7 @@ printDenseElementsAttrImpl(bool isSplat, ShapedType type, raw_ostream &os,
     return printEltFn(0);
 
   // Special case for degenerate tensors.
-  auto numElements = type.getNumElements();
+  auto numElements = type.getMinNumElements();
   if (numElements == 0)
     return;
 
@@ -2398,7 +2398,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  auto numElements = type.getNumElements();
+  auto numElements = type.getMinNumElements();
   if (!attr.isSplat() && allowHex &&
       shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
@@ -2542,16 +2542,12 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
       })
       .Case<VectorType>([&](VectorType vectorTy) {
-        auto scalableDims = vectorTy.getScalableDims();
         os << "vector<";
-        auto vShape = vectorTy.getShape();
-        unsigned lastDim = vShape.size();
-        unsigned dimIdx = 0;
-        for (dimIdx = 0; dimIdx < lastDim; dimIdx++) {
-          if (!scalableDims.empty() && scalableDims[dimIdx])
+        for (ShapeDim dim : vectorTy.getShape()) {
+          if (dim.isScalable())
             os << '[';
-          os << vShape[dimIdx];
-          if (!scalableDims.empty() && scalableDims[dimIdx])
+          os << dim.minSize();
+          if (dim.isScalable())
             os << ']';
           os << 'x';
         }

@@ -444,12 +444,11 @@ VectorType Parser::parseVectorType() {
     return nullptr;
 
   SmallVector<int64_t, 4> dimensions;
-  SmallVector<bool, 4> scalableDims;
-  if (parseVectorDimensionList(dimensions, scalableDims))
+  if (parseVectorDimensionList(dimensions))
     return nullptr;
-  if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
+  if (any_of(dimensions, [](int64_t i) { return i == 0; }))
     return emitError(getToken().getLoc(),
-                     "vector types must have positive constant sizes"),
+                     "vector type must have non-zero sizes"),
            nullptr;
 
   // Parse the element type.
@@ -462,33 +461,32 @@ VectorType Parser::parseVectorType() {
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType, scalableDims);
+  return VectorType::get(dimensions, elementType);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.
-/// For i-th dimension, `scalableDims[i]` contains either:
-///   * `false` for a non-scalable dimension (e.g. `4`),
-///   * `true` for a scalable dimension (e.g. `[4]`).
+/// For i-th dimension, `dimensions[i]` contains either:
+///   * `dim_size` for a non-scalable dimension (e.g. `4`),
+///   * `-dim_size` for a scalable dimension (e.g. `[4]`).
 ///
 /// vector-dim-list := (static-dim-list `x`)?
 /// static-dim-list ::= static-dim (`x` static-dim)*
 /// static-dim ::= (decimal-literal | `[` decimal-literal `]`)
 ///
 ParseResult
-Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                 SmallVectorImpl<bool> &scalableDims) {
+Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions) {
   // If there is a set of fixed-length dimensions, consume it
   while (getToken().is(Token::integer) || getToken().is(Token::l_square)) {
     int64_t value;
     bool scalable = consumeIf(Token::l_square);
     if (parseIntegerInDimensionList(value))
       return failure();
-    dimensions.push_back(value);
+    dimensions.push_back(scalable ? ShapeDim::scalable(value)
+                                  : ShapeDim::fixed(value));
     if (scalable) {
       if (!consumeIf(Token::r_square))
         return emitWrongTokenError("missing ']' closing scalable dimension");
     }
-    scalableDims.push_back(scalable);
     // Make sure we have an 'x' or something like 'xbf32'.
     if (parseXInDimensionList())
       return failure();

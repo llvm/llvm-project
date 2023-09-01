@@ -241,7 +241,7 @@ bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim) {
 
 int64_t mlirShapedTypeGetDimSize(MlirType type, intptr_t dim) {
   return llvm::cast<ShapedType>(unwrap(type))
-      .getDimSize(static_cast<unsigned>(dim));
+      .getDim(static_cast<unsigned>(dim));
 }
 
 int64_t mlirShapedTypeGetDynamicSize() { return ShapedType::kDynamic; }

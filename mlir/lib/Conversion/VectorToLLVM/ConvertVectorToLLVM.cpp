@@ -31,8 +31,7 @@ using namespace mlir::vector;
 // Helper to reduce vector type by *all* but one rank at back.
 static VectorType reducedVectorTypeBack(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  return VectorType::get(tp.getShape().take_back(), tp.getElementType(),
-                         tp.getScalableDims().take_back());
+  return VectorType::get(tp.getShape().take_back(), tp.getElementType());
 }
 
 // Helper that picks the proper sequence for inserting.
@@ -1390,7 +1389,7 @@ public:
         force32BitVectorIndices ? rewriter.getI32Type() : rewriter.getI64Type();
     auto loc = op->getLoc();
     Value indices = rewriter.create<LLVM::StepVectorOp>(
-        loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
+        loc, LLVM::getVectorType(idxType, dstType.getDim(0).minSize(),
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
                                                  op.getOperand(0));

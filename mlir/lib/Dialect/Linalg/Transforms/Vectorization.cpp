@@ -201,8 +201,11 @@ struct VectorizationState {
       vectorShape.append(canonicalVecShape.begin(), canonicalVecShape.end());
       scalableDims.append(scalableVecDims.begin(), scalableVecDims.end());
     }
-
-    return VectorType::get(vectorShape, elementType, scalableDims);
+    for (auto [dim, isScalable] : llvm::zip(vectorShape, scalableDims)) {
+      if (isScalable)
+        dim = ShapeDim::scalable(dim);
+    }
+    return VectorType::get(vectorShape, elementType);
   }
 
   /// Masks an operation with the canonical vector mask if the operation needs
@@ -1217,9 +1220,9 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     assert(vecOperand && "Vector operand couldn't be found");
 
     if (firstMaxRankedType) {
-      auto vecType = VectorType::get(firstMaxRankedType.getShape(),
-                                     getElementTypeOrSelf(vecOperand.getType()),
-                                     firstMaxRankedType.getScalableDims());
+      auto vecType =
+          VectorType::get(firstMaxRankedType.getShape(),
+                          getElementTypeOrSelf(vecOperand.getType()));
       vecOperands.push_back(broadcastIfNeeded(rewriter, vecOperand, vecType));
     } else {
       vecOperands.push_back(vecOperand);
@@ -1230,8 +1233,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
   for (Type resultType : op->getResultTypes()) {
     resultTypes.push_back(
         firstMaxRankedType
-            ? VectorType::get(firstMaxRankedType.getShape(), resultType,
-                              firstMaxRankedType.getScalableDims())
+            ? VectorType::get(firstMaxRankedType.getShape(), resultType)
             : resultType);
   }
   //   d. Build and return the new op.

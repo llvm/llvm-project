@@ -7,7 +7,7 @@ func.func @elementsattr_non_tensor_type() -> () {
 // -----
 
 func.func @elementsattr_non_ranked() -> () {
-  "foo"(){bar = dense<[4]> : tensor<?xi32>} : () -> () // expected-error {{elements literal type must have static shape}}
+  "foo"(){bar = dense<[4]> : tensor<?xi32>} : () -> () // expected-error {{elements literal type cannot have dynamic dims}}
 }
 
 // -----

@@ -148,8 +148,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
 
     // Unpack 1-d vector type from 2-d vector type.
     auto tileSliceType =
-        VectorType::get(tileType.getShape().drop_front(), tileElementType,
-                        /*scalableDims=*/{true});
+        VectorType::get(tileType.getShape().drop_front(), tileElementType);
     auto denseAttr1D = DenseElementsAttr::get(
         tileSliceType, denseAttr.getSplatValue<Attribute>());
     auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
@@ -209,8 +208,7 @@ struct BroadcastOpToArmSMELowering
         (srcVectorType && (srcVectorType.getRank() == 0))) {
       // Broadcast scalar or 0-d vector to 1-d vector.
       auto tileSliceType =
-          VectorType::get(tileType.getShape().drop_front(), tileElementType,
-                          /*scalableDims=*/{true});
+          VectorType::get(tileType.getShape().drop_front(), tileElementType);
       broadcastOp1D = rewriter.create<vector::BroadcastOp>(
           loc, tileSliceType, broadcastOp.getSource());
     } else if (srcVectorType && (srcVectorType.getRank() == 1))

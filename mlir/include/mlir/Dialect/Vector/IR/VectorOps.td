@@ -730,7 +730,7 @@ def Vector_ScalableInsertOp :
        AllTypesMatch<["dest", "res"]>,
        PredOpTrait<"position is a multiple of the source length.",
         CPred<
-          "(getPos() % getSourceVectorType().getNumElements()) == 0"
+          "(getPos() % getSourceVectorType().getMinNumElements()) == 0"
         >>]>,
      Arguments<(ins VectorOfRank<[1]>:$source,
                     ScalableVectorOfRank<[1]>:$dest,
@@ -786,7 +786,7 @@ def Vector_ScalableExtractOp :
        AllElementTypesMatch<["source", "res"]>,
        PredOpTrait<"position is a multiple of the result length.",
         CPred<
-          "(getPos() % getResultVectorType().getNumElements()) == 0"
+          "(getPos() % getResultVectorType().getMinNumElements()) == 0"
         >>]>,
      Arguments<(ins ScalableVectorOfRank<[1]>:$source,
                     I64Attr:$pos)>,

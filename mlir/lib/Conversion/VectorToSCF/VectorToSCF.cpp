@@ -728,7 +728,6 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       vectorType = targetVectorType;
     }
 
-    auto scalableDimensions = vectorType.getScalableDims();
     auto shape = vectorType.getShape();
     constexpr int64_t singletonShape[] = {1};
     if (vectorType.getRank() == 0)
@@ -738,10 +737,11 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       // Flatten n-D vectors to 1D. This is done to allow indexing with a
       // non-constant value (which can currently only be done via
       // vector.extractelement for 1D vectors).
-      auto flatLength = std::accumulate(shape.begin(), shape.end(), 1,
-                                        std::multiplies<int64_t>());
-      auto flatVectorType =
-          VectorType::get({flatLength}, vectorType.getElementType());
+      auto flatLength = vectorType.getMinNumElements();
+      auto flatVectorType = VectorType::create(
+          vectorType.isScalable() ? ShapeDim::scalable(flatLength)
+                                  : ShapeDim::fixed(flatLength),
+          vectorType.getElementType());
       value = rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, value);
     }
 
@@ -749,10 +749,12 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     SmallVector<Value, 8> loopIndices;
     for (unsigned d = 0; d < shape.size(); d++) {
       // Setup loop bounds and step.
+      ShapeDim dim = shape[d];
       Value lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-      Value upperBound = rewriter.create<arith::ConstantIndexOp>(loc, shape[d]);
+      Value upperBound =
+          rewriter.create<arith::ConstantIndexOp>(loc, dim.minSize());
       Value step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-      if (!scalableDimensions.empty() && scalableDimensions[d]) {
+      if (dim.isScalable()) {
         auto vscale = rewriter.create<vector::VectorScaleOp>(
             loc, rewriter.getIndexType());
         upperBound = rewriter.create<arith::MulIOp>(loc, upperBound, vscale);

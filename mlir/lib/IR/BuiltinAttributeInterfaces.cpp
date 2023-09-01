@@ -29,7 +29,7 @@ Type ElementsAttr::getElementType(ElementsAttr elementsAttr) {
 }
 
 int64_t ElementsAttr::getNumElements(ElementsAttr elementsAttr) {
-  return elementsAttr.getShapedType().getNumElements();
+  return elementsAttr.getShapedType().getMinNumElements();
 }
 
 bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
