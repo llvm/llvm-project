@@ -1782,8 +1782,7 @@ public:
   /// Helper to lower intrinsic arguments for inquiry intrinsic.
   ExtValue
   lowerIntrinsicArgumentAsInquired(const Fortran::lower::SomeExpr &expr) {
-    if (Fortran::evaluate::IsAllocatableOrPointerObject(
-            expr, converter.getFoldingContext()))
+    if (Fortran::evaluate::IsAllocatableOrPointerObject(expr))
       return genMutableBoxValue(expr);
     /// Do not create temps for array sections whose properties only need to be
     /// inquired: create a descriptor that will be inquired.
@@ -1918,8 +1917,7 @@ public:
       fir::ArgLoweringRule argRules =
           fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
       if (argRules.handleDynamicOptional &&
-          Fortran::evaluate::MayBePassedAsAbsentOptional(
-              *expr, converter.getFoldingContext())) {
+          Fortran::evaluate::MayBePassedAsAbsentOptional(*expr)) {
         ExtValue optional = lowerIntrinsicArgumentAsInquired(*expr);
         mlir::Value isPresent = genActualIsPresentTest(builder, loc, optional);
         switch (argRules.lowerAs) {
@@ -2392,8 +2390,7 @@ public:
   std::pair<ExtValue, mlir::Value>
   prepareActualThatMayBeAbsent(const Fortran::lower::SomeExpr &expr) {
     mlir::Location loc = getLoc();
-    if (Fortran::evaluate::IsAllocatableOrPointerObject(
-            expr, converter.getFoldingContext())) {
+    if (Fortran::evaluate::IsAllocatableOrPointerObject(expr)) {
       // Fortran 2018 15.5.2.12 point 1: If unallocated/disassociated,
       // it is as if the argument was absent. The main care here is to
       // not do a copy-in/copy-out because the temp address, even though
@@ -2496,8 +2493,8 @@ public:
         // not passed.
         return {genTempExtAddr(expr), std::nullopt};
       ExtValue baseAddr;
-      if (arg.isOptional() && Fortran::evaluate::MayBePassedAsAbsentOptional(
-                                  expr, converter.getFoldingContext())) {
+      if (arg.isOptional() &&
+          Fortran::evaluate::MayBePassedAsAbsentOptional(expr)) {
         auto [actualArgBind, isPresent] = prepareActualThatMayBeAbsent(expr);
         const ExtValue &actualArg = actualArgBind;
         if (!needsCopy)
@@ -2631,8 +2628,7 @@ public:
           continue;
         }
         if (fir::isPointerType(argTy) &&
-            !Fortran::evaluate::IsObjectPointer(
-                *expr, converter.getFoldingContext())) {
+            !Fortran::evaluate::IsObjectPointer(*expr)) {
           // Passing a non POINTER actual argument to a POINTER dummy argument.
           // Create a pointer of the dummy argument type and assign the actual
           // argument to it.
@@ -2759,8 +2755,7 @@ public:
           }
 
         } else if (arg.isOptional() &&
-                   Fortran::evaluate::IsAllocatableOrPointerObject(
-                       *expr, converter.getFoldingContext())) {
+                   Fortran::evaluate::IsAllocatableOrPointerObject(*expr)) {
           // Before lowering to an address, handle the allocatable/pointer
           // actual argument to optional fir.box dummy. It is legal to pass
           // unallocated/disassociated entity to an optional. In this case, an
@@ -3355,8 +3350,7 @@ public:
     setPointerAssignmentBounds(lbounds, ubounds);
     if (rhs.Rank() == 0 ||
         (Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(rhs) &&
-         Fortran::evaluate::IsAllocatableOrPointerObject(
-             rhs, converter.getFoldingContext()))) {
+         Fortran::evaluate::IsAllocatableOrPointerObject(rhs))) {
       lowerScalarAssignment(lhs, rhs);
       return;
     }
@@ -4684,8 +4678,7 @@ private:
         fir::ArgLoweringRule argRules =
             fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
         if (argRules.handleDynamicOptional &&
-            Fortran::evaluate::MayBePassedAsAbsentOptional(
-                *expr, converter.getFoldingContext())) {
+            Fortran::evaluate::MayBePassedAsAbsentOptional(*expr)) {
           // Currently, there is not elemental intrinsic that requires lowering
           // a potentially absent argument to something else than a value (apart
           // from character MAX/MIN that are handled elsewhere.)
@@ -4768,8 +4761,8 @@ private:
       LLVM_DEBUG(expr->AsFortran(llvm::dbgs()
                                  << "argument: " << arg.firArgument << " = [")
                  << "]\n");
-      if (arg.isOptional() && Fortran::evaluate::MayBePassedAsAbsentOptional(
-                                  *expr, converter.getFoldingContext()))
+      if (arg.isOptional() &&
+          Fortran::evaluate::MayBePassedAsAbsentOptional(*expr))
         TODO(loc,
              "passing dynamically optional argument to elemental procedures");
       switch (arg.passBy) {
@@ -5925,8 +5918,8 @@ private:
         fir::valueHasFirAttribute(base, fir::getOptionalAttrName());
     mlir::Type baseType = fir::unwrapRefType(base.getType());
     const bool isBox = baseType.isa<fir::BoxType>();
-    const bool isAllocOrPtr = Fortran::evaluate::IsAllocatableOrPointerObject(
-        expr, converter.getFoldingContext());
+    const bool isAllocOrPtr =
+        Fortran::evaluate::IsAllocatableOrPointerObject(expr);
     mlir::Type arrType = fir::unwrapPassByRefType(baseType);
     mlir::Type eleType = fir::unwrapSequenceType(arrType);
     ExtValue exv = optionalArg;
