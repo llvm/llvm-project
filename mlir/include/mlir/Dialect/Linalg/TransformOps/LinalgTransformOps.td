@@ -2114,7 +2114,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        Variadic<TransformHandleTypeInterface>:$vector_sizes,
-                       UnitAttr:$vectorize_nd_extract,
+                       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:
                           $scalable_sizes,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
@@ -2126,7 +2126,8 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
                                               type($vector_sizes),
-                                              $scalable_sizes)
+                                              $scalable_sizes) |
+      `vectorize_nd_extract` $vectorize_nd_extract
       )
       attr-dict
       `:` type($target)
