@@ -332,7 +332,7 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
 bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
   const auto action = GetAction();
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  LLDB_LOG(log, "{0} action = {1}", __PRETTY_FUNCTION__, ActionToCStr(action));
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
 
   if (action == eNoAction)
     return false;
@@ -372,7 +372,7 @@ bool DYLDRendezvous::UpdateSOEntries() {
   m_removed_soentries.clear();
   const auto action = GetAction();
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  LLDB_LOG(log, "{0} action = {1}", __PRETTY_FUNCTION__, ActionToCStr(action));
+  LLDB_LOG(log, "{0} action = {1}", LLVM_PRETTY_FUNCTION, ActionToCStr(action));
   switch (action) {
   case eTakeSnapshot:
     m_soentries.clear();
