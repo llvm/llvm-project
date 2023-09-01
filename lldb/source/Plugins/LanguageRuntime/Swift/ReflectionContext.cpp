@@ -127,6 +127,12 @@ public:
     return type_info;
   }
 
+  const swift::reflection::TypeInfo *
+  GetTypeInfoFromInstance(lldb::addr_t instance,
+                          swift::remote::TypeInfoProvider *provider) override {
+    return m_reflection_ctx.getInstanceTypeInfo(instance, provider);
+  }
+
   swift::reflection::MemoryReader &GetReader() override {
     return m_reflection_ctx.getReader();
   }
@@ -167,6 +173,17 @@ public:
       md_ptr = m_reflection_ctx.readSuperClassFromClassMetadata(metadata);
     }
     return false;
+  }
+
+  llvm::Optional<int32_t>
+  ProjectEnumValue(swift::remote::RemoteAddress enum_addr,
+                   const swift::reflection::TypeRef *enum_type_ref,
+                   swift::remote::TypeInfoProvider *provider) override {
+    int32_t case_idx;
+    if (m_reflection_ctx.projectEnumValue(enum_addr, enum_type_ref, &case_idx,
+                                          provider))
+      return case_idx;
+    return {};
   }
 
   llvm::Optional<std::pair<const swift::reflection::TypeRef *,
