@@ -135,7 +135,7 @@ ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
 
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
   StringRef pathRef = getToolkitPath();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     SmallVector<char, 256> path;
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     llvm::sys::path::append(path, "amdgcn", "bitcode");
