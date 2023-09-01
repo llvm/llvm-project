@@ -355,6 +355,8 @@ public:
   static void decomposeStackOffsetForDwarfOffsets(const StackOffset &Offset,
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
+
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
