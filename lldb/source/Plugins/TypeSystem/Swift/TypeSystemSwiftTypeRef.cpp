@@ -34,9 +34,6 @@
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
 #include "swift/Frontend/Frontend.h"
-#include "swift/AST/ClangModuleLoader.h"
-#include "swift/Basic/Version.h"
-#include "swift/Strings.h"
 
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
