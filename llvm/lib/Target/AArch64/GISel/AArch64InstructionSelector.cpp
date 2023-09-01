@@ -6777,11 +6777,29 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   MachineRegisterInfo &MRI =
       Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  MachineInstr *Extract = getDefIgnoringCopies(Root.getReg(), MRI);
-  if (Extract && Extract->getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
-      Root.getReg() == Extract->getOperand(1).getReg()) {
-    Register ExtReg = Extract->getOperand(2).getReg();
-    return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+  auto Extract = getDefSrcRegIgnoringCopies(Root.getReg(), MRI);
+  while (Extract && Extract->MI->getOpcode() == TargetOpcode::G_BITCAST &&
+         STI.isLittleEndian())
+    Extract =
+        getDefSrcRegIgnoringCopies(Extract->MI->getOperand(1).getReg(), MRI);
+  if (!Extract)
+    return std::nullopt;
+
+  if (Extract->MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
+    if (Extract->Reg == Extract->MI->getOperand(1).getReg()) {
+      Register ExtReg = Extract->MI->getOperand(2).getReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
+  }
+  if (Extract->MI->getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
+    LLT SrcTy = MRI.getType(Extract->MI->getOperand(1).getReg());
+    auto LaneIdx = getIConstantVRegValWithLookThrough(
+        Extract->MI->getOperand(2).getReg(), MRI);
+    if (LaneIdx && SrcTy == LLT::fixed_vector(2, 64) &&
+        LaneIdx->Value.getSExtValue() == 1) {
+      Register ExtReg = Extract->MI->getOperand(1).getReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
   }
 
   return std::nullopt;
