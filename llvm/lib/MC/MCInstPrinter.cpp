@@ -231,3 +231,53 @@ format_object<uint64_t> MCInstPrinter::formatHex(uint64_t Value) const {
   }
   llvm_unreachable("unsupported print style");
 }
+
+MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS,
+                                                Markup S) const {
+  return WithMarkup(OS, S, getUseMarkup(), getUseColor());
+}
+
+MCInstPrinter::WithMarkup::WithMarkup(raw_ostream &OS, Markup M,
+                                      bool EnableMarkup, bool EnableColor)
+    : OS(OS), EnableMarkup(EnableMarkup), EnableColor(EnableColor) {
+  if (EnableColor) {
+    switch (M) {
+    case Markup::Immediate:
+      OS.changeColor(raw_ostream::RED);
+      break;
+    case Markup::Register:
+      OS.changeColor(raw_ostream::CYAN);
+      break;
+    case Markup::Target:
+      OS.changeColor(raw_ostream::YELLOW);
+      break;
+    case Markup::Memory:
+      OS.changeColor(raw_ostream::GREEN);
+      break;
+    }
+  }
+
+  if (EnableMarkup) {
+    switch (M) {
+    case Markup::Immediate:
+      OS << "<imm:";
+      break;
+    case Markup::Register:
+      OS << "<reg:";
+      break;
+    case Markup::Target:
+      OS << "<target:";
+      break;
+    case Markup::Memory:
+      OS << "<mem:";
+      break;
+    }
+  }
+}
+
+MCInstPrinter::WithMarkup::~WithMarkup() {
+  if (EnableMarkup)
+    OS << '>';
+  if (EnableColor)
+    OS.resetColor();
+}
