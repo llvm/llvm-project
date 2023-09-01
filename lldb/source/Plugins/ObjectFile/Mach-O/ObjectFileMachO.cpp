@@ -1204,7 +1204,6 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleTypes:
         case eSectionTypeDWARFAppleNamespaces:
         case eSectionTypeDWARFAppleObjC:
-        case eSectionTypeSwiftModules:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
         case eSectionTypeSwiftModules:
@@ -1561,8 +1560,6 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeCompactUnwind;
   if (section_name == g_sect_name_cfstring)
     return eSectionTypeDataObjCCFStrings;
-  if (section_name == g_sect_name_swift_ast)
-    return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_go_symtab)
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
