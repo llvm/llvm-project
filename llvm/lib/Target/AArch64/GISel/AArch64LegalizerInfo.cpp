@@ -252,7 +252,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
+  getActionDefinitionsBuilder(G_FREM)
+      .libcallFor({s32, s64})
+      .minScalar(0, s32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
