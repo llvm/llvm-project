@@ -46,7 +46,8 @@ define <2 x double> @test_vcvt_high_v1f64_f32_bitcast(<4 x float> %x) nounwind r
 ;
 ; GISEL-LABEL: test_vcvt_high_v1f64_f32_bitcast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcvtl2 v0.2d, v0.4s
+; GISEL-NEXT:    mov d0, v0[1]
+; GISEL-NEXT:    fcvtl v0.2d, v0.2s
 ; GISEL-NEXT:    ret
   %bc1 = bitcast <4 x float> %x to <2 x double>
   %ext = shufflevector <2 x double> %bc1, <2 x double> undef, <1 x i32> <i32 1>
@@ -63,7 +64,8 @@ define <2 x double> @test_vcvt_high_v1i64_f32_bitcast(<2 x i64> %x) nounwind rea
 ;
 ; GISEL-LABEL: test_vcvt_high_v1i64_f32_bitcast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcvtl2 v0.2d, v0.4s
+; GISEL-NEXT:    mov d0, v0[1]
+; GISEL-NEXT:    fcvtl v0.2d, v0.2s
 ; GISEL-NEXT:    ret
   %ext = shufflevector <2 x i64> %x, <2 x i64> undef, <1 x i32> <i32 1>
   %bc2 = bitcast <1 x i64> %ext to <2 x float>
@@ -129,7 +131,8 @@ define <4 x float> @test_vcvt_high_v1i64_f16_bitcast(<2 x i64> %x) nounwind read
 ;
 ; GISEL-LABEL: test_vcvt_high_v1i64_f16_bitcast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcvtl2 v0.4s, v0.8h
+; GISEL-NEXT:    mov d0, v0[1]
+; GISEL-NEXT:    fcvtl v0.4s, v0.4h
 ; GISEL-NEXT:    ret
   %ext = shufflevector <2 x i64> %x, <2 x i64> undef, <1 x i32> <i32 1>
   %bc2 = bitcast <1 x i64> %ext to <4 x half>

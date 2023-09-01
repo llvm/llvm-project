@@ -37,7 +37,8 @@ def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
-                                      fold_global_offset]> {
+                                      fold_global_offset,
+                                      shuffle_to_extract]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
