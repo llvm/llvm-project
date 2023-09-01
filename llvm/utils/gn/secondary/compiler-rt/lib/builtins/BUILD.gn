@@ -341,10 +341,7 @@ static_library("builtins") {
       "x86_64/floatundixf.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "x86_64/chkstk.S",
-        "x86_64/chkstk2.S",
-      ]
+      sources += [ "x86_64/chkstk.S" ]
     }
   }
 
