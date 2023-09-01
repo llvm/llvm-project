@@ -304,7 +304,11 @@ llvm::FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
 UseCaptureKind llvm::DetermineUseCaptureKind(
     const Use &U,
     function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
-  Instruction *I = cast<Instruction>(U.getUser());
+  Instruction *I = dyn_cast<Instruction>(U.getUser());
+
+  // TODO: Investigate non-instruction uses.
+  if (!I)
+    return UseCaptureKind::MAY_CAPTURE;
 
   switch (I->getOpcode()) {
   case Instruction::Call:
