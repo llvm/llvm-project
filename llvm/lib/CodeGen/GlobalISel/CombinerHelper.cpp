@@ -6026,6 +6026,22 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
          !getIConstantVRegVal(RHS, MRI);
 }
 
+bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  return getFConstantVRegValWithLookThrough(LHS, MRI, false).has_value() &&
+         !getFConstantVRegValWithLookThrough(RHS, MRI, false).has_value();
+}
+
+void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
+  Observer.changingInstr(MI);
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  MI.getOperand(1).setReg(RHSReg);
+  MI.getOperand(2).setReg(LHSReg);
+  Observer.changedInstr(MI);
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
