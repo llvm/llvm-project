@@ -1055,6 +1055,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <cstring>
 #  include <initializer_list>
 #  include <limits>
+#  include <mutex>
 #  include <new>
 #  include <stdexcept>
 #  include <system_error>

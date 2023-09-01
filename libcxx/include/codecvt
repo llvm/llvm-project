@@ -562,6 +562,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <initializer_list>
 #  include <iosfwd>
 #  include <limits>
+#  include <mutex>
 #  include <new>
 #  include <stdexcept>
 #  include <type_traits>
