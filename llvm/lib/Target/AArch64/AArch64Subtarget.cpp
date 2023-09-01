@@ -477,14 +477,16 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
+bool AArch64Subtarget::isStreamingCompatible() const {
+  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
+}
+
 bool AArch64Subtarget::isNeonAvailable() const {
-  if (!hasNEON())
-    return false;
+  return hasNEON() && !isStreaming() && !isStreamingCompatible();
+}
 
-  // The 'force-streaming-comaptible-sve' flag overrides the streaming
-  // function attributes.
-  if (ForceStreamingCompatibleSVE.getNumOccurrences() > 0)
-    return !ForceStreamingCompatibleSVE;
-
-  return !isStreaming() && !isStreamingCompatible();
+bool AArch64Subtarget::isSVEAvailable() const{
+  // FIXME: Also return false if FEAT_FA64 is set, but we can't do this yet
+  // as we don't yet support the feature in LLVM.
+  return hasSVE() && !isStreaming() && !isStreamingCompatible();
 }
