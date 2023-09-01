@@ -5,6 +5,9 @@
 ; RUN: opt -passes=attributor --attributor-max-specializations-per-call-base=0 -S < %s | FileCheck %s --check-prefixes=CHECK,OWRDL,LIMI0
 ; RUN: opt -passes=attributor --attributor-assume-closed-world -S < %s | FileCheck %s --check-prefixes=CHECK,UPTO2,UNLIM,CWRLD
 
+;.
+; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global ptr @usedByGlobal
+;.
 define dso_local void @func1() {
 ; CHECK-LABEL: @func1(
 ; CHECK-NEXT:    br label [[TMP2:%.*]]
@@ -472,6 +475,14 @@ define void @usedOnlyInCastedDirectCallCaller() {
   ret void
 }
 
+define internal void @usedByGlobal() {
+; CHECK-LABEL: @usedByGlobal(
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+@G = global ptr @usedByGlobal
+
 define void @broker(ptr %unknown) !callback !0 {
 ; OWRDL-LABEL: @broker(
 ; OWRDL-NEXT:    call void [[UNKNOWN:%.*]]()
@@ -618,6 +629,8 @@ cond.end.i:
 
 ; UTC_ARGS: --enable
 
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
 ; UNLIM: [[META0:![0-9]+]] = !{!1}
 ; UNLIM: [[META1:![0-9]+]] = !{i64 0, i1 false}
