@@ -353,6 +353,13 @@ def propagate_undef_shuffle_mask: GICombineRule<
          [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
+// Replace a G_SHUFFLE_VECTOR with a G_EXTRACT_VECTOR_ELT.
+def shuffle_to_extract: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return Helper.matchShuffleToExtract(*${root}); }]),
+  (apply [{ Helper.applyShuffleToExtract(*${root}); }])>;
+
   // Replace an insert/extract element of an out of bounds index with undef.
   def insert_extract_vec_elt_out_of_bounds : GICombineRule<
   (defs root:$root),

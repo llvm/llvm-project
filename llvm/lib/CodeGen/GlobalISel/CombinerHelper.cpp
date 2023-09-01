@@ -395,6 +395,39 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   replaceRegWith(MRI, DstReg, NewDstReg);
 }
 
+bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction kind");
+
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  return Mask.size() == 1;
+}
+
+void CombinerHelper::applyShuffleToExtract(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInsertPt(*MI.getParent(), MI);
+
+  int I = MI.getOperand(3).getShuffleMask()[0];
+  Register Src1 = MI.getOperand(1).getReg();
+  LLT Src1Ty = MRI.getType(Src1);
+  int Src1NumElts = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+  Register SrcReg;
+  if (I >= Src1NumElts) {
+    SrcReg = MI.getOperand(2).getReg();
+    I -= Src1NumElts;
+  } else if (I >= 0)
+    SrcReg = Src1;
+
+  if (I < 0)
+    Builder.buildUndef(DstReg);
+  else if (!MRI.getType(SrcReg).isVector())
+    Builder.buildCopy(DstReg, SrcReg);
+  else
+    Builder.buildExtractVectorElementConstant(DstReg, SrcReg, I);
+
+  MI.eraseFromParent();
+}
+
 namespace {
 
 /// Select a preference between two uses. CurrentUse is the current preference
