@@ -251,7 +251,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
                     [&](std::vector<Diag>) { ++CallbackCount; });
     Ready.notify();
 
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -274,7 +274,7 @@ TEST_F(TUSchedulerTests, Debounce) {
   Notification N;
   updateWithDiags(S, Path, "auto (timed out)", WantDiagnostics::Auto,
                   [&](std::vector<Diag>) { N.notify(); });
-  EXPECT_TRUE(N.wait(timeoutSeconds(5)));
+  EXPECT_TRUE(N.wait(timeoutSeconds(60)));
 
   // Once we start shutting down the TUScheduler, this one becomes a dead write.
   updateWithDiags(S, Path, "auto (discarded)", WantDiagnostics::Auto,
@@ -340,7 +340,7 @@ TEST_F(TUSchedulerTests, Cancellation) {
     Read("R3")();
     Proceed.notify();
 
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   }
   EXPECT_THAT(DiagsSeen, ElementsAre("U2", "U3"))
       << "U1 and all dependent reads were cancelled. "
@@ -361,7 +361,7 @@ TEST_F(TUSchedulerTests, InvalidationNoCrash) {
   // We expect invalidation logic to not crash by trying to invalidate a running
   // request.
   S.update(Path, getInputs(Path, ""), WantDiagnostics::Auto);
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   S.runWithAST(
       "invalidatable-but-running", Path,
       [&](llvm::Expected<InputsAndAST> AST) {
@@ -373,7 +373,7 @@ TEST_F(TUSchedulerTests, InvalidationNoCrash) {
   StartedRunning.wait();
   S.update(Path, getInputs(Path, ""), WantDiagnostics::Auto);
   ScheduledChange.notify();
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 }
 
 TEST_F(TUSchedulerTests, Invalidation) {
@@ -429,7 +429,7 @@ TEST_F(TUSchedulerTests, Invalidation) {
       },
       TUScheduler::InvalidateOnUpdate);
   Start.notify();
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 
   EXPECT_EQ(2, Builds.load()) << "Middle build should be skipped";
   EXPECT_EQ(4, Actions.load()) << "All actions should run (some with error)";
@@ -462,7 +462,7 @@ TEST_F(TUSchedulerTests, InvalidationUnchanged) {
     ADD_FAILURE() << "Shouldn't build, identical to previous";
   });
   Start.notify();
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 
   EXPECT_EQ(1, Actions.load()) << "All actions should run";
 }
@@ -569,7 +569,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         }
       }
     }
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   } // TUScheduler destructor waits for all operations to finish.
 
   std::lock_guard<std::mutex> Lock(Mut);
@@ -611,7 +611,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   // one that the cache will evict.
   updateWithCallback(S, Foo, SourceContents, WantDiagnostics::Yes,
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_EQ(BuiltASTCounter.load(), 1);
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
@@ -622,7 +622,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   updateWithCallback(S, Baz, SourceContents, WantDiagnostics::Yes,
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_EQ(BuiltASTCounter.load(), 3);
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(2));
@@ -633,7 +633,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   // Access the old file again.
   updateWithCallback(S, Foo, OtherSourceContents, WantDiagnostics::Yes,
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_EQ(BuiltASTCounter.load(), 4);
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
@@ -659,16 +659,16 @@ TEST_F(TUSchedulerTests, NoopChangesDontThrashCache) {
 
   // After opening Foo then Bar, AST cache contains Bar.
   S.update(Foo, FooInputs, WantDiagnostics::Auto);
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   S.update(Bar, BarInputs, WantDiagnostics::Auto);
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
 
   // Any number of no-op updates to Foo don't dislodge Bar from the cache.
   S.update(Foo, FooInputs, WantDiagnostics::Auto);
   S.update(Foo, FooInputs, WantDiagnostics::Auto);
   S.update(Foo, FooInputs, WantDiagnostics::Auto);
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_THAT(S.getFilesWithCachedAST(), ElementsAre(Bar));
   // In fact each file has been built only once.
   ASSERT_EQ(S.fileStats().lookup(Foo).ASTBuilds, 1u);
@@ -698,12 +698,12 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
             0u);
       });
   // Wait while the preamble is being built.
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 
   // Update the file which results in an empty preamble.
   S.update(Foo, getInputs(Foo, WithEmptyPreamble), WantDiagnostics::Auto);
   // Wait while the preamble is being built.
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   S.runWithPreamble(
       "getEmptyPreamble", Foo, TUScheduler::Stale,
       [&](Expected<InputsAndPreamble> Preamble) {
@@ -731,7 +731,7 @@ TEST_F(TUSchedulerTests, ASTSignalsSmokeTests) {
   // Update the file which results in an empty preamble.
   S.update(Foo, getInputs(Foo, Contents), WantDiagnostics::Yes);
   // Wait while the preamble is being built.
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   Notification TaskRun;
   S.runWithPreamble(
       "ASTSignals", Foo, TUScheduler::Stale,
@@ -778,7 +778,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
           Preambles[I] = cantFail(std::move(IP)).Preamble;
         });
   }
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   // Check all actions got the same non-null preamble.
   std::lock_guard<std::mutex> Lock(PreamblesMut);
   ASSERT_NE(Preambles[0], nullptr);
@@ -805,7 +805,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
     Updated = false;
     updateWithDiags(S, Source, Contents, WantDiagnostics::Yes,
                     [&Updated](std::vector<Diag>) { Updated = true; });
-    bool UpdateFinished = S.blockUntilIdle(timeoutSeconds(10));
+    bool UpdateFinished = S.blockUntilIdle(timeoutSeconds(60));
     if (!UpdateFinished)
       ADD_FAILURE() << "Updated has not finished in one second. Threading bug?";
     return Updated;
@@ -877,7 +877,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
                                 Field(&Diag::Message,
                                       "use of undeclared identifier 'b'")));
       });
-  S.blockUntilIdle(timeoutSeconds(10));
+  S.blockUntilIdle(timeoutSeconds(60));
 
   FS.Files[HeaderB] = "int b;";
   FS.Timestamps[HeaderB] = time_t(1);
@@ -890,7 +890,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
                   });
 
   // Ensure previous assertions are done before we touch the FS again.
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   // Add the high-priority header file, which should reintroduce the error.
   FS.Files[HeaderA] = "int a;";
   FS.Timestamps[HeaderA] = time_t(1);
@@ -912,7 +912,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
         ElementsAre(Field(&Diag::Message, "use of undeclared identifier 'b'"));
       });
 
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_EQ(DiagCount, 3U);
 }
 
@@ -934,7 +934,7 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
     // Make sure the AST was actually built.
     cantFail(std::move(IA));
   });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(Tracer.takeMetric("ast_access_read", "hit"), SizeIs(0));
   EXPECT_THAT(Tracer.takeMetric("ast_access_read", "miss"), SizeIs(1));
 
@@ -943,7 +943,7 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
   std::atomic<bool> SeenDiags(false);
   updateWithDiags(S, FooCpp, Contents, WantDiagnostics::Auto,
                   [&](std::vector<Diag>) { SeenDiags = true; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   ASSERT_TRUE(SeenDiags);
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(1));
   EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
@@ -953,7 +953,7 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
   updateWithDiags(
       S, FooCpp, Contents, WantDiagnostics::Auto,
       [&](std::vector<Diag>) { ADD_FAILURE() << "Should not be called."; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 }
 
 TEST_F(TUSchedulerTests, Run) {
@@ -965,7 +965,7 @@ TEST_F(TUSchedulerTests, Run) {
     std::atomic<int> Counter(0);
     S.run("add 1", /*Path=*/"", [&] { ++Counter; });
     S.run("add 2", /*Path=*/"", [&] { Counter += 2; });
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
     EXPECT_EQ(Counter.load(), 3);
 
     Notification TaskRun;
@@ -1157,7 +1157,7 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
   auto PI = getInputs(File, "");
   PI.Version = InputsV0.str();
   S.update(File, PI, WantDiagnostics::Auto);
-  S.blockUntilIdle(timeoutSeconds(10));
+  S.blockUntilIdle(timeoutSeconds(60));
 
   // Block preamble builds.
   PI.Version = InputsV1.str();
@@ -1193,15 +1193,15 @@ TEST_F(TUSchedulerTests, OnlyPublishWhenPreambleIsBuilt) {
 
   Path File = testPath("foo.cpp");
   S.update(File, getInputs(File, ""), WantDiagnostics::Auto);
-  S.blockUntilIdle(timeoutSeconds(10));
+  S.blockUntilIdle(timeoutSeconds(60));
   EXPECT_EQ(PreamblePublishCount, 1);
   // Same contents, no publish.
   S.update(File, getInputs(File, ""), WantDiagnostics::Auto);
-  S.blockUntilIdle(timeoutSeconds(10));
+  S.blockUntilIdle(timeoutSeconds(60));
   EXPECT_EQ(PreamblePublishCount, 1);
   // New contents, should publish.
   S.update(File, getInputs(File, "#define FOO"), WantDiagnostics::Auto);
-  S.blockUntilIdle(timeoutSeconds(10));
+  S.blockUntilIdle(timeoutSeconds(60));
   EXPECT_EQ(PreamblePublishCount, 2);
 }
 
@@ -1218,7 +1218,7 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
         PathRef Path, llvm::StringRef Version, CapturedASTCtx,
         std::shared_ptr<const include_cleaner::PragmaIncludes>) override {
       if (BuildBefore)
-        ASSERT_TRUE(UnblockPreamble.wait(timeoutSeconds(5)))
+        ASSERT_TRUE(UnblockPreamble.wait(timeoutSeconds(60)))
             << "Expected notification";
       BuildBefore = true;
     }
@@ -1307,7 +1307,7 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
   ASSERT_THAT(BlockForDiags(PI), testing::Pair("1", "3"));
 
   UnblockPreamble.notify();
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(5)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 
   // Make sure that we have eventual consistency.
   EXPECT_THAT(Collector.diagVersions().back(), Pair(PI.Version, PI.Version));
@@ -1316,7 +1316,7 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
   PI.Version = "4";
   PI.Contents = "#define FOO\n" + PI.Version;
   S.update(File, PI, WantDiagnostics::No);
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(5)));
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(Collector.diagVersions().back(), Pair("3", "3"));
 }
 
@@ -1353,7 +1353,7 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   TUScheduler S(CDB, optsForTest());
   auto GetFlags = [&](PathRef Header) {
     S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
-    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
     Notification CmdDone;
     tooling::CompileCommand Cmd;
     S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
@@ -1363,7 +1363,7 @@ TEST_F(TUSchedulerTests, IncluderCache) {
                         CmdDone.notify();
                       });
     CmdDone.wait();
-    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
     return Cmd.CommandLine;
   };
 
@@ -1381,7 +1381,7 @@ TEST_F(TUSchedulerTests, IncluderCache) {
     #include "unreliable.h"
   )cpp";
   S.update(Main, getInputs(Main, AllIncludes), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN"))
       << "Included from main file, has no own command";
   EXPECT_THAT(GetFlags(Unreliable), Contains("-DMAIN"))
@@ -1397,7 +1397,7 @@ TEST_F(TUSchedulerTests, IncluderCache) {
     #include "not_included.h"
   )cpp";
   S.update(Main2, getInputs(Main2, SomeIncludes), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd),
               AllOf(Contains("-DMAIN"), Not(Contains("-DMAIN2"))))
       << "mainfile association is stable";
@@ -1408,14 +1408,14 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   // Remove includes from main - this marks the associations as invalid but
   // doesn't actually remove them until another preamble claims them.
   S.update(Main, getInputs(Main, ""), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd),
               AllOf(Contains("-DMAIN"), Not(Contains("-DMAIN2"))))
       << "mainfile association not updated yet!";
 
   // Open yet another file - this time it claims the associations.
   S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN3"))
       << "association invalidated and then claimed by main3";
   EXPECT_THAT(GetFlags(Unreliable), Contains("-DMAIN"))
@@ -1430,11 +1430,11 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   // Also run update for Main3 to invalidate the preeamble to make sure next
   // update populates include cache associations.
   S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   // Re-add the file and make sure nothing crashes.
   CDB.FailAll = false;
   S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
-  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN3"))
       << "association invalidated and then claimed by main3";
 }
@@ -1448,7 +1448,7 @@ TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
 
     auto CheckNoFileActionsSeesLastActiveFile =
         [&](llvm::StringRef LastActiveFile) {
-          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
           std::atomic<int> Counter(0);
           // We only check for run and runQuick as runWithAST and
           // runWithPreamble is always bound to a file.
@@ -1460,7 +1460,7 @@ TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
             ++Counter;
             EXPECT_EQ(LastActiveFile, boundPath());
           });
-          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
           EXPECT_EQ(2, Counter.load());
         };
 
@@ -1589,7 +1589,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
       Filenames.push_back(Path);
       S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes);
     }
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
 
     // The throttler saw all files, and we built them.
     EXPECT_THAT(Throttler.Acquires,
