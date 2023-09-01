@@ -596,7 +596,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, Out->os(), MCOptions);
+                                    SrcMgr, Ctx, MCOptions);
 
   // Keep output if no errors.
   if (Res == 0) {
