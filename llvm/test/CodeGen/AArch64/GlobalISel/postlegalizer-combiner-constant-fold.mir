@@ -12,9 +12,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: add
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 42
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 42
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 40
     %b:_(s64) = G_CONSTANT i64 2
     %res:_(s64) = G_ADD %a, %b
@@ -33,9 +35,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: sub
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 38
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 38
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 40
     %b:_(s64) = G_CONSTANT i64 2
     %res:_(s64) = G_SUB %a, %b
@@ -54,9 +58,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: mul
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 80
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 80
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 40
     %b:_(s64) = G_CONSTANT i64 2
     %res:_(s64) = G_MUL %a, %b
@@ -75,9 +81,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: and
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 0
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 40
     %b:_(s64) = G_CONSTANT i64 2
     %res:_(s64) = G_AND %a, %b
@@ -96,9 +104,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: or
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 62
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 62
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 42
     %b:_(s64) = G_CONSTANT i64 22
     %res:_(s64) = G_OR %a, %b
@@ -117,9 +127,11 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: xor
-    ; CHECK: %res:_(s64) = G_CONSTANT i64 12
-    ; CHECK: $x0 = COPY %res(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = G_CONSTANT i64 8
     %b:_(s64) = G_CONSTANT i64 4
     %res:_(s64) = G_XOR %a, %b
