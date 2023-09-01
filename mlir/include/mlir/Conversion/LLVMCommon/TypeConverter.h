@@ -238,14 +238,15 @@ private:
   /// Convert a memref type to a bare pointer to the memref element type.
   Type convertMemRefToBarePtr(BaseMemRefType type) const;
 
-  /// Convert a 1D vector type into an LLVM vector type.
-  Type convertVectorType(VectorType type) const;
-
   /// Options for customizing the llvm lowering.
   LowerToLLVMOptions options;
 
   /// Data layout analysis mapping scopes to layouts active in them.
   const DataLayoutAnalysis *dataLayoutAnalysis;
+
+protected:
+  /// Convert a 1D vector type into an LLVM vector type.
+  Type convertVectorType(VectorType type) const;
 };
 
 /// Callback to convert function argument types. It converts a MemRef function

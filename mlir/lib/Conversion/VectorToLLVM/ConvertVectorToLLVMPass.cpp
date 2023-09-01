@@ -83,21 +83,26 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect.
   LowerToLLVMOptions options(&getContext());
   options.useOpaquePointers = useOpaquePointers;
-  LLVMTypeConverter converter(&getContext(), options);
+
+  LLVMTypeConverter *converter;
+  if (armSME)
+    converter = new arm_sme::ArmSMETypeConverter(&getContext(), options);
+  else
+    converter = new LLVMTypeConverter(&getContext(), options);
+
   RewritePatternSet patterns(&getContext());
   populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
+  populateVectorToLLVMMatrixConversionPatterns(*converter, patterns);
   populateVectorToLLVMConversionPatterns(
-      converter, patterns, reassociateFPReductions, force32BitVectorIndices);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
+      *converter, patterns, reassociateFPReductions, force32BitVectorIndices);
+  populateVectorToLLVMMatrixConversionPatterns(*converter, patterns);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect>();
   target.addLegalDialect<memref::MemRefDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
-  arm_sme::ArmSMETypeConverter armSMEConverter(&getContext(), options);
 
   if (armNeon) {
     // TODO: we may or may not want to include in-dialect lowering to
@@ -107,19 +112,19 @@ void LowerVectorToLLVMPass::runOnOperation() {
   }
   if (armSVE) {
     configureArmSVELegalizeForExportTarget(target);
-    populateArmSVELegalizeForLLVMExportPatterns(converter, patterns);
+    populateArmSVELegalizeForLLVMExportPatterns(*converter, patterns);
   }
   if (armSME) {
     configureArmSMELegalizeForExportTarget(target);
-    populateArmSMELegalizeForLLVMExportPatterns(armSMEConverter, patterns);
+    populateArmSMELegalizeForLLVMExportPatterns(*converter, patterns);
   }
   if (amx) {
     configureAMXLegalizeForExportTarget(target);
-    populateAMXLegalizeForLLVMExportPatterns(converter, patterns);
+    populateAMXLegalizeForLLVMExportPatterns(*converter, patterns);
   }
   if (x86Vector) {
     configureX86VectorLegalizeForExportTarget(target);
-    populateX86VectorLegalizeForLLVMExportPatterns(converter, patterns);
+    populateX86VectorLegalizeForLLVMExportPatterns(*converter, patterns);
   }
 
   if (failed(

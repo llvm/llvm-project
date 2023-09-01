@@ -43,6 +43,19 @@ std::unique_ptr<Pass> createTileAllocationPass();
 class ArmSMETypeConverter : public LLVMTypeConverter {
 public:
   ArmSMETypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
+
+protected:
+  /// Convert an n-D vector type to an LLVM vector type.
+  ///
+  /// Disables type conversion of legal 2-D scalable vector types such as
+  /// `vector<[16]x[16]xi8>` for ArmSME, since LLVM does not support arrays of
+  /// scalable vectors and the LLVM type converter asserts on such types to
+  /// prevent generation of illegal LLVM IR. When lowering to ArmSME these types
+  /// should be eliminated before lowering to LLVM.
+  ///
+  /// Types unrelated to ArmSME are converted by
+  /// `LLVMTypeConverter::convertVectorType`.
+  Type convertVectorType(VectorType type) const;
 };
 
 //===----------------------------------------------------------------------===//
