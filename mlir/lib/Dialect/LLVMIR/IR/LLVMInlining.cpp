@@ -695,6 +695,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             LLVM::AtomicCmpXchgOp,
             LLVM::CallOp,
             LLVM::DbgDeclareOp,
+            LLVM::DbgLabelOp,
             LLVM::DbgValueOp,
             LLVM::FenceOp,
             LLVM::InlineAsmOp,
