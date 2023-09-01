@@ -2156,54 +2156,49 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
-  case ISD::SMIN: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-    // If we're only wanting the signbit, then we can simplify to OR node.
-    // TODO: Extend this based on ComputeNumSignBits.
-    if (DemandedBits.isSignMask())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT, Op0, Op1));
-    break;
-  }
-  case ISD::SMAX: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-    // If we're only wanting the signbit, then we can simplify to AND node.
-    // TODO: Extend this based on ComputeNumSignBits.
-    if (DemandedBits.isSignMask())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT, Op0, Op1));
-    break;
-  }
-  case ISD::UMIN: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-    // If we're only wanting the msb, then we can simplify to AND node.
-    if (DemandedBits.isSignMask())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT, Op0, Op1));
-    // Check if one arg is always less than (or equal) to the other arg.
-    KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
-    KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
-    Known = KnownBits::umin(Known0, Known1);
-    if (std::optional<bool> IsULE = KnownBits::ule(Known0, Known1))
-      return TLO.CombineTo(Op, *IsULE ? Op0 : Op1);
-    if (std::optional<bool> IsULT = KnownBits::ult(Known0, Known1))
-      return TLO.CombineTo(Op, *IsULT ? Op0 : Op1);
-    break;
-  }
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
   case ISD::UMAX: {
+    unsigned Opc = Op.getOpcode();
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    // If we're only wanting the msb, then we can simplify to OR node.
-    if (DemandedBits.isSignMask())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT, Op0, Op1));
-    // Check if one arg is always greater than (or equal) to the other arg.
+
+    // If we're only demanding signbits, then we can simplify to OR/AND node.
+    unsigned BitOp =
+        (Opc == ISD::SMIN || Opc == ISD::UMAX) ? ISD::OR : ISD::AND;
+    unsigned NumSignBits =
+        std::min(TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1),
+                 TLO.DAG.ComputeNumSignBits(Op1, DemandedElts, Depth + 1));
+    unsigned NumDemandedUpperBits = BitWidth - DemandedBits.countr_zero();
+    if (NumSignBits >= NumDemandedUpperBits)
+      return TLO.CombineTo(Op, TLO.DAG.getNode(BitOp, SDLoc(Op), VT, Op0, Op1));
+
+    // Check if one arg is always less/greater than (or equal) to the other arg.
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
-    Known = KnownBits::umax(Known0, Known1);
-    if (std::optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
-      return TLO.CombineTo(Op, *IsUGE ? Op0 : Op1);
-    if (std::optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
-      return TLO.CombineTo(Op, *IsUGT ? Op0 : Op1);
+    switch (Opc) {
+    case ISD::SMIN:
+      // TODO: Add KnownBits::sle/slt handling.
+      break;
+    case ISD::SMAX:
+      // TODO: Add KnownBits::sge/sgt handling.
+      break;
+    case ISD::UMIN:
+      if (std::optional<bool> IsULE = KnownBits::ule(Known0, Known1))
+        return TLO.CombineTo(Op, *IsULE ? Op0 : Op1);
+      if (std::optional<bool> IsULT = KnownBits::ult(Known0, Known1))
+        return TLO.CombineTo(Op, *IsULT ? Op0 : Op1);
+      Known = KnownBits::umin(Known0, Known1);
+      break;
+    case ISD::UMAX:
+      if (std::optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
+        return TLO.CombineTo(Op, *IsUGE ? Op0 : Op1);
+      if (std::optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
+        return TLO.CombineTo(Op, *IsUGT ? Op0 : Op1);
+      Known = KnownBits::umax(Known0, Known1);
+      break;
+    }
     break;
   }
   case ISD::BITREVERSE: {
