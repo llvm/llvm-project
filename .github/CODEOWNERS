@@ -215,8 +215,8 @@
 /clang-tools-extra/test/clang-tidy/ @llvm/pr-subscribers-clang-tidy
 
 # llvm-mca
-/llvm/tools//llvm-mca/ @llvm/pr-subscribers-llvm-mca
-/llvm/include//llvm/MCA/ @llvm/pr-subscribers-llvm-mca
+/llvm/tools/llvm-mca/ @llvm/pr-subscribers-llvm-mca
+/llvm/include/llvm/MCA/ @llvm/pr-subscribers-llvm-mca
 /llvm/lib/MCA/ @llvm/pr-subscribers-llvm-mca
 
 # vectorizers
@@ -398,6 +398,19 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/Frontend/OpenMP/ @llvm/pr-subscribers-flang-openmp
 /llvm/unittests/Frontend/OpenMP* @llvm/pr-subscribers-flang-openmp
 
+# llvm-ir
+/llvm/lib/IR/ @llvm/pr-subscribers-llvm-ir
+/llvm/include/llvm/IR/ @llvm/pr-subscribers-llvm-ir
+/llvm/docs/LangRef.rst @llvm/pr-subscribers-llvm-ir
+
+# llvm-analysis
+/llvm/lib/analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/include/llvm/analysis/ @llvm/pr-subscribers-llvm-analysis
+
+# llvm-transforms
+/llvm/lib/transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/include/llvm/transforms/ @llvm/pr-subscribers-llvm-transforms
+
 # arm
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
 /llvm/lib/Target/ARM/ @llvm/pr-subscribers-arm
@@ -425,14 +438,14 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
 /clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
 
-# riskv
-/llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riskv
-/llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riskv
-/llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riskv
-/clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riskv
-/clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riskv
-/clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riskv
-/clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riskv
+# riscv
+/llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
+/llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
+/clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
+/clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
+/clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
+/clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riscv
 
 # sparc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
