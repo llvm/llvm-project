@@ -369,4 +369,26 @@ def TestTypeElseAnchorStruct : Test_Type<"TestTypeElseAnchorStruct"> {
   let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }
 
+def TestI32 : Test_Type<"TestI32"> {
+  let mnemonic = "i32";
+}
+
+def TestRecursiveAlias
+    : Test_Type<"TestRecursiveAlias", [NativeTypeTrait<"IsMutable">]> {
+  let mnemonic = "test_rec_alias";
+  let storageClass = "TestRecursiveTypeStorage";
+  let storageNamespace = "test";
+  let genStorageClass = 0;
+
+  let parameters = (ins "llvm::StringRef":$name);
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    Type getBody() const;
+
+    void setBody(Type type);
+  }];
+}
+
 #endif // TEST_TYPEDEFS
