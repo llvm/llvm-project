@@ -204,8 +204,7 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       new OffloadBinary(Buf, TheHeader, TheEntry));
 }
 
-std::unique_ptr<MemoryBuffer>
-OffloadBinary::write(const OffloadingImage &OffloadingData) {
+SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
   // Create a null-terminated string table with all the used strings.
   StringTableBuilder StrTab(StringTableBuilder::ELF);
   for (auto &KeyAndValue : OffloadingData.StringData) {
@@ -243,7 +242,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   TheEntry.ImageOffset = BinaryDataSize;
   TheEntry.ImageSize = OffloadingData.Image->getBufferSize();
 
-  SmallVector<char> Data;
+  SmallString<0> Data;
   Data.reserve(TheHeader.Size);
   raw_svector_ostream OS(Data);
   OS << StringRef(reinterpret_cast<char *>(&TheHeader), sizeof(Header));
@@ -264,7 +263,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   OS.write_zeros(TheHeader.Size - OS.tell());
   assert(TheHeader.Size == OS.tell() && "Size mismatch");
 
-  return MemoryBuffer::getMemBufferCopy(OS.str());
+  return Data;
 }
 
 Error object::extractOffloadBinaries(MemoryBufferRef Buffer,
