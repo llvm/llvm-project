@@ -61,6 +61,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(CPUType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
+LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -204,6 +205,15 @@ void ScalarEnumerationTraits<FrameCookieKind>::enumeration(
   for (const auto &E : ThunkNames) {
     io.enumCase(FC, E.Name.str().c_str(),
                 static_cast<FrameCookieKind>(E.Value));
+  }
+}
+
+void ScalarEnumerationTraits<JumpTableEntrySize>::enumeration(
+    IO &io, JumpTableEntrySize &FC) {
+  auto ThunkNames = getJumpTableEntrySizeNames();
+  for (const auto &E : ThunkNames) {
+    io.enumCase(FC, E.Name.str().c_str(),
+                static_cast<JumpTableEntrySize>(E.Value));
   }
 }
 
@@ -584,6 +594,17 @@ template <> void SymbolRecordImpl<AnnotationSym>::map(IO &IO) {
   IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
   IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Strings", Symbol.Strings);
+}
+
+template <> void SymbolRecordImpl<JumpTableSym>::map(IO &IO) {
+  IO.mapRequired("BaseOffset", Symbol.BaseOffset);
+  IO.mapRequired("BaseSegment", Symbol.BaseSegment);
+  IO.mapRequired("SwitchType", Symbol.SwitchType);
+  IO.mapRequired("BranchOffset", Symbol.BranchOffset);
+  IO.mapRequired("TableOffset", Symbol.TableOffset);
+  IO.mapRequired("BranchSegment", Symbol.BranchSegment);
+  IO.mapRequired("TableSegment", Symbol.TableSegment);
+  IO.mapRequired("EntriesCount", Symbol.EntriesCount);
 }
 
 } // end namespace detail
