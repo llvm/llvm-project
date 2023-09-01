@@ -56,6 +56,7 @@ public:
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
+  PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
@@ -88,6 +89,7 @@ private:
   bool isContiguous_{false};
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
+  bool isAssumedRank_{false};
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -112,6 +114,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isVolatile(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isBoundsRemapping(
     bool isBoundsRemapping) {
   isBoundsRemapping_ = isBoundsRemapping;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isAssumedRank(
+    bool isAssumedRank) {
+  isAssumedRank_ = isAssumedRank;
   return *this;
 }
 
@@ -263,7 +271,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
     CHECK(frTypeAndShape);
     if (!lhsType_->IsCompatibleWith(foldingContext_.messages(), *frTypeAndShape,
             "pointer", "function result",
-            isBoundsRemapping_ /*omit shape check*/,
+            /*omitShapeConformanceCheck=*/isBoundsRemapping_ || isAssumedRank_,
             evaluate::CheckConformanceFlags::BothDeferredShape)) {
       return false; // IsCompatibleWith() emitted message
     }
@@ -489,17 +497,20 @@ static bool CheckPointerBounds(
 bool CheckPointerAssignment(SemanticsContext &context,
     const evaluate::Assignment &assignment, const Scope &scope) {
   return CheckPointerAssignment(context, assignment.lhs, assignment.rhs, scope,
-      CheckPointerBounds(context.foldingContext(), assignment));
+      CheckPointerBounds(context.foldingContext(), assignment),
+      /*isAssumedRank=*/false);
 }
 
 bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
-    const SomeExpr &rhs, const Scope &scope, bool isBoundsRemapping) {
+    const SomeExpr &rhs, const Scope &scope, bool isBoundsRemapping,
+    bool isAssumedRank) {
   const Symbol *pointer{GetLastSymbol(lhs)};
   if (!pointer) {
     return false; // error was reported
   }
   PointerAssignmentChecker checker{context, scope, *pointer};
   checker.set_isBoundsRemapping(isBoundsRemapping);
+  checker.set_isAssumedRank(isAssumedRank);
   bool lhsOk{checker.CheckLeftHandSide(lhs)};
   bool rhsOk{checker.Check(rhs)};
   return lhsOk && rhsOk; // don't short-circuit
@@ -514,11 +525,12 @@ bool CheckStructConstructorPointerComponent(SemanticsContext &context,
 
 bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
     const std::string &description, const DummyDataObject &lhs,
-    const SomeExpr &rhs, const Scope &scope) {
+    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank) {
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isAssumedRank(isAssumedRank)
       .Check(rhs);
 }
 
@@ -526,7 +538,9 @@ bool CheckInitialDataPointerTarget(SemanticsContext &context,
     const SomeExpr &pointer, const SomeExpr &init, const Scope &scope) {
   return evaluate::IsInitialDataTarget(
              init, &context.foldingContext().messages()) &&
-      CheckPointerAssignment(context, pointer, init, scope);
+      CheckPointerAssignment(context, pointer, init, scope,
+          /*isBoundsRemapping=*/false,
+          /*isAssumedRank=*/false);
 }
 
 } // namespace Fortran::semantics
