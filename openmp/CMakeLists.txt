@@ -56,9 +56,18 @@ else()
     set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
   endif()
 
-  find_program(OPENMP_TEST_Fortran_COMPILER flang-new PATHS LLVM_RUNTIME_OUTPUT_INTDIR)
-  if (NOT OPENMP_TEST_Fortran_COMPILER)
-    unset(OPENMP_TEST_Fortran_COMPILER CACHE)
+  # Check for flang
+  if (NOT MSVC)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new)
+  else()
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new.exe)
+  endif()
+
+  # Set fortran test compiler if flang is found
+  if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+    message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
+  else()
+    unset(OPENMP_TEST_Fortran_COMPILER)
   endif()
 
   # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
