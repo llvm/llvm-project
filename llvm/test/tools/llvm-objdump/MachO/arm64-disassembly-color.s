@@ -1,4 +1,6 @@
 // UNSUPPORTED: system-windows
+// REQUIRES: aarch64-registered-target
+
 // RUN: llvm-mc -triple arm64-apple-macosx %s -filetype=obj -o %t
 // RUN: llvm-objdump --disassembler-color=on --disassemble %t | FileCheck %s --check-prefix=COLOR
 // RUN: llvm-objdump --disassembler-color=off --disassemble %t | FileCheck %s --check-prefix=NOCOLOR
