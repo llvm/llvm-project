@@ -991,10 +991,17 @@ public:
                        ArrayRef<const Attr *> Attrs = std::nullopt);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
+  mlir::LogicalResult buildCXXTryStmt(const clang::CXXTryStmt &S);
+  void enterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
+  void exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
+
   mlir::LogicalResult buildCompoundStmt(const clang::CompoundStmt &S);
 
   mlir::LogicalResult
   buildCompoundStmtWithoutScope(const clang::CompoundStmt &S);
+
+  GlobalDecl CurSEHParent;
+  bool currentFunctionUsesSEHTry() const { return !!CurSEHParent; }
 
   /// Emit code to compute the specified expression,
   /// ignoring the result.

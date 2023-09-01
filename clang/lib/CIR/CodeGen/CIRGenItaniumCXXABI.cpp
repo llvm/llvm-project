@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunctionInfo.h"
 #include "ConstantInitBuilder.h"
 
@@ -171,6 +172,14 @@ public:
                            QualType ThisTy) override;
   virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) override;
   virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) override;
+  CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType Ty,
+                               QualType CatchHandlerType) override {
+    auto rtti =
+        dyn_cast<mlir::cir::GlobalViewAttr>(getAddrOfRTTIDescriptor(loc, Ty));
+    assert(rtti && "expected GlobalViewAttr");
+    return CatchTypeInfo{rtti, 0};
+  }
 
   bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,

@@ -461,3 +461,11 @@ bool EHScopeStack::requiresLandingPad() const {
 
   return false;
 }
+
+EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
+  char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
+  EHCatchScope *scope =
+      new (buffer) EHCatchScope(numHandlers, InnermostEHScope);
+  InnermostEHScope = stable_begin();
+  return scope;
+}
