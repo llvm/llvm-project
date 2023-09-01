@@ -425,6 +425,24 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
 /clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
 
+# riskv
+/llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riskv
+/llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riskv
+/llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riskv
+/clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riskv
+/clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riskv
+/clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riskv
+/clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riskv
+
+# sparc
+/llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
+/llvm/lib/Target/Sparc/ @llvm/pr-subscribers-sparc
+/llvm/test/CodeGen/Sparc/ @llvm/pr-subscribers-sparc
+/clang/lib/Basic/Targets/Sparc* @llvm/pr-subscribers-sparc
+/clang/lib/Driver/ToolChains/Arch/Sparc.* @llvm/pr-subscribers-sparc
+/clang/lib/CodeGen/Targets/Sparc.cpp @llvm/pr-subscribers-sparc
+/clang/include/clang/Basic/BuiltinsSparc* @llvm/pr-subscribers-sparc
+
 # x86
 /llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
