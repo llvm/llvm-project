@@ -14,11 +14,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
@@ -130,6 +132,32 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
   }
   transformResults.set(cast<OpResult>(getResult()), results);
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MemRefEraseDeadAllocAndStoresOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefEraseDeadAllocAndStoresOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  // Apply store to load forwarding and dead store elimination.
+  vector::transferOpflowOpt(rewriter, target);
+  memref::eraseDeadAllocAndStores(rewriter, target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MemRefEraseDeadAllocAndStoresOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+void transform::MemRefEraseDeadAllocAndStoresOp::build(OpBuilder &builder,
+                                                       OperationState &result,
+                                                       Value target) {
+  result.addOperands(target);
 }
 
 //===----------------------------------------------------------------------===//
