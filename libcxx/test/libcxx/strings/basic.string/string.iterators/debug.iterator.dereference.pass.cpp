@@ -18,20 +18,16 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    typedef std::string C;
-    C c(1, '\0');
-    C::iterator i = c.end();
-    TEST_LIBCPP_ASSERT_FAILURE(*i, "Attempted to dereference a non-dereferenceable iterator");
-  }
+template <class C>
+void test() {
+  C c(1, '\0');
+  typename C::iterator i = c.end();
+  TEST_LIBCPP_ASSERT_FAILURE(*i, "Attempted to dereference a non-dereferenceable iterator");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > C;
-    C c(1, '\0');
-    C::iterator i = c.end();
-    TEST_LIBCPP_ASSERT_FAILURE(*i, "Attempted to dereference a non-dereferenceable iterator");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }

@@ -5608,7 +5608,6 @@ libcxx/test/std/re/re.traits/translate_nocase.pass.cpp
 libcxx/test/std/re/re.traits/translate.pass.cpp
 libcxx/test/std/re/re.traits/types.pass.cpp
 libcxx/test/std/re/re.traits/value.pass.cpp
-libcxx/test/std/strings/basic.string/string.modifiers/string_assign/string.pass.cpp
 libcxx/test/std/thread/futures/futures.async/async.pass.cpp
 libcxx/test/std/thread/futures/futures.async/async_race.38682.pass.cpp
 libcxx/test/std/thread/futures/futures.async/async_race.pass.cpp

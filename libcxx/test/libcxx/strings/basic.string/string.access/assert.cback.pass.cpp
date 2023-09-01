@@ -20,17 +20,15 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    std::string const s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-  }
+template <class S>
+void test() {
+  const S s;
+  TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-    const S s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }
