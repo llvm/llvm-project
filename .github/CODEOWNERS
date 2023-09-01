@@ -369,6 +369,15 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
 /llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
 
+# selection-dag
+/llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
+/llvm/include/llvm/CodeGen/SelectionDAG*.h @llvm/pr-subscribers-selectiondag
+/llvm/include/llvm/CodeGen/SDNodeProperties.td @llvm/pr-subscribers-selectiondag
+/llvm/include/llvm/Target/TargetSelectionDAG.td @llvm/pr-subscribers-selectiondag
+/llvm/lib/CodeGen/SelectionDAG/ @llvm/pr-subscribers-selectiondag
+/llvm/utils/TableGen/CodeGenDAG* @llvm/pr-subscribers-selectiondag
+/llvm/utils/TableGen/DAGISel* @llvm/pr-subscribers-selectiondag
+
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
 /llvm/lib/Transforms/Utils/SCCPSolver.cpp @llvm/pr-subscribers-function-specialization
