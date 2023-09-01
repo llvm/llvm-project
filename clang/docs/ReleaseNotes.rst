@@ -341,6 +341,23 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Android Support
+^^^^^^^^^^^^^^^
+
+- Android target triples are usually suffixed with a version. Clang searches for
+  target-specific runtime and standard libraries in directories named after the
+  target (e.g. if you're building with ``-target aarch64-none-linux-android21``,
+  Clang will look for ``lib/aarch64-none-linux-android21`` under its resource
+  directory to find runtime libraries). If an exact match isn't found, Clang
+  would previously fall back to a directory without any version (which would be
+  ``lib/aarch64-none-linux-android`` in our example). Clang will now look for
+  directories for lower versions and use the newest version it finds instead,
+  e.g. if you have ``lib/aarch64-none-linux-android21`` and
+  ``lib/aarch64-none-linux-android29``, ``-target aarch64-none-linux-android23``
+  will use the former and ``-target aarch64-none-linux-android30`` will use the
+  latter. Falling back to a versionless directory will now emit a warning, and
+  the fallback will be removed in Clang 19.
+
 Windows Support
 ^^^^^^^^^^^^^^^
 - Fixed an assertion failure that occurred due to a failure to propagate
