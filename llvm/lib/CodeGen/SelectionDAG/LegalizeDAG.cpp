@@ -3333,7 +3333,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.expandVACopy(Node));
     break;
   case ISD::EXTRACT_VECTOR_ELT:
-    if (Node->getOperand(0).getValueType().getVectorNumElements() == 1)
+    if (Node->getOperand(0).getValueType().getVectorElementCount().isScalar())
       // This must be an access of the only element.  Return it.
       Tmp1 = DAG.getNode(ISD::BITCAST, dl, Node->getValueType(0),
                          Node->getOperand(0));
