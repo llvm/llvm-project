@@ -9,7 +9,7 @@ set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
                              "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
                              "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-                            "sm_70;sm_72;sm_75;sm_80;sm_86")
+                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
 set(LIBC_GPU_ARCHITECTURES "all" CACHE STRING
