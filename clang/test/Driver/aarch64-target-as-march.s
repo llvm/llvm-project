@@ -35,7 +35,7 @@
 // MULTIPLE-VALUES-NOT: "-target-feature" "+v8.2a
 
 /// march to compiler and assembler, we choose the one suited to the input file type
-// RUN: not %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a %s 2>&1 | \
+// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a %s 2>&1 | \
 // RUN: FileCheck --check-prefix=TARGET-FEATURE-3 %s
 // RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a \
 // RUN: %S/Inputs/wildcard1.c 2>&1 | FileCheck --check-prefix=TARGET-FEATURE-4 %s
