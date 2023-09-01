@@ -75,6 +75,10 @@ End-user Options
 
  Marked up disassembly of string of hex bytes.
 
+.. option:: --cdis
+
+ Colored disassembly of string of hex bytes.
+
 .. option:: --filetype=[asm,null,obj]
 
  Sets the output filetype. Setting this flag to `asm` will make the tool
