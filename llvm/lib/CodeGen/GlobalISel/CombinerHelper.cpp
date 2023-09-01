@@ -2635,6 +2635,22 @@ void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, APFloat C) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  // Only expect double containers.
+  assert(C.getSizeInBits(C.getSemantics()) == 64 &&
+         "Expected double-precision float");
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty.getScalarSizeInBits() == 32) {
+    bool LosesInfo;
+    C.convert(APFloat::IEEEsingle(), APFloat::rmTowardZero, &LosesInfo);
+    assert(!LosesInfo && "Shouldn't lose information");
+  }
+  Builder.setInstr(MI);
+  Builder.buildFConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+}
+
 void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
@@ -4521,6 +4537,16 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) 
   if (!MaybeCst)
     return false;
   MatchInfo = *MaybeCst;
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI, double &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldFPBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo = MaybeCst->convertToDouble();
   return true;
 }
 

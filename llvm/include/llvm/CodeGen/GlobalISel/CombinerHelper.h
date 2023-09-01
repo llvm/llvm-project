@@ -434,6 +434,12 @@ public:
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   void replaceInstWithFConstant(MachineInstr &MI, double C);
 
+  /// Replace an instruction with an F_CONSTANT with value \p C.
+  /// This only works with float and double types, and will downconvert the
+  /// constant if necessary. The reason we do this is because we can't default
+  /// construct an APFloat, so we need to pass floats as double APFloat.
+  void replaceInstWithFConstant(MachineInstr &MI, APFloat C);
+
   /// Replace an instruction with a G_CONSTANT with value \p C.
   void replaceInstWithConstant(MachineInstr &MI, int64_t C);
 
@@ -636,6 +642,9 @@ public:
 
   /// Do constant folding when opportunities are exposed after MIR building.
   bool matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo);
+
+  /// Do constant FP folding when opportunities are exposed after MIR building.
+  bool matchConstantFoldFPBinOp(MachineInstr &MI, double &MatchInfo);
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
