@@ -191,7 +191,7 @@ function(add_properties_for_swift_modules target reldir)
   endif()
 
   if (NOT BOOTSTRAPPING_MODE)
-    if (SWIFT_SWIFT_PARSER)
+    if (SWIFT_BUILD_SWIFT_SYNTAX)
       set(APSM_BOOTSTRAPPING_MODE "HOSTTOOLS")
     endif()
   else()
@@ -238,7 +238,7 @@ function(add_properties_for_swift_modules target reldir)
       endif()
     endif()
 
-    if (SWIFT_SWIFT_PARSER)
+    if (SWIFT_BUILD_SWIFT_SYNTAX)
       if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
         set_property(TARGET ${target}
           APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
