@@ -468,9 +468,11 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::NullPtr:
-      // Model std::nullptr_t as i8*
-      // ResultType = llvm::Type::getUInt8PtrTy(getLLVMContext());
-      assert(0 && "not implemented");
+      // Add proper CIR type for it? this looks mostly useful for sema related
+      // things (like for overloads accepting void), for now, given that
+      // `sizeof(std::nullptr_t)` is equal to `sizeof(void *)`, model
+      // std::nullptr_t as !cir.ptr<!void>
+      ResultType = Builder.getVoidPtrTy();
       break;
 
     case BuiltinType::UInt128:
