@@ -26,8 +26,8 @@ Pull Requests
 =============
 The LLVM project is using GitHub Pull Requests for Code Reviews. This document
 describes the typical workflow of creating a Pull Request and getting it reviewed
-and accepted. This is meant as an overview of the GitHub workflow, for compelete
-documentation refer to `GitHubs documentation <https://docs.github.com/pull-requests>`_.
+and accepted. This is meant as an overview of the GitHub workflow, for complete
+documentation refer to `GitHub's documentation <https://docs.github.com/pull-requests>`_.
 
 GitHub Tools
 ------------
@@ -52,26 +52,31 @@ With the CLI it's enough to create the branch locally and then run:
 
   gh pr create
 
-When promted select to create and use your own fork and follow
+When prompted select to create and use your own fork and follow
 the instructions to add more information needed.
 
 .. note::
 
-  When you let the GitHub CLI to create a fork of llvm-project to
+  When you let the GitHub CLI create a fork of llvm-project to
   your user, it will change the git "remotes" so that "origin" points
   to your fork and "upstream" points to the main llvm-project repository.
 
 Updating Pull Requests
 ----------------------
-When updating a pull request, you should push additional "fix up" commits to
-your branch instead of force pushing.  This makes it easier for GitHub to
-track the context of previous review comments.
+In order to update your pull request, the only thing you need to do is to push
+your new commits to the branch in your fork. That will automatically update
+the pull request.
 
-If you do this, you must squash and merge before committing and
+When updating a pull request, you should push additional "fix up" commits to
+your branch instead of force pushing. This makes it easier for GitHub to
+track the context of previous review comments. Consider using the
+`built-in support for fixups <https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---fixupamendrewordltcommitgt>`_
+in git.
+
+If you do this, you must squash and merge before landing the PR and
 you must use the pull request title and description as the commit message.
-The default commit message for a squashed pull request is the pull request
-description, so this will allow reviewers to review the commit message before
-approving the commit.
+You can do this manually with an interactive git rebase or with GitHub's
+built-in tool. See the section about landing your fix below.
 
 When pushing to your branch, make sure you push to the correct fork. Check your
 remotes with:
@@ -97,10 +102,23 @@ you won't encounter merge conflicts when landing the PR.
 Landing your change
 -------------------
 When your PR has been accepted you can use the web interface to land your change.
-The button that should be used is called `Squash and merge` and after you can
-select the option `Delete branch` to delete the branch from your fork.
+If you have created multiple commits to address feedback at this point you need
+to consolidate those commits into one commit. There are two different ways to
+do this:
 
-You can also merge via the CLI by switch to your branch locally and run:
+`Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
+with fixup's. This is the recommended method since you can control the final
+commit message and inspect that the final commit looks as you expect. When
+your local state is correct, remember to force-push to your branch and press
+the merge button afterwards.
+
+Use the button `Squash and merge` in GitHub's web interface, if you do this
+remember to review the commit message when prompted.
+
+Afterwards you can select the option `Delete branch` to delete the branch
+from your fork.
+
+You can also merge via the CLI by switching to your branch locally and run:
 
 ::
 
@@ -109,7 +127,7 @@ You can also merge via the CLI by switch to your branch locally and run:
 
 Checking out another PR locally
 -------------------------------
-Sometimes you want to review another persons PR on your local machine to run
+Sometimes you want to review another person's PR on your local machine to run
 tests or inspect code in your prefered editor. This is easily done with the
 CLI:
 
