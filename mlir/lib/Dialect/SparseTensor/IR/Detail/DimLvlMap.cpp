@@ -391,7 +391,7 @@ void DimLvlMap::print(llvm::raw_ostream &os, bool wantElision) const {
     os << '{';
     llvm::interleaveComma(
         lvlSpecs, os, [&](LvlSpec const &spec) { os << spec.getBoundVar(); });
-    os << '}';
+    os << "} ";
   }
 
   // Dimension specifiers.
