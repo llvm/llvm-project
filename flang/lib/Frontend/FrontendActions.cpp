@@ -48,6 +48,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -1013,6 +1014,18 @@ public:
     case llvm::DK_OptimizationRemarkAnalysis:
       optimizationRemarkHandler(
           llvm::cast<llvm::OptimizationRemarkAnalysis>(di));
+      break;
+    case llvm::DK_MachineOptimizationRemark:
+      optimizationRemarkHandler(
+          llvm::cast<llvm::MachineOptimizationRemark>(di));
+      break;
+    case llvm::DK_MachineOptimizationRemarkMissed:
+      optimizationRemarkHandler(
+          llvm::cast<llvm::MachineOptimizationRemarkMissed>(di));
+      break;
+    case llvm::DK_MachineOptimizationRemarkAnalysis:
+      optimizationRemarkHandler(
+          llvm::cast<llvm::MachineOptimizationRemarkAnalysis>(di));
       break;
     default:
       break;
