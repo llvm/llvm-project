@@ -39,8 +39,14 @@ recommended.
 
 Creating Pull Requests
 ----------------------
-For pull requests, please push a branch to your
-`fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks>`_
+Keep in mind that each pull request should generally only contain one commit.
+This makes it easier for reviewers to understand the introduced changes and
+provide feedback. It also helps maintain a clear and organized commit history
+for the project. If you have multiple changes you want to introduce, it's
+recommended to create separate pull requests for each change.
+
+Create a local branch per commit you want to submit and then push that branch
+to your `fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks>`_
 of the llvm-project and
 `create a pull request from the fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_.
 
