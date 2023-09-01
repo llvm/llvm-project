@@ -147,6 +147,9 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::CoreturnStmtClass:
     return buildCoreturnStmt(cast<CoreturnStmt>(*S));
 
+  case Stmt::CXXTryStmtClass:
+    return buildCXXTryStmt(cast<CXXTryStmt>(*S));
+
   case Stmt::CXXForRangeStmtClass:
     return buildCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
 
@@ -161,7 +164,6 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::ObjCAtSynchronizedStmtClass:
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:
-  case Stmt::CXXTryStmtClass:
   case Stmt::SEHTryStmtClass:
   case Stmt::OMPMetaDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:

@@ -31,7 +31,7 @@ class CIRGenFunction;
 /// The MS C++ ABI needs a pointer to RTTI data plus some flags to describe the
 /// type of a catch handler, so we use this wrapper.
 struct CatchTypeInfo {
-  mlir::Value RTTI;
+  mlir::TypedAttr RTTI;
   unsigned Flags;
 };
 
@@ -181,7 +181,7 @@ public:
     setHandler(I, CatchTypeInfo{nullptr, 0}, Block);
   }
 
-  void setHandler(unsigned I, mlir::Value Type, mlir::Block *Block) {
+  void setHandler(unsigned I, mlir::TypedAttr Type, mlir::Block *Block) {
     assert(I < getNumHandlers());
     getHandlers()[I].Type = CatchTypeInfo{Type, 0};
     getHandlers()[I].Block = Block;
