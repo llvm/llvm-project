@@ -116,13 +116,15 @@ template <bool Invert, typename Packet> struct Process {
   }
 
   /// Retrieve the inbox state from memory shared between processes.
-  LIBC_INLINE uint32_t load_inbox(uint32_t index) {
-    return inbox[index].load(cpp::MemoryOrder::RELAXED);
+  LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) {
+    return gpu::broadcast_value(lane_mask,
+                                inbox[index].load(cpp::MemoryOrder::RELAXED));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
-  LIBC_INLINE uint32_t load_outbox(uint32_t index) {
-    return outbox[index].load(cpp::MemoryOrder::RELAXED);
+  LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) {
+    return gpu::broadcast_value(lane_mask,
+                                outbox[index].load(cpp::MemoryOrder::RELAXED));
   }
 
   /// Signal to the other process that this one is finished with the buffer.
@@ -138,11 +140,11 @@ template <bool Invert, typename Packet> struct Process {
 
   // Given the current outbox and inbox values, wait until the inbox changes
   // to indicate that this thread owns the buffer element.
-  LIBC_INLINE void wait_for_ownership(uint32_t index, uint32_t outbox,
-                                      uint32_t in) {
+  LIBC_INLINE void wait_for_ownership(uint64_t lane_mask, uint32_t index,
+                                      uint32_t outbox, uint32_t in) {
     while (buffer_unavailable(in, outbox)) {
       sleep_briefly();
-      in = load_inbox(index);
+      in = load_inbox(lane_mask, index);
     }
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
@@ -393,10 +395,10 @@ private:
 template <bool T, typename S>
 template <typename F>
 LIBC_INLINE void Port<T, S>::send(F fill) {
-  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
+  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(lane_mask, index);
 
   // We need to wait until we own the buffer before sending.
-  process.wait_for_ownership(index, out, in);
+  process.wait_for_ownership(lane_mask, index, out, in);
 
   // Apply the \p fill function to initialize the buffer and release the memory.
   invoke_rpc(fill, process.packet[index]);
@@ -416,10 +418,10 @@ LIBC_INLINE void Port<T, S>::recv(U use) {
     owns_buffer = false;
   }
 
-  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
+  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(lane_mask, index);
 
   // We need to wait until we own the buffer before receiving.
-  process.wait_for_ownership(index, out, in);
+  process.wait_for_ownership(lane_mask, index, out, in);
 
   // Apply the \p use function to read the memory out of the buffer.
   invoke_rpc(use, process.packet[index]);
@@ -534,8 +536,8 @@ template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
     if (!process.try_lock(lane_mask, index))
       continue;
 
-    uint32_t in = process.load_inbox(index);
-    uint32_t out = process.load_outbox(index);
+    uint32_t in = process.load_inbox(lane_mask, index);
+    uint32_t out = process.load_outbox(lane_mask, index);
 
     // Once we acquire the index we need to check if we are in a valid sending
     // state.
@@ -561,8 +563,9 @@ template <uint32_t lane_size>
     Server<lane_size>::try_open() {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = 0; index < process.port_count; ++index) {
-    uint32_t in = process.load_inbox(index);
-    uint32_t out = process.load_outbox(index);
+    uint64_t lane_mask = gpu::get_lane_mask();
+    uint32_t in = process.load_inbox(lane_mask, index);
+    uint32_t out = process.load_outbox(lane_mask, index);
 
     // The server is passive, if there is no work pending don't bother
     // opening a port.
@@ -570,12 +573,11 @@ template <uint32_t lane_size>
       continue;
 
     // Attempt to acquire the lock on this index.
-    uint64_t lane_mask = gpu::get_lane_mask();
     if (!process.try_lock(lane_mask, index))
       continue;
 
-    in = process.load_inbox(index);
-    out = process.load_outbox(index);
+    in = process.load_inbox(lane_mask, index);
+    out = process.load_outbox(lane_mask, index);
 
     if (process.buffer_unavailable(in, out)) {
       process.unlock(lane_mask, index);
