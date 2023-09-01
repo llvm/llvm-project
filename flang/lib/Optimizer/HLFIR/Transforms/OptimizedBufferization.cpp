@@ -157,6 +157,83 @@ containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
   return mlir::AliasResult::NoAlias;
 }
 
+// Returns true if the given array references represent identical
+// or completely disjoint array slices. The callers may use this
+// method when the alias analysis reports an alias of some kind,
+// so that we can run Fortran specific analysis on the array slices
+// to see if they are identical or disjoint. Note that the alias
+// analysis are not able to give such an answer about the references.
+static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
+  if (ref1 == ref2)
+    return true;
+
+  auto des1 = ref1.getDefiningOp<hlfir::DesignateOp>();
+  auto des2 = ref2.getDefiningOp<hlfir::DesignateOp>();
+  // We only support a pair of designators right now.
+  if (!des1 || !des2)
+    return false;
+
+  if (des1.getMemref() != des2.getMemref()) {
+    // If the bases are different, then there is unknown overlap.
+    LLVM_DEBUG(llvm::dbgs() << "No identical base for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  // Require all components of the designators to be the same.
+  // It might be too strict, e.g. we may probably allow for
+  // different type parameters.
+  if (des1.getComponent() != des2.getComponent() ||
+      des1.getComponentShape() != des2.getComponentShape() ||
+      des1.getSubstring() != des2.getSubstring() ||
+      des1.getComplexPart() != des2.getComplexPart() ||
+      des1.getShape() != des2.getShape() ||
+      des1.getTypeparams() != des2.getTypeparams()) {
+    LLVM_DEBUG(llvm::dbgs() << "Different designator specs for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  if (des1.getIsTriplet() != des2.getIsTriplet()) {
+    LLVM_DEBUG(llvm::dbgs() << "Different sections for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  // Analyze the subscripts.
+  // For example:
+  //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %0)  shape %9
+  //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %1)  shape %9
+  //
+  // If all the triplets (section speficiers) are the same, then
+  // we do not care if %0 is equal to %1 - the slices are either
+  // identical or completely disjoint.
+  //
+  // TODO: if we can prove that all non-triplet subscripts are different
+  // (by value), then we may return true regardless of the triplet
+  // values - the sections must be completely disjoint.
+  auto des1It = des1.getIndices().begin();
+  auto des2It = des2.getIndices().begin();
+  for (bool isTriplet : des1.getIsTriplet()) {
+    if (isTriplet) {
+      for (int i = 0; i < 3; ++i)
+        if (*des1It++ != *des2It++) {
+          LLVM_DEBUG(llvm::dbgs() << "Triplet mismatch for:\n"
+                                  << des1 << "and:\n"
+                                  << des2 << "\n");
+          return false;
+        }
+    } else {
+      ++des1It;
+      ++des2It;
+    }
+  }
+  return true;
+}
+
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -274,7 +351,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     if (!res.isPartial()) {
       if (auto designate =
               effect.getValue().getDefiningOp<hlfir::DesignateOp>()) {
-        if (designate.getMemref() != match.array) {
+        if (!areIdenticalOrDisjointSlices(match.array, designate.getMemref())) {
           LLVM_DEBUG(llvm::dbgs() << "possible read conflict: " << designate
                                   << " at " << elemental.getLoc() << "\n");
           return std::nullopt;
@@ -291,7 +368,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
           continue;
       }
     }
-    LLVM_DEBUG(llvm::dbgs() << "diasllowed side-effect: " << effect.getValue()
+    LLVM_DEBUG(llvm::dbgs() << "disallowed side-effect: " << effect.getValue()
                             << " for " << elemental.getLoc() << "\n");
     return std::nullopt;
   }
@@ -484,6 +561,8 @@ mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
 
   fir::AliasAnalysis aliasAnalysis;
   mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
+  // TODO: use areIdenticalOrDisjointSlices() to check if
+  // we can still do the expansion.
   if (!aliasRes.isNo()) {
     LLVM_DEBUG(llvm::dbgs() << "VariableAssignBufferization:\n"
                             << "\tLHS: " << lhs << "\n"
