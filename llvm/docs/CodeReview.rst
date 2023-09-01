@@ -78,10 +78,8 @@ author, for example, might no longer be an active contributor to the project.
 What Tools Are Used for Code Review?
 ------------------------------------
 
-Pre-commit code reviews are conducted on our web-based code-review tool (see
-:doc:`Phabricator`). Post-commit reviews can be done on Phabricator, by email
-on the relevant project's commit mailing list, on the project's development
-list, or on the bug tracker.
+Pre-commit code reviews are conducted on GitHub with Pull Requests. See
+:ref:`GitHub <github-reviews>` documentation.
 
 When Is an RFC Required?
 ------------------------
@@ -146,12 +144,6 @@ approved. If unsure, the reviewer should provide a qualified approval, (e.g.,
 "LGTM, but please wait for @someone, @someone_else"). You may also do this if
 you are fairly certain that a particular community member will wish to review,
 even if that person hasn't done so yet.
-
-If you approve of the idea/concept of a patch but feel unqualified to approve,
-another option (other than accepting the patch) is to simply *"Award Token"*
-(right-hand side in Phabricator) to indicate support without indicating to
-other reviewers that the patch has been accepted and reviewed in their
-dashboard.
 
 Note that, if a reviewer has requested a particular community member to review,
 and after a week that community member has yet to respond, feel free to ping
