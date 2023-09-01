@@ -217,16 +217,21 @@ function(add_properties_for_swift_modules target reldir)
       # Workaround for a linker crash related to autolinking: rdar://77839981
       set_property(TARGET ${target} APPEND_STRING PROPERTY
                    LINK_FLAGS " -lobjc ")
+
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
     elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
       string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
       string(TOLOWER ${CMAKE_SYSTEM_NAME} platform)
       set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/${platform}")
       set(SWIFT_INSTALL_RPATH "$ORIGIN/${reldir}lib/swift/${platform}")
+      set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
+      set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
+    elseif(CMAKE_SYSTEM_NAME MATCHES Windows)
+      target_link_directories(${target} PRIVATE
+        ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/Windows/x86_64)
     endif()
-
-    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
-    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
 
     if (SWIFT_SWIFT_PARSER)
       if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
