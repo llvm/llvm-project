@@ -9,7 +9,7 @@
 ; RUN: opt -thinlto-bc -o %t1.o %s
 
 ;; Check that we have properly recorded the alias in the vtable summary.
-; RUN llvm-dis -o - %t1.o | FileCheck %s --check-prefix SUMMARY
+; RUN: llvm-dis -o - %t1.o | FileCheck %s --check-prefix SUMMARY
 ; SUMMARY: gv: (name: "_ZTV1D", {{.*}} vTableFuncs: ((virtFunc: ^[[ALIAS:([0-9]+)]], offset: 16))
 ; SUMMARY: ^[[ALIAS]] = gv: (name: "_ZN1D1mEiAlias"
 
