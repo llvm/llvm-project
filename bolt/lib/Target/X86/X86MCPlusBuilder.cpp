@@ -350,7 +350,7 @@ public:
     }
   }
 
-  bool isLoad(const MCInst &Inst) const override {
+  bool mayLoad(const MCInst &Inst) const override {
     if (isPop(Inst))
       return true;
 
@@ -363,7 +363,7 @@ public:
     return MCII.mayLoad();
   }
 
-  bool isStore(const MCInst &Inst) const override {
+  bool mayStore(const MCInst &Inst) const override {
     if (isPush(Inst))
       return true;
 
@@ -1755,7 +1755,7 @@ public:
     // - Non-stack loads are prohibited (generally unsafe)
     // - Stack loads are OK if AllowStackMemOp is true
     // - Stack loads with RBP are OK if AllowBasePtrStackMemOp is true
-    if (isLoad(Inst)) {
+    if (mayLoad(Inst)) {
       // If stack memory operands are not allowed, no loads are allowed
       if (!AllowStackMemOp)
         return false;
@@ -2190,7 +2190,7 @@ public:
       MCInst &CurInst = *Itr++;
       const MCInstrDesc &Desc = Info->get(CurInst.getOpcode());
       if (Desc.hasDefOfPhysReg(CurInst, MethodRegNum, *RegInfo)) {
-        if (!isLoad(CurInst))
+        if (!mayLoad(CurInst))
           return false;
         if (std::optional<X86MemOperand> MO =
                 evaluateX86MemoryOperand(CurInst)) {
