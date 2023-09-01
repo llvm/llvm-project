@@ -4247,31 +4247,16 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                                                RotateVT))
     return SDValue();
 
-  // If we just create the shift amount with
-  //
-  // DAG.getConstant(RotateAmt, DL, RotateVT)
-  //
-  // then for e64 we get a weird bitcasted build_vector on RV32 that we're
-  // unable to detect as a splat during pattern matching. So directly lower it
-  // to a vmv.v.x which gets matched to vror.vi.
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, RotateVT, Subtarget);
-  SDValue VL =
-      getDefaultVLOps(RotateVT, ContainerVT, DL, DAG, Subtarget).second;
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
 
   SDValue Rotate;
   // A rotate of an i16 by 8 bits either direction is equivalent to a byteswap,
   // so canonicalize to vrev8.
-  if (RotateVT.getScalarType() == MVT::i16 && RotateAmt == 8) {
+  if (RotateVT.getScalarType() == MVT::i16 && RotateAmt == 8)
     Rotate = DAG.getNode(ISD::BSWAP, DL, RotateVT, Op);
-  } else {
-    SDValue RotateAmtSplat = DAG.getNode(
-        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-        DAG.getConstant(RotateAmt, DL, Subtarget.getXLenVT()), VL);
-    RotateAmtSplat =
-        convertFromScalableVector(RotateVT, RotateAmtSplat, DAG, Subtarget);
-    Rotate = DAG.getNode(ISD::ROTL, DL, RotateVT, Op, RotateAmtSplat);
-  }
+  else
+    Rotate = DAG.getNode(ISD::ROTL, DL, RotateVT, Op,
+                         DAG.getConstant(RotateAmt, DL, RotateVT));
 
   return DAG.getBitcast(VT, Rotate);
 }
