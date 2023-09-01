@@ -963,8 +963,8 @@ entry:
 define <vscale x 1 x i16> @test_vaaddu(<vscale x 1 x i16> %var_11, i16 zeroext %var_9, <vscale x 1 x i1> %var_5, <vscale x 1 x i16> %var_0) {
 ; CHECK-LABEL: test_vaaddu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 3, e16, mf4, ta, mu
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 3, e16, mf4, ta, mu
 ; CHECK-NEXT:    vaaddu.vx v9, v8, a0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

@@ -68,6 +68,9 @@ void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
 FunctionPass *createRISCVInsertReadWriteCSRPass();
 void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
 
+FunctionPass *createRISCVInsertWriteVXRMPass();
+void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
+
 FunctionPass *createRISCVRedundantCopyEliminationPass();
 void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
 
