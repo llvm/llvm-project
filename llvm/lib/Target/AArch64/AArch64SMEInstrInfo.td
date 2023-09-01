@@ -23,8 +23,6 @@ def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue]>;
 
-def AArch64ObscureCopy : SDNode<"AArch64ISD::OBSCURE_COPY", SDTypeProfile<1, 1, []>, []>;
-
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
@@ -185,10 +183,6 @@ def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
           (MSR 0xde85, GPR64:$val)>;
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
-
-def OBSCURE_COPY : Pseudo<(outs GPR64:$dst), (ins GPR64:$idx), []>, Sched<[]> { }
-def : Pat<(i64 (AArch64ObscureCopy (i64 GPR64:$idx))),
-          (OBSCURE_COPY GPR64:$idx)>;
 } // End let Predicates = [HasSME]
 
 // Pseudo to match to smstart/smstop. This expands:

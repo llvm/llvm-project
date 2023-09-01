@@ -1515,17 +1515,6 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
        NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
      return true;
    }
-   case AArch64::OBSCURE_COPY: {
-     if (MI.getOperand(0).getReg() != MI.getOperand(1).getReg()) {
-       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
-           .add(MI.getOperand(0))
-           .addReg(AArch64::XZR)
-           .add(MI.getOperand(1))
-           .addImm(0);
-     }
-     MI.eraseFromParent();
-     return true;
-   }
    case AArch64::LD1B_2Z_IMM_PSEUDO:
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
