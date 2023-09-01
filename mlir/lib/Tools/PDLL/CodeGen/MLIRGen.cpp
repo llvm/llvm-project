@@ -103,12 +103,14 @@ private:
   Value genExprImpl(const ast::TypeExpr *expr);
 
   SmallVector<Value> genConstraintCall(const ast::UserConstraintDecl *decl,
-                                       Location loc, ValueRange inputs);
+                                       Location loc, ValueRange inputs,
+                                       bool isNegated = false);
   SmallVector<Value> genRewriteCall(const ast::UserRewriteDecl *decl,
                                     Location loc, ValueRange inputs);
   template <typename PDLOpT, typename T>
   SmallVector<Value> genConstraintOrRewriteCall(const T *decl, Location loc,
-                                                ValueRange inputs);
+                                                ValueRange inputs,
+                                                bool isNegated = false);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -419,7 +421,7 @@ SmallVector<Value> CodeGen::genExprImpl(const ast::CallExpr *expr) {
   // Generate the PDL based on the type of callable.
   const ast::Decl *callable = callableExpr->getDecl();
   if (const auto *decl = dyn_cast<ast::UserConstraintDecl>(callable))
-    return genConstraintCall(decl, loc, arguments);
+    return genConstraintCall(decl, loc, arguments, expr->getIsNegated());
   if (const auto *decl = dyn_cast<ast::UserRewriteDecl>(callable))
     return genRewriteCall(decl, loc, arguments);
   llvm_unreachable("unhandled CallExpr callable");
@@ -547,15 +549,15 @@ Value CodeGen::genExprImpl(const ast::TypeExpr *expr) {
 
 SmallVector<Value>
 CodeGen::genConstraintCall(const ast::UserConstraintDecl *decl, Location loc,
-                           ValueRange inputs) {
+                           ValueRange inputs, bool isNegated) {
   // Apply any constraints defined on the arguments to the input values.
   for (auto it : llvm::zip(decl->getInputs(), inputs))
     applyVarConstraints(std::get<0>(it), std::get<1>(it));
 
   // Generate the constraint call.
   SmallVector<Value> results =
-      genConstraintOrRewriteCall<pdl::ApplyNativeConstraintOp>(decl, loc,
-                                                               inputs);
+      genConstraintOrRewriteCall<pdl::ApplyNativeConstraintOp>(
+          decl, loc, inputs, isNegated);
 
   // Apply any constraints defined on the results of the constraint.
   for (auto it : llvm::zip(decl->getResults(), results))
@@ -570,9 +572,9 @@ SmallVector<Value> CodeGen::genRewriteCall(const ast::UserRewriteDecl *decl,
 }
 
 template <typename PDLOpT, typename T>
-SmallVector<Value> CodeGen::genConstraintOrRewriteCall(const T *decl,
-                                                       Location loc,
-                                                       ValueRange inputs) {
+SmallVector<Value>
+CodeGen::genConstraintOrRewriteCall(const T *decl, Location loc,
+                                    ValueRange inputs, bool isNegated) {
   const ast::CompoundStmt *cstBody = decl->getBody();
 
   // If the decl doesn't have a statement body, it is a native decl.
@@ -585,8 +587,10 @@ SmallVector<Value> CodeGen::genConstraintOrRewriteCall(const T *decl,
     } else {
       resultTypes.push_back(genType(declResultType));
     }
-    Operation *pdlOp = builder.create<PDLOpT>(
+    PDLOpT pdlOp = builder.create<PDLOpT>(
         loc, resultTypes, decl->getName().getName(), inputs);
+    if (isNegated && std::is_same_v<PDLOpT, pdl::ApplyNativeConstraintOp>)
+      cast<pdl::ApplyNativeConstraintOp>(pdlOp).setIsNegated(true);
     return pdlOp->getResults();
   }
 
