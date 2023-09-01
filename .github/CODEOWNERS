@@ -138,7 +138,7 @@
 /mlir/**/OpenACC/ @llvm/pr-subscribers-mlir-openacc
 
 # mlir-openmp
-/mlir/**/OpenMP/ @llvm/pr-subscribers-mlir-openmp
+/mlir/**/OpenMP*/ @llvm/pr-subscribers-mlir-openmp
 
 # mlir-pdl
 /mlir/**/PDL/ @llvm/pr-subscribers-mlir-pdl
@@ -221,6 +221,7 @@
 
 # vectorizers
 /llvm/lib/Transforms/Vectorize/ @llvm/pr-subscribers-vectorizers
+/llvm/include/llvm/Transforms/Vectorize/ @llvm/pr-subscribers-vectorizers
 
 # clang
 /clang/ @llvm/pr-subscribers-clang
@@ -404,12 +405,15 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/docs/LangRef.rst @llvm/pr-subscribers-llvm-ir
 
 # llvm-analysis
-/llvm/lib/analysis/ @llvm/pr-subscribers-llvm-analysis
-/llvm/include/llvm/analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/lib/Analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/include/llvm/Analysis/ @llvm/pr-subscribers-llvm-analysis
 
 # llvm-transforms
-/llvm/lib/transforms/ @llvm/pr-subscribers-llvm-transforms
-/llvm/include/llvm/transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/lib/Transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/include/llvm/Transforms/ @llvm/pr-subscribers-llvm-transforms
+
+# clangd
+/clang-tools-extra/clangd/ @llvm/pr-subscribers-clangd
 
 # arm
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
@@ -437,6 +441,15 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
 /clang/include/clang/Basic/BuiltinsLoongArch* @llvm/pr-subscribers-loongarch
+
+# msp430
+/llvm/include/llvm/IR/IntrinsicsMSP430.td @llvm/pr-subscribers-msp430
+/llvm/lib/Target/MSP430/ @llvm/pr-subscribers-msp430
+/llvm/test/CodeGen/MSP430/ @llvm/pr-subscribers-msp430
+/clang/lib/Basic/Targets/MSP430* @llvm/pr-subscribers-msp430
+/clang/lib/Driver/ToolChains/Arch/MSP430.* @llvm/pr-subscribers-msp430
+/clang/lib/CodeGen/Targets/MSP430.cpp @llvm/pr-subscribers-msp430
+/clang/include/clang/Basic/BuiltinsMSP430* @llvm/pr-subscribers-msp430
 
 # riscv
 /llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
