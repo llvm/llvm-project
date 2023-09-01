@@ -6582,9 +6582,12 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       return V;
 
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
-    return DAG.getNode(ISD::OR, DL, VT,
-                       DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
-                       DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
+    // Unless we have the short forward branch optimization.
+    if (!Subtarget.hasShortForwardBranchOpt())
+      return DAG.getNode(
+          ISD::OR, DL, VT,
+          DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
+          DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
   }
 
   if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
