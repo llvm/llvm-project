@@ -33,52 +33,52 @@
 
 template <class S>
 TEST_CONSTEXPR_CXX20 bool test() {
-    // Test that a call to reserve() does shrink the string.
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-        S s(1000, 'a');
-        typename S::size_type old_cap = s.capacity();
-        s.resize(20);
-        assert(s.capacity() == old_cap);
+  // Test that a call to reserve() does shrink the string.
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s(1000, 'a');
+    typename S::size_type old_cap = s.capacity();
+    s.resize(20);
+    assert(s.capacity() == old_cap);
 
-        s.reserve();
-        assert(s.capacity() < old_cap);
-    }
+    s.reserve();
+    assert(s.capacity() < old_cap);
+  }
 
-    // Test that a call to reserve(smaller-than-capacity) never shrinks the string.
-    {
-        S s(1000, 'a');
-        typename S::size_type old_cap = s.capacity();
-        s.resize(20);
-        assert(s.capacity() == old_cap);
+  // Test that a call to reserve(smaller-than-capacity) never shrinks the string.
+  {
+    S s(1000, 'a');
+    typename S::size_type old_cap = s.capacity();
+    s.resize(20);
+    assert(s.capacity() == old_cap);
 
-        s.reserve(10);
-        assert(s.capacity() == old_cap);
-    }
+    s.reserve(10);
+    assert(s.capacity() == old_cap);
+  }
 
-    // In particular, test that reserve(0) does NOT shrink the string.
-    {
-        S s(1000, 'a');
-        typename S::size_type old_cap = s.capacity();
-        s.resize(20);
-        assert(s.capacity() == old_cap);
+  // In particular, test that reserve(0) does NOT shrink the string.
+  {
+    S s(1000, 'a');
+    typename S::size_type old_cap = s.capacity();
+    s.resize(20);
+    assert(s.capacity() == old_cap);
 
-        s.reserve(0);
-        assert(s.capacity() == old_cap);
-    }
+    s.reserve(0);
+    assert(s.capacity() == old_cap);
+  }
 
-    return true;
+  return true;
 }
 
 int main(int, char**) {
-    test<std::string>();
+  test<std::string>();
 
 #if TEST_STD_VER >= 11
-    test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
 #if TEST_STD_VER > 17
-    static_assert(test<std::string>());
+  static_assert(test<std::string>());
 #endif
 
-    return 0;
+  return 0;
 }

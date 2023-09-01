@@ -17,13 +17,12 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if TEST_STD_VER >= 11
-    assert(std::char_traits<char16_t>::to_char_type(u'a') == u'a');
-    assert(std::char_traits<char16_t>::to_char_type(u'A') == u'A');
+  assert(std::char_traits<char16_t>::to_char_type(u'a') == u'a');
+  assert(std::char_traits<char16_t>::to_char_type(u'A') == u'A');
 #endif
-    assert(std::char_traits<char16_t>::to_char_type(0) == 0);
+  assert(std::char_traits<char16_t>::to_char_type(0) == 0);
 
   return 0;
 }

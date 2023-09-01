@@ -18,14 +18,12 @@
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::difference_type pos, typename S::size_type n,
-     typename S::value_type c, S expected)
-{
-    typename S::const_iterator p = s.cbegin() + pos;
-    typename S::iterator i = s.insert(p, n, c);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(i - s.begin() == pos);
-    assert(s == expected);
+test(S s, typename S::difference_type pos, typename S::size_type n, typename S::value_type c, S expected) {
+  typename S::const_iterator p = s.cbegin() + pos;
+  typename S::iterator i       = s.insert(p, n, c);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(i - s.begin() == pos);
+  assert(s == expected);
 }
 
 template <class S>
@@ -105,8 +103,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

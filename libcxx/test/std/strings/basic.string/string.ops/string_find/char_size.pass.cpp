@@ -18,23 +18,19 @@
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void
-test(const S& s, typename S::value_type c, typename S::size_type pos,
-     typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.find(c, pos));
-    assert(s.find(c, pos) == x);
-    if (x != S::npos)
-        assert(pos <= x && x + 1 <= s.size());
+test(const S& s, typename S::value_type c, typename S::size_type pos, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.find(c, pos));
+  assert(s.find(c, pos) == x);
+  if (x != S::npos)
+    assert(pos <= x && x + 1 <= s.size());
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s, typename S::value_type c, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.find(c));
-    assert(s.find(c) == x);
-    if (x != S::npos)
-        assert(0 <= x && x + 1 <= s.size());
+TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::value_type c, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.find(c));
+  assert(s.find(c) == x);
+  if (x != S::npos)
+    assert(0 <= x && x + 1 <= s.size());
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -100,8 +96,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

@@ -16,21 +16,18 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX20 int sign(int x)
-{
-    if (x == 0)
-        return 0;
-    if (x < 0)
-        return -1;
-    return 1;
+TEST_CONSTEXPR_CXX20 int sign(int x) {
+  if (x == 0)
+    return 0;
+  if (x < 0)
+    return -1;
+  return 1;
 }
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s, SV sv, int x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.compare(sv));
-    assert(sign(s.compare(sv)) == sign(x));
+TEST_CONSTEXPR_CXX20 void test(const S& s, SV sv, int x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.compare(sv));
+  assert(sign(s.compare(sv)) == sign(x));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -80,8 +77,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

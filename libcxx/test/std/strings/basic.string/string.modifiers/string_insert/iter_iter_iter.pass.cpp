@@ -19,40 +19,39 @@
 #include "min_allocator.h"
 
 template <class S, class It>
-TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::difference_type pos, It first, It last, S expected)
-{
-    typename S::const_iterator p = s.cbegin() + pos;
-    typename S::iterator i = s.insert(p, first, last);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(i - s.begin() == pos);
-    assert(s == expected);
+TEST_CONSTEXPR_CXX20 void test(S s, typename S::difference_type pos, It first, It last, S expected) {
+  typename S::const_iterator p = s.cbegin() + pos;
+  typename S::iterator i       = s.insert(p, first, last);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(i - s.begin() == pos);
+  assert(s == expected);
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-struct Widget { operator char() const { throw 42; } };
+struct Widget {
+  operator char() const { throw 42; }
+};
 
 template <class S, class It>
-TEST_CONSTEXPR_CXX20 void
-test_exceptions(S s, typename S::difference_type pos, It first, It last)
-{
-    typename S::const_iterator p = s.cbegin() + pos;
+TEST_CONSTEXPR_CXX20 void test_exceptions(S s, typename S::difference_type pos, It first, It last) {
+  typename S::const_iterator p = s.cbegin() + pos;
 
-    S original = s;
-    typename S::iterator begin = s.begin();
-    typename S::iterator end = s.end();
+  S original                 = s;
+  typename S::iterator begin = s.begin();
+  typename S::iterator end   = s.end();
 
-    try {
-        s.insert(p, first, last);
-        assert(false);
-    } catch (...) {}
+  try {
+    s.insert(p, first, last);
+    assert(false);
+  } catch (...) {
+  }
 
-    // Part of "no effects" is that iterators and pointers
-    // into the string must not have been invalidated.
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == original);
-    assert(s.begin() == begin);
-    assert(s.end() == end);
+  // Part of "no effects" is that iterators and pointers
+  // into the string must not have been invalidated.
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == original);
+  assert(s.begin() == begin);
+  assert(s.end() == end);
 }
 #endif
 
@@ -60,46 +59,88 @@ template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
   const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   test(S(), 0, s, s, S());
-  test(S(), 0, s, s+1, S("A"));
-  test(S(), 0, s, s+10, S("ABCDEFGHIJ"));
-  test(S(), 0, s, s+52, S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S(), 0, s, s + 1, S("A"));
+  test(S(), 0, s, s + 10, S("ABCDEFGHIJ"));
+  test(S(), 0, s, s + 52, S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
   test(S("12345"), 0, s, s, S("12345"));
-  test(S("12345"), 1, s, s+1, S("1A2345"));
-  test(S("12345"), 4, s, s+10, S("1234ABCDEFGHIJ5"));
-  test(S("12345"), 5, s, s+52, S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S("12345"), 1, s, s + 1, S("1A2345"));
+  test(S("12345"), 4, s, s + 10, S("1234ABCDEFGHIJ5"));
+  test(S("12345"), 5, s, s + 52, S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
   test(S("1234567890"), 0, s, s, S("1234567890"));
-  test(S("1234567890"), 1, s, s+1, S("1A234567890"));
-  test(S("1234567890"), 10, s, s+10, S("1234567890ABCDEFGHIJ"));
-  test(S("1234567890"), 8, s, s+52, S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
+  test(S("1234567890"), 1, s, s + 1, S("1A234567890"));
+  test(S("1234567890"), 10, s, s + 10, S("1234567890ABCDEFGHIJ"));
+  test(S("1234567890"), 8, s, s + 52, S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
 
   test(S("12345678901234567890"), 3, s, s, S("12345678901234567890"));
-  test(S("12345678901234567890"), 3, s, s+1, S("123A45678901234567890"));
-  test(S("12345678901234567890"), 15, s, s+10, S("123456789012345ABCDEFGHIJ67890"));
-  test(S("12345678901234567890"), 20, s, s+52,
-        S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S("12345678901234567890"), 3, s, s + 1, S("123A45678901234567890"));
+  test(S("12345678901234567890"), 15, s, s + 10, S("123456789012345ABCDEFGHIJ67890"));
+  test(S("12345678901234567890"),
+       20,
+       s,
+       s + 52,
+       S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
   test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S());
-  test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("A"));
-  test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("ABCDEFGHIJ"));
-  test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 1), S("A"));
+  test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 10), S("ABCDEFGHIJ"));
+  test(S(),
+       0,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 52),
+       S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
   test(S("12345"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345"));
-  test(S("12345"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A2345"));
-  test(S("12345"), 4, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234ABCDEFGHIJ5"));
-  test(S("12345"), 5, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S("12345"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 1), S("1A2345"));
+  test(S("12345"),
+       4,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 10),
+       S("1234ABCDEFGHIJ5"));
+  test(S("12345"),
+       5,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 52),
+       S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
   test(S("1234567890"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("1234567890"));
-  test(S("1234567890"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A234567890"));
-  test(S("1234567890"), 10, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234567890ABCDEFGHIJ"));
-  test(S("1234567890"), 8, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
+  test(S("1234567890"),
+       1,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 1),
+       S("1A234567890"));
+  test(S("1234567890"),
+       10,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 10),
+       S("1234567890ABCDEFGHIJ"));
+  test(S("1234567890"),
+       8,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 52),
+       S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
 
-  test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345678901234567890"));
-  test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("123A45678901234567890"));
-  test(S("12345678901234567890"), 15, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
-  test(S("12345678901234567890"), 20, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
-        S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+  test(S("12345678901234567890"),
+       3,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s),
+       S("12345678901234567890"));
+  test(S("12345678901234567890"),
+       3,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 1),
+       S("123A45678901234567890"));
+  test(S("12345678901234567890"),
+       15,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 10),
+       S("123456789012345ABCDEFGHIJ67890"));
+  test(S("12345678901234567890"),
+       20,
+       cpp17_input_iterator<const char*>(s),
+       cpp17_input_iterator<const char*>(s + 52),
+       S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -114,16 +155,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter(TIter()));
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter(TIter()));
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s + 10, 4, TIter::TAIncrement)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s + 10, 5, TIter::TADereference)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s + 10, 6, TIter::TAComparison)), IIter(TIter()));
 
-    test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
-    test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
-    test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+    test_exceptions(S(), 0, TIter(s, s + 10, 4, TIter::TAIncrement), TIter());
+    test_exceptions(S(), 0, TIter(s, s + 10, 5, TIter::TADereference), TIter());
+    test_exceptions(S(), 0, TIter(s, s + 10, 6, TIter::TAComparison), TIter());
 
     Widget w[100];
-    test_exceptions(S(), 0, w, w+100);
+    test_exceptions(S(), 0, w, w + 100);
   }
 #endif
 
@@ -153,14 +194,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   if (!TEST_IS_CONSTANT_EVALUATED) { // regression-test inserting into self in sneaky ways
-    std::string s_short = "hello";
-    std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
-    std::string s_othertype = "hello";
-    const unsigned char *first = reinterpret_cast<const unsigned char*>(s_othertype.data());
+    std::string s_short        = "hello";
+    std::string s_long         = "Lorem ipsum dolor sit amet, consectetur/";
+    std::string s_othertype    = "hello";
+    const unsigned char* first = reinterpret_cast<const unsigned char*>(s_othertype.data());
 
-    test(s_short, 0, s_short.data() + s_short.size(), s_short.data() + s_short.size() + 1,
-         std::string("\0hello", 6));
-    test(s_long, 0, s_long.data() + s_long.size(), s_long.data() + s_long.size() + 1,
+    test(s_short, 0, s_short.data() + s_short.size(), s_short.data() + s_short.size() + 1, std::string("\0hello", 6));
+    test(s_long,
+         0,
+         s_long.data() + s_long.size(),
+         s_long.data() + s_long.size() + 1,
          std::string("\0Lorem ipsum dolor sit amet, consectetur/", 41));
     test(s_othertype, 1, first + 2, first + 5, std::string("hlloello"));
   }
@@ -192,8 +235,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

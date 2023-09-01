@@ -18,15 +18,13 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s1, const typename S::value_type* s2)
-{
-    typedef typename S::traits_type T;
-    s1 = s2;
-    LIBCPP_ASSERT(s1.__invariants());
-    assert(s1.size() == T::length(s2));
-    assert(T::compare(s1.data(), s2, s1.size()) == 0);
-    assert(s1.capacity() >= s1.size());
+TEST_CONSTEXPR_CXX20 void test(S s1, const typename S::value_type* s2) {
+  typedef typename S::traits_type T;
+  s1 = s2;
+  LIBCPP_ASSERT(s1.__invariants());
+  assert(s1.size() == T::length(s2));
+  assert(T::compare(s1.data(), s2, s1.size()) == 0);
+  assert(s1.capacity() >= s1.size());
 }
 
 template <class S>
@@ -37,15 +35,13 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("1"), "2");
   test(S("1"), "2");
 
-  test(S(),
-        "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
-  test(S("123456789"),
-        "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+  test(S(), "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+  test(S("123456789"), "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
   test(S("1234567890123456789012345678901234567890123456789012345678901234567890"),
-        "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+       "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
   test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
-          "1234567890123456789012345678901234567890123456789012345678901234567890"),
-        "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+         "1234567890123456789012345678901234567890123456789012345678901234567890"),
+       "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -57,8 +53,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
