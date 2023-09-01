@@ -88,7 +88,7 @@ in order to update the last commit with all pending changes.
   the git integration can be run from
   ``clang/tools/clang-format/git-clang-format``.
 
-The LLVM project is migrating to GitHub Pull Requests as its review process.
+The LLVM project has migrated to GitHub Pull Requests as its review process.
 We still have an active :ref:`Phabricator <phabricator-reviews>`
 instance for the duration of the migration. If you want to contribute to LLVM
 now, please use GitHub. For more information about the workflow of using GitHub
