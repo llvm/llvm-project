@@ -107,7 +107,6 @@ bool CIRGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
 
 static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &CGM,
                                                 const CXXRecordDecl *RD) {
-  assert(CGM.getCodeGenOpts().OptimizationLevel == 0 && "NYI");
   return CGM.getCodeGenOpts().OptimizationLevel > 0 &&
          CGM.getCXXABI().canSpeculativelyEmitVTable(RD);
 }
