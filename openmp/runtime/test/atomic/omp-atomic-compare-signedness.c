@@ -11,7 +11,12 @@
 // UNSUPPORTED: gcc
 
 // High parallelism increases our chances of detecting a lack of atomicity.
+#ifdef __ve__
+// VE's pthread_create supports 64 threads at a maximum.
+#define NUM_THREADS_TRY 64
+#else
 #define NUM_THREADS_TRY 256
+#endif
 
 #include <limits.h>
 #include <omp.h>
