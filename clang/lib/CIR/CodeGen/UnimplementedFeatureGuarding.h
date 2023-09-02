@@ -137,6 +137,7 @@ struct UnimplementedFeature {
   static bool operandBundles() { return false; }
   static bool exceptions() { return false; }
   static bool metaDataNode() { return false; }
+  static bool isSEHTryScope() { return false; }
 };
 } // namespace cir
 
