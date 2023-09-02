@@ -308,6 +308,56 @@ static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,
   return addr;
 }
 
+static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
+                                               const FunctionProtoType *FPT) {
+  if (!FPT)
+    return;
+
+  if (!isUnresolvedExceptionSpec(FPT->getExceptionSpecType()) &&
+      FPT->isNothrow())
+    llvm_unreachable("NoUnwind NYI");
+}
+
+/// Construct the CIR attribute list of a function or call.
+///
+/// When adding an attribute, please consider where it should be handled:
+///
+///   - getDefaultFunctionAttributes is for attributes that are essentially
+///     part of the global target configuration (but perhaps can be
+///     overridden on a per-function basis).  Adding attributes there
+///     will cause them to also be set in frontends that build on Clang's
+///     target-configuration logic, as well as for code defined in library
+///     modules such as CUDA's libdevice.
+///
+///   - ConstructAttributeList builds on top of getDefaultFunctionAttributes
+///     and adds declaration-specific, convention-specific, and
+///     frontend-specific logic.  The last is of particular importance:
+///     attributes that restrict how the frontend generates code must be
+///     added here rather than getDefaultFunctionAttributes.
+///
+void CIRGenModule::ConstructAttributeList(
+    StringRef Name, const CIRGenFunctionInfo &FI, CIRGenCalleeInfo CalleeInfo,
+    llvm::SmallSet<mlir::Attribute, 8> &Attrs, bool AttrOnCallSite,
+    bool IsThunk) {
+  // Implementation Disclaimer
+  //
+  // UnimplementedFeature and asserts are used throughout the code to track
+  // unsupported and things not yet implemented. However, most of the content of
+  // this function is on detecting attributes, which doesn't not cope with
+  // existing approaches to track work because its too big.
+  //
+  // That said, for the most part, the approach here is very specific compared
+  // to the rest of CIRGen and attributes and other handling should be done upon
+  // demand.
+
+  // Collect function CIR attributes from the CC lowering.
+  // TODO: NoReturn, cmse_nonsecure_call
+
+  // Collect function CIR attributes from the callee prototype if we have one.
+  AddAttributesFromFunctionProtoType(astCtx,
+                                     CalleeInfo.getCalleeFunctionProtoType());
+}
+
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -490,9 +540,16 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // the call.
   // if (!CallArgs.getCleanupsToDeactivate().empty())
   //   deactivateArgCleanupsBeforeCall(*this, CallArgs);
-
   // TODO: Update the largest vector width if any arguments have vector types.
-  // TODO: Compute the calling convention and attributes.
+
+  // Compute the calling convention and attributes.
+  llvm::SmallSet<mlir::Attribute, 8> Attrs;
+  StringRef FnName;
+  if (auto calleeFnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
+    FnName = calleeFnOp.getName();
+  CGM.ConstructAttributeList(FnName, CallInfo, Callee.getAbstractInfo(), Attrs,
+                             /*AttrOnCallSite=*/true,
+                             /*IsThunk=*/false);
 
   // TODO: strictfp
   // TODO: Add call-site nomerge, noinline, always_inline attribute if exists.

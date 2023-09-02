@@ -15,6 +15,7 @@
 
 #include "CIRDataLayout.h"
 #include "CIRGenBuilder.h"
+#include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -243,6 +244,20 @@ public:
   computeNonVirtualBaseClassOffset(const CXXRecordDecl *DerivedClass,
                                    CastExpr::path_const_iterator Start,
                                    CastExpr::path_const_iterator End);
+
+  /// Get the CIR attributes and calling convention to use for a particular
+  /// function type.
+  ///
+  /// \param Name - The function name.
+  /// \param Info - The function type information.
+  /// \param CalleeInfo - The callee information these attributes are being
+  /// constructed for. If valid, the attributes applied to this decl may
+  /// contribute to the function attributes and calling convention.
+  /// \param Attrs [out] - On return, the attribute list to use.
+  void ConstructAttributeList(StringRef Name, const CIRGenFunctionInfo &Info,
+                              CIRGenCalleeInfo CalleeInfo,
+                              llvm::SmallSet<mlir::Attribute, 8> &Attrs,
+                              bool AttrOnCallSite, bool IsThunk);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
