@@ -98,13 +98,9 @@ __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
     return __ti(_VSTD::forward<_Uj>(_VSTD::get<_Indx>(__uj))...);
 }
 
-template <class _Ti, class ..._Uj>
+template <class _Ti, class ..._Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename __enable_if_t
-<
-    is_bind_expression<_Ti>::value,
-    __invoke_of<_Ti&, _Uj...>
->::type
+typename __invoke_of<_Ti&, _Uj...>::type
 __mu(_Ti& __ti, tuple<_Uj...>& __uj)
 {
     typedef typename __make_tuple_indices<sizeof...(_Uj)>::type __indices;
