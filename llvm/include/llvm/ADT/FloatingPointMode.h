@@ -197,7 +197,7 @@ parseDenormalFPAttributeComponent(StringRef Str) {
       .Default(DenormalMode::Invalid);
 }
 
-/// Return the name used for the denormal handling mode used by the the
+/// Return the name used for the denormal handling mode used by the
 /// expected names from the denormal-fp-math attribute.
 inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {

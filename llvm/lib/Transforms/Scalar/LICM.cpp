@@ -993,7 +993,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   // loop invariant). If so make them unconditional by moving them to their
   // immediate dominator. We iterate through the instructions in reverse order
   // which ensures that when we rehoist an instruction we rehoist its operands,
-  // and also keep track of where in the block we are rehoisting to to make sure
+  // and also keep track of where in the block we are rehoisting to make sure
   // that we rehoist instructions before the instructions that use them.
   Instruction *HoistPoint = nullptr;
   if (ControlFlowHoisting) {

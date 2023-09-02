@@ -230,7 +230,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
