@@ -355,7 +355,7 @@ def testPadOpArgs():
     # CHECK-DAG: pack_paddings = [0]
     # CHECK-DAG: pad_to_multiple_of = [128]
     # CHECK-DAG: padding_dimensions = [1]
-    # CHECK-DAG: padding_values = [4.200000e+01 : f32]
+    # CHECK-DAG: padding_values = [4.200000e+01 : f32, "0"]
     # CHECK-DAG: transpose_paddings = {{\[}}[1, 0], [0, 1]]
 
 
