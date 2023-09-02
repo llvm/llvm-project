@@ -63,7 +63,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
-/// Attribute name used to to memoize indexing maps for named ops.
+/// Attribute name used to memoize indexing maps for named ops.
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 

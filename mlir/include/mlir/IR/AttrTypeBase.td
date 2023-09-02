@@ -315,7 +315,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppType = type;
   // The C++ type of the accessor for this parameter.
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
-  // The C++ storage type of of this parameter if it is a reference, e.g.
+  // The C++ storage type of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
   string cppStorageType = cppType;
   // The C++ code to convert from the storage type to the parameter type.

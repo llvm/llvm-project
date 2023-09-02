@@ -3084,7 +3084,7 @@ void OpEmitter::genCanonicalizerDecls() {
   auto *method = opClass.addMethod("void", "getCanonicalizationPatterns", kind,
                                    std::move(paramList));
 
-  // If synthesizing the method, fill it it.
+  // If synthesizing the method, fill it.
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";
