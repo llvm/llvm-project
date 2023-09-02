@@ -1013,7 +1013,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   SetValueForKey(v, object, "value");
   auto type_obj = v.GetType();
   auto type_cstr = type_obj.GetDisplayTypeName();
-  // If we have a type with many many children, we would like to be able to
+  // If we have a type with many children, we would like to be able to
   // give a hint to the IDE that the type has indexed children so that the
   // request can be broken up in grabbing only a few children at a time. We want
   // to be careful and only call "v.GetNumChildren()" if we have an array type

@@ -1286,7 +1286,7 @@ bool Symtab::Encode(DataEncoder &encoder) const {
 
   // Now that all strings have been gathered, we will emit the string table.
   strtab.Encode(encoder);
-  // Followed the the symbol table data.
+  // Followed by the symbol table data.
   encoder.AppendData(symtab_encoder.GetData());
   return true;
 }

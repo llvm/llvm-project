@@ -19,7 +19,7 @@ TEST(PortMapTest, Constructors) {
   GDBRemoteCommunicationServerPlatform::PortMap p1;
   ASSERT_TRUE(p1.empty());
 
-  // Empty means no restrictions, return 0 and and bind to get a port
+  // Empty means no restrictions, return 0 and bind to get a port
   llvm::Expected<uint16_t> available_port = p1.GetNextAvailablePort();
   ASSERT_THAT_EXPECTED(available_port, llvm::HasValue(0));
 

@@ -712,7 +712,7 @@ bool RegisterContextUnwind::CheckIfLoopingStack() {
   // frames with the same
   // CFA (in theory we
   // can have arbitrary number of frames with the same CFA, but more then 2 is
-  // very very unlikely)
+  // very unlikely)
 
   RegisterContextUnwind::SharedPtr next_frame = GetNextFrame();
   if (next_frame) {
