@@ -416,7 +416,7 @@ public:
   /// Drop any attributes or metadata that can cause immediate undefined
   /// behavior. Retain other attributes/metadata on a best-effort basis.
   /// This should be used when speculating instructions.
-  void dropUBImplyingAttrsAndMetadata();
+  void dropUBImplyingAttrsAndMetadata(bool mayTriggerUBIfPoison);
 
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;

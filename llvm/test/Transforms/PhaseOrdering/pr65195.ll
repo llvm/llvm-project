@@ -15,19 +15,37 @@ define void @foo(i1 %0) {
 ; CHECK-NEXT:    [[L1:%.*]] = load i64, ptr [[V]], align 8
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i64 [[L1]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[C1]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB1:%.*]], label [[COMMON_RET:%.*]]
-; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB2_THREAD:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2.thread:
 ; CHECK-NEXT:    store i64 0, ptr [[V]], align 8
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[L2:%.*]] = phi i64 [ [[L1]], [[START:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[L2]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB3:%.*]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 ; O2-LABEL: define void @foo(
 ; O2-SAME: i1 [[TMP0:%.*]]) local_unnamed_addr {
 ; O2-NEXT:  start:
 ; O2-NEXT:    [[V:%.*]] = alloca i64, align 8
 ; O2-NEXT:    call void @set_value(ptr nonnull [[V]])
+; O2-NEXT:    [[L1:%.*]] = load i64, ptr [[V]], align 8
+; O2-NEXT:    [[C1:%.*]] = icmp ne i64 [[L1]], 0
+; O2-NEXT:    [[NOT_:%.*]] = xor i1 [[TMP0]], true
+; O2-NEXT:    [[OR_COND:%.*]] = select i1 [[NOT_]], i1 true, i1 [[C1]]
+; O2-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[L1]], 2
+; O2-NEXT:    [[OR_COND2:%.*]] = select i1 [[OR_COND]], i1 [[TMP1]], i1 false
+; O2-NEXT:    br i1 [[OR_COND2]], label [[BB3:%.*]], label [[COMMON_RET:%.*]]
+; O2:       common.ret:
 ; O2-NEXT:    ret void
+; O2:       bb3:
+; O2-NEXT:    call void @bar()
+; O2-NEXT:    br label [[COMMON_RET]]
 ;
 start:
   %v = alloca i64, align 8

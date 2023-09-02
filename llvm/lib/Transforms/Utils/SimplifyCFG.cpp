@@ -1120,7 +1120,7 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // only given the branch precondition.
     // Similarly strip attributes on call parameters that may cause UB in
     // location the call is moved to.
-    NewBonusInst->dropUBImplyingAttrsAndMetadata();
+    NewBonusInst->dropUBImplyingAttrsAndMetadata(true);
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     NewBonusInst->takeName(&BonusInst);
@@ -3035,7 +3035,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
       if (!isa<DbgAssignIntrinsic>(&I))
         I.setDebugLoc(DebugLoc());
     }
-    I.dropUBImplyingAttrsAndMetadata();
+    I.dropUBImplyingAttrsAndMetadata(true);
 
     // Drop ephemeral values.
     if (EphTracker.contains(&I)) {
