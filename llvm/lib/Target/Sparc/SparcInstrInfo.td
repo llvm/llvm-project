@@ -1123,14 +1123,6 @@ let Predicates = [HasNoV9] in {
 		     "rd %tbr, $rd", []>;
 }
 
-// PC don't exist on the SparcV8, only the V9.
-let Predicates = [HasV9] in {
-  let rs2 = 0, rs1 = 5 in
-    def RDPC : F3_1<2, 0b101000,
-		     (outs IntRegs:$rd), (ins),
-		     "rd %pc, $rd", []>;
-}
-
 // Section B.29 - Write State Register Instructions
 def WRASRrr : F3_1<2, 0b110000,
                  (outs ASRRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
