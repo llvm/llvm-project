@@ -414,9 +414,9 @@ operator<=>(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y
 
 #endif
 
-template <class _Tp, class _Container>
+template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-__enable_if_t<__is_swappable<_Container>::value, void>
+void
 swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {
