@@ -4125,15 +4125,17 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   // Handle fcmp with constant RHS.
   if (C) {
+    // TODO: If we always required a context function, we wouldn't need to
+    // special case nans.
+    if (C->isNaN())
+      return ConstantInt::get(RetTy, CmpInst::isUnordered(Pred));
+
     // TODO: Need version fcmpToClassTest which returns implied class when the
     // compare isn't a complete class test. e.g. > 1.0 implies fcPositive, but
     // isn't implementable as a class call.
     if (C->isNegative() && !C->isNegZero()) {
       FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
 
-      // FIXME: This assert won't always hold if we depend on the context
-      // instruction above
-      assert(!C->isNaN() && "Unexpected NaN constant!");
       // TODO: We can catch more cases by using a range check rather than
       //       relying on CannotBeOrderedLessThanZero.
       switch (Pred) {
