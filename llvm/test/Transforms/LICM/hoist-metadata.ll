@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=licm < %s| FileCheck %s
 
 declare void @foo(...) memory(none)
+declare void @foo2(i32 noundef, ptr noundef, ptr noundef) memory(none)
 
 ; We can preserve all metadata on instructions that are guaranteed to execute.
 define void @test_unconditional(i1 %c, ptr dereferenceable(8) align 8 %p) {
@@ -67,6 +68,44 @@ latch:
 exit:
   ret void
 }
+
+; We cannot preserve poison-implying metadata on instructions that are speculated if it will trigger UB.
+define void @test_conditional_hoist_ub(i1 %c, i1 %c2, ptr dereferenceable(8) align 8 %p) {
+; CHECK-LABEL: define void @test_conditional_hoist_ub
+; CHECK-SAME: (i1 [[C:%.*]], i1 [[C2:%.*]], ptr align 8 dereferenceable(8) [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !1
+; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !align !2
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[LATCH:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo2(i32 [[V1]], ptr [[V2]], ptr [[V3]])
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    br i1 [[C2]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop
+
+loop:
+  br i1 %c, label %if, label %latch
+
+if:
+  %v1 = load i32, ptr %p, !range !{i32 0, i32 10}
+  %v2 = load ptr, ptr %p, !nonnull !{}, !noundef !{}
+  %v3 = load ptr, ptr %p, !align !{i64 4}, !dereferenceable !{i64 4}
+  call void @foo2(i32 %v1, ptr %v2, ptr %v3)
+  br label %latch
+
+latch:
+  br i1 %c2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
