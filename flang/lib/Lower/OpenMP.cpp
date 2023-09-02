@@ -1854,7 +1854,7 @@ static mlir::Operation *getCompareFromReductionOp(mlir::Operation *reductionOp,
 }
 
 /// The COMMON block is a global structure. \p commonValue is the base address
-/// of the the COMMON block. As the offset from the symbol \p sym, generate the
+/// of the COMMON block. As the offset from the symbol \p sym, generate the
 /// COMMON block member value (commonValue + offset) for the symbol.
 /// FIXME: Share the code with `instantiateCommon` in ConvertVariable.cpp.
 static mlir::Value
