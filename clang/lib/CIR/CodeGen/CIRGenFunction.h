@@ -1626,12 +1626,16 @@ public:
     bool isConditional() const { return IsConditional; }
   };
 
-  // TODO(cir): perhaps return a mlir::BasicBlock* here, for now
+  /// Emits landing pad information for the current EH stack.
+  mlir::Block *buildLandingPad();
+
+  // TODO(cir): perhaps return a mlir::Block* here, for now
   // only check if a landing pad is required.
+  mlir::Block *getInvokeDestImpl();
   bool getInvokeDest() {
     if (!EHStack.requiresLandingPad())
       return false;
-    return true;
+    return (bool)getInvokeDestImpl();
   }
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
