@@ -2719,10 +2719,10 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
       continue;
     SmallBitVector Used(VF, false);
-    for_each(SubMask, [&Used, VF](int Idx) {
+    for (int Idx : SubMask) {
       if (Idx != PoisonMaskElem && Idx < VF)
         Used.set(Idx);
-    });
+    }
     if (!Used.all())
       return false;
   }
