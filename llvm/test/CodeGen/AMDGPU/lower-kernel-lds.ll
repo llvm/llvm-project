@@ -1,18 +1,18 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] undef, align 1
-@lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] undef, align 2
-@lds.size.4.align.4 = internal unnamed_addr addrspace(3) global [4 x i8] undef, align 4
-@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] undef, align 16
+@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] poison, align 1
+@lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] poison, align 2
+@lds.size.4.align.4 = internal unnamed_addr addrspace(3) global [4 x i8] poison, align 4
+@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] poison, align 16
 
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [16 x i8], [4 x i8], [2 x i8], [1 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [16 x i8], [4 x i8], [2 x i8] }
 
 ;.
-; CHECK: @lds.k2 = addrspace(3) global [1 x i8] undef, align 1
-; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t undef, align 16, !absolute_symbol !0
-; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t undef, align 16, !absolute_symbol !0
+; CHECK: @lds.k2 = addrspace(3) global [1 x i8] poison, align 1
+; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 16, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 16, !absolute_symbol !0
 ;.
 define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: @k0(
@@ -50,7 +50,7 @@ define amdgpu_kernel void @k1() {
 
 ; Do not lower LDS for graphics shaders.
 
-@lds.k2 = addrspace(3) global [1 x i8] undef, align 1
+@lds.k2 = addrspace(3) global [1 x i8] poison, align 1
 
 define amdgpu_ps void @k2() {
 ; CHECK-LABEL: @k2(
