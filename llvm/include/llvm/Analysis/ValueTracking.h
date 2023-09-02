@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/CachedBitsValue.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
@@ -90,6 +91,18 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            const DominatorTree *DT = nullptr,
                            bool UseInstrInfo = true);
 
+void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                      KnownBits &Known, unsigned Depth, const SimplifyQuery &Q);
+
+void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
+                      const SimplifyQuery &Q);
+
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                           unsigned Depth, const SimplifyQuery &Q);
+
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                           const SimplifyQuery &Q);
+
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
 /// \p KnownOne the set of bits that are known to be one
@@ -107,7 +120,8 @@ KnownBits analyzeKnownBitsFromAndXorOr(
     bool UseInstrInfo = true);
 
 /// Return true if LHS and RHS have no common bits set.
-bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
+bool haveNoCommonBitsSet(const CachedBitsConstValue &LHSCache,
+                         const CachedBitsConstValue &RHSCache,
                          const SimplifyQuery &SQ);
 
 /// Return true if the given value is known to have exactly one bit set when
@@ -847,9 +861,9 @@ OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
                                              const SimplifyQuery &SQ);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
-OverflowResult computeOverflowForUnsignedAdd(const Value *LHS, const Value *RHS,
+OverflowResult computeOverflowForUnsignedAdd(const CachedBitsConstValue &LHS, const CachedBitsConstValue &RHS,
                                              const SimplifyQuery &SQ);
-OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
+OverflowResult computeOverflowForSignedAdd(const CachedBitsConstValue &LHS, const CachedBitsConstValue &RHS,
                                            const SimplifyQuery &SQ);
 /// This version also leverages the sign bit of Add if known.
 OverflowResult computeOverflowForSignedAdd(const AddOperator *Add,
