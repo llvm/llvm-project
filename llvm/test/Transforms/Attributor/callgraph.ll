@@ -40,7 +40,19 @@ define void @func5(i32 %0) {
 ; CHECK-LABEL: @func5(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr @func4, ptr @func3
-; CHECK-NEXT:    call void [[TMP3]]()
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[TMP3]], @func3
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    br label [[TMP9:%.*]]
+; CHECK:       6:
+; CHECK-NEXT:    br i1 true, label [[TMP7:%.*]], label [[TMP8:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    call void @func4()
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       8:
+; CHECK-NEXT:    unreachable
+; CHECK:       9:
 ; CHECK-NEXT:    ret void
 ;
   %2 = icmp ne i32 %0, 0
@@ -72,8 +84,35 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 ; CHECK-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; CHECK-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
 ; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
-; CHECK-NEXT:    ret i32 [[CALL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
+; CHECK-NEXT:    br label [[TMP15:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @void
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @void(i32 42)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       9:
+; CHECK-NEXT:    br i1 true, label [[TMP10:%.*]], label [[TMP14:%.*]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 42 to float
+; CHECK-NEXT:    [[TMP12:%.*]] = call float @retFloatTakeFloat(float [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast float [[TMP12]] to i32
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       14:
+; CHECK-NEXT:    unreachable
+; CHECK:       15:
+; CHECK-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP8]] ], [ [[TMP13]], [[TMP10]] ]
+; CHECK-NEXT:    ret i32 [[CALL_PHI]]
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
   %fp2 = select i1 %c2, ptr @retFloatTakeFloat, ptr @void
@@ -87,7 +126,27 @@ define void @non_matching_fp2(i1 %c1, i1 %c2, i1 %c, ptr %unknown) {
 ; CHECK-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; CHECK-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
 ; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    call void @takeI32()
+; CHECK-NEXT:    br label [[TMP10:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @retI32()
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloat
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    call void @retFloatTakeFloat()
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void [[FP]]()
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
 ; CHECK-NEXT:    ret void
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -100,8 +159,17 @@ define void @non_matching_fp2(i1 %c1, i1 %c2, i1 %c, ptr %unknown) {
 define i32 @non_matching_unknown(i1 %c, ptr %fn) {
 ; CHECK-LABEL: @non_matching_unknown(
 ; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
-; CHECK-NEXT:    ret i32 [[CALL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @retI32
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @retI32(i32 42)
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 [[FP]](i32 42)
+; CHECK-NEXT:    br label [[TMP4]]
+; CHECK:       4:
+; CHECK-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP3]] ]
+; CHECK-NEXT:    ret i32 [[CALL_PHI]]
 ;
   %fp = select i1 %c, ptr @retI32, ptr %fn
   %call = call i32 %fp(i32 42)
@@ -120,6 +188,14 @@ define void @usedOnlyInCastedDirectCallCaller() {
   call void @usedOnlyInCastedDirectCall()
   ret void
 }
+
+define internal void @usedByGlobal() {
+; CHECK-LABEL: @usedByGlobal(
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+@G = global ptr @usedByGlobal
 
 define void @broker(ptr %unknown) !callback !0 {
 ; CHECK-LABEL: @broker(
@@ -141,7 +217,19 @@ define void @func6() {
 
 define void @func7(ptr %unknown) {
 ; CHECK-LABEL: @func7(
-; CHECK-NEXT:    call void [[UNKNOWN:%.*]](), !callees !2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[UNKNOWN:%.*]], @func3
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @func4()
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       5:
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    ret void
 ;
   call void %unknown(), !callees !2
@@ -152,11 +240,75 @@ define void @func7(ptr %unknown) {
 define void @undef_in_callees() {
 ; CHECK-LABEL: @undef_in_callees(
 ; CHECK-NEXT:  cond.end.i:
-; CHECK-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !3
+; CHECK-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !2
 ; CHECK-NEXT:    ret void
 ;
 cond.end.i:
   call void undef(ptr undef, i32 undef, ptr undef), !callees !3
+  ret void
+}
+
+define void @as_cast(ptr %arg) {
+; OWRDL-LABEL: @as_cast(
+; OWRDL-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
+; OWRDL-NEXT:    tail call addrspace(1) void [[FP]]()
+; OWRDL-NEXT:    ret void
+;
+; CWRLD-LABEL: @as_cast(
+; CWRLD-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
+; CWRLD-NEXT:    [[FP_AS0:%.*]] = addrspacecast ptr addrspace(1) [[FP]] to ptr
+; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP_AS0]], @func3
+; CWRLD-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CWRLD:       2:
+; CWRLD-NEXT:    tail call void @func3()
+; CWRLD-NEXT:    br label [[TMP21:%.*]]
+; CWRLD:       3:
+; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP_AS0]], @func4
+; CWRLD-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CWRLD:       5:
+; CWRLD-NEXT:    tail call void @func4()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       6:
+; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP_AS0]], @retI32
+; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CWRLD:       8:
+; CWRLD-NEXT:    call void @retI32()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       9:
+; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP_AS0]], @takeI32
+; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
+; CWRLD:       11:
+; CWRLD-NEXT:    call void @takeI32()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       12:
+; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloat
+; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
+; CWRLD:       14:
+; CWRLD-NEXT:    call void @retFloatTakeFloat()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       15:
+; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloatFloatNoundef
+; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
+; CWRLD:       17:
+; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       18:
+; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
+; CWRLD:       19:
+; CWRLD-NEXT:    tail call void @void()
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       20:
+; CWRLD-NEXT:    unreachable
+; CWRLD:       21:
+; CWRLD-NEXT:    ret void
+;
+; CHECK-LABEL: @as_cast(
+; CHECK-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    tail call addrspace(1) void [[FP]]()
+; CHECK-NEXT:    ret void
+;
+  %fp = load ptr addrspace(1), ptr %arg, align 8
+  tail call addrspace(1) void %fp()
   ret void
 }
 
@@ -190,5 +342,23 @@ cond.end.i:
 ; These ones are added because of the callees metadata.
 ; DOT-DAG: Node[[FUNC7]] -> Node[[FUNC3]];
 ; DOT-DAG: Node[[FUNC7]] -> Node[[FUNC4]];
+
+; UTC_ARGS: --enable
+
+; UNLIM: [[META0:![0-9]+]] = !{!1}
+; UNLIM: [[META1:![0-9]+]] = !{i64 0, i1 false}
+; UNLIM: [[META2:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI2: [[META0:![0-9]+]] = !{ptr @void, ptr @retFloatTakeFloat}
+; LIMI2: [[META1:![0-9]+]] = !{ptr @void}
+; LIMI2: [[META2:![0-9]+]] = !{!3}
+; LIMI2: [[META3:![0-9]+]] = !{i64 0, i1 false}
+; LIMI2: [[META4:![0-9]+]] = distinct !{ptr undef, ptr null}
+; LIMI0: [[META0:![0-9]+]] = !{ptr @func4, ptr @internal_good}
+; LIMI0: [[META1:![0-9]+]] = !{ptr @func3, ptr @func4}
+; LIMI0: [[META2:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void, ptr @retFloatTakeFloat}
+; LIMI0: [[META3:![0-9]+]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; LIMI0: [[META4:![0-9]+]] = !{!5}
+; LIMI0: [[META5:![0-9]+]] = !{i64 0, i1 false}
+; LIMI0: [[META6:![0-9]+]] = distinct !{ptr undef, ptr null}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT: {{.*}}

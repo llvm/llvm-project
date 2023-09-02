@@ -985,8 +985,7 @@ define internal void @callee_is_undef(ptr %fn) {
 ; CGSCC: Function Attrs: memory(readwrite, argmem: none)
 ; CGSCC-LABEL: define {{[^@]+}}@callee_is_undef
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    call void undef()
-; CGSCC-NEXT:    ret void
+; CGSCC-NEXT:    unreachable
 ;
   call void %fn()
   ret void

@@ -503,6 +503,16 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/Sparc.cpp @llvm/pr-subscribers-sparc
 /clang/include/clang/Basic/BuiltinsSparc* @llvm/pr-subscribers-sparc
 
+# windows
+/lld/COFF/ @llvm/pr-subscribers-windows
+/clang/lib/Driver/MSVC.cpp @llvm/pr-subscribers-windows
+/clang/lib/Driver/MinGW.cpp @llvm/pr-subscribers-windows
+/llvm/lib/DebugInfo/CodeView/ @llvm/pr-subscribers-windows
+/llvm/lib/DebugInfo/PDB/ @llvm/pr-subscribers-windows
+/llvm/lib/WindowsDriver/ @llvm/pr-subscribers-windows
+/llvm/lib/Support/Windows/ @llvm/pr-subscribers-windows
+/llvm/lib/BinaryFormat/COFF.cpp @llvm/pr-subscribers-windows
+
 # x86
 /llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86

@@ -66,7 +66,7 @@ using ForwardSliceOptions = SliceOptions;
 ///
 /// Upon return to the root call, `forwardSlice` is filled with a
 /// postorder list of uses (i.e. a reverse topological order). To get a proper
-/// topological order, we just just reverse the order in `forwardSlice` before
+/// topological order, we just reverse the order in `forwardSlice` before
 /// returning.
 ///
 /// Example starting from node 0

@@ -112,7 +112,6 @@ define void @pos_empty_8(i1 %c) "kernel" {
 ; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       f:
 ; CHECK-NEXT:    ret void
@@ -1096,7 +1095,7 @@ define void @caller_barrier2() "kernel" {
 !15 = !{i32 7, !"openmp", i32 50}
 !16 = !{i32 7, !"openmp-device", i32 50}
 ;.
-; CHECK: attributes #[[ATTR0]] = { "llvm.assume"="ompx_aligned_barrier" }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

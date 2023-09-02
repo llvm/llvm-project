@@ -105,7 +105,7 @@ static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
 
       MachineOperand &Loc = MI.getDebugOperand(0);
       if (!Loc.isReg()) {
-        // If it it's not a register, just stop tracking such variable.
+        // If it's not a register, just stop tracking such variable.
         if (VMI != VariableMap.end())
           VariableMap.erase(VMI);
         continue;

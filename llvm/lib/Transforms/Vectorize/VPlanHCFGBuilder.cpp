@@ -323,7 +323,7 @@ void PlainCFGBuilder::buildPlainCFG() {
 
   // 2. Process outermost loop exit. We created an empty VPBB for the loop
   // single exit BB during the RPO traversal of the loop body but Instructions
-  // weren't visited because it's not part of the the loop.
+  // weren't visited because it's not part of the loop.
   BasicBlock *LoopExitBB = TheLoop->getUniqueExitBlock();
   assert(LoopExitBB && "Loops with multiple exits are not supported.");
   VPBasicBlock *LoopExitVPBB = BB2VPBB[LoopExitBB];

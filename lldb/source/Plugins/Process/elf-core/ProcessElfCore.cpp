@@ -131,7 +131,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       m_core_aranges.Append(range_entry);
     }
   }
-  // Keep a separate map of permissions that that isn't coalesced so all ranges
+  // Keep a separate map of permissions that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
       ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |

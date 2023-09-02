@@ -33,9 +33,6 @@ Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in 
 Revert "[clang][test] Fix LIT test failures for the following commit"
 Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 
-Revert "[Attributor] Introduce AAIndirectCallInfo"
-  causes snap build time to go from 20 seconds to 35+ minutes, opt attributor 
-
 Revert  "6acff5390d05 [X86] Support -march=gracemont"
   and  [Tests] Remove some and/or constant expressions in tests (NFC)
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 

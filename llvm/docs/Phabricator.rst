@@ -4,8 +4,15 @@
 Code Reviews with Phabricator
 =============================
 
+.. warning::
+
+  Phabricator is deprecated and will be switched to read-only mode in October
+  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+
+
 .. contents::
   :local:
+
 
 If you prefer to use a web user interface for code reviews, you can now submit
 your patches for Clang and LLVM at `LLVM's Phabricator`_ instance.
