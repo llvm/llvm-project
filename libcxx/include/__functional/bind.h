@@ -265,12 +265,7 @@ private:
     typedef typename __make_tuple_indices<sizeof...(_BoundArgs)>::type __indices;
 public:
     template <class _Gp, class ..._BA,
-              class = typename enable_if
-                               <
-                                  is_constructible<_Fd, _Gp>::value &&
-                                  !is_same<__libcpp_remove_reference_t<_Gp>,
-                                           __bind>::value
-                               >::type>
+              __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind>::value, int> = 0>
       _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind(_Gp&& __f, _BA&& ...__bound_args)
         : __f_(_VSTD::forward<_Gp>(__f)),
@@ -310,12 +305,7 @@ public:
 
 
     template <class _Gp, class ..._BA,
-              class = typename enable_if
-                               <
-                                  is_constructible<_Fd, _Gp>::value &&
-                                  !is_same<__libcpp_remove_reference_t<_Gp>,
-                                           __bind_r>::value
-                               >::type>
+              __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind_r>::value, int> = 0>
       _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind_r(_Gp&& __f, _BA&& ...__bound_args)
         : base(_VSTD::forward<_Gp>(__f),

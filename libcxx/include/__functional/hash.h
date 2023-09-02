@@ -673,7 +673,7 @@ using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
 
 template <class _Type, class ..._Keys>
 using __enable_hash_helper _LIBCPP_NODEBUG = __enable_hash_helper_imp<_Type,
-  typename enable_if<__all<__has_enabled_hash<_Keys>::value...>::value>::type
+  __enable_if_t<__all<__has_enabled_hash<_Keys>::value...>::value>
 >;
 #else
 template <class _Type, class ...>
