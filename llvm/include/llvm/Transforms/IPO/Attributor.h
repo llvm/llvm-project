@@ -3272,6 +3272,9 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Virtual destructor.
   virtual ~AbstractAttribute() = default;
 
+  /// Compile time access to the IR attribute kind.
+  static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
+
   /// This function is used to identify if an \p DGN is of type
   /// AbstractAttribute so that the dyn_cast and cast can use such information
   /// to cast an AADepGraphNode to an AbstractAttribute.
@@ -4605,7 +4608,7 @@ struct AAPrivatizablePtr
 /// (readnone/readonly/writeonly).
 struct AAMemoryBehavior
     : public IRAttribute<
-          Attribute::ReadNone,
+          Attribute::None,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>,
           AAMemoryBehavior> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -4680,7 +4683,7 @@ struct AAMemoryBehavior
 /// (readnone/argmemonly/inaccessiblememonly/inaccessibleorargmemonly).
 struct AAMemoryLocation
     : public IRAttribute<
-          Attribute::ReadNone,
+          Attribute::None,
           StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>,
           AAMemoryLocation> {
   using MemoryLocationsKind = StateType::base_t;

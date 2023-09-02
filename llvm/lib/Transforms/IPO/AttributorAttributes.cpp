@@ -383,7 +383,7 @@ getMinimalBaseOfPointer(Attributor &A, const AbstractAttribute &QueryingAA,
 /// Clamp the information known for all returned values of a function
 /// (identified by \p QueryingAA) into \p S.
 template <typename AAType, typename StateType = typename AAType::StateType,
-          Attribute::AttrKind IRAttributeKind = Attribute::None,
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind,
           bool RecurseForSelectAndPHI = true>
 static void clampReturnedValueStates(
     Attributor &A, const AAType &QueryingAA, StateType &S,
@@ -406,7 +406,7 @@ static void clampReturnedValueStates(
   auto CheckReturnValue = [&](Value &RV) -> bool {
     const IRPosition &RVPos = IRPosition::value(RV, CBContext);
     // If possible, use the hasAssumedIRAttr interface.
-    if (IRAttributeKind != Attribute::None) {
+    if (Attribute::isEnumAttrKind(IRAttributeKind)) {
       bool IsKnown;
       return AA::hasAssumedIRAttr<IRAttributeKind>(
           A, &QueryingAA, RVPos, DepClassTy::REQUIRED, IsKnown);
@@ -440,7 +440,7 @@ namespace {
 template <typename AAType, typename BaseType,
           typename StateType = typename BaseType::StateType,
           bool PropagateCallBaseContext = false,
-          Attribute::AttrKind IRAttributeKind = Attribute::None,
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind,
           bool RecurseForSelectAndPHI = true>
 struct AAReturnedFromReturnedValues : public BaseType {
   AAReturnedFromReturnedValues(const IRPosition &IRP, Attributor &A)
@@ -461,7 +461,7 @@ struct AAReturnedFromReturnedValues : public BaseType {
 /// Clamp the information known at all call sites for a given argument
 /// (identified by \p QueryingAA) into \p S.
 template <typename AAType, typename StateType = typename AAType::StateType,
-          Attribute::AttrKind IRAttributeKind = Attribute::None>
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind>
 static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
                                         StateType &S) {
   LLVM_DEBUG(dbgs() << "[Attributor] Clamp call site argument states for "
@@ -486,7 +486,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
       return false;
 
     // If possible, use the hasAssumedIRAttr interface.
-    if (IRAttributeKind != Attribute::None) {
+    if (Attribute::isEnumAttrKind(IRAttributeKind)) {
       bool IsKnown;
       return AA::hasAssumedIRAttr<IRAttributeKind>(
           A, &QueryingAA, ACSArgPos, DepClassTy::REQUIRED, IsKnown);
@@ -520,7 +520,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
 /// context.
 template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType,
-          Attribute::AttrKind IRAttributeKind = Attribute::None>
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind>
 bool getArgumentStateFromCallBaseContext(Attributor &A,
                                          BaseType &QueryingAttribute,
                                          IRPosition &Pos, StateType &State) {
@@ -535,7 +535,7 @@ bool getArgumentStateFromCallBaseContext(Attributor &A,
   const IRPosition CBArgPos = IRPosition::callsite_argument(*CBContext, ArgNo);
 
   // If possible, use the hasAssumedIRAttr interface.
-  if (IRAttributeKind != Attribute::None) {
+  if (Attribute::isEnumAttrKind(IRAttributeKind)) {
     bool IsKnown;
     return AA::hasAssumedIRAttr<IRAttributeKind>(
         A, &QueryingAttribute, CBArgPos, DepClassTy::REQUIRED, IsKnown);
@@ -561,7 +561,7 @@ bool getArgumentStateFromCallBaseContext(Attributor &A,
 template <typename AAType, typename BaseType,
           typename StateType = typename AAType::StateType,
           bool BridgeCallBaseContext = false,
-          Attribute::AttrKind IRAttributeKind = Attribute::None>
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind>
 struct AAArgumentFromCallSiteArguments : public BaseType {
   AAArgumentFromCallSiteArguments(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
@@ -591,7 +591,7 @@ struct AAArgumentFromCallSiteArguments : public BaseType {
 template <typename AAType, typename BaseType,
           typename StateType = typename BaseType::StateType,
           bool IntroduceCallBaseContext = false,
-          Attribute::AttrKind IRAttributeKind = Attribute::None>
+          Attribute::AttrKind IRAttributeKind = AAType::IRAttributeKind>
 struct AACalleeToCallSite : public BaseType {
   AACalleeToCallSite(const IRPosition &IRP, Attributor &A) : BaseType(IRP, A) {}
 
@@ -617,7 +617,7 @@ struct AACalleeToCallSite : public BaseType {
         *AssociatedFunction, IntroduceCallBaseContext ? &CBContext : nullptr);
 
     // If possible, use the hasAssumedIRAttr interface.
-    if (IRAttributeKind != Attribute::None) {
+    if (Attribute::isEnumAttrKind(IRAttributeKind)) {
       bool IsKnown;
       if (!AA::hasAssumedIRAttr<IRAttributeKind>(A, this, FnPos,
                                                  DepClassTy::REQUIRED, IsKnown))
@@ -2703,13 +2703,9 @@ struct AANonNullReturned final
 
 /// NonNull attribute for function argument.
 struct AANonNullArgument final
-    : AAArgumentFromCallSiteArguments<AANonNull, AANonNullImpl,
-                                      AANonNull::StateType, false,
-                                      AANonNull::IRAttributeKind> {
+    : AAArgumentFromCallSiteArguments<AANonNull, AANonNullImpl> {
   AANonNullArgument(const IRPosition &IRP, Attributor &A)
-      : AAArgumentFromCallSiteArguments<AANonNull, AANonNullImpl,
-                                        AANonNull::StateType, false,
-                                        AANonNull::IRAttributeKind>(IRP, A) {}
+      : AAArgumentFromCallSiteArguments<AANonNull, AANonNullImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nonnull) }
@@ -2725,11 +2721,9 @@ struct AANonNullCallSiteArgument final : AANonNullFloating {
 
 /// NonNull attribute for a call site return position.
 struct AANonNullCallSiteReturned final
-    : AACalleeToCallSite<AANonNull, AANonNullImpl, AANonNull::StateType, false,
-                         AANonNull::IRAttributeKind> {
+    : AACalleeToCallSite<AANonNull, AANonNullImpl> {
   AANonNullCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACalleeToCallSite<AANonNull, AANonNullImpl, AANonNull::StateType,
-                           false, AANonNull::IRAttributeKind>(IRP, A) {}
+      : AACalleeToCallSite<AANonNull, AANonNullImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nonnull) }
@@ -3848,12 +3842,8 @@ struct AANoAliasFloating final : AANoAliasImpl {
 
 /// NoAlias attribute for an argument.
 struct AANoAliasArgument final
-    : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl,
-                                      AANoAlias::StateType, false,
-                                      Attribute::NoAlias> {
-  using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl,
-                                               AANoAlias::StateType, false,
-                                               Attribute::NoAlias>;
+    : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl> {
+  using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl>;
   AANoAliasArgument(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
   /// See AbstractAttribute::update(...).
@@ -10374,26 +10364,18 @@ struct AANoUndefFloating : public AANoUndefImpl {
 };
 
 struct AANoUndefReturned final
-    : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl,
-                                   AANoUndef::StateType, false,
-                                   Attribute::NoUndef> {
+    : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
   AANoUndefReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl,
-                                     AANoUndef::StateType, false,
-                                     Attribute::NoUndef>(IRP, A) {}
+      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
 struct AANoUndefArgument final
-    : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl,
-                                      AANoUndef::StateType, false,
-                                      Attribute::NoUndef> {
+    : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl> {
   AANoUndefArgument(const IRPosition &IRP, Attributor &A)
-      : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl,
-                                        AANoUndef::StateType, false,
-                                        Attribute::NoUndef>(IRP, A) {}
+      : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noundef) }
@@ -10408,11 +10390,9 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
 };
 
 struct AANoUndefCallSiteReturned final
-    : AACalleeToCallSite<AANoUndef, AANoUndefImpl, AANoUndef::StateType, false,
-                         Attribute::NoUndef> {
+    : AACalleeToCallSite<AANoUndef, AANoUndefImpl> {
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACalleeToCallSite<AANoUndef, AANoUndefImpl, AANoUndef::StateType,
-                           false, Attribute::NoUndef>(IRP, A) {}
+      : AACalleeToCallSite<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
