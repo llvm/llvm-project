@@ -971,7 +971,7 @@ class Benchmark {
 
   // Have "setup" and/or "teardown" invoked once for every benchmark run.
   // If the benchmark is multi-threaded (will run in k threads concurrently),
-  // the setup callback will be be invoked exactly once (not k times) before
+  // the setup callback will be invoked exactly once (not k times) before
   // each run with k threads. Time allowing (e.g. for a short benchmark), there
   // may be multiple such runs per benchmark, each run with its own
   // "setup"/"teardown".

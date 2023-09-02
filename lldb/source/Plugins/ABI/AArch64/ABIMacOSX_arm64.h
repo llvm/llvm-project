@@ -46,7 +46,7 @@ public:
   // in other environments there can be a large number of different functions
   // involved in async traps.
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // Make sure the stack call frame addresses are are 8 byte aligned
+    // Make sure the stack call frame addresses are 8 byte aligned
     if (cfa & (8ull - 1ull))
       return false; // Not 8 byte aligned
     if (cfa == 0)
