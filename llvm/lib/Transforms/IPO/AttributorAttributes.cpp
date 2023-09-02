@@ -12292,8 +12292,13 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     if (!AllCalleesKnown && AssumedCallees.empty())
       return ChangeStatus::UNCHANGED;
 
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     CallBase *CB = cast<CallBase>(getCtxI());
+    bool UsedAssumedInformation = false;
+    if (A.isAssumedDead(*CB, this, /*LivenessAA=*/nullptr,
+                        UsedAssumedInformation))
+      return ChangeStatus::UNCHANGED;
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
       FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
