@@ -1522,7 +1522,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
     auto destinationType =
         llvm::cast<VectorType>(extractOp.getResult().getType());
     for (int64_t i = 0; i < destinationRank; i++) {
-      // The lowest dimension of of the destination must match the lowest
+      // The lowest dimension of the destination must match the lowest
       // dimension of the shapecast op source.
       // TODO: This case could be support in a canonicalization pattern.
       if (getDimReverse(shapeCastOp.getSourceVectorType(), i) !=
