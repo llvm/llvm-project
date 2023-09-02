@@ -1003,6 +1003,17 @@ public:
   GlobalDecl CurSEHParent;
   bool currentFunctionUsesSEHTry() const { return !!CurSEHParent; }
 
+  /// Returns true inside SEH __try blocks.
+  bool isSEHTryScope() const { return UnimplementedFeature::isSEHTryScope(); }
+
+  mlir::Operation *CurrentFuncletPad = nullptr;
+
+  /// Returns true while emitting a cleanuppad.
+  bool isCleanupPadScope() const {
+    assert(!CurrentFuncletPad && "NYI");
+    return false;
+  }
+
   /// Emit code to compute the specified expression,
   /// ignoring the result.
   void buildIgnoredExpr(const clang::Expr *E);

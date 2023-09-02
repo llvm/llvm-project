@@ -480,32 +480,55 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // If we're using inalloca, set up that argument.
   assert(!ArgMemory.isValid() && "inalloca NYI");
 
+  // 2. Prepare the function pointer.
+
   // TODO: simplifyVariadicCallee
 
   // 3. Perform the actual call.
 
-  // Deactivate any cleanups that we're supposed to do immediately before the
-  // call.
-  // TODO: do this
+  // TODO: Deactivate any cleanups that we're supposed to do immediately before
+  // the call.
+  // if (!CallArgs.getCleanupsToDeactivate().empty())
+  //   deactivateArgCleanupsBeforeCall(*this, CallArgs);
 
   // TODO: Update the largest vector width if any arguments have vector types.
   // TODO: Compute the calling convention and attributes.
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
-    assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
 
-    // TODO: InNoMergeAttributedStmt
-    // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
-    //        !TargetDecl->hasAttr<NoInlineAttr>() && "NYI");
+  // TODO: strictfp
+  // TODO: Add call-site nomerge, noinline, always_inline attribute if exists.
 
-    // TODO: isSEHTryScope
+  // Apply some call-site-specific attributes.
+  // TODO: work this into building the attribute set.
 
-    // TODO: currentFunctionUsesSEHTry
-    // TODO: isCleanupPadScope
+  // Apply always_inline to all calls within flatten functions.
+  // FIXME: should this really take priority over __try, below?
+  // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
+  //        !TargetDecl->hasAttr<NoInlineAttr>() && "NYI");
 
-    // TODO: UnusedReturnSizePtr
+  // Disable inlining inside SEH __try blocks.
+  if (isSEHTryScope())
+    llvm_unreachable("NYI");
 
-    assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+  // Decide whether to use a call or an invoke.
+  bool CannotThrow;
+  if (currentFunctionUsesSEHTry()) {
+    // SEH cares about asynchronous exceptions, so everything can "throw."
+    CannotThrow = false;
+  } else if (isCleanupPadScope() &&
+             EHPersonality::get(*this).isMSVCXXPersonality()) {
+    // The MSVC++ personality will implicitly terminate the program if an
+    // exception is thrown during a cleanup outside of a try/catch.
+    // We don't need to model anything in IR to get this behavior.
+    CannotThrow = true;
+  } else {
+    // FIXME(cir): pass down nounwind attribute
+    CannotThrow = true;
   }
+  (void)CannotThrow;
+
+  // TODO: UnusedReturnSizePtr
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+    assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
 
   // TODO: alignment attributes
 
@@ -537,23 +560,16 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   if (callOrInvoke)
     callOrInvoke = &theCall;
 
-  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     assert(!FD->getAttr<CFGuardAttr>() && "NYI");
-  }
 
   // TODO: set attributes on callop
-
   // assert(!theCall.getResults().getType().front().isSignlessInteger() &&
   //        "Vector NYI");
-
   // TODO: LLVM models indirect calls via a null callee, how should we do this?
-
   assert(!CGM.getLangOpts().ObjCAutoRefCount && "Not supported");
-
   assert((!TargetDecl || !TargetDecl->hasAttr<NotTailCalledAttr>()) && "NYI");
-
   assert(!getDebugInfo() && "No debug info yet");
-
   assert((!TargetDecl || !TargetDecl->hasAttr<ErrorAttr>()) && "NYI");
 
   // 4. Finish the call.
