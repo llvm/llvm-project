@@ -754,9 +754,9 @@ std::vector<std::string> serializeTargets(const AggregateT Targets,
   if (Targets.size() == ActiveTargets.size())
     return TargetsStr;
 
-  llvm::for_each(Targets, [&TargetsStr](const MachO::Target &Target) {
+  for (const MachO::Target &Target : Targets)
     TargetsStr.emplace_back(getFormattedStr(Target));
-  });
+
   return TargetsStr;
 }
 
