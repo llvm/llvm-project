@@ -2341,7 +2341,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
 
   auto Comps = getPerfectCompletions(SM, LogLen);
-  if (llvm::any_of(Comps, [](uint32_t P) { return P == 0; }))
+  if (llvm::is_contained(Comps, 0))
     return OpRef::fail();
 
   auto Pick = completeToPerfect(Comps, LogLen);
