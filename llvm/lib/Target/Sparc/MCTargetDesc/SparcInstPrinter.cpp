@@ -42,6 +42,11 @@ void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   OS << '%' << StringRef(getRegisterName(Reg)).lower();
 }
 
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
+                                    unsigned AltIdx) const {
+  OS << '%' << StringRef(getRegisterName(Reg, AltIdx)).lower();
+}
+
 void SparcInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  StringRef Annot, const MCSubtargetInfo &STI,
                                  raw_ostream &O) {
@@ -111,7 +116,11 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   const MCOperand &MO = MI->getOperand (opNum);
 
   if (MO.isReg()) {
-    printRegName(O, MO.getReg());
+    unsigned Reg = MO.getReg();
+    if (isV9(STI))
+      printRegName(O, Reg, SP::RegNamesStateReg);
+    else
+      printRegName(O, Reg);
     return ;
   }
 

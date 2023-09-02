@@ -15,7 +15,8 @@ class SparcReg<bits<16> Enc, string n> : Register<n> {
   let Namespace = "SP";
 }
 
-class SparcCtrlReg<bits<16> Enc, string n>: Register<n> {
+class SparcCtrlReg<bits<16> Enc, string n,
+                   list<string> altNames = []>: Register<n, altNames> {
   let HWEncoding = Enc;
   let Namespace = "SP";
 }
@@ -25,6 +26,11 @@ def sub_even : SubRegIndex<32>;
 def sub_odd  : SubRegIndex<32, 32>;
 def sub_even64 : SubRegIndex<64>;
 def sub_odd64  : SubRegIndex<64, 64>;
+}
+
+let Namespace = "SP",
+    FallbackRegAltNameIndex = NoRegAltName in {
+  def RegNamesStateReg : RegAltNameIndex;
 }
 
 // Registers are identified with 5-bit ID numbers.
@@ -71,11 +77,18 @@ def CPQ : SparcCtrlReg<0, "CPQ">; // Co-processor queue.
 def Y : SparcCtrlReg<0, "Y">, DwarfRegNum<[64]>;
 // Ancillary state registers (implementation defined)
 def ASR1 : SparcCtrlReg<1, "ASR1">;
-def ASR2 : SparcCtrlReg<2, "ASR2">;
-def ASR3 : SparcCtrlReg<3, "ASR3">;
-def ASR4 : SparcCtrlReg<4, "ASR4">;
-def ASR5 : SparcCtrlReg<5, "ASR5">;
-def ASR6 : SparcCtrlReg<6, "ASR6">;
+let RegAltNameIndices = [RegNamesStateReg] in {
+// FIXME: Currently this results in the assembler accepting
+// the alternate names (%ccr, %asi, etc.) when targeting V8.
+// Make sure that the alternate names are available for V9 only:
+// %asr2-asr6      : valid on both V8 and V9.
+// %ccr, %asi, etc.: valid on V9, returns "no such register" error on V8.
+def ASR2 : SparcCtrlReg<2, "ASR2", ["CCR"]>;
+def ASR3 : SparcCtrlReg<3, "ASR3", ["ASI"]>;
+def ASR4 : SparcCtrlReg<4, "ASR4", ["TICK"]>;
+def ASR5 : SparcCtrlReg<5, "ASR5", ["PC"]>;
+def ASR6 : SparcCtrlReg<6, "ASR6", ["FPRS"]>;
+}
 def ASR7 : SparcCtrlReg<7, "ASR7">;
 def ASR8 : SparcCtrlReg<8, "ASR8">;
 def ASR9 : SparcCtrlReg<9, "ASR9">;
@@ -106,24 +119,25 @@ def ASR31 : SparcCtrlReg<31, "ASR31">;
 def PSR : SparcCtrlReg<0, "PSR">;
 def WIM : SparcCtrlReg<0, "WIM">;
 def TBR : SparcCtrlReg<0, "TBR">;
-// PC on the other hand is only available for SparcV9.
-def PC : SparcCtrlReg<5, "PC">;
 
-def TPC : SparcCtrlReg<0, "TPC">;
-def TNPC : SparcCtrlReg<1, "TNPC">;
-def TSTATE : SparcCtrlReg<2, "TSTATE">;
-def TT : SparcCtrlReg<3, "TT">;
-def TICK : SparcCtrlReg<4, "TICK">;
-def TBA : SparcCtrlReg<5, "TBA">;
-def PSTATE : SparcCtrlReg<6, "PSTATE">;
-def TL : SparcCtrlReg<7, "TL">;
-def PIL : SparcCtrlReg<8, "PIL">;
-def CWP : SparcCtrlReg<9, "CWP">;
-def CANSAVE : SparcCtrlReg<10, "CANSAVE">;
+// Privileged V9 state registers
+def TPC        : SparcCtrlReg<0, "TPC">;
+def TNPC       : SparcCtrlReg<1, "TNPC">;
+def TSTATE     : SparcCtrlReg<2, "TSTATE">;
+def TT         : SparcCtrlReg<3, "TT">;
+def TICK       : SparcCtrlReg<4, "TICK">;
+def TBA        : SparcCtrlReg<5, "TBA">;
+def PSTATE     : SparcCtrlReg<6, "PSTATE">;
+def TL         : SparcCtrlReg<7, "TL">;
+def PIL        : SparcCtrlReg<8, "PIL">;
+def CWP        : SparcCtrlReg<9, "CWP">;
+def CANSAVE    : SparcCtrlReg<10, "CANSAVE">;
 def CANRESTORE : SparcCtrlReg<11, "CANRESTORE">;
-def CLEANWIN : SparcCtrlReg<12, "CLEANWIN">;
-def OTHERWIN : SparcCtrlReg<13, "OTHERWIN">;
-def WSTATE : SparcCtrlReg<14, "WSTATE">;
+def CLEANWIN   : SparcCtrlReg<12, "CLEANWIN">;
+def OTHERWIN   : SparcCtrlReg<13, "OTHERWIN">;
+def WSTATE     : SparcCtrlReg<14, "WSTATE">;
+def GL         : SparcCtrlReg<16, "GL">;
+def VER        : SparcCtrlReg<31, "VER">;
 
 // Integer registers
 def G0 : Ri< 0, "G0">, DwarfRegNum<[0]> {
@@ -361,8 +375,11 @@ def FCCRegs : RegisterClass<"SP", [i1], 1, (sequence "FCC%u", 0, 3)>;
 
 let isAllocatable = 0 in {
   // Ancillary state registers
+  // FIXME: TICK is special-cased here as it can be accessed
+  // from the ASR (as ASR4) or the privileged register set.
+  // For now this is required for the parser to work.
   def ASRRegs : RegisterClass<"SP", [i32], 32,
-                              (add Y, (sequence "ASR%u", 1, 31))>;
+                              (add Y, TICK, (sequence "ASR%u", 1, 31))>;
 
   // This register class should not be used to hold i64 values.
   def CoprocRegs : RegisterClass<"SP", [i32], 32,
@@ -379,5 +396,4 @@ let isAllocatable = 0 in {
 // Privileged Registers
 def PRRegs : RegisterClass<"SP", [i64], 64,
     (add TPC, TNPC, TSTATE, TT, TICK, TBA, PSTATE, TL, PIL, CWP,
-         CANSAVE, CANRESTORE, CLEANWIN, OTHERWIN, WSTATE)>;
-
+         CANSAVE, CANRESTORE, CLEANWIN, OTHERWIN, WSTATE, GL, VER)>;

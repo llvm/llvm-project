@@ -417,9 +417,27 @@
         rdpr %wstate,%i5
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
-        ! V8-NEXT: rd %pc, %o7
+        ! V8-NEXT: rdpr %ver,%i5
+        ! V9: rdpr %ver, %i5            ! encoding: [0xbb,0x57,0xc0,0x00]
+        rdpr %ver,%i5
+
         ! V9: rd %pc, %o7               ! encoding: [0x9f,0x41,0x40,0x00]
         rd %pc, %o7
+        ! V9: rd %asi, %g1              ! encoding: [0x83,0x40,0xc0,0x00]
+        rd %asi, %g1
+        ! V9: rd %ccr, %g1              ! encoding: [0x83,0x40,0x80,0x00]
+        rd %ccr, %g1
+        ! V9: rd %tick, %i5             ! encoding: [0xbb,0x41,0x00,0x00]
+        rd %tick,%i5
+
+        ! V9: wr %i0, %i1, %asi         ! encoding: [0x87,0x86,0x00,0x19]
+        wr %i0, %i1, %asi
+        ! V9: wr %i0, 1, %asi           ! encoding: [0x87,0x86,0x20,0x01]
+        wr %i0, 1, %asi
+        ! V9: wr %i0, %i1, %ccr         ! encoding: [0x85,0x86,0x00,0x19]
+        wr %i0, %i1, %ccr
+        ! V9: wr %i0, 1, %ccr           ! encoding: [0x85,0x86,0x20,0x01]
+        wr %i0, 1, %ccr
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
