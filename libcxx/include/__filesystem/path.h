@@ -445,8 +445,7 @@ struct _PathExport<char8_t> {
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
-  using _EnableIfPathable =
-      typename enable_if<__is_pathable<_SourceOrIter>::value, _Tp>::type;
+  using _EnableIfPathable = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 
   template <class _Tp>
   using _SourceChar = typename __is_pathable<_Tp>::__char_type;
