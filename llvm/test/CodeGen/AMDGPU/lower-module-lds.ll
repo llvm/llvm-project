@@ -8,11 +8,11 @@
 ; Variable removed by pass
 ; CHECK-NOT: @var0
 
-@var0 = addrspace(3) global float undef, align 8
-@var1 = addrspace(3) global i32 undef, align 8
+@var0 = addrspace(3) global float poison, align 8
+@var1 = addrspace(3) global i32 poison, align 8
 
 ; The invalid use by the global is left unchanged
-; CHECK: @var1 = addrspace(3) global i32 undef, align 8
+; CHECK: @var1 = addrspace(3) global i32 poison, align 8
 ; CHECK: @ptr = addrspace(1) global ptr addrspace(3) @var1, align 4
 @ptr = addrspace(1) global ptr addrspace(3) @var1, align 4
 
@@ -21,7 +21,7 @@
 @with_init = addrspace(3) global i64 0
 
 ; Instance of new type, aligned to max of element alignment
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 8
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 8
 
 ; Use in func rewritten to access struct at address zero
 ; CHECK-LABEL: @func()
