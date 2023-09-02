@@ -108,7 +108,7 @@ public:
   /// Returns the base register operator of a load/store.
   static const MachineOperand &getLdStBaseOp(const MachineInstr &MI);
 
-  /// Returns the the immediate offset operator of a load/store.
+  /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
   /// Returns whether the instruction is FP or NEON.

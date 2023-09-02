@@ -698,7 +698,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   // UniqueTimestamps is a special case to improve debugging on Darwin:
   //
   // The Darwin linker does not link debug info into the final
-  // binary. Instead, it emits entries of type N_OSO in in the output
+  // binary. Instead, it emits entries of type N_OSO in the output
   // binary's symbol table, containing references to the linked-in
   // object files. Using that reference, the debugger can read the
   // debug data directly from the object files. Alternatively, an

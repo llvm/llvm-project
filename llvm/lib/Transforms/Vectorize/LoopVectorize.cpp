@@ -6992,7 +6992,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
     // because the VF is either 1, or any instructions that need scalarizing
-    // have already been dealt with by the the time we get here. As a result,
+    // have already been dealt with by the time we get here. As a result,
     // it means we don't have to multiply the instruction cost by VF.
     assert(I->getOpcode() == Instruction::GetElementPtr ||
            I->getOpcode() == Instruction::PHI ||

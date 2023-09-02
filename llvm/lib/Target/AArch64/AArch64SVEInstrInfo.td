@@ -2477,7 +2477,7 @@ let Predicates = [HasSVEorSME] in {
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
-  // type, and and reloaded as another type.
+  // type, and reloaded as another type.
   let Predicates = [IsLE] in {
     def : Pat<(nxv16i8 (bitconvert (nxv8i16 ZPR:$src))), (nxv16i8 ZPR:$src)>;
     def : Pat<(nxv16i8 (bitconvert (nxv4i32 ZPR:$src))), (nxv16i8 ZPR:$src)>;

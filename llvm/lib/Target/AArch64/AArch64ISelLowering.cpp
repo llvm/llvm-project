@@ -11281,7 +11281,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
     };
 
     // For OP_MOVLANE shuffles, the RHSID represents the lane to move into. We
-    // get the lane to move from from the PFID, which is always from the
+    // get the lane to move from the PFID, which is always from the
     // original vectors (V1 or V2).
     SDValue OpLHS = GeneratePerfectShuffle(
         LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
@@ -16421,7 +16421,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
          return SDValue();
 
   // Multiplication of a power of two plus/minus one can be done more
-  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.

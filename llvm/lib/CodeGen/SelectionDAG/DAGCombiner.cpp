@@ -5608,7 +5608,7 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
                                          SelectionDAG &DAG) {
   // We are looking for UMIN(FPTOUI(X), (2^n)-1), which may have come via a
   // select/vselect/select_cc. The two operands pairs for the select (N2/N3) may
-  // be truncated versions of the the setcc (N0/N1).
+  // be truncated versions of the setcc (N0/N1).
   if ((N0 != N2 &&
        (N2.getOpcode() != ISD::TRUNCATE || N0 != N2.getOperand(0))) ||
       N0.getOpcode() != ISD::FP_TO_UINT || CC != ISD::SETULT)
@@ -27467,7 +27467,7 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
     }
 
     case ISD::CopyFromReg:
-      // Always forward past past CopyFromReg.
+      // Always forward past CopyFromReg.
       C = C.getOperand(0);
       return true;
 

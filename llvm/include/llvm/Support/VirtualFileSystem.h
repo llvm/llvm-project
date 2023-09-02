@@ -66,7 +66,7 @@ public:
   /// FIXME: Currently the external path is exposed by replacing the virtual
   /// path in this Status object. Instead, we should leave the path in the
   /// Status intact (matching the requested virtual path) - see
-  /// FileManager::getFileRef for how how we plan to fix this.
+  /// FileManager::getFileRef for how we plan to fix this.
   bool ExposesExternalVFSPath = false;
 
   Status() = default;
@@ -888,7 +888,7 @@ public:
     LookupResult(Entry *E, sys::path::const_iterator Start,
                  sys::path::const_iterator End);
 
-    /// If the found Entry maps the the input path to a path in the external
+    /// If the found Entry maps the input path to a path in the external
     /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns
     /// that path.
     std::optional<StringRef> getExternalRedirect() const {

@@ -1073,7 +1073,7 @@ struct dyld_chained_fixups_header {
 };
 
 /// dyld_chained_starts_in_image is embedded in LC_DYLD_CHAINED_FIXUPS payload.
-/// Each each seg_info_offset entry is the offset into this struct for that
+/// Each seg_info_offset entry is the offset into this struct for that
 /// segment followed by pool of dyld_chain_starts_in_segment data.
 struct dyld_chained_starts_in_image {
   uint32_t seg_count;

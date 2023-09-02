@@ -6097,7 +6097,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   // Multiply the numerator (operand 0) by the magic value.
   // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHS = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the the type calculated
+    // If the type isn't legal, use a wider mul of the type calculated
     // earlier.
     if (!isTypeLegal(VT)) {
       X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
@@ -6284,7 +6284,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHU = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the the type calculated
+    // If the type isn't legal, use a wider mul of the type calculated
     // earlier.
     if (!isTypeLegal(VT)) {
       X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);

@@ -1058,7 +1058,7 @@ void LVELFReader::processLocationMember(dwarf::Attribute Attr,
     CurrentSymbol->addLocationConstant(Attr, *FormValue.getAsUnsignedConstant(),
                                        OffsetOnEntry);
   else
-    // This is a a location description, or a reference to one.
+    // This is a location description, or a reference to one.
     processLocationList(Attr, FormValue, Die, OffsetOnEntry);
 }
 

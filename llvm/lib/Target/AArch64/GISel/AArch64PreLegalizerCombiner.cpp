@@ -234,7 +234,7 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
   // result is only used in the no-overflow case. It is restricted to cases
   // where we know that the high-bits of the operands are 0. If there's an
-  // overflow, then the the 9th or 17th bit must be set, which can be checked
+  // overflow, then the 9th or 17th bit must be set, which can be checked
   // using TBNZ.
   //
   // Change (for UADDOs on 8 and 16 bits):

@@ -368,7 +368,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
   // clang's LangOptions is not used and thus the exception model info is not
   // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
-  // have the correct exception model in in WebAssemblyMCAsmInfo constructor.
+  // have the correct exception model in WebAssemblyMCAsmInfo constructor.
   // But in this case TargetOptions is still not updated, so we make sure they
   // are the same.
   TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();

@@ -557,7 +557,7 @@ collectRegionsConstants(OutlinableRegion &Region,
 
     // Iterate over the operands in an instruction. If the global value number,
     // assigned by the IRSimilarityCandidate, has been seen before, we check if
-    // the the number has been found to be not the same value in each instance.
+    // the number has been found to be not the same value in each instance.
     for (Value *V : ID.OperVals) {
       std::optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
@@ -766,7 +766,7 @@ static void moveFunctionData(Function &Old, Function &New,
   }
 }
 
-/// Find the the constants that will need to be lifted into arguments
+/// Find the constants that will need to be lifted into arguments
 /// as they are not the same in each instance of the region.
 ///
 /// \param [in] C - The IRSimilarityCandidate containing the region we are

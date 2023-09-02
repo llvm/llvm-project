@@ -270,7 +270,7 @@ protected:
 
   virtual void emitRawTextImpl(StringRef String);
 
-  /// Returns true if the the .cv_loc directive is in the right section.
+  /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
 public:

@@ -61,7 +61,7 @@ private:
 
   /// Lower a HOM_Prolog pseudo instruction into a helper call
   /// or a sequence of homogeneous stores.
-  /// When a a fp setup follows, it can be optimized.
+  /// When a fp setup follows, it can be optimized.
   bool lowerProlog(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    MachineBasicBlock::iterator &NextMBBI);
   /// Lower a HOM_Epilog pseudo instruction into a helper call

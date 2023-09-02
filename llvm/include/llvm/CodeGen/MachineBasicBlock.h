@@ -233,7 +233,7 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is used as as something other than the target
+  /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.

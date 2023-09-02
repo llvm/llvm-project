@@ -5830,7 +5830,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
 
-    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
     // overrun the parent vector.
     if (VecEC.isScalable() == ResultEC.isScalable()) {

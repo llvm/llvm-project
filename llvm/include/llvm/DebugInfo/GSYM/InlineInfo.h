@@ -90,7 +90,7 @@ struct InlineInfo {
   /// exists for \a Addr, then \a SrcLocs will be left untouched. If there is
   /// inline information for \a Addr, then \a SrcLocs will be modifiied to
   /// contain the deepest most inline function's SourceLocation at index zero
-  /// in the array and proceed up the the concrete function source file and
+  /// in the array and proceed up the concrete function source file and
   /// line at the end of the array.
   ///
   /// \param GR The GSYM reader that contains the string and file table that

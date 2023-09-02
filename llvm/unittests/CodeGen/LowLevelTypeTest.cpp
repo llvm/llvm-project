@@ -159,7 +159,7 @@ TEST(LowLevelTypeTest, ChangeElementType) {
   EXPECT_EQ(V2P1, V2P0.changeElementType(P1));
   EXPECT_EQ(V2S32, V2P0.changeElementType(S32));
 
-  // Similar tests for for scalable vectors.
+  // Similar tests for scalable vectors.
   const LLT NXV2S32 = LLT::scalable_vector(2, 32);
   const LLT NXV2S64 = LLT::scalable_vector(2, 64);
 

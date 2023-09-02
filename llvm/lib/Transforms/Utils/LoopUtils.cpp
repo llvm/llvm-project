@@ -1449,7 +1449,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion
         // inbetween, one that we might not intend to keep, said expansion
-        // *may* affect cost calculation of the the next SCEV's we'll query,
+        // *may* affect cost calculation of the next SCEV's we'll query,
         // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.

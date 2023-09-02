@@ -53,7 +53,7 @@ struct PassConcept {
   /// Polymorphic method to access the name of a pass.
   virtual StringRef name() const = 0;
 
-  /// Polymorphic method to to let a pass optionally exempted from skipping by
+  /// Polymorphic method to let a pass optionally exempted from skipping by
   /// PassInstrumentation.
   /// To opt-in, pass should implement `static bool isRequired()`. It's no-op
   /// to have `isRequired` always return false since that is the default.
