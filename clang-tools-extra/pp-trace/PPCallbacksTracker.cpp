@@ -601,7 +601,7 @@ void PPCallbacksTracker::appendArgument(const char *Name,
   llvm::raw_string_ostream SS(Str);
   SS << "[";
 
-  // Each argument is is a series of contiguous Tokens, terminated by a eof.
+  // Each argument is a series of contiguous Tokens, terminated by a eof.
   // Go through each argument printing tokens until we reach eof.
   for (unsigned I = 0; I < Value->getNumMacroArguments(); ++I) {
     const Token *Current = Value->getUnexpArgument(I);

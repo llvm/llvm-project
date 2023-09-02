@@ -824,7 +824,7 @@ static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
     if (copyRightStatus != errAuthorizationSuccess) {
       // Eventually when the commandline supports running as root and the user
       // is not
-      // logged in in the current audit session, we will need the trick in gdb
+      // logged in to the current audit session, we will need the trick in gdb
       // where
       // we ask the user to type in the root passwd in the terminal.
       error.SetError(2, eErrorTypeGeneric);

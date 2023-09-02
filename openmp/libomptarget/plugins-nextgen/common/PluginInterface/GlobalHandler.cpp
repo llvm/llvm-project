@@ -114,7 +114,7 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     return Plugin::error("Unable to create ELF object for image %p",
                          Image.getStart());
 
-  // Search the ELF symbol using the the symbol name.
+  // Search the ELF symbol using the symbol name.
   auto SymOrErr = getELFSymbol(*ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error("Failed ELF lookup of global '%s': %s",

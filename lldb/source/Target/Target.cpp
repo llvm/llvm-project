@@ -1813,7 +1813,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     } else {
       // We have at least one section loaded. This can be because we have
       // manually loaded some sections with "target modules load ..." or
-      // because we have have a live process that has sections loaded through
+      // because we have a live process that has sections loaded through
       // the dynamic loader
       load_addr =
           fixed_addr.GetOffset(); // "fixed_addr" doesn't have a section, so
@@ -2096,7 +2096,7 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
       } else {
         // We have at least one section loaded. This can be because we have
         // manually loaded some sections with "target modules load ..." or
-        // because we have have a live process that has sections loaded through
+        // because we have a live process that has sections loaded through
         // the dynamic loader
         section_load_list.ResolveLoadAddress(pointer_vm_addr, pointer_addr);
       }
