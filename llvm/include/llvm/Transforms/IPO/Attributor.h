@@ -1742,10 +1742,16 @@ struct Attributor {
 
     Function *AssociatedFn = IRP.getAssociatedFunction();
 
-    // Check if we require a callee but there is none.
-    if (!AssociatedFn && AAType::requiresCalleeForCallBase() &&
-        IRP.isAnyCallSitePosition())
-      return false;
+    if (IRP.isAnyCallSitePosition()) {
+      // Check if we require a callee but there is none.
+      if (!AssociatedFn && AAType::requiresCalleeForCallBase())
+        return false;
+
+      // Check if we require non-asm but it is inline asm.
+      if (AAType::requiresNonAsmForCallBase() &&
+          cast<CallBase>(IRP.getAnchorValue()).isInlineAsm())
+        return false;
+    }
 
     // Check if we require a calles but we can't see all.
     if (AAType::requiresCallersForArgOrFunction())
@@ -3290,6 +3296,9 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return true if this AA requires a "callee" (or an associted function) for
   /// a call site positon. Default is optimistic to minimize AAs.
   static bool requiresCalleeForCallBase() { return true; }
+
+  /// Return true if this AA requires non-asm "callee" for a call site positon.
+  static bool requiresNonAsmForCallBase() { return true; }
 
   /// Return true if this AA requires all callees for an argument or function
   /// positon.
@@ -5475,6 +5484,9 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   /// The callee value is tracked beyond a simple stripPointerCasts, so we allow
   /// unknown callees.
   static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::requiresNonAsmForCallBase.
+  static bool requiresNonAsmForCallBase() { return false; }
 
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
