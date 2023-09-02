@@ -579,9 +579,13 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     CannotThrow = true;
   } else {
     // FIXME(cir): pass down nounwind attribute
-    CannotThrow = true;
+    CannotThrow = false;
   }
   (void)CannotThrow;
+
+  // In LLVM this contains the basic block, in CIR we solely track for now.
+  bool InvokeDest = getInvokeDest();
+  (void)InvokeDest;
 
   // TODO: UnusedReturnSizePtr
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))

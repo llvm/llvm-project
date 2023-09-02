@@ -333,3 +333,93 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   buildCatchDispatchBlock(*this, CatchScope);
   llvm_unreachable("NYI");
 }
+
+/// Check whether this is a non-EH scope, i.e. a scope which doesn't
+/// affect exception handling.  Currently, the only non-EH scopes are
+/// normal-only cleanup scopes.
+static bool isNonEHScope(const EHScope &S) {
+  switch (S.getKind()) {
+  case EHScope::Cleanup:
+    return !cast<EHCleanupScope>(S).isEHCleanup();
+  case EHScope::Filter:
+  case EHScope::Catch:
+  case EHScope::Terminate:
+    return false;
+  }
+
+  llvm_unreachable("Invalid EHScope Kind!");
+}
+
+mlir::Block *CIRGenFunction::buildLandingPad() {
+  assert(EHStack.requiresLandingPad());
+  assert(!CGM.getLangOpts().IgnoreExceptions &&
+         "LandingPad should not be emitted when -fignore-exceptions are in "
+         "effect.");
+  EHScope &innermostEHScope = *EHStack.find(EHStack.getInnermostEHScope());
+  switch (innermostEHScope.getKind()) {
+  case EHScope::Terminate:
+    llvm_unreachable("NYI");
+
+  case EHScope::Catch:
+  case EHScope::Cleanup:
+  case EHScope::Filter:
+    llvm_unreachable("NYI");
+    if (auto *lpad = innermostEHScope.getCachedLandingPad())
+      return lpad;
+  }
+
+  llvm_unreachable("NYI");
+}
+
+mlir::Block *CIRGenFunction::getInvokeDestImpl() {
+  assert(EHStack.requiresLandingPad());
+  assert(!EHStack.empty());
+
+  // If exceptions are disabled/ignored and SEH is not in use, then there is no
+  // invoke destination. SEH "works" even if exceptions are off. In practice,
+  // this means that C++ destructors and other EH cleanups don't run, which is
+  // consistent with MSVC's behavior, except in the presence of -EHa
+  const LangOptions &LO = CGM.getLangOpts();
+  if (!LO.Exceptions || LO.IgnoreExceptions) {
+    if (!LO.Borland && !LO.MicrosoftExt)
+      return nullptr;
+    if (!currentFunctionUsesSEHTry())
+      return nullptr;
+  }
+
+  // CUDA device code doesn't have exceptions.
+  if (LO.CUDA && LO.CUDAIsDevice)
+    return nullptr;
+
+  // Check the innermost scope for a cached landing pad.  If this is
+  // a non-EH cleanup, we'll check enclosing scopes in EmitLandingPad.
+  auto *LP = EHStack.begin()->getCachedLandingPad();
+  if (LP)
+    return LP;
+
+  const EHPersonality &Personality = EHPersonality::get(*this);
+
+  // FIXME(cir): add personality function
+  // if (!CurFn->hasPersonalityFn())
+  //   CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
+
+  if (Personality.usesFuncletPads()) {
+    // We don't need separate landing pads in the funclet model.
+    llvm_unreachable("NYI");
+  } else {
+    // Build the landing pad for this scope.
+    LP = buildLandingPad();
+  }
+
+  assert(LP);
+
+  // Cache the landing pad on the innermost scope.  If this is a
+  // non-EH scope, cache the landing pad on the enclosing scope, too.
+  for (EHScopeStack::iterator ir = EHStack.begin(); true; ++ir) {
+    ir->setCachedLandingPad(LP);
+    if (!isNonEHScope(*ir))
+      break;
+  }
+
+  return LP;
+}
