@@ -28,7 +28,7 @@ namespace misexpect {
 /// checkBackendInstrumentation - compares PGO counters to the thresholds used
 /// for llvm.expect and warns if the PGO counters are outside of the expected
 /// range. It extracts the expected weights from the MD_prof weights attatched
-/// to the instruction, which are are assumed to come from lowered llvm.expect
+/// to the instruction, which are assumed to come from lowered llvm.expect
 /// intrinsics. The RealWeights parameter and the extracted expected weights are
 /// then passed to verifyMisexpect() for verification
 ///
@@ -40,7 +40,7 @@ void checkBackendInstrumentation(Instruction &I,
 /// checkFrontendInstrumentation - compares PGO counters to the thresholds used
 /// for llvm.expect and warns if the PGO counters are outside of the expected
 /// range. It extracts the expected weights from the MD_prof weights attatched
-/// to the instruction, which are are assumed to come from profiling data
+/// to the instruction, which are assumed to come from profiling data
 /// attached by the frontend prior to llvm.expect intrinsic lowering. The
 /// ExpectedWeights parameter and the extracted real weights are then passed to
 /// verifyMisexpect() for verification
@@ -64,7 +64,7 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 /// checkExpectAnnotations - compares PGO counters to the thresholds used
 /// for llvm.expect and warns if the PGO counters are outside of the expected
 /// range. It extracts the expected weights from the MD_prof weights attatched
-/// to the instruction, which are are assumed to come from lowered llvm.expect
+/// to the instruction, which are assumed to come from lowered llvm.expect
 /// intrinsics. The RealWeights parameter and the extracted expected weights are
 /// then passed to verifyMisexpect() for verification. It is a thin wrapper
 /// around the checkFrontendInstrumentation and checkBackendInstrumentation APIs
