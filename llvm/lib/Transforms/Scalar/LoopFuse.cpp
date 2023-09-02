@@ -1411,7 +1411,7 @@ private:
     }
 
     // Walk through all uses in FC1. For each use, find the reaching def. If the
-    // def is located in FC0 then it is is not safe to fuse.
+    // def is located in FC0 then it is not safe to fuse.
     for (BasicBlock *BB : FC1.L->blocks())
       for (Instruction &I : *BB)
         for (auto &Op : I.operands())
@@ -1491,7 +1491,7 @@ private:
   ///   2. The successors of the guard have the same flow into/around the loop.
   /// If the compare instructions are identical, then the first successor of the
   /// guard must go to the same place (either the preheader of the loop or the
-  /// NonLoopBlock). In other words, the the first successor of both loops must
+  /// NonLoopBlock). In other words, the first successor of both loops must
   /// both go into the loop (i.e., the preheader) or go around the loop (i.e.,
   /// the NonLoopBlock). The same must be true for the second successor.
   bool haveIdenticalGuards(const FusionCandidate &FC0,
@@ -1624,7 +1624,7 @@ private:
     // first, or undef otherwise. This is sound as exiting the first implies the
     // second will exit too, __without__ taking the back-edge. [Their
     // trip-counts are equal after all.
-    // KB: Would this sequence be simpler to just just make FC0.ExitingBlock go
+    // KB: Would this sequence be simpler to just make FC0.ExitingBlock go
     // to FC1.Header? I think this is basically what the three sequences are
     // trying to accomplish; however, doing this directly in the CFG may mean
     // the DT/PDT becomes invalid

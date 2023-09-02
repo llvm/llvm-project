@@ -2741,7 +2741,7 @@ void ELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) const {
     return;
 
   std::vector<size_t> ChainLen(NBucket, 0);
-  // Go over all buckets and and note chain lengths of each bucket (total
+  // Go over all buckets and note chain lengths of each bucket (total
   // unique chain lengths).
   for (size_t B = 0; B < NBucket; ++B) {
     BitVector Visited(NChain);

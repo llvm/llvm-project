@@ -6204,7 +6204,7 @@ static DecodeStatus DecoderForMRRC2AndMCRR2(MCInst &Inst, unsigned Val,
   // We have to check if the instruction is MRRC2
   // or MCRR2 when constructing the operands for
   // Inst. Reason is because MRRC2 stores to two
-  // registers so it's tablegen desc has has two
+  // registers so it's tablegen desc has two
   // outputs whereas MCRR doesn't store to any
   // registers so all of it's operands are listed
   // as inputs, therefore the operand order for

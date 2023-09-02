@@ -3229,7 +3229,7 @@ bool CombinerHelper::matchFoldBinOpIntoSelect(MachineInstr &MI,
 
   unsigned BinOpcode = MI.getOpcode();
 
-  // We know know one of the operands is a select of constants. Now verify that
+  // We know that one of the operands is a select of constants. Now verify that
   // the other binary operator operand is either a constant, or we can handle a
   // variable.
   bool CanFoldNonConst =

@@ -1174,7 +1174,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // MO_TAGGED on the page indicates a tagged address. Set the tag now. We do so
   // by creating a MOVK that sets bits 48-63 of the register to (global address
   // + 0x100000000 - PC) >> 48. The additional 0x100000000 offset here is to
-  // prevent an incorrect tag being generated during relocation when the the
+  // prevent an incorrect tag being generated during relocation when the
   // global appears before the code section. Without the offset, a global at
   // `0x0f00'0000'0000'1000` (i.e. at `0x1000` with tag `0xf`) that's referenced
   // by code at `0x2000` would result in `0x0f00'0000'0000'1000 - 0x2000 =
