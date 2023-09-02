@@ -58,18 +58,18 @@
 
 // RUN: llvm-ar cr %t/hipBundled2.lib %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -lhipBundled2 \
+// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -lhipBundled2 \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -l:hipBundled2.lib \
+// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -l:hipBundled2.lib \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc %t/hipBundled2.lib \
+// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/hipBundled2.lib \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // GNU1: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a]]" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"

@@ -645,7 +645,8 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleImage(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
-    Buffers.emplace_back(OffloadBinary::write(Image));
+    Buffers.emplace_back(
+	MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
 
   return std::move(Buffers);
 }
