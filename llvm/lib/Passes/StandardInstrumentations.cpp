@@ -899,7 +899,7 @@ void DumpIRInstrumentation::dumpAfterPass(StringRef PassID, Any IR) {
   unwrapAndPrint(OS, IR);
 }
 
-bool DumpIRInstrumentation::shouldDumpBeforePass(StringRef PassID) {
+bool DumpIRInstrumentation::shouldDumpBeforePass(StringRef PassID) const {
   if (shouldDumpBeforeAll())
     return true;
 
@@ -907,7 +907,7 @@ bool DumpIRInstrumentation::shouldDumpBeforePass(StringRef PassID) {
   return is_contained(dumpBeforePasses(), PassName);
 }
 
-bool DumpIRInstrumentation::shouldDumpAfterPass(StringRef PassID) {
+bool DumpIRInstrumentation::shouldDumpAfterPass(StringRef PassID) const {
   if (shouldDumpAfterAll())
     return true;
 
@@ -930,7 +930,7 @@ void DumpIRInstrumentation::pushPass(StringRef PassID, Any IR) {
   }
 
   PassRunsFrequencyTableT &FreqTable = PipelineStateStack.back().FreqTable;
-  if (FreqTable.find(PassID) == FreqTable.end())
+  if (!FreqTable.count(PassID))
     FreqTable[PassID] = 0;
 
   PipelineStateStack.push_back(PipelineStateStackFrame(PassID));
@@ -997,12 +997,10 @@ DumpIRInstrumentation::fetchCurrentInstrumentationDumpFile(StringRef Suffix) {
 
   // Make sure the directory we wish to write our log file into exists.
   StringRef ParentDirectory = sys::path::parent_path(OutputPath);
-  if (!ParentDirectory.empty()) {
-    if (auto EC = llvm::sys::fs::create_directories(ParentDirectory)) {
+  if (!ParentDirectory.empty())
+    if (auto EC = llvm::sys::fs::create_directories(ParentDirectory))
       report_fatal_error(Twine("Failed to create directory '") +
                          ParentDirectory + "' :" + EC.message());
-    }
-  }
 
   return OutputPath;
 }

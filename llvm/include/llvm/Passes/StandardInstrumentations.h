@@ -77,8 +77,8 @@ private:
   void dumpBeforePass(StringRef PassID, Any IR);
   void dumpAfterPass(StringRef PassID, Any IR);
 
-  bool shouldDumpBeforePass(StringRef PassID);
-  bool shouldDumpAfterPass(StringRef PassID);
+  bool shouldDumpBeforePass(StringRef PassID) const;
+  bool shouldDumpAfterPass(StringRef PassID) const;
 
   PassInstrumentationCallbacks *PIC;
 
@@ -95,7 +95,7 @@ private:
 
   // A table to store how many times a given pass has run at the current "nested
   // level"
-  using PassRunsFrequencyTableT = DenseMap<StringRef, unsigned>;
+  using PassRunsFrequencyTableT = StringMap<unsigned>;
   // A stack each frame of which (aside from the very first) represents a pass
   // being run on some unit of IR. The larger, the stack grows, the smaller the
   // unit of IR. For example, we would first push a module pass, then for each
