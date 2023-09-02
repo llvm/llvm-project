@@ -291,11 +291,6 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
-  This macro can be used to disable diagnostics emitted from functions marked
-  ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.
