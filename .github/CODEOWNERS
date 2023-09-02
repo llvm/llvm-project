@@ -528,3 +528,18 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/test/CodeGen/X86/ @llvm/pr-subscribers-x86
 /clang/include/clang/Basic/BuiltinsX86* @llvm/pr-subscribers-x86
 
+# MLGO
+/llvm/lib/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/lib/Analysis/*Runner.cpp @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/*Runner.h @llvm/pr-subscribers-mlgo
+/llvm/unittests/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/lib/Analysis/FunctionPropertiesAnalysis.cpp @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/FunctionPropertiesAnalysis.h @llvm/pr-subscribers-mlgo
+/llvm/test/Analysis/FunctionPropertiesAnalysis/* @llvm/pr-subscribers-mlgo
+/llvm/unittests/Analysis/FunctionPropertiesAnalysisTest.cpp @llvm/pr-subscribers-mlgo
+/llvm/test/Transforms/inline/ML/ @llvm/pr-subscribers-mlgo
+/llvm/lib/CodeGen/ML* @llvm/pr-subscribers-mlgo
+/llvm/unittests/CodeGen/ML* @llvm/pr-subscribers-mlgo
+/llvm/test/CodeGen/MLRegalloc/ @llvm/pr-subscribers-mlgo
+
