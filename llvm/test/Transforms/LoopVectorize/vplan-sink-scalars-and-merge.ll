@@ -906,7 +906,7 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%l1> = load ir<%src>
 ; CHECK-NEXT:     REPLICATE ir<%l2> = trunc ir<%l1>
-; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp ir<%l1>, ir<0>
+; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
 ; CHECK-NEXT:     REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
 ; CHECK-NEXT:     REPLICATE store ir<%sel>, ir<%dst>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
