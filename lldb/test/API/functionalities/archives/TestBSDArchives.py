@@ -70,12 +70,6 @@ class BSDArchivesTestCase(TestBase):
         )
         self.expect_var_path("__b_global", type="int", value="2")
 
-        # Test loading thin archives
-        archive_path = self.getBuildArtifact("libbar.a")
-        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(archive_path)
-        num_specs = module_specs.GetSize()
-        self.assertEqual(num_specs, 1)
-        self.assertEqual(module_specs.GetSpecAtIndex(0).GetObjectName(), "c.o")
 
     def check_frame_variable_errors(self, thread, error_strings):
         command_result = lldb.SBCommandReturnObject()
@@ -130,6 +124,53 @@ class BSDArchivesTestCase(TestBase):
         self.check_frame_variable_errors(thread, error_strings)
 
     @skipIfRemote
+    def test_archive_specifications(self):
+        """
+        Create archives and make sure the information we get when retrieving
+        the modules specifications is correct.
+        """
+        self.build()
+        libbar_path = self.getBuildArtifact("libbar.a")
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        libfoothin_path = self.getBuildArtifact("libfoo-thin.a")
+        objfile_a = self.getBuildArtifact("a.o")
+        objfile_b = self.getBuildArtifact("b.o")
+        objfile_c = self.getBuildArtifact("c.o")
+        size_a = os.path.getsize(objfile_a)
+        size_b = os.path.getsize(objfile_b)
+        size_c = os.path.getsize(objfile_c)
+
+        # Test loading normal archives
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
+        num_specs = module_specs.GetSize()
+        self.assertEqual(num_specs, 2)
+        spec = module_specs.GetSpecAtIndex(0)
+        self.assertEqual(spec.GetObjectName(), "a.o")
+        self.assertEqual(spec.GetObjectSize(), size_a)
+        spec = module_specs.GetSpecAtIndex(1)
+        self.assertEqual(spec.GetObjectName(), "b.o")
+        self.assertEqual(spec.GetObjectSize(), size_b)
+
+        # Test loading thin archives
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libbar_path)
+        num_specs = module_specs.GetSize()
+        self.assertEqual(num_specs, 1)
+        spec = module_specs.GetSpecAtIndex(0)
+        self.assertEqual(spec.GetObjectName(), "c.o")
+        self.assertEqual(spec.GetObjectSize(), size_c)
+
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoothin_path)
+        num_specs = module_specs.GetSize()
+        self.assertEqual(num_specs, 2)
+        spec = module_specs.GetSpecAtIndex(0)
+        self.assertEqual(spec.GetObjectName(), "a.o")
+        self.assertEqual(spec.GetObjectSize(), size_a)
+        spec = module_specs.GetSpecAtIndex(1)
+        self.assertEqual(spec.GetObjectName(), "b.o")
+        self.assertEqual(spec.GetObjectSize(), size_b, libfoothin_path)
+
+
+    @skipIfRemote
     @skipUnlessDarwin
     def test_frame_var_errors_when_thin_archive_malformed(self):
         """
@@ -142,6 +183,8 @@ class BSDArchivesTestCase(TestBase):
         libfoo_path = self.getBuildArtifact("libfoo.a")
         libthin_path = self.getBuildArtifact("libfoo-thin.a")
         objfile_a = self.getBuildArtifact("a.o")
+        objfile_b = self.getBuildArtifact("b.o")
+        objfile_c = self.getBuildArtifact("c.o")
         # Replace the libfoo.a file with a thin archive containing the same
         # debug information (a.o, b.o). Then remove a.o from the file system
         # so we force an error when we set a breakpoint on a() function.
