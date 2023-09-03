@@ -498,9 +498,11 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/TargetParser/RISCVTargetParser.h @llvm/pr-subscribers-riscv
 /llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/lib/TargetParser/RISCVTargetParser.cpp @llvm/pr-subscribers-riscv
+/llvm/test/Analysis/CostModel/RISCV/ @llvm/pr-subscribers-x86
 /llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/tools/llvm-mca/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/utils/TableGen/RISCVTargetDefEmitter.cpp @llvm/pr-subscribers-riscv
 /clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
 /clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
