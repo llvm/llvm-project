@@ -495,14 +495,22 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # riscv
 /llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
+/llvm/include/llvm/TargetParser/RISCVTargetParser.h @llvm/pr-subscribers-riscv
 /llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/lib/TargetParser/RISCVTargetParser.cpp @llvm/pr-subscribers-riscv
 /llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/utils/TableGen/RISCVTargetDefEmitter.cpp @llvm/pr-subscribers-riscv
 /clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
 /clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
 /clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
+/clang/lib/Sema/SemaRISCVVectorLookup.cpp @llvm/pr-subscribers-riscv
 /clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riscv
+/clang/include/clang/Basic/riscv_*.td @llvm/pr-subscribers-riscv
+/clang/include/clang/Sema/RISCVIntrinsicManager.h @llvm/pr-subscribers-riscv
+/clang/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
+/clang/utils/TableGen/RISCVVEmitter.cpp @llvm/pr-subscribers-riscv
 
 # sparc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
