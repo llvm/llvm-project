@@ -34,15 +34,16 @@ namespace clang::tidy::modernize {
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-delete.html
 class UseEqualsDeleteCheck : public ClangTidyCheck {
 public:
-  UseEqualsDeleteCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+  UseEqualsDeleteCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   const bool IgnoreMacros;
