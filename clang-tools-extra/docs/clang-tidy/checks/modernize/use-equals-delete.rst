@@ -10,14 +10,11 @@ private function) or a linker error (undefined reference).
 After C++11, the more idiomatic way to achieve this is by marking the functions
 as ``= delete``, and keeping them in the ``public`` section.
 
-This check marks unimplemented private special member functions with ``= delete``.
-Additionally, it warns about ``delete``'d functions still kept in the ``private``
-section, that should be moved to the ``public`` one instead.
-
+This check warns only on unimplemented private **special member functions**.
 To avoid false-positives, this check only applies in a translation unit that has
 all other member functions implemented. The check will generate partial fixes
-by adding ``= delete``, but the user must manually move it to the ``public``
-section.
+by adding ``= delete``, but the move the ``public`` section needs to be done
+manually.
 
 .. code-block:: c++
 
