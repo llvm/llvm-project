@@ -495,9 +495,9 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # riscv
 /llvm/**/*RISCV* @llvm/pr-subscribers-riscv
+/llvm/**/*riscv* @llvm/pr-subscribers-riscv
 /clang/**/*RISCV* @llvm/pr-subscribers-riscv
-/clang/include/clang/Basic/riscv_*.td @llvm/pr-subscribers-riscv
-/clang/lib/Headers/riscv_* @llvm/pr-subscribers-riscv
+/clang/**/*riscv* @llvm/pr-subscribers-riscv
 
 # sparc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
