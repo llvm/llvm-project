@@ -3333,7 +3333,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.expandVACopy(Node));
     break;
   case ISD::EXTRACT_VECTOR_ELT:
-    if (Node->getOperand(0).getValueType().getVectorNumElements() == 1)
+    if (Node->getOperand(0).getValueType().getVectorElementCount().isScalar())
       // This must be an access of the only element.  Return it.
       Tmp1 = DAG.getNode(ISD::BITCAST, dl, Node->getValueType(0),
                          Node->getOperand(0));
@@ -4419,6 +4419,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::EXP2_F32, RTLIB::EXP2_F64, RTLIB::EXP2_F80,
                     RTLIB::EXP2_F128, RTLIB::EXP2_PPCF128, Results);
     break;
+  case ISD::FEXP10:
+    ExpandFPLibCall(Node, RTLIB::EXP10_F32, RTLIB::EXP10_F64, RTLIB::EXP10_F80,
+                    RTLIB::EXP10_F128, RTLIB::EXP10_PPCF128, Results);
+    break;
   case ISD::FTRUNC:
   case ISD::STRICT_FTRUNC:
     ExpandFPLibCall(Node, RTLIB::TRUNC_F32, RTLIB::TRUNC_F64,
@@ -5302,6 +5306,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FABS:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(

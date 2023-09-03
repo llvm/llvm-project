@@ -617,6 +617,9 @@ HANDLE_TARGET_OPCODE(G_FEXP)
 /// Generic base-2 exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP2)
 
+/// Generic base-10 exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP10)
+
 /// Floating point base-e logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG)
 

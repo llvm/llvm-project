@@ -6,12 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
-//
 // This file contains definitions for the following classes:
 //
 // * `SparseTensorStorageBase`
@@ -19,14 +13,6 @@
 // * `SparseTensorEnumeratorBase<V>`
 // * `SparseTensorEnumerator<P, C, V>`
 // * `SparseTensorNNZ`
-//
-// Ideally we would split the storage classes and enumerator classes
-// into separate files, to improve legibility.  But alas: because these
-// are template-classes, they must therefore provide *definitions* in the
-// header; and those definitions cause circular dependencies that make it
-// impossible to split the file up along the desired lines.  (We could
-// split the base classes from the derived classes, but that doesn't
-// particularly help improve legibility.)
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,13 +24,6 @@
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
-
-#if defined(__cplusplus) && defined(__has_cpp_attribute) &&                    \
-    __has_cpp_attribute(gsl::Pointer)
-#define MLIR_SPARSETENSOR_GSL_POINTER [[gsl::Pointer]]
-#else
-#define MLIR_SPARSETENSOR_GSL_POINTER
-#endif
 
 namespace mlir {
 namespace sparse_tensor {
@@ -75,9 +54,8 @@ inline void assertIsPermutation(uint64_t size, const uint64_t *perm) {
 #endif
 }
 
-/// A non-owning class for capturing the knowledge that `isPermutation`
-/// is true, to avoid needing to assert it repeatedly.
-class MLIR_SPARSETENSOR_GSL_POINTER [[nodiscard]] PermutationRef final {
+/// A class for capturing the knowledge that `isPermutation` is true.
+class PermutationRef final {
 public:
   /// Asserts `isPermutation` and returns the witness to that being true.
   explicit PermutationRef(uint64_t size, const uint64_t *perm)
@@ -870,7 +848,7 @@ private:
 /// than simply using this class, is to avoid the cost of virtual-method
 /// dispatch within the loop-nest.
 template <typename V>
-class MLIR_SPARSETENSOR_GSL_POINTER [[nodiscard]] SparseTensorEnumeratorBase {
+class SparseTensorEnumeratorBase {
 public:
   /// Constructs an enumerator which automatically applies the given
   /// mapping from the source tensor's dimensions to the desired
@@ -938,7 +916,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class MLIR_SPARSETENSOR_GSL_POINTER [[nodiscard]] SparseTensorEnumerator final
+class SparseTensorEnumerator final
     : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
@@ -1027,7 +1005,7 @@ private:
 /// This class does not have the "dimension" vs "level" distinction, but
 /// since it is used for initializing the levels of a `SparseTensorStorage`
 /// object, we use the "level" name throughout for the sake of consistency.
-class MLIR_SPARSETENSOR_GSL_POINTER [[nodiscard]] SparseTensorNNZ final {
+class SparseTensorNNZ final {
 public:
   /// Allocates the statistics structure for the desired target-tensor
   /// level structure (i.e., sizes and types).  This constructor does not
