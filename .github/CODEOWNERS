@@ -446,6 +446,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
 /llvm/lib/Target/ARM/ @llvm/pr-subscribers-arm
 /llvm/test/CodeGen/ARM/ @llvm/pr-subscribers-arm
+/llvm/test/MC/ARM/ @llvm/pr-subscribers-arm
+/llvm/test/MC/DisasemblerARM/ @llvm/pr-subscribers-arm
 /clang/lib/Basic/Targets/ARM* @llvm/pr-subscribers-arm
 /clang/lib/Driver/ToolChains/Arch/ARM.* @llvm/pr-subscribers-arm
 /clang/lib/CodeGen/Targets/ARM.cpp @llvm/pr-subscribers-arm
@@ -455,6 +457,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsAArch64.td @llvm/pr-subscribers-AArch64
 /llvm/lib/Target/AArch64/ @llvm/pr-subscribers-AArch64
 /llvm/test/CodeGen/AArch64/ @llvm/pr-subscribers-AArch64
+/llvm/test/MC/AArch64/ @llvm/pr-subscribers-AArch64
+/llvm/test/MC/Disassembler/AArch64/ @llvm/pr-subscribers-AArch64
 /clang/lib/Basic/Targets/AArch64* @llvm/pr-subscribers-AArch64
 /clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
@@ -472,6 +476,7 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
 /llvm/lib/Target/LoongArch/ @llvm/pr-subscribers-loongarch
 /llvm/test/CodeGen/LoongArch/ @llvm/pr-subscribers-loongarch
+/llvm/test/MC/LoongArch/ @llvm/pr-subscribers-loongarch
 /clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
 /clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
@@ -481,6 +486,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsMSP430.td @llvm/pr-subscribers-msp430
 /llvm/lib/Target/MSP430/ @llvm/pr-subscribers-msp430
 /llvm/test/CodeGen/MSP430/ @llvm/pr-subscribers-msp430
+/llvm/test/MC/MSP430/ @llvm/pr-subscribers-msp430
+/llvm/test/MC/Disassembler/MSP430/ @llvm/pr-subscribers-msp430
 /clang/lib/Basic/Targets/MSP430* @llvm/pr-subscribers-msp430
 /clang/lib/Driver/ToolChains/Arch/MSP430.* @llvm/pr-subscribers-msp430
 /clang/lib/CodeGen/Targets/MSP430.cpp @llvm/pr-subscribers-msp430
@@ -490,6 +497,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
 /llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
 /clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
 /clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
 /clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
@@ -499,6 +508,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
 /llvm/lib/Target/Sparc/ @llvm/pr-subscribers-sparc
 /llvm/test/CodeGen/Sparc/ @llvm/pr-subscribers-sparc
+/llvm/test/MC/Sparc/ @llvm/pr-subscribers-sparc
+/llvm/test/MC/Disassembler/Sparc/ @llvm/pr-subscribers-sparc
 /clang/lib/Basic/Targets/Sparc* @llvm/pr-subscribers-sparc
 /clang/lib/Driver/ToolChains/Arch/Sparc.* @llvm/pr-subscribers-sparc
 /clang/lib/CodeGen/Targets/Sparc.cpp @llvm/pr-subscribers-sparc
