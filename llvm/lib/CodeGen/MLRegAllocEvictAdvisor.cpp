@@ -21,7 +21,7 @@
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #endif
-#include "MLRegallocEvictAdvisor.h"
+#include "MLRegAllocEvictAdvisor.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -48,8 +48,8 @@ using namespace llvm;
 
 // Generated header in release (AOT) mode
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
-#include "RegallocEvictModel.h"
-using CompiledModelType = RegallocEvictModel;
+#include "RegAllocEvictModel.h"
+using CompiledModelType = RegAllocEvictModel;
 #else
 using CompiledModelType = NoopSavedModelImpl;
 #endif
