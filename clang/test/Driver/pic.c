@@ -324,3 +324,9 @@
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ
 // RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ
+
+// On Haiku, PIC is enabled by default, and PIE is disabled by default.
+// RUN: %clang -c %s --target=x86_64-unknown-haiku -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s --target=i586-pc-haiku -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
