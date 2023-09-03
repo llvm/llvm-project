@@ -12,15 +12,21 @@ define void @foo(i1 %0) {
 ; CHECK-NEXT:    [[V:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @set_value(ptr [[V]])
 ; CHECK-NEXT:    [[L1:%.*]] = load i64, ptr [[V]], align 8
-; CHECK-NEXT:    br i1 [[TMP0]], label [[BB0:%.*]], label [[BB4:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB0:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i64 [[L1]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[BB1:%.*]], label [[BB4]]
-; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C1]], label [[BB2_THREAD:%.*]], label [[BB2]]
+; CHECK:       bb2.thread:
 ; CHECK-NEXT:    store i64 0, ptr [[V]], align 8
-; CHECK-NEXT:    br label [[BB4]]
+; CHECK-NEXT:    br label [[BB4:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[L2:%.*]] = phi i64 [ [[L1]], [[BB0]] ], [ [[L1]], [[START:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[L2]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB3:%.*]], label [[BB4]]
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[L2:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[L1]], [[BB0]] ], [ [[L1]], [[START:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 start:

@@ -465,6 +465,10 @@ public:
     F.print(OS, &Writer);
   }
 
+  /// This is part of the update interface to remove information related to this
+  /// value from the cache.
+  void forgetValue(Value *V) { TheCache.eraseValue(V); }
+
   /// This is part of the update interface to inform the cache
   /// that a block has been deleted.
   void eraseBlock(BasicBlock *BB) {
@@ -1967,6 +1971,11 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
     getImpl(PImpl, AC, PredBB->getModule())
         .threadEdge(PredBB, OldSucc, NewSucc);
   }
+}
+
+void LazyValueInfo::forgetValue(Value *V) {
+  if (PImpl)
+    getImpl(PImpl, AC, nullptr).forgetValue(V);
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
