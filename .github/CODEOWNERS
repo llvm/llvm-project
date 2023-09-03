@@ -388,6 +388,7 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
 # selection-dag
 /llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
+/llvm/include/llvm/CodeGen/ISDOpcodes.h @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/CodeGen/SelectionDAG*.h @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/CodeGen/SDNodeProperties.td @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/Target/TargetSelectionDAG.td @llvm/pr-subscribers-selectiondag
