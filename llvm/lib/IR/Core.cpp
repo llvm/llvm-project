@@ -3758,6 +3758,8 @@ LLVMAtomicOrdering LLVMGetOrdering(LLVMValueRef MemAccessInst) {
     O = LI->getOrdering();
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
     O = SI->getOrdering();
+  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
+    O = FI->getOrdering();
   else
     O = cast<AtomicRMWInst>(P)->getOrdering();
   return mapToLLVMOrdering(O);
@@ -3769,6 +3771,8 @@ void LLVMSetOrdering(LLVMValueRef MemAccessInst, LLVMAtomicOrdering Ordering) {
 
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
     return LI->setOrdering(O);
+  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
+    return FI->setOrdering(O);
   return cast<StoreInst>(P)->setOrdering(O);
 }
 
@@ -4039,6 +4043,12 @@ LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
 
   if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
     return I->getSyncScopeID() == SyncScope::SingleThread;
+  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
+    return FI->getSyncScopeID() == SyncScope::SingleThread;
+  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
+    return SI->getSyncScopeID() == SyncScope::SingleThread;
+  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
+    return LI->getSyncScopeID() == SyncScope::SingleThread;
   return cast<AtomicCmpXchgInst>(P)->getSyncScopeID() ==
              SyncScope::SingleThread;
 }
@@ -4049,6 +4059,12 @@ void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
 
   if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
     return I->setSyncScopeID(SSID);
+  else if (FenceInst *FI = dyn_cast<FenceInst>(P))
+    return FI->setSyncScopeID(SSID);
+  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
+    return SI->setSyncScopeID(SSID);
+  else if (LoadInst *LI = dyn_cast<LoadInst>(P))
+    return LI->setSyncScopeID(SSID);
   return cast<AtomicCmpXchgInst>(P)->setSyncScopeID(SSID);
 }
 
