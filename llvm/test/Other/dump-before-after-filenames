@@ -24,12 +24,12 @@
 ; RUN: find %t/logs -type f -print | FileCheck %s --check-prefix=MULTIPLE-NESTED-RUNS -DSOURCE_FILE_NAME=%s
 ; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/0.NoOpModulePass.0-before.ll
 ; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/0.NoOpModulePass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.NoOpFunctionPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.NoOpFunctionPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{(llvm::)?}}Function>.1/0.NoOpFunctionPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{(llvm::)?}}Function>.1/0.NoOpFunctionPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{(llvm::)?}}Loop, {{(llvm::)?}}AnalysisManager<{{(llvm::)?}}Loop, {{(llvm::)?}}LoopStandardAnalysisResults&>, {{(llvm::)?}}LoopStandardAnalysisResults&, {{(llvm::)?}}LPMUpdater&>.0/0.NoOpLoopPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{(llvm::)?}}Loop, {{(llvm::)?}}AnalysisManager<{{(llvm::)?}}Loop, {{(llvm::)?}}LoopStandardAnalysisResults&>, {{(llvm::)?}}LoopStandardAnalysisResults&, {{(llvm::)?}}LPMUpdater&>.0/0.NoOpLoopPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.NoOpFunctionPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.NoOpFunctionPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{[^/]+}}>.1/0.NoOpFunctionPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{[^/]+}}>.1/0.NoOpFunctionPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{[^/]+}}>.0/0.NoOpLoopPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{[^/]+}}>.0/0.NoOpLoopPass.0-after.ll
 ; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/3.NoOpModulePass.1-before.ll
 ; MULTIPLE-NESTED-RUNS-DAG: [[SOURCE_FILE_NAME]]/3.NoOpModulePass.1-after.ll
 ; RUN: rm -rf %t/logs
@@ -39,20 +39,20 @@
 ; RUN: find %t/logs -type f -print | FileCheck %s --check-prefix=MULTIPLE-NESTED-RUNS-DUMP-ALL -DSOURCE_FILE_NAME=%s
 ; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/0.NoOpModulePass.0-before.ll
 ; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/0.NoOpModulePass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.NoOpFunctionPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.NoOpFunctionPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{(llvm::)?}}Function>.1/0.NoOpFunctionPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{(llvm::)?}}Function>.1/0.NoOpFunctionPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{(llvm::)?}}Function>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.LoopSimplifyPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{(llvm::)?}}Function>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.LoopSimplifyPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{(llvm::)?}}Function>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/1.LCSSAPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{(llvm::)?}}Function>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/1.LCSSAPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.LoopSimplifyPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/0.LoopSimplifyPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/1.LCSSAPass.0-before.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{(llvm::)?}}Function>.0/1.LCSSAPass.0-after.ll
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{(llvm::)?}}Loop, {{(llvm::)?}}AnalysisManager<{{(llvm::)?}}Loop, {{(llvm::)?}}LoopStandardAnalysisResults&>, {{(llvm::)?}}LoopStandardAnalysisResults&, {{(llvm::)?}}LPMUpdater&>.0/0.NoOpLoopPass.0-before.l
-; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{(llvm::)?}}Function>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{(llvm::)?}}Loop, {{(llvm::)?}}AnalysisManager<{{(llvm::)?}}Loop, {{(llvm::)?}}LoopStandardAnalysisResults&>, {{(llvm::)?}}LoopStandardAnalysisResults&, {{(llvm::)?}}LPMUpdater&>.0/0.NoOpLoopPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.NoOpFunctionPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.NoOpFunctionPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{[^/]+}}>.1/0.NoOpFunctionPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/1.ModuleToFunctionPassAdaptor.0/1.PassManager<{{[^/]+}}>.1/0.NoOpFunctionPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{[^/]+}}>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.LoopSimplifyPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{[^/]+}}>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.LoopSimplifyPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{[^/]+}}>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/1.LCSSAPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/0.PassManager<{{[^/]+}}>.0/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/1.LCSSAPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.LoopSimplifyPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/0.LoopSimplifyPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/1.LCSSAPass.0-before.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/0.PassManager<{{[^/]+}}>.0/1.LCSSAPass.0-after.ll
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{[^/]+}}>.0/0.NoOpLoopPass.0-before.l
+; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/2.ModuleToFunctionPassAdaptor.1/1.PassManager<{{[^/]+}}>.1/0.FunctionToLoopPassAdaptor.0/1.PassManager<{{[^/]+}}>.0/0.NoOpLoopPass.0-after.ll
 ; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/3.NoOpModulePass.1-before.ll
 ; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/3.NoOpModulePass.1-after.ll
 ; MULTIPLE-NESTED-RUNS-DUMP-ALL-DAG: [[SOURCE_FILE_NAME]]/4.VerifierPass.0-before.ll
