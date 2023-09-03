@@ -4,8 +4,8 @@ source_filename = "test.cl"
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
 target triple = "amdgcn-amd-amdhsa"
 
-; CHECK: @llvm.amdgcn.kernel.hello.lds = internal addrspace(3) global %llvm.amdgcn.kernel.hello.lds.t undef, align 8, !absolute_symbol !{{[0-9]+}}, !dbg.def ![[HELLO_FRAGMENT:[0-9]+]]
-; CHECK: @llvm.amdgcn.kernel.bye.lds = internal addrspace(3) global %llvm.amdgcn.kernel.bye.lds.t undef, align 8, !absolute_symbol !{{[0-9]+}}, !dbg.def ![[BYE_FRAGMENT:[0-9]+]]
+; CHECK: @llvm.amdgcn.kernel.hello.lds = internal addrspace(3) global %llvm.amdgcn.kernel.hello.lds.t poison, align 8, !absolute_symbol !{{[0-9]+}}, !dbg.def ![[HELLO_FRAGMENT:[0-9]+]]
+; CHECK: @llvm.amdgcn.kernel.bye.lds = internal addrspace(3) global %llvm.amdgcn.kernel.bye.lds.t poison, align 8, !absolute_symbol !{{[0-9]+}}, !dbg.def ![[BYE_FRAGMENT:[0-9]+]]
 
 ; CHECK: ![[HELLO_FRAGMENT]] = distinct !DIFragment()
 ; CHECK: ![[BYE_FRAGMENT]] = distinct !DIFragment()

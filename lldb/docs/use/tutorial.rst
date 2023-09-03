@@ -360,7 +360,7 @@ That is better, but suffers from the problem that when new breakpoints get
 added, they don't pick up these modifications, and the options only exist in
 the context of actual breakpoints, so they are hard to store & reuse.
 
-A even better solution is to make a fully configured breakpoint name:
+An even better solution is to make a fully configured breakpoint name:
 
 ::
 

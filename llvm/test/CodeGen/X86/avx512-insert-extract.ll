@@ -175,9 +175,8 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) nounwind {
 ; KNL-LABEL: test11:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $4, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    testb $1, %al
+; KNL-NEXT:    testb $16, %al
 ; KNL-NEXT:    je LBB10_2
 ; KNL-NEXT:  ## %bb.1: ## %A
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -189,9 +188,8 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) nounwind {
 ; SKX-LABEL: test11:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; SKX-NEXT:    kshiftrw $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    testb $1, %al
+; SKX-NEXT:    testb $16, %al
 ; SKX-NEXT:    je LBB10_2
 ; SKX-NEXT:  ## %bb.1: ## %A
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -276,9 +274,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) nounwind {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; KNL-NEXT:    kshiftrw $4, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %ecx
-; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    testb $16, %cl
 ; KNL-NEXT:    cmoveq %rsi, %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -287,9 +284,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) nounwind {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; SKX-NEXT:    kshiftrb $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %ecx
-; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    testb $16, %cl
 ; SKX-NEXT:    cmoveq %rsi, %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -2203,23 +2199,21 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    kshiftlw $1, %k2, %k2
 ; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k1
-; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kmovw %k0, %edi
 ; KNL-NEXT:    xorl %eax, %eax
-; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    testb $1, %dil
 ; KNL-NEXT:    movl $0, %ecx
 ; KNL-NEXT:    je LBB85_2
 ; KNL-NEXT:  ## %bb.1:
-; KNL-NEXT:    movzwl 2(%rsi), %ecx
+; KNL-NEXT:    movzwl (%rsi), %ecx
 ; KNL-NEXT:  LBB85_2:
-; KNL-NEXT:    kmovw %k0, %edi
-; KNL-NEXT:    testb $1, %dil
+; KNL-NEXT:    testb $2, %dil
 ; KNL-NEXT:    je LBB85_4
 ; KNL-NEXT:  ## %bb.3:
-; KNL-NEXT:    movzwl (%rsi), %eax
+; KNL-NEXT:    movzwl 2(%rsi), %eax
 ; KNL-NEXT:  LBB85_4:
-; KNL-NEXT:    movw %ax, (%rdx)
-; KNL-NEXT:    movw %cx, 2(%rdx)
+; KNL-NEXT:    movw %ax, 2(%rdx)
+; KNL-NEXT:    movw %cx, (%rdx)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_concat_v2i1:
@@ -2253,23 +2247,21 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-NEXT:    kshiftrb $7, %k2, %k2
 ; SKX-NEXT:    korw %k1, %k2, %k1
 ; SKX-NEXT:    kandw %k1, %k0, %k0
-; SKX-NEXT:    kshiftrb $1, %k0, %k1
-; SKX-NEXT:    kmovd %k1, %ecx
+; SKX-NEXT:    kmovd %k0, %edi
 ; SKX-NEXT:    xorl %eax, %eax
-; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    testb $1, %dil
 ; SKX-NEXT:    movl $0, %ecx
 ; SKX-NEXT:    je LBB85_2
 ; SKX-NEXT:  ## %bb.1:
-; SKX-NEXT:    movzwl 2(%rsi), %ecx
+; SKX-NEXT:    movzwl (%rsi), %ecx
 ; SKX-NEXT:  LBB85_2:
-; SKX-NEXT:    kmovd %k0, %edi
-; SKX-NEXT:    testb $1, %dil
+; SKX-NEXT:    testb $2, %dil
 ; SKX-NEXT:    je LBB85_4
 ; SKX-NEXT:  ## %bb.3:
-; SKX-NEXT:    movzwl (%rsi), %eax
+; SKX-NEXT:    movzwl 2(%rsi), %eax
 ; SKX-NEXT:  LBB85_4:
-; SKX-NEXT:    movw %ax, (%rdx)
-; SKX-NEXT:    movw %cx, 2(%rdx)
+; SKX-NEXT:    movw %ax, 2(%rdx)
+; SKX-NEXT:    movw %cx, (%rdx)
 ; SKX-NEXT:    retq
   %tmp = load <2 x half>, ptr %arg, align 8
   %tmp3 = fcmp fast olt <2 x half> %tmp, <half 0xH4600, half 0xH4600>
@@ -2279,4 +2271,27 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
   %tmp7 = select <2 x i1> %tmp5, <2 x half> %tmp6, <2 x half> zeroinitializer
   store <2 x half> %tmp7, ptr %arg2, align 8
   ret void
+}
+
+; Check that an extracted bool element comparison is correctly extended when
+; the bool vector is bitcasted instead.
+define void @test_extractelement_v64i1_cmp0(<64 x i1> %0) nounwind {
+; KNL-LABEL: test_extractelement_v64i1_cmp0:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_extractelement_v64i1_cmp0:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+entry:
+  %1 = extractelement <64 x i1> %0, i64 0
+  br i1 %1, label %common.ret, label %2
+
+common.ret:                                       ; preds = %2, %entry
+  ret void
+
+2:                                                ; preds = %entry
+  %3 = extractelement <64 x i1> zeroinitializer, i64 0
+  br label %common.ret
 }
