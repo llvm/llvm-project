@@ -22,7 +22,7 @@ unit where all other member functions have been implemented. The check will
 generate partial fixes by introducing ``= delete``, but the user is responsible
 for manually relocating functions to the ``public`` section.
 
-.. code-block:: c
+.. code-block:: c++
 
   // Example: bad
   class A {
