@@ -1749,17 +1749,17 @@ const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
+bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
   ExprScope<Emitter> RootScope(this);
-  if (!visit(Exp))
+  if (!visit(E))
     return false;
 
-  if (Exp->getType()->isVoidType())
-    return this->emitRetVoid(Exp);
+  if (E->getType()->isVoidType())
+    return this->emitRetVoid(E);
 
-  if (std::optional<PrimType> T = classify(Exp))
-    return this->emitRet(*T, Exp);
-  return this->emitRetValue(Exp);
+  if (std::optional<PrimType> T = classify(E))
+    return this->emitRet(*T, E);
+  return this->emitRetValue(E);
 }
 
 /// Toplevel visitDecl().
