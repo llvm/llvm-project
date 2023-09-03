@@ -3943,7 +3943,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // inside the loop, create the final store here.
   if (StoreInst *SI = RdxDesc.IntermediateStore) {
     StoreInst *NewSI =
-        Builder.CreateStore(ReducedPartRdx, SI->getPointerOperand());
+        Builder.CreateAlignedStore(ReducedPartRdx, SI->getPointerOperand(),
+                                   SI->getAlign());
     propagateMetadata(NewSI, SI);
 
     // If the reduction value is used in other places,

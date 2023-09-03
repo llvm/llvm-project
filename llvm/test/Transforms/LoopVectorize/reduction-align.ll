@@ -18,7 +18,7 @@ define void @fn(ptr %hbuf, ptr %ref, i32 %height) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[REF]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[HBUF]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    store i16 [[ADD]], ptr [[HBUF]], align 2
+; CHECK-NEXT:    store i16 [[ADD]], ptr [[HBUF]], align 1
 ; CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
