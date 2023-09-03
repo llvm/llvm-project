@@ -3,20 +3,26 @@
 modernize-use-equals-delete
 ===========================
 
-Prior to C++11, the only way to "delete" a given function was to make it
-``private`` and without definition, to generate a compiler error (calling
-private function) or a linker error (undefined reference).
+Identifies unimplemented private special member functions, and recommends using
+``= delete`` for them, as well as relocating them from the ``private`` to the
+``public`` section.
 
-After C++11, the more idiomatic way to achieve this is by marking the functions
-as ``= delete``, and keeping them in the ``public`` section.
+Before the introduction of C11, the primary method to effectively "erase" a
+particular function involved declaring it as ``private`` without providing a
+definition. This approach would result in either a compiler error (when
+attempting to call a private function) or a linker error (due to an undefined
+reference).
 
-This check warns only on unimplemented private **special member functions**.
-To avoid false-positives, this check only applies in a translation unit that has
-all other member functions implemented. The check will generate partial fixes
-by adding ``= delete``, but the move the ``public`` section needs to be done
-manually.
+However, subsequent to the advent of C11, a more conventional approach emerged
+for achieving this purpose. It involves flagging functions as ``= delete`` and
+keeping them in the ``public`` section of the class.
 
-.. code-block:: c++
+To prevent false positives, this check is only active within a translation
+unit where all other member functions have been implemented. The check will
+generate partial fixes by introducing ``= delete``, but the user is responsible
+for manually relocating functions to the ``public`` section.
+
+.. code-block:: c
 
   // Example: bad
   class A {
