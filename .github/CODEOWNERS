@@ -283,6 +283,9 @@
 
 # m68k
 /llvm/lib/Target/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/CodeGen/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/MC/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/MC/Disassembler/M68k/ @llvm/pr-subscribers-m68k
 /clang/lib/Basic/Targets/M68k.* @llvm/pr-subscribers-m68k
 /clang/lib/CodeGen/Targets/M68k.cpp @llvm/pr-subscribers-m68k
 
