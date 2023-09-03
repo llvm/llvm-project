@@ -7,13 +7,13 @@ Identifies unimplemented private special member functions, and recommends using
 ``= delete`` for them, as well as relocating them from the ``private`` to the
 ``public`` section.
 
-Before the introduction of C11, the primary method to effectively "erase" a
+Before the introduction of C++11, the primary method to effectively "erase" a
 particular function involved declaring it as ``private`` without providing a
 definition. This approach would result in either a compiler error (when
 attempting to call a private function) or a linker error (due to an undefined
 reference).
 
-However, subsequent to the advent of C11, a more conventional approach emerged
+However, subsequent to the advent of C++11, a more conventional approach emerged
 for achieving this purpose. It involves flagging functions as ``= delete`` and
 keeping them in the ``public`` section of the class.
 
