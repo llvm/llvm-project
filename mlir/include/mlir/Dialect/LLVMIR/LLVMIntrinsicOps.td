@@ -329,7 +329,7 @@ def LLVM_NoAliasScopeDeclOp
   string llvmBuilder = [{
     // Wrap the scope argument into a list since the LLVM IR intrinsic takes
     // a list containing exactly one scope rather than a scope itself.
-    llvm::MDNode* node = moduleTranslation.getAliasScopes({$scope});
+    llvm::MDNode* node = moduleTranslation.getOrCreateAliasScopes({$scope});
     builder.CreateNoAliasScopeDeclaration(node);
   }];
   string mlirBuilder = [{

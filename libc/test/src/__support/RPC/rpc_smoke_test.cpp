@@ -49,36 +49,37 @@ TEST(LlvmLibcRPCSmoke, SanityCheck) {
   EXPECT_TRUE(ProcB.try_lock(lane_mask, index));
 
   // All zero to begin with
-  EXPECT_EQ(ProcA.load_inbox(index), 0u);
-  EXPECT_EQ(ProcB.load_inbox(index), 0u);
-  EXPECT_EQ(ProcA.load_outbox(index), 0u);
-  EXPECT_EQ(ProcB.load_outbox(index), 0u);
+  EXPECT_EQ(ProcA.load_inbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcB.load_inbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcA.load_outbox(lane_mask, index), 0u);
+  EXPECT_EQ(ProcB.load_outbox(lane_mask, index), 0u);
 
   // Available for ProcA and not for ProcB
-  EXPECT_FALSE(ProcA.buffer_unavailable(ProcA.load_inbox(index),
-                                        ProcA.load_outbox(index)));
-  EXPECT_TRUE(ProcB.buffer_unavailable(ProcB.load_inbox(index),
-                                       ProcB.load_outbox(index)));
+  EXPECT_FALSE(ProcA.buffer_unavailable(ProcA.load_inbox(lane_mask, index),
+                                        ProcA.load_outbox(lane_mask, index)));
+  EXPECT_TRUE(ProcB.buffer_unavailable(ProcB.load_inbox(lane_mask, index),
+                                       ProcB.load_outbox(lane_mask, index)));
 
   // ProcA write to outbox
-  uint32_t ProcAOutbox = ProcA.load_outbox(index);
+  uint32_t ProcAOutbox = ProcA.load_outbox(lane_mask, index);
   EXPECT_EQ(ProcAOutbox, 0u);
   ProcAOutbox = ProcA.invert_outbox(index, ProcAOutbox);
   EXPECT_EQ(ProcAOutbox, 1u);
 
   // No longer available for ProcA
-  EXPECT_TRUE(ProcA.buffer_unavailable(ProcA.load_inbox(index), ProcAOutbox));
+  EXPECT_TRUE(ProcA.buffer_unavailable(ProcA.load_inbox(lane_mask, index),
+                                       ProcAOutbox));
 
   // Outbox is still zero, hasn't been written to
-  EXPECT_EQ(ProcB.load_outbox(index), 0u);
+  EXPECT_EQ(ProcB.load_outbox(lane_mask, index), 0u);
 
   // Wait for ownership will terminate because load_inbox returns 1
-  EXPECT_EQ(ProcB.load_inbox(index), 1u);
-  ProcB.wait_for_ownership(index, 0u, 0u);
+  EXPECT_EQ(ProcB.load_inbox(lane_mask, index), 1u);
+  ProcB.wait_for_ownership(lane_mask, index, 0u, 0u);
 
   // and B now has the buffer available
-  EXPECT_FALSE(ProcB.buffer_unavailable(ProcB.load_inbox(index),
-                                        ProcB.load_outbox(index)));
+  EXPECT_FALSE(ProcB.buffer_unavailable(ProcB.load_inbox(lane_mask, index),
+                                        ProcB.load_outbox(lane_mask, index)));
 
   // Enough checks for one test, close the locks
   ProcA.unlock(lane_mask, index);

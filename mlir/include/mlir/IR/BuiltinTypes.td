@@ -913,7 +913,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     arguments of any rank without versioning the functions based on the rank.
     Other uses of this type are disallowed or will have undefined behavior.
 
-    See [MemRefType](#builtin_memref-memreftype) for more information on
+    See [MemRefType](#memreftype) for more information on
     memref types.
 
     Examples:
@@ -986,7 +986,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     ```
 
     An unranked tensor is a type of tensor in which the set of dimensions have
-    unknown rank. See [RankedTensorType](#builtin_rankedtensor-rankedtensortype)
+    unknown rank. See [RankedTensorType](#rankedtensortype)
     for more information on tensor types.
 
     Examples:

@@ -613,14 +613,12 @@ public:
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
-  virtual bool isLoad(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
+  virtual bool mayLoad(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).mayLoad();
   }
 
-  virtual bool isStore(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
+  virtual bool mayStore(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).mayStore();
   }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {

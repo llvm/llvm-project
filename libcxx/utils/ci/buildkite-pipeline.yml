@@ -1063,44 +1063,43 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  # TODO: Uncomment these jobs once the AIX builders have been fixed.
-  # - group: "AIX"
-  #   steps:
-  #   - label: "AIX (32-bit)"
-  #     command: "libcxx/utils/ci/run-buildbot aix"
-  #     artifact_paths:
-  #       - "**/test-results.xml"
-  #       - "**/*.abilist"
-  #     env:
-  #         CC: "clang"
-  #         CXX: "clang++"
-  #         OBJECT_MODE: "32"
-  #     agents:
-  #         queue: libcxx-builders
-  #         os: aix
-  #     retry:
-  #       automatic:
-  #         - exit_status: -1  # Agent was lost
-  #           limit: 2
-  #     timeout_in_minutes: 120
+  - group: "AIX"
+    steps:
+    - label: "AIX (32-bit)"
+      command: "libcxx/utils/ci/run-buildbot aix"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
+          CC: "clang"
+          CXX: "clang++"
+          OBJECT_MODE: "32"
+      agents:
+          queue: libcxx-builders
+          os: aix
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
 
-  #   - label: "AIX (64-bit)"
-  #     command: "libcxx/utils/ci/run-buildbot aix"
-  #     artifact_paths:
-  #       - "**/test-results.xml"
-  #       - "**/*.abilist"
-  #     env:
-  #         CC: "clang"
-  #         CXX: "clang++"
-  #         OBJECT_MODE: "64"
-  #     agents:
-  #         queue: libcxx-builders
-  #         os: aix
-  #     retry:
-  #       automatic:
-  #         - exit_status: -1  # Agent was lost
-  #           limit: 2
-  #     timeout_in_minutes: 120
+    - label: "AIX (64-bit)"
+      command: "libcxx/utils/ci/run-buildbot aix"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
+          CC: "clang"
+          CXX: "clang++"
+          OBJECT_MODE: "64"
+      agents:
+          queue: libcxx-builders
+          os: aix
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
 
   - group: ":freebsd: FreeBSD"
     steps:

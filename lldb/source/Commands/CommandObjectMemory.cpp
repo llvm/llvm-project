@@ -1795,7 +1795,7 @@ protected:
       return false;
     }
 
-    // Is is important that we track the address used to request the region as
+    // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
     // On Windows we get mutliple regions that start at the same place but are
     // different sizes and refer to different sections.

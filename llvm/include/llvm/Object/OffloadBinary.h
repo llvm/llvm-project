@@ -18,6 +18,7 @@
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
@@ -78,7 +79,7 @@ public:
   static Expected<std::unique_ptr<OffloadBinary>> create(MemoryBufferRef);
 
   /// Serialize the contents of \p File to a binary buffer to be read later.
-  static std::unique_ptr<MemoryBuffer> write(const OffloadingImage &);
+  static SmallString<0> write(const OffloadingImage &);
 
   static uint64_t getAlignment() { return 8; }
 

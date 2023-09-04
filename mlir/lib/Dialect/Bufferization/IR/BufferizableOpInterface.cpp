@@ -234,6 +234,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
                   });
 
     if (aliasingValues.getNumAliases() == 1 &&
+        isa<OpResult>(aliasingValues.getAliases()[0].value) &&
         !state.bufferizesToMemoryWrite(opOperand) &&
         state.getAliasingOpOperands(aliasingValues.getAliases()[0].value)
                 .getNumAliases() == 1 &&
@@ -498,11 +499,16 @@ bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
 bool AnalysisState::isValueRead(Value value) const {
   assert(llvm::isa<TensorType>(value.getType()) && "expected TensorType");
   SmallVector<OpOperand *> workingSet;
+  DenseSet<OpOperand *> visited;
   for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);
 
   while (!workingSet.empty()) {
     OpOperand *uMaybeReading = workingSet.pop_back_val();
+    if (visited.contains(uMaybeReading))
+      continue;
+    visited.insert(uMaybeReading);
+
     // Skip over all ops that neither read nor write (but create an alias).
     if (bufferizesToAliasOnly(*uMaybeReading))
       for (AliasingValue alias : getAliasingValues(*uMaybeReading))
@@ -522,11 +528,21 @@ bool AnalysisState::isValueRead(Value value) const {
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
     TraversalConfig config) const {
+  llvm::DenseSet<Value> visited;
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 
   while (!workingSet.empty()) {
     Value value = workingSet.pop_back_val();
+
+    if (!config.revisitAlreadyVisitedValues && visited.contains(value)) {
+      // Stop traversal if value was already visited.
+      if (config.alwaysIncludeLeaves)
+        result.insert(value);
+      continue;
+    }
+    visited.insert(value);
+
     if (condition(value)) {
       result.insert(value);
       continue;
@@ -659,11 +675,15 @@ bool AnalysisState::isTensorYielded(Value tensor) const {
   // preceding value, so we can follow SSA use-def chains and do a simple
   // analysis.
   SmallVector<OpOperand *> worklist;
+  DenseSet<OpOperand *> visited;
   for (OpOperand &use : tensor.getUses())
     worklist.push_back(&use);
 
   while (!worklist.empty()) {
     OpOperand *operand = worklist.pop_back_val();
+    if (visited.contains(operand))
+      continue;
+    visited.insert(operand);
     Operation *op = operand->getOwner();
 
     // If the op is not bufferizable, we can safely assume that the value is not

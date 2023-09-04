@@ -149,7 +149,7 @@ opportunities(Function &F,
 
       // Regardless whether referenced, add the function arguments as
       // replacement possibility with the goal of reducing the number of (used)
-      // function arguments, possibly created by the the operands-to-args.
+      // function arguments, possibly created by the operands-to-args.
       for (Argument &Arg : F.args())
         ReferencedVals.insert(&Arg);
 
@@ -185,7 +185,7 @@ opportunities(Function &F,
       std::reverse(Candidates.begin(), Candidates.end());
 
       // Independency of collectReferencedValues's idea of reductive power,
-      // ensure the the partial order of IsMoreReduced is enforced.
+      // ensure the partial order of IsMoreReduced is enforced.
       llvm::stable_sort(Candidates, IsMoreReduced);
 
       Callback(Op, Candidates);

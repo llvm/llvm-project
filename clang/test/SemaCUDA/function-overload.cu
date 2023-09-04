@@ -222,13 +222,7 @@ __host__ __device__ void hostdevicef() {
 // Test for address of overloaded function resolution in the global context.
 HostFnPtr fp_h = h;
 HostFnPtr fp_ch = ch;
-#if defined (__CUDA_ARCH__)
-__device__
-#endif
 CurrentFnPtr fp_dh = dh;
-#if defined (__CUDA_ARCH__)
-__device__
-#endif
 CurrentFnPtr fp_cdh = cdh;
 GlobalFnPtr fp_g = g;
 

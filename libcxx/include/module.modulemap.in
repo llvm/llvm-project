@@ -1575,6 +1575,7 @@ module std_private_memory_resource_unsynchronized_pool_resource [system] { heade
 
 module std_private_mutex_lock_guard  [system] { header "__mutex/lock_guard.h" }
 module std_private_mutex_mutex       [system] { header "__mutex/mutex.h" }
+module std_private_mutex_once_flag  [system]  { header "__mutex/once_flag.h" }
 module std_private_mutex_tag_types   [system] { header "__mutex/tag_types.h" }
 module std_private_mutex_unique_lock [system] { header "__mutex/unique_lock.h" }
 

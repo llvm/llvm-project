@@ -278,11 +278,6 @@ public:
     llvm::Instruction *IsActiveIP;
   };
 
-  struct EndLifetimeInfo {
-    llvm::Value *Addr;
-    llvm::Value *Size;
-  };
-
   void add(RValue rvalue, QualType type) { push_back(CallArg(rvalue, type)); }
 
   void addUncopiedAggregate(LValue LV, QualType type) {
@@ -299,9 +294,6 @@ public:
     CleanupsToDeactivate.insert(CleanupsToDeactivate.end(),
                                 other.CleanupsToDeactivate.begin(),
                                 other.CleanupsToDeactivate.end());
-    LifetimeCleanups.insert(LifetimeCleanups.end(),
-                            other.LifetimeCleanups.begin(),
-                            other.LifetimeCleanups.end());
     assert(!(StackBase && other.StackBase) && "can't merge stackbases");
     if (!StackBase)
       StackBase = other.StackBase;
@@ -341,14 +333,6 @@ public:
   /// memory.
   bool isUsingInAlloca() const { return StackBase; }
 
-  void addLifetimeCleanup(EndLifetimeInfo Info) {
-    LifetimeCleanups.push_back(Info);
-  }
-
-  ArrayRef<EndLifetimeInfo> getLifetimeCleanups() const {
-    return LifetimeCleanups;
-  }
-
 private:
   SmallVector<Writeback, 1> Writebacks;
 
@@ -356,10 +340,6 @@ private:
   /// is used to cleanup objects that are owned by the callee once the call
   /// occurs.
   SmallVector<CallArgCleanup, 1> CleanupsToDeactivate;
-
-  /// Lifetime information needed to call llvm.lifetime.end for any temporary
-  /// argument allocas.
-  SmallVector<EndLifetimeInfo, 2> LifetimeCleanups;
 
   /// The stacksave call.  It dominates all of the argument evaluation.
   llvm::CallInst *StackBase = nullptr;
@@ -395,10 +375,25 @@ public:
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
 };
 
-/// Helper to add attributes to \p F according to the CodeGenOptions and
-/// LangOptions without requiring a CodeGenModule to be constructed.
+/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
+/// though we had emitted it ourselves. We remove any attributes on F that
+/// conflict with the attributes we add here.
+///
+/// This is useful for adding attrs to bitcode modules that you want to link
+/// with but don't control, such as CUDA's libdevice.  When linking with such
+/// a bitcode library, you might want to set e.g. its functions'
+/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
+/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
+/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// function in the bitcode library!
+///
+/// With the exception of fast-math attrs, this will only make the attributes
+/// on the function more conservative.  But it's unsafe to call this on a
+/// function which relies on particular fast-math attributes for correctness.
+/// It's up to you to ensure that this is safe.
 void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
-                                              const CodeGenOptions CodeGenOpts,
+                                              const CodeGenOptions &CodeGenOpts,
                                               const LangOptions &LangOpts,
                                               const TargetOptions &TargetOpts,
                                               bool WillInternalize);

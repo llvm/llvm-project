@@ -22,7 +22,7 @@ wint_t wi0; // c99-error{{unknown type name 'wint_t'}} c11-error{{unknown type}}
 ptrdiff_t p1;
 size_t s1;
 rsize_t r1; // c99-error{{unknown type}} c11-error{{unknown type}} c23-error{{unknown type}}
-            // c99-note@stddef.h:*{{'size_t' declared here}} c11-note@stddef.h:*{{'size_t' declared here}} c23-note@stddef.h:*{{'size_t' declared here}}
+            // c99-note@__stddef_size_t.h:*{{'size_t' declared here}} c11-note@__stddef_size_t.h:*{{'size_t' declared here}} c23-note@__stddef_size_t.h:*{{'size_t' declared here}}
 wchar_t wc1;
 void *v1 = NULL;
 nullptr_t n1; // c99-error{{unknown type}} c11-error{{unknown type}}

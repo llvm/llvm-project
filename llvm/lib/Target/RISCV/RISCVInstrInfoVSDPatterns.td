@@ -1423,7 +1423,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 
 foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
-    def : Pat<(fvti.Vector (SplatFPOp fvti.ScalarRegClass:$rs1)),
+    def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl undef, fvti.ScalarRegClass:$rs1, srcvalue)),
               (!cast<Instruction>("PseudoVFMV_V_"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                 (fvti.Vector (IMPLICIT_DEF)),
                 (fvti.Scalar fvti.ScalarRegClass:$rs1),

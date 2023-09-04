@@ -696,7 +696,7 @@ public:
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
-/// instructions. VPRecipeBase owns the the VPValues it defines through VPDef
+/// instructions. VPRecipeBase owns the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
 /// VPRecipeBases that also inherit from VPValue must make sure to inherit from
 /// VPRecipeBase before VPValue.
@@ -814,6 +814,7 @@ public:
 /// Class to record LLVM IR flag for a recipe along with it.
 class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
+    Cmp,
     OverflowingBinOp,
     PossiblyExactOp,
     GEPOp,
@@ -851,11 +852,12 @@ private:
   OperationType OpType;
 
   union {
+    CmpInst::Predicate CmpPredicate;
     WrapFlagsTy WrapFlags;
     ExactFlagsTy ExactFlags;
     GEPFlagsTy GEPFlags;
     FastMathFlagsTy FMFs;
-    unsigned char AllFlags;
+    unsigned AllFlags;
   };
 
 public:
@@ -869,7 +871,10 @@ public:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, Instruction &I)
       : VPRecipeWithIRFlags(SC, Operands) {
-    if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
+    if (auto *Op = dyn_cast<CmpInst>(&I)) {
+      OpType = OperationType::Cmp;
+      CmpPredicate = Op->getPredicate();
+    } else if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
       WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
     } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
@@ -883,6 +888,12 @@ public:
       FMFs = Op->getFastMathFlags();
     }
   }
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      CmpInst::Predicate Pred)
+      : VPRecipeBase(SC, Operands), OpType(OperationType::Cmp),
+        CmpPredicate(Pred) {}
 
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
@@ -922,6 +933,7 @@ public:
       FMFs.NoNaNs = false;
       FMFs.NoInfs = false;
       break;
+    case OperationType::Cmp:
     case OperationType::Other:
       break;
     }
@@ -949,9 +961,16 @@ public:
       I->setHasAllowContract(FMFs.AllowContract);
       I->setHasApproxFunc(FMFs.ApproxFunc);
       break;
+    case OperationType::Cmp:
     case OperationType::Other:
       break;
     }
+  }
+
+  CmpInst::Predicate getPredicate() const {
+    assert(OpType == OperationType::Cmp &&
+           "recipe doesn't have a compare predicate");
+    return CmpPredicate;
   }
 
   bool isInBounds() const {
@@ -996,7 +1015,6 @@ public:
         Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
                                       // values of a first-order recurrence.
     Not,
-    ICmpULE,
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
@@ -1042,6 +1060,9 @@ public:
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
 
+  VPInstruction(unsigned Opcode, CmpInst::Predicate Pred, VPValue *A,
+                VPValue *B, DebugLoc DL = {}, const Twine &Name = "");
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags),
@@ -1051,11 +1072,6 @@ public:
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
-
-  VPInstruction *clone() const {
-    SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands, DL, Name);
-  }
 
   unsigned getOpcode() const { return Opcode; }
 

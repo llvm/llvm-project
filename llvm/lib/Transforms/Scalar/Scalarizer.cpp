@@ -730,7 +730,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   // vector type, which is true for all current intrinsics.
   for (unsigned I = 0; I != NumArgs; ++I) {
     Value *OpI = CI.getOperand(I);
-    if (auto *OpVecTy = dyn_cast<FixedVectorType>(OpI->getType())) {
+    if ([[maybe_unused]] auto *OpVecTy =
+            dyn_cast<FixedVectorType>(OpI->getType())) {
       assert(OpVecTy->getNumElements() == VS->VecTy->getNumElements());
       std::optional<VectorSplit> OpVS = getVectorSplit(OpI->getType());
       if (!OpVS || OpVS->NumPacked != VS->NumPacked) {

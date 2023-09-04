@@ -2865,7 +2865,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if (const auto *operand = llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
+    if ([[maybe_unused]] const auto *operand =
+            llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }
@@ -3083,7 +3084,7 @@ void OpEmitter::genCanonicalizerDecls() {
   auto *method = opClass.addMethod("void", "getCanonicalizationPatterns", kind,
                                    std::move(paramList));
 
-  // If synthesizing the method, fill it it.
+  // If synthesizing the method, fill it.
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";

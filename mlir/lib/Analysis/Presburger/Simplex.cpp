@@ -188,7 +188,7 @@ Direction flippedDirection(Direction direction) {
 /// greater, so A*y + b is always equal to or lexicographically greater than b.
 /// Thus, since we can attain x = b, that is the lexicographic minimum.
 ///
-/// We have that that every column in A is lexicopositive, i.e., has at least
+/// We have that every column in A is lexicopositive, i.e., has at least
 /// one non-zero element, with the first such element being positive. Since for
 /// the tableau to be consistent we must have non-negative sample values not
 /// only for the constraints but also for the variables, we also have x >= 0 and

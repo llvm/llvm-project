@@ -2324,7 +2324,7 @@ public:
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
       // The only difference between InsertSliceOp and ParallelInsertSliceOp
-      // is the the insertion point is just before the ParallelCombiningOp in
+      // is that the insertion point is just before the ParallelCombiningOp in
       // the parallel case.
       if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
@@ -2465,7 +2465,7 @@ struct InsertSliceOpSourceCastInserter final
     // Insert the cast.
     OpBuilder::InsertionGuard g(rewriter);
     // The only difference between InsertSliceOp and ParallelInsertSliceOp is
-    // the the insertion point is just before the ParallelCombiningOp in the
+    // that the insertion point is just before the ParallelCombiningOp in the
     // parallel case.
     if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
@@ -3712,7 +3712,7 @@ bool areTilesAndTiledDimsAllConstant(OpTy op) {
 }
 
 Speculation::Speculatability PackOp::getSpeculatability() {
-  if (auto paddingValue = getPaddingValue())
+  if (getPaddingValue())
     return Speculation::Speculatable;
 
   // The verifier rejects already operations if we can statically prove that the

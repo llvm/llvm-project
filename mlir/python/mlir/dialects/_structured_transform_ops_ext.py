@@ -125,7 +125,7 @@ def _get_value_list(
 
 def _get_int_array_attr(values: Optional[Union[ArrayAttr, IntOrAttrList]]) -> ArrayAttr:
     if values is None:
-        return ArrayAttr.get([])
+        return None
 
     # Turn into a Python list of Python ints.
     values = _get_value_list(values)
@@ -148,7 +148,7 @@ def _get_int_array_array_attr(
     If the input is None, an empty ArrayAttr is returned.
     """
     if values is None:
-        return ArrayAttr.get([])
+        return None
 
     # Make sure the outer level is a list.
     values = _get_value_list(values)
@@ -195,6 +195,8 @@ class BufferizeToAllocationOp:
             memcpy_op=memcpy_op,
             alloc_op=alloc_op,
             bufferize_destination_only=bufferize_destination_only,
+            loc=loc,
+            ip=ip,
         )
 
 
@@ -395,6 +397,8 @@ class MaskedVectorizeOp:
             static_vector_sizes=static_vector_sizes,
             scalable_sizes=scalable_sizes,
             vectorize_nd_extract=vectorize_nd_extract,
+            loc=loc,
+            ip=ip,
         )
 
 
@@ -493,9 +497,7 @@ class PadOp:
         self,
         target: Union[Operation, OpView, Value],
         *,
-        padding_values: Optional[
-            Union[ArrayAttr, Sequence[Union[bool, int, float, Attribute]]]
-        ] = None,
+        padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
         pad_to_multiple_of: OptionalIntList = None,
         pack_paddings: OptionalIntList = None,
@@ -506,17 +508,6 @@ class PadOp:
         loc=None,
         ip=None,
     ):
-        if padding_values is None:
-            padding_values = []
-        if padding_dimensions is None:
-            padding_dimensions = []
-        if pad_to_multiple_of is None:
-            pad_to_multiple_of = []
-        if pack_paddings is None:
-            pack_paddings = []
-        if transpose_paddings is None:
-            transpose_paddings = []
-
         padding_dimensions = _get_int_array_attr(padding_dimensions)
         pad_to_multiple_of = _get_int_array_attr(pad_to_multiple_of)
         pack_paddings = _get_int_array_attr(pack_paddings)

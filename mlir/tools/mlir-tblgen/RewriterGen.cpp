@@ -517,7 +517,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     std::string argName = capture[i];
 
     // Handle nested DAG construct first
-    if (DagNode argTree = tree.getArgAsNestedDag(i)) {
+    if (tree.getArgAsNestedDag(i)) {
       PrintFatalError(
           loc, formatv("Matching nested tree in NativeCodecall not support for "
                        "{0} as arg {1}",

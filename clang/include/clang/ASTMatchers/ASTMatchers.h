@@ -3928,7 +3928,7 @@ AST_MATCHER_P(CallExpr, callee, internal::Matcher<Stmt>,
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     callee, AST_POLYMORPHIC_SUPPORTED_TYPES(ObjCMessageExpr, CallExpr),
     internal::Matcher<Decl>, InnerMatcher, 1) {
-  if (const auto *CallNode = dyn_cast<CallExpr>(&Node))
+  if (isa<CallExpr>(&Node))
     return callExpr(hasDeclaration(InnerMatcher))
         .matches(Node, Finder, Builder);
   else {

@@ -3617,10 +3617,44 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
   // the incoming edges.
   VPBasicBlock *Header =
       State.Plan->getVectorLoopRegion()->getEntryBasicBlock();
+
+  // Gather all VPReductionPHIRecipe and sort them so that Intermediate stores
+  // sank outside of the loop would keep the same order as they had in the
+  // original loop.
+  SmallVector<VPReductionPHIRecipe *> ReductionPHIList;
   for (VPRecipeBase &R : Header->phis()) {
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R))
-      fixReduction(ReductionPhi, State);
-    else if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      ReductionPHIList.emplace_back(ReductionPhi);
+  }
+  stable_sort(ReductionPHIList, [this](const VPReductionPHIRecipe *R1,
+                                       const VPReductionPHIRecipe *R2) {
+    auto *IS1 = R1->getRecurrenceDescriptor().IntermediateStore;
+    auto *IS2 = R2->getRecurrenceDescriptor().IntermediateStore;
+
+    // If neither of the recipes has an intermediate store, keep the order the
+    // same.
+    if (!IS1 && !IS2)
+      return false;
+
+    // If only one of the recipes has an intermediate store, then move it
+    // towards the beginning of the list.
+    if (IS1 && !IS2)
+      return true;
+
+    if (!IS1 && IS2)
+      return false;
+
+    // If both recipes have an intermediate store, then the recipe with the
+    // later store should be processed earlier. So it should go to the beginning
+    // of the list.
+    return DT->dominates(IS2, IS1);
+  });
+
+  for (VPReductionPHIRecipe *ReductionPhi : ReductionPHIList)
+    fixReduction(ReductionPhi, State);
+
+  for (VPRecipeBase &R : Header->phis()) {
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       fixFixedOrderRecurrence(FOR, State);
   }
 }
@@ -3909,7 +3943,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // inside the loop, create the final store here.
   if (StoreInst *SI = RdxDesc.IntermediateStore) {
     StoreInst *NewSI =
-        Builder.CreateStore(ReducedPartRdx, SI->getPointerOperand());
+        Builder.CreateAlignedStore(ReducedPartRdx, SI->getPointerOperand(),
+                                   SI->getAlign());
     propagateMetadata(NewSI, SI);
 
     // If the reduction value is used in other places,
@@ -6958,7 +6993,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
     // because the VF is either 1, or any instructions that need scalarizing
-    // have already been dealt with by the the time we get here. As a result,
+    // have already been dealt with by the time we get here. As a result,
     // it means we don't have to multiply the instruction cost by VF.
     assert(I->getOpcode() == Instruction::GetElementPtr ||
            I->getOpcode() == Instruction::PHI ||
@@ -7336,6 +7371,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
+}
+
+VPValue *VPBuilder::createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                               DebugLoc DL, const Twine &Name) {
+  assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+         Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+  return tryInsertInstruction(
+      new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
 }
 
 // TODO: we could return a pair of values that specify the max VF and
@@ -8045,7 +8088,7 @@ void VPRecipeBuilder::createHeaderMask(VPlan &Plan) {
                                      nullptr, "active.lane.mask");
   } else {
     VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-    BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
+    BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   }
   BlockMaskCache[Header] = BlockMask;
 }
