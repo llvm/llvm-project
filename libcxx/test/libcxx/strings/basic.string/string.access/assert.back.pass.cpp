@@ -21,16 +21,16 @@
 #include "min_allocator.h"
 
 int main(int, char**) {
-    {
-        std::string s;
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-    }
+  {
+    std::string s;
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
+  }
 
-    {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-        S s;
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-    }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
+    S s;
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
+  }
 
-    return 0;
+  return 0;
 }
