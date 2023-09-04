@@ -2431,8 +2431,8 @@ struct FormatStyle {
   ///         label:                               label:
   ///         }                                      }
   ///       }                                       }
-  ///     }                                       } 
-  ///   }                                       } 
+  ///     }                                       }
+  ///   }                                       }
   /// }                                       }
   /// \endcode
   /// \version 10
@@ -4345,14 +4345,14 @@ struct FormatStyle {
     SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
         bool InEmptyParentheses, bool Other)
         : InConditionalStatements(InConditionalStatements),
-          InCStyleCasts(InCStyleCasts), 
+          InCStyleCasts(InCStyleCasts),
           InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
       return InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
-             InEmptyParentheses == R.InEmptyParentheses && 
+             InEmptyParentheses == R.InEmptyParentheses &&
              Other == R.Other;
     }
     bool operator!=(const SpacesInParensCustom &R) const {
