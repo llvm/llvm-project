@@ -6980,7 +6980,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   SMEAttrs CallerAttrs(MF.getFunction());
   auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
   if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs))
+      CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.hasStreamingBody())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
