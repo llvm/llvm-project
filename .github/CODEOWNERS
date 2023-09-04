@@ -41,29 +41,28 @@
 /mlir/ @llvm/pr-subscribers-mlir
 
 # mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Support/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Parser/ @llvm/pr-subscribers-mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Bytecode/ @llvm/pr-subscribers-mlir-core
 /mlir/**/AsmParser/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Pass/ @llvm/pr-subscribers-mlir-core
-/mlir/**/tools/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Reducer/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Transforms/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Bytecode/ @llvm/pr-subscribers-mlir-core
 /mlir/**/Debug/ @llvm/pr-subscribers-mlir-core
+/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Parser/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Pass/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Reducer/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Support/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Transforms/ @llvm/pr-subscribers-mlir-core
+/mlir/**/tools/ @llvm/pr-subscribers-mlir-core
 /mlir/tools/ @llvm/pr-subscribers-mlir-core
 
 # mlir-ods
 /mlir/TableGen/ @llvm/pr-subscribers-mlir-ods
 /mlir/tblgen/ @llvm/pr-subscribers-mlir-ods
+/mlir/include/mlir/IR/*.td @llvm/pr-subscribers-mlir-ods
 
 # mlir-bindings
 /mlir/Bindings/ @llvm/pr-subscribers-mlir-bindings
 
 # mlir-gpu
-/mlir/GPU/ @llvm/pr-subscribers-mlir-gpu
+/mlir/**/*GPU @llvm/pr-subscribers-mlir-gpu
 
 # mlir-amdgpu
 /mlir/**/AMDGPU/ @llvm/pr-subscribers-mlir-amdgpu
@@ -108,7 +107,7 @@
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
 
 # mlir-async
-/mlir/GPU/ @llvm/pr-subscribers-mlir-async
+/mlir/**/Async/ @llvm/pr-subscribers-mlir-async
 
 # mlir-irdl
 /mlir/**/IRDL/ @llvm/pr-subscribers-mlir-irdl
@@ -120,10 +119,11 @@
 /mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
-/mlir/linalg/ @llvm/pr-subscribers-mlir-linalg
+/mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
+/mlir/**/*linalg @llvm/pr-subscribers-mlir-linalg
 
 # mlir-mlprogram
-/mlir/**/MLProgram/** @llvm/pr-subscribers-mlir-mlprogram
+/mlir/**/MLProgram @llvm/pr-subscribers-mlir-mlprogram
 
 # mlir-math
 /mlir/**/Math/ @llvm/pr-subscribers-mlir-math
@@ -135,10 +135,10 @@
 /mlir/**/NVGPU/ @llvm/pr-subscribers-mlir-nvgpu
 
 # mlir-openacc
-/mlir/**/OpenACC/ @llvm/pr-subscribers-mlir-openacc
+/mlir/**/*OpenACC @llvm/pr-subscribers-mlir-openacc
 
 # mlir-openmp
-/mlir/**/OpenMP*/ @llvm/pr-subscribers-mlir-openmp
+/mlir/**/*OpenMP @llvm/pr-subscribers-mlir-openmp
 
 # mlir-pdl
 /mlir/**/PDL/ @llvm/pr-subscribers-mlir-pdl
@@ -171,7 +171,7 @@
 /mlir/**/*Vector/ @llvm/pr-subscribers-mlir-vector
 
 # mlir-execution-engine
-/mlir/ExecutionEngine/ @llvm/pr-subscribers-mlir-execution-engine
+/mlir/**/ExecutionEngine/ @llvm/pr-subscribers-mlir-execution-engine
 
 # coroutines
 /clang/docs/DebuggingCoroutines.rst @llvm/pr-subscribers-coroutines
