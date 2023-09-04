@@ -268,12 +268,12 @@ public:
             Inst.getOpcode() == AArch64::LDRXui);
   }
 
-  bool isLoad(const MCInst &Inst) const override {
+  bool mayLoad(const MCInst &Inst) const override {
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
   }
 
   bool isLoadFromStack(const MCInst &Inst) const {
-    if (!isLoad(Inst))
+    if (!mayLoad(Inst))
       return false;
     for (const MCOperand &Operand : useOperands(Inst)) {
       if (!Operand.isReg())
@@ -680,7 +680,7 @@ public:
     PCRelBase = DefBaseAddr;
     // Match LOAD to load the jump table (relative) target
     const MCInst *DefLoad = UsesAdd[2];
-    assert(isLoad(*DefLoad) &&
+    assert(mayLoad(*DefLoad) &&
            "Failed to match indirect branch load pattern! (1)");
     assert((ScaleValue != 1LL || isLDRB(*DefLoad)) &&
            "Failed to match indirect branch load pattern! (2)");
@@ -1013,7 +1013,7 @@ public:
     return true;
   }
 
-  bool isStore(const MCInst &Inst) const override { return false; }
+  bool mayStore(const MCInst &Inst) const override { return false; }
 
   bool createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
