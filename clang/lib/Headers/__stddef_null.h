@@ -15,5 +15,9 @@
 #define NULL 0
 #endif
 #else
-#define NULL ((void *)0)
+// Don't add any whitespaces in ((void*)0) below!
+// musl (https://www.musl-libc.org/) redefines `NULL` as such and redefinition
+// with a different expression, even in terms of a single whitespace, causes a
+// warning.
+#define NULL ((void*)0)
 #endif
