@@ -665,6 +665,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
   PreambleTimer.stopTimer();
+
+  // We have to setup DiagnosticConsumer that will be alife
+  // while preamble callback is executed
+  PreambleDiagsEngine->setClient(new IgnoringDiagConsumer, true);
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
@@ -706,6 +710,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       // While extending the life of FileMgr and VFS, StatCache should also be
       // extended.
       Ctx->setStatCache(Result->StatCache);
+
       PreambleCallback(std::move(*Ctx), Result->Pragmas);
     }
     return Result;
