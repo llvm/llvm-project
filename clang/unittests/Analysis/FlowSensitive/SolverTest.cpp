@@ -369,4 +369,32 @@ TEST(SolverTest, ReachedLimitsReflectsTimeouts) {
   EXPECT_TRUE(solver.reachedLimit());
 }
 
+TEST(SolverTest, SimpleButLargeContradiction) {
+  // This test ensures that the solver takes a short-cut on known
+  // contradictory inputs, without using max_iterations. At the time
+  // this test is added, formulas that are easily recognized to be
+  // contradictory at CNF construction time would lead to timeout.
+  WatchedLiteralsSolver solver(10);
+  ConstraintContext Ctx;
+  auto first = Ctx.atom();
+  auto last = first;
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.atom());
+  }
+  last = Ctx.conj(Ctx.neg(first), last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
+
+  first = Ctx.atom();
+  last = Ctx.neg(first);
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.neg(Ctx.atom()));
+  }
+  last = Ctx.conj(first, last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
+}
+
 } // namespace
