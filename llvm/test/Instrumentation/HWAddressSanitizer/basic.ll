@@ -36,7 +36,19 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1:![0-9]+]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i8 [[B]]
 ;
@@ -156,7 +168,19 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i16 [[B]]
 ;
@@ -276,7 +300,19 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i32 [[B]]
 ;
@@ -396,7 +432,19 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; FASTPATH-NEXT:    ret i64 [[B]]
 ;
@@ -516,7 +564,19 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; FASTPATH-NEXT:    ret i128 [[B]]
 ;
@@ -705,7 +765,19 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -825,7 +897,19 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -945,7 +1029,19 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1065,7 +1161,19 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1185,7 +1293,19 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
+; FASTPATH-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
+; FASTPATH-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
+; FASTPATH-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
+; FASTPATH-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
+; FASTPATH-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; FASTPATH-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
+; FASTPATH-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
+; FASTPATH:       8:
 ; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
+; FASTPATH-NEXT:    br label [[TMP9]]
+; FASTPATH:       9:
 ; FASTPATH-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; FASTPATH-NEXT:    ret void
 ;
