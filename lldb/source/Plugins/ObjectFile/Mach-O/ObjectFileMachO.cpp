@@ -1481,7 +1481,6 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_compact_unwind("__unwind_info");
   static ConstString g_sect_name_text("__text");
   static ConstString g_sect_name_data("__data");
-  static ConstString g_sect_name_swift_ast("__swift_ast");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
   static ConstString g_sect_name_swift_ast("__swift_ast");
