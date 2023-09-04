@@ -268,7 +268,8 @@ struct ContextTableKey {
 
   ContextTableKey(std::optional<Context> context, IdentifierID nameID)
       : parentContextID(context ? context->id.Value : (uint32_t)-1),
-        contextKind(context ? (uint8_t)context->kind : (uint8_t)-1),
+        contextKind(context ? static_cast<uint8_t>(context->kind)
+                            : static_cast<uint8_t>(-1)),
         contextID(nameID) {}
 
   llvm::hash_code hashValue() const {
