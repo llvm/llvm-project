@@ -389,9 +389,8 @@ def select_to_logical : GICombineRule<
 // TODO: handle compares (currently not marked as isCommutable)
 def commute_constant_to_rhs : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root, [{
-    return getIConstantVRegVal(${root}->getOperand(1).getReg(), MRI).has_value();
-  }]),
+  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root,
+    [{ return Helper.matchCommuteConstantToRHS(*${root}); }]),
   (apply [{
     Observer.changingInstr(*${root});
     Register LHSReg = ${root}->getOperand(1).getReg();

@@ -145,6 +145,13 @@ private:
       });
       break;
     }
+    case RPC_ABORT: {
+      // Send a response to the client to signal that we are ready to abort.
+      port->recv_and_send([](rpc::Buffer *) {});
+      port->recv([](rpc::Buffer *) {});
+      abort();
+      break;
+    }
     case RPC_HOST_CALL: {
       uint64_t sizes[lane_size] = {0};
       void *args[lane_size] = {nullptr};

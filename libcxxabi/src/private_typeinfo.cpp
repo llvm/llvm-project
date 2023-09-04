@@ -1075,7 +1075,7 @@ __vmi_class_type_info::search_below_dst(__dynamic_cast_info* info,
                     if (info->search_done)
                         break;
                     // If we just found a dst_type with a public path to (static_ptr, static_type),
-                    //    then the only reason to continue the search is to make sure sure
+                    //    then the only reason to continue the search is to make sure
                     //    no other dst_type points to (static_ptr, static_type).
                     //    If !diamond, then we don't need to search here.
                     // if we just found a dst_type with a private path to (static_ptr, static_type),

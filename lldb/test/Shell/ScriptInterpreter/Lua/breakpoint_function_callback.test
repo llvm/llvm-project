@@ -12,7 +12,7 @@ r
 # CHECK: nil
 breakpoint command add -s lua -F abc -k foo -v 123pizza!
 r
-# CHECK: <userdata of type 'lldb::SBStructuredData *' at {{0x[[:xdigit:]]+}}>
+# CHECK: foo: 123pizza!
 # CHECK: 123pizza!
 breakpoint command add -s lua -o "abc(frame, bp_loc, ...)"
 r

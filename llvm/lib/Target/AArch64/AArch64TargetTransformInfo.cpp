@@ -197,7 +197,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallerAttrs.requiresSMChange(CalleeAttrs,
                                    /*BodyOverridesInterface=*/true) ||
       CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CalleeAttrs.hasNewZAInterface())
+      CalleeAttrs.hasNewZABody())
     return false;
 
   const TargetMachine &TM = getTLI()->getTargetMachine();
@@ -1943,8 +1943,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
     return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if ((ST->isStreaming() || ST->isStreamingCompatible()) &&
-        !EnableScalableAutovecInStreamingMode)
+    if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
       return TypeSize::getScalable(0);
 
     return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
@@ -2050,10 +2049,8 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 //   %y = (zext i8 -> i16)
 //   trunc i16 (lshr (add %x, %y), 1) -> i8
 //
-bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser,
-                                        const CastInst *Ext, Type *Dst,
+bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
                                         Type *Src) {
-
   // The source should be a legal vector type.
   if (!Src->isVectorTy() || !TLI->isTypeLegal(TLI->getValueType(DL, Src)) ||
       (Src->isScalableTy() && !ST->hasSVE2()))
@@ -2121,7 +2118,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     // The cast will be free for the s/urhadd instructions
     if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
-        isExtPartOfAvgExpr(SingleUser, cast<CastInst>(I), Dst, Src))
+        isExtPartOfAvgExpr(SingleUser, Dst, Src))
       return 0;
   }
 

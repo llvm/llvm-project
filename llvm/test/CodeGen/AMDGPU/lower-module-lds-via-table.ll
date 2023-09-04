@@ -4,26 +4,26 @@
 ; Opt checks from utils/update_test_checks.py, llc checks from utils/update_llc_test_checks.py, both modified.
 
 ; Define four variables and four non-kernel functions which access exactly one variable each
-@v0 = addrspace(3) global float undef
-@v1 = addrspace(3) global i16 undef, align 16
-@v2 = addrspace(3) global i64 undef
-@v3 = addrspace(3) global i8 undef
-@unused = addrspace(3) global i16 undef
+@v0 = addrspace(3) global float poison
+@v1 = addrspace(3) global i16 poison, align 16
+@v2 = addrspace(3) global i64 poison
+@v3 = addrspace(3) global i8 poison
+@unused = addrspace(3) global i16 poison
 
 ; OPT: %llvm.amdgcn.kernel.kernel_no_table.lds.t = type { i64 }
 ; OPT: %llvm.amdgcn.kernel.k01.lds.t = type { i16, [2 x i8], float }
 ; OPT: %llvm.amdgcn.kernel.k23.lds.t = type { i64, i8 }
 ; OPT: %llvm.amdgcn.kernel.k123.lds.t = type { i16, i8, [5 x i8], i64 }
 
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t undef, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t undef, align 16, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t undef, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t undef, align 16, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t poison, align 16, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t poison, align 16, !absolute_symbol !0
 
 ; Salient parts of the IR lookup table check:
 ; It has (top level) size 3 as there are 3 kernels that call functions which use lds
 ; The next level down has type [4 x i16] as there are 4 variables accessed by functions which use lds
-; The kernel naming pattern and the structs being named after the functions helps verify placement of undef
+; The kernel naming pattern and the structs being named after the functions helps verify placement of poison
 ; The remainder are constant expressions into the variable instances checked above
 
 ; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [4 x i32]] [[4 x i32] [i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k01.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, i32 0, i32 2) to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds to i32), i32 poison, i32 poison], [4 x i32] [i32 poison, i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 3) to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1) to i32)], [4 x i32] [i32 poison, i32 poison, i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k23.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 0, i32 1) to i32)]]

@@ -634,8 +634,8 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // Return 'NoDependence' if loopDepth > numCommonLoops and if the ancestor
   // operation of 'srcAccess' does not properly dominate the ancestor
   // operation of 'dstAccess' in the same common operation block.
-  // Note: this check is skipped if 'allowRAR' is true, because because RAR
-  // deps can exist irrespective of lexicographic ordering b/w src and dst.
+  // Note: this check is skipped if 'allowRAR' is true, because RAR deps
+  // can exist irrespective of lexicographic ordering b/w src and dst.
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   assert(loopDepth <= numCommonLoops + 1);
   if (!allowRAR && loopDepth > numCommonLoops &&

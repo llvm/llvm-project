@@ -109,9 +109,13 @@ bool returnsBool() {
   std::string str2;
   std::wstring wstr;
   (void)(str.size() + 0);
+  (void)(str.length() + 0);
   (void)(str.size() - 0);
+  (void)(str.length() - 0);
   (void)(0 + str.size());
+  (void)(0 + str.length());
   (void)(0 - str.size());
+  (void)(0 - str.length());
   if (intSet.size() == 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
@@ -128,11 +132,19 @@ bool returnsBool() {
   // CHECK-FIXES: {{^  }}if (s_func().empty()){{$}}
   if (str.size() == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: {{^  }}if (str.empty()){{$}}
+  if (str.length() == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length'
   // CHECK-FIXES: {{^  }}if (str.empty()){{$}}
   if ((str + str2).size() == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: {{^  }}if ((str + str2).empty()){{$}}
+  if ((str + str2).length() == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length'
   // CHECK-FIXES: {{^  }}if ((str + str2).empty()){{$}}
   if (str == "")
     ;
@@ -144,7 +156,11 @@ bool returnsBool() {
   // CHECK-FIXES: {{^  }}if ((str + str2).empty()){{$}}
   if (wstr.size() == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: {{^  }}if (wstr.empty()){{$}}
+  if (wstr.length() == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length'
   // CHECK-FIXES: {{^  }}if (wstr.empty()){{$}}
   if (wstr == L"")
     ;
@@ -153,7 +169,7 @@ bool returnsBool() {
   std::vector<int> vect;
   if (vect.size() == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: {{^  }}if (vect.empty()){{$}}
   if (vect == std::vector<int>())
     ;
@@ -508,6 +524,17 @@ template <typename T> void f() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
   // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: CHECKSIZE(templated_container);
+  std::basic_string<T> s;
+  if (s.size())
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
+  if (s.length())
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
+  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
 }
 
 void g() {
@@ -757,7 +784,7 @@ bool testArraySize(const Array& value) {
   return value.size() == 0U;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
 // CHECK-FIXES: {{^  }}return value.empty();{{$}}
-// CHECK-MESSAGES: :735:8: note: method 'array'::empty() defined here
+// CHECK-MESSAGES: :[[@LINE-25]]:8: note: method 'array'::empty() defined here
 }
 
 bool testArrayCompareToEmpty(const Array& value) {
@@ -768,7 +795,7 @@ bool testDummyType(const DummyType& value) {
   return value == DummyType();
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object [readability-container-size-empty]
 // CHECK-FIXES: {{^  }}return value.empty();{{$}}
-// CHECK-MESSAGES: :745:8: note: method 'DummyType'::empty() defined here
+// CHECK-MESSAGES: :[[@LINE-26]]:8: note: method 'DummyType'::empty() defined here
 }
 
 bool testIgnoredDummyType(const IgnoredDummyType& value) {

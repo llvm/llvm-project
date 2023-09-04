@@ -1,14 +1,14 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -flatten-profile-for-matching=0 -S 2>%t -o %t.ll
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
 ; RUN: llc < %t.ll -filetype=obj -o %t.obj
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; CHECK: (2/3) of callsites' profile are invalid and (15/25) of samples are discarded due to callsite location mismatch.
+; CHECK: (2/3) of callsites' profile are invalid and (25/35) of samples are discarded due to callsite location mismatch.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 15, !"TotalCallsiteSamples", i64 25}
+; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 25, !"TotalCallsiteSamples", i64 35}
 
 ; CHECK-OBJ: .llvm_stats
 
@@ -24,11 +24,11 @@
 ; CHECK-ASM: .byte 25
 ; CHECK-ASM: .ascii  "MismatchedCallsiteSamples"
 ; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MTU="
+; CHECK-ASM: .ascii  "MjU="
 ; CHECK-ASM: .byte 20
 ; CHECK-ASM: .ascii  "TotalCallsiteSamples"
 ; CHECK-ASM: .byte 4
-; CHECK-ASM: .ascii  "MjU="
+; CHECK-ASM: .ascii  "MzU="
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

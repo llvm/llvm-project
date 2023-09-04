@@ -924,14 +924,14 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   unsigned Flag = getOperand(FlagIdx).getImm();
   unsigned RCID;
-  if ((InlineAsm::getKind(Flag) == InlineAsm::Kind_RegUse ||
-       InlineAsm::getKind(Flag) == InlineAsm::Kind_RegDef ||
-       InlineAsm::getKind(Flag) == InlineAsm::Kind_RegDefEarlyClobber) &&
+  if ((InlineAsm::getKind(Flag) == InlineAsm::Kind::RegUse ||
+       InlineAsm::getKind(Flag) == InlineAsm::Kind::RegDef ||
+       InlineAsm::getKind(Flag) == InlineAsm::Kind::RegDefEarlyClobber) &&
       InlineAsm::hasRegClassConstraint(Flag, RCID))
     return TRI->getRegClass(RCID);
 
   // Assume that all registers in a memory operand are pointers.
-  if (InlineAsm::getKind(Flag) == InlineAsm::Kind_Mem)
+  if (InlineAsm::getKind(Flag) == InlineAsm::Kind::Mem)
     return TRI->getPointerRegClass(MF);
 
   return nullptr;
@@ -1263,7 +1263,8 @@ bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
   }
 
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      mayRaiseFPException() || hasUnmodeledSideEffects())
+      mayRaiseFPException() || hasUnmodeledSideEffects() ||
+      isJumpTableDebugInfo())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the

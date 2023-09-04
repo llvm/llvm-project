@@ -132,6 +132,10 @@ cl::opt<bool> DisableAutoPairedVecSt(
     cl::desc("disable automatically generated 32byte paired vector stores"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> PPCMinimumJumpTableEntries(
+    "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on PPC"));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -1431,6 +1435,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setHasMultipleConditionRegisters();
     setJumpIsExpensive();
   }
+
+  // TODO: The default entry number is set to 64. This stops most jump table
+  // generation on PPC. But it is good for current PPC HWs because the indirect
+  // branch instruction mtctr to the jump table may lead to bad branch predict.
+  // Re-evaluate this value on future HWs that can do better with mtctr.
+  setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
 
   setMinFunctionAlignment(Align(4));
 
@@ -3326,22 +3336,22 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   bool Is64Bit = Subtarget.isPPC64();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
 
-  if (Model == TLSModel::LocalExec) {
+  if (Model == TLSModel::LocalExec || Model == TLSModel::InitialExec) {
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
     SDValue TLSReg;
     if (Is64Bit)
-      // For local-exec on AIX (64-bit), the sequence that is generated involves
-      // a load of the variable offset (from the TOC), followed by an add of the
-      // loaded variable offset to R13 (the thread pointer).
+      // For local-exec and initial-exec on AIX (64-bit), the sequence generated
+      // involves a load of the variable offset (from the TOC), followed by an
+      // add of the loaded variable offset to R13 (the thread pointer).
       // This code sequence looks like:
       //    ld reg1,var[TC](2)
       //    add reg2, reg1, r13     // r13 contains the thread pointer
       TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
     else
-      // For local-exec on AIX (32-bit), the sequence that is generated involves
-      // loading the variable offset from the TOC, generating a call to
+      // For local-exec and initial-exec on AIX (32-bit), the sequence generated
+      // involves loading the variable offset from the TOC, generating a call to
       // .__get_tpointer to get the thread pointer (which will be in R3), and
       // adding the two together:
       //    lwz reg1,var[TC](2)
@@ -3351,9 +3361,9 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
-  // The Local-Exec and General-Dynamic TLS models are currently the only
-  // supported access models. If Local-exec is not possible or specified, all
-  // GlobalTLSAddress nodes are lowered using the general-dynamic model.
+  // Only Local-Exec, Initial-Exec and General-Dynamic TLS models are currently
+  // supported models. If Local- or Initial-exec are not possible or specified,
+  // all GlobalTLSAddress nodes are lowered using the general-dynamic model.
   // We need to generate two TOC entries, one for the variable offset, one for
   // the region handle. The global address for the TOC entry of the region
   // handle is created with the MO_TLSGDM_FLAG flag and the global address
@@ -3769,14 +3779,14 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     switch (InlineAsm::getKind(Flags)) {
     default:
       llvm_unreachable("Bad flags!");
-    case InlineAsm::Kind_RegUse:
-    case InlineAsm::Kind_Imm:
-    case InlineAsm::Kind_Mem:
+    case InlineAsm::Kind::RegUse:
+    case InlineAsm::Kind::Imm:
+    case InlineAsm::Kind::Mem:
       i += NumVals;
       break;
-    case InlineAsm::Kind_Clobber:
-    case InlineAsm::Kind_RegDef:
-    case InlineAsm::Kind_RegDefEarlyClobber: {
+    case InlineAsm::Kind::Clobber:
+    case InlineAsm::Kind::RegDef:
+    case InlineAsm::Kind::RegDefEarlyClobber: {
       for (; NumVals; --NumVals, ++i) {
         Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
         if (Reg != PPC::LR && Reg != PPC::LR8)
@@ -5276,7 +5286,7 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // inserted into the DAG as part of call lowering. The restore of the TOC
     // pointer is modeled by using a pseudo instruction for the call opcode that
     // represents the 2 instruction sequence of an indirect branch and link,
-    // immediately followed by a load of the TOC pointer from the the stack save
+    // immediately followed by a load of the TOC pointer from the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
     RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
@@ -11035,14 +11045,14 @@ SDValue PPCTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
     SmallVector<SDValue, 4> Ops{
         N->getOperand(0),
         DAG.getConstant(Intrinsic::ppc_atomic_store_i128, dl, MVT::i32)};
-    SDValue Val = N->getOperand(2);
+    SDValue Val = N->getOperand(1);
     SDValue ValLo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, Val);
     SDValue ValHi = DAG.getNode(ISD::SRL, dl, MVT::i128, Val,
                                 DAG.getConstant(64, dl, MVT::i32));
     ValHi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, ValHi);
     Ops.push_back(ValLo);
     Ops.push_back(ValHi);
-    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(2));
     return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops, MemVT,
                                    N->getMemOperand());
   }

@@ -51,7 +51,7 @@ void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
   // stepping because the debugger stops regardless due to the BVR/BCR
   // triggering a stop.
   //
-  // It also means we can set breakpoints on instructions inside an an if/then
+  // It also means we can set breakpoints on instructions inside an if/then
   // block and correctly skip them if we use the BKPT instruction. The ARM and
   // Thumb BKPT instructions are unconditional even when executed in a Thumb IT
   // block.

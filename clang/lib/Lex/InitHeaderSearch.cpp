@@ -231,9 +231,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
-    case llvm::Triple::CloudABI:
-    case llvm::Triple::ELFIAMCU:
-      break;
     case llvm::Triple::Win32:
       if (triple.getEnvironment() != llvm::Triple::Cygnus)
         break;
@@ -271,15 +268,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   switch (os) {
-  case llvm::Triple::CloudABI: {
-    // <sysroot>/<triple>/include
-    SmallString<128> P = StringRef(HSOpts.ResourceDir);
-    llvm::sys::path::append(P, "../../..", triple.str(), "include");
-    AddPath(P, System, false);
-    break;
-  }
-  case llvm::Triple::RTEMS:
-    break;
   case llvm::Triple::Win32:
     switch (triple.getEnvironment()) {
     default: llvm_unreachable("Include management is handled in the driver.");
@@ -294,15 +282,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     break;
   }
 
-  switch (os) {
-  case llvm::Triple::CloudABI:
-  case llvm::Triple::RTEMS:
-  case llvm::Triple::ELFIAMCU:
-    break;
-  default:
-    AddPath("/usr/include", ExternCSystem, false);
-    break;
-  }
+  AddPath("/usr/include", ExternCSystem, false);
 }
 
 void InitHeaderSearch::AddDefaultCPlusPlusIncludePaths(
@@ -327,9 +307,6 @@ void InitHeaderSearch::AddDefaultCPlusPlusIncludePaths(
       break;
     }
     break;
-  case llvm::Triple::DragonFly:
-    AddPath("/usr/include/c++/5.0", CXXSystem, false);
-    break;
   default:
     break;
   }
@@ -339,6 +316,8 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     const llvm::Triple &triple) {
   switch (triple.getOS()) {
   case llvm::Triple::AIX:
+  case llvm::Triple::DragonFly:
+  case llvm::Triple::ELFIAMCU:
   case llvm::Triple::Emscripten:
   case llvm::Triple::FreeBSD:
   case llvm::Triple::Fuchsia:
@@ -351,6 +330,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::OpenBSD:
   case llvm::Triple::PS4:
   case llvm::Triple::PS5:
+  case llvm::Triple::RTEMS:
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
   case llvm::Triple::ZOS:

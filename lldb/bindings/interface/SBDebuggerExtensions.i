@@ -24,15 +24,6 @@ STRING_EXTENSION_OUTSIDE(SBDebugger)
                 file = sys.stderr
             self.SetErrorFile(SBFile.Create(file, borrow=True))
 
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all targets in a lldb.SBDebugger object.'''
             return lldb_iter(self, 'GetNumTargets', 'GetTargetAtIndex')

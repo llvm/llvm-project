@@ -48,9 +48,7 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
-  unsigned XLen = 32;
   unsigned ZvlLen = 0;
-  MVT XLenVT = MVT::i32;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
@@ -127,8 +125,12 @@ public:
     return hasStdExtZfhOrZfhmin() || HasStdExtZfbfmin;
   }
   bool is64Bit() const { return IsRV64; }
-  MVT getXLenVT() const { return XLenVT; }
-  unsigned getXLen() const { return XLen; }
+  MVT getXLenVT() const {
+    return is64Bit() ? MVT::i64 : MVT::i32;
+  }
+  unsigned getXLen() const {
+    return is64Bit() ? 64 : 32;
+  }
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
@@ -138,7 +140,7 @@ public:
 
     return 0;
   }
-  unsigned getELEN() const {
+  unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
   }

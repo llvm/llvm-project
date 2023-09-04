@@ -357,12 +357,7 @@ public:
     return *this;
   }
 
-  /// In the particular case where the vector has a single dimension that we
-  /// drop, return the scalar element type.
-  // TODO: unify once we have a VectorType that supports 0-D.
-  operator Type() {
-    if (shape.empty())
-      return elementType;
+  operator VectorType() {
     return VectorType::get(shape, elementType, scalableDims);
   }
 
@@ -516,7 +511,7 @@ MemRefType canonicalizeStridedLayout(MemRefType t);
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
 /// dynamic and need to be encoded with a different symbol.
-/// For canonical strides expressions, the offset is always 0 and and fastest
+/// For canonical strides expressions, the offset is always 0 and the fastest
 /// varying stride is always `1`.
 ///
 /// Examples:

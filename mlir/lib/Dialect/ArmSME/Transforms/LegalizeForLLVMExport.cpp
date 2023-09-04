@@ -92,11 +92,12 @@ struct ZeroOpConversion : public ConvertOpToLLVMPattern<ZeroOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = zero.getLoc();
 
+    unsigned tileElementWidth =
+        zero.getVectorType().getElementType().getIntOrFloatBitWidth();
+
     // Get Tile ID for the `zero` intrinsic.
     auto tileId = rewriter.create<arm_sme::GetTileID>(
-        loc, zero.getVectorType().getElementType());
-
-    auto tileElementWidth = tileId.getType().getIntOrFloatBitWidth();
+        loc, rewriter.getIntegerType(tileElementWidth));
 
     // Get the base mask for tile based on the element size.
     // The base mask is just the mask to zero the first tile (of a size).

@@ -23,6 +23,40 @@ entry:
   ret i32 0
 }
 
+; Check a safe alloca to ensure it does not get a tag.
+define i32 @test_cmpxchg(ptr %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_cmpxchg
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY-NOT: call {{.*}}__hwasan_generate_tag
+  ; SAFETY-NOT: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
+  %buf.sroa.0 = alloca i8, align 4
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  %0 = cmpxchg ptr %buf.sroa.0, i8 1, i8 2 monotonic monotonic, align 4
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  ret i32 0
+}
+
+; Check a safe alloca to ensure it does not get a tag.
+define i32 @test_atomicrwm(ptr %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_atomicrwm
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY-NOT: call {{.*}}__hwasan_generate_tag
+  ; SAFETY-NOT: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
+  %buf.sroa.0 = alloca i8, align 4
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  %0 = atomicrmw add ptr %buf.sroa.0, i8 1 monotonic, align 4
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  ret i32 0
+}
+
 ; Check a non-safe alloca to ensure it gets a tag.
 define i32 @test_use(ptr %a) sanitize_hwaddress {
 entry:
@@ -141,6 +175,23 @@ entry:
   ret i32 0
 }
 
+define i32 @test_out_of_range2(ptr %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_out_of_range2
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY: call {{.*}}__hwasan_generate_tag
+  ; SAFETY: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
+  %buf.sroa.0 = alloca [10 x i8], align 4
+  %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 10
+  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  %0 = cmpxchg ptr %ptr, i8 1, i8 2 monotonic monotonic, align 4
+  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
+  ret i32 0
+}
+
 define i32 @test_out_of_range3(ptr %a) sanitize_hwaddress {
 entry:
   ; CHECK-LABEL: @test_out_of_range3
@@ -189,6 +240,23 @@ entry:
   call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.1)
   call void @llvm.memmove.p0.p0.i32(ptr %ptr, ptr %ptr1, i32 1, i1 true)
   call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.1)
+  ret i32 0
+}
+
+define i32 @test_out_of_range6(ptr %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_out_of_range6
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY: call {{.*}}__hwasan_generate_tag
+  ; SAFETY: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
+  %buf.sroa.0 = alloca [10 x i8], align 4
+  %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 10
+  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  %0 = atomicrmw add ptr %ptr, i32 1 monotonic, align 4
+  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 

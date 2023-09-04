@@ -21,7 +21,7 @@ tablegen("AArch64GenFastISel") {
 tablegen("AArch64GenO0PreLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AArch64O0PreLegalizerCombiner",
   ]
   td_file = "AArch64.td"
@@ -42,7 +42,7 @@ tablegen("AArch64GenMCPseudoLowering") {
 tablegen("AArch64GenPostLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AArch64PostLegalizerCombiner",
   ]
   td_file = "AArch64.td"
@@ -51,7 +51,7 @@ tablegen("AArch64GenPostLegalizeGICombiner") {
 tablegen("AArch64GenPreLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AArch64PreLegalizerCombiner",
   ]
   td_file = "AArch64.td"
@@ -60,7 +60,7 @@ tablegen("AArch64GenPreLegalizeGICombiner") {
 tablegen("AArch64GenPostLegalizeGILowering") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AArch64PostLegalizerLowering",
   ]
   td_file = "AArch64.td"

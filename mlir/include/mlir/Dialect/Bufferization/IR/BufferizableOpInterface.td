@@ -415,6 +415,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           the input IR and returns `failure` in that case. If this op is
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
+
+          Note: If this op supports unstructured control flow in its regions,
+          then this function should also bufferize all block signatures that
+          belong to this op. Branch ops (that branch to a block) are typically
+          bufferized together with the block signature (this is just a
+          suggestion to make sure IR is valid at every point in time and could
+          be done differently).
         }],
         /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"bufferize",

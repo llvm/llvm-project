@@ -28,17 +28,10 @@ STRING_EXTENSION_OUTSIDE(SBModule)
 %extend lldb::SBModule {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
         def __eq__(self, other):
             return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
 
         def __len__(self):
             '''Return the number of symbols in a lldb.SBModule object.'''

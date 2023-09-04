@@ -1,5 +1,4 @@
 libcxx/include/__algorithm/binary_search.h
-libcxx/include/__algorithm/clamp.h
 libcxx/include/__algorithm/comp_ref_type.h
 libcxx/include/__algorithm/copy_backward.h
 libcxx/include/__algorithm/copy_if.h

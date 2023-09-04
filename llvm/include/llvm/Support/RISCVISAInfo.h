@@ -22,6 +22,8 @@ struct RISCVExtensionInfo {
   unsigned MinorVersion;
 };
 
+void riscvExtensionsHelp();
+
 class RISCVISAInfo {
 public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;

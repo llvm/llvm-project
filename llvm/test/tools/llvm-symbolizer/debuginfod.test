@@ -39,9 +39,9 @@ RUN:   FileCheck %s --check-prefix=FOUND
 
 # Passing BUILDID twice is a syntax error.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
 RUN:   FileCheck %s --check-prefix=BUILDIDBUILDID
-BUILDIDBUILDID: BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+BUILDIDBUILDID: error: 'BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix
 
 # CODE should work preceding build ID.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
@@ -63,16 +63,16 @@ NOTHINGFOUND-NEXT: ??:0:0
 # BUILDID shouldn't be parsed if --obj is given, just like regular filenames.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
 RUN:   --obj=%t/addr.exe \
-RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
 RUN:   FileCheck %s --check-prefix=BUILDIDIGNORED
-BUILDIDIGNORED: BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+BUILDIDIGNORED: error: 'BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': input file has already been specified
 
 # Providing both BUILDID and FILE is a syntax error.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
 RUN:   FileCheck %s --check-prefix=BUILDIDFILE
-BUILDIDFILE: BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+BUILDIDFILE: error: 'BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
 RUN:   FileCheck %s --check-prefix=FILEBUILDID
-FILEBUILDID: FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+FILEBUILDID: error: 'FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix

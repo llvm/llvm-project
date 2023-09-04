@@ -413,17 +413,17 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   auto Range = BC.getBinaryDataForSection(Section);
   bool FoundUnmoveable = false;
   for (auto Itr = Range.begin(); Itr != Range.end(); ++Itr) {
+    BinaryData *Next =
+        std::next(Itr) != Range.end() ? std::next(Itr)->second : nullptr;
     if (Itr->second->getName().startswith("PG.")) {
       BinaryData *Prev =
           Itr != Range.begin() ? std::prev(Itr)->second : nullptr;
-      BinaryData *Next = Itr != Range.end() ? std::next(Itr)->second : nullptr;
       bool PrevIsPrivate = Prev && isPrivate(Prev);
       bool NextIsPrivate = Next && isPrivate(Next);
       if (isPrivate(Itr->second) && (PrevIsPrivate || NextIsPrivate))
         Itr->second->setIsMoveable(false);
     } else {
       // check for overlapping symbols.
-      BinaryData *Next = Itr != Range.end() ? std::next(Itr)->second : nullptr;
       if (Next && Itr->second->getEndAddress() != Next->getAddress() &&
           Next->containsAddress(Itr->second->getEndAddress())) {
         Itr->second->setIsMoveable(false);

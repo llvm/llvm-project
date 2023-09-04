@@ -71,8 +71,6 @@ public:
 
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
-      case Triple::CloudABI:
-        return ELF::ELFOSABI_CLOUDABI;
       case Triple::HermitCore:
         return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:

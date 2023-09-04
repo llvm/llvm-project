@@ -47,13 +47,6 @@
 // CHECK-NO-MIX-OMIT-FP-PG: '-fomit-frame-pointer' not allowed with '-pg'
 // CHECK-MIX-NO-OMIT-FP-PG-NOT: '-fomit-frame-pointer' not allowed with '-pg'
 
-// CloudABI follows the same rules as Linux.
-// RUN: %clang -### -target x86_64-unknown-cloudabi -S -O1 %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=KEEP-NONE %s
-
-// RUN: %clang -### -target x86_64-unknown-cloudabi -S %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=KEEP-ALL %s
-
 // NetBSD follows the same rules as Linux.
 // RUN: %clang -### -target x86_64-unknown-netbsd -S -O1 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s

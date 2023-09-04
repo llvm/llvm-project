@@ -427,7 +427,8 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
   auto HandleIntToPtr = [this](Value &V) {
     if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
       SmallVector<User *, 16> UsersToUpdate(V.users());
-      llvm::for_each(UsersToUpdate, [&](User *U) { markPointerAsGlobal(U); });
+      for (User *U : UsersToUpdate)
+        markPointerAsGlobal(U);
     }
   };
   if (TM.getDrvInterface() == NVPTX::CUDA) {
