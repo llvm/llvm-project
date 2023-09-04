@@ -1787,4 +1787,38 @@ def ClauseRequiresAttr :
   EnumAttr<OpenMP_Dialect, ClauseRequires, "clause_requires"> {
 }
 
+
+def RegionOp : OpenMP_Op<"region"> {
+  let summary = "Encapsulates a region in an OpenMP construct.";
+  let description = [{
+    Encapsulates a region surrounded by an OpenMP Construct. The intended use
+    of this operation is that within an OpenMP operation's region, there would
+    be a single `omp.region` operation and a terminator operation as shown
+    below.
+
+    ```
+    // Example with `omp.task`
+    omp.task {
+      omp.region {
+        call @foo : () -> ()
+      }
+      omp.terminator
+    }
+    ```
+
+    This operation is especially more useful in operations that use `omp.yield`
+    as a terminator. For example, in the proposed canonical loop operation,
+    this operation would help fix the arguments of the yield operation and it
+    is not affected by branches in the region assosciated with the canonical
+    loop. In cases where the yielded value has to be a compile time constant,
+    this provides a mechanism to avoid complex static analysis for the constant
+    value.
+  }];
+  let regions = (region AnyRegion:$block);
+  let assemblyFormat = [{
+    $block attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // OPENMP_OPS

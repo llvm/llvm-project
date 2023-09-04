@@ -1524,6 +1524,21 @@ LogicalResult CancellationPointOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// RegionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult RegionOp::verify() {
+  Operation *parentOp = (*this)->getParentOp();
+  if (!parentOp)
+    return emitOpError() << "`omp.region` must have a parent";
+
+  if (!isa<OpenMPDialect>(parentOp->getDialect()))
+    return emitOpError()
+           << "`omp.region` must be used under an OpenMP Dialect operation.";
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
