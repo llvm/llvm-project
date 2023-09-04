@@ -459,9 +459,10 @@ public:
 
 mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
-  if (assign.isAllocatableAssignment())
-    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
-
+  // Since RHS is a scalar and LHS is an array, LHS must be allocated
+  // in a conforming Fortran program, and LHS cannot be reallocated
+  // as a result of the assignment. So we can ignore isAllocatableAssignment
+  // and do the transformation always.
   mlir::Value rhs = assign.getRhs();
   if (!fir::isa_trivial(rhs.getType()))
     return rewriter.notifyMatchFailure(
