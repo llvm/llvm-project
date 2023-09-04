@@ -152,6 +152,11 @@ public:
     unsigned VLen = getMaxRVVVectorSizeInBits();
     return VLen == 0 ? 65536 : VLen;
   }
+  std::optional<unsigned> getRealKnownVLen() const {
+    if (getRealMinVLen() == getRealMaxVLen())
+      return getRealMinVLen();
+    return std::nullopt;
+  }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||

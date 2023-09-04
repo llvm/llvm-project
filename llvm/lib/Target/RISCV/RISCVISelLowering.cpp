@@ -8628,12 +8628,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (OrigIdx == 0)
     return Op;
 
+  auto KnownVLen = Subtarget.getRealKnownVLen();
+
   // If the subvector vector is a fixed-length type, we cannot use subregister
-  // manipulation to simplify the codegen; we don't know which register of a
-  // LMUL group contains the specific subvector as we only know the minimum
-  // register size. Therefore we must slide the vector group down the full
-  // amount.
-  if (SubVecVT.isFixedLengthVector()) {
+  // manipulation to simplify the codegen if we don't know VLEN; we don't know
+  // which register of a LMUL group contains the specific subvector as we only
+  // know the minimum register size. Therefore we must slide the vector group
+  // down the full amount.
+  if (SubVecVT.isFixedLengthVector() && !KnownVLen) {
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VecVT);
@@ -8654,19 +8656,46 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
+  if (VecVT.isFixedLengthVector()) {
+    VecVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(VecVT, Vec, DAG, Subtarget);
+  }
+
+  // The semantics of extract_subvector are that if the extracted subvector is
+  // scalable, then the index is scaled by vscale. So if we have a fixed length
+  // subvector, we need to factor that in before we decompose it to
+  // subregisters...
+  MVT ContainerSubVecVT = SubVecVT;
+  unsigned EffectiveIdx = OrigIdx;
+  unsigned Vscale = *KnownVLen / RISCV::RVVBitsPerBlock;
+  if (SubVecVT.isFixedLengthVector()) {
+    assert(KnownVLen);
+    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
+    EffectiveIdx = OrigIdx / Vscale;
+  }
+
   unsigned SubRegIdx, RemIdx;
   std::tie(SubRegIdx, RemIdx) =
       RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-          VecVT, SubVecVT, OrigIdx, TRI);
+          VecVT, ContainerSubVecVT, EffectiveIdx, TRI);
+
+  // ... and scale the remainder back afterwards.
+  if (SubVecVT.isFixedLengthVector())
+    RemIdx = (RemIdx * Vscale) + (OrigIdx % Vscale);
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
   // using subregister manipulation.
-  if (RemIdx == 0)
+  if (RemIdx == 0) {
+    if (SubVecVT.isFixedLengthVector()) {
+      Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, ContainerSubVecVT, Vec);
+      return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
+    }
     return Op;
+  }
 
   // Else SubVecVT is a fractional LMUL and needs to be slid down.
-  assert(RISCVVType::decodeVLMUL(getLMUL(SubVecVT)).second);
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -8678,10 +8707,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
-  SDValue SlidedownAmt =
-      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
+  SDValue SlidedownAmt;
+  if (SubVecVT.isFixedLengthVector())
+    SlidedownAmt = DAG.getConstant(RemIdx, DL, Subtarget.getXLenVT());
+  else
+    SlidedownAmt =
+        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
 
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
+  if (SubVecVT.isFixedLengthVector())
+    VL = getVLOp(SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
+
   SDValue Slidedown =
       getVSlidedown(DAG, Subtarget, DL, InterSubVT, DAG.getUNDEF(InterSubVT),
                     Vec, SlidedownAmt, Mask, VL);
