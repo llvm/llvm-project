@@ -589,6 +589,17 @@ namespace PR42089 {
   __attribute__((nothrow)) void S::Bar(){}
 }
 
+namespace UnalignedConv {
+struct S {
+  bool operator==(int) const;
+};
+
+int func() {
+  S __unaligned s;
+  return s == 42;
+}
+}
+
 #elif TEST2
 
 // Check that __unaligned is not recognized if MS extensions are not enabled
