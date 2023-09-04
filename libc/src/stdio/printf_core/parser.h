@@ -128,7 +128,7 @@ private:
 
   // the ArgProvider can only return the next item in the list. This function is
   // used in index mode when the item that needs to be read is not the next one.
-  // It moves cur_args to the index requested so the the appropriate value may
+  // It moves cur_args to the index requested so the appropriate value may
   // be read. This may involve parsing the format string, and is in the worst
   // case an O(n^2) operation.
   bool args_to_index(size_t index);
