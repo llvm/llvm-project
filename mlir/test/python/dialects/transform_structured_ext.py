@@ -297,7 +297,7 @@ def testMatchOpNamesTyped():
 
 
 @run
-def testMultitileSizes():
+def testMultitileSizesCompact():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
@@ -308,8 +308,34 @@ def testMultitileSizes():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMultitileSizes
     # CHECK: transform.sequence
+    # CHECK-NOT: divisor
+    # CHECK: transform.structured.multitile_sizes
+    # CHECK-NOT: divisor
+    # CHECK-DAG: dimension = 1
+    # CHECK-NOT: divisor
+    # CHECK-DAG: target_size = 42
+    # CHECK-NOT: divisor
+
+
+@run
+def testMultitileSizesAllArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MultiTileSizesOp(
+            pdl.OperationType.get(),
+            sequence.bodyTarget,
+            dimension=1,
+            target_size=42,
+            divisor=2,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMultitileSizes
+    # CHECK: transform.sequence
     # CHECK: transform.structured.multitile_sizes
     # CHECK-DAG: dimension = 1
+    # CHECK-DAG: divisor = 2
     # CHECK-DAG: target_size = 42
 
 
