@@ -13,22 +13,9 @@
 
 namespace clang::tidy::modernize {
 
-/// Mark unimplemented private special member functions with '= delete'.
-/// \code
-///   struct A {
-///   private:
-///     A(const A&);
-///     A& operator=(const A&);
-///   };
-/// \endcode
-/// Is converted to:
-/// \code
-///   struct A {
-///   private:
-///     A(const A&) = delete;
-///     A& operator=(const A&) = delete;
-///   };
-/// \endcode
+/// Identifies unimplemented private special member functions, and recommends
+/// using ``= delete`` for them. Additionally, it recommends relocating any
+/// deleted member function from the ``private`` to the ``public`` section.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-delete.html

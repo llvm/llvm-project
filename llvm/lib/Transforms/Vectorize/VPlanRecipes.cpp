@@ -1235,7 +1235,7 @@ void VPBlendRecipe::execute(VPTransformState &State) {
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "BLEND ";
-  Phi->printAsOperand(O, false);
+  printAsOperand(O, SlotTracker);
   O << " =";
   if (getNumIncomingValues() == 1) {
     // Not a User of any mask: not really blending, this is a
