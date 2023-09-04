@@ -487,6 +487,22 @@ def testTileExplicitLoopTypeAll():
 
 
 @run
+def testTileScalable():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileOp(
+            sequence.bodyTarget,
+            sizes=[4, [2]],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileScalable
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, [2]]
+
+
+@run
 def testTileToForallCompact():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
