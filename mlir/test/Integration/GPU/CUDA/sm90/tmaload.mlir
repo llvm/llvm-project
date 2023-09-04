@@ -10,7 +10,7 @@
 // RUN:     -convert-func-to-llvm \
 // RUN:     -canonicalize \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm{use-opaque-pointers=1},lower-affine,convert-scf-to-cf,convert-vector-to-llvm,convert-math-to-llvm,expand-strided-metadata,lower-affine,convert-index-to-llvm{index-bitwidth=32},convert-arith-to-llvm,reconcile-unrealized-casts,gpu-to-cubin{chip=sm_90 features=+ptx80 dump-ptx}))' \
-// RUN: 2&>1 | FileCheck %s --check-prefixes=CHECK-PTX
+// RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-PTX
 
 // CHECK-PTX: mbarrier.init.shared.b64
 // CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
@@ -18,6 +18,31 @@
 // CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
 // CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
+
+// RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
+// RUN:         -gpu-kernel-outlining \
+// RUN:         -convert-nvvm-to-llvm \
+// RUN:         -convert-nvgpu-to-nvvm \
+// RUN:         -convert-scf-to-cf  \
+// RUN:         -convert-vector-to-llvm \
+// RUN:         -convert-index-to-llvm=index-bitwidth=32 \
+// RUN:         -convert-arith-to-llvm \
+// RUN:         -finalize-memref-to-llvm='use-opaque-pointers=1' \
+// RUN:         -convert-func-to-llvm \
+// RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
+// RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
+// RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
+// RUN:  | mlir-cpu-runner \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --entry-point-result=void \
+// RUN:  | FileCheck %s
+
+
+// CHECK: [GPU] TMA BEFORE lhs[45][7] 0.000000
+// CHECK: [GPU] TMA BEFORE rhs[7][0] 0.000000
+// CHECK: [GPU] TMA LOADED lhs[45][7] 7.000000
+// CHECK: [GPU] TMA LOADED rhs[7][0] 3.000000
 
 module @mymod {
   memref.global "private" @bufferLhsGlobal : memref<64x8xf32, 3>
