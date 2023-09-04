@@ -41,3 +41,5 @@ void test() {
 // CHECK-NEXT: {{^}}   12 |
 // CHECK-NEXT: {{^}}      |
 // CHECK-NEXT: {{^}}   13 |
+// CHECK-NEXT: {{^}}      |
+
