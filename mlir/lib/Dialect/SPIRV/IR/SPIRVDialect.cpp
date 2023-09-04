@@ -710,33 +710,20 @@ static Type parseStructType(SPIRVDialect const &dialect,
                             DialectAsmParser &parser) {
   // TODO: This function is quite lengthy. Break it down into smaller chunks.
 
-  // To properly resolve recursive references while parsing recursive struct
-  // types, we need to maintain a list of enclosing struct type names. This set
-  // maintains the names of struct types in which the type we are about to parse
-  // is nested.
-  //
-  // Note: This has to be thread_local to enable multiple threads to safely
-  // parse concurrently.
-  thread_local SetVector<StringRef> structContext;
-
-  static auto removeIdentifierAndFail = [](SetVector<StringRef> &structContext,
-                                           StringRef identifier) {
-    if (!identifier.empty())
-      structContext.remove(identifier);
-
-    return Type();
-  };
-
   if (parser.parseLess())
     return Type();
 
   StringRef identifier;
+  FailureOr<DialectAsmParser::CyclicParseReset> cyclicParse;
 
   // Check if this is an identified struct type.
   if (succeeded(parser.parseOptionalKeyword(&identifier))) {
     // Check if this is a possible recursive reference.
+    auto structType =
+        StructType::getIdentified(dialect.getContext(), identifier);
+    cyclicParse = parser.tryStartCyclicParse(structType);
     if (succeeded(parser.parseOptionalGreater())) {
-      if (structContext.count(identifier) == 0) {
+      if (succeeded(cyclicParse)) {
         parser.emitError(
             parser.getNameLoc(),
             "recursive struct reference not nested in struct definition");
@@ -744,30 +731,24 @@ static Type parseStructType(SPIRVDialect const &dialect,
         return Type();
       }
 
-      return StructType::getIdentified(dialect.getContext(), identifier);
+      return structType;
     }
 
     if (failed(parser.parseComma()))
       return Type();
 
-    if (structContext.count(identifier) != 0) {
+    if (failed(cyclicParse)) {
       parser.emitError(parser.getNameLoc(),
                        "identifier already used for an enclosing struct");
-
-      return removeIdentifierAndFail(structContext, identifier);
+      return Type();
     }
-
-    structContext.insert(identifier);
   }
 
   if (failed(parser.parseLParen()))
-    return removeIdentifierAndFail(structContext, identifier);
+    return Type();
 
   if (succeeded(parser.parseOptionalRParen()) &&
       succeeded(parser.parseOptionalGreater())) {
-    if (!identifier.empty())
-      structContext.remove(identifier);
-
     return StructType::getEmpty(dialect.getContext(), identifier);
   }
 
@@ -783,30 +764,28 @@ static Type parseStructType(SPIRVDialect const &dialect,
   do {
     Type memberType;
     if (parser.parseType(memberType))
-      return removeIdentifierAndFail(structContext, identifier);
+      return Type();
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))
       if (parseStructMemberDecorations(dialect, parser, memberTypes, offsetInfo,
                                        memberDecorationInfo))
-        return removeIdentifierAndFail(structContext, identifier);
+        return Type();
   } while (succeeded(parser.parseOptionalComma()));
 
   if (!offsetInfo.empty() && memberTypes.size() != offsetInfo.size()) {
     parser.emitError(parser.getNameLoc(),
                      "offset specification must be given for all members");
-    return removeIdentifierAndFail(structContext, identifier);
+    return Type();
   }
 
   if (failed(parser.parseRParen()) || failed(parser.parseGreater()))
-    return removeIdentifierAndFail(structContext, identifier);
+    return Type();
 
   if (!identifier.empty()) {
     if (failed(idStructTy.trySetBody(memberTypes, offsetInfo,
                                      memberDecorationInfo)))
       return Type();
-
-    structContext.remove(identifier);
     return idStructTy;
   }
 
@@ -886,20 +865,20 @@ static void print(SampledImageType type, DialectAsmPrinter &os) {
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
-  thread_local SetVector<StringRef> structContext;
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint;
 
   os << "struct<";
 
   if (type.isIdentified()) {
     os << type.getIdentifier();
 
-    if (structContext.count(type.getIdentifier())) {
+    cyclicPrint = os.tryStartCyclicPrint(type);
+    if (failed(cyclicPrint)) {
       os << ">";
       return;
     }
 
     os << ", ";
-    structContext.insert(type.getIdentifier());
   }
 
   os << "(";
@@ -928,9 +907,6 @@ static void print(StructType type, DialectAsmPrinter &os) {
   llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
                         printMember);
   os << ")>";
-
-  if (type.isIdentified())
-    structContext.remove(type.getIdentifier());
 }
 
 static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
