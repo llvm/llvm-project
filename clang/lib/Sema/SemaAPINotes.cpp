@@ -628,6 +628,22 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
 static void ProcessAPINotes(Sema &S, TagDecl *D,
                             const api_notes::TagInfo &info,
                             VersionedInfoMetadata metadata) {
+  if (auto ImportAs = info.SwiftImportAs) {
+    auto str = "import_" + ImportAs.value();
+    auto attr = SwiftAttrAttr::Create(S.Context, str);
+    D->addAttr(attr);
+  }
+  if (auto RetainOp = info.SwiftRetainOp) {
+    auto str = "retain:" + RetainOp.value();
+    auto attr = SwiftAttrAttr::Create(S.Context, str);
+    D->addAttr(attr);
+  }
+  if (auto ReleaseOp = info.SwiftReleaseOp) {
+    auto str = "release:" + ReleaseOp.value();
+    auto attr = SwiftAttrAttr::Create(S.Context, str);
+    D->addAttr(attr);
+  }
+
   if (auto extensibility = info.EnumExtensibility) {
     using api_notes::EnumExtensibilityKind;
     bool shouldAddAttribute = (*extensibility != EnumExtensibilityKind::None);

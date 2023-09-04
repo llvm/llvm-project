@@ -527,6 +527,9 @@ struct Tag {
   std::optional<bool> SwiftPrivate;
   std::optional<StringRef> SwiftBridge;
   std::optional<StringRef> NSErrorDomain;
+  std::optional<std::string> SwiftImportAs;
+  std::optional<std::string> SwiftRetainOp;
+  std::optional<std::string> SwiftReleaseOp;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
@@ -557,6 +560,9 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
     IO.mapOptional("SwiftBridge", T.SwiftBridge);
     IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
+    IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
+    IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
+    IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
@@ -1128,6 +1134,27 @@ namespace {
         TagInfo tagInfo;
         if (convertCommonType(t, tagInfo, t.Name))
           continue;
+
+        if ((t.SwiftRetainOp.has_value() || t.SwiftReleaseOp.has_value()) &&
+            !t.SwiftImportAs) {
+          emitError(llvm::Twine("should declare SwiftImportAs to use "
+                                "SwiftRetainOp and SwiftReleaseOp (for ") +
+                    t.Name + ")");
+          continue;
+        }
+        if (t.SwiftReleaseOp.has_value() != t.SwiftRetainOp.has_value()) {
+          emitError(llvm::Twine("should declare both SwiftReleaseOp and "
+                                "SwiftRetainOp (for ") +
+                    t.Name + ")");
+          continue;
+        }
+
+        if (t.SwiftImportAs)
+          tagInfo.SwiftImportAs = t.SwiftImportAs;
+        if (t.SwiftRetainOp)
+          tagInfo.SwiftRetainOp = t.SwiftRetainOp;
+        if (t.SwiftReleaseOp)
+          tagInfo.SwiftReleaseOp = t.SwiftReleaseOp;
 
         if (t.EnumConvenienceKind) {
           if (t.EnumExtensibility) {
