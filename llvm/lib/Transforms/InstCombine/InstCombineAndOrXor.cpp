@@ -2458,6 +2458,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // If we are clearing the sign bit of a floating-point value, convert this to
   // fabs, then cast back to integer.
   //
+  // This is a generous interpretation for noimplicitfloat, this is not a true
+  // floating-point operation.
+  //
   // Assumes any IEEE-represented type has the sign bit in the high bit.
   // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
   Value *CastOp;
@@ -3738,6 +3741,31 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
     return Res;
+
+  // If we are setting the sign bit of a floating-point value, convert
+  // this to fneg(fabs), then cast back to integer.
+  //
+  // If the result isn't immediately cast back to a float, this will increase
+  // the number of instructions. This is still probably a better canonical form
+  // as it enables FP value tracking.
+  //
+  // Assumes any IEEE-represented type has the sign bit in the high bit.
+  //
+  // This is generous interpretation of noimplicitfloat, this is not a true
+  // floating-point operation.
+  Value *CastOp;
+  if (match(Op0, m_BitCast(m_Value(CastOp))) && match(Op1, m_SignMask()) &&
+      !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
+          Attribute::NoImplicitFloat)) {
+    Type *EltTy = CastOp->getType()->getScalarType();
+    if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
+        EltTy->getPrimitiveSizeInBits() ==
+        I.getType()->getScalarType()->getPrimitiveSizeInBits()) {
+      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+      Value *FNegFAbs = Builder.CreateFNeg(FAbs);
+      return new BitCastInst(FNegFAbs, I.getType());
+    }
+  }
 
   return nullptr;
 }
