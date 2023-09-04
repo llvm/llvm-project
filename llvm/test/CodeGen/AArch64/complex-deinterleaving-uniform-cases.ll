@@ -8,8 +8,8 @@ define <4 x float> @simple_mul(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_mul:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -65,10 +65,10 @@ define <4 x float> @three_way_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #90
-; CHECK-NEXT:    fcmla v3.4s, v2.4s, v4.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v2.4s, v4.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v4.4s, v2.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v4.4s, v2.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -177,8 +177,8 @@ define <4 x float> @mul_mul_with_fneg(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: mul_mul_with_fneg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #270
-; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #180
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #270
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #180
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:

@@ -9,10 +9,10 @@ define <4 x float> @mul_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #90
-; CHECK-NEXT:    fcmla v3.4s, v4.4s, v2.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v4.4s, v2.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v2.4s, v4.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v2.4s, v4.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -130,10 +130,10 @@ define <4 x float> @mul_triangle(<4 x float> %a, <4 x float> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v3.4s, #0
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v3.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v2.4s, v3.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v3.4s, v0.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -166,15 +166,15 @@ define <4 x float> @mul_diamond(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    movi v6.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v6.4s, v2.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v6.4s, v0.4s, v2.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v1.4s, #90
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v6.4s, v2.4s, v0.4s, #90
-; CHECK-NEXT:    fcmla v5.4s, v4.4s, v3.4s, #0
-; CHECK-NEXT:    fcmla v5.4s, v4.4s, v3.4s, #90
-; CHECK-NEXT:    fcmla v1.4s, v6.4s, v5.4s, #0
-; CHECK-NEXT:    fcmla v1.4s, v6.4s, v5.4s, #90
+; CHECK-NEXT:    fcmla v6.4s, v0.4s, v2.4s, #90
+; CHECK-NEXT:    fcmla v5.4s, v3.4s, v4.4s, #0
+; CHECK-NEXT:    fcmla v5.4s, v3.4s, v4.4s, #90
+; CHECK-NEXT:    fcmla v1.4s, v5.4s, v6.4s, #0
+; CHECK-NEXT:    fcmla v1.4s, v5.4s, v6.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -220,10 +220,10 @@ define <4 x float> @mul_add90_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.4s, v2.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v2.4s, v0.4s, #90
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v2.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v0.4s, v2.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
 ; CHECK-NEXT:    fcadd v0.4s, v4.4s, v3.4s, #90
 ; CHECK-NEXT:    ret
 entry:
@@ -358,8 +358,8 @@ entry:
 define <4 x float> @mul_addequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_addequal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -386,8 +386,8 @@ define <4 x float> @mul_subequal(<4 x float> %a, <4 x float> %b, <4 x float> %c)
 ; CHECK-LABEL: mul_subequal:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
 ; CHECK-NEXT:    fsub v0.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -415,8 +415,8 @@ define <4 x float> @mul_mulequal(<4 x float> %a, <4 x float> %b, <4 x float> %c)
 ; CHECK-LABEL: mul_mulequal:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
 ; CHECK-NEXT:    fmul v0.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -484,8 +484,8 @@ define <4 x float> @mul_negequal(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: mul_negequal:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #180
-; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #270
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #180
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #270
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
