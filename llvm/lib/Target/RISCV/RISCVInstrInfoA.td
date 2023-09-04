@@ -44,11 +44,6 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
   def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
-class AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-                  ValueType vt = XLenVT>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
-          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -122,14 +117,14 @@ let Predicates = [HasAtomicLdSt] in {
   def : LdPat<atomic_load_16, LH>;
   def : LdPat<atomic_load_32, LW>;
 
-  def : AtomicStPat<atomic_store_8,  SB, GPR>;
-  def : AtomicStPat<atomic_store_16, SH, GPR>;
-  def : AtomicStPat<atomic_store_32, SW, GPR>;
+  def : StPat<atomic_store_8,  SB, GPR, XLenVT>;
+  def : StPat<atomic_store_16, SH, GPR, XLenVT>;
+  def : StPat<atomic_store_32, SW, GPR, XLenVT>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
   def : LdPat<atomic_load_64, LD, i64>;
-  def : AtomicStPat<atomic_store_64, SD, GPR, i64>;
+  def : StPat<atomic_store_64, SD, GPR, i64>;
 }
 
 /// AMOs
