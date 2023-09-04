@@ -600,6 +600,7 @@ int func() {
 }
 }
 
+
 #elif TEST2
 
 // Check that __unaligned is not recognized if MS extensions are not enabled
