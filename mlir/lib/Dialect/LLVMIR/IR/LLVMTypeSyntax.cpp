@@ -198,11 +198,12 @@ static LLVMStructType parseStructType(AsmParser &parser) {
     if (succeeded(parser.parseOptionalGreater())) {
       auto type = LLVMStructType::getIdentifiedChecked(
           [loc] { return emitError(loc); }, loc.getContext(), name);
-      if (succeeded(parser.tryStartCyclicParse(type)))
-        return parser.emitError(
-                   greaterLoc,
-                   "struct without a body only allowed in a recursive struct"),
-               LLVMStructType();
+      if (succeeded(parser.tryStartCyclicParse(type))) {
+        parser.emitError(
+            greaterLoc,
+            "struct without a body only allowed in a recursive struct");
+        return nullptr;
+      }
 
       return type;
     }
