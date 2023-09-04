@@ -218,3 +218,27 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only} : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @scf_for_destination(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
+//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   %[[t2:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[t2]])
+//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   return %[[for]]
+func.func @scf_for_destination(%t: tensor<?x10xindex>, %lb: index, %ub: index, %step: index) -> tensor<?x10xindex> {
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%a = %t) -> tensor<?x10xindex> {
+    %b = "test.foo"(%a) : (tensor<?x10xindex>) -> (tensor<?x10xindex>)
+    scf.yield %b : tensor<?x10xindex>
+  }
+  return %r : tensor<?x10xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only} : !transform.any_op
+}
