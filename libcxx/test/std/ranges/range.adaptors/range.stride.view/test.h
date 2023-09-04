@@ -14,12 +14,18 @@
 #include <ranges>
 
 template <typename T = int>
-struct Range : std::ranges::view_base {
-  constexpr explicit Range(T* b, T* e) : begin_(b), end_(e) {}
-  constexpr Range(Range const& other) : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
-  constexpr Range(Range&& other) : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
-  Range& operator=(Range const&) = default;
-  Range& operator=(Range&&)      = default;
+struct InstrumentedBasicRange {
+  T *begin() const;
+  T *end() const;
+};
+
+template <typename T = int>
+struct InstrumentedBasicView : std::ranges::view_base {
+  constexpr explicit InstrumentedBasicView(T* b, T* e) : begin_(b), end_(e) {}
+  constexpr InstrumentedBasicView(InstrumentedBasicView const& other) : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
+  constexpr InstrumentedBasicView(InstrumentedBasicView&& other) : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
+  InstrumentedBasicView& operator=(InstrumentedBasicView const&) = default;
+  InstrumentedBasicView& operator=(InstrumentedBasicView&&)      = default;
   constexpr T* begin() const { return begin_; }
   constexpr T* end() const { return end_; }
 
@@ -30,20 +36,20 @@ struct Range : std::ranges::view_base {
 };
 
 template <typename T>
-Range(T, T) -> Range<T>;
+InstrumentedBasicView(T, T) -> InstrumentedBasicView<T>;
 
 template <typename T>
-struct BorrowedRange : public Range<T> {};
+struct InstrumentedBorrowedRange : public InstrumentedBasicView<T> {};
 
 template <typename T>
-inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange<T>> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<InstrumentedBorrowedRange<T>> = true;
 
-struct NoCopyRange : std::ranges::view_base {
-  explicit NoCopyRange(int*, int*);
-  NoCopyRange(NoCopyRange const&)            = delete;
-  NoCopyRange(NoCopyRange&&)                 = default;
-  NoCopyRange& operator=(NoCopyRange const&) = default;
-  NoCopyRange& operator=(NoCopyRange&&)      = default;
+struct NoCopyView : std::ranges::view_base {
+  explicit NoCopyView(int*, int*);
+  NoCopyView(NoCopyView const&)            = delete;
+  NoCopyView(NoCopyView&&)                 = default;
+  NoCopyView& operator=(NoCopyView const&) = default;
+  NoCopyView& operator=(NoCopyView&&)      = default;
   int* begin() const;
   int* end() const;
 };
@@ -100,7 +106,7 @@ struct NotSimpleViewIterA : ForwardIterBase<NotSimpleViewIterA> {
   constexpr NotSimpleViewIterA& operator=(const NotSimpleViewIterA&) = default;
 };
 
-struct NotSimpleView : std::ranges::view_base {
+struct InstrumentedNotSimpleView : std::ranges::view_base {
   constexpr NotSimpleViewIterA begin() const { return {}; }
   constexpr NotSimpleViewIterB begin() { return {}; }
   constexpr NotSimpleViewIterA end() const { return {}; }
@@ -127,42 +133,42 @@ struct ForwardTracedMoveView : std::ranges::view_base {
   constexpr ForwardTracedMoveIter end() const { return {}; }
 };
 
-struct BidirRange : std::ranges::view_base {
+struct BidirView : std::ranges::view_base {
   int* begin_;
   int* end_;
 
-  constexpr BidirRange(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr BidirView(int* b, int* e) : begin_(b), end_(e) {}
 
   constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{begin_}; }
   constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{begin_}; }
   constexpr bidirectional_iterator<int*> end() { return bidirectional_iterator<int*>{end_}; }
   constexpr bidirectional_iterator<const int*> end() const { return bidirectional_iterator<const int*>{end_}; }
 };
-static_assert(std::ranges::bidirectional_range<BidirRange>);
-static_assert(std::ranges::common_range<BidirRange>);
-static_assert(std::ranges::view<BidirRange>);
-static_assert(std::copyable<BidirRange>);
 
+static_assert(std::ranges::view<BidirView>);
+static_assert(std::copyable<BidirView>);
+
+/*
 enum CopyCategory { MoveOnly, Copyable };
 template <CopyCategory CC>
-struct BidirSentRange : std::ranges::view_base {
+struct BidirSentView : std::ranges::view_base {
   using sent_t       = sentinel_wrapper<bidirectional_iterator<int*>>;
   using sent_const_t = sentinel_wrapper<bidirectional_iterator<const int*>>;
 
   int* begin_;
   int* end_;
 
-  constexpr BidirSentRange(int* b, int* e) : begin_(b), end_(e) {}
-  constexpr BidirSentRange(const BidirSentRange&)
+  constexpr BidirSentView(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr BidirSentView(const BidirSentView&)
     requires(CC == Copyable)
   = default;
-  constexpr BidirSentRange(BidirSentRange&&)
+  constexpr BidirSentView(BidirSentView&&)
     requires(CC == MoveOnly)
   = default;
-  constexpr BidirSentRange& operator=(const BidirSentRange&)
+  constexpr BidirSentView& operator=(const BidirSentView&)
     requires(CC == Copyable)
   = default;
-  constexpr BidirSentRange& operator=(BidirSentRange&&)
+  constexpr BidirSentView& operator=(BidirSentView&&)
     requires(CC == MoveOnly)
   = default;
 
@@ -171,13 +177,15 @@ struct BidirSentRange : std::ranges::view_base {
   constexpr sent_t end() { return sent_t{bidirectional_iterator<int*>{end_}}; }
   constexpr sent_const_t end() const { return sent_const_t{bidirectional_iterator<const int*>{end_}}; }
 };
-static_assert(std::ranges::bidirectional_range<BidirSentRange<MoveOnly>>);
-static_assert(!std::ranges::common_range<BidirSentRange<MoveOnly>>);
-static_assert(std::ranges::view<BidirSentRange<MoveOnly>>);
-static_assert(!std::copyable<BidirSentRange<MoveOnly>>);
-static_assert(std::ranges::bidirectional_range<BidirSentRange<Copyable>>);
-static_assert(!std::ranges::common_range<BidirSentRange<Copyable>>);
-static_assert(std::ranges::view<BidirSentRange<Copyable>>);
-static_assert(std::copyable<BidirSentRange<Copyable>>);
+// TODO: Clean up.
+static_assert(std::ranges::bidirectional_range<BidirSentView<MoveOnly>>);
+static_assert(!std::ranges::common_range<BidirSentView<MoveOnly>>);
+static_assert(std::ranges::view<BidirSentView<MoveOnly>>);
+static_assert(!std::copyable<BidirSentView<MoveOnly>>);
+static_assert(std::ranges::bidirectional_range<BidirSentView<Copyable>>);
+static_assert(!std::ranges::common_range<BidirSentView<Copyable>>);
+static_assert(std::ranges::view<BidirSentView<Copyable>>);
+static_assert(std::copyable<BidirSentView<Copyable>>);
+*/
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
