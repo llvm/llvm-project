@@ -46,11 +46,6 @@ def Test_Dialect : Dialect {
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;
-
-    ::mlir::Type parseTestType(::mlir::AsmParser &parser,
-                               ::llvm::SetVector<::mlir::Type> &stack) const;
-    void printTestType(::mlir::Type type, ::mlir::AsmPrinter &printer,
-                       ::llvm::SetVector<::mlir::Type> &stack) const;
   }];
 }
 

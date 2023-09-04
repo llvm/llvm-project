@@ -406,6 +406,10 @@ public:
   void printAffineConstraint(AffineExpr expr, bool isEq);
   void printIntegerSet(IntegerSet set);
 
+  LogicalResult pushCyclicPrinting(const void *opaquePointer);
+
+  void popCyclicPrinting();
+
 protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {},
@@ -917,6 +921,16 @@ private:
   void printKeywordOrString(StringRef) override {}
   void printSymbolName(StringRef) override {}
   void printResourceHandle(const AsmDialectResourceHandle &) override {}
+
+  LogicalResult pushCyclicPrinting(const void *opaquePointer) override {
+    return success(cyclicPrintingStack.insert(opaquePointer));
+  }
+
+  void popCyclicPrinting() override { cyclicPrintingStack.pop_back(); }
+
+  /// Stack of potentially cyclic mutable attributes or type currently being
+  /// printed.
+  SetVector<const void *> cyclicPrintingStack;
 
   /// The initializer to use when identifying aliases.
   AliasInitializer &initializer;
@@ -1791,6 +1805,12 @@ public:
     return dialectResources;
   }
 
+  LogicalResult pushCyclicPrinting(const void *opaquePointer) {
+    return success(cyclicPrintingStack.insert(opaquePointer));
+  }
+
+  void popCyclicPrinting() { cyclicPrintingStack.pop_back(); }
+
 private:
   /// Collection of OpAsm interfaces implemented in the context.
   DialectInterfaceCollection<OpAsmDialectInterface> interfaces;
@@ -1815,6 +1835,10 @@ private:
 
   /// An optional location map to be populated.
   AsmState::LocationMap *locationMap;
+
+  /// Stack of potentially cyclic mutable attributes or type currently being
+  /// printed.
+  SetVector<const void *> cyclicPrintingStack;
 
   // Allow direct access to the impl fields.
   friend AsmState;
@@ -2689,6 +2713,12 @@ void AsmPrinter::Impl::printHexString(ArrayRef<char> data) {
   printHexString(StringRef(data.data(), data.size()));
 }
 
+LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
+  return state.pushCyclicPrinting(opaquePointer);
+}
+
+void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
+
 //===--------------------------------------------------------------------===//
 // AsmPrinter
 //===--------------------------------------------------------------------===//
@@ -2746,6 +2776,12 @@ void AsmPrinter::printResourceHandle(const AsmDialectResourceHandle &resource) {
   assert(impl && "expected AsmPrinter::printResourceHandle to be overriden");
   impl->printResourceHandle(resource);
 }
+
+LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
+  return impl->pushCyclicPrinting(opaquePointer);
+}
+
+void AsmPrinter::popCyclicPrinting() { impl->popCyclicPrinting(); }
 
 //===----------------------------------------------------------------------===//
 // Affine expressions and maps
