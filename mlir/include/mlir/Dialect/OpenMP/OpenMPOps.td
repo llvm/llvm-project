@@ -1788,18 +1788,18 @@ def ClauseRequiresAttr :
 }
 
 
-def RegionOp : OpenMP_Op<"region"> {
+def RegionOp : OpenMP_Op<"structured_region"> {
   let summary = "Encapsulates a region in an OpenMP construct.";
   let description = [{
     Encapsulates a region surrounded by an OpenMP Construct. The intended use
     of this operation is that within an OpenMP operation's region, there would
-    be a single `omp.region` operation and a terminator operation as shown
-    below.
+    be a single `omp.structured_region` operation and a terminator operation as
+    shown below.
 
     ```
-    // Example with `omp.task`
-    omp.task {
-      omp.region {
+    // Example with `omp.sections`
+    omp.sections {
+      omp.structured_region {
         call @foo : () -> ()
       }
       omp.terminator
@@ -1814,9 +1814,9 @@ def RegionOp : OpenMP_Op<"region"> {
     this provides a mechanism to avoid complex static analysis for the constant
     value.
   }];
-  let regions = (region AnyRegion:$block);
+  let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    $block attr-dict
+    $region attr-dict
   }];
   let hasVerifier = 1;
 }

@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Debug.h"
 #include <cstddef>
 #include <optional>
 
@@ -1530,12 +1531,9 @@ LogicalResult CancellationPointOp::verify() {
 
 LogicalResult RegionOp::verify() {
   Operation *parentOp = (*this)->getParentOp();
-  if (!parentOp)
-    return emitOpError() << "`omp.region` must have a parent";
-
+  assert(parentOp && "'omp.region' op must have a parent");
   if (!isa<OpenMPDialect>(parentOp->getDialect()))
-    return emitOpError()
-           << "`omp.region` must be used under an OpenMP Dialect operation.";
+    return emitOpError() << "must be used under an OpenMP Dialect operation";
   return success();
 }
 
