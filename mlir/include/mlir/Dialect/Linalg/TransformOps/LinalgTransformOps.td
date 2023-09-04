@@ -149,10 +149,10 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
                            $alloc_op,
                        UnitAttr:$bufferize_destination_only);
-  let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
@@ -1325,8 +1325,8 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
                        I64Attr:$static_split_point);
   let results = (outs TransformHandleTypeInterface:$first,
                       TransformHandleTypeInterface:$second);
-  let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2131,7 +2131,6 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       attr-dict
       `:` type($target)
   }];
-
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

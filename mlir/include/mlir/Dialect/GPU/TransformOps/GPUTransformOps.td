@@ -298,6 +298,8 @@ def MapForallToBlocks :
     attr-dict
     `:` functional-type($target, $result)
   }];
+  let hasVerifier = 1;
+  
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
