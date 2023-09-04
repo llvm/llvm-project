@@ -36,7 +36,7 @@ SmallVector<Type> &LLVMTypeConverter::getCurrentThreadRecursiveStack() {
   std::unique_lock<decltype(callStackMutex)> lock(callStackMutex);
   auto recursiveStackInserted = conversionCallStack.insert(std::make_pair(
       llvm::get_threadid(), std::make_unique<SmallVector<Type>>()));
-  return *recursiveStackInserted.first->second.get();
+  return *recursiveStackInserted.first->second;
 }
 
 /// Create an LLVMTypeConverter using default LowerToLLVMOptions.
