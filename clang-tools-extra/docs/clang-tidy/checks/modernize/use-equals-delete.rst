@@ -4,8 +4,8 @@ modernize-use-equals-delete
 ===========================
 
 Identifies unimplemented private special member functions, and recommends using
-``= delete`` for them, as well as relocating them from the ``private`` to the
-``public`` section.
+``= delete`` for them. Additionally, it recommends relocating any deleted
+member function from the ``private`` to the ``public`` section.
 
 Before the introduction of C++11, the primary method to effectively "erase" a
 particular function involved declaring it as ``private`` without providing a

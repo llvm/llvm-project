@@ -14,8 +14,8 @@
 namespace clang::tidy::modernize {
 
 /// Identifies unimplemented private special member functions, and recommends
-/// using ``= delete`` for them, as well as relocating them from the ``private``
-/// to the ``public`` section.
+/// using ``= delete`` for them. Additionally, it recommends relocating any
+/// deleted member function from the ``private`` to the ``public`` section.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-delete.html
