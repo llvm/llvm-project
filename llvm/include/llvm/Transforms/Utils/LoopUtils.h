@@ -392,15 +392,13 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI, Value *Src,
+Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
 /// described by \p Desc.
-Value *createAnyOfTargetReduction(IRBuilderBase &B,
-                                  const TargetTransformInfo *TTI, Value *Src,
+Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
                                   const RecurrenceDescriptor &Desc,
                                   PHINode *OrigPhi);
 
@@ -408,9 +406,8 @@ Value *createAnyOfTargetReduction(IRBuilderBase &B,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi = nullptr);
+Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
+                             Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
