@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include <cassert>
 #include <numeric>
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
@@ -1959,6 +1960,72 @@ LogicalResult spirv::ShiftRightArithmeticOp::verify() {
 
 LogicalResult spirv::ShiftRightLogicalOp::verify() {
   return verifyShiftOp(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BtiwiseAndOp
+//===----------------------------------------------------------------------===//
+
+static std::optional<APInt> extractIntConstant(Attribute attr) {
+  IntegerAttr intAttr;
+  if (auto splat = dyn_cast_if_present<SplatElementsAttr>(attr))
+    intAttr = dyn_cast<IntegerAttr>(splat.getSplatValue<Attribute>());
+  else
+    intAttr = dyn_cast_if_present<IntegerAttr>(attr);
+
+  if (!intAttr)
+    return std::nullopt;
+
+  return intAttr.getValue();
+}
+
+OpFoldResult
+spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
+  std::optional<APInt> rhsVal = extractIntConstant(adaptor.getOperand2());
+  if (!rhsVal)
+    return {};
+
+  APInt rhsMask = *rhsVal;
+
+  // x & 0 -> 0
+  if (rhsMask.isZero())
+    return getOperand2();
+
+  // x & <all ones> -> x
+  if (rhsMask.isAllOnes())
+    return getOperand1();
+
+  // (UConvert x : iN to iK) & <mask with N low bits set> -> UConvert x
+  if (auto zext = getOperand1().getDefiningOp<spirv::UConvertOp>()) {
+    int valueBits =
+        getElementTypeOrSelf(zext.getOperand()).getIntOrFloatBitWidth();
+    if (rhsMask.zextOrTrunc(valueBits).isAllOnes())
+      return getOperand1();
+  }
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BtiwiseOrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
+  std::optional<APInt> rhsVal = extractIntConstant(adaptor.getOperand2());
+  if (!rhsVal)
+    return {};
+
+  APInt rhsMask = *rhsVal;
+
+  // x | 0 -> x
+  if (rhsMask.isZero())
+    return getOperand1();
+
+  // x | <all ones> -> <all ones>
+  if (rhsMask.isAllOnes())
+    return getOperand2();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
