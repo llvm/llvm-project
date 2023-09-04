@@ -58,6 +58,8 @@ Changes to the LLVM IR
   * ``and``
   * ``or``
 
+* Added `llvm.exp10` intrinsic.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -80,6 +82,8 @@ Changes to the AMDGPU Backend
   for raw instruction access.
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
+
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
 Changes to the ARM Backend
 --------------------------
@@ -159,6 +163,9 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+
+* llvm-symbolizer now treats invalid input as an address for which source
+  information is not found.
 
 Changes to LLDB
 ---------------------------------

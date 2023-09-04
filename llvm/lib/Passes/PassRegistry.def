@@ -191,6 +191,15 @@ MODULE_PASS_WITH_PARAMS("memprof-use",
                         },
                         parseMemProfUsePassOptions,
                         "profile-filename=S")
+MODULE_PASS_WITH_PARAMS("print<structural-hash>",
+                        "StructuralHashPrinterPass",
+                        [](bool EnableDetailedStructuralHash) {
+                          return StructuralHashPrinterPass(
+                              dbgs(),
+                              EnableDetailedStructuralHash);
+                        },
+                        parseStructuralHashPrinterPassOptions,
+                        "detailed")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS

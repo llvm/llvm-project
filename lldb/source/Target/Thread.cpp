@@ -76,7 +76,7 @@ enum {
 class ThreadOptionValueProperties
     : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
-  ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
+  ThreadOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -100,8 +100,7 @@ public:
 
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
-    m_collection_sp =
-        std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
+    m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
     m_collection_sp->Initialize(g_thread_properties);
   } else
     m_collection_sp =

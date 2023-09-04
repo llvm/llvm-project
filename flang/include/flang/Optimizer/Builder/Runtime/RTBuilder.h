@@ -380,7 +380,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<
 ///     decltype(_FortranASumReal4)>, "_FortranASumReal4"))>
 /// ```
-/// These entries are then used to to generate the MLIR FunctionType that
+/// These entries are then used to generate the MLIR FunctionType that
 /// correspond to the runtime function declaration in C++.
 #undef FirE
 #define FirE(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)

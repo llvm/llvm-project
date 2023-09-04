@@ -153,6 +153,7 @@ codecvt mutex
 codecvt new
 codecvt stdexcept
 codecvt string
+codecvt tuple
 codecvt type_traits
 codecvt typeinfo
 codecvt version
@@ -363,6 +364,7 @@ fstream new
 fstream ostream
 fstream stdexcept
 fstream string
+fstream tuple
 fstream type_traits
 fstream typeinfo
 fstream version
@@ -412,6 +414,7 @@ iomanip istream
 iomanip version
 ios atomic
 ios cctype
+ios cerrno
 ios clocale
 ios concepts
 ios cstddef
@@ -427,6 +430,7 @@ ios new
 ios stdexcept
 ios string
 ios system_error
+ios tuple
 ios type_traits
 ios typeinfo
 ios version
@@ -509,6 +513,7 @@ locale new
 locale stdexcept
 locale streambuf
 locale string
+locale tuple
 locale type_traits
 locale typeinfo
 locale version
@@ -724,6 +729,7 @@ regex mutex
 regex new
 regex stdexcept
 regex string
+regex tuple
 regex type_traits
 regex typeinfo
 regex utility

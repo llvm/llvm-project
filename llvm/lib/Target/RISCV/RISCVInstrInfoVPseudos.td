@@ -118,7 +118,6 @@ class PseudoToVInst<string PseudoInst> {
                         ["FPR64", "F"],
                         ["FPR32", "F"],
                         ["FPR16", "F"],
-                        ["_TU", ""],
                         ["_TIED", ""],
                         ["_MASK", ""],
                         ["_B64", ""],
@@ -3143,7 +3142,7 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
                                           int sew,
                                           string Constraint = "",
                                           bit Commutable = 0> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
@@ -3158,7 +3157,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                           int sew,
                                           string Constraint = "",
                                           bit Commutable = 0> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew

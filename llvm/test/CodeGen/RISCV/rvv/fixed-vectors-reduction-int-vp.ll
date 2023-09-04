@@ -1425,7 +1425,7 @@ define i8 @vpreduce_mul_v1i8(i8 %s, <1 x i8> %v, <1 x i1> %m, i32 zeroext %evl) 
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a2, a0
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v9, a1
+; RV32-NEXT:    vmv.s.x v9, a1
 ; RV32-NEXT:    vmsne.vi v9, v9, 0
 ; RV32-NEXT:    vmand.mm v0, v9, v0
 ; RV32-NEXT:    vmv.v.i v9, 1
@@ -1446,7 +1446,7 @@ define i8 @vpreduce_mul_v1i8(i8 %s, <1 x i8> %v, <1 x i1> %m, i32 zeroext %evl) 
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    vmv.s.x v9, a1
 ; RV64-NEXT:    vmsne.vi v9, v9, 0
 ; RV64-NEXT:    vmand.mm v0, v9, v0
 ; RV64-NEXT:    vmv.v.i v9, 1

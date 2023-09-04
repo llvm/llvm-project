@@ -19,13 +19,11 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    assert(std::char_traits<wchar_t>::not_eof(L'a') == L'a');
-    assert(std::char_traits<wchar_t>::not_eof(L'A') == L'A');
-    assert(std::char_traits<wchar_t>::not_eof(0) == 0);
-    assert(std::char_traits<wchar_t>::not_eof(std::char_traits<wchar_t>::eof()) !=
-           std::char_traits<wchar_t>::eof());
+int main(int, char**) {
+  assert(std::char_traits<wchar_t>::not_eof(L'a') == L'a');
+  assert(std::char_traits<wchar_t>::not_eof(L'A') == L'A');
+  assert(std::char_traits<wchar_t>::not_eof(0) == 0);
+  assert(std::char_traits<wchar_t>::not_eof(std::char_traits<wchar_t>::eof()) != std::char_traits<wchar_t>::eof());
 
   return 0;
 }

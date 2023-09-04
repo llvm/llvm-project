@@ -226,6 +226,10 @@ HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
+// Provides information about what jump table the following indirect branch is
+// using.
+HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
@@ -612,6 +616,9 @@ HANDLE_TARGET_OPCODE(G_FEXP)
 
 /// Generic base-2 exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP2)
+
+/// Generic base-10 exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP10)
 
 /// Floating point base-e logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG)

@@ -89,7 +89,7 @@ using namespace std::chrono;
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
-  ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
+  ProcessOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -146,8 +146,7 @@ class ProcessExperimentalOptionValueProperties
                        OptionValueProperties> {
 public:
   ProcessExperimentalOptionValueProperties()
-      : Cloneable(
-            ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(Properties::GetExperimentalSettingsName()) {}
 };
 
 ProcessExperimentalProperties::ProcessExperimentalProperties()
@@ -162,8 +161,7 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
 {
   if (process == nullptr) {
     // Global process properties, set them up one time
-    m_collection_sp =
-        std::make_shared<ProcessOptionValueProperties>(ConstString("process"));
+    m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,

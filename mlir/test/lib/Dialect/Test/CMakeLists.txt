@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   TestDialect.cpp
   TestPatterns.cpp
   TestTraits.cpp
+  TestToLLVMIRTranslation.cpp
 )
 
 set(LLVM_TARGET_DEFINITIONS TestInterfaces.td)
@@ -70,6 +71,7 @@ add_mlir_library(MLIRTestDialect
   MLIRDialect
   MLIRDLTIDialect
   MLIRFuncDialect
+  MLIRFunctionInterfaces
   MLIRFuncTransforms
   MLIRIR
   MLIRInferIntRangeInterface
@@ -82,4 +84,21 @@ add_mlir_library(MLIRTestDialect
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
+)
+
+add_mlir_translation_library(MLIRTestToLLVMIRTranslation
+  TestToLLVMIRTranslation.cpp
+
+  EXCLUDE_FROM_LIBMLIR
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRLLVMDialect
+  MLIRTestDialect
+  MLIRSupport
+  MLIRBuiltinToLLVMIRTranslation
+  MLIRLLVMToLLVMIRTranslation
 )

@@ -891,8 +891,8 @@ bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
-    IRBuilder<> &Builder, Value *Num, Value *Den, FastMathFlags DivFMF,
-    FastMathFlags SqrtFMF, const Instruction *CtxI) const {
+    IRBuilder<> &Builder, Value *Num, Value *Den, const FastMathFlags DivFMF,
+    const FastMathFlags SqrtFMF, const Instruction *CtxI) const {
   // The rsqrt contraction increases accuracy from ~2ulp to ~1ulp.
   assert(DivFMF.allowContract() && SqrtFMF.allowContract());
 
@@ -911,8 +911,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
   if (CLHS->isExactlyValue(1.0) || (IsNegative = CLHS->isExactlyValue(-1.0))) {
     // Add in the sqrt flags.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
-    DivFMF |= SqrtFMF;
-    Builder.setFastMathFlags(DivFMF);
+    Builder.setFastMathFlags(DivFMF | SqrtFMF);
 
     if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) || HasUnsafeFPMath ||
         canIgnoreDenormalInput(Den, CtxI)) {

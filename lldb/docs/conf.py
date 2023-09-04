@@ -43,7 +43,7 @@ automodapi_toctreedirnm = "python_api"
 extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
 
 autodoc_default_options = {
-    "special-members": "__int__, __len__, __hex__, __oct__, __iter__",
+    "special-members": True
 }
 
 # Unless we only generate the basic manpage we need the plugin for generating

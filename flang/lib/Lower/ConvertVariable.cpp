@@ -431,12 +431,13 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
-  // Fortran arrays of integer, real, or logical. The tensor type does
-  // not support nested structures which are needed for complex numbers.
+  // Fortran arrays of integer, real, complex, or logical. The tensor
+  // type does not support nested structures.
   if (symTy.isa<fir::SequenceType>() &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = symTy.cast<fir::SequenceType>().getEleTy();
-    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>()) {
+    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+                  fir::LogicalType>()) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {

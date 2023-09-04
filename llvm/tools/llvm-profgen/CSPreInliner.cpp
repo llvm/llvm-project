@@ -186,7 +186,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
         (NormalizationUpperBound - NormalizationLowerBound);
     if (NormalizedHotness > 1.0)
       NormalizedHotness = 1.0;
-    // Add 1 to to ensure hot callsites get a non-zero threshold, which could
+    // Add 1 to ensure hot callsites get a non-zero threshold, which could
     // happen when SampleColdCallSiteThreshold is 0. This is when we do not
     // want any inlining for cold callsites.
     SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +

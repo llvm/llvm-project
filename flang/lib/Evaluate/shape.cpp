@@ -76,10 +76,10 @@ auto GetShapeHelper::AsShapeResult(ExtentExpr &&arrayExpr) const -> Result {
   }
 }
 
-Shape GetShapeHelper::CreateShape(int rank, NamedEntity &base) {
+Shape GetShapeHelper::CreateShape(int rank, NamedEntity &base) const {
   Shape shape;
   for (int dimension{0}; dimension < rank; ++dimension) {
-    shape.emplace_back(GetExtent(base, dimension));
+    shape.emplace_back(GetExtent(base, dimension, invariantOnly_));
   }
   return shape;
 }
@@ -236,8 +236,10 @@ public:
   using Result = RESULT;
   using Base = Traverse<GetLowerBoundHelper, RESULT>;
   using Base::operator();
-  explicit GetLowerBoundHelper(int d, FoldingContext *context)
-      : Base{*this}, dimension_{d}, context_{context} {}
+  explicit GetLowerBoundHelper(
+      int d, FoldingContext *context, bool invariantOnly)
+      : Base{*this}, dimension_{d}, context_{context},
+        invariantOnly_{invariantOnly} {}
   static Result Default() { return Result{1}; }
   static Result Combine(Result &&, Result &&) {
     // Operator results and array references always have lower bounds == 1
@@ -259,7 +261,7 @@ public:
               if (dimension_ == rank - 1 && details->IsAssumedSize()) {
                 // last dimension of assumed-size dummy array: don't worry
                 // about handling an empty dimension
-                ok = IsScopeInvariantExpr(*lbound);
+                ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound);
               } else if (lbValue.value_or(0) == 1) {
                 // Lower bound is 1, regardless of extent
                 ok = true;
@@ -371,60 +373,69 @@ public:
 private:
   int dimension_; // zero-based
   FoldingContext *context_{nullptr};
+  bool invariantOnly_{false};
 };
 
-ExtentExpr GetRawLowerBound(const NamedEntity &base, int dimension) {
-  return GetLowerBoundHelper<ExtentExpr, false>{dimension, nullptr}(base);
-}
-
 ExtentExpr GetRawLowerBound(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
-  return Fold(context,
-      GetLowerBoundHelper<ExtentExpr, false>{dimension, &context}(base));
+    const NamedEntity &base, int dimension, bool invariantOnly) {
+  return GetLowerBoundHelper<ExtentExpr, false>{
+      dimension, nullptr, invariantOnly}(base);
 }
 
-MaybeExtentExpr GetLBOUND(const NamedEntity &base, int dimension) {
-  return GetLowerBoundHelper<MaybeExtentExpr, true>{dimension, nullptr}(base);
+ExtentExpr GetRawLowerBound(FoldingContext &context, const NamedEntity &base,
+    int dimension, bool invariantOnly) {
+  return Fold(context,
+      GetLowerBoundHelper<ExtentExpr, false>{
+          dimension, &context, invariantOnly}(base));
 }
 
 MaybeExtentExpr GetLBOUND(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
+    const NamedEntity &base, int dimension, bool invariantOnly) {
+  return GetLowerBoundHelper<MaybeExtentExpr, true>{
+      dimension, nullptr, invariantOnly}(base);
+}
+
+MaybeExtentExpr GetLBOUND(FoldingContext &context, const NamedEntity &base,
+    int dimension, bool invariantOnly) {
   return Fold(context,
-      GetLowerBoundHelper<MaybeExtentExpr, true>{dimension, &context}(base));
+      GetLowerBoundHelper<MaybeExtentExpr, true>{
+          dimension, &context, invariantOnly}(base));
 }
 
-Shape GetRawLowerBounds(const NamedEntity &base) {
+Shape GetRawLowerBounds(const NamedEntity &base, bool invariantOnly) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetRawLowerBound(base, dim));
+    result.emplace_back(GetRawLowerBound(base, dim, invariantOnly));
   }
   return result;
 }
 
-Shape GetRawLowerBounds(FoldingContext &context, const NamedEntity &base) {
+Shape GetRawLowerBounds(
+    FoldingContext &context, const NamedEntity &base, bool invariantOnly) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetRawLowerBound(context, base, dim));
+    result.emplace_back(GetRawLowerBound(context, base, dim, invariantOnly));
   }
   return result;
 }
 
-Shape GetLBOUNDs(const NamedEntity &base) {
+Shape GetLBOUNDs(const NamedEntity &base, bool invariantOnly) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetLBOUND(base, dim));
+    result.emplace_back(GetLBOUND(base, dim, invariantOnly));
   }
   return result;
 }
 
-Shape GetLBOUNDs(FoldingContext &context, const NamedEntity &base) {
+Shape GetLBOUNDs(
+    FoldingContext &context, const NamedEntity &base, bool invariantOnly) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetLBOUND(context, base, dim));
+    result.emplace_back(GetLBOUND(context, base, dim, invariantOnly));
   }
   return result;
 }
@@ -433,7 +444,7 @@ Shape GetLBOUNDs(FoldingContext &context, const NamedEntity &base) {
 // the extent.  In particular, if the upper bound is less than the lower bound,
 // return zero.
 static MaybeExtentExpr GetNonNegativeExtent(
-    const semantics::ShapeSpec &shapeSpec) {
+    const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   const auto &lbound{shapeSpec.lbound().GetExplicit()};
   std::optional<ConstantSubscript> uval{ToInt64(ubound)};
@@ -444,8 +455,9 @@ static MaybeExtentExpr GetNonNegativeExtent(
     } else {
       return ExtentExpr{*uval - *lval + 1};
     }
-  } else if (lbound && ubound && IsScopeInvariantExpr(*lbound) &&
-      IsScopeInvariantExpr(*ubound)) {
+  } else if (lbound && ubound &&
+      (!invariantOnly ||
+          (IsScopeInvariantExpr(*lbound) && IsScopeInvariantExpr(*ubound)))) {
     // Apply effective IDIM (MAX calculation with 0) so thet the
     // result is never negative
     if (lval.value_or(0) == 1) {
@@ -481,7 +493,8 @@ MaybeExtentExpr GetAssociatedExtent(const NamedEntity &base,
   return std::nullopt;
 }
 
-MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
+MaybeExtentExpr GetExtent(
+    const NamedEntity &base, int dimension, bool invariantOnly) {
   CHECK(dimension >= 0);
   const Symbol &last{base.GetLastSymbol()};
   const Symbol &symbol{ResolveAssociationsExceptSelectRank(last)};
@@ -506,7 +519,7 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
       int j{0};
       for (const auto &shapeSpec : details->shape()) {
         if (j++ == dimension) {
-          if (auto extent{GetNonNegativeExtent(shapeSpec)}) {
+          if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
             return extent;
           } else if (details->IsAssumedSize() && j == symbol.Rank()) {
             return std::nullopt;
@@ -523,23 +536,23 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
   return std::nullopt;
 }
 
-MaybeExtentExpr GetExtent(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
-  return Fold(context, GetExtent(base, dimension));
+MaybeExtentExpr GetExtent(FoldingContext &context, const NamedEntity &base,
+    int dimension, bool invariantOnly) {
+  return Fold(context, GetExtent(base, dimension, invariantOnly));
 }
 
-MaybeExtentExpr GetExtent(
-    const Subscript &subscript, const NamedEntity &base, int dimension) {
+MaybeExtentExpr GetExtent(const Subscript &subscript, const NamedEntity &base,
+    int dimension, bool invariantOnly) {
   return common::visit(
       common::visitors{
           [&](const Triplet &triplet) -> MaybeExtentExpr {
             MaybeExtentExpr upper{triplet.upper()};
             if (!upper) {
-              upper = GetUBOUND(base, dimension);
+              upper = GetUBOUND(base, dimension, invariantOnly);
             }
             MaybeExtentExpr lower{triplet.lower()};
             if (!lower) {
-              lower = GetLBOUND(base, dimension);
+              lower = GetLBOUND(base, dimension, invariantOnly);
             }
             return CountTrips(std::move(lower), std::move(upper),
                 MaybeExtentExpr{triplet.stride()});
@@ -558,8 +571,8 @@ MaybeExtentExpr GetExtent(
 }
 
 MaybeExtentExpr GetExtent(FoldingContext &context, const Subscript &subscript,
-    const NamedEntity &base, int dimension) {
-  return Fold(context, GetExtent(subscript, base, dimension));
+    const NamedEntity &base, int dimension, bool invariantOnly) {
+  return Fold(context, GetExtent(subscript, base, dimension, invariantOnly));
 }
 
 MaybeExtentExpr ComputeUpperBound(
@@ -580,14 +593,15 @@ MaybeExtentExpr ComputeUpperBound(
   return Fold(context, ComputeUpperBound(std::move(lower), std::move(extent)));
 }
 
-MaybeExtentExpr GetRawUpperBound(const NamedEntity &base, int dimension) {
+MaybeExtentExpr GetRawUpperBound(
+    const NamedEntity &base, int dimension, bool invariantOnly) {
   const Symbol &symbol{
       ResolveAssociationsExceptSelectRank(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     int rank{details->shape().Rank()};
     if (dimension < rank) {
       const auto &bound{details->shape()[dimension].ubound().GetExplicit()};
-      if (bound && IsScopeInvariantExpr(*bound)) {
+      if (bound && (!invariantOnly || IsScopeInvariantExpr(*bound))) {
         return *bound;
       } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
         return std::nullopt;
@@ -606,16 +620,16 @@ MaybeExtentExpr GetRawUpperBound(const NamedEntity &base, int dimension) {
   return std::nullopt;
 }
 
-MaybeExtentExpr GetRawUpperBound(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
-  return Fold(context, GetRawUpperBound(base, dimension));
+MaybeExtentExpr GetRawUpperBound(FoldingContext &context,
+    const NamedEntity &base, int dimension, bool invariantOnly) {
+  return Fold(context, GetRawUpperBound(base, dimension, invariantOnly));
 }
 
-static MaybeExtentExpr GetExplicitUBOUND(
-    FoldingContext *context, const semantics::ShapeSpec &shapeSpec) {
+static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
+    const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
-  if (ubound && IsScopeInvariantExpr(*ubound)) {
-    if (auto extent{GetNonNegativeExtent(shapeSpec)}) {
+  if (ubound && (!invariantOnly || IsScopeInvariantExpr(*ubound))) {
+    if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
         if (cstExtent > 0) {
@@ -629,20 +643,21 @@ static MaybeExtentExpr GetExplicitUBOUND(
   return std::nullopt;
 }
 
-static MaybeExtentExpr GetUBOUND(
-    FoldingContext *context, const NamedEntity &base, int dimension) {
+static MaybeExtentExpr GetUBOUND(FoldingContext *context,
+    const NamedEntity &base, int dimension, bool invariantOnly) {
   const Symbol &symbol{
       ResolveAssociationsExceptSelectRank(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     int rank{details->shape().Rank()};
     if (dimension < rank) {
       const semantics::ShapeSpec &shapeSpec{details->shape()[dimension]};
-      if (auto ubound{GetExplicitUBOUND(context, shapeSpec)}) {
+      if (auto ubound{GetExplicitUBOUND(context, shapeSpec, invariantOnly)}) {
         return *ubound;
       } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
         return std::nullopt; // UBOUND() folding replaces with -1
-      } else if (auto lb{GetLBOUND(base, dimension)}) {
-        return ComputeUpperBound(std::move(*lb), GetExtent(base, dimension));
+      } else if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
+        return ComputeUpperBound(
+            std::move(*lb), GetExtent(base, dimension, invariantOnly));
       }
     }
   } else if (const auto *assoc{
@@ -658,7 +673,7 @@ static MaybeExtentExpr GetUBOUND(
       }
     } else if (assoc->expr()) {
       if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
-        if (auto lb{GetLBOUND(base, dimension)}) {
+        if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
           return ComputeUpperBound(std::move(*lb), std::move(extent));
         }
       }
@@ -667,29 +682,34 @@ static MaybeExtentExpr GetUBOUND(
   return std::nullopt;
 }
 
-MaybeExtentExpr GetUBOUND(const NamedEntity &base, int dimension) {
-  return GetUBOUND(nullptr, base, dimension);
-}
-
 MaybeExtentExpr GetUBOUND(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
-  return Fold(context, GetUBOUND(&context, base, dimension));
+    const NamedEntity &base, int dimension, bool invariantOnly) {
+  return GetUBOUND(nullptr, base, dimension, invariantOnly);
 }
 
-static Shape GetUBOUNDs(FoldingContext *context, const NamedEntity &base) {
+MaybeExtentExpr GetUBOUND(FoldingContext &context, const NamedEntity &base,
+    int dimension, bool invariantOnly) {
+  return Fold(context, GetUBOUND(&context, base, dimension, invariantOnly));
+}
+
+static Shape GetUBOUNDs(
+    FoldingContext *context, const NamedEntity &base, bool invariantOnly) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetUBOUND(context, base, dim));
+    result.emplace_back(GetUBOUND(context, base, dim, invariantOnly));
   }
   return result;
 }
 
-Shape GetUBOUNDs(FoldingContext &context, const NamedEntity &base) {
-  return Fold(context, GetUBOUNDs(&context, base));
+Shape GetUBOUNDs(
+    FoldingContext &context, const NamedEntity &base, bool invariantOnly) {
+  return Fold(context, GetUBOUNDs(&context, base, invariantOnly));
 }
 
-Shape GetUBOUNDs(const NamedEntity &base) { return GetUBOUNDs(nullptr, base); }
+Shape GetUBOUNDs(const NamedEntity &base, bool invariantOnly) {
+  return GetUBOUNDs(nullptr, base, invariantOnly);
+}
 
 auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
   return common::visit(

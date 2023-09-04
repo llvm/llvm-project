@@ -6,19 +6,7 @@
             return lldb_iter(self, 'GetNumSignals', 'GetSignalAtIndex')
 
         def __len__(self):
-            return int(self.GetNumSignals())
-
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
+            return self.GetNumSignals()
 
         def get_unix_signals_list(self):
             signals = []

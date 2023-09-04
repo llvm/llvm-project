@@ -1813,7 +1813,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     } else {
       // We have at least one section loaded. This can be because we have
       // manually loaded some sections with "target modules load ..." or
-      // because we have have a live process that has sections loaded through
+      // because we have a live process that has sections loaded through
       // the dynamic loader
       load_addr =
           fixed_addr.GetOffset(); // "fixed_addr" doesn't have a section, so
@@ -2096,7 +2096,7 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
       } else {
         // We have at least one section loaded. This can be because we have
         // manually loaded some sections with "target modules load ..." or
-        // because we have have a live process that has sections loaded through
+        // because we have a live process that has sections loaded through
         // the dynamic loader
         section_load_list.ResolveLoadAddress(pointer_vm_addr, pointer_addr);
       }
@@ -4062,7 +4062,7 @@ enum {
 class TargetOptionValueProperties
     : public Cloneable<TargetOptionValueProperties, OptionValueProperties> {
 public:
-  TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
+  TargetOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -4098,7 +4098,7 @@ class TargetExperimentalOptionValueProperties
                        OptionValueProperties> {
 public:
   TargetExperimentalOptionValueProperties()
-      : Cloneable(ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(Properties::GetExperimentalSettingsName()) {}
 };
 
 TargetExperimentalProperties::TargetExperimentalProperties()
@@ -4152,8 +4152,7 @@ TargetProperties::TargetProperties(Target *target)
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
   } else {
-    m_collection_sp =
-        std::make_shared<TargetOptionValueProperties>(ConstString("target"));
+    m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
     m_collection_sp->Initialize(g_target_properties);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();

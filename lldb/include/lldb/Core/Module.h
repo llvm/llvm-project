@@ -1084,7 +1084,7 @@ protected:
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
-                                     /// is used by the ObjectFile and and
+                                     /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};

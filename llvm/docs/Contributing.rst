@@ -88,17 +88,17 @@ in order to update the last commit with all pending changes.
   the git integration can be run from
   ``clang/tools/clang-format/git-clang-format``.
 
-We don't currently accept GitHub pull requests, and you'll need to send patches
-via :ref:`Phabricator#phabricator-reviews <phabricator-reviews>`.
-(We used to allow patches on the llvm-commits mailing list, but the mailing lists
-have been deprecated.)
+The LLVM project has migrated to GitHub Pull Requests as its review process.
+We still have an active :ref:`Phabricator <phabricator-reviews>`
+instance for the duration of the migration. If you want to contribute to LLVM
+now, please use GitHub. For more information about the workflow of using GitHub
+Pull Requests see our :ref:`GitHub <github-reviews>` documentation.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
 code owner (see CODE_OWNERS.txt) and other people doing work in the area your
-patch touches. If you are using Phabricator, add them to the `Reviewers` field
-when creating a review and if you are using `llvm-commits`, add them to the CC of
-your email.
+patch touches. Github will normally suggest some reviewers based on rules or
+people that have worked on the code before.
 
 A reviewer may request changes or ask questions during the review. If you are
 uncertain on how to provide test cases, documentation, etc., feel free to ask
@@ -110,8 +110,7 @@ access, please let people know during the review and someone should commit it
 on your behalf.
 
 If you have received no comments on your patch for a week, you can request a
-review by 'ping'ing a patch by responding to the email thread containing the
-patch, or the Phabricator review with "Ping." The common courtesy 'ping' rate
+review by 'ping'ing the GitHub PR with "Ping." The common courtesy 'ping' rate
 is once a week. Please remember that you are asking for valuable time from other
 professional developers.
 
@@ -122,28 +121,9 @@ For more information on LLVM's code-review process, please see :doc:`CodeReview`
 For developers to commit changes from Git
 -----------------------------------------
 
-Once a patch is reviewed, you should rebase it, re-test locally, and commit the
-changes to LLVM's main branch. This is done using `git push` if you have the
-required access rights. See `committing a change
-<Phabricator.html#committing-a-change>`_ for Phabricator based commits or
-`obtaining commit access <DeveloperPolicy.html#obtaining-commit-access>`_
-for commit access.
-
-Here is an example workflow using git. This workflow assumes you have an
-accepted commit on the branch named `branch-with-change`.
-
-.. code-block:: console
-
-  # Pull changes from the upstream main branch.
-  % git checkout main && git pull
-  # Rebase your change onto main.
-  % git rebase --onto main --root branch-with-change
-  # Rerun the appropriate tests if needed.
-  % ninja check-$whatever
-  # Check that the list of commits about to be pushed is correct.
-  % git log origin/main...HEAD --oneline
-  # Push to Github.
-  % git push origin HEAD:main
+Once a patch is reviewed, you can select the "Squash and merge" button in the
+GitHub web interface. You might need to rebase your change before pushing
+it to the repo.
 
 LLVM currently has a linear-history policy, which means that merge commits are
 not allowed. The `llvm-project` repo on github is configured to reject pushes
@@ -201,5 +181,6 @@ of LLVM's high-level design, as well as its internals:
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
 .. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
-.. _LLVM's Phabricator: https://reviews.llvm.org/
+.. _LLVM's GitHub: https://github.com/llvm/llvm-project
+.. _LLVM's Phabricator (deprecated): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what

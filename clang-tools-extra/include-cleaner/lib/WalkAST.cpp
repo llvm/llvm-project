@@ -173,9 +173,8 @@ public:
 
   bool VisitOverloadExpr(OverloadExpr *E) {
     // Since we can't prove which overloads are used, report all of them.
-    llvm::for_each(E->decls(), [this, E](NamedDecl *D) {
+    for (NamedDecl *D : E->decls())
       report(E->getNameLoc(), D, RefType::Ambiguous);
-    });
     return true;
   }
 
@@ -238,6 +237,11 @@ public:
     // type-checking purposes.
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       report(D->getLocation(), D);
+    return true;
+  }
+
+  bool VisitConceptReference(const ConceptReference *CR) {
+    report(CR->getConceptNameLoc(), CR->getFoundDecl());
     return true;
   }
 

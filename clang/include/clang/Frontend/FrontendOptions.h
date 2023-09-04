@@ -283,6 +283,9 @@ public:
   /// print the supported cpus for the current target
   unsigned PrintSupportedCPUs : 1;
 
+  /// Print the supported extensions for the current target.
+  unsigned PrintSupportedExtensions : 1;
+
   /// Show the -version text.
   unsigned ShowVersion : 1;
 

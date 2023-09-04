@@ -1330,7 +1330,7 @@ define <1 x double> @vfwmacc_vf_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, ha
 ; CHECK-LABEL: vfwmacc_vf_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -1365,7 +1365,7 @@ define <1 x double> @vfwnmacc_vf_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, h
 ; CHECK-LABEL: vfwnmacc_vf_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -1385,7 +1385,7 @@ define <1 x double> @vfwnmacc_fv_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, h
 ; CHECK-LABEL: vfwnmacc_fv_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -1421,7 +1421,7 @@ define <1 x double> @vfwmsac_vf_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, ha
 ; CHECK-LABEL: vfwmsac_vf_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -1456,7 +1456,7 @@ define <1 x double> @vfwnmsac_vf_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, h
 ; CHECK-LABEL: vfwnmsac_vf_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -1475,7 +1475,7 @@ define <1 x double> @vfwnmsac_fv_v1f64_v1f16(<1 x double> %va, <1 x half> %vb, h
 ; CHECK-LABEL: vfwnmsac_fv_v1f64_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v11, v9
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma

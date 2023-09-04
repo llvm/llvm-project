@@ -90,7 +90,7 @@ enum RemapFlags {
 
   /// Instruct the remapper to reuse and mutate distinct metadata (remapping
   /// them in place) instead of cloning remapped copies. This flag has no
-  /// effect when when RF_NoModuleLevelChanges, since that implies an identity
+  /// effect when RF_NoModuleLevelChanges, since that implies an identity
   /// mapping.
   RF_ReuseAndMutateDistinctMDs = 4,
 

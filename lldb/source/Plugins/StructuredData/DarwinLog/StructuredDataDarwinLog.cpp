@@ -117,8 +117,8 @@ enum {
 
 class StructuredDataDarwinLogProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin-log");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin-log");
     return g_setting_name;
   }
 

@@ -56,6 +56,13 @@ using LatPointId = unsigned;
 /// for the corresponding `SmallVector<LatPointId>` object.
 using LatSetId = unsigned;
 
+/// A pair of level and its corresponding DimLevelType of a tensor.
+using LvlDLTPair = std::pair<Level, DimLevelType>;
+
+/// A pair of loop id and its coefficients. E.g., for affine expression in the
+/// affine map `2 * d0`, loop id = 0, coefficient = 2.
+using LoopCoeffPair = std::pair<LoopId, unsigned>;
+
 /// Tensor expression. Represents an MLIR expression in tensor index notation.
 struct TensorExp final {
   enum class Kind;
@@ -509,22 +516,22 @@ public:
 
   /// Establishes the two-way map that i <-> <t, lvl, dlt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
-                                   DimLevelType dlt) {
+                                   DimLevelType dlt, unsigned coefficient) {
     assert(isValidLoopId(i) && isValidLevel(t, lvl));
-    assert(!loopToDependencies[i][t].has_value()); // must be the first def
-    loopToDependencies[i][t] = std::make_pair(lvl, dlt);
-    levelToDependentLoop[t][lvl].push_back(i);
+    assert(!loopToUnresolvedLvls[i][t].has_value()); // must be the first def
+    loopToUnresolvedLvls[i][t] = std::make_pair(lvl, dlt);
+    levelToDependentLoop[t][lvl].emplace_back(i, coefficient);
   }
 
   /// Whether the loop has dependent slice.
   bool hasDependentLvl(LoopId i, TensorId t) {
     assert(isValidTensorId(t) && isValidLoopId(i));
-    return loopToDependencies[i][t].has_value();
+    return loopToUnresolvedLvls[i][t].has_value();
   }
 
   /// Returns the list of loop indices which appear in the non-trivial index
   /// expression on t_l, e.g., A[i+j] => {i, j}
-  std::vector<LoopId> &getDependentLoops(TensorId t, Level lvl) {
+  std::vector<LoopCoeffPair> &getDependentLoops(TensorId t, Level lvl) {
     assert(isValidLevel(t, lvl));
     return levelToDependentLoop[t][lvl];
   }
@@ -541,7 +548,7 @@ public:
     const TensorId t = tensor(b);
     const LoopId i = loop(b);
     assert(isValidTensorId(t) && isValidLoopId(i));
-    return loopToDependencies[i][t].has_value();
+    return loopToUnresolvedLvls[i][t].has_value();
   }
 
   /// Checks whether the TensorLoopId represents a sparse tensor level contains
@@ -556,12 +563,12 @@ public:
 
   Level getLoopDependentLevel(TensorLoopId b) const {
     assert(isLvlWithNonTrivialIdxExp(b));
-    return loopToDependencies[loop(b)][tensor(b)]->first;
+    return loopToUnresolvedLvls[loop(b)][tensor(b)]->first;
   }
 
   DimLevelType getLoopDependentLevelType(TensorLoopId b) const {
     assert(isLvlWithNonTrivialIdxExp(b));
-    return loopToDependencies[loop(b)][tensor(b)]->second;
+    return loopToUnresolvedLvls[loop(b)][tensor(b)]->second;
   }
 
   /// Convenience getters to immediately access the stored nodes.
@@ -715,13 +722,13 @@ private:
   /// It is currently only set for non-trivial index expressions.
   /// E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
   /// that i and j are used in the non-trivial index expression on A0.
-  std::vector<std::vector<std::optional<std::pair<Level, DimLevelType>>>>
-      loopToDependencies;
+  std::vector<std::vector<std::optional<LvlDLTPair>>> loopToUnresolvedLvls;
 
   /// The inverse map of ldxToDependencies from tensor level -> dependent loop
-  /// E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
-  /// to compute its indices.
-  std::vector<std::vector<std::vector<LoopId>>> levelToDependentLoop;
+  /// E.g., A[2i+j], we have A0 => {(2, i), (1, j)}, to indicate that A0 uses
+  /// both {i, j} to compute its indices and the coefficients on the loop id are
+  /// 2 and 1 respectively.
+  std::vector<std::vector<std::vector<LoopCoeffPair>>> levelToDependentLoop;
 
   /// Map from a loop to the [tid, lvl] pair that defines the loop boundary.
   std::vector<std::pair<TensorId, Level>> loopBounds;

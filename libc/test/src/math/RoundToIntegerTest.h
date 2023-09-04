@@ -114,7 +114,7 @@ public:
     test_one_input(func, F(1234.0), I(1234), false);
     test_one_input(func, F(-1234.0), I(-1234), false);
 
-    // The rest of this this function compares with an equivalent MPFR function
+    // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR
     // function to round to long long or wider integer values. So, we will
     // the remaining tests only if the width of I less than equal to that of

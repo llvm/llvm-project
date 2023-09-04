@@ -17,6 +17,21 @@ transform.sequence failures(propagate) {
 
 // -----
 
+// CHECK-LABEL: func @pass_pipeline(
+func.func @pass_pipeline() {
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  // This pipeline does not do anything. Just make sure that the pipeline is
+  // found and no error is produced.
+  transform.apply_registered_pass "test-options-pass-pipeline" to %1 : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
 func.func @invalid_pass_name() {
   return
 }
@@ -24,7 +39,7 @@ func.func @invalid_pass_name() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{unknown pass: non-existing-pass}}
+  // expected-error @below {{unknown pass or pass pipeline: non-existing-pass}}
   transform.apply_registered_pass "non-existing-pass" to %1 : (!transform.any_op) -> !transform.any_op
 }
 
@@ -54,7 +69,7 @@ func.func @invalid_pass_option() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{failed to add pass to pipeline: canonicalize}}
+  // expected-error @below {{failed to add pass or pass pipeline to pipeline: canonicalize}}
   transform.apply_registered_pass "canonicalize" to %1 {options = "invalid-option=1"} : (!transform.any_op) -> !transform.any_op
 }
 

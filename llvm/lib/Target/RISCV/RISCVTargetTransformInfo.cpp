@@ -307,7 +307,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // If the size of the element is < ELEN then shuffles of interleaves and
         // deinterleaves of 2 vectors can be lowered into the following
         // sequences
-        if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
+        if (EltTp.getScalarSizeInBits() < ST->getELen()) {
           // Example sequence:
           //   vsetivli     zero, 4, e8, mf4, ta, ma (ignored)
           //   vwaddu.vv    v10, v8, v9
@@ -1186,8 +1186,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
     // Skip if element size of Dst or Src is bigger than ELEN.
-    if (Src->getScalarSizeInBits() > ST->getELEN() ||
-        Dst->getScalarSizeInBits() > ST->getELEN())
+    if (Src->getScalarSizeInBits() > ST->getELen() ||
+        Dst->getScalarSizeInBits() > ST->getELen())
       return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1270,7 +1270,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   // Skip if scalar size of Ty is bigger than ELEN.
-  if (Ty->getScalarSizeInBits() > ST->getELEN())
+  if (Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -1297,7 +1297,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   // Skip if scalar size of Ty is bigger than ELEN.
-  if (Ty->getScalarSizeInBits() > ST->getELEN())
+  if (Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1332,7 +1332,7 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
                                            FMF, CostKind);
 
   // Skip if scalar size of ResTy is bigger than ELEN.
-  if (ResTy->getScalarSizeInBits() > ST->getELEN())
+  if (ResTy->getScalarSizeInBits() > ST->getELen())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
 
@@ -1412,7 +1412,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                      I);
 
   // Skip if scalar size of ValTy is bigger than ELEN.
-  if (ValTy->isVectorTy() && ValTy->getScalarSizeInBits() > ST->getELEN())
+  if (ValTy->isVectorTy() && ValTy->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
 
@@ -1592,7 +1592,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
                                          Args, CxtI);
 
   // Skip if scalar size of Ty is bigger than ELEN.
-  if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELEN())
+  if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 

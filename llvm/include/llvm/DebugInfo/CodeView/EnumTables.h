@@ -48,6 +48,7 @@ ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames();
 ArrayRef<EnumEntry<uint8_t>> getCallingConventions();
 ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum();
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum();
+ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames();
 
 } // end namespace codeview
 } // end namespace llvm

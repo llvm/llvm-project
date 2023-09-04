@@ -71,6 +71,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
   ; CHECK-NEXT:   early-clobber %17:gpr64, early-clobber %18:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
+  ; CHECK-NEXT:   JUMP_TABLE_DEBUG_INFO 0
   ; CHECK-NEXT:   BR %17
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.sw.bb:

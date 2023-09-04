@@ -30,6 +30,7 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
 
   const bool IsArch32Bit = getToolChain().getTriple().isArch32Bit();
@@ -37,6 +38,11 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // Only support 32 and 64 bit.
   if (!IsArch32Bit && !IsArch64Bit)
     llvm_unreachable("Unsupported bit width value.");
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
 
   // Specify the mode in which the as(1) command operates.
   if (IsArch32Bit) {
@@ -429,11 +435,20 @@ void AIX::addClangTargetOptions(
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const {
-  // Add linker option -u__llvm_profile_runtime to cause runtime
-  // initialization to occur.
-  if (needsProfileRT(Args))
+  if (needsProfileRT(Args)) {
+    // Add linker option -u__llvm_profile_runtime to cause runtime
+    // initialization to occur.
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+
+    if (const auto *A =
+            Args.getLastArgNoClaim(options::OPT_fprofile_update_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "atomic" || Val == "prefer-atomic")
+        CmdArgs.push_back("-latomic");
+    }
+  }
+
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 

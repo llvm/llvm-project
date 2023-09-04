@@ -9,6 +9,8 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g --target=x86_64-unknown-haiku 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 
 // 'g0' is the default. Just basic correctness check that it does nothing
 // RUN: %clang -### -S %s -g0    2>&1 | FileCheck --check-prefix=CHECK-WITHOUT-G %s
@@ -27,12 +29,15 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
-// RUN: %clang -### -S %s -g0 -g -target i386-pc-solaris 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g0 -g --target=x86_64-unknown-haiku 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
+// RUN: %clang -### -S %s -g0 -g --target=i386-pc-solaris 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G %s
 
 // CHECK-WITHOUT-G-NOT: -debug-info-kind
 // CHECK-WITH-G: "-debug-info-kind=constructor"
 // CHECK-WITH-G: "-dwarf-version=5"
+// CHECK-WITH-G-DWARF4: "-dwarf-version=4"
 // CHECK-WITH-G-DWARF2: "-dwarf-version=2"
 
 // CHECK-WITH-G-STANDALONE: "-debug-info-kind=standalone"

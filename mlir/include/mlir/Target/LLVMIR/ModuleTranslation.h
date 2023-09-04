@@ -44,6 +44,8 @@ class DebugTranslation;
 class LoopAnnotationTranslation;
 } // namespace detail
 
+class AliasScopeAttr;
+class AliasScopeDomainAttr;
 class DINodeAttr;
 class LLVMFuncOp;
 class ComdatSelectorOp;
@@ -137,12 +139,14 @@ public:
   void forgetMapping(Region &region);
 
   /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
-  /// attribute.
-  llvm::MDNode *getAliasScope(AliasScopeAttr aliasScopeAttr) const;
+  /// attribute. Creates the metadata node if it has not been converted before.
+  llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
 
   /// Returns the LLVM metadata corresponding to an array of mlir LLVM dialect
-  /// alias scope attributes.
-  llvm::MDNode *getAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs) const;
+  /// alias scope attributes. Creates the metadata nodes if they have not been
+  /// converted before.
+  llvm::MDNode *
+  getOrCreateAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs);
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(AccessGroupOpInterface op,
@@ -295,10 +299,6 @@ private:
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 
-  /// Process alias.scope LLVM Metadata operations and create LLVM
-  /// metadata nodes for them and their domains.
-  LogicalResult createAliasScopeMetadata();
-
   /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
   /// TBAATagAttr.
   llvm::MDNode *getTBAANode(TBAATagAttr tbaaAttr) const;
@@ -350,9 +350,13 @@ private:
   /// have been converted.
   DenseMap<Operation *, llvm::CallInst *> callMapping;
 
-  /// Mapping from an alias scope metadata operation to its LLVM metadata.
-  /// This map is populated on module entry.
-  DenseMap<Attribute, llvm::MDNode *> aliasScopeMetadataMapping;
+  /// Mapping from an alias scope attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeAttr, llvm::MDNode *> aliasScopeMetadataMapping;
+
+  /// Mapping from an alias scope domain attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeDomainAttr, llvm::MDNode *> aliasDomainMetadataMapping;
 
   /// Mapping from a tbaa attribute to its LLVM metadata.
   /// This map is populated on module entry.

@@ -229,7 +229,8 @@ public:
   }
   bool shouldTrackSubRegLiveness(Register VReg) const {
     assert(VReg.isVirtual() && "Must pass a VReg");
-    return shouldTrackSubRegLiveness(*getRegClass(VReg));
+    const TargetRegisterClass *RC = getRegClassOrNull(VReg);
+    return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
   bool subRegLivenessEnabled() const {
     return TracksSubRegLiveness;

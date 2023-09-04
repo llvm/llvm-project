@@ -28,8 +28,6 @@ using namespace api_notes;
 namespace {
 enum class APIAvailability {
   Available = 0,
-  OSX,
-  IOS,
   None,
   NonSwift,
 };
@@ -39,8 +37,6 @@ namespace llvm {
 namespace yaml {
 template <> struct ScalarEnumerationTraits<APIAvailability> {
   static void enumeration(IO &IO, APIAvailability &AA) {
-    IO.enumCase(AA, "OSX", APIAvailability::OSX);
-    IO.enumCase(AA, "iOS", APIAvailability::IOS);
     IO.enumCase(AA, "none", APIAvailability::None);
     IO.enumCase(AA, "nonswift", APIAvailability::NonSwift);
     IO.enumCase(AA, "available", APIAvailability::Available);
@@ -495,6 +491,9 @@ template <> struct MappingTraits<Typedef> {
 } // namespace llvm
 
 namespace {
+struct Namespace;
+typedef std::vector<Namespace> NamespacesSeq;
+
 struct TopLevelItems {
   ClassesSeq Classes;
   ClassesSeq Protocols;
@@ -503,6 +502,7 @@ struct TopLevelItems {
   EnumConstantsSeq EnumConstants;
   TagsSeq Tags;
   TypedefsSeq Typedefs;
+  NamespacesSeq Namespaces;
 };
 } // namespace
 
@@ -516,7 +516,36 @@ static void mapTopLevelItems(IO &IO, TopLevelItems &TLI) {
   IO.mapOptional("Enumerators", TLI.EnumConstants);
   IO.mapOptional("Tags", TLI.Tags);
   IO.mapOptional("Typedefs", TLI.Typedefs);
+  IO.mapOptional("Namespaces", TLI.Namespaces);
 }
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Namespace {
+  StringRef Name;
+  AvailabilityItem Availability;
+  StringRef SwiftName;
+  std::optional<bool> SwiftPrivate;
+  TopLevelItems Items;
+};
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(Namespace)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Namespace> {
+  static void mapping(IO &IO, Namespace &T) {
+    IO.mapRequired("Name", T.Name);
+    IO.mapOptional("Availability", T.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", T.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", T.SwiftPrivate);
+    IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
+    mapTopLevelItems(IO, T.Items);
+  }
+};
 } // namespace yaml
 } // namespace llvm
 
