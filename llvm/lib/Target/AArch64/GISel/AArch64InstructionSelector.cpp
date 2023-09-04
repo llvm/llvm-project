@@ -2629,12 +2629,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       default:
         llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
       case 32:
-        // For s32, use a cp load if we have optsize/minsize.
-        if (!shouldOptForSize(&MF))
+      case 64: {
+        bool OptForSize = shouldOptForSize(&MF);
+        const auto &TLI = MF.getSubtarget().getTargetLowering();
+        // If TLI says that this fpimm is illegal, then we'll expand to a
+        // constant pool load.
+        if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
+                              EVT::getFloatingPointVT(DefSize), OptForSize))
           break;
         [[fallthrough]];
+      }
       case 16:
-      case 64:
       case 128: {
         auto *FPImm = I.getOperand(1).getFPImm();
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
@@ -2648,11 +2653,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
       }
 
+      assert(DefSize == 32 || DefSize == 64 && "Unexpected const def size");
       // Either emit a FMOV, or emit a copy to emit a normal mov.
-      assert(DefSize == 32 &&
-             "Expected constant pool loads for all sizes other than 32!");
-      const Register DefGPRReg =
-          MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+      const Register DefGPRReg = MRI.createVirtualRegister(
+          DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
       MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
