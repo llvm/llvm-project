@@ -1109,12 +1109,15 @@ namespace {
     }
   };
 
-  /// Used to serialize the on-disk tag table.
-  class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
-  public:
-    unsigned getUnversionedInfoSize(const TagInfo &info) {
-      return 1 + getCommonTypeInfoSize(info);
-    }
+/// Used to serialize the on-disk tag table.
+class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
+public:
+  unsigned getUnversionedInfoSize(const TagInfo &TI) {
+    return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
+           2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
+           2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
+           1 + getCommonTypeInfoSize(TI);
+  }
 
     void emitUnversionedInfo(raw_ostream &out, const TagInfo &info) {
       endian::Writer writer(out, little);
@@ -1133,11 +1136,29 @@ namespace {
 
       writer.write<uint8_t>(payload);
 
-      emitCommonTypeInfo(out, info);
+    if (auto ImportAs = info.SwiftImportAs) {
+      writer.write<uint16_t>(ImportAs->size() + 1);
+      out.write(ImportAs->c_str(), ImportAs->size());
+    } else {
+      writer.write<uint16_t>(0);
     }
-  };
+    if (auto RetainOp = info.SwiftRetainOp) {
+      writer.write<uint16_t>(RetainOp->size() + 1);
+      out.write(RetainOp->c_str(), RetainOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto ReleaseOp = info.SwiftReleaseOp) {
+      writer.write<uint16_t>(ReleaseOp->size() + 1);
+      out.write(ReleaseOp->c_str(), ReleaseOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
 
-} // end anonymous namespace
+    emitCommonTypeInfo(out, info);
+  }
+};
+} // namespace
 
 void APINotesWriter::Implementation::writeTagBlock(
        llvm::BitstreamWriter &writer) {
