@@ -97,7 +97,7 @@ public:
 
   class WithMarkup {
   public:
-    [[nodiscard]] WithMarkup(raw_ostream &OS, Markup M, bool EnableMarkup,
+    WithMarkup(raw_ostream &OS, Markup M, bool EnableMarkup,
                              bool EnableColor);
     ~WithMarkup();
 
