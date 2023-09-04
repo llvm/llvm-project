@@ -24,6 +24,7 @@ package(default_visibility = ["//visibility:public"])
         include = ["**/*.mlir"],
         exclude = [
             "IRDL/*.irdl.mlir",
+            "LLVM/*-symbol-def.mlir",
             "Transform/*-source.mlir",
             "Transform/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
