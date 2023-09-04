@@ -24,9 +24,9 @@ constexpr bool test() {
 
   // Check the const& overload
   {
-    Range range(buff, buff + 8);
-    std::ranges::stride_view<Range<int>> const view(range, 3);
-    std::same_as<Range<int>> decltype(auto) result = view.base();
+    InstrumentedBasicView range(buff, buff + 8);
+    std::ranges::stride_view<InstrumentedBasicView<int>> const view(range, 3);
+    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = view.base();
     assert(result.wasCopyInitialized);
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
@@ -34,9 +34,9 @@ constexpr bool test() {
 
   // Check the && overload
   {
-    Range range(buff, buff + 8);
-    std::ranges::stride_view<Range<int>> view(range, 3);
-    std::same_as<Range<int>> decltype(auto) result = std::move(view).base();
+    InstrumentedBasicView<int> range(buff, buff + 8);
+    std::ranges::stride_view<InstrumentedBasicView<int>> view(range, 3);
+    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = std::move(view).base();
     assert(result.wasMoveInitialized);
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
@@ -44,8 +44,8 @@ constexpr bool test() {
 
   // Check the && overload (again)
   {
-    Range range(buff, buff + 8);
-    std::same_as<Range<int>> decltype(auto) result = std::ranges::stride_view<Range<int>>(range, 3).base();
+    InstrumentedBasicView range(buff, buff + 8);
+    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = std::ranges::stride_view<InstrumentedBasicView<int>>(range, 3).base();
     assert(result.wasMoveInitialized);
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
@@ -53,10 +53,10 @@ constexpr bool test() {
 
   // Ensure the const& overload is not considered when the base is not copy-constructible
   {
-    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyRange> const&>);
-    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyRange>&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyRange>&&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyRange>>);
+    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyView> const&>);
+    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyView>&>);
+    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyView>&&>);
+    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyView>>);
   }
 
   return true;

@@ -28,8 +28,8 @@ constexpr bool test() {
   // Simple use cases.
   {
     {
-      BidirRange view(arr, arr + 3);
-      std::ranges::stride_view<BidirRange> strided(view, 1);
+      BidirView view(arr, arr + 3);
+      std::ranges::stride_view<BidirView> strided(view, 1);
       auto strided_iter = strided.begin();
 
       assert(*strided_iter == arr[0]);
@@ -38,8 +38,8 @@ constexpr bool test() {
       assert(*strided_iter == arr[2]);
     }
     {
-      BidirRange view(arr, arr + 3);
-      std::ranges::stride_view<BidirRange> strided(view, 2);
+      BidirView view(arr, arr + 3);
+      std::ranges::stride_view<BidirView> strided(view, 2);
       auto strided_iter = strided.begin();
 
       assert(*strided_iter == arr[0]);
@@ -170,14 +170,14 @@ constexpr bool test() {
     static_assert(!std::is_invocable_v<decltype(std::views::stride)>);
     // Not invocable because NotAViewableRange is, well, not a viewable range.
     static_assert(!std::is_invocable_v<decltype(std::views::reverse), NotAViewableRange>);
-    // Is invocable because BidirRange is a viewable range.
-    static_assert(std::is_invocable_v<decltype(std::views::reverse), BidirRange>);
+    // Is invocable because BidirView is a viewable range.
+    static_assert(std::is_invocable_v<decltype(std::views::reverse), BidirView>);
 
     // Make sure that pipe operations work!
-    static_assert(CanBePiped<BidirRange, decltype(std::views::stride(std::ranges::range_difference_t<BidirRange>{}))>);
-    static_assert(CanBePiped<BidirRange&, decltype(std::views::stride(std::ranges::range_difference_t<BidirRange>{}))>);
+    static_assert(CanBePiped<BidirView, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
+    static_assert(CanBePiped<BidirView&, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
     static_assert(
-        !CanBePiped<NotABidirRange, decltype(std::views::stride(std::ranges::range_difference_t<BidirRange>{}))>);
+        !CanBePiped<NotABidirRange, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
   }
   // A final sanity check.
   { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }
