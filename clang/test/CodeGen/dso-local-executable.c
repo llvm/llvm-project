@@ -9,12 +9,14 @@
 // COFF-DAG: define dso_local ptr @zed()
 // COFF-DAG: declare dllimport void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS %s
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -fno-auto-import | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-NO-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS,MINGW-AUTO-IMPORT %s
 // MINGW:      @baz = dso_local global i32 42
 // MINGW-NEXT: @import_var = external dllimport global i32
 // MINGW-NEXT: @weak_bar = extern_weak global i32
-// MINGW-NEXT: @bar = external global i32
+// MINGW-AUTO-IMPORT-NEXT: @bar = external global i32
+// MINGW-NO-AUTO-IMPORT-NEXT: @bar = external dso_local global i32
 // MINGW-NEXT: @local_thread_var = dso_local thread_local global i32 42
 // MINGW-NATIVE_TLS-NEXT: @thread_var = external dso_local thread_local global i32
 // MINGW-EMUTLS-NEXT: @thread_var = external thread_local global i32
