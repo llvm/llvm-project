@@ -557,3 +557,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/unittests/CodeGen/ML* @llvm/pr-subscribers-mlgo
 /llvm/test/CodeGen/MLRegAlloc/ @llvm/pr-subscribers-mlgo
 
+# llvm-exegesis
+/llvm/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+/llvm/test/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+/llvm/unittests/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+
