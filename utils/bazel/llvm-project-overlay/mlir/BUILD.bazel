@@ -8203,12 +8203,14 @@ cc_library(
 cc_library(
     name = "MlirTranslateMain",
     srcs = ["tools/mlir-translate/mlir-translate.cpp"],
+    local_defines = ["MLIR_INCLUDE_TESTS"],
     deps = [
         ":AllPassesAndDialects",
         ":AllTranslations",
         ":Support",
         ":TranslateLib",
         "//llvm:Support",
+        "//mlir/test:TestToLLVMIRTranslation",
     ],
 )
 
