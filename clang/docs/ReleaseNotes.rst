@@ -211,6 +211,8 @@ Bug Fixes in This Version
 - Clang now reports ``-Wformat`` for bool value and char specifier confusion
   in scanf. Fixes
   (`#64987 <https://github.com/llvm/llvm-project/issues/64987>`_)
+- Support MSVC predefined macro expressions in constant expressions and in
+  local structs.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
