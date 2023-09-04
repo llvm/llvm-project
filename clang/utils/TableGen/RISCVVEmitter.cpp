@@ -264,13 +264,14 @@ void SemaSignatureTable::init(ArrayRef<SemaRecord> SemaRecords) {
 
   assert(!SemaRecords.empty());
 
-  llvm::for_each(SemaRecords, [&](const SemaRecord &SR) {
+  for (const SemaRecord &SR : SemaRecords) {
     InsertToSignatureSet(SR.Prototype);
     InsertToSignatureSet(SR.Suffix);
     InsertToSignatureSet(SR.OverloadedSuffix);
-  });
+  }
 
-  llvm::for_each(Signatures, [this](auto &Sig) { insert(Sig); });
+  for (auto &Sig : Signatures)
+    insert(Sig);
 }
 
 void SemaSignatureTable::insert(ArrayRef<PrototypeDescriptor> Signature) {
