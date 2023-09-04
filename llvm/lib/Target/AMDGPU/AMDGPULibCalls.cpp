@@ -567,7 +567,8 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   return true;
 }
 
-static bool isKnownIntegral(const Value *V) {
+static bool isKnownIntegral(const Value *V, const DataLayout &DL,
+                            FastMathFlags FMF) {
   if (isa<UndefValue>(V))
     return true;
 
@@ -585,6 +586,24 @@ static bool isKnownIntegral(const Value *V) {
     }
 
     return true;
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  switch (I->getOpcode()) {
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    // TODO: Could check nofpclass(inf) on incoming argument
+    if (FMF.noInfs())
+      return true;
+
+    // Need to check int size cannot produce infinity, which computeKnownFPClass
+    // knows how to do already.
+    return isKnownNeverInfinity(I, DL);
+  default:
+    break;
   }
 
   return false;
@@ -1013,7 +1032,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
-    if (!isKnownIntegral(opr1))
+    if (!isKnownIntegral(opr1, M->getDataLayout(), FPOp->getFastMathFlags()))
       return false;
   }
 
