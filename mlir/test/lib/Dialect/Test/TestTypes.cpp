@@ -404,8 +404,7 @@ void TestDialect::registerTypes() {
   registerDynamicType(getCustomAssemblyFormatDynamicType(this));
 }
 
-Type TestDialect::parseTestType(AsmParser &parser,
-                                SetVector<Type> &stack) const {
+Type TestDialect::parseType(DialectAsmParser &parser) const {
   StringRef typeTag;
   {
     Type genType;
@@ -434,9 +433,12 @@ Type TestDialect::parseTestType(AsmParser &parser,
     return Type();
   auto rec = TestRecursiveType::get(parser.getContext(), name);
 
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
   // If this type already has been parsed above in the stack, expect just the
   // name.
-  if (stack.contains(rec)) {
+  if (failed(cyclicParse)) {
     if (failed(parser.parseGreater()))
       return Type();
     return rec;
@@ -445,22 +447,14 @@ Type TestDialect::parseTestType(AsmParser &parser,
   // Otherwise, parse the body and update the type.
   if (failed(parser.parseComma()))
     return Type();
-  stack.insert(rec);
-  Type subtype = parseTestType(parser, stack);
-  stack.pop_back();
+  Type subtype = parseType(parser);
   if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
     return Type();
 
   return rec;
 }
 
-Type TestDialect::parseType(DialectAsmParser &parser) const {
-  SetVector<Type> stack;
-  return parseTestType(parser, stack);
-}
-
-void TestDialect::printTestType(Type type, AsmPrinter &printer,
-                                SetVector<Type> &stack) const {
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
   if (succeeded(generatedTypePrinter(type, printer)))
     return;
 
@@ -468,19 +462,16 @@ void TestDialect::printTestType(Type type, AsmPrinter &printer,
     return;
 
   auto rec = llvm::cast<TestRecursiveType>(type);
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(rec);
+
   printer << "test_rec<" << rec.getName();
-  if (!stack.contains(rec)) {
+  if (succeeded(cyclicPrint)) {
     printer << ", ";
-    stack.insert(rec);
-    printTestType(rec.getBody(), printer, stack);
-    stack.pop_back();
+    printType(rec.getBody(), printer);
   }
   printer << ">";
-}
-
-void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  SetVector<Type> stack;
-  printTestType(type, printer, stack);
 }
 
 Type TestRecursiveAliasType::getBody() const { return getImpl()->body; }
@@ -490,16 +481,17 @@ void TestRecursiveAliasType::setBody(Type type) { (void)Base::mutate(type); }
 StringRef TestRecursiveAliasType::getName() const { return getImpl()->name; }
 
 Type TestRecursiveAliasType::parse(AsmParser &parser) {
-  thread_local static SetVector<Type> stack;
-
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
     return Type();
   auto rec = TestRecursiveAliasType::get(parser.getContext(), name);
 
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
   // If this type already has been parsed above in the stack, expect just the
   // name.
-  if (stack.contains(rec)) {
+  if (failed(cyclicParse)) {
     if (failed(parser.parseGreater()))
       return Type();
     return rec;
@@ -508,11 +500,9 @@ Type TestRecursiveAliasType::parse(AsmParser &parser) {
   // Otherwise, parse the body and update the type.
   if (failed(parser.parseComma()))
     return Type();
-  stack.insert(rec);
   Type subtype;
   if (parser.parseType(subtype))
     return nullptr;
-  stack.pop_back();
   if (!subtype || failed(parser.parseGreater()))
     return Type();
 
@@ -522,14 +512,14 @@ Type TestRecursiveAliasType::parse(AsmParser &parser) {
 }
 
 void TestRecursiveAliasType::print(AsmPrinter &printer) const {
-  thread_local static SetVector<Type> stack;
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(*this);
 
   printer << "<" << getName();
-  if (!stack.contains(*this)) {
+  if (succeeded(cyclicPrint)) {
     printer << ", ";
-    stack.insert(*this);
     printer << getBody();
-    stack.pop_back();
   }
   printer << ">";
 }
