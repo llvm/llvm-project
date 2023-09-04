@@ -508,9 +508,6 @@ class PadOp:
         loc=None,
         ip=None,
     ):
-        padding_dimensions = _get_int_array_attr(padding_dimensions)
-        pad_to_multiple_of = _get_int_array_attr(pad_to_multiple_of)
-        pack_paddings = _get_int_array_attr(pack_paddings)
         transpose_paddings = _get_int_array_array_attr(transpose_paddings)
 
         pdl_operation_type = pdl.OperationType.get()
