@@ -1786,6 +1786,50 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
 }
 
 InstructionCost
+ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                   FastMathFlags FMF,
+                                   TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, Ty);
+
+  // In general floating point reductions are a series of elementwise
+  // operations, with free extracts on each step. These are either in-order or
+  // treewise depending on whether that is allowed by the fast math flags.
+  if ((IID == Intrinsic::minnum || IID == Intrinsic::maxnum) &&
+      ((ValVT.getVectorElementType() == MVT::f32 && ST->hasVFP2Base()) ||
+       (ValVT.getVectorElementType() == MVT::f64 && ST->hasFP64()) ||
+       (ValVT.getVectorElementType() == MVT::f16 && ST->hasFullFP16()))) {
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+    unsigned EltSize = ValVT.getScalarSizeInBits();
+    unsigned VecLimit = ST->hasMVEFloatOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost;
+    while (isPowerOf2_32(NumElts) && NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(Ty->getElementType(), NumElts/2);
+      IntrinsicCostAttributes ICA(IID, VecTy, {VecTy, VecTy}, FMF);
+      VecCost += getIntrinsicInstrCost(ICA, CostKind);
+      NumElts /= 2;
+    }
+
+    // For fp16 we need to extract the upper lane elements. MVE can add a
+    // VREV+FMIN/MAX to perform another vector step instead.
+    InstructionCost ExtractCost = 0;
+    if (ST->hasMVEFloatOps() && ValVT.getVectorElementType() == MVT::f16 &&
+        NumElts == 8) {
+      VecCost += ST->getMVEVectorCostFactor(CostKind) * 2;
+      NumElts /= 2;
+    } else if (ValVT.getVectorElementType() == MVT::f16)
+      ExtractCost = cast<FixedVectorType>(Ty)->getNumElements() / 2;
+
+    IntrinsicCostAttributes ICA(IID, Ty->getElementType(),
+                                {Ty->getElementType(), Ty->getElementType()},
+                                FMF);
+    return VecCost + ExtractCost +
+           (NumElts - 1) * getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
+}
+
+InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) {
   switch (ICA.getID()) {
