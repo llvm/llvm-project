@@ -3328,16 +3328,6 @@ the configuration (without a prefix: ``Auto``).
       return 1;                              return 1;
     }                                      }
 
-    GLI_HalfIndent:
-    int f() {
-      if (foo()) {
-      label1:
-        bar();
-      }
-    label2:
-      return 1;
-    }                                    }
-
 .. _IndentPPDirectives:
 
 **IndentPPDirectives** (``PPDirectiveIndentStyle``) :versionbadge:`clang-format 6` :ref:`¶ <IndentPPDirectives>`

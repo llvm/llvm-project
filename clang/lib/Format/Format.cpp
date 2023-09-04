@@ -1202,9 +1202,8 @@ template <> struct DocumentListTraits<std::vector<FormatStyle>> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::GotoLabelIndentation> {
   static void enumeration(IO &IO, FormatStyle::GotoLabelIndentation &Value) {
-    IO.enumCase(Value, "None", FormatStyle::GLI_None);
-    IO.enumCase(Value, "Indent", FormatStyle::GLI_Indent);
-    IO.enumCase(Value, "HalfIndent", FormatStyle::GLI_HalfIndent);
+    IO.enumCase(Value, "false", FormatStyle::GLI_None);
+    IO.enumCase(Value, "true", FormatStyle::GLI_Indent);
   }
 };
 
