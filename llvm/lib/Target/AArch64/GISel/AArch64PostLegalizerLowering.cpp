@@ -1066,6 +1066,50 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
   Helper.lower(MI, 0, /* Unused hint type */ LLT());
 }
 
+/// Combine <N x t>, unused = unmerge(G_EXT <2*N x t> v, undef, N)
+///           => unused, <N x t> = unmerge v
+bool matchUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              Register &MatchInfo) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  if (Unmerge.getNumDefs() != 2)
+    return false;
+  if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
+    return false;
+
+  LLT DstTy = MRI.getType(Unmerge.getReg(0));
+  if (!DstTy.isVector())
+    return false;
+
+  MachineInstr *Ext = getOpcodeDef(AArch64::G_EXT, Unmerge.getSourceReg(), MRI);
+  if (!Ext)
+    return false;
+
+  Register ExtSrc1 = Ext->getOperand(1).getReg();
+  Register ExtSrc2 = Ext->getOperand(2).getReg();
+  auto LowestVal =
+      getIConstantVRegValWithLookThrough(Ext->getOperand(3).getReg(), MRI);
+  if (!LowestVal || LowestVal->Value.getZExtValue() != DstTy.getSizeInBytes())
+    return false;
+
+  if (!getOpcodeDef<GImplicitDef>(ExtSrc2, MRI))
+    return false;
+
+  MatchInfo = ExtSrc1;
+  return true;
+}
+
+void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B,
+                              GISelChangeObserver &Observer, Register &SrcReg) {
+  Observer.changingInstr(MI);
+  // Swap dst registers.
+  Register Dst1 = MI.getOperand(0).getReg();
+  MI.getOperand(0).setReg(MI.getOperand(1).getReg());
+  MI.getOperand(1).setReg(Dst1);
+  MI.getOperand(2).setReg(SrcReg);
+  Observer.changedInstr(MI);
+}
+
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.
