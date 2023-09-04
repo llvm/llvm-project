@@ -5286,7 +5286,7 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // inserted into the DAG as part of call lowering. The restore of the TOC
     // pointer is modeled by using a pseudo instruction for the call opcode that
     // represents the 2 instruction sequence of an indirect branch and link,
-    // immediately followed by a load of the TOC pointer from the the stack save
+    // immediately followed by a load of the TOC pointer from the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
     RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
