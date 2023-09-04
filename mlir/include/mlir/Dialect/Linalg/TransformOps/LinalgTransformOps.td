@@ -149,10 +149,10 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
                            $alloc_op,
                        UnitAttr:$bufferize_destination_only);
-  let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
@@ -1325,8 +1325,8 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
                        I64Attr:$static_split_point);
   let results = (outs TransformHandleTypeInterface:$first,
                       TransformHandleTypeInterface:$second);
-  let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2114,7 +2114,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        Variadic<TransformHandleTypeInterface>:$vector_sizes,
-                       UnitAttr:$vectorize_nd_extract,
+                       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:
                           $scalable_sizes,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
@@ -2126,12 +2126,12 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
                                               type($vector_sizes),
-                                              $scalable_sizes)
+                                              $scalable_sizes) |
+      `vectorize_nd_extract` $vectorize_nd_extract
       )
       attr-dict
       `:` type($target)
   }];
-
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

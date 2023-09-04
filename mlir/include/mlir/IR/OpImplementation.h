@@ -222,10 +222,68 @@ public:
     printArrowTypeList(results);
   }
 
+  /// Class used to automatically end a cyclic region on destruction.
+  class CyclicPrintReset {
+  public:
+    explicit CyclicPrintReset(AsmPrinter *printer) : printer(printer) {}
+
+    ~CyclicPrintReset() {
+      if (printer)
+        printer->popCyclicPrinting();
+    }
+
+    CyclicPrintReset(const CyclicPrintReset &) = delete;
+
+    CyclicPrintReset &operator=(const CyclicPrintReset &) = delete;
+
+    CyclicPrintReset(CyclicPrintReset &&rhs)
+        : printer(std::exchange(rhs.printer, nullptr)) {}
+
+    CyclicPrintReset &operator=(CyclicPrintReset &&rhs) {
+      printer = std::exchange(rhs.printer, nullptr);
+      return *this;
+    }
+
+  private:
+    AsmPrinter *printer;
+  };
+
+  /// Attempts to start a cyclic printing region for `attrOrType`.
+  /// A cyclic printing region starts with this call and ends with the
+  /// destruction of the returned `CyclicPrintReset`. During this time,
+  /// calling `tryStartCyclicPrint` with the same attribute in any printer
+  /// will lead to returning failure.
+  ///
+  /// This makes it possible to break infinite recursions when trying to print
+  /// cyclic attributes or types by printing only immutable parameters if nested
+  /// within itself.
+  template <class AttrOrTypeT>
+  FailureOr<CyclicPrintReset> tryStartCyclicPrint(AttrOrTypeT attrOrType) {
+    static_assert(
+        std::is_base_of_v<AttributeTrait::IsMutable<AttrOrTypeT>,
+                          AttrOrTypeT> ||
+            std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
+        "Only mutable attributes or types can be cyclic");
+    if (failed(pushCyclicPrinting(attrOrType.getAsOpaquePointer())))
+      return failure();
+    return CyclicPrintReset(this);
+  }
+
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
   AsmPrinter() = default;
+
+  /// Pushes a new attribute or type in the form of a type erased pointer
+  /// into an internal set.
+  /// Returns success if the type or attribute was inserted in the set or
+  /// failure if it was already contained.
+  virtual LogicalResult pushCyclicPrinting(const void *opaquePointer);
+
+  /// Removes the element that was last inserted with a successful call to
+  /// `pushCyclicPrinting`. There must be exactly one `popCyclicPrinting` call
+  /// in reverse order of all successful `pushCyclicPrinting`.
+  virtual void popCyclicPrinting();
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
@@ -1265,11 +1323,66 @@ public:
   /// next token.
   virtual ParseResult parseXInDimensionList() = 0;
 
+  /// Class used to automatically end a cyclic region on destruction.
+  class CyclicParseReset {
+  public:
+    explicit CyclicParseReset(AsmParser *parser) : parser(parser) {}
+
+    ~CyclicParseReset() {
+      if (parser)
+        parser->popCyclicParsing();
+    }
+
+    CyclicParseReset(const CyclicParseReset &) = delete;
+    CyclicParseReset &operator=(const CyclicParseReset &) = delete;
+    CyclicParseReset(CyclicParseReset &&rhs)
+        : parser(std::exchange(rhs.parser, nullptr)) {}
+    CyclicParseReset &operator=(CyclicParseReset &&rhs) {
+      parser = std::exchange(rhs.parser, nullptr);
+      return *this;
+    }
+
+  private:
+    AsmParser *parser;
+  };
+
+  /// Attempts to start a cyclic parsing region for `attrOrType`.
+  /// A cyclic parsing region starts with this call and ends with the
+  /// destruction of the returned `CyclicParseReset`. During this time,
+  /// calling `tryStartCyclicParse` with the same attribute in any parser
+  /// will lead to returning failure.
+  ///
+  /// This makes it possible to parse cyclic attributes or types by parsing a
+  /// short from if nested within itself.
+  template <class AttrOrTypeT>
+  FailureOr<CyclicParseReset> tryStartCyclicParse(AttrOrTypeT attrOrType) {
+    static_assert(
+        std::is_base_of_v<AttributeTrait::IsMutable<AttrOrTypeT>,
+                          AttrOrTypeT> ||
+            std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
+        "Only mutable attributes or types can be cyclic");
+    if (failed(pushCyclicParsing(attrOrType.getAsOpaquePointer())))
+      return failure();
+
+    return CyclicParseReset(this);
+  }
+
 protected:
   /// Parse a handle to a resource within the assembly format for the given
   /// dialect.
   virtual FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) = 0;
+
+  /// Pushes a new attribute or type in the form of a type erased pointer
+  /// into an internal set.
+  /// Returns success if the type or attribute was inserted in the set or
+  /// failure if it was already contained.
+  virtual LogicalResult pushCyclicParsing(const void *opaquePointer) = 0;
+
+  /// Removes the element that was last inserted with a successful call to
+  /// `pushCyclicParsing`. There must be exactly one `popCyclicParsing` call
+  /// in reverse order of all successful `pushCyclicParsing`.
+  virtual void popCyclicParsing() = 0;
 
   //===--------------------------------------------------------------------===//
   // Code Completion

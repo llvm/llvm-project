@@ -43,6 +43,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
@@ -50,6 +51,7 @@
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTFUNCTOLLVMPASS
+#define GEN_PASS_DEF_SETLLVMMODULEDATALAYOUTPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -746,15 +748,21 @@ struct ConvertFuncToLLVMPass
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
+    ModuleOp m = getOperation();
+    StringRef dataLayout;
+    auto dataLayoutAttr = dyn_cast_or_null<StringAttr>(
+        m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
+    if (dataLayoutAttr)
+      dataLayout = dataLayoutAttr.getValue();
+
     if (failed(LLVM::LLVMDialect::verifyDataLayoutString(
-            this->dataLayout, [this](const Twine &message) {
+            dataLayout, [this](const Twine &message) {
               getOperation().emitError() << message.str();
             }))) {
       signalPassFailure();
       return;
     }
 
-    ModuleOp m = getOperation();
     const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
 
     LowerToLLVMOptions options(&getContext(),
@@ -762,7 +770,7 @@ struct ConvertFuncToLLVMPass
     options.useBarePtrCallConv = useBarePtrCallConv;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.dataLayout = llvm::DataLayout(this->dataLayout);
+    options.dataLayout = llvm::DataLayout(dataLayout);
     options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter typeConverter(&getContext(), options,
@@ -778,7 +786,24 @@ struct ConvertFuncToLLVMPass
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
+  }
+};
 
+struct SetLLVMModuleDataLayoutPass
+    : public impl::SetLLVMModuleDataLayoutPassBase<
+          SetLLVMModuleDataLayoutPass> {
+  using Base::Base;
+
+  /// Run the dialect converter on the module.
+  void runOnOperation() override {
+    if (failed(LLVM::LLVMDialect::verifyDataLayoutString(
+            this->dataLayout, [this](const Twine &message) {
+              getOperation().emitError() << message.str();
+            }))) {
+      signalPassFailure();
+      return;
+    }
+    ModuleOp m = getOperation();
     m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
                StringAttr::get(m.getContext(), this->dataLayout));
   }
