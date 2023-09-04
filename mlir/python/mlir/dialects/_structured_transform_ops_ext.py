@@ -462,7 +462,7 @@ class MatchOp:
 
 
 class MultiTileSizesOp:
-    """Specialization for MultitileSizesOp class."""
+    """Specialization for MultiTileSizesOp class."""
 
     def __init__(
         self,
@@ -475,8 +475,6 @@ class MultiTileSizesOp:
         loc=None,
         ip=None,
     ):
-        if divisor is None:
-            divisor = 1
         super().__init__(
             result_type,
             result_type,
