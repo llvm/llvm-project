@@ -2049,10 +2049,10 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   // definitions may extend the number of permitted types (i.e. augment the
   // Mask). Use std::map to avoid sorting the table by hash number.
   struct OverloadInfo {
-    uint64_t Mask;
-    int PtrArgNum;
-    bool HasConstPtr;
-    OverloadInfo() : Mask(0ULL), PtrArgNum(0), HasConstPtr(false) {}
+    uint64_t Mask = 0ULL;
+    int PtrArgNum = 0;
+    bool HasConstPtr = false;
+    OverloadInfo() = default;
   };
   std::map<std::string, OverloadInfo> OverloadMap;
 
