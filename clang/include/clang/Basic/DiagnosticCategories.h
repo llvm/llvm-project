@@ -26,6 +26,7 @@ namespace clang {
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef CATEGORY
 #undef DIAG_ENTRY
+      NUM_GROUPS
     };
   }  // end namespace diag
 }  // end namespace clang

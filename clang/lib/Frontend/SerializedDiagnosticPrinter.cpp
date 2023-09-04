@@ -540,7 +540,8 @@ unsigned SDiagsWriter::getEmitDiagnosticFlag(DiagnosticsEngine::Level DiagLevel,
   if (DiagLevel == DiagnosticsEngine::Note)
     return 0; // No flag for notes.
 
-  StringRef FlagName = DiagnosticIDs::getWarningOptionForDiag(DiagID);
+  StringRef FlagName =
+      getMetaDiags()->getDiagnosticIDs()->getWarningOptionForDiag(DiagID);
   return getEmitDiagnosticFlag(FlagName);
 }
 

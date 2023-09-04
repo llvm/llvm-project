@@ -138,7 +138,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
     // through command-line.
-    DiagStates.emplace_back();
+    DiagStates.emplace_back(*Diags);
     DiagStatesByLoc.appendFirst(&DiagStates.back());
   }
 }
@@ -167,7 +167,7 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
 
   // Initialize the entry if we added it.
   if (Result.second)
-    Result.first->second = DiagnosticIDs::getDefaultMapping(Diag);
+    Result.first->second = DiagIDs.getDefaultMapping(Diag);
 
   return Result.first->second;
 }
@@ -309,7 +309,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
 
       for (auto &Mapping : *Transition.State) {
         StringRef Option =
-            DiagnosticIDs::getWarningOptionForDiag(Mapping.first);
+            SrcMgr.getDiagnostics().Diags->getWarningOptionForDiag(
+                Mapping.first);
         if (!DiagName.empty() && DiagName != Option)
           continue;
 
@@ -353,9 +354,7 @@ void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
 
 void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
                                     SourceLocation L) {
-  assert(Diag < diag::DIAG_UPPER_LIMIT &&
-         "Can only map builtin diagnostics");
-  assert((Diags->isBuiltinWarningOrExtension(Diag) ||
+  assert((Diags->isWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
@@ -405,6 +404,8 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
   SmallVector<diag::kind, 256> GroupDiags;
   if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags))
     return true;
+
+  Diags->setGroupSeverity(Group, Map);
 
   // Set the mapping.
   for (diag::kind Diag : GroupDiags)
@@ -491,7 +492,7 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 
   // Set the mapping.
   for (diag::kind Diag : AllDiags)
-    if (Diags->isBuiltinWarningOrExtension(Diag))
+    if (Diags->isWarningOrExtension(Diag))
       setSeverity(Diag, Map, Loc);
 }
 
