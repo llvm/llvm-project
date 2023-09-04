@@ -878,7 +878,7 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
                               ARCHS ${arch}
                               SOURCES atomic.c
                               LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
-                              DEPS builtins
+                              LINK_LIBS clang_rt.builtins-${arch}
                               PARENT_TARGET builtins-standalone-atomic)
     endif()
   endforeach()
