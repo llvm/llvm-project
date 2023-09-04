@@ -78,14 +78,72 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   }
   ~TestAllocator() { this->unmapTestOnly(); }
 
-  void *operator new(size_t size) {
-    void *p = nullptr;
-    EXPECT_EQ(0, posix_memalign(&p, alignof(TestAllocator), size));
-    return p;
+  void *operator new(size_t size);
+  void operator delete(void *ptr);
+};
+
+constexpr size_t kMaxAlign = std::max({
+  alignof(scudo::Allocator<scudo::DefaultConfig>),
+#if SCUDO_CAN_USE_PRIMARY64
+      alignof(scudo::Allocator<scudo::FuchsiaConfig>),
+#endif
+      alignof(scudo::Allocator<scudo::AndroidSvelteConfig>),
+      alignof(scudo::Allocator<scudo::AndroidConfig>)
+});
+
+#if SCUDO_RISCV64
+// The allocator is over 4MB large. Rather than creating an instance of this on
+// the heap, keep it in a global storage to reduce fragmentation from having to
+// mmap this at the start of every test.
+struct TestAllocatorStorage {
+  static constexpr size_t kMaxSize = std::max({
+    sizeof(scudo::Allocator<scudo::DefaultConfig>),
+#if SCUDO_CAN_USE_PRIMARY64
+        sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
+#endif
+        sizeof(scudo::Allocator<scudo::AndroidSvelteConfig>),
+        sizeof(scudo::Allocator<scudo::AndroidConfig>)
+  });
+
+  // To alleviate some problem, let's skip the thread safety analysis here.
+  static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
+    assert(size <= kMaxSize &&
+           "Allocation size doesn't fit in the allocator storage");
+    M.lock();
+    return AllocatorStorage;
   }
 
-  void operator delete(void *ptr) { free(ptr); }
+  static void release(void *ptr) NO_THREAD_SAFETY_ANALYSIS {
+    M.assertHeld();
+    M.unlock();
+    ASSERT_EQ(ptr, AllocatorStorage);
+  }
+
+  static scudo::HybridMutex M;
+  static uint8_t AllocatorStorage[kMaxSize];
 };
+scudo::HybridMutex TestAllocatorStorage::M;
+alignas(kMaxAlign) uint8_t TestAllocatorStorage::AllocatorStorage[kMaxSize];
+#else
+struct TestAllocatorStorage {
+  static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
+    void *p = nullptr;
+    EXPECT_EQ(0, posix_memalign(&p, kMaxAlign, size));
+    return p;
+  }
+  static void release(void *ptr) NO_THREAD_SAFETY_ANALYSIS { free(ptr); }
+};
+#endif
+
+template <typename Config>
+void *TestAllocator<Config>::operator new(size_t size) {
+  return TestAllocatorStorage::get(size);
+}
+
+template <typename Config>
+void TestAllocator<Config>::operator delete(void *ptr) {
+  TestAllocatorStorage::release(ptr);
+}
 
 template <class TypeParam> struct ScudoCombinedTest : public Test {
   ScudoCombinedTest() {
