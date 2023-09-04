@@ -338,6 +338,8 @@ def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
     %2 = spirv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -373,6 +375,8 @@ def SPIRV_BitwiseOrOp : SPIRV_BitBinaryOp<"BitwiseOr",
     %2 = spirv.BitwiseOr %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
