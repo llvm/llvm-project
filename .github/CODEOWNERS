@@ -527,6 +527,7 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # x86
 /llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
+/llvm/include/llvm/Support/X86DisassemblerDecoderCommon.h @llvm/pr-subscribers-x86
 /llvm/include/llvm/TargetParser/X86* @llvm/pr-subscribers-x86
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
 /llvm/lib/TargetParser/X86* @llvm/pr-subscribers-x86
