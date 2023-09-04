@@ -235,7 +235,7 @@ AffineMap StridedLayoutAttr::getAffineMap() const {
 LogicalResult
 StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           int64_t offset, ArrayRef<int64_t> strides) {
-  if (llvm::any_of(strides, [&](int64_t stride) { return stride == 0; }))
+  if (llvm::is_contained(strides, 0))
     return emitError() << "strides must not be zero";
 
   return success();

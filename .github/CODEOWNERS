@@ -283,6 +283,9 @@
 
 # m68k
 /llvm/lib/Target/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/CodeGen/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/MC/M68k/ @llvm/pr-subscribers-m68k
+/llvm/test/MC/Disassembler/M68k/ @llvm/pr-subscribers-m68k
 /clang/lib/Basic/Targets/M68k.* @llvm/pr-subscribers-m68k
 /clang/lib/CodeGen/Targets/M68k.cpp @llvm/pr-subscribers-m68k
 
@@ -388,6 +391,7 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
 # selection-dag
 /llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
+/llvm/include/llvm/CodeGen/ISDOpcodes.h @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/CodeGen/SelectionDAG*.h @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/CodeGen/SDNodeProperties.td @llvm/pr-subscribers-selectiondag
 /llvm/include/llvm/Target/TargetSelectionDAG.td @llvm/pr-subscribers-selectiondag
@@ -445,6 +449,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsARM.td @llvm/pr-subscribers-arm
 /llvm/lib/Target/ARM/ @llvm/pr-subscribers-arm
 /llvm/test/CodeGen/ARM/ @llvm/pr-subscribers-arm
+/llvm/test/MC/ARM/ @llvm/pr-subscribers-arm
+/llvm/test/MC/DisasemblerARM/ @llvm/pr-subscribers-arm
 /clang/lib/Basic/Targets/ARM* @llvm/pr-subscribers-arm
 /clang/lib/Driver/ToolChains/Arch/ARM.* @llvm/pr-subscribers-arm
 /clang/lib/CodeGen/Targets/ARM.cpp @llvm/pr-subscribers-arm
@@ -454,6 +460,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsAArch64.td @llvm/pr-subscribers-AArch64
 /llvm/lib/Target/AArch64/ @llvm/pr-subscribers-AArch64
 /llvm/test/CodeGen/AArch64/ @llvm/pr-subscribers-AArch64
+/llvm/test/MC/AArch64/ @llvm/pr-subscribers-AArch64
+/llvm/test/MC/Disassembler/AArch64/ @llvm/pr-subscribers-AArch64
 /clang/lib/Basic/Targets/AArch64* @llvm/pr-subscribers-AArch64
 /clang/lib/Driver/ToolChains/Arch/AArch64.* @llvm/pr-subscribers-AArch64
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
@@ -471,6 +479,7 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsLoongArch.td @llvm/pr-subscribers-loongarch
 /llvm/lib/Target/LoongArch/ @llvm/pr-subscribers-loongarch
 /llvm/test/CodeGen/LoongArch/ @llvm/pr-subscribers-loongarch
+/llvm/test/MC/LoongArch/ @llvm/pr-subscribers-loongarch
 /clang/lib/Basic/Targets/LoongArch* @llvm/pr-subscribers-loongarch
 /clang/lib/Driver/ToolChains/Arch/LoongArch.* @llvm/pr-subscribers-loongarch
 /clang/lib/CodeGen/Targets/LoongArch.cpp @llvm/pr-subscribers-loongarch
@@ -480,6 +489,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsMSP430.td @llvm/pr-subscribers-msp430
 /llvm/lib/Target/MSP430/ @llvm/pr-subscribers-msp430
 /llvm/test/CodeGen/MSP430/ @llvm/pr-subscribers-msp430
+/llvm/test/MC/MSP430/ @llvm/pr-subscribers-msp430
+/llvm/test/MC/Disassembler/MSP430/ @llvm/pr-subscribers-msp430
 /clang/lib/Basic/Targets/MSP430* @llvm/pr-subscribers-msp430
 /clang/lib/Driver/ToolChains/Arch/MSP430.* @llvm/pr-subscribers-msp430
 /clang/lib/CodeGen/Targets/MSP430.cpp @llvm/pr-subscribers-msp430
@@ -489,6 +500,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
 /llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
 /llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
+/llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
 /clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
 /clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
 /clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
@@ -498,6 +511,8 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
 /llvm/lib/Target/Sparc/ @llvm/pr-subscribers-sparc
 /llvm/test/CodeGen/Sparc/ @llvm/pr-subscribers-sparc
+/llvm/test/MC/Sparc/ @llvm/pr-subscribers-sparc
+/llvm/test/MC/Disassembler/Sparc/ @llvm/pr-subscribers-sparc
 /clang/lib/Basic/Targets/Sparc* @llvm/pr-subscribers-sparc
 /clang/lib/Driver/ToolChains/Arch/Sparc.* @llvm/pr-subscribers-sparc
 /clang/lib/CodeGen/Targets/Sparc.cpp @llvm/pr-subscribers-sparc
@@ -515,16 +530,35 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # x86
 /llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
+/llvm/include/llvm/Support/X86DisassemblerDecoderCommon.h @llvm/pr-subscribers-x86
+/llvm/include/llvm/TargetParser/X86* @llvm/pr-subscribers-x86
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
+/llvm/lib/TargetParser/X86* @llvm/pr-subscribers-x86
 /llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
 /llvm/test/MC/X86/ @llvm/pr-subscribers-x86
 /llvm/test/MC/Disassembler/X86/ @llvm/pr-subscribers-x86
 /llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
 /llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
+/llvm/utils/TableGen/X86* @llvm/pr-subscribers-x86
 /clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
 /clang/lib/Driver/ToolChains/Arch/X86.* @llvm/pr-subscribers-x86
 /clang/lib/CodeGen/Targets/X86.* @llvm/pr-subscribers-x86
 /clang/lib/Headers/ @llvm/pr-subscribers-x86
 /clang/test/CodeGen/X86/ @llvm/pr-subscribers-x86
 /clang/include/clang/Basic/BuiltinsX86* @llvm/pr-subscribers-x86
+
+# MLGO
+/llvm/lib/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/lib/Analysis/*Runner.cpp @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/*Runner.h @llvm/pr-subscribers-mlgo
+/llvm/unittests/Analysis/ML* @llvm/pr-subscribers-mlgo
+/llvm/lib/Analysis/FunctionPropertiesAnalysis.cpp @llvm/pr-subscribers-mlgo
+/llvm/include/llvm/Analysis/FunctionPropertiesAnalysis.h @llvm/pr-subscribers-mlgo
+/llvm/test/Analysis/FunctionPropertiesAnalysis/* @llvm/pr-subscribers-mlgo
+/llvm/unittests/Analysis/FunctionPropertiesAnalysisTest.cpp @llvm/pr-subscribers-mlgo
+/llvm/test/Transforms/inline/ML/ @llvm/pr-subscribers-mlgo
+/llvm/lib/CodeGen/ML* @llvm/pr-subscribers-mlgo
+/llvm/unittests/CodeGen/ML* @llvm/pr-subscribers-mlgo
+/llvm/test/CodeGen/MLRegAlloc/ @llvm/pr-subscribers-mlgo
 

@@ -3943,7 +3943,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // inside the loop, create the final store here.
   if (StoreInst *SI = RdxDesc.IntermediateStore) {
     StoreInst *NewSI =
-        Builder.CreateStore(ReducedPartRdx, SI->getPointerOperand());
+        Builder.CreateAlignedStore(ReducedPartRdx, SI->getPointerOperand(),
+                                   SI->getAlign());
     propagateMetadata(NewSI, SI);
 
     // If the reduction value is used in other places,
@@ -7372,6 +7373,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   }
 }
 
+VPValue *VPBuilder::createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                               DebugLoc DL, const Twine &Name) {
+  assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+         Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+  return tryInsertInstruction(
+      new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+}
+
 // TODO: we could return a pair of values that specify the max VF and
 // min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
 // `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
@@ -8079,7 +8088,7 @@ void VPRecipeBuilder::createHeaderMask(VPlan &Plan) {
                                      nullptr, "active.lane.mask");
   } else {
     VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-    BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
+    BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   }
   BlockMaskCache[Header] = BlockMask;
 }
