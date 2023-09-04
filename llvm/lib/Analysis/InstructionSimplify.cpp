@@ -6170,8 +6170,11 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     break;
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
+    // log10(exp10(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
-        match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X))))
+        (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
+         match(Op0,
+               m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
       return X;
     break;
   case Intrinsic::experimental_vector_reverse:
