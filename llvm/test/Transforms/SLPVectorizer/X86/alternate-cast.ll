@@ -76,12 +76,10 @@ define <8 x i32> @fptosi_fptoui(<8 x float> %a) {
 
 define <8 x float> @fneg_fabs(<8 x float> %a) {
 ; CHECK-LABEL: @fneg_fabs(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x float> [[A:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg <8 x float> [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i32> [[TMP1]], <i32 poison, i32 poison, i32 poison, i32 poison, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP3]] to <8 x float>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    ret <8 x float> [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <8 x float> [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[A]])
+; CHECK-NEXT:    [[DOTUNCASTED:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <8 x float> [[DOTUNCASTED]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
