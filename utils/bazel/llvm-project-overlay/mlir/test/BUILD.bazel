@@ -368,7 +368,10 @@ cc_library(
 
 cc_library(
     name = "TestDialect",
-    srcs = glob(["lib/Dialect/Test/*.cpp"]),
+    srcs = glob(
+        ["lib/Dialect/Test/*.cpp"],
+        exclude = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
+    ),
     hdrs = glob(["lib/Dialect/Test/*.h"]),
     includes = [
         "lib/Dialect/Test",
@@ -407,6 +410,20 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:ViewLikeInterface",
+    ],
+)
+
+cc_library(
+    name = "TestToLLVMIRTranslation",
+    srcs = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
+    deps = [
+        ":TestDialect",
+        "//llvm:Support",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:IR",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TranslateLib",
     ],
 )
 
