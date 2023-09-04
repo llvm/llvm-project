@@ -415,7 +415,7 @@ class TargetArch<list<string> arches> : TargetSpec {
   let Arches = arches;
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
-def TargetAArch64 : TargetArch<["aarch64"]>;
+def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
