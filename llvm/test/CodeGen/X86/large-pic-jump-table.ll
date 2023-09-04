@@ -1,7 +1,5 @@
 ; RUN: llc -code-model=large -relocation-model=pic %s -o - | FileCheck %s
 
-; XFAIL: *
-
 target triple = "x86_64-linux-gnu"
 
 define i32 @f(i32 %i) {

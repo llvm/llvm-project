@@ -53,6 +53,7 @@ set(sources
   X86FrameLowering.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
+  X86ISelLoweringCall.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp

@@ -1754,8 +1754,6 @@ namespace llvm {
 
     bool needsCmpXchgNb(Type *MemType) const;
 
-    template<typename T> bool isSoftFP16(T VT) const;
-
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;
 
@@ -1827,6 +1825,9 @@ namespace llvm {
 
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
+
+    SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
+                    SDValue V2) const;
   };
 
   namespace X86 {

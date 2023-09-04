@@ -1,12 +1,3 @@
-ee2a35ac4ab [X86] Add AVX-NE-CONVERT instruc
-Revert "[X86] Support -march=sierraforest, grandridge,
-Revert "[AMDGPU] Enable OMod on more VOP3 instructions"   # rocrand assert fails
-
-7f12efa88  [X86][FP16] Lower half->i16 into vcvttph2[u]w directly
-
-FP16
-Revert "[X86][MemFold] Update some records for X86MemFoldTables.inc"
-
 SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
@@ -16,35 +7,20 @@ Revert "[AMDGPU] Remove extract_subvector patterns"
 breaks rccl build:
 Revert "Implement P2361 Unevaluated string literals"
 
-Revert "[X86] Add SHA512 instructions."  
-Revert "[X86] Add SM3 instructions."
-Revert "[X86] Add SM4 instructions."
-Revert "[X86] Add AVX-VNNI-INT16 instructions."
 Revert "[Clang] Implement P2741R3 - user-generated static_assert messages "
 Revert "[Clang] Fix crash in CIndex, when visiting a static_assert without message"
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
-Revert "[X86] Support -march=arrowlake,arrowlake-s,lunarlake"
-Revert "[X86] Split SDISel call lowering out to its own file"
 Revert "[Clang] Handle static_assert messages with an expression started by a literal"
 Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
-Revert "[X86] Workaround possible CPUID bug in Sandy Bridge."
 Revert "Enable concatenation of predefined identifiers "
 Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in the first function-attrs pass"
 Revert "[clang][test] Fix LIT test failures for the following commit"
 Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 
-Revert  "6acff5390d05 [X86] Support -march=gracemont"
-  and  [Tests] Remove some and/or constant expressions in tests (NFC)
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
-Revert "Revert "[Fuzzer] SetThreadName implementation for Windows" "
-  breaks windows build ,fixed in later commits
-Revert "[X86][BF16] Lower FP_EXTEND for vector types under AVX512BF16"
-
-Revert "[X86][BF16] Lower FP_ROUND for vector types under AVX512BF16 "
 
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 
-Revert "[CUDA][HIP] Fix overloading resolution in global variable initializer "
 Revert "[Parser] Parse string literal arguments of 'avail"
    needs Dave's restores to land
