@@ -17,11 +17,11 @@
 #include <ranges>
 
 bool non_simple_view_iter_ctor_test() {
-  using StrideView             = std::ranges::stride_view<NotSimpleView>;
+  using StrideView             = std::ranges::stride_view<InstrumentedNotSimpleView>;
   using StrideViewIterNonConst = std::ranges::iterator_t<StrideView>;
   using StrideViewIterConst    = std::ranges::iterator_t<const StrideView>;
 
-  StrideView sv{NotSimpleView{}, 1};
+  StrideView sv{InstrumentedNotSimpleView{}, 1};
   StrideViewIterNonConst iter = {sv, sv.base().begin(), 0};
   StrideViewIterConst iterb   = {iter};
   assert(iterb.__end_.moved_from_a == true);

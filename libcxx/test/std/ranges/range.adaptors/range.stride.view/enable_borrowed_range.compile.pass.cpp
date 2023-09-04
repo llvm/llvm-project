@@ -19,8 +19,8 @@ constexpr bool test() {
   using std::ranges::enable_borrowed_range;
   // Make sure that a stride_view over neither a borrowable nor an unborrowable view
   // is itself borrowable.
-  static_assert(!enable_borrowed_range<std::ranges::stride_view<Range<int>>>);
-  static_assert(!enable_borrowed_range<std::ranges::stride_view<BorrowedRange<int>>>);
+  static_assert(!enable_borrowed_range<std::ranges::stride_view<InstrumentedBasicView<int>>>);
+  static_assert(!enable_borrowed_range<std::ranges::stride_view<InstrumentedBorrowedRange<int>>>);
   return true;
 }
 
