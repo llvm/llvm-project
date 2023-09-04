@@ -497,15 +497,10 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/include/clang/Basic/BuiltinsMSP430* @llvm/pr-subscribers-msp430
 
 # riscv
-/llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
-/llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
-/clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
-/clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
-/clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
-/clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riscv
+/llvm/**/*RISCV* @llvm/pr-subscribers-riscv
+/llvm/**/*riscv* @llvm/pr-subscribers-riscv
+/clang/**/*RISCV* @llvm/pr-subscribers-riscv
+/clang/**/*riscv* @llvm/pr-subscribers-riscv
 
 # sparc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
