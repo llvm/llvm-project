@@ -55,12 +55,9 @@ public:
   /// Returns the unique identifier that corresponds to this pass.
   TypeID getTypeID() const { return passID; }
 
-  /// Returns the pass info for the specified pass class or null if unknown.
-  static const PassInfo *lookupPassInfo(StringRef passArg);
-
   /// Returns the pass info for this pass, or null if unknown.
   const PassInfo *lookupPassInfo() const {
-    return lookupPassInfo(getArgument());
+    return PassInfo::lookup(getArgument());
   }
 
   /// Returns the derived pass name.
