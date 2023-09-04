@@ -740,7 +740,7 @@ namespace TestUsingDecl {
 }
 // CHECK:      NamespaceDecl{{.*}} TestUsingDecl
 // CHECK-NEXT:   UsingDecl{{.*}} testUsingDecl::i
-// CHECK-NEXT:   | `-NestedNameSpecifier NamespaceNamespace 0x{{.*}} 'testUsingDecl
+// CHECK-NEXT:   | `-NestedNameSpecifier Namespace 0x{{.*}} 'testUsingDecl
 // CHECK-NEXT:   UsingShadowDecl{{.*}} Var{{.*}} 'i' 'int'
 
 namespace testUnresolvedUsing {
