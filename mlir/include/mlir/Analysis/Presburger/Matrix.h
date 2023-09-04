@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This is a simple 2D matrix class that supports reading, writing, resizing,
-// swapping rows, and swapping columns.
+// swapping rows, and swapping columns. It can hold integers (MPInt) or rational
+// numbers (Fraction).
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +16,8 @@
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,6 +36,8 @@ namespace presburger {
 /// space in the underlying SmallVector's capacity.
 template<typename T>
 class Matrix {
+  // This class is not intended for general use: it supports only integers and rational numbers
+static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
 public:
   Matrix() = delete;
 

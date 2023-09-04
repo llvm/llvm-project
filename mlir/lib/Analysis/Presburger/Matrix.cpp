@@ -379,9 +379,9 @@ template <typename T> bool Matrix<T>::hasConsistentState() const {
 
 namespace mlir
 {
-  namespace presburger
-  {
-    template class Matrix<MPInt>;
-    template class Matrix<Fraction>;
-  }
+namespace presburger
+{
+template class Matrix<MPInt>;
+template class Matrix<Fraction>;
+}
 }

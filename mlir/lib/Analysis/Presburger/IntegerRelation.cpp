@@ -304,7 +304,7 @@ SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMax() const {
   // Get lexmax by flipping range sign in the PWMA constraints.
   for (auto &flippedPiece :
        flippedSymbolicIntegerLexMax.lexopt.getAllPieces()) {
-    Matrix mat = flippedPiece.output.getOutputMatrix();
+    Matrix<MPInt> mat = flippedPiece.output.getOutputMatrix();
     for (unsigned i = 0, e = mat.getNumRows(); i < e; i++)
       mat.negateRow(i);
     MultiAffineFunction maf(flippedPiece.output.getSpace(), mat);
