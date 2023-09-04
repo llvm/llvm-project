@@ -4007,15 +4007,9 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       Value *LHS, Value *RHS,
                                                       bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+  if (!match(RHS, m_APFloat(ConstRHS)))
     return {nullptr, fcNone};
 
-  return fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
-}
-
-std::pair<Value *, FPClassTest>
-llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
-                      const APFloat *ConstRHS, bool LookThroughSrc) {
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
   if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
     return {LHS, ~fcNan};
