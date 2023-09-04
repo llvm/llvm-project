@@ -134,7 +134,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     }
   }
 
-  if (auto fromFpType = dyn_cast<FloatType>(operand.getType())) {
+  if (dyn_cast<FloatType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
     Value from = operand;
@@ -149,7 +149,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
-  if (auto fromIntType = dyn_cast<IntegerType>(operand.getType())) {
+  if (dyn_cast<IntegerType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     Value from = operand;
     if (isUnsigned) {

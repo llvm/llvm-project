@@ -581,7 +581,7 @@ public:
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
           loc,
-          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
               ? hSymType
               : symType,
           mangleName(sym), toStringRef(sym.GetUltimate().name()),
@@ -1019,10 +1019,13 @@ private:
       if (!shallowLookupSymbol(sym)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
-        auto newVal = builder->createTemporary(loc, genType(sym),
-                                               toStringRef(sym.name()));
-        bindIfNewSymbol(sym, newVal);
-        return newVal;
+        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(builder->getAllocaBlock());
+        mlir::Type tempTy = genType(sym);
+        mlir::Value temp =
+            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+        bindIfNewSymbol(sym, temp);
+        builder->restoreInsertionPoint(insPt);
       }
     }
     auto entry = lookupSymbol(sym);

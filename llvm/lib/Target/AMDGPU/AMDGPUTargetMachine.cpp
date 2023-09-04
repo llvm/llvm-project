@@ -400,7 +400,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
-  initializeAMDGPULowerModuleLDSPass(*PR);
+  initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHIPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -608,8 +608,8 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
 
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
-      [](StringRef PassName, ModulePassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef PassName, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-unify-metadata") {
           PM.addPass(AMDGPUUnifyMetadataPass());
           return true;
@@ -623,7 +623,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return true;
         }
         if (PassName == "amdgpu-lower-module-lds") {
-          PM.addPass(AMDGPULowerModuleLDSPass());
+          PM.addPass(AMDGPULowerModuleLDSPass(*this));
           return true;
         }
         if (PassName == "amdgpu-lower-ctor-dtor") {
@@ -1011,7 +1011,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
-    addPass(createAMDGPULowerModuleLDSPass());
+    addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
   // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
@@ -1021,6 +1021,13 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOpt::None)
     addPass(createInferAddressSpacesPass());
+
+  // Run atomic optimizer before Atomic Expand
+  if ((TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+      (TM.getOptLevel() >= CodeGenOpt::Less) &&
+      (AMDGPUAtomicOptimizerStrategy != ScanOptions::None)) {
+    addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
+  }
 
   addPass(createAtomicExpandPass());
 
@@ -1145,11 +1152,6 @@ bool GCNPassConfig::addPreISel() {
 
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createAMDGPULateCodeGenPreparePass());
-
-  if ((TM->getOptLevel() >= CodeGenOpt::Less) &&
-      (AMDGPUAtomicOptimizerStrategy != ScanOptions::None)) {
-    addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
-  }
 
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createSinkingPass());

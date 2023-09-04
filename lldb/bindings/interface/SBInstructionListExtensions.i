@@ -3,15 +3,6 @@ STRING_EXTENSION_OUTSIDE(SBInstructionList)
 %extend lldb::SBInstructionList {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all instructions in a lldb.SBInstructionList
             object.'''

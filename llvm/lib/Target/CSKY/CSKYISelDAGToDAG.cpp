@@ -116,7 +116,8 @@ void CSKYDAGToDAGISel::Select(SDNode *N) {
 
 bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
   std::vector<SDValue> AsmNodeOperands;
-  unsigned Flag, Kind;
+  unsigned Flag;
+  InlineAsm::Kind Kind;
   bool Changed = false;
   unsigned NumOps = N->getNumOperands();
 
@@ -146,10 +147,10 @@ bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
       continue;
 
     // Immediate operands to inline asm in the SelectionDAG are modeled with
-    // two operands. The first is a constant of value InlineAsm::Kind_Imm, and
+    // two operands. The first is a constant of value InlineAsm::Kind::Imm, and
     // the second is a constant with the value of the immediate. If we get here
-    // and we have a Kind_Imm, skip the next operand, and continue.
-    if (Kind == InlineAsm::Kind_Imm) {
+    // and we have a Kind::Imm, skip the next operand, and continue.
+    if (Kind == InlineAsm::Kind::Imm) {
       SDValue op = N->getOperand(++i);
       AsmNodeOperands.push_back(op);
       continue;
@@ -167,18 +168,18 @@ bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
       IsTiedToChangedOp = OpChanged[DefIdx];
 
     // Memory operands to inline asm in the SelectionDAG are modeled with two
-    // operands: a constant of value InlineAsm::Kind_Mem followed by the input
-    // operand. If we get here and we have a Kind_Mem, skip the next operand (so
-    // it doesn't get misinterpreted), and continue. We do this here because
+    // operands: a constant of value InlineAsm::Kind::Mem followed by the input
+    // operand. If we get here and we have a Kind::Mem, skip the next operand
+    // (so it doesn't get misinterpreted), and continue. We do this here because
     // it's important to update the OpChanged array correctly before moving on.
-    if (Kind == InlineAsm::Kind_Mem) {
+    if (Kind == InlineAsm::Kind::Mem) {
       SDValue op = N->getOperand(++i);
       AsmNodeOperands.push_back(op);
       continue;
     }
 
-    if (Kind != InlineAsm::Kind_RegUse && Kind != InlineAsm::Kind_RegDef &&
-        Kind != InlineAsm::Kind_RegDefEarlyClobber)
+    if (Kind != InlineAsm::Kind::RegUse && Kind != InlineAsm::Kind::RegDef &&
+        Kind != InlineAsm::Kind::RegDefEarlyClobber)
       continue;
 
     unsigned RC;
@@ -195,8 +196,8 @@ bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
     SDValue PairedReg;
     MachineRegisterInfo &MRI = MF->getRegInfo();
 
-    if (Kind == InlineAsm::Kind_RegDef ||
-        Kind == InlineAsm::Kind_RegDefEarlyClobber) {
+    if (Kind == InlineAsm::Kind::RegDef ||
+        Kind == InlineAsm::Kind::RegDefEarlyClobber) {
       // Replace the two GPRs with 1 GPRPair and copy values from GPRPair to
       // the original GPRs.
 
@@ -222,7 +223,7 @@ bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
       Ops.push_back(T1.getValue(1));
       CurDAG->UpdateNodeOperands(GU, Ops);
     } else {
-      // For Kind  == InlineAsm::Kind_RegUse, we first copy two GPRs into a
+      // For Kind  == InlineAsm::Kind::RegUse, we first copy two GPRs into a
       // GPRPair and then pass the GPRPair to the inline asm.
       SDValue Chain = AsmNodeOperands[InlineAsm::Op_InputChain];
 

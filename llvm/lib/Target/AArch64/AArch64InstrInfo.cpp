@@ -3669,8 +3669,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Copy a Z register pair by copying the individual sub-registers.
-  if (AArch64::ZPR2RegClass.contains(DestReg) &&
-      AArch64::ZPR2RegClass.contains(SrcReg)) {
+  if ((AArch64::ZPR2RegClass.contains(DestReg) ||
+       AArch64::ZPR2StridedOrContiguousRegClass.contains(DestReg)) &&
+      (AArch64::ZPR2RegClass.contains(SrcReg) ||
+       AArch64::ZPR2StridedOrContiguousRegClass.contains(SrcReg))) {
     assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -3690,8 +3692,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Copy a Z register quad by copying the individual sub-registers.
-  if (AArch64::ZPR4RegClass.contains(DestReg) &&
-      AArch64::ZPR4RegClass.contains(SrcReg)) {
+  if ((AArch64::ZPR4RegClass.contains(DestReg) ||
+       AArch64::ZPR4StridedOrContiguousRegClass.contains(DestReg)) &&
+      (AArch64::ZPR4RegClass.contains(SrcReg) ||
+       AArch64::ZPR4StridedOrContiguousRegClass.contains(SrcReg))) {
     assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
@@ -4022,7 +4026,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Twov2d;
       Offset = false;
-    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4044,7 +4049,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Fourv2d;
       Offset = false;
-    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4178,7 +4184,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Twov2d;
       Offset = false;
-    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4200,7 +4207,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Fourv2d;
       Offset = false;
-    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC)) {
+    } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
+               AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -8514,6 +8522,58 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
     return AArch64::BLRNoIP;
   else
     return AArch64::BLR;
+}
+
+bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  const MachineFunction &MF = *MI.getMF();
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
+
+  // If the function contains changes to streaming mode, then there
+  // is a danger that rematerialised instructions end up between
+  // instruction sequences (e.g. call sequences, or prolog/epilogue)
+  // where the streaming-SVE mode is temporarily changed.
+  if (AFI.hasStreamingModeChanges()) {
+    // Avoid rematerializing rematerializable instructions that use/define
+    // scalable values, such as 'pfalse' or 'ptrue', which result in different
+    // results when the runtime vector length is different.
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    if (any_of(MI.operands(), [&MRI, &MFI](const MachineOperand &MO) {
+          if (MO.isFI() &&
+              MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector)
+            return true;
+          if (!MO.isReg())
+            return false;
+
+          if (MO.getReg().isVirtual()) {
+            const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
+            return AArch64::ZPRRegClass.hasSubClassEq(RC) ||
+                   AArch64::PPRRegClass.hasSubClassEq(RC);
+          }
+          return AArch64::ZPRRegClass.contains(MO.getReg()) ||
+                 AArch64::PPRRegClass.contains(MO.getReg());
+        }))
+      return false;
+
+    // Avoid rematerializing instructions that return a value that is
+    // different depending on vector length, even when it is not returned
+    // in a scalable vector/predicate register.
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    case AArch64::RDVLI_XI:
+    case AArch64::ADDVL_XXI:
+    case AArch64::ADDPL_XXI:
+    case AArch64::CNTB_XPiI:
+    case AArch64::CNTH_XPiI:
+    case AArch64::CNTW_XPiI:
+    case AArch64::CNTD_XPiI:
+      return false;
+    }
+  }
+
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 #define GET_INSTRINFO_HELPERS

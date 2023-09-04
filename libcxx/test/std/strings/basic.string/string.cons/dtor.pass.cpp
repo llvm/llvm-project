@@ -19,12 +19,11 @@
 #include "test_allocator.h"
 
 template <class T>
-struct throwing_alloc
-{
-    typedef T value_type;
-    throwing_alloc(const throwing_alloc&);
-    T *allocate(std::size_t);
-    ~throwing_alloc() noexcept(false);
+struct throwing_alloc {
+  typedef T value_type;
+  throwing_alloc(const throwing_alloc&);
+  T* allocate(std::size_t);
+  ~throwing_alloc() noexcept(false);
 };
 
 // Test that it's possible to take the address of basic_string's destructors
@@ -35,10 +34,10 @@ std::wstring unused_wide_string;
 #endif
 
 static_assert(std::is_nothrow_destructible<std::string>::value, "");
-static_assert(std::is_nothrow_destructible<
-                std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value, "");
-LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<
-                     std::basic_string<char, std::char_traits<char>, throwing_alloc<char>>>::value, "");
+static_assert(
+    std::is_nothrow_destructible< std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value, "");
+LIBCPP_STATIC_ASSERT(
+    !std::is_nothrow_destructible< std::basic_string<char, std::char_traits<char>, throwing_alloc<char>>>::value, "");
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_allocator_statistics alloc_stats;
@@ -53,8 +52,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

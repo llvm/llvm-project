@@ -30,7 +30,7 @@ class IteratorTypeAttr;
 class LinalgOp;
 
 namespace detail {
-/// Implementation of the method that that check if given operands
+/// Implementation of the method that check if given operands
 /// can be dropped, i.e. the remaining operands can compute the loop
 /// bounds of the op.
 bool canOpOperandsBeDroppedImpl(linalg::LinalgOp linalgOp,

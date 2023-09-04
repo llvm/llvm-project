@@ -397,7 +397,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
           hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(int),
                                        /*flags=*/0, &dev_ret))
     handle_error(err);
-  hsa_amd_memory_fill(dev_ret, 0, sizeof(int));
+  hsa_amd_memory_fill(dev_ret, 0, /*count=*/1);
 
   // Allocate finegrained memory for the RPC server and client to share.
   uint32_t wavefront_size = 0;

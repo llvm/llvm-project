@@ -19,20 +19,22 @@
 #include "min_allocator.h"
 
 int main(int, char**) {
-    {
-        std::string l1("123");
-        std::string l2("123");
-        std::string::const_iterator i = l2.begin();
-        TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i), "string::erase(iterator) called with an iterator not referring to this string");
-    }
+  {
+    std::string l1("123");
+    std::string l2("123");
+    std::string::const_iterator i = l2.begin();
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(i), "string::erase(iterator) called with an iterator not referring to this string");
+  }
 
-    {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-        S l1("123");
-        S l2("123");
-        S::const_iterator i = l2.begin();
-        TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i), "string::erase(iterator) called with an iterator not referring to this string");
-    }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
+    S l1("123");
+    S l2("123");
+    S::const_iterator i = l2.begin();
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(i), "string::erase(iterator) called with an iterator not referring to this string");
+  }
 
-    return 0;
+  return 0;
 }

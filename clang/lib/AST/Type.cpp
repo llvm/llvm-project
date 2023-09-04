@@ -1526,16 +1526,16 @@ bool QualType::UseExcessPrecision(const ASTContext &Ctx) {
           Ctx.getLangOpts().getFloat16ExcessPrecision() !=
               Ctx.getLangOpts().ExcessPrecisionKind::FPP_None)
         return true;
-      return false;
-    } break;
+      break;
+    }
     case BuiltinType::Kind::BFloat16: {
       const TargetInfo &TI = Ctx.getTargetInfo();
       if (TI.hasBFloat16Type() && !TI.hasFullBFloat16Type() &&
           Ctx.getLangOpts().getBFloat16ExcessPrecision() !=
               Ctx.getLangOpts().ExcessPrecisionKind::FPP_None)
         return true;
-      return false;
-    } break;
+      break;
+    }
     default:
       return false;
     }

@@ -237,7 +237,8 @@ private:
       llvm::raw_ostream &, const EntityDetails &);
 };
 
-// Symbol is associated with a name or expression in a SELECT TYPE or ASSOCIATE.
+// Symbol is associated with a name or expression in an ASSOCIATE,
+// SELECT TYPE, or SELECT RANK construct.
 class AssocEntityDetails : public EntityDetails {
 public:
   AssocEntityDetails() {}
@@ -252,7 +253,7 @@ public:
 
 private:
   MaybeExpr expr_;
-  std::optional<int> rank_;
+  std::optional<int> rank_; // for SELECT RANK
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 

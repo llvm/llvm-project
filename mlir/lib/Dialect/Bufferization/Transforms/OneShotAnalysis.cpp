@@ -309,8 +309,29 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
+static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
+  DenseSet<Block *> visited;
+  SmallVector<Block *> worklist;
+  for (Block *succ : from->getSuccessors())
+    worklist.push_back(succ);
+  while (!worklist.empty()) {
+    Block *next = worklist.pop_back_val();
+    if (llvm::find(except, next) != except.end())
+      continue;
+    if (next == to)
+      return true;
+    if (visited.contains(next))
+      continue;
+    visited.insert(next);
+    for (Block *succ : next->getSuccessors())
+      worklist.push_back(succ);
+  }
+  return false;
+}
+
 /// Return `true` if op dominance can be used to rule out a read-after-write
-/// conflicts based on the ordering of ops.
+/// conflicts based on the ordering of ops. Returns `false` if op dominance
+/// cannot be used to due region-based loops.
 ///
 /// Generalized op dominance can often be used to rule out potential conflicts
 /// due to "read happens before write". E.g., the following IR is not a RaW
@@ -383,9 +404,9 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
 ///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
 ///
-static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
-                              const SetVector<Value> &definitions,
-                              AnalysisState &state) {
+static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
+                                          const SetVector<Value> &definitions,
+                                          AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
   for (Value def : definitions) {
     Region *rRead =
@@ -411,7 +432,51 @@ static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
     if (rRead->getParentOp()->isAncestor(uWrite->getOwner()))
       return false;
   }
+
   return true;
+}
+
+/// Return `true` if op dominance can be used to rule out a read-after-write
+/// conflicts based on the ordering of ops. Returns `false` if op dominance
+/// cannot be used to due block-based loops within a region.
+///
+/// Refer to the `canUseOpDominanceDueToRegions` documentation for details on
+/// how op domiance is used during RaW conflict detection.
+///
+/// On a high-level, there is a potential RaW in a program if there exists a
+/// possible program execution such that there is a sequence of DEF, followed
+/// by WRITE, followed by READ. Each additional DEF resets the sequence.
+///
+/// Op dominance cannot be used if there is a path from block(READ) to
+/// block(WRITE) and a path from block(WRITE) to block(READ). block(DEF) should
+/// not appear on that path.
+static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
+                                         const SetVector<Value> &definitions,
+                                         AnalysisState &state) {
+  // Fast path: If READ and WRITE are in different regions, their block cannot
+  // be reachable just via unstructured control flow. (Loops due to regions are
+  // covered by `canUseOpDominanceDueToRegions`.)
+  if (uRead->getOwner()->getParentRegion() !=
+      uWrite->getOwner()->getParentRegion())
+    return true;
+
+  Block *readBlock = uRead->getOwner()->getBlock();
+  Block *writeBlock = uWrite->getOwner()->getBlock();
+  for (Value def : definitions) {
+    Block *defBlock = def.getParentBlock();
+    if (isReachable(readBlock, writeBlock, {defBlock}) &&
+        isReachable(writeBlock, readBlock, {defBlock}))
+      return false;
+  }
+
+  return true;
+}
+
+static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
+                              const SetVector<Value> &definitions,
+                              AnalysisState &state) {
+  return canUseOpDominanceDueToRegions(uRead, uWrite, definitions, state) &&
+         canUseOpDominanceDueToBlocks(uRead, uWrite, definitions, state);
 }
 
 /// Annotate IR with details about the detected RaW conflict.

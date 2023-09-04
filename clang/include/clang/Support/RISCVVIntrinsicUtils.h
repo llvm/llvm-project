@@ -480,13 +480,21 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint8_t {
+enum RVVRequire : uint16_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
   RVV_REQ_ZvfhminOrZvfh = 1 << 1,
   RVV_REQ_Xsfvcp = 1 << 2,
+  RVV_REQ_Zvbb = 1 << 3,
+  RVV_REQ_Zvbc = 1 << 4,
+  RVV_REQ_Zvkb = 1 << 5,
+  RVV_REQ_Zvkg = 1 << 6,
+  RVV_REQ_Zvkned = 1 << 7,
+  RVV_REQ_Zvknha = 1 << 8,
+  RVV_REQ_Zvksed = 1 << 9,
+  RVV_REQ_Zvksh = 1 << 10,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Xsfvcp)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
 };
 
 // Raw RVV intrinsic info, used to expand later.
@@ -518,7 +526,7 @@ struct RVVIntrinsicRecord {
   uint8_t OverloadedSuffixSize;
 
   // Required target features for this intrinsic.
-  uint8_t RequiredExtensions;
+  uint16_t RequiredExtensions;
 
   // Supported type, mask of BasicType.
   uint8_t TypeRangeMask;

@@ -21,7 +21,8 @@ RUN: llvm-symbolizer --print-address --obj=%p/Inputs/addr.exe < %p/Inputs/addr.i
 RUN: llvm-symbolizer --addresses --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -a --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 
-CHECK: some text
+CHECK: ??:0:0
+CHECK-EMPTY:
 CHECK-NEXT: 0x40054d
 CHECK-NEXT: inctwo
 CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:3:3
@@ -30,7 +31,8 @@ CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:7:0
 CHECK-NEXT: main
 CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 CHECK-EMPTY:
-CHECK-NEXT: some text2
+CHECK-NEXT: ??
+CHECK-NEXT: ??:0:0
 
 RUN: llvm-symbolizer --inlining --print-address --pretty-print --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s 
 RUN: llvm-symbolizer --inlining --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
@@ -43,11 +45,11 @@ RUN: llvm-symbolizer -i --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/
 # Support this compatibility alias for a while.
 RUN: llvm-symbolizer --inlining=true --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 
-PRETTY: some text
+PRETTY: ??:0:0
 PRETTY: {{[0x]+}}40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3:3
 PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
 PRETTY:  (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
-PRETTY: some text2
+PRETTY: ??:0:0
 
 RUN: llvm-addr2line --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix=A2L %s
 RUN: llvm-addr2line -a --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_A %s
@@ -62,7 +64,7 @@ RUN: llvm-addr2line -pai --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileChe
 RUN: llvm-addr2line -pfi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_F,A2LP_FI %s
 RUN: llvm-addr2line -pafi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_AF,A2LP_FI %s
 
-A2L:         some text
+A2L:         ??:0
 A2L_A-NEXT:  0x40054d
 A2L_F-NEXT:  inctwo
 A2L-NEXT:    {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
@@ -70,9 +72,10 @@ A2L_FI-NEXT: inc{{$}}
 A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
 A2L_FI-NEXT: main
 A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
-A2L-NEXT:    some text2
+A2L_F-NEXT:  ??
+A2L-NEXT:    ??:0
 
-A2LP:          some text
+A2LP:          ??:0
 A2LP_A-NEXT:   0x40054d: {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
 A2LP_F-NEXT:   inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
 A2LP_AF-NEXT:  0x40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
@@ -80,4 +83,4 @@ A2LP_I-NEXT:   {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
 A2LP_I-NEXT:   {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
 A2LP_FI-NEXT:   (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
 A2LP_FI-NEXT:   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
-A2LP-NEXT:     some text2
+A2LP-NEXT:     ??:0

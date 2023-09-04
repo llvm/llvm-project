@@ -2634,7 +2634,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   DIExpressionCursor ExprCursor(DIExpr);
   DwarfExpr.addFragmentOffset(DIExpr);
 
-  // If the DIExpr is is an Entry Value, we want to follow the same code path
+  // If the DIExpr is an Entry Value, we want to follow the same code path
   // regardless of whether the DBG_VALUE is variadic or not.
   if (DIExpr && DIExpr->isEntryValue()) {
     // Entry values can only be a single register with no additional DIExpr,

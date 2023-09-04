@@ -158,7 +158,6 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                uint64_t ModuleId,
                 std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
   };
 
@@ -225,8 +224,7 @@ struct ParserCallbacks {
 
   /// Parse the specified bitcode buffer and merge the index into CombinedIndex.
   Error readModuleSummaryIndex(MemoryBufferRef Buffer,
-                               ModuleSummaryIndex &CombinedIndex,
-                               uint64_t ModuleId);
+                               ModuleSummaryIndex &CombinedIndex);
 
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers

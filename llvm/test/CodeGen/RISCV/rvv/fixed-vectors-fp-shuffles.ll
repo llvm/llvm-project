@@ -18,9 +18,8 @@ define <8 x float> @shuffle_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 236
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 12, i32 5, i32 6, i32 7>

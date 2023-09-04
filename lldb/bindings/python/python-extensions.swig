@@ -289,24 +289,6 @@ class declaration(object):
         self.line = line
         self.col = col
 
-    def __eq__(self, other):
-        return not self.__ne__(other)
-
-    def __int__(self):
-        pass
-
-    def __hex__(self):
-        pass
-
-    def __oct__(self):
-        pass
-
-    def __len__(self):
-        pass
-
-    def __iter__(self):
-        pass
-
 class value_iter(object):
     '''Allows iterating over the children of an :py:class:`SBValue`.'''
     def __iter__(self):
@@ -324,15 +306,6 @@ class value_iter(object):
 
     def __eq__(self, other):
         return not self.__ne__(other)
-
-    def __int__(self):
-        pass
-
-    def __hex__(self):
-        pass
-
-    def __oct__(self):
-        pass
 
     def __len__(self):
         return self.length
@@ -579,15 +552,6 @@ class SBSyntheticValueProvider(object):
 
     def has_children(self):
         return False
-
-    def __int__(self):
-      pass
-
-    def __hex__(self):
-      pass
-
-    def __oct__(self):
-      pass
 
     def __len__(self):
       return self.num_children()

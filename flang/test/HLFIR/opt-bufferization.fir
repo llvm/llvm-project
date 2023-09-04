@@ -251,7 +251,7 @@ func.func @write(%arg: !fir.ref<!fir.array<42xi32>>, %arg1: !fir.ref<!fir.array<
 // CHECK:           %[[VAL_5B:.*]]:2 = hlfir.declare %[[ARG_1]](%[[VAL_4]]) {uniq_name = "array2"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 // CHECK:           %[[VAL_6:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index):
-// CHECK:             hlfir.assign %[[VAL_5B]]#0 to %[[VAL_5]]#0 : !fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>
+// CHECK:             hlfir.assign
 // CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
 // CHECK:             %[[VAL_10:.*]] = arith.subi %[[VAL_9]], %[[VAL_1]] : i32

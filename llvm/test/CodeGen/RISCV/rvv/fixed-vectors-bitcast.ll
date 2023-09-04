@@ -436,70 +436,46 @@ define <1 x i16> @bitcast_i16_v1i16(i16 %a) {
 ; CHECK-LABEL: bitcast_i16_v1i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_i16_v1i16:
 ; ELEN32:       # %bb.0:
 ; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; ELEN32-NEXT:    vmv.v.x v8, a0
+; ELEN32-NEXT:    vmv.s.x v8, a0
 ; ELEN32-NEXT:    ret
   %b = bitcast i16 %a to <1 x i16>
   ret <1 x i16> %b
 }
 
 define <2 x i16> @bitcast_i32_v2i16(i32 %a) {
-; RV32-LABEL: bitcast_i32_v2i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: bitcast_i32_v2i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    ret
-;
-; RV32ELEN32-LABEL: bitcast_i32_v2i16:
-; RV32ELEN32:       # %bb.0:
-; RV32ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32ELEN32-NEXT:    ret
-;
-; RV64ELEN32-LABEL: bitcast_i32_v2i16:
-; RV64ELEN32:       # %bb.0:
-; RV64ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64ELEN32-NEXT:    vmv.v.x v8, a0
-; RV64ELEN32-NEXT:    ret
+; ELEN32-LABEL: bitcast_i32_v2i16:
+; ELEN32:       # %bb.0:
+; ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; ELEN32-NEXT:    vmv.s.x v8, a0
+; ELEN32-NEXT:    ret
   %b = bitcast i32 %a to <2 x i16>
   ret <2 x i16> %b
 }
 
 define <1 x i32> @bitcast_i32_v1i32(i32 %a) {
-; RV32-LABEL: bitcast_i32_v1i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v1i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: bitcast_i32_v1i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    ret
-;
-; RV32ELEN32-LABEL: bitcast_i32_v1i32:
-; RV32ELEN32:       # %bb.0:
-; RV32ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32ELEN32-NEXT:    ret
-;
-; RV64ELEN32-LABEL: bitcast_i32_v1i32:
-; RV64ELEN32:       # %bb.0:
-; RV64ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64ELEN32-NEXT:    vmv.v.x v8, a0
-; RV64ELEN32-NEXT:    ret
+; ELEN32-LABEL: bitcast_i32_v1i32:
+; ELEN32:       # %bb.0:
+; ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; ELEN32-NEXT:    vmv.s.x v8, a0
+; ELEN32-NEXT:    ret
   %b = bitcast i32 %a to <1 x i32>
   ret <1 x i32> %b
 }

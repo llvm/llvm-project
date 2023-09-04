@@ -926,9 +926,9 @@ void TargetLoweringBase::initActions() {
 
   // These library functions default to expand.
   setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL,
-                      ISD::FRINT, ISD::FTRUNC, ISD::LROUND, ISD::LLROUND,
-                      ISD::LRINT, ISD::LLRINT},
+                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
+                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
+                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // Default ISD::TRAP to expand (which turns it into abort).

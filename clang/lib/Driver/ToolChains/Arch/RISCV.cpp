@@ -169,15 +169,17 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   // -mno-unaligned-access is default, unless -munaligned-access is specified.
   bool HasV = llvm::is_contained(Features, "+zve32x");
-  if (Args.hasFlag(options::OPT_munaligned_access,
-                   options::OPT_mno_unaligned_access, false)) {
-    Features.push_back("+unaligned-scalar-mem");
-    if (HasV)
-      Features.push_back("+unaligned-vector-mem");
-  } else {
-    Features.push_back("-unaligned-scalar-mem");
-    if (HasV)
-      Features.push_back("-unaligned-vector-mem");
+  if (const Arg *A = Args.getLastArg(options::OPT_munaligned_access,
+                                     options::OPT_mno_unaligned_access)) {
+    if (A->getOption().matches(options::OPT_munaligned_access)) {
+      Features.push_back("+unaligned-scalar-mem");
+      if (HasV)
+        Features.push_back("+unaligned-vector-mem");
+    } else {
+      Features.push_back("-unaligned-scalar-mem");
+      if (HasV)
+        Features.push_back("-unaligned-vector-mem");
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,

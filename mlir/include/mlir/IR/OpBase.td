@@ -122,10 +122,13 @@ def ElementwiseMappable : TraitList<[
 // Op's regions have a single block.
 def SingleBlock : NativeOpTrait<"SingleBlock">, StructuralOpTrait;
 
+class SingleBlockImplicitTerminatorImpl<string op>
+    : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op, [SingleBlock]>,
+      StructuralOpTrait;
+
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
-    : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op>,
-      StructuralOpTrait;
+    : TraitList<[SingleBlock, SingleBlockImplicitTerminatorImpl<op>]>;
 
 // Op's regions don't have terminator.
 def NoTerminator : NativeOpTrait<"NoTerminator">, StructuralOpTrait;

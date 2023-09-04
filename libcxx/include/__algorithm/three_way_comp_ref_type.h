@@ -50,7 +50,7 @@ struct __debug_three_way_comp {
       __expected = _Order::greater;
     if (__o == _Order::greater)
       __expected = _Order::less;
-    _LIBCPP_ASSERT(__comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
     (void)__l;
     (void)__r;
   }

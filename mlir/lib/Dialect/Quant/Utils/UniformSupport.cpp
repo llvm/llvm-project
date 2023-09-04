@@ -36,7 +36,7 @@ Type ExpressedToQuantizedConverter::convert(QuantizedType elementalType) const {
   assert(expressedType && "convert() on unsupported conversion");
   if (auto tensorType = dyn_cast<RankedTensorType>(inputType))
     return RankedTensorType::get(tensorType.getShape(), elementalType);
-  if (auto tensorType = dyn_cast<UnrankedTensorType>(inputType))
+  if (dyn_cast<UnrankedTensorType>(inputType))
     return UnrankedTensorType::get(elementalType);
   if (auto vectorType = dyn_cast<VectorType>(inputType))
     return VectorType::get(vectorType.getShape(), elementalType);

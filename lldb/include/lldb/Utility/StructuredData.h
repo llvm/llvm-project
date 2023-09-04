@@ -266,25 +266,6 @@ public:
       return success;
     }
 
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = ConstString(string_value->GetValue());
-          return true;
-        }
-      }
-      return false;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result,
-                                const char *default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result.SetCString(default_val);
-      return success;
-    }
-
     bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {
       result = nullptr;
       ObjectSP value_sp = GetItemAtIndex(idx);

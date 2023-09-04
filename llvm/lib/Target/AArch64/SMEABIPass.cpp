@@ -137,7 +137,7 @@ bool SMEABI::runOnFunction(Function &F) {
 
   bool Changed = false;
   SMEAttrs FnAttrs(F);
-  if (FnAttrs.hasNewZAInterface())
+  if (FnAttrs.hasNewZABody())
     Changed |= updateNewZAFunctions(M, &F, Builder);
 
   return Changed;

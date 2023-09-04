@@ -67,6 +67,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/StructuralHash.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -1091,6 +1092,11 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
     }
   }
   return Result;
+}
+
+Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "detailed",
+                               "StructuralHashPrinterPass");
 }
 
 } // namespace

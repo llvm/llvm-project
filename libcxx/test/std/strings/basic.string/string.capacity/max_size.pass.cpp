@@ -26,34 +26,34 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test1(const S& s)
-{
-    S s2(s);
-    const std::size_t sz = s2.max_size() - 1;
-    try { s2.resize(sz, 'x'); }
-    catch ( const std::bad_alloc & ) { return ; }
-    assert ( s2.size() ==  sz );
+TEST_CONSTEXPR_CXX20 void test1(const S& s) {
+  S s2(s);
+  const std::size_t sz = s2.max_size() - 1;
+  try {
+    s2.resize(sz, 'x');
+  } catch (const std::bad_alloc&) {
+    return;
+  }
+  assert(s2.size() == sz);
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test2(const S& s)
-{
-    S s2(s);
-    const std::size_t sz = s2.max_size();
-    try { s2.resize(sz, 'x'); }
-    catch ( const std::bad_alloc & ) { return ; }
-    assert ( s.size() ==  sz );
+TEST_CONSTEXPR_CXX20 void test2(const S& s) {
+  S s2(s);
+  const std::size_t sz = s2.max_size();
+  try {
+    s2.resize(sz, 'x');
+  } catch (const std::bad_alloc&) {
+    return;
+  }
+  assert(s.size() == sz);
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s)
-{
-    assert(s.max_size() >= s.size());
-    test1(s);
-    test2(s);
+TEST_CONSTEXPR_CXX20 void test(const S& s) {
+  assert(s.max_size() >= s.size());
+  test1(s);
+  test2(s);
 }
 
 template <class S>
@@ -83,8 +83,7 @@ constexpr bool test_constexpr() {
 }
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   test_constexpr();
