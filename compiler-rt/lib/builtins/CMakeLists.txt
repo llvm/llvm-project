@@ -330,7 +330,6 @@ if (NOT MSVC)
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       x86_64/chkstk.S
-      x86_64/chkstk2.S
     )
   endif()
 
@@ -363,7 +362,6 @@ if (NOT MSVC)
   if (WIN32)
     set(i386_SOURCES
       ${i386_SOURCES}
-      i386/chkstk.S
       i386/chkstk2.S
     )
   endif()
