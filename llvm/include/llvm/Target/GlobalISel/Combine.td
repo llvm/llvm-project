@@ -524,12 +524,25 @@ def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
 
+// Fold constant zero int to fp conversions.
+class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
+  (defs root:$dst),
+  (match (opcode $dst, 0)),
+  // Can't use COPY $dst, 0 here because the 0 operand may be a smaller type
+  // than the destination for itofp.
+  (apply [{ Helper.replaceInstWithFConstant(*${dst}.getParent(), 0.0); }])
+>;
+def itof_const_zero_fold_si : itof_const_zero_fold_rule<G_SITOFP>;
+def itof_const_zero_fold_ui : itof_const_zero_fold_rule<G_UITOFP>;
+
 def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fneg,
   constant_fold_fabs,
   constant_fold_fsqrt,
   constant_fold_flog2,
-  constant_fold_fptrunc
+  constant_fold_fptrunc,
+  itof_const_zero_fold_si,
+  itof_const_zero_fold_ui
 ]>;
 
 // Fold int2ptr(ptr2int(x)) -> x
