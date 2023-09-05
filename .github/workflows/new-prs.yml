@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
-    - uses: actions/labeler@v4
+    - uses: actions/labeler@v5
       with:
         configuration-path: .github/new-prs-labeler.yml
-        sync-labels: false
