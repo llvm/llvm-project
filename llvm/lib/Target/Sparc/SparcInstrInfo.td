@@ -1769,6 +1769,15 @@ let rs2 = 0 in
   def RDPR : F3_1<2, 0b101010,
                  (outs IntRegs:$rd), (ins PRRegs:$rs1),
                  "rdpr $rs1, $rd", []>;
+
+// Special case %fq as the register is also used in V8
+// (albeit with different instructions and encoding).
+// This allows us to reuse the register definition and
+// the "%fq" designation while giving it a different encoding.
+let Uses = [FQ], rs1 = 15, rs2 = 0 in
+  def RDFQ : F3_1<2, 0b101010,
+                 (outs IntRegs:$rd), (ins),
+                 "rdpr %fq, $rd", []>;
 }
 
 // Section A.62 - Write Privileged Register Instructions

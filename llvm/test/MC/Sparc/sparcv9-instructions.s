@@ -417,6 +417,10 @@
         rdpr %wstate,%i5
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: rdpr %fq,%i5
+        ! V9: rdpr %fq, %i5             ! encoding: [0xbb,0x53,0xc0,0x00]
+        rdpr %fq,%i5
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: rdpr %ver,%i5
         ! V9: rdpr %ver, %i5            ! encoding: [0xbb,0x57,0xc0,0x00]
         rdpr %ver,%i5
