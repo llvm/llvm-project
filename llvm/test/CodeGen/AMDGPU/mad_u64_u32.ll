@@ -88,7 +88,7 @@ define amdgpu_ps float @mad_i32_vvc(i32 %a, i32 %b) {
 ;
 ; GFX1210-LABEL: mad_i32_vvc:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, 42
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, 42
 ; GFX1210-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, 42
@@ -118,7 +118,7 @@ define amdgpu_ps float @mad_i32_vvi(i32 %a, i32 %b) {
 ;
 ; GFX1210-LABEL: mad_i32_vvi:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, 0x12d687
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, 0x12d687
 ; GFX1210-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, 1234567
@@ -148,7 +148,7 @@ define amdgpu_ps float @mad_i32_vvi_neg(i32 %a, i32 %b) {
 ;
 ; GFX1210-LABEL: mad_i32_vvi_neg:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, 0xffffffffffed2979
+; GFX1210-NEXT:    v_mad_u32 v0, v0, v1, 0xffed2979
 ; GFX1210-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, -1234567
@@ -202,7 +202,7 @@ define amdgpu_ps float @mad_i32_vcc(i32 %a) {
 ;
 ; GFX1210-LABEL: mad_i32_vcc:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 42, 43
+; GFX1210-NEXT:    v_mad_u32 v0, v0, 42, 43
 ; GFX1210-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, 42
   %add = add i32 %mul, 43

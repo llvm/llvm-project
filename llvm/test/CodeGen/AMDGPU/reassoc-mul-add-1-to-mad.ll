@@ -3401,7 +3401,7 @@ define i32 @v_mul_9_add_52_i32(i32 %arg) {
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 9, 52
+; GFX1210-NEXT:    v_mad_u32 v0, v0, 9, 52
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 9
   %add = add i32 %mul, 52
@@ -3607,7 +3607,7 @@ define i32 @v_mul_5_add_1_i32(i32 %arg) {
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 5, 1
+; GFX1210-NEXT:    v_mad_u32 v0, v0, 5, 1
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 5
   %add = add i32 %mul, 1
@@ -3655,7 +3655,7 @@ define i32 @v_mul_284_add_82_i32(i32 %arg) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_movk_i32 s0, 0x11c
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, s0, 0x52
+; GFX1210-NEXT:    v_mad_u32 v0, v0, s0, 0x52
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i32 %arg, 284
   %add = add i32 %mul, 82

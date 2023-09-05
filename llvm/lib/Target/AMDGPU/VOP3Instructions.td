@@ -742,7 +742,7 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
-let SubtargetPredicate = isGFX12_10Plus in {
+let SubtargetPredicate = isGFX12_10Plus, AddedComplexity = 10 in {
 def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
 }
 
