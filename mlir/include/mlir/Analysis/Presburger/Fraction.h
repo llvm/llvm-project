@@ -99,20 +99,27 @@ inline bool operator>=(const Fraction &x, const Fraction &y) {
   return compare(x, y) >= 0;
 }
 
+inline Fraction reduce(const Fraction &f) {
+  if (f == Fraction(0))
+    return f;
+  MPInt g = gcd(f.num, f.den);
+  return Fraction(f.num / g, f.den / g);
+}
+
 inline Fraction operator*(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.num, x.den * y.den));
 }
 
 inline Fraction operator/(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den, x.den * y.num);
+  return reduce(Fraction(x.num * y.den, x.den * y.num));
 }
 
 inline Fraction operator+(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.den + x.den * y.num, x.den * y.den));
 }
 
 inline Fraction operator-(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
