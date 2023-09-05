@@ -1070,14 +1070,13 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
 ///           => unused, <N x t> = unmerge v
 bool matchUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
                               Register &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
   auto &Unmerge = cast<GUnmerge>(MI);
   if (Unmerge.getNumDefs() != 2)
     return false;
-  if (!MRI.use_nodbg_empty(Unmerge.getOperand(1).getReg()))
+  if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
     return false;
 
-  LLT DstTy = MRI.getType(Unmerge.getOperand(0).getReg());
+  LLT DstTy = MRI.getType(Unmerge.getReg(0));
   if (!DstTy.isVector())
     return false;
 
