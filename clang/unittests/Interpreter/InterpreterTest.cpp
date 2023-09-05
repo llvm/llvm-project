@@ -244,7 +244,7 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 
   // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
 #ifndef _WIN32
-  EXPECT_EQ((unsigned long long)&printf, Addr->getValue());
+  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
 #endif // _WIN32
 }
 
