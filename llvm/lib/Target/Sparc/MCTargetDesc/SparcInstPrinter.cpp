@@ -251,3 +251,9 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
     }
   }
 }
+
+void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  O << Imm;
+}

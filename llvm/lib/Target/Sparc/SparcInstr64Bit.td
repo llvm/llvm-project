@@ -239,7 +239,7 @@ def UDIVXri : F3_2<2, 0b001101,
 let Predicates = [Is64Bit] in {
 
 // 64-bit loads.
-defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
+defm LDX   : LoadA<"ldx", 0b001011, 0b011011, load, I64Regs, i64>;
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def TLS_LDXrr : F3_1<3, 0b001011,
@@ -282,10 +282,10 @@ def : Pat<(i64 (extloadi32 ADDRrr:$addr)),  (LDrr ADDRrr:$addr)>;
 def : Pat<(i64 (extloadi32 ADDRri:$addr)),  (LDri ADDRri:$addr)>;
 
 // Sign-extending load of i32 into i64 is a new SPARC v9 instruction.
-defm LDSW   : Load<"ldsw", 0b001000, sextloadi32, I64Regs, i64>;
+defm LDSW   : LoadA<"ldsw", 0b001000, 0b011000, sextloadi32, I64Regs, i64>;
 
 // 64-bit stores.
-defm STX    : Store<"stx", 0b001110, store,  I64Regs, i64>;
+defm STX    : StoreA<"stx", 0b001110, 0b011110, store, I64Regs, i64>;
 
 // Truncating stores from i64 are identical to the i32 stores.
 def : Pat<(truncstorei8  i64:$src, ADDRrr:$addr), (STBrr ADDRrr:$addr, $src)>;

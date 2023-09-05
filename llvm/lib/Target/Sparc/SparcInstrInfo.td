@@ -183,6 +183,16 @@ def MembarTag : Operand<i32> {
   let ParserMatchClass = SparcMembarTagAsmOperand;
 }
 
+def SparcASITagAsmOperand : AsmOperandClass {
+  let Name = "ASITag";
+  let ParserMethod = "parseASITag";
+}
+
+def ASITag : Operand<i32> {
+  let PrintMethod = "printASITag";
+  let ParserMatchClass = SparcASITagAsmOperand;
+}
+
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
@@ -421,18 +431,25 @@ multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> :
-  F3_1_asi<3, Op3Val, (outs RC:$rd), (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
-                !strconcat(OpcStr, "a [$addr] $asi, $rd"),
-                []>;
+multiclass LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> {
+  def rr  : F3_1_asi<3, Op3Val, (outs RC:$rd), (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi),
+                     !strconcat(OpcStr, "a [$addr] $asi, $rd"),
+                     []>;
+
+  let Predicates = [HasV9], Uses = [ASR3] in
+  def ri  : F3_2<3, Op3Val, (outs RC:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                 !strconcat(OpcStr, "a [$addr] %asi, $rd"),
+                 []>;
+}
 
 // LoadA multiclass - As above, but also define alternate address space variant
 multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
                  InstrItinClass itin = NoItinerary> :
              Load<OpcStr, Op3Val, OpNode, RC, Ty, itin> {
-  def Arr  : LoadASI<OpcStr, LoadAOp3Val, RC>;
+  defm A   : LoadASI<OpcStr, LoadAOp3Val, RC>;
 }
+
 
 // The LDSTUB instruction is supported for asm only.
 // It is unlikely that general-purpose code could make use of it.
@@ -442,8 +459,12 @@ def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$ad
 def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
                     "ldstub [$addr], $rd", []>;
 def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
-                         (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
+                         (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi),
                          "ldstuba [$addr] $asi, $rd", []>;
+let Predicates = [HasV9], Uses = [ASR3] in
+def LDSTUBAri : F3_2<3, 0b011101, (outs IntRegs:$rd),
+                         (ins (MEMri $rs1, $simm13):$addr),
+                         "ldstuba [$addr] %asi, $rd", []>;
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
@@ -462,17 +483,24 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the StoreASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
-               InstrItinClass itin = IIC_st> :
-  F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, i8imm:$asi),
+multiclass StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
+               InstrItinClass itin = IIC_st> {
+  def rr : F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, ASITag:$asi),
            !strconcat(OpcStr, "a $rd, [$addr] $asi"),
            [],
            itin>;
 
+  let Predicates = [HasV9], Uses = [ASR3] in
+  def ri : F3_2<3, Op3Val, (outs), (ins (MEMri $rs1, $simm13):$addr, RC:$rd),
+           !strconcat(OpcStr, "a $rd, [$addr] %asi"),
+           [],
+           itin>;
+}
+
 multiclass StoreA<string OpcStr, bits<6> Op3Val, bits<6> StoreAOp3Val,
                   SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
              Store<OpcStr, Op3Val, OpNode, RC, Ty> {
-  def Arr : StoreASI<OpcStr, StoreAOp3Val, RC>;
+  defm A   : StoreASI<OpcStr, StoreAOp3Val, RC>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -587,18 +615,21 @@ defm LD   : LoadA<"ld",   0b000000, 0b010000, load,        IntRegs, i32>;
 defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
 
 // Section B.2 - Load Floating-point Instructions, p. 92
-defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
-def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
-             Requires<[HasV9]>;
+defm LDF     : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
+defm LDDF    : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
 
-defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
-def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
-              Requires<[HasV9]>;
-defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
-             Requires<[HasV9, HasHardQuad]>;
+let DecoderNamespace = "SparcV9", Predicates = [HasV9] in {
+  defm LDFA    : LoadASI<"ld",  0b110000, FPRegs>;
+  defm LDDFA   : LoadASI<"ldd", 0b110011, DFPRegs>;
+  defm LDQF    : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
+                 Requires<[HasHardQuad]>;
+}
 
-defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
-defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+// Coprocessor instructions were removed in v9.
+let DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
+  defm LDC    : Load<"ld", 0b110000, load, CoprocRegs, i32>;
+  defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+}
 
 let Defs = [CPSR] in {
   let rd = 0 in {
@@ -641,16 +672,20 @@ defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
 defm STF    : Store<"st",  0b100100, store,         FPRegs,  f32>;
-def STFArr  : StoreASI<"st",  0b110100, FPRegs>,
-              Requires<[HasV9]>;
 defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
-def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
-              Requires<[HasV9]>;
-defm STQF   : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
-              Requires<[HasV9, HasHardQuad]>;
 
-defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
-defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
+let DecoderNamespace = "SparcV9", Predicates = [HasV9] in {
+  defm STFA  : StoreASI<"st",  0b110100, FPRegs>;
+  defm STDFA : StoreASI<"std", 0b110111, DFPRegs>;
+  defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
+              Requires<[HasHardQuad]>;
+}
+
+// Coprocessor instructions were removed in v9.
+let DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
+  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+  defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
+}
 
 let rd = 0 in {
   let Defs = [CPSR] in {
@@ -700,8 +735,13 @@ let Constraints = "$val = $rd" in {
                  "swap [$addr], $rd",
                  [(set i32:$rd, (atomic_swap_32 ADDRri:$addr, i32:$val))]>;
   def SWAPArr : F3_1_asi<3, 0b011111,
-                 (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi, IntRegs:$val),
+                 (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi, IntRegs:$val),
                  "swapa [$addr] $asi, $rd",
+                 [/*FIXME: pattern?*/]>;
+let Predicates = [HasV9], Uses = [ASR3] in
+  def SWAPAri : F3_2<3, 0b011111,
+                 (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr, IntRegs:$val),
+                 "swapa [$addr] %asi, $rd",
                  [/*FIXME: pattern?*/]>;
 }
 
@@ -1687,7 +1727,7 @@ let Predicates = [HasLeonCASA], Constraints = "$swap = $rd", asi = 0b00001010 in
 let Predicates = [HasLeonCASA], Constraints = "$swap = $rd" in
   def CASArr: F3_1_asi<3, 0b111100,
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
-                                     IntRegs:$swap, i8imm:$asi),
+                                     IntRegs:$swap, ASITag:$asi),
                  "casa [$rs1] $asi, $rs2, $rd", []>;
 
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided

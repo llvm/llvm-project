@@ -52,43 +52,83 @@
         ! V8-NEXT: lduwa [%i0 + %l6] 131, %o2
         ! V9: lda [%i0+%l6] 131, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
         lduwa [%i0 + %l6] 131, %o2
+        ! V8:      error: invalid instruction mnemonic
+        ! V8-NEXT: lduwa [%i0 + %l6] (130+1), %o2
+        ! V9: lda [%i0+%l6] 131, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
+        lduwa [%i0 + %l6] (130+1), %o2
+
+        ! V9: ldsw [%i0+%l6], %o2    ! encoding: [0xd4,0x46,0x00,0x16]
+        ldsw [%i0 + %l6], %o2
+        ! V9: ldsw [%i0+32], %o2     ! encoding: [0xd4,0x46,0x20,0x20]
+        ldsw [%i0 + 32], %o2
+        ! V9: ldsw [%g1], %o2        ! encoding: [0xd4,0x40,0x40,0x00]
+        ldsw [%g1], %o2
+        ! V9: ldswa [%i0+%l6] 131, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
+        ldswa [%i0 + %l6] 131, %o2
+        ! V9: ldswa [%i0+%l6] 131, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
+        ldswa [%i0 + %l6] (130+1), %o2
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: lda [%l0] 0xf0, %f29
         ! V9: lda [%l0] 240, %f29             ! encoding: [0xfb,0x84,0x1e,0x00]
         lda [%l0] 0xf0, %f29
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: lda [%l0] (0xef+0x01), %f29
+        ! V9: lda [%l0] 240, %f29             ! encoding: [0xfb,0x84,0x1e,0x00]
+        lda [%l0] (0xef+0x01), %f29
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: ldda [%l0] 0xf0, %f48
         ! V9: ldda [%l0] 240, %f48            ! encoding: [0xe3,0x9c,0x1e,0x00]
         ldda [%l0] 0xf0, %f48
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: ldda [%l0] (0xef+0x01), %f48
+        ! V9: ldda [%l0] 240, %f48            ! encoding: [0xe3,0x9c,0x1e,0x00]
+        ldda [%l0] (0xef+0x01), %f48
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: ldqa [%l0] 0xf0, %f48
+        ! V9: ldqa [%l0] 240, %f48            ! encoding: [0xe3,0x94,0x1e,0x00]
+        ldqa [%l0] 0xf0, %f48
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: ldqa [%l0] (0xef+0x01), %f48
+        ! V9: ldqa [%l0] 240, %f48            ! encoding: [0xe3,0x94,0x1e,0x00]
+        ldqa [%l0] (0xef+0x01), %f48
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: ldq [%l0], %f48
-        ! V9: ldqa [%l0] 240, %f48            ! encoding: [0xe3,0x94,0x1e,0x00]
         ! V9: ldq [%l0], %f48                 ! encoding: [0xe3,0x14,0x00,0x00]
-        ldqa [%l0] 0xf0, %f48
         ldq [%l0], %f48
+
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: sta %f29, [%l0] 0xf0
         ! V9: sta %f29, [%l0] 240             ! encoding: [0xfb,0xa4,0x1e,0x00]
         sta %f29, [%l0] 0xf0
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: sta %f29, [%l0] (0xef+0x01)
+        ! V9: sta %f29, [%l0] 240             ! encoding: [0xfb,0xa4,0x1e,0x00]
+        sta %f29, [%l0] (0xef+0x01)
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: stda %f48, [%l0] 0xf0
         ! V9: stda %f48, [%l0] 240            ! encoding: [0xe3,0xbc,0x1e,0x00]
         stda %f48, [%l0] 0xf0
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: stda %f48, [%l0] (0xef+0x01)
+        ! V9: stda %f48, [%l0] 240            ! encoding: [0xe3,0xbc,0x1e,0x00]
+        stda %f48, [%l0] (0xef+0x01)
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: stqa %f48, [%l0] 0xf0
+        ! V9: stqa %f48, [%l0] 240            ! encoding: [0xe3,0xb4,0x1e,0x00]
+        stqa %f48, [%l0] 0xf0
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: stqa %f48, [%l0] (0xef+0x01)
+        ! V9: stqa %f48, [%l0] 240            ! encoding: [0xe3,0xb4,0x1e,0x00]
+        stqa %f48, [%l0] (0xef+0x01)
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: stq %f48, [%l0]
-        ! V9: stqa %f48, [%l0] 240            ! encoding: [0xe3,0xb4,0x1e,0x00]
         ! V9: stq %f48, [%l0]                 ! encoding: [0xe3,0x34,0x00,0x00]
-        stqa %f48, [%l0] 0xf0
         stq %f48, [%l0]
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
@@ -101,6 +141,11 @@
         ! V9: ldx [%g2+%i5], %fsr   ! encoding: [0xc3,0x08,0x80,0x1d]
         ldx [%g2 + %i5],%fsr
 
+        ! V9: ldxa [%g2+%i5] 131, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
+        ldxa [%g2 + %i5] 131, %g0
+        ! V9: ldxa [%g2+%i5] 131, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
+        ldxa [%g2 + %i5] (130+1), %g0
+
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: stx %fsr,[%g2 + 20]
         ! V9: stx %fsr, [%g2+20]    ! encoding: [0xc3,0x28,0xa0,0x14]
@@ -110,6 +155,11 @@
         ! V8-NEXT: stx %fsr,[%g2 + %i5]
         ! V9: stx %fsr, [%g2+%i5]   ! encoding: [0xc3,0x28,0x80,0x1d]
         stx %fsr,[%g2 + %i5]
+
+        ! V9: stxa %g0, [%g2+%i5] 131   ! encoding: [0xc0,0xf0,0x90,0x7d]
+        stxa %g0, [%g2 + %i5] 131
+        ! V9: stxa %g0, [%g2+%i5] 131   ! encoding: [0xc0,0xf0,0x90,0x7d]
+        stxa %g0, [%g2 + %i5] (130+1)
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: wrpr %g6,%i6,%tpc
@@ -445,6 +495,16 @@
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
+
+        !! SPARCv9 provides a new variant of ASI-tagged memory accesses.
+        ! V9: ldxa [%g2] %asi, %g0    ! encoding: [0xc0,0xd8,0xa0,0x00]
+        ldxa [%g2] %asi, %g0
+        ! V9: stxa %g0, [%g2] %asi    ! encoding: [0xc0,0xf0,0xa0,0x00]
+        stxa %g0, [%g2] %asi
+        ! V9: ldxa [%g2+5] %asi, %g0    ! encoding: [0xc0,0xd8,0xa0,0x05]
+        ldxa [%g2 + 5] %asi, %g0
+        ! V9: stxa %g0, [%g2+5] %asi    ! encoding: [0xc0,0xf0,0xa0,0x05]
+        stxa %g0, [%g2 + 5] %asi
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], 1
