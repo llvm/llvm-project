@@ -1343,18 +1343,6 @@ public:
                   MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
                   const AAMDNodes &AAInfo = AAMDNodes(),
                   const MDNode *Ranges = nullptr);
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
-                  "")
-  inline SDValue
-  getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
-          MachinePointerInfo PtrInfo, unsigned Alignment,
-          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-          const AAMDNodes &AAInfo = AAMDNodes(),
-          const MDNode *Ranges = nullptr) {
-    return getLoad(VT, dl, Chain, Ptr, PtrInfo, MaybeAlign(Alignment), MMOFlags,
-                   AAInfo, Ranges);
-  }
   SDValue getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
                   MachineMemOperand *MMO);
   SDValue
@@ -1385,19 +1373,6 @@ public:
                    Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, AAInfo,
                    Ranges);
   }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
-                  "")
-  inline SDValue
-  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
-          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
-          MachinePointerInfo PtrInfo, EVT MemVT, unsigned Alignment,
-          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-          const AAMDNodes &AAInfo = AAMDNodes(),
-          const MDNode *Ranges = nullptr) {
-    return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, PtrInfo, MemVT,
-                   MaybeAlign(Alignment), MMOFlags, AAInfo, Ranges);
-  }
   SDValue getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                   const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
                   EVT MemVT, MachineMemOperand *MMO);
@@ -1421,16 +1396,6 @@ public:
                     Alignment.value_or(getEVTAlign(Val.getValueType())),
                     MMOFlags, AAInfo);
   }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
-  inline SDValue
-  getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-           MachinePointerInfo PtrInfo, unsigned Alignment,
-           MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getStore(Chain, dl, Val, Ptr, PtrInfo, MaybeAlign(Alignment),
-                    MMOFlags, AAInfo);
-  }
   SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                    MachineMemOperand *MMO);
   SDValue
@@ -1447,16 +1412,6 @@ public:
     return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
                          Alignment.value_or(getEVTAlign(SVT)), MMOFlags,
                          AAInfo);
-  }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
-  inline SDValue
-  getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-                MachinePointerInfo PtrInfo, EVT SVT, unsigned Alignment,
-                MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
-                         MaybeAlign(Alignment), MMOFlags, AAInfo);
   }
   SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
