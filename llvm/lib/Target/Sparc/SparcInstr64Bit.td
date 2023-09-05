@@ -475,14 +475,34 @@ def SETHIXi : F2_1<0b100,
 }
 
 // ATOMICS.
-let Predicates = [Is64Bit], Constraints = "$swap = $rd", asi = 0b10000000 in {
-  def CASXrr: F3_1_asi<3, 0b111110,
+let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
+  let asi = 0b10000000 in
+    def CASXrr: F3_1_asi<3, 0b111110,
                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
                                      I64Regs:$swap),
                  "casx [$rs1], $rs2, $rd",
                  [(set i64:$rd,
                      (atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap))]>;
 
+  let asi = 0b10001000 in
+    def CASXLrr: F3_1_asi<3, 0b111110,
+                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
+                                     I64Regs:$swap),
+                 "casxl [$rs1], $rs2, $rd",
+                 []>;
+
+  def CASXArr: F3_1_asi<3, 0b111110,
+                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
+                                     I64Regs:$swap, ASITag:$asi),
+                 "casxa [$rs1] $asi, $rs2, $rd",
+                 []>;
+
+  let Uses = [ASR3] in
+    def CASXAri: F3_1_cas_asi<3, 0b111110,
+                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
+                                     I64Regs:$swap),
+                 "casxa [$rs1] %asi, $rs2, $rd",
+                 []>;
 } // Predicates = [Is64Bit], Constraints = ...
 
 let Predicates = [Is64Bit] in {
