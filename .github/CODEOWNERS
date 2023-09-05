@@ -79,6 +79,9 @@
 # mlir-neon
 /mlir/**/ArmNeon/ @llvm/pr-subscribers-mlir-neon
 
+# mlir-presburger
+/mlir/**/*Presburger @llvm/pr-subscribers-mlir-presburger
+
 # mlir-sme
 /mlir/**/ArmSME/ @llvm/pr-subscribers-mlir-sme
 
