@@ -692,11 +692,11 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
+ranges new
 ranges optional
 ranges span
 ranges tuple
 ranges type_traits
-ranges variant
 ranges version
 ratio climits
 ratio cstdint

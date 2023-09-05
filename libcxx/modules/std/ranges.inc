@@ -309,6 +309,7 @@ export namespace std {
     namespace views {
       using std::ranges::views::slide;
     }
+#endif
 
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
@@ -317,6 +318,7 @@ export namespace std {
       using std::ranges::views::chunk_by;
     }
 
+#if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
