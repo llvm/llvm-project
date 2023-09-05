@@ -206,8 +206,8 @@ Bug Fixes in This Version
 - Clang's ``-Wunused-private-field`` no longer warns on fields whose type is
   declared with ``[[maybe_unused]]``.
   (`#61334 <https://github.com/llvm/llvm-project/issues/61334>`_)
-- For function multi-versioning using the ``target`` or ``target_clones``
-  attributes, remove comdat for internal linkage functions.
+- For function multi-versioning using the ``target``, ``target_clones``, or
+  ``target_version`` attributes, remove comdat for internal linkage functions.
   (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
 - Clang now reports ``-Wformat`` for bool value and char specifier confusion
   in scanf. Fixes
