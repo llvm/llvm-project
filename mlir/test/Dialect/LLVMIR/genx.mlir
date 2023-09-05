@@ -30,12 +30,14 @@ func.func @genx_special_regs() -> i32 {
 }
 
 func.func @genx.barrier() {
+  // CHECK-LABEL: genx.barrier
   // CHECK: genx.barrier
   genx.barrier
   llvm.return
 }
 
 func.func @genx.sub_group_shuffle() {
+  // CHECK-LABEL: genx.sub_group_shuffle
   %0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %1 = genx.sub_group_shuffle XOR %0, %0 : i32 -> i32
   %1 = genx.sub_group_shuffle XOR %0, %0 : i32 -> i32
@@ -66,9 +68,30 @@ func.func @genx.sub_group_shuffle() {
   llvm.return
 }
 
-llvm.func @genx.atomic.cmpxchg.i32(%ptr : !llvm.ptr<i32>, %cmp : i32, %val : i32) -> i32 {
-  // CHECK: [[RES:%.*]] = genx.atomic.cmpxchg %arg0, %arg1, %arg2 : (!llvm.ptr<i32>, i32, i32) -> i32
-  // CHECK-NEXT: llvm.return [[RES]] : i32
-  %res = genx.atomic.cmpxchg %ptr, %cmp, %val : (!llvm.ptr<i32>, i32, i32) -> i32
-  llvm.return %res : i32
+llvm.func @genx.atomic.cmpxchg.i32(%ptr : !llvm.ptr<i32>, %cmp : i32, %val : i32)  {
+  // CHECK-LABEL: genx.atomic.cmpxchg.i32
+  // CHECK: %0 = genx.atomic.cmpxchg %arg0, %arg1, %arg2 : (!llvm.ptr<i32>, i32, i32) -> i32
+  %0 = genx.atomic.cmpxchg %ptr, %cmp, %val : (!llvm.ptr<i32>, i32, i32) -> i32
+  llvm.return
+}
+
+llvm.func @genx.atomic.rmw.i32(%ptr : !llvm.ptr<i32>, %val : i32) {
+  // CHECK-LABEL: genx.atomic.rmw.i32
+  // CHECK: genx.atomic.rmw AND %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32
+  %0 = genx.atomic.rmw AND %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw OR %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %1 = genx.atomic.rmw OR %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw XOR %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %2 = genx.atomic.rmw XOR %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw ADD %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %3 = genx.atomic.rmw ADD %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw MIN %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %4 = genx.atomic.rmw MIN %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw MAX %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %5 = genx.atomic.rmw MAX %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw MAX %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %6 = genx.atomic.rmw MAX %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  // CHECK: genx.atomic.rmw XCHG %arg0, %arg1 : (!llvm.ptr<i32>, i32) -> i32  
+  %7 = genx.atomic.rmw XCHG %ptr, %val : (!llvm.ptr<i32>, i32) -> i32
+  llvm.return  
 }

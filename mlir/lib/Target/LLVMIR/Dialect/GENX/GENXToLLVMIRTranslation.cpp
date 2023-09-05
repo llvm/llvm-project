@@ -128,6 +128,67 @@ static llvm::Value *createAtomicCmpXchg(llvm::IRBuilderBase &builder,
       {ptr->getType(), cmp->getType(), val->getType()}, {ptr, cmp, val});
 }
 
+// Create a call to SPIR atomic rmw function.
+static llvm::Value *createAtomicRMW(llvm::IRBuilderBase &builder,
+                                    llvm::Value *ptr, llvm::Value *val,
+                                    GENX::RMWOpKind op) {
+  assert(isa<llvm::PointerType>(ptr->getType()) && "Expecting a pointer type");
+
+  auto *retType = cast<llvm::IntegerType>(val->getType());
+  unsigned addrSpace =
+      cast<llvm::PointerType>(ptr->getType())->getAddressSpace();
+
+  std::string fnName = "";
+  switch (op) {
+  case GENX::RMWOpKind::AND:
+    fnName = "_Z8atom_andPU";
+    break;
+  case GENX::RMWOpKind::OR:
+    fnName = "_Z7atom_orPU";
+    break;
+  case GENX::RMWOpKind::XOR:
+    fnName = "_Z8atom_xorPU";
+    break;
+  case GENX::RMWOpKind::ADD:
+    fnName = "_Z8atom_addPU";
+    break;
+  case GENX::RMWOpKind::MIN:
+    fnName = "_Z8atom_minPU";
+    break;
+  case GENX::RMWOpKind::MAX:
+    fnName = "_Z8atom_maxPU";
+    break;
+  case GENX::RMWOpKind::XCHG:
+    fnName = "_Z8atom_xchgPU";
+    break;
+  }
+
+  switch (addrSpace) {
+  case mlir::GENX::GENXDialect::kGlobalMemoryAddressSpace:
+    fnName += "8CLglobal";
+    break;
+  case mlir::GENX::GENXDialect::kSharedMemoryAddressSpace:
+    fnName += "7CLlocal";
+    break;
+  default:
+    llvm_unreachable("Unexpected address space");
+  }
+
+  switch (retType->getBitWidth()) {
+  case 32:
+    fnName += retType->getSignBit() ? "Vii" : "Vjj";
+    break;
+  case 64:
+    fnName += retType->getSignBit() ? "Vll" : "Vmm";
+    break;
+  default:
+    llvm_unreachable("Unexpected bit width");
+  }
+
+  return createDeviceFunctionCall(builder, fnName, retType,
+                                  {ptr->getType(), val->getType()}, {ptr, val});
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the GENX dialect to LLVM IR.

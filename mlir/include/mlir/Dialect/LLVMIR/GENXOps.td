@@ -224,4 +224,44 @@ def GENX_AtomicCmpXchgOp : GENX_Op<"atomic.cmpxchg", [
   }];
 }
 
+/// Enum attribute of the different read-modify-write operation kinds.
+def RMWOpKind : I32EnumAttr<"RMWOpKind", "GENX RMW operation kind",
+  [
+    I32EnumAttrCase<"AND",  0>,
+    I32EnumAttrCase<"OR",   1>,
+    I32EnumAttrCase<"XOR",  2>,
+    I32EnumAttrCase<"ADD",  3>,
+    I32EnumAttrCase<"MIN",  4>,    
+    I32EnumAttrCase<"MAX",  5>,
+    I32EnumAttrCase<"XCHG", 6>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def RMWOpKindAttr : EnumAttr<GENX_Dialect, RMWOpKind, "RMW_op_kind">;
+
+def GENX_AtomicRMWType : AnyTypeOf<[AnyI32, AnyI64]>;
+
+def GENX_AtomicRMWOp : GENX_Op<"atomic.rmw", [
+      TypesMatchWith<"result #0 and operand #1 have the same type",
+                     "res", "val", "$_self">]>,
+  Results<(outs GENX_AtomicRMWType:$res)>,
+  Arguments<(ins Arg<LLVM_PointerTo<GENX_AtomicRMWType>,"", [MemRead, MemWrite]>:$ptr,
+             GENX_AtomicRMWType:$val, RMWOpKindAttr:$bin_op)> {
+  let summary = "Atomic read-modify-write";
+
+  string baseDescription = [{
+    The 'genx.atomic.rmw' operation performs an atomic read-modify-write at 
+    the memory location specified by the pointer argument. 
+  }];
+
+  string llvmBuilder = [{
+    $res = createAtomicRMW(builder, $ptr, $val, $bin_op);
+  }];
+
+  let assemblyFormat = [{
+    $bin_op $ptr `,` $val attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // GENXIR_OPS
