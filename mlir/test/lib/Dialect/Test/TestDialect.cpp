@@ -859,7 +859,7 @@ void CustomResultsNameOp::getAsmResultNames(
   ArrayAttr value = getNames();
   for (size_t i = 0, e = value.size(); i != e; ++i)
     if (auto str = dyn_cast<StringAttr>(value[i]))
-      if (!str.getValue().empty())
+      if (!str.empty())
         setNameFn(getResult(i), str.getValue());
 }
 

@@ -5919,6 +5919,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
+
+    Check(Call.paramHasAttr(2, Attribute::InReg),
+          "SGPR arguments must have the `inreg` attribute", &Call);
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
+          "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:

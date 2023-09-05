@@ -369,6 +369,20 @@ def DenseArrayNonNegativeOp : TEST_Op<"confined_non_negative_attr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Promised Interfaces Constraints
+//===----------------------------------------------------------------------===//
+
+def PromisedInterfacesOp : TEST_Op<"promised_interfaces"> {
+  let arguments = (ins
+      ConfinedAttr<AnyAttr,
+          [PromisedAttrInterface<TestExternalAttrInterface>]>:$promisedAttr,
+      ConfinedType<AnyType,
+          [HasPromiseOrImplementsTypeInterface<TestExternalTypeInterface>]
+        >:$promisedType
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Test Enum Attributes
 //===----------------------------------------------------------------------===//
 
