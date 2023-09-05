@@ -1735,7 +1735,7 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
     break;
 
   case llvm::Triple::systemz:
-    AddSystemZTargetArgs(Args, CmdArgs);
+    AddSystemZTargetArgs(EffectiveTriple, Args, CmdArgs);
     break;
 
   case llvm::Triple::x86:
@@ -2232,7 +2232,8 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
   }
 }
 
-void Clang::AddSystemZTargetArgs(const ArgList &Args,
+void Clang::AddSystemZTargetArgs(const llvm::Triple &Triple,
+                                 const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
@@ -2263,6 +2264,14 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-msoft-float");
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
+  }
+
+  if (Triple.isOSzOS()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(llvm::Twine("-translation-time=")
+                               .concat(llvm::Twine(std::time(nullptr)))
+                               .str()));
   }
 }
 

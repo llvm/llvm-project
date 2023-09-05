@@ -975,6 +975,21 @@ void CodeGenModule::Release() {
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
+  if (getTriple().isOSzOS()) {
+    int32_t ProductVersion, ProductRelease, ProductPatch;
+    ProductVersion = LLVM_VERSION_MAJOR,
+    ProductRelease = LLVM_VERSION_MINOR, ProductPatch = LLVM_VERSION_PATCH;
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Major Version", ProductVersion);
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Minor Version", ProductRelease);
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel", ProductPatch);
+
+    // Record the language because we need it for the PPA2.
+    const char *lang_str = LanguageToString(
+        LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
+    getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
+                              llvm::MDString::get(VMContext, lang_str));
+  }
+
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
   if (   Arch == llvm::Triple::arm
       || Arch == llvm::Triple::armeb
