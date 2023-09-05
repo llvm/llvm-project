@@ -9816,6 +9816,7 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":IndexDialect",
         ":IR",
         ":LinalgDialect",
         ":LinalgMatchOpsIncGen",
