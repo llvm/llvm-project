@@ -6029,8 +6029,10 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-  return getFConstantVRegValWithLookThrough(LHS, MRI, false).has_value() &&
-         !getFConstantVRegValWithLookThrough(RHS, MRI, false).has_value();
+  std::optional<FPValueAndVReg> ValAndVReg;
+  if (!mi_match(LHS, MRI, m_GFCstOrSplat(ValAndVReg)))
+    return false;
+  return !mi_match(RHS, MRI, m_GFCstOrSplat(ValAndVReg));
 }
 
 void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
