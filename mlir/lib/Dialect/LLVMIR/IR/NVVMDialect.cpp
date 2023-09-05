@@ -994,8 +994,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
-  declarePromisedInterface<ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<gpu::TargetAttrInterface>();
+  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
