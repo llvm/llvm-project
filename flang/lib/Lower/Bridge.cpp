@@ -1019,10 +1019,13 @@ private:
       if (!shallowLookupSymbol(sym)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
-        auto newVal = builder->createTemporary(loc, genType(sym),
-                                               toStringRef(sym.name()));
-        bindIfNewSymbol(sym, newVal);
-        return newVal;
+        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(builder->getAllocaBlock());
+        mlir::Type tempTy = genType(sym);
+        mlir::Value temp =
+            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+        bindIfNewSymbol(sym, temp);
+        builder->restoreInsertionPoint(insPt);
       }
     }
     auto entry = lookupSymbol(sym);
@@ -1304,6 +1307,30 @@ private:
             return builder->create<fir::LoadOp>(loc, x.getBuffer());
           return fir::factory::CharacterExprHelper{*builder, loc}
               .createEmboxChar(x.getBuffer(), x.getLen());
+        },
+        [&](const fir::MutableBoxValue &x) -> mlir::Value {
+          mlir::Value resultRef = resultSymBox.getAddr();
+          mlir::Value load = builder->create<fir::LoadOp>(loc, resultRef);
+          unsigned rank = x.rank();
+          if (x.isAllocatable() && rank > 0) {
+            // ALLOCATABLE array result must have default lower bounds.
+            // At the call site the result box of a function reference
+            // might be considered having default lower bounds, but
+            // the runtime box should probably comply with this assumption
+            // as well. If the result box has proper lbounds in runtime,
+            // this may improve the debugging experience of Fortran apps.
+            // We may consider removing this, if the overhead of setting
+            // default lower bounds is too big.
+            mlir::Value one =
+                builder->createIntegerConstant(loc, builder->getIndexType(), 1);
+            llvm::SmallVector<mlir::Value> lbounds{rank, one};
+            auto shiftTy = fir::ShiftType::get(builder->getContext(), rank);
+            mlir::Value shiftOp =
+                builder->create<fir::ShiftOp>(loc, shiftTy, lbounds);
+            load = builder->create<fir::ReboxOp>(
+                loc, load.getType(), load, shiftOp, /*slice=*/mlir::Value{});
+          }
+          return load;
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();

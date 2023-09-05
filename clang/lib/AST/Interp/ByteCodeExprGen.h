@@ -213,6 +213,7 @@ private:
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(QualType QT, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
   enum class DerefKind {
     /// Value is read and pushed to stack.
@@ -264,9 +265,12 @@ private:
     return FPO.getRoundingMode();
   }
 
+  bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   bool emitRecordDestruction(const Descriptor *Desc);
   bool emitDerivedToBaseCasts(const RecordType *DerivedType,
                               const RecordType *BaseType, const Expr *E);
+  unsigned collectBaseOffset(const RecordType *BaseType,
+                             const RecordType *DerivedType);
 
 protected:
   /// Variable to storage mapping.

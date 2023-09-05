@@ -2,18 +2,6 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeEnumMember {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
             return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')
@@ -33,18 +21,6 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTypeEnumMemberList {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __iter__(self):
             '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
             return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')

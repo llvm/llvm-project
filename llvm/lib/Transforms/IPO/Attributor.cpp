@@ -1072,7 +1072,9 @@ Attributor::Attributor(SetVector<Function *> &Functions,
     if (Fn->hasAddressTaken(/*PutOffender=*/nullptr,
                             /*IgnoreCallbackUses=*/false,
                             /*IgnoreAssumeLikeCalls=*/true,
-                            /*IgnoreLLVMUsed=*/true))
+                            /*IgnoreLLVMUsed=*/true,
+                            /*IgnoreARCAttachedCall=*/false,
+                            /*IgnoreCastedDirectCall=*/true))
       InfoCache.IndirectlyCallableFunctions.push_back(Fn);
 }
 
@@ -1108,8 +1110,7 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
 
 template <typename DescTy>
 ChangeStatus
-Attributor::updateAttrMap(const IRPosition &IRP,
-                          const ArrayRef<DescTy> &AttrDescs,
+Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
                           function_ref<bool(const DescTy &, AttributeSet,
                                             AttributeMask &, AttrBuilder &)>
                               CB) {
@@ -1216,9 +1217,8 @@ void Attributor::getAttrs(const IRPosition &IRP,
     getAttrsFromAssumes(IRP, AK, Attrs);
 }
 
-ChangeStatus
-Attributor::removeAttrs(const IRPosition &IRP,
-                        const ArrayRef<Attribute::AttrKind> &AttrKinds) {
+ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
+                                     ArrayRef<Attribute::AttrKind> AttrKinds) {
   auto RemoveAttrCB = [&](const Attribute::AttrKind &Kind, AttributeSet AttrSet,
                           AttributeMask &AM, AttrBuilder &) {
     if (!AttrSet.hasAttribute(Kind))
@@ -1229,8 +1229,21 @@ Attributor::removeAttrs(const IRPosition &IRP,
   return updateAttrMap<Attribute::AttrKind>(IRP, AttrKinds, RemoveAttrCB);
 }
 
+ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
+                                     ArrayRef<StringRef> Attrs) {
+  auto RemoveAttrCB = [&](StringRef Attr, AttributeSet AttrSet,
+                          AttributeMask &AM, AttrBuilder &) -> bool {
+    if (!AttrSet.hasAttribute(Attr))
+      return false;
+    AM.addAttribute(Attr);
+    return true;
+  };
+
+  return updateAttrMap<StringRef>(IRP, Attrs, RemoveAttrCB);
+}
+
 ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
-                                       const ArrayRef<Attribute> &Attrs,
+                                       ArrayRef<Attribute> Attrs,
                                        bool ForceReplace) {
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AddAttrCB = [&](const Attribute &Attr, AttributeSet AttrSet,
@@ -1993,7 +2006,7 @@ bool Attributor::checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
 static bool checkForAllInstructionsImpl(
     Attributor *A, InformationCache::OpcodeInstMapTy &OpcodeInstMap,
     function_ref<bool(Instruction &)> Pred, const AbstractAttribute *QueryingAA,
-    const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
+    const AAIsDead *LivenessAA, ArrayRef<unsigned> Opcodes,
     bool &UsedAssumedInformation, bool CheckBBLivenessOnly = false,
     bool CheckPotentiallyDead = false) {
   for (unsigned Opcode : Opcodes) {
@@ -2023,7 +2036,7 @@ static bool checkForAllInstructionsImpl(
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const Function *Fn,
                                          const AbstractAttribute *QueryingAA,
-                                         const ArrayRef<unsigned> &Opcodes,
+                                         ArrayRef<unsigned> Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
                                          bool CheckPotentiallyDead) {
@@ -2048,7 +2061,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const AbstractAttribute &QueryingAA,
-                                         const ArrayRef<unsigned> &Opcodes,
+                                         ArrayRef<unsigned> Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
                                          bool CheckPotentiallyDead) {
@@ -3388,6 +3401,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every function can track active assumptions.
     getOrCreateAAFor<AAAssumptionInfo>(FPos);
+
+    // If we're not using a dynamic mode for float, there's nothing worthwhile
+    // to infer. This misses the edge case denormal-fp-math="dynamic" and
+    // denormal-fp-math-f32=something, but that likely has no real world use.
+    DenormalMode Mode = F.getDenormalMode(APFloat::IEEEsingle());
+    if (Mode.Input == DenormalMode::Dynamic ||
+        Mode.Output == DenormalMode::Dynamic)
+      getOrCreateAAFor<AADenormalFPMath>(FPos);
 
     // Return attributes are only appropriate if the return type is non void.
     Type *ReturnType = F.getReturnType();

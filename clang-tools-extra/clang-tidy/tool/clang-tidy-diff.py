@@ -49,7 +49,7 @@ else:
     import queue as queue
 
 
-def run_tidy(task_queue, lock, timeout):
+def run_tidy(task_queue, lock, timeout, failed_files):
     watchdog = None
     while True:
         command = task_queue.get()
@@ -63,6 +63,14 @@ def run_tidy(task_queue, lock, timeout):
                 watchdog.start()
 
             stdout, stderr = proc.communicate()
+            if proc.returncode != 0:
+                if proc.returncode < 0:
+                    msg = "Terminated by signal %d : %s\n" % (
+                        -proc.returncode,
+                        " ".join(command),
+                    )
+                    stderr += msg.encode("utf-8")
+                failed_files.append(command)
 
             with lock:
                 sys.stdout.write(stdout.decode("utf-8") + "\n")
@@ -84,9 +92,9 @@ def run_tidy(task_queue, lock, timeout):
             task_queue.task_done()
 
 
-def start_workers(max_tasks, tidy_caller, task_queue, lock, timeout):
+def start_workers(max_tasks, tidy_caller, arguments):
     for _ in range(max_tasks):
-        t = threading.Thread(target=tidy_caller, args=(task_queue, lock, timeout))
+        t = threading.Thread(target=tidy_caller, args=arguments)
         t.daemon = True
         t.start()
 
@@ -259,8 +267,13 @@ def main():
     # A lock for console output.
     lock = threading.Lock()
 
+    # List of files with a non-zero return code.
+    failed_files = []
+
     # Run a pool of clang-tidy workers.
-    start_workers(max_task_count, run_tidy, task_queue, lock, args.timeout)
+    start_workers(
+        max_task_count, run_tidy, (task_queue, lock, args.timeout, failed_files)
+    )
 
     # Form the common args list.
     common_clang_tidy_args = []
@@ -301,8 +314,15 @@ def main():
 
         task_queue.put(command)
 
+    # Application return code
+    return_code = 0
+
     # Wait for all threads to be done.
     task_queue.join()
+    # Application return code
+    return_code = 0
+    if failed_files:
+        return_code = 1
 
     if yaml and args.export_fixes:
         print("Writing fixes to " + args.export_fixes + " ...")
@@ -311,9 +331,11 @@ def main():
         except:
             sys.stderr.write("Error exporting fixes.\n")
             traceback.print_exc()
+            return_code = 1
 
     if tmpdir:
         shutil.rmtree(tmpdir)
+    sys.exit(return_code)
 
 
 if __name__ == "__main__":

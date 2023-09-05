@@ -107,19 +107,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  nanosleep
-  SRCS
-    nanosleep.cpp
-  HDRS
-    nanosleep.h
-  DEPENDS
-    libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   time
   ALIAS
   DEPENDS
@@ -131,4 +118,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.clock
+)
+
+add_entrypoint_object(
+  nanosleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.nanosleep
 )

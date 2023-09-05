@@ -33,15 +33,17 @@ def fold_global_offset : GICombineRule<
   (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
-def AArch64PreLegalizerCombiner: GICombinerHelper<
+def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
-def AArch64O0PreLegalizerCombiner: GICombinerHelper<
+def AArch64O0PreLegalizerCombiner: GICombiner<
   "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
@@ -204,20 +206,29 @@ def vector_sext_inreg_to_shift : GICombineRule<
   (apply [{ applyVectorSextInReg(*${d}, MRI, B, Observer); }])
 >;
 
+def unmerge_ext_to_unmerge_matchdata : GIDefMatchData<"Register">;
+def unmerge_ext_to_unmerge : GICombineRule<
+  (defs root:$d, unmerge_ext_to_unmerge_matchdata:$matchinfo),
+  (match (wip_match_opcode G_UNMERGE_VALUES):$d,
+          [{ return matchUnmergeExtToUnmerge(*${d}, MRI, ${matchinfo}); }]),
+  (apply [{ applyUnmergeExtToUnmerge(*${d}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLowering
-    : GICombinerHelper<"AArch64PostLegalizerLoweringImpl",
+    : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
-                        vector_sext_inreg_to_shift]> {
+                        vector_sext_inreg_to_shift,
+                        unmerge_ext_to_unmerge]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
-    : GICombinerHelper<"AArch64PostLegalizerCombinerImpl",
+    : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, combines_for_extload,
                         sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,

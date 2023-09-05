@@ -315,7 +315,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   string DiagnosticType = "";
 
   // A diagnostic message to emit when an invalid value is provided for this
-  // register class when it is being used an an assembly operand. If this is
+  // register class when it is being used as an assembly operand. If this is
   // non-empty, an anonymous diagnostic type enum value will be generated, and
   // the assembly matcher will provide a function to map from diagnostic types
   // to message strings.
@@ -1407,6 +1407,14 @@ def MEMBARRIER : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "";
   let hasSideEffects = true;
+  let Size = 0;
+  let isMeta = true;
+}
+def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i64imm:$jti);
+  let AsmString = "";
+  let hasSideEffects = false;
   let Size = 0;
   let isMeta = true;
 }

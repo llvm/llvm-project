@@ -386,11 +386,14 @@ private:
           // Reduce indent level for bodies of namespaces which were compacted,
           // but only if their content was indented in the first place.
           auto *ClosingLine = AnnotatedLines.begin() + ClosingLineIndex + 1;
-          auto OutdentBy = I[J]->Level - TheLine->Level;
+          const int OutdentBy = I[J]->Level - TheLine->Level;
+          assert(OutdentBy >= 0);
           for (auto *CompactedLine = I + J; CompactedLine <= ClosingLine;
                ++CompactedLine) {
-            if (!(*CompactedLine)->InPPDirective)
-              (*CompactedLine)->Level -= OutdentBy;
+            if (!(*CompactedLine)->InPPDirective) {
+              const int Level = (*CompactedLine)->Level;
+              (*CompactedLine)->Level = std::max(Level - OutdentBy, 0);
+            }
           }
         }
         return J - 1;

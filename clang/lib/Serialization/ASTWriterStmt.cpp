@@ -11,15 +11,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ExprOpenMP.h"
-#include "clang/Serialization/ASTRecordWriter.h"
-#include "clang/Sema/DeclSpec.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
+#include "clang/Sema/DeclSpec.h"
+#include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
 
@@ -437,13 +438,11 @@ addSubstitutionDiagnostic(
 void ASTStmtWriter::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
-  Record.AddNestedNameSpecifierLoc(E->getNestedNameSpecifierLoc());
-  Record.AddSourceLocation(E->getTemplateKWLoc());
-  Record.AddDeclarationNameInfo(E->getConceptNameInfo());
-  Record.AddDeclRef(E->getNamedConcept());
-  Record.AddDeclRef(E->getFoundDecl());
   Record.AddDeclRef(E->getSpecializationDecl());
-  Record.AddASTTemplateArgumentListInfo(E->getTemplateArgsAsWritten());
+  const ConceptReference *CR = E->getConceptReference();
+  Record.push_back(CR != nullptr);
+  if (CR)
+    Record.AddConceptReference(CR);
   if (!E->isValueDependent())
     addConstraintSatisfaction(Record, E->getSatisfaction());
 

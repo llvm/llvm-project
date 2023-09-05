@@ -36,7 +36,7 @@ class PluginProperties : public Properties {
 public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(
-        ConstString(PlatformQemuUser::GetPluginNameStatic()));
+        PlatformQemuUser::GetPluginNameStatic());
     m_collection_sp->Initialize(g_platformqemuuser_properties);
   }
 
@@ -89,8 +89,8 @@ void PlatformQemuUser::Terminate() {
 }
 
 void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, ConstString(GetPluginNameStatic()))) {
+  if (!PluginManager::GetSettingForPlatformPlugin(debugger,
+                                                  GetPluginNameStatic())) {
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
         "Properties for the qemu-user platform plugin.",

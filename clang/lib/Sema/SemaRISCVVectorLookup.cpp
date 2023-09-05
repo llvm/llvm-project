@@ -202,9 +202,17 @@ public:
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
   const TargetInfo &TI = Context.getTargetInfo();
-  static const std::pair<const char *, uint8_t> FeatureCheckList[] = {
+  static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
-      {"xsfvcp", RVV_REQ_Xsfvcp}};
+      {"xsfvcp", RVV_REQ_Xsfvcp},
+      {"experimental-zvbb", RVV_REQ_Zvbb},
+      {"experimental-zvbc", RVV_REQ_Zvbc},
+      {"experimental-zvkb", RVV_REQ_Zvkb},
+      {"experimental-zvkg", RVV_REQ_Zvkg},
+      {"experimental-zvkned", RVV_REQ_Zvkned},
+      {"experimental-zvknha", RVV_REQ_Zvknha},
+      {"experimental-zvksed", RVV_REQ_Zvksed},
+      {"experimental-zvksh", RVV_REQ_Zvksh}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.

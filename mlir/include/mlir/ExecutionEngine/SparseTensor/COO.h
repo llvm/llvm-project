@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
+// This file contains a coordinate-scheme representation of sparse tensors.
 //
 //===----------------------------------------------------------------------===//
 
@@ -80,22 +76,12 @@ using ElementConsumer =
 /// an intermediate representation; e.g., for reading sparse tensors
 /// from external formats into memory, or for certain conversions between
 /// different `SparseTensorStorage` formats.
-///
-/// This class provides all the typedefs required by the "Container"
-/// concept (<https://en.cppreference.com/w/cpp/named_req/Container>);
-/// however, beware that it cannot fully implement that concept since
-/// it cannot have a default ctor (because the `dimSizes` field is const).
-/// Thus these typedefs are provided for familiarity reasons, rather
-/// than as a proper implementation of the concept.
 template <typename V>
 class SparseTensorCOO final {
 public:
   using value_type = const Element<V>;
   using reference = value_type &;
   using const_reference = reference;
-  // The types associated with `std::vector` differ significantly between
-  // C++11/17 vs C++20; so we explicitly defer to whatever `std::vector`
-  // says the types should be.
   using vector_type = std::vector<Element<V>>;
   using iterator = typename vector_type::const_iterator;
   using const_iterator = iterator;

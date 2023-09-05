@@ -177,6 +177,13 @@ public:
 
 #define DEBUG_TYPE "objdump"
 
+enum class ColorOutput {
+  Auto,
+  Enable,
+  Disable,
+  Invalid,
+};
+
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -189,6 +196,7 @@ bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
 static std::vector<std::string> DisassemblerOptions;
+static ColorOutput DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -900,6 +908,19 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   InstPrinter->setPrintBranchImmAsAddress(true);
   InstPrinter->setSymbolizeOperands(SymbolizeOperands);
   InstPrinter->setMCInstrAnalysis(InstrAnalysis.get());
+
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    InstPrinter->setUseColor(true);
+    break;
+  case ColorOutput::Auto:
+    InstPrinter->setUseColor(outs().has_colors());
+    break;
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    InstPrinter->setUseColor(false);
+    break;
+  };
 }
 
 DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
@@ -1899,6 +1920,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
 
       formatted_raw_ostream FOS(outs());
+
+      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
+      // are (incorrectly) written directly to the unbuffered raw_ostream
+      // wrapped by the formatted_raw_ostream.
+      if (DisassemblyColor == ColorOutput::Enable ||
+          DisassemblyColor == ColorOutput::Auto)
+        FOS.SetUnbuffered();
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
@@ -3193,6 +3221,16 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     if (DbgVariables == DVInvalid)
       invalidArgValue(A);
   }
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_disassembler_color_EQ)) {
+    DisassemblyColor = StringSwitch<ColorOutput>(A->getValue())
+                           .Case("on", ColorOutput::Enable)
+                           .Case("off", ColorOutput::Disable)
+                           .Case("terminal", ColorOutput::Auto)
+                           .Default(ColorOutput::Invalid);
+    if (DisassemblyColor == ColorOutput::Invalid)
+      invalidArgValue(A);
+  }
+
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 
   parseMachOOptions(InputArgs);

@@ -596,8 +596,13 @@ public:
         },
         py::arg("type"), py::arg("value"),
         "Gets a uniqued string attribute associated to a type");
-    c.def_property_readonly("value", toPyStr,
-                            "Returns the value of the string attribute");
+    c.def_property_readonly(
+        "value",
+        [](PyStringAttribute &self) {
+          MlirStringRef stringRef = mlirStringAttrGetValue(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the value of the string attribute");
     c.def_property_readonly(
         "value_bytes",
         [](PyStringAttribute &self) {
@@ -605,14 +610,6 @@ public:
           return py::bytes(stringRef.data, stringRef.length);
         },
         "Returns the value of the string attribute as `bytes`");
-    c.def("__str__", toPyStr,
-          "Converts the value of the string attribute to a Python str");
-  }
-
-private:
-  static py::str toPyStr(PyStringAttribute &self) {
-    MlirStringRef stringRef = mlirStringAttrGetValue(self);
-    return py::str(stringRef.data, stringRef.length);
   }
 };
 

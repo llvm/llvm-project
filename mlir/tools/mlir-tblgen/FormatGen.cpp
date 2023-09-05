@@ -383,9 +383,9 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
   unsigned thenParseStart = std::distance(thenElements.begin(), thenParseBegin);
   unsigned elseParseStart = std::distance(elseElements.begin(), elseParseBegin);
 
-  if (!isa<LiteralElement, VariableElement>(*thenParseBegin)) {
+  if (!isa<LiteralElement, VariableElement, CustomDirective>(*thenParseBegin)) {
     return emitError(loc, "first parsable element of an optional group must be "
-                          "a literal or variable");
+                          "a literal, variable, or custom directive");
   }
   return create<OptionalElement>(std::move(thenElements),
                                  std::move(elseElements), thenParseStart,

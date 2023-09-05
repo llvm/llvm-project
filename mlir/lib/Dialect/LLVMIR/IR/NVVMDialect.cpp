@@ -772,13 +772,13 @@ LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
   case mlir::NVVM::WGMMATypes::bf16:
   case mlir::NVVM::WGMMATypes::e4m3:
   case mlir::NVVM::WGMMATypes::e5m2:
-    if (llvm::any_of(allowedN, [&](int n) { return sizeN == n; }))
+    if (llvm::is_contained(allowedN, sizeN))
       return success();
     break;
   case mlir::NVVM::WGMMATypes::u8:
   case mlir::NVVM::WGMMATypes::s8:
   case mlir::NVVM::WGMMATypes::b1:
-    if (llvm::any_of(allowedNshort, [&](int n) { return sizeN == n; }))
+    if (llvm::is_contained(allowedNshort, sizeN))
       return success();
   }
   return failure();
@@ -994,8 +994,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
-  declarePromisedInterface<ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<gpu::TargetAttrInterface>();
+  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,

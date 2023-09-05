@@ -51,6 +51,23 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyAllocToAllocaOp : Op<Transform_Dialect,
+    "apply_patterns.memref.alloc_to_alloca",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface, ["populatePatternsWithState"]>]> {
+  let description = [{
+    Collects patterns to rewrite scoped dynamic allocation (`alloc`/`dealloc`
+    pairs) into automatic allocation (`alloca`) in the same scope, for memrefs
+    of static shape.
+
+    The `size_limit` attribute controls the maximum allocated memory (in bytes,
+    subject to data layout) for which the pattern applies.
+  }];
+
+  let arguments = (ins
+    OptionalAttr<I64Attr>:$size_limit);
+  let assemblyFormat = "(`size_limit` `(` $size_limit^ `)`)? attr-dict";
+}
+
 def ApplyExpandOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.memref.expand_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -157,6 +174,44 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
+}
+
+def MemRefEraseDeadAllocAndStoresOp
+    : Op<Transform_Dialect, "memref.erase_dead_alloc_and_stores", [
+      TransformEachOpTrait, TransformOpInterface,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      ReportTrackingListenerFailuresOpTrait
+    ]> {
+  let description = [{
+    This applies memory optimization on memref. In particular it does store to
+    load forwarding, dead store elimination and dead alloc elimination.
+
+    #### Return modes
+
+    This operation applies a set of memory optimization on the whole region of
+    the operand.
+
+    The transformation does not consume the target handle. It modifies the
+    payload. Dead allocations, loads and stores are silently dropped from all
+    mappings.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type($target, results)";
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
 }
 
 def MemRefMakeLoopIndependentOp

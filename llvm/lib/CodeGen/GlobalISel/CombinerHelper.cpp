@@ -1394,7 +1394,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (AccessTy) {
     AMNew.HasBaseReg = true;
     TargetLoweringBase::AddrMode AMOld;
-    AMOld.BaseOffs = MaybeImm2Val->Value.getSExtValue();
+    AMOld.BaseOffs = MaybeImmVal->Value.getSExtValue();
     AMOld.HasBaseReg = true;
     unsigned AS = MRI.getType(Add2).getAddressSpace();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -2563,6 +2563,16 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
          MaybeCst->getSExtValue() == C;
 }
 
+bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP, double C) {
+  if (!MOP.isReg())
+    return false;
+  std::optional<FPValueAndVReg> MaybeCst;
+  if (!mi_match(MOP.getReg(), MRI, m_GFCstOrSplat(MaybeCst)))
+    return false;
+
+  return MaybeCst->Value.isExactlyValue(C);
+}
+
 void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
                                                      unsigned OpIdx) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
@@ -3229,7 +3239,7 @@ bool CombinerHelper::matchFoldBinOpIntoSelect(MachineInstr &MI,
 
   unsigned BinOpcode = MI.getOpcode();
 
-  // We know know one of the operands is a select of constants. Now verify that
+  // We know that one of the operands is a select of constants. Now verify that
   // the other binary operator operand is either a constant, or we can handle a
   // variable.
   bool CanFoldNonConst =
@@ -4262,20 +4272,20 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
 }
 
 bool CombinerHelper::reassociationCanBreakAddressingModePattern(
-    MachineInstr &PtrAdd) {
-  assert(PtrAdd.getOpcode() == TargetOpcode::G_PTR_ADD);
+    MachineInstr &MI) {
+  auto &PtrAdd = cast<GPtrAdd>(MI);
 
-  Register Src1Reg = PtrAdd.getOperand(1).getReg();
-  MachineInstr *Src1Def = getOpcodeDef(TargetOpcode::G_PTR_ADD, Src1Reg, MRI);
+  Register Src1Reg = PtrAdd.getBaseReg();
+  auto *Src1Def = getOpcodeDef<GPtrAdd>(Src1Reg, MRI);
   if (!Src1Def)
     return false;
 
-  Register Src2Reg = PtrAdd.getOperand(2).getReg();
+  Register Src2Reg = PtrAdd.getOffsetReg();
 
   if (MRI.hasOneNonDBGUse(Src1Reg))
     return false;
 
-  auto C1 = getIConstantVRegVal(Src1Def->getOperand(2).getReg(), MRI);
+  auto C1 = getIConstantVRegVal(Src1Def->getOffsetReg(), MRI);
   if (!C1)
     return false;
   auto C2 = getIConstantVRegVal(Src2Reg, MRI);
@@ -4286,7 +4296,7 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
   const APInt &C2APIntVal = *C2;
   const int64_t CombinedValue = (C1APIntVal + C2APIntVal).getSExtValue();
 
-  for (auto &UseMI : MRI.use_nodbg_instructions(Src1Reg)) {
+  for (auto &UseMI : MRI.use_nodbg_instructions(PtrAdd.getReg(0))) {
     // This combine may end up running before ptrtoint/inttoptr combines
     // manage to eliminate redundant conversions, so try to look through them.
     MachineInstr *ConvUseMI = &UseMI;
@@ -4299,9 +4309,8 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
       ConvUseMI = &*MRI.use_instr_nodbg_begin(DefReg);
       ConvUseOpc = ConvUseMI->getOpcode();
     }
-    auto LoadStore = ConvUseOpc == TargetOpcode::G_LOAD ||
-                     ConvUseOpc == TargetOpcode::G_STORE;
-    if (!LoadStore)
+    auto *LdStMI = dyn_cast<GLoadStore>(ConvUseMI);
+    if (!LdStMI)
       continue;
     // Is x[offset2] already not a legal addressing mode? If so then
     // reassociating the constants breaks nothing (we test offset2 because
@@ -4309,11 +4318,9 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
     TargetLoweringBase::AddrMode AM;
     AM.HasBaseReg = true;
     AM.BaseOffs = C2APIntVal.getSExtValue();
-    unsigned AS =
-        MRI.getType(ConvUseMI->getOperand(1).getReg()).getAddressSpace();
-    Type *AccessTy =
-        getTypeForLLT(MRI.getType(ConvUseMI->getOperand(0).getReg()),
-                      PtrAdd.getMF()->getFunction().getContext());
+    unsigned AS = MRI.getType(LdStMI->getPointerReg()).getAddressSpace();
+    Type *AccessTy = getTypeForLLT(LdStMI->getMMO().getMemoryType(),
+                                   PtrAdd.getMF()->getFunction().getContext());
     const auto &TLI = *PtrAdd.getMF()->getSubtarget().getTargetLowering();
     if (!TLI.isLegalAddressingMode(PtrAdd.getMF()->getDataLayout(), AM,
                                    AccessTy, AS))
@@ -6027,6 +6034,24 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
   return MRI.getVRegDef(RHS)->getOpcode() !=
              TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
          !getIConstantVRegVal(RHS, MRI);
+}
+
+bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  std::optional<FPValueAndVReg> ValAndVReg;
+  if (!mi_match(LHS, MRI, m_GFCstOrSplat(ValAndVReg)))
+    return false;
+  return !mi_match(RHS, MRI, m_GFCstOrSplat(ValAndVReg));
+}
+
+void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
+  Observer.changingInstr(MI);
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  MI.getOperand(1).setReg(RHSReg);
+  MI.getOperand(2).setReg(LHSReg);
+  Observer.changedInstr(MI);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

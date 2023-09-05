@@ -645,6 +645,24 @@ def TypeN : TestType<"TestP"> {
   let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }
 
+// TYPE-LABEL: TestQType::parse
+// TYPE: if (auto result = [&]() -> ::mlir::OptionalParseResult {
+// TYPE:     auto odsCustomResult = parseAB(odsParser
+// TYPE:     if (!odsCustomResult) return {};
+// TYPE:     if (::mlir::failed(*odsCustomResult)) return ::mlir::failure();
+// TYPE:   return ::mlir::success();
+// TYPE: }(); result.has_value() && ::mlir::failed(*result)) {
+// TYPE:   return {};
+// TYPE: } else if (result.has_value()) {
+// TYPE:   // Parse literal 'y'
+// TYPE: } else {
+// TYPE:   // Parse literal 'x'
+def TypeO : TestType<"TestQ"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  let mnemonic = "type_o";
+  let assemblyFormat = "(custom<AB>($a)^ `x`) : (`y`)?";
+}
+
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
 // DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
 // DEFAULT_TYPE_PARSER: if (parseResult.has_value()) {
