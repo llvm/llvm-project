@@ -5512,43 +5512,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, const SDNodeFlags Flags) {
   assert(N1.getOpcode() != ISD::DELETED_NODE && "Operand is DELETED_NODE!");
-  // Constant fold unary operations with an integer constant operand. Even
-  // opaque constant will be folded, because the folding of unary operations
-  // doesn't create new constants with different values. Nevertheless, the
-  // opaque flag is preserved during folding to prevent future folding with
-  // other constants.
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
-    const APInt &Val = C->getAPIntValue();
-    switch (Opcode) {
-    case ISD::BITCAST:
-      if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
-        return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
-      if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
-        return getConstantFP(APFloat(APFloat::IEEEsingle(), Val), DL, VT);
-      if (VT == MVT::f64 && C->getValueType(0) == MVT::i64)
-        return getConstantFP(APFloat(APFloat::IEEEdouble(), Val), DL, VT);
-      if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
-        return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
-      break;
-    }
-  }
-
-  // Constant fold unary operations with a floating point constant operand.
-  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N1)) {
-    APFloat V = C->getValueAPF();    // make copy
-    switch (Opcode) {
-    case ISD::BITCAST:
-      if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
-        return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
-        return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
-        return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
-        return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
-      break;
-    }
-  }
 
   // Constant fold unary operations with a vector integer or float operand.
   switch (Opcode) {
@@ -5574,6 +5537,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SINT_TO_FP:
   case ISD::FP16_TO_FP:
   case ISD::BF16_TO_FP:
+  case ISD::BITCAST:
   case ISD::ABS:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -6104,6 +6068,16 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
           return V;
         break;
+      case ISD::BITCAST:
+        if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
+          return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
+        if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
+          return getConstantFP(APFloat(APFloat::IEEEsingle(), Val), DL, VT);
+        if (VT == MVT::f64 && C->getValueType(0) == MVT::i64)
+          return getConstantFP(APFloat(APFloat::IEEEdouble(), Val), DL, VT);
+        if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
+          return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
+        break;
       }
     }
 
@@ -6164,8 +6138,25 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                         APFloat::rmNearestTiesToEven, &Ignored);
         return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       }
+      case ISD::BITCAST:
+        if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
+          return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
+          return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
+          return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
+          return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
+        break;
       }
     }
+
+    // Early-out if we failed to constant fold a bitcast.
+    if (Opcode == ISD::BITCAST)
+      return SDValue();
   }
 
   // Handle binops special cases.
