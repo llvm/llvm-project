@@ -1127,7 +1127,8 @@ void CodeGenModule::Release() {
   if (LangOpts.HLSL)
     getHLSLRuntime().finishCodeGen();
 
-  if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
+  uint32_t PLevel = Context.getLangOpts().PICLevel;
+  if (PLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");
     getModule().setPICLevel(static_cast<llvm::PICLevel::Level>(PLevel));
     if (Context.getLangOpts().PIE)
@@ -1152,7 +1153,7 @@ void CodeGenModule::Release() {
     getModule().setRtLibUseGOT();
   if (getTriple().isOSBinFormatELF() &&
       CodeGenOpts.DirectAccessExternalData !=
-          getModule().getDirectAccessExternalData()) {
+          getModule().getDirectAccessExternalData(PLevel == 0)) {
     getModule().setDirectAccessExternalData(
         CodeGenOpts.DirectAccessExternalData);
   }

@@ -687,12 +687,12 @@ void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
 }
 
-bool Module::getDirectAccessExternalData() const {
+bool Module::getDirectAccessExternalData(bool IsStaticRelocModel) const {
   auto *Val = cast_or_null<ConstantAsMetadata>(
       getModuleFlag("direct-access-external-data"));
   if (Val)
     return cast<ConstantInt>(Val->getValue())->getZExtValue() > 0;
-  return getPICLevel() == PICLevel::NotPIC;
+  return getPICLevel() == PICLevel::NotPIC || IsStaticRelocModel;
 }
 
 void Module::setDirectAccessExternalData(bool Value) {

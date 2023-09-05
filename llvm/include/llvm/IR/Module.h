@@ -958,7 +958,7 @@ public:
 
   /// Get/set whether referencing global variables can use direct access
   /// relocations on ELF targets.
-  bool getDirectAccessExternalData() const;
+  bool getDirectAccessExternalData(bool IsStaticRelocModel) const;
   void setDirectAccessExternalData(bool Value);
 
   /// Get/set whether synthesized functions should get the uwtable attribute.

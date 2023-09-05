@@ -606,7 +606,8 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
                                 nullptr, GuardSymb, nullptr,
                                 GlobalValue::NotThreadLocal, AddressSpace);
         if (!Subtarget.isTargetDarwin())
-          GV->setDSOLocal(M->getDirectAccessExternalData());
+          GV->setDSOLocal(M->getDirectAccessExternalData(
+              getTargetMachine().getRelocationModel() == Reloc::Static));
       }
       return GV;
     }
