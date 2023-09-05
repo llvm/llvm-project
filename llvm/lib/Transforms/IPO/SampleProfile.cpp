@@ -2111,57 +2111,66 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
 void SampleProfileMatcher::findIRAnchors(
     const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
+  // For inlined code, recover the original callsite and callee by finding the
+  // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
+  // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
+  auto FindTopLevelInlinedCallsite = [](const DILocation *DIL) {
+    assert((DIL && DIL->getInlinedAt()) && "No inlined callsite");
+    const DILocation *PrevDIL = nullptr;
+    do {
+      PrevDIL = DIL;
+      DIL = DIL->getInlinedAt();
+    } while (DIL->getInlinedAt());
+
+    LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+    StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
+    return std::make_pair(Callsite, CalleeName);
+  };
+
+  auto GetCanonicalCalleeName = [](const CallBase *CB) {
+    StringRef CalleeName = UnknownIndirectCallee;
+    if (Function *Callee = CB->getCalledFunction())
+      CalleeName = FunctionSamples::getCanonicalFnName(Callee->getName());
+    return CalleeName;
+  };
+
   // Extract profile matching anchors in the IR.
   for (auto &BB : F) {
     for (auto &I : BB) {
-      // TODO: To support AutoFDO, we need to parse all the non-call
-      // instructions to extract the line-number based locations. For
-      // pseudo-probe mode, since each block is instrumented with one probe
-      // inst, parsing probe inst is enough.
-      if (FunctionSamples::ProfileIsProbeBased && isa<PseudoProbeInst>(&I)) {
-        std::optional<PseudoProbe> Probe = extractProbe(I);
-        assert(Probe &&
-               "Probe should not be null for pseudo-probe instruction");
-        // Flatten inlined IR for the matching. Recover the original callsite
-        // and call target by analyzing the inline frames from the debug info.
-        if (DILocation *DIL = I.getDebugLoc()) {
-          if (DIL->getInlinedAt()) {
-            // Find the top-level inline frame.
-            const DILocation *PrevDIL = DIL;
-            for (; DIL->getInlinedAt(); DIL = DIL->getInlinedAt())
-              PrevDIL = DIL;
-
-            LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
-            StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
-            IRAnchors.emplace(Callsite, CalleeName);
-          } else
-            IRAnchors.emplace(LineLocation(Probe->Id, 0), StringRef());
-        }
-      }
-
-      if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
+      DILocation *DIL = I.getDebugLoc();
+      if (!DIL)
         continue;
 
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (auto &DLoc = I.getDebugLoc()) {
-        // Skip the inlined callsite. For pseudo probe mode, extracting inline
-        // info from the probe inst is enough.
-        if (DLoc.getInlinedAt())
+      if (FunctionSamples::ProfileIsProbeBased) {
+        if (auto Probe = extractProbe(I)) {
+          // Flatten inlined IR for the matching.
+          if (DIL->getInlinedAt()) {
+            IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
+          } else {
+            // Use empty StringRef for basic block probe.
+            StringRef CalleeName;
+            if (const auto *CB = dyn_cast<CallBase>(&I)) {
+              // Skip the probe inst whose callee name is "llvm.pseudoprobe".
+              if (!isa<IntrinsicInst>(&I))
+                CalleeName = GetCanonicalCalleeName(CB);
+            }
+            IRAnchors.emplace(LineLocation(Probe->Id, 0), CalleeName);
+          }
+        }
+      } else {
+        // TODO: For line-number based profile(AutoFDO), currently only support
+        // find callsite anchors. In future, we need to parse all the non-call
+        // instructions to extract the line locations for profile matching.
+        if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
           continue;
 
-        LineLocation IRCallsite = FunctionSamples::getCallSiteIdentifier(DLoc);
-        StringRef CalleeName = UnknownIndirectCallee;
-        if (Function *Callee = CB->getCalledFunction())
-          CalleeName = FunctionSamples::getCanonicalFnName(Callee->getName());
-
-        // Force to overwrite the callee name in case any non-call location was
-        // written before.
-        auto R = IRAnchors.emplace(IRCallsite, CalleeName);
-        R.first->second = CalleeName;
-        assert((!FunctionSamples::ProfileIsProbeBased || R.second ||
-                R.first->second == CalleeName) &&
-               "Overwrite non-call or different callee name location for "
-               "pseudo probe callsite");
+        if (DIL->getInlinedAt()) {
+          IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
+        } else {
+          LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+          StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
+          IRAnchors.emplace(Callsite, CalleeName);
+        }
       }
     }
   }
