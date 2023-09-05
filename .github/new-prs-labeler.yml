@@ -1,0 +1,273 @@
+backend:AArch64:
+  - llvm/include/llvm/IR/IntrinsicsAArch64.td
+  - llvm/lib/Target/AArch64/**/*
+  - llvm/test/**/*AArch64/**/*
+  - clang/lib/Basic/Targets/AArch64*
+  - clang/lib/Driver/ToolChains/Arch/AArch64*
+  - clang/lib/CodeGen/Targets/AArch64.cpp
+  - clang/include/clang/Basic/BuiltinsAArch64*
+
+backend:ARM:
+  - llvm/include/llvm/IR/IntrinsicsARM.td
+  - llvm/lib/Target/ARM/**/*
+  - llvm/test/**/*ARM/**/*
+  - clang/lib/Basic/Targets/ARM*
+  - clang/lib/Driver/ToolChains/Arch/ARM*
+  - clang/lib/CodeGen/Targets/ARM.cpp
+  - clang/include/clang/Basic/BuiltinsARM*
+
+backend:DirectX:
+  - llvm/include/llvm/IR/IntrinsicsDirectX.td
+  - llvm/**/Target/DirectX/**/*
+  - llvm/**/dxil-dis/**/*
+  - clang/lib/Basic/Targets/DirectX*
+
+backend:MSP430:
+  - llvm/include/llvm/IR/IntrinsicsMSP430.td
+  - llvm/lib/Target/MSP430/**/*
+  - llvm/test/**/MSP430/**/*
+  - clang/lib/Basic/Targets/MSP430*
+  - clang/lib/Driver/ToolChains/Arch/MSP430*
+  - clang/lib/CodeGen/Targets/MSP430.cpp
+  - clang/include/clang/Basic/BuiltinsMSP430*
+
+backend:RISC-V:
+  - llvm/**/*RISCV*/**/*
+  - llvm/**/*risv*/**/*
+  - clang/**/*RISCV*/**/*
+  - clang/**/*risv*/**/*
+
+backend:Sparc:
+  - llvm/include/llvm/IR/IntrinsicsSparc.td
+  - llvm/lib/Target/Sparc/**/*
+  - llvm/test/**/Sparc/**/*
+  - clang/lib/Basic/Targets/Sparc*
+  - clang/lib/Driver/ToolChains/Arch/Sparc*
+  - clang/lib/CodeGen/Targets/Sparc.cpp
+  - clang/include/clang/Basic/BuiltinsSparc*
+
+backend:X86:
+  - llvm/include/llvm/IR/IntrinsicsX86.td
+  - llvm/include/llvm/Support/X86DisassemblerDecoderCommon.h
+  - llvm/include/llvm/TargetParser/X86*
+  - llvm/lib/TargetParser/X86*
+  - llvm/**/**/X86/**/*
+  - llvm/utils/TableGen/X86*
+  - clang/lib/Basic/Targets/X86/**/*
+  - clang/lib/Driver/ToolChains/Arch/X86.*
+  - clang/lib/CodeGen/Targets/X86.*
+  - clang/test/CodeGen/X86/**/*
+  - clang/include/clang/Basic/BuiltinsX86*
+
+backend:loongarch:
+  - llvm/include/llvm/IR/IntrinsicsLoongArch.td
+  - llvm/lib/Target/LoongArch/**/*
+  - llvm/test/**/LoongArch/**/*
+  - clang/lib/Basic/Targets/LoongArch*
+  - clang/lib/Driver/ToolChains/Arch/LoongArch*
+  - clang/lib/CodeGen/Targets/LoongArch.cpp
+  - clang/include/clang/Basic/BuiltinsLoongArch*
+
+clang-format:
+  - clang/**/Format/**/*
+  - clang/tools/clang-format/**/*
+
+clang-tidy:
+  - clang-tools-extra/**/clang-tidy/**/*
+  - clang-tools-extra/clang-tidy/**/*
+
+clang:codegen:
+  - clang/lib/CodeGen/**/*
+  - clang/include/clang/CodeGen/**/*
+
+clang:dataflow:
+  - clang/**/Analysis/**/*
+
+clang:driver:
+  - clang/**/Driver/**/*
+
+clang:frontend:
+  - clang/lib/AST/**/*
+  - clang/include/clang/AST/**/*
+  - clang/lib/Basic/**/*
+  - clang/include/clang/Basic/**/*
+  - clang/lib/Interpreter/**/*
+  - clang/include/clang/Interpreter/**/*
+  - clang/lib/Lex/**/*
+  - clang/include/clang/Lex/**/*
+  - clang/lib/Parse/**/*
+  - clang/include/clang/Parse/**/*
+  - clang/lib/Sema/**/*
+  - clang/include/clang/Sema/**/*
+
+clang:headers:
+  - clang/lib/Headers/**/*
+
+clang:static analyzer:
+  - clang/**/StaticAnalyzer/**/*
+  - clang/utils/analyzer/**/*
+  - clang/docs/analyzer/**/*
+
+clangd:
+  - clang-tools-extra/clangd/**/*
+
+compiler-rt:
+  - compiler-rt/**/*
+
+coroutines:
+  - '**/*Coroutine*'
+  - '**/*Coroutine*/**/*'
+
+flang:
+  - flang/**/*
+
+flang:driver:
+  - flang/tools/flang-driver/**/*
+  - flang/test/Driver/**/*
+
+flang:frontend:
+  - flang/Parser/**/*
+  - flang/Evaluate/**/*
+  - flang/Semantics/**/*
+
+flang:runtime:
+  - flang/runtime/**/*
+
+HLSL:
+  - clang/*HLSL*/**/*
+  - clang/**/*HLSL*
+  - llvm/**/Frontend/HLSL/**/*
+
+libc:
+  - libc/**/*
+  - utils/bazel/llvm-project-overlay/libc/**/*
+
+libc++:
+  - libcxx/**/*
+
+libc++-abi:
+  - libcxxabi/**/*
+
+libunwind:
+  - libunwind/**/*
+
+lld:
+  - lld/**/*
+
+lldb:
+  - lldb/**/*
+
+llvm-lit:
+  - llvm/utils/lit/**/*
+
+llvm:SelectionDAGP:
+  - llvm/include/llvm/CodeGen/DAGCombine.h
+  - llvm/include/llvm/CodeGen/ISDOpcodes.h
+  - llvm/include/llvm/CodeGen/SelectionDAG*.h
+  - llvm/include/llvm/CodeGen/SDNodeProperties.td
+  - llvm/include/llvm/Target/TargetSelectionDAG.td
+  - llvm/lib/CodeGen/SelectionDAG/**/*
+  - llvm/utils/TableGen/CodeGenDAG*
+  - llvm/utils/TableGen/DAGISel*
+
+llvm:globalisel:
+  - llvm/**/GlobalISel/**/*
+  - llvm/utils/TableGen/GlobalISelEmitter.cpp
+  - llvm/utils/TableGen/GICombinerEmitter.cpp
+
+LTO:
+  - llvm/**/LTO/**
+  - llvm/**/ThinLTO/**
+
+mc:
+  - llvm/**/MC/**
+
+mlir:
+  - mlir/**
+
+mlir:afine:
+  - mlir/**/Affine/**/*
+
+mlir:bufferization:
+  - mlir/**/Bufferization/**/*
+
+mlir:complex:
+  - mlir/**/Complex/**/*
+
+mlir:core:
+  - mlir/**/AsmParser/**/*
+  - mlir/**/Bytecode/**/*
+  - mlir/**/Debug/**/*
+  - mlir/**/IR/**/*
+  - mlir/**/Parser/**/*
+  - mlir/**/Pass/**/*
+  - mlir/**/Reducer/**/*
+  - mlir/**/Support/**/*
+  - mlir/**/Transforms/**/*
+  - mlir/**/tools/**/*
+  - mlir/tools/**/*
+
+mlir:gpu:
+  - mlir/**/*GPU*/**/*
+
+mlir:linalg:
+  - mlir/**/Linalg/**/*
+  - mlir/**/linalg/**/*
+
+mlir:llvm:
+  - mlir/**/LLVM/**/*
+
+mlir:memref:
+  - mlir/**/MemRef/**/*
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:scf:
+  - mlir/**/SCF/**/*
+
+mlir:tensor:
+  - mlir/**/Tensor/**/*
+
+mlir:tosa:
+  - mlir/**/Tosa/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
+
+tools:llvm-exegesis:
+  - '**/llvm-exegesis/**/*'
+
+tools:llvm-mca:
+  - llvm/tools/llvm-mca/**/*
+  - llvm/include/llvm/MCA/**/*
+  - llvm/lib/MCA/**/*
+
+PGO:
+  - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
+  - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
+  - llvm/lib/Transforms/Instrumentation/IndirectCallPromotion.cpp
+  - llvm/lib/Transforms/Instrumentation/InstrProfiling.cpp
+  - llvm/lib/Transforms/Instrumentation/PGO*
+  - llvm/lib/Transforms/Instrumentation/ValueProfile*
+  - llvm/test/Instrumentation/InstrProfiling/**/*
+  - llvm/test/Transforms/PGOProfile/**/*
+  - llvm/**/llvm-profdata/**/*
+  - llvm/**/llvm-profgen/**/*
+  - llvm/unittests/ProfileData/**/*
+
+vectorization:
+  - llvm/lib/Transforms/Vectorize/**/*
+  - llvm/include/llvm/Transforms/Vectorize/**/*
+
+xray:
+  - llvm/tools/llvm-xray/**
+  - compiler-rt/**/xray/**
+  - clang/include/clang/Basic/XRay*
+  - clang/lib/Basic/XRay*
+  - compiler-rt/**/xray/*
+  - llvm/include/llvm/XRay/*
+  - llvm/lib/XRay/*
+  - llvm/tools/llvm-xray/*
+  - llvm/unittests/XRay/*
+  - compiler-rt/**/xray/*
