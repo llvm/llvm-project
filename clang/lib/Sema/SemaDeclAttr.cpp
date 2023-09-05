@@ -2054,7 +2054,7 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (S.Context.getTargetInfo().getTriple().isOSAIX() &&
-      Model != "global-dynamic" && Model != "local-exec") {
+      Model == "local-dynamic") {
     S.Diag(LiteralLoc, diag::err_aix_attr_unsupported_tls_model) << Model;
     return;
   }
