@@ -14,6 +14,7 @@
 // RUN: %clang -target x86_64-apple-darwin14 -g -S -emit-llvm -o - %s -isysroot %t | FileCheck %s --check-prefix=VER2
 
 // RUN: %clang -target powerpc-unknown-openbsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
+// RUN: %clang --target=x86_64-unknown-haiku -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
 // RUN: %clang -target powerpc-unknown-freebsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
 
 // Check which debug info formats we use on Windows. By default, in an MSVC
