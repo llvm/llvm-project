@@ -59,7 +59,7 @@ using Literal = uint32_t;
 
 /// A null literal is used as a placeholder in various data structures and
 /// algorithms.
-static constexpr Literal NullLit = 0;
+[[maybe_unused]] static constexpr Literal NullLit = 0;
 
 /// Returns the positive literal `V`.
 static constexpr Literal posLit(Variable V) { return 2 * V; }
