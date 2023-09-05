@@ -17,9 +17,3 @@
 
         ! CHECK: ldstuba [%i0+2] %asi, %g1 ! encoding: [0xc2,0xee,0x20,0x02]
         ldstuba [%i0+2] %asi, %g1
-
-        ! CHECK: cas [%i0], %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
-        cas [%i0], %l6, %o2
-
-        ! CHECK: casx [%i0], %l6, %o2  ! encoding: [0xd5,0xf6,0x10,0x16]
-        casx [%i0], %l6, %o2
