@@ -265,20 +265,28 @@ Create a pull request from your branch to llvm::main.
   # Recommit if any formatting changes
   git commit -a --amend
 
+  # Re-run tests and make sure nothing broke.
+  ninja check-llvm
+
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
   # fork, use git remote -v to see. Usually origin points to your
   # fork and upstream to llvm/llvm-project
   git push origin my_change
 
-  # When your PR is accepted, you can now rebase it and make sure
-  # you have all the latest changes.
+Before merging the PR, it is reccomended that you rebase locally and re-run test
+checks:
+
+::
+
+  # Make sure you have all the latest changes
   git rebase -i origin/main
 
-  # If this PR is older and you get a lot of new commits with the
-  # rebase, you might want to re-run tests and make sure nothing
-  # broke.
+  # Make sure tests pass with latest changes and your change
   ninja check-llvm
+
+  # Push the rebased changes to your fork.
+  git push origin my_change
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
