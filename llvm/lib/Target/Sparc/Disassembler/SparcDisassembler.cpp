@@ -306,8 +306,10 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   {
     Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
-  if (Result != MCDisassembler::Fail)
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
     return Result;
+  }
 
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
