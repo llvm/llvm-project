@@ -41,7 +41,7 @@ Implemented Papers
 
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
-
+- P2443R1 - ``views::chunk_by``
 
 Improvements and New Features
 -----------------------------
