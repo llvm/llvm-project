@@ -451,6 +451,10 @@ public:
   /// Delete \p MI and replace all of its uses with \p Replacement.
   void replaceSingleDefInstWithReg(MachineInstr &MI, Register Replacement);
 
+  /// @brief Replaces the shift amount in \p MI with ShiftAmt % BW
+  /// @param MI
+  void applyFunnelShiftConstantModulo(MachineInstr &MI);
+
   /// Return true if \p MOP1 and \p MOP2 are register operands are defined by
   /// equivalent instructions.
   bool matchEqualDefs(const MachineOperand &MOP1, const MachineOperand &MOP2);
@@ -462,6 +466,10 @@ public:
   /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
   /// equal to \p C.
   bool matchConstantFPOp(const MachineOperand &MOP, double C);
+
+  /// @brief Checks if constant at \p ConstIdx is larger than \p MI 's bitwidth
+  /// @param ConstIdx Index of the constant
+  bool matchConstantLargerBitWidth(MachineInstr &MI, unsigned ConstIdx);
 
   /// Optimize (cond ? x : x) -> x
   bool matchSelectSameVal(MachineInstr &MI);
