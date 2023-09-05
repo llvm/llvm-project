@@ -9,12 +9,15 @@ permissions:
 jobs:
   automate-issues-labels:
     permissions:
-      issues: write  # for andymckay/labeler to label issues
-      pull-requests: write  # for andymckay/labeler to label PRs
+      issues: write
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: andymckay/labeler@1.0.4
+      - uses: github/issue-labeler@v3.2
         with:
-          add-labels: 'new issue'
-          ignore-if-labeled: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/workflows/new-issues-labeler.yml
+          include-title: 1
+          include-body: 0
+          sync-labels: 0
+          enable-versioned-regex: 0
