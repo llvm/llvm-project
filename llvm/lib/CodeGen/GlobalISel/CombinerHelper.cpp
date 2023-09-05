@@ -2563,6 +2563,16 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
          MaybeCst->getSExtValue() == C;
 }
 
+bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP, double C) {
+  if (!MOP.isReg())
+    return false;
+  std::optional<FPValueAndVReg> MaybeCst;
+  if (!mi_match(MOP.getReg(), MRI, m_GFCstOrSplat(MaybeCst)))
+    return false;
+
+  return MaybeCst->Value.isExactlyValue(C);
+}
+
 void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
                                                      unsigned OpIdx) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
