@@ -698,6 +698,13 @@ public:
   /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
 
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return name.hasPromiseOrImplementsInterface<InterfaceT>();
+  }
+
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait>
