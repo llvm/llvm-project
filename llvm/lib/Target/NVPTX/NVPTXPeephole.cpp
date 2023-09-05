@@ -120,7 +120,9 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
       BuildMI(MF, Root.getDebugLoc(), TII->get(Prev.getOpcode()),
               Root.getOperand(0).getReg())
           .addReg(NRI->getFrameLocalRegister(MF))
-          .add(Prev.getOperand(2));
+          .add(Prev.getOperand(2))
+          .addReg(0)
+          .addImm(0);
 
   MBB.insert((MachineBasicBlock::iterator)&Root, MIB);
 

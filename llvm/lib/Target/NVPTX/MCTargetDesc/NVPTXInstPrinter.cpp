@@ -31,6 +31,19 @@ NVPTXInstPrinter::NVPTXInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                                    const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
+void NVPTXInstPrinter::printPredicateOperand(const MCInst *MI, int OpNum,
+                                             raw_ostream &OS,
+                                             const char * /*Modifier*/) {
+  assert(MI->getNumOperands() == OpNum + 2 &&
+         "predicate and switch must be last");
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  unsigned Sw = MI->getOperand(OpNum + 1).getImm();
+  if (!Reg)
+    return;
+  OS << (Sw ? "@!" : "@");
+  printRegName(OS, Reg);
+}
+
 void NVPTXInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   // Decode the virtual register
   // Must be kept in sync with NVPTXAsmPrinter::encodeVirtualRegister

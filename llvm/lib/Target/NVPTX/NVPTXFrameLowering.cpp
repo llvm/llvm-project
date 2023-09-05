@@ -58,12 +58,16 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
       MBBI = BuildMI(MBB, MBBI, dl,
                      MF.getSubtarget().getInstrInfo()->get(CvtaLocalOpcode),
                      NRI->getFrameRegister(MF))
-                 .addReg(NRI->getFrameLocalRegister(MF));
+                 .addReg(NRI->getFrameLocalRegister(MF))
+                 .addReg(0)
+                 .addImm(0);
     }
     BuildMI(MBB, MBBI, dl,
             MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
             NRI->getFrameLocalRegister(MF))
-        .addImm(MF.getFunctionNumber());
+        .addImm(MF.getFunctionNumber())
+        .addReg(0)
+        .addImm(0);
   }
 }
 
