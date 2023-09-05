@@ -92,7 +92,7 @@ extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 // POSIX.1-2017 requires this.
 LIBC_INLINE time_t out_of_range() {
   libc_errno = EOVERFLOW;
-  return static_cast<time_t>(-1);
+  return TimeConstants::OUT_OF_RANGE_RETURN_VALUE;
 }
 
 LIBC_INLINE void invalid_value() { libc_errno = EINVAL; }
