@@ -588,3 +588,28 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/test/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/unittests/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+
+# WebAssembly
+/llvm/include/llvm/BinaryFormat/Wasm.h
+/llvm/include/llvm/IR/IntinsicsWebAssembly.td
+/llvm/include/llvm/Object/Wasm*
+/llvm/lib/CodeGen/Wasm*
+/llvm/lib/CodeGen/AsmPrinter/Wasm*
+/llvm/lib/MC/MCParser/Wasm*
+/llvm/lib/MC/Wasm*
+/llvm/lib/ObjCopy/wasm/
+/llvm/lib/Object/Wasm*
+/llvm/lib/Target/WebAssembly/
+/llvm/test/CodeGen/WebAssembly/
+/llvm/test/DebugInfo/WebAssembly/
+/llvm/test/MC/WebAssembly/
+/llvm/unittests/Target/WebAssembly/
+/clang/include/clang/Basic/BuiltinsWebAssembly.def
+/clang/include/clang/Basic/WebAssemblyReferenceTypes.def
+/clang/lib/Basic/Targets/WebAssembly*
+/clang/lib/Driver/Toolchains/WebAssembly*
+/clang/lib/CodeGen/Targets/WebAssembly*
+/clang/lib/Headers/wasm_simd128.h
+/clang/test/CodeGen/WebAssembly/
+/clang/test/Sema/*wasm*
+/clang/test/SemaCXX/*wasm*
