@@ -194,7 +194,7 @@ unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
 std::string escapeRST(StringRef Str) {
   std::string Out;
   for (auto K : Str) {
-    if (StringRef("`*|_[]\\").count(K))
+    if (StringRef("`*|[]\\").count(K))
       Out.push_back('\\');
     Out.push_back(K);
   }
