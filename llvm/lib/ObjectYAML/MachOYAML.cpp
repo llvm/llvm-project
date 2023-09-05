@@ -627,7 +627,8 @@ void MappingTraits<MachO::fileset_entry_command>::mapping(
     IO &IO, MachO::fileset_entry_command &LoadCommand) {
   IO.mapRequired("vmaddr", LoadCommand.vmaddr);
   IO.mapRequired("fileoff", LoadCommand.fileoff);
-  IO.mapRequired("id", LoadCommand.entry_id);
+  IO.mapRequired("id", LoadCommand.entry_id.offset);
+  IO.mapOptional("reserved", LoadCommand.reserved);
 }
 
 } // end namespace yaml
