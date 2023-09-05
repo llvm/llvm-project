@@ -2335,6 +2335,10 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (STI.hasV8_1MMainlineOps() && AFI->isCmseNSEntryFunction())
     CanEliminateFrame = false;
 
+  // When return address signing is enabled R12 is treated as callee-saved.
+  if (AFI->shouldSignReturnAddress())
+    CanEliminateFrame = false;
+
   // Don't spill FP if the frame can be eliminated. This is determined
   // by scanning the callee-save registers to see if any is modified.
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
