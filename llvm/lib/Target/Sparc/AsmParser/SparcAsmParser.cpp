@@ -1113,17 +1113,33 @@ OperandMatchResultTy SparcAsmParser::parseASITag(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getEndLoc();
   int64_t ASIVal = 0;
 
-  if (getParser().parseAbsoluteExpression(ASIVal)) {
-    Error(
-        S,
-        is64Bit()
-            ? "malformed ASI tag, must be %asi or a constant integer expression"
-            : "malformed ASI tag, must be a constant integer expression");
-    return MatchOperand_ParseFail;
-  }
+  if (is64Bit() && (getLexer().getKind() == AsmToken::Hash)) {
+    // For now we only support named tags for 64-bit/V9 systems.
+    // TODO: add support for 32-bit/V8 systems.
+    SMLoc TagStart = getLexer().peekTok(false).getLoc();
+    Parser.Lex(); // Eat the '#'.
+    auto ASIName = Parser.getTok().getString();
+    auto ASITag = SparcASITag::lookupASITagByName(ASIName);
+    if (!ASITag)
+      ASITag = SparcASITag::lookupASITagByAltName(ASIName);
+    Parser.Lex(); // Eat the identifier token.
 
-  if (!isUInt<8>(ASIVal)) {
-    Error(S, "invalid ASI number, must be between 0 and 255");
+    if (!ASITag) {
+      Error(TagStart, "unknown ASI tag");
+      return MatchOperand_ParseFail;
+    }
+
+    ASIVal = ASITag->Encoding;
+  } else if (!getParser().parseAbsoluteExpression(ASIVal)) {
+    if (!isUInt<8>(ASIVal)) {
+      Error(S, "invalid ASI number, must be between 0 and 255");
+      return MatchOperand_ParseFail;
+    }
+  } else {
+    Error(S, is64Bit()
+                 ? "malformed ASI tag, must be %asi, a constant integer "
+                   "expression, or a named tag"
+                 : "malformed ASI tag, must be a constant integer expression");
     return MatchOperand_ParseFail;
   }
 
@@ -1239,8 +1255,8 @@ SparcAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
         return MatchOperand_Success;
       }
 
-      Error(S,
-            "malformed ASI tag, must be %asi or a constant integer expression");
+      Error(S, "malformed ASI tag, must be %asi, a constant integer "
+               "expression, or a named tag");
       return MatchOperand_ParseFail;
     }
 

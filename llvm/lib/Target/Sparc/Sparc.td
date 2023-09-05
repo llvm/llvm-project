@@ -69,6 +69,7 @@ include "LeonFeatures.td"
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
+include "SparcASITags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
