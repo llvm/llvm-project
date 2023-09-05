@@ -33,16 +33,16 @@ parsePresburgerRelationFromPresburgerSet(ArrayRef<StringRef> strs,
 }
 
 TEST(PresburgerRelationTest, intersectDomainAndRange) {
-  PresburgerRelation rel = parsePresburgerRelationFromPresburgerSet(
-      {// (x, y) -> (x + N, y - N)
-       "(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0)",
-       // (x, y) -> (x + y, x - y)
-       "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0)",
-       // (x, y) -> (x - y, y - x)}
-       "(x, y, a, b)[N] : (a - x + y == 0, b - y + x == 0)"},
-      2);
-
   {
+    PresburgerRelation rel = parsePresburgerRelationFromPresburgerSet(
+        {// (x, y) -> (x + N, y - N)
+         "(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0)",
+         // (x, y) -> (x + y, x - y)
+         "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0)",
+         // (x, y) -> (x - y, y - x)}
+         "(x, y, a, b)[N] : (a - x + y == 0, b - y + x == 0)"},
+        2);
+
     PresburgerSet set =
         parsePresburgerSet({// (2x, x)
                             "(a, b)[N] : (a - 2 * b == 0)",
@@ -71,6 +71,15 @@ TEST(PresburgerRelationTest, intersectDomainAndRange) {
   }
 
   {
+    PresburgerRelation rel = parsePresburgerRelationFromPresburgerSet(
+        {// (x)[N] -> (x + N, x - N)
+         "(x, a, b)[N] : (a - x - N == 0, b - x + N == 0)",
+         // (x)[N] -> (x, -x)
+         "(x, a, b)[N] : (a - x == 0, b + x == 0)",
+         // (x)[N] -> (N - x, 2 * x)}
+         "(x, a, b)[N] : (a - N + x == 0, b - 2 * x == 0)"},
+        1);
+
     PresburgerSet set =
         parsePresburgerSet({// (2x, x)
                             "(a, b)[N] : (a - 2 * b == 0)",
@@ -80,19 +89,19 @@ TEST(PresburgerRelationTest, intersectDomainAndRange) {
                             "(a, b)[N] : (a - N == 0, b - N == 0)"});
 
     PresburgerRelation expectedRel = parsePresburgerRelationFromPresburgerSet(
-        {"(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0, a - 2 * b == 0)",
-         "(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0, a + b == 0)",
-         "(x, y, a, b)[N] : (x - a + N == 0, y - b - N == 0, a - N == 0, b - N "
+        {"(x, a, b)[N] : (a - x - N == 0, b - x + N == 0, a - 2 * b == 0)",
+         "(x, a, b)[N] : (a - x - N == 0, b - x + N == 0, a + b == 0)",
+         "(x, a, b)[N] : (a - x - N == 0, b - x + N == 0, a - N == 0, b - N "
          "== 0)",
-         "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0, a - 2 * b == 0)",
-         "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0, a + b == 0)",
-         "(x, y, a, b)[N] : (a - x - y == 0, b - x + y == 0, a - N == 0, b - N "
+         "(x, a, b)[N] : (a - x == 0, b + x == 0, a - 2 * b == 0)",
+         "(x, a, b)[N] : (a - x == 0, b + x == 0, a + b == 0)",
+         "(x, a, b)[N] : (a - x == 0, b + x == 0, a - N == 0, b - N "
          "== 0)",
-         "(x, y, a, b)[N] : (a - x + y == 0, b - y + x == 0, a - 2 * b == 0)",
-         "(x, y, a, b)[N] : (a - x + y == 0, b - y + x == 0, a + b == 0)",
-         "(x, y, a, b)[N] : (a - x + y == 0, b - y + x == 0, a - N == 0, b - N "
+         "(x, a, b)[N] : (a - N + x == 0, b - 2 * x == 0, a - 2 * b == 0)",
+         "(x, a, b)[N] : (a - N + x == 0, b - 2 * x == 0, a + b == 0)",
+         "(x, a, b)[N] : (a - N + x == 0, b - 2 * x == 0, a - N == 0, b - N "
          "== 0)"},
-        2);
+        1);
 
     PresburgerRelation computedRel = rel.intersectRange(set);
     EXPECT_TRUE(computedRel.isEqual(expectedRel));

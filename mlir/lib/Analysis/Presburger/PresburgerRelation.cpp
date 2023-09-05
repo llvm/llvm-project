@@ -159,7 +159,7 @@ PresburgerRelation::intersectDomain(const PresburgerSet &set) const {
          "Domain of `this` must be compatible with range of `set`");
 
   PresburgerRelation other = set;
-  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  other.insertVarInPlace(VarKind::Domain, 0, getNumRangeVars());
   other.inverse();
   return intersect(other);
 }
