@@ -76,3 +76,32 @@ transform.sequence failures(propagate) {
 // expected-remark @below {{0}}
   transform.test_print_number_of_associated_payload_ir_ops %no_match : !transform.any_op
 }
+
+// -----
+
+func.func private @callee()
+
+func.func @foo(%lb: index, %ub: index, %step: index) {
+  // expected-remark @below {{loop-like}}
+  scf.for %i = %lb to %ub step %step {
+    func.call @callee() : () -> ()
+    scf.yield
+  }
+  // expected-remark @below {{loop-like}}
+  scf.parallel (%i) = (%lb) to (%ub) step (%step) {
+    func.call @callee() : () -> ()
+    scf.yield
+  }
+  // expected-remark @below {{loop-like}}
+  scf.forall (%i) in (%ub) {
+    func.call @callee() : () -> ()
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %matched = transform.structured.match interface{LoopLikeInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %matched, "loop-like" : !transform.any_op
+  transform.yield
+}
