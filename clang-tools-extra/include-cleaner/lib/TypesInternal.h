@@ -66,13 +66,13 @@ enum class Hints : uint8_t {
   /// Symbol is directly originating from this header, rather than being
   /// exported or included transitively.
   OriginHeader = 1 << 0,
-  /// Provides a generally-usable definition for the symbol. (a function decl,
-  /// or class definition and not a forward declaration of a template).
-  CompleteSymbol = 1 << 1,
   /// Header providing the symbol is explicitly marked as preferred, with an
   /// IWYU private pragma that points at this provider or header and symbol has
   /// ~the same name.
-  PreferredHeader = 1 << 2,
+  PreferredHeader = 1 << 1,
+  /// Provides a generally-usable definition for the symbol. (a function decl,
+  /// or class definition and not a forward declaration of a template).
+  CompleteSymbol = 1 << 2,
   /// Symbol is provided by a public file. Only absent in the cases where file
   /// is explicitly marked as such, non self-contained or IWYU private
   /// pragmas.
