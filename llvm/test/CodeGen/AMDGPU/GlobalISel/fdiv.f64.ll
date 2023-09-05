@@ -440,7 +440,7 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GCN-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GCN-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GCN-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GCN-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
+; GCN-NEXT:    v_mul_f64 v[4:5], v[2:3], 1.0
 ; GCN-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
 ; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -453,7 +453,7 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GFX10-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GFX10-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
+; GFX10-NEXT:    v_mul_f64 v[4:5], v[2:3], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -469,7 +469,7 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GFX11-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GFX11-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
+; GFX11-NEXT:    v_mul_f64 v[4:5], v[2:3], 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
 ; GFX11-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
@@ -1436,8 +1436,8 @@ define <2 x double> @v_rcp_v2f64_arcp_afn(<2 x double> %x) {
 ; GCN-NEXT:    v_fma_f64 v[10:11], -v[2:3], v[6:7], 1.0
 ; GCN-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[4:5]
 ; GCN-NEXT:    v_fma_f64 v[6:7], v[10:11], v[6:7], v[6:7]
-; GCN-NEXT:    v_mul_f64 v[8:9], 1.0, v[4:5]
-; GCN-NEXT:    v_mul_f64 v[10:11], 1.0, v[6:7]
+; GCN-NEXT:    v_mul_f64 v[8:9], v[4:5], 1.0
+; GCN-NEXT:    v_mul_f64 v[10:11], v[6:7], 1.0
 ; GCN-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], 1.0
 ; GCN-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], 1.0
 ; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
@@ -1457,8 +1457,8 @@ define <2 x double> @v_rcp_v2f64_arcp_afn(<2 x double> %x) {
 ; GFX10-NEXT:    v_fma_f64 v[10:11], -v[2:3], v[6:7], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[4:5]
 ; GFX10-NEXT:    v_fma_f64 v[6:7], v[10:11], v[6:7], v[6:7]
-; GFX10-NEXT:    v_mul_f64 v[8:9], 1.0, v[4:5]
-; GFX10-NEXT:    v_mul_f64 v[10:11], 1.0, v[6:7]
+; GFX10-NEXT:    v_mul_f64 v[8:9], v[4:5], 1.0
+; GFX10-NEXT:    v_mul_f64 v[10:11], v[6:7], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
@@ -1483,8 +1483,8 @@ define <2 x double> @v_rcp_v2f64_arcp_afn(<2 x double> %x) {
 ; GFX11-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[6:7], v[10:11], v[6:7], v[6:7]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_mul_f64 v[8:9], 1.0, v[4:5]
-; GFX11-NEXT:    v_mul_f64 v[10:11], 1.0, v[6:7]
+; GFX11-NEXT:    v_mul_f64 v[8:9], v[4:5], 1.0
+; GFX11-NEXT:    v_mul_f64 v[10:11], v[6:7], 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], 1.0
 ; GFX11-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], 1.0
