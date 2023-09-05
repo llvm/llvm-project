@@ -37,7 +37,9 @@
 # CHECK: st %fsr, [%i5]
 0xc1 0x2f 0x40 0x00
 
-# CHECK: std %fq, [%i5+%l1]
+## The same encoding resolves to different instructions in V8 and V9.
+# V8: std %fq, [%i5+%l1]
+# V9: stq %f0, [%i5+%l1]
 0xc1 0x37 0x40 0x11
 
 
