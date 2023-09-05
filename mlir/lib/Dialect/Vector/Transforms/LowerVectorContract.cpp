@@ -1128,7 +1128,7 @@ public:
     VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
     bool isInt = isa<IntegerType, IndexType>(eltType);
-    Value acc = (op.getAcc().empty()) ? nullptr : op.getAcc()[0];
+    Value acc = op.getAcc();
     vector::CombiningKind kind = op.getKind();
 
     // Vector mask setup.

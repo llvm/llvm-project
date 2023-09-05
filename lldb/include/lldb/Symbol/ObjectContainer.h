@@ -110,7 +110,7 @@ public:
   /// Selects an architecture in an object file.
   ///
   /// Object files that contain a single architecture should verify that the
-  /// specified \a arch matches the architecture in in object file and return
+  /// specified \a arch matches the architecture in the object file and return
   /// \b true or \b false accordingly.
   ///
   /// Object files that contain more than one architecture should attempt to

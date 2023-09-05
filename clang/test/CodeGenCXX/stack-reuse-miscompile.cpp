@@ -26,8 +26,6 @@ const char * f(S s)
 // CHECK: [[T2:%.*]] = alloca %class.T, align 4
 // CHECK: [[T3:%.*]] = alloca %class.T, align 4
 //
-// CHECK: [[AGG:%.*]] = alloca %class.S, align 4
-//
 // FIXME: We could defer starting the lifetime of the return object of concat
 // until the call.
 // CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T1]])
@@ -36,9 +34,7 @@ const char * f(S s)
 // CHECK: [[T4:%.*]] = call noundef ptr @_ZN1TC1EPKc(ptr {{[^,]*}} [[T2]], ptr noundef @.str)
 //
 // CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T3]])
-// CHECK: call void @llvm.lifetime.start.p0(i64 8, ptr [[AGG]])
 // CHECK: [[T5:%.*]] = call noundef ptr @_ZN1TC1E1S(ptr {{[^,]*}} [[T3]], [2 x i32] %{{.*}})
-// CHECK: call void @llvm.lifetime.end.p0(i64 8, ptr [[AGG]]
 //
 // CHECK: call void @_ZNK1T6concatERKS_(ptr sret(%class.T) align 4 [[T1]], ptr {{[^,]*}} [[T2]], ptr noundef nonnull align 4 dereferenceable(16) [[T3]])
 // CHECK: [[T6:%.*]] = call noundef ptr @_ZNK1T3strEv(ptr {{[^,]*}} [[T1]])

@@ -368,58 +368,9 @@ namespace clang {
 
     // Importing types
     ExpectedType VisitType(const Type *T);
-    ExpectedType VisitAtomicType(const AtomicType *T);
-    ExpectedType VisitBuiltinType(const BuiltinType *T);
-    ExpectedType VisitDecayedType(const DecayedType *T);
-    ExpectedType VisitComplexType(const ComplexType *T);
-    ExpectedType VisitPointerType(const PointerType *T);
-    ExpectedType VisitBlockPointerType(const BlockPointerType *T);
-    ExpectedType VisitLValueReferenceType(const LValueReferenceType *T);
-    ExpectedType VisitRValueReferenceType(const RValueReferenceType *T);
-    ExpectedType VisitMemberPointerType(const MemberPointerType *T);
-    ExpectedType VisitConstantArrayType(const ConstantArrayType *T);
-    ExpectedType VisitIncompleteArrayType(const IncompleteArrayType *T);
-    ExpectedType VisitVariableArrayType(const VariableArrayType *T);
-    ExpectedType VisitDependentSizedArrayType(const DependentSizedArrayType *T);
-    ExpectedType
-    VisitDependentSizedExtVectorType(const DependentSizedExtVectorType *T);
-    ExpectedType VisitVectorType(const VectorType *T);
-    ExpectedType VisitExtVectorType(const ExtVectorType *T);
-    ExpectedType VisitFunctionNoProtoType(const FunctionNoProtoType *T);
-    ExpectedType VisitFunctionProtoType(const FunctionProtoType *T);
-    ExpectedType VisitUnresolvedUsingType(const UnresolvedUsingType *T);
-    ExpectedType VisitParenType(const ParenType *T);
-    ExpectedType VisitTypedefType(const TypedefType *T);
-    ExpectedType VisitTypeOfExprType(const TypeOfExprType *T);
-    // FIXME: DependentTypeOfExprType
-    ExpectedType VisitTypeOfType(const TypeOfType *T);
-    ExpectedType VisitUsingType(const UsingType *T);
-    ExpectedType VisitDecltypeType(const DecltypeType *T);
-    ExpectedType VisitUnaryTransformType(const UnaryTransformType *T);
-    ExpectedType VisitAutoType(const AutoType *T);
-    ExpectedType VisitDeducedTemplateSpecializationType(
-        const DeducedTemplateSpecializationType *T);
-    ExpectedType VisitInjectedClassNameType(const InjectedClassNameType *T);
-    // FIXME: DependentDecltypeType
-    ExpectedType VisitRecordType(const RecordType *T);
-    ExpectedType VisitEnumType(const EnumType *T);
-    ExpectedType VisitAttributedType(const AttributedType *T);
-    ExpectedType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
-    ExpectedType VisitSubstTemplateTypeParmType(
-        const SubstTemplateTypeParmType *T);
-    ExpectedType
-    VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
-    ExpectedType VisitTemplateSpecializationType(
-        const TemplateSpecializationType *T);
-    ExpectedType VisitElaboratedType(const ElaboratedType *T);
-    ExpectedType VisitDependentNameType(const DependentNameType *T);
-    ExpectedType VisitPackExpansionType(const PackExpansionType *T);
-    ExpectedType VisitDependentTemplateSpecializationType(
-        const DependentTemplateSpecializationType *T);
-    ExpectedType VisitObjCInterfaceType(const ObjCInterfaceType *T);
-    ExpectedType VisitObjCObjectType(const ObjCObjectType *T);
-    ExpectedType VisitObjCObjectPointerType(const ObjCObjectPointerType *T);
-    ExpectedType VisitMacroQualifiedType(const MacroQualifiedType *T);
+#define TYPE(Class, Base)                                                    \
+    ExpectedType Visit##Class##Type(const Class##Type *T);
+#include "clang/AST/TypeNodes.inc"
 
     // Importing declarations
     Error ImportDeclParts(NamedDecl *D, DeclarationName &Name, NamedDecl *&ToD,
@@ -1739,6 +1690,123 @@ ASTNodeImporter::VisitMacroQualifiedType(const MacroQualifiedType *T) {
   IdentifierInfo *ToIdentifier = Importer.Import(T->getMacroIdentifier());
   return Importer.getToContext().getMacroQualifiedType(*ToUnderlyingTypeOrErr,
                                                        ToIdentifier);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitAdjustedType(const AdjustedType *T) {
+  Error Err = Error::success();
+  QualType ToOriginalType = importChecked(Err, T->getOriginalType());
+  QualType ToAdjustedType = importChecked(Err, T->getAdjustedType());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getAdjustedType(ToOriginalType,
+                                                 ToAdjustedType);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitBitIntType(const BitIntType *T) {
+  return Importer.getToContext().getBitIntType(T->isUnsigned(),
+                                               T->getNumBits());
+}
+
+ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
+    const clang::BTFTagAttributedType *T) {
+  Error Err = Error::success();
+  const BTFTypeTagAttr *ToBTFAttr = importChecked(Err, T->getAttr());
+  QualType ToWrappedType = importChecked(Err, T->getWrappedType());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getBTFTagAttributedType(ToBTFAttr,
+                                                         ToWrappedType);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
+    const clang::ConstantMatrixType *T) {
+  ExpectedType ToElementTypeOrErr = import(T->getElementType());
+  if (!ToElementTypeOrErr)
+    return ToElementTypeOrErr.takeError();
+
+  return Importer.getToContext().getConstantMatrixType(
+      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns());
+}
+
+ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(
+    const clang::DependentAddressSpaceType *T) {
+  Error Err = Error::success();
+  QualType ToPointeeType = importChecked(Err, T->getPointeeType());
+  Expr *ToAddrSpaceExpr = importChecked(Err, T->getAddrSpaceExpr());
+  SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getDependentAddressSpaceType(
+      ToPointeeType, ToAddrSpaceExpr, ToAttrLoc);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
+    const clang::DependentBitIntType *T) {
+  ExpectedExpr ToNumBitsExprOrErr = import(T->getNumBitsExpr());
+  if (!ToNumBitsExprOrErr)
+    return ToNumBitsExprOrErr.takeError();
+  return Importer.getToContext().getDependentBitIntType(T->isUnsigned(),
+                                                        *ToNumBitsExprOrErr);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(
+    const clang::DependentSizedMatrixType *T) {
+  Error Err = Error::success();
+  QualType ToElementType = importChecked(Err, T->getElementType());
+  Expr *ToRowExpr = importChecked(Err, T->getRowExpr());
+  Expr *ToColumnExpr = importChecked(Err, T->getColumnExpr());
+  SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getDependentSizedMatrixType(
+      ToElementType, ToRowExpr, ToColumnExpr, ToAttrLoc);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitDependentVectorType(
+    const clang::DependentVectorType *T) {
+  Error Err = Error::success();
+  QualType ToElementType = importChecked(Err, T->getElementType());
+  Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
+  SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getDependentVectorType(
+      ToElementType, ToSizeExpr, ToAttrLoc, T->getVectorKind());
+}
+
+ExpectedType clang::ASTNodeImporter::VisitObjCTypeParamType(
+    const clang::ObjCTypeParamType *T) {
+  Expected<ObjCTypeParamDecl *> ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  SmallVector<ObjCProtocolDecl *, 4> ToProtocols;
+  for (ObjCProtocolDecl *FromProtocol : T->getProtocols()) {
+    Expected<ObjCProtocolDecl *> ToProtocolOrErr = import(FromProtocol);
+    if (!ToProtocolOrErr)
+      return ToProtocolOrErr.takeError();
+    ToProtocols.push_back(*ToProtocolOrErr);
+  }
+
+  return Importer.getToContext().getObjCTypeParamType(*ToDeclOrErr,
+                                                      ToProtocols);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitPipeType(const clang::PipeType *T) {
+  ExpectedType ToElementTypeOrErr = import(T->getElementType());
+  if (!ToElementTypeOrErr)
+    return ToElementTypeOrErr.takeError();
+
+  ASTContext &ToCtx = Importer.getToContext();
+  if (T->isReadOnly())
+    return ToCtx.getReadPipeType(*ToElementTypeOrErr);
+  else
+    return ToCtx.getWritePipeType(*ToElementTypeOrErr);
 }
 
 //----------------------------------------------------------------------------
@@ -4681,6 +4749,11 @@ ExpectedDecl ASTNodeImporter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
           ToColonLoc, ToTypeSourceInfo))
     return Result;
 
+  // Only import 'ObjCTypeParamType' after the decl is created.
+  auto ToTypeForDecl = importChecked(Err, D->getTypeForDecl());
+  if (Err)
+    return std::move(Err);
+  Result->setTypeForDecl(ToTypeForDecl);
   Result->setLexicalDeclContext(LexicalDC);
   return Result;
 }

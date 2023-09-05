@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -681,8 +682,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   for (auto Op : {ISD::FREM,        ISD::FPOW,         ISD::FPOWI,
                   ISD::FCOS,        ISD::FSIN,         ISD::FSINCOS,
-                  ISD::FEXP,        ISD::FEXP2,        ISD::FLOG,
-                  ISD::FLOG2,       ISD::FLOG10,       ISD::STRICT_FREM,
+                  ISD::FEXP,        ISD::FEXP2,        ISD::FEXP10,
+                  ISD::FLOG,        ISD::FLOG2,        ISD::FLOG10,
+                  ISD::STRICT_FREM,
                   ISD::STRICT_FPOW, ISD::STRICT_FPOWI, ISD::STRICT_FCOS,
                   ISD::STRICT_FSIN, ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
                   ISD::STRICT_FLOG, ISD::STRICT_FLOG2, ISD::STRICT_FLOG10}) {
@@ -1464,7 +1466,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      if (Subtarget->isSVEAvailable())
+        setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
@@ -1478,6 +1481,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FEXP10, VT, Expand);
       setOperationAction(ISD::FLOG, VT, Expand);
       setOperationAction(ISD::FLOG2, VT, Expand);
       setOperationAction(ISD::FLOG10, VT, Expand);
@@ -1524,9 +1528,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
-    // NEON doesn't support across-vector reductions, but SVE does.
-    for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
-      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+    if (Subtarget->isSVEAvailable()) {
+      // NEON doesn't support across-vector reductions, but SVE does.
+      for (auto VT :
+           {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
+        setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+    }
 
     if (!Subtarget->isNeonAvailable()) {
       setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
@@ -1647,6 +1654,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FLOG10, VT, Expand);
     setOperationAction(ISD::FEXP, VT, Expand);
     setOperationAction(ISD::FEXP2, VT, Expand);
+    setOperationAction(ISD::FEXP10, VT, Expand);
   }
 
   // But we do support custom-lowering for FCOPYSIGN.
@@ -1884,7 +1892,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
   setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
   setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT,
+                     StreamingSVE ? Expand : Custom);
   setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -2303,7 +2312,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
-    MAKE_CASE(AArch64ISD::OBSCURE_COPY)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -6982,7 +6990,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   SMEAttrs CallerAttrs(MF.getFunction());
   auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
   if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs))
+      CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.hasStreamingBody())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -7168,6 +7177,10 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::changeStreamingMode(
     SelectionDAG &DAG, SDLoc DL, bool Enable,
     SDValue Chain, SDValue InGlue, SDValue PStateSM, bool Entry) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  FuncInfo->setHasStreamingModeChanges(true);
+
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
@@ -7510,11 +7523,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
           return ArgReg.Reg == VA.getLocReg();
         });
       } else {
-        // Add an extra level of indirection for streaming mode changes by
-        // using a pseudo copy node that cannot be rematerialised between a
-        // smstart/smstop and the call by the simple register coalescer.
-        if (RequiresSMChange && isa<FrameIndexSDNode>(Arg))
-          Arg = DAG.getNode(AArch64ISD::OBSCURE_COPY, DL, MVT::i64, Arg);
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
@@ -11465,7 +11473,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
     };
 
     // For OP_MOVLANE shuffles, the RHSID represents the lane to move into. We
-    // get the lane to move from from the PFID, which is always from the
+    // get the lane to move from the PFID, which is always from the
     // original vectors (V1 or V2).
     SDValue OpLHS = GeneratePerfectShuffle(
         LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
@@ -16605,7 +16613,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
          return SDValue();
 
   // Multiplication of a power of two plus/minus one can be done more
-  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.
@@ -23198,19 +23206,20 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   // Check ExtractLow's user.
   if (HasFoundMULLow) {
     SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
-    if (ExtractLowUser->getOpcode() != N->getOpcode())
+    if (ExtractLowUser->getOpcode() != N->getOpcode()) {
       HasFoundMULLow = false;
-
-    if (ExtractLowUser->getOperand(0) == ExtractLow) {
-      if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(1);
-      else
-        HasFoundMULLow = false;
     } else {
-      if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
-        TruncLow = ExtractLowUser->getOperand(0);
-      else
-        HasFoundMULLow = false;
+      if (ExtractLowUser->getOperand(0) == ExtractLow) {
+        if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(1);
+        else
+          HasFoundMULLow = false;
+      } else {
+        if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
+          TruncLow = ExtractLowUser->getOperand(0);
+        else
+          HasFoundMULLow = false;
+      }
     }
   }
 
@@ -24955,7 +24964,8 @@ bool AArch64TargetLowering::shouldLocalize(
     llvm_unreachable("Unexpected remat cost");
   };
 
-  switch (MI.getOpcode()) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
   case TargetOpcode::G_GLOBAL_VALUE: {
     // On Darwin, TLS global vars get selected into function calls, which
     // we don't want localized, as they can get moved into the middle of a
@@ -24965,14 +24975,37 @@ bool AArch64TargetLowering::shouldLocalize(
       return false;
     return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
+  case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
-    auto *CI = MI.getOperand(1).getCImm();
+    const ConstantInt *CI;
+    unsigned AdditionalCost = 0;
+
+    if (Opc == TargetOpcode::G_CONSTANT)
+      CI = MI.getOperand(1).getCImm();
+    else {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      // We try to estimate cost of 32/64b fpimms, as they'll likely be
+      // materialized as integers.
+      if (Ty.getScalarSizeInBits() != 32 && Ty.getScalarSizeInBits() != 64)
+        break;
+      auto APF = MI.getOperand(1).getFPImm()->getValueAPF();
+      bool OptForSize =
+          MF.getFunction().hasOptSize() || MF.getFunction().hasMinSize();
+      if (isFPImmLegal(APF, EVT::getFloatingPointVT(Ty.getScalarSizeInBits()),
+                       OptForSize))
+        return true; // Constant should be cheap.
+      CI =
+          ConstantInt::get(MF.getFunction().getContext(), APF.bitcastToAPInt());
+      // FP materialization also costs an extra move, from gpr to fpr.
+      AdditionalCost = 1;
+    }
     APInt Imm = CI->getValue();
     InstructionCost Cost = TTI->getIntImmCost(
         Imm, CI->getType(), TargetTransformInfo::TCK_CodeSize);
     assert(Cost.isValid() && "Expected a valid imm cost");
 
     unsigned RematCost = *Cost.getValue();
+    RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);
     // Don't pass UINT_MAX sentinal value to hasAtMostUserInstrs().

@@ -1563,7 +1563,7 @@ void XCOFFObjectWriter::writeSectionForControlSectionEntry(
   }
 
   // The size of the tail padding in a section is the end virtual address of
-  // the current section minus the the end virtual address of the last csect
+  // the current section minus the end virtual address of the last csect
   // in that section.
   if (uint64_t PaddingSize =
           CsectEntry.Address + CsectEntry.Size - CurrentAddressLocation) {

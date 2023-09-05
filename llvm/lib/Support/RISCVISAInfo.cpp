@@ -526,7 +526,7 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
     return createStringError(errc::invalid_argument, Error);
   }
 
-  // If experimental extension, require use of current version number number
+  // If experimental extension, require use of current version number
   if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
     if (!EnableExperimentalExtension) {
       std::string Error = "requires '-menable-experimental-extensions' for "

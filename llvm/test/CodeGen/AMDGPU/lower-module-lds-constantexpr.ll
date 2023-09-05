@@ -4,19 +4,19 @@
 ; CHECK: %llvm.amdgcn.module.lds.t = type { float, float }
 ; CHECK: %llvm.amdgcn.kernel.timestwo.lds.t = type { float, float }
 
-@a_func = addrspace(3) global float undef, align 4
+@a_func = addrspace(3) global float poison, align 4
 
-@kern = addrspace(3) global float undef, align 4
+@kern = addrspace(3) global float poison, align 4
 
 ; @a_func is only used from a non-kernel function so is rewritten
 ; CHECK-NOT: @a_func
 ; @b_both is used from a non-kernel function so is rewritten
 ; CHECK-NOT: @b_both
 ; sorted both < func, so @b_both at null and @a_func at 4
-@b_both = addrspace(3) global float undef, align 4
+@b_both = addrspace(3) global float poison, align 4
 
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 4
-; CHECK: @llvm.amdgcn.kernel.timestwo.lds = internal addrspace(3) global %llvm.amdgcn.kernel.timestwo.lds.t undef, align 4
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4
+; CHECK: @llvm.amdgcn.kernel.timestwo.lds = internal addrspace(3) global %llvm.amdgcn.kernel.timestwo.lds.t poison, align 4
 
 ; CHECK-LABEL: @get_func()
 ; CHECK:       %0 = addrspacecast ptr addrspace(3) @llvm.amdgcn.module.lds to ptr

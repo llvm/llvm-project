@@ -702,7 +702,7 @@ static Value *isOneOf(const InstructionsState &S, Value *Op) {
   return S.OpValue;
 }
 
-/// \returns true if \p Opcode is allowed as part of of the main/alternate
+/// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///
 /// Example of unsupported opcode is SDIV that can potentially cause UB if the
@@ -2205,7 +2205,7 @@ public:
       for (int Pass = 0; Pass != 2; ++Pass) {
         // Check if no need to reorder operands since they're are perfect or
         // shuffled diamond match.
-        // Need to to do it to avoid extra external use cost counting for
+        // Need to do it to avoid extra external use cost counting for
         // shuffled matches, which may cause regressions.
         if (SkipReordering())
           break;
@@ -2523,9 +2523,9 @@ private:
   collectUserStores(const BoUpSLP::TreeEntry *TE) const;
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
-  /// stores in \p StoresVec can form a vector instruction. If so it returns true
-  /// and populates \p ReorderIndices with the shuffle indices of the the stores
-  /// when compared to the sorted vector.
+  /// stores in \p StoresVec can form a vector instruction. If so it returns
+  /// true and populates \p ReorderIndices with the shuffle indices of the
+  /// stores when compared to the sorted vector.
   bool canFormVector(ArrayRef<StoreInst *> StoresVec,
                      OrdersType &ReorderIndices) const;
 
@@ -6241,7 +6241,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                    ReuseShuffleIndicies);
       TE->setOperandsInOrder();
       for (unsigned i = 0, e = CI->arg_size(); i != e; ++i) {
-        // For scalar operands no need to to create an entry since no need to
+        // For scalar operands no need to create an entry since no need to
         // vectorize it.
         if (isVectorIntrinsicWithScalarOpAtArg(ID, i))
           continue;
@@ -10074,22 +10074,22 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
       if (It != Scalars.end()) {
         // Replace undefs by the non-poisoned scalars and emit broadcast.
         int Pos = std::distance(Scalars.begin(), It);
-        for_each(UndefPos, [&](int I) {
+        for (int I : UndefPos) {
           // Set the undef position to the non-poisoned scalar.
           ReuseMask[I] = Pos;
           // Replace the undef by the poison, in the mask it is replaced by
           // non-poisoned scalar already.
           if (I != Pos)
             Scalars[I] = PoisonValue::get(ScalarTy);
-        });
+        }
       } else {
         // Replace undefs by the poisons, emit broadcast and then emit
         // freeze.
-        for_each(UndefPos, [&](int I) {
+        for (int I : UndefPos) {
           ReuseMask[I] = PoisonMaskElem;
           if (isa<UndefValue>(Scalars[I]))
             Scalars[I] = PoisonValue::get(ScalarTy);
-        });
+        }
         NeedFreeze = true;
       }
     }
@@ -14181,7 +14181,7 @@ private:
            "A call to the llvm.fmuladd intrinsic is not handled yet");
 
     ++NumVectorInstructions;
-    return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind);
+    return createSimpleTargetReduction(Builder, VectorizedValue, RdxKind);
   }
 
   /// Emits optimized code for unique scalar value reused \p Cnt times.

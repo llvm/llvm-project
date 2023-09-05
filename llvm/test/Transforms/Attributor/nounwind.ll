@@ -12,11 +12,23 @@ define i32 @foo1() {
   ret i32 1
 }
 
+declare void @unknown()
+define void @foo2() nounwind {
+; CHECK: Function Attrs: nounwind
+; CHECK-LABEL: define {{[^@]+}}@foo2
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+  call void @unknown()
+  ret void
+}
+
 ; TEST 2
 define i32 @scc1_foo() {
 ; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@scc1_foo
-; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:    ret i32 1
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -33,7 +45,7 @@ define i32 @scc1_foo() {
 define i32 @scc1_bar() {
 ; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@scc1_bar
-; TUNIT-SAME: () #[[ATTR1]] {
+; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:    ret i32 1
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -138,6 +150,94 @@ define i32 @catch_thing_user() {
   ret i32 %catch_thing_call
 }
 
+define void @two_potential_callees_pos1(i1 %c) {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@two_potential_callees_pos1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR3:[0-9]+]] {
+; TUNIT-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @scc1_foo
+; TUNIT-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
+; TUNIT-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; TUNIT:       2:
+; TUNIT-NEXT:    call void @scc1_foo()
+; TUNIT-NEXT:    br label [[TMP6:%.*]]
+; TUNIT:       3:
+; TUNIT-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; TUNIT:       4:
+; TUNIT-NEXT:    call void @foo1()
+; TUNIT-NEXT:    br label [[TMP6]]
+; TUNIT:       5:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       6:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@two_potential_callees_pos1
+; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @scc1_foo
+; CGSCC-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
+; CGSCC-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CGSCC:       2:
+; CGSCC-NEXT:    call void @scc1_foo()
+; CGSCC-NEXT:    br label [[TMP6:%.*]]
+; CGSCC:       3:
+; CGSCC-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CGSCC:       4:
+; CGSCC-NEXT:    call void @foo1()
+; CGSCC-NEXT:    br label [[TMP6]]
+; CGSCC:       5:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       6:
+; CGSCC-NEXT:    ret void
+;
+  %fp = select i1 %c, ptr @foo1, ptr @scc1_foo
+  call void %fp()
+  ret void
+}
+define void @two_potential_callees_pos2(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@two_potential_callees_pos2
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo2, ptr @scc1_foo
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    call void @scc1_foo()
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       5:
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
+; CHECK-NEXT:    ret void
+;
+  %fp = select i1 %c, ptr @foo2, ptr @scc1_foo
+  call void %fp()
+  ret void
+}
+define void @two_potential_callees_neg(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@two_potential_callees_neg
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @non_nounwind
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @non_nounwind
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    call void @non_nounwind()
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       5:
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
+; CHECK-NEXT:    ret void
+;
+  %fp = select i1 %c, ptr @foo1, ptr @non_nounwind
+  call void %fp()
+  ret void
+}
 
 declare i32 @__gxx_personality_v0(...)
 
@@ -146,7 +246,10 @@ declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nounwind }
+; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR3]] = { norecurse }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nounwind }
 ;.

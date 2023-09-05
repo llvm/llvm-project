@@ -819,13 +819,13 @@ class ObjCLoopChecker
                    check::PostObjCMessage,
                    check::DeadSymbols,
                    check::PointerEscape > {
-  mutable IdentifierInfo *CountSelectorII;
+  mutable IdentifierInfo *CountSelectorII = nullptr;
 
   bool isCollectionCountMethod(const ObjCMethodCall &M,
                                CheckerContext &C) const;
 
 public:
-  ObjCLoopChecker() : CountSelectorII(nullptr) {}
+  ObjCLoopChecker() = default;
   void checkPostStmt(const ObjCForCollectionStmt *FCS, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;

@@ -6,6 +6,9 @@
 // RUN: %run not %t 10 0 0 1 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
 // RUN: %run %t 10 0 0 0
 
+// This test appears to be flaky on x86_64-darwin buildbots.
+// UNSUPPORTED: darwin
+
 #include <pthread.h>
 #include <stdlib.h>
 

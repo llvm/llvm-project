@@ -65,10 +65,10 @@ Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
   case tok::objc_implementation:
     break;
   default:
-    llvm::for_each(DeclAttrs, [this](const auto &Attr) {
+    for (const auto &Attr : DeclAttrs) {
       if (Attr.isGNUAttribute())
         Diag(Tok.getLocation(), diag::err_objc_unexpected_attr);
-    });
+    }
   }
 
   Decl *SingleDecl = nullptr;

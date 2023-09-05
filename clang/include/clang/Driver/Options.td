@@ -272,12 +272,6 @@ def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_op
 def mmpx : Flag<["-"], "mmpx">, Group<clang_ignored_legacy_options_Group>;
 def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
-// Retired with clang-16.0, to provide a deprecation period; it should
-// be removed in Clang 18 or later.
-def enable_trivial_var_init_zero : Flag<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, CLOption]>,
-  Group<clang_ignored_legacy_options_Group>;
-
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
@@ -1495,6 +1489,17 @@ defm autolink : BoolFOption<"autolink",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Disable generation of linker directives for automatic library linking">,
   PosFlag<SetTrue>>;
+
+let Flags = [TargetSpecific] in {
+defm auto_import : BoolFOption<"auto-import",
+  CodeGenOpts<"AutoImport">, DefaultTrue,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "MinGW specific. Disable support for automatic dllimport in code generation "
+          "and linking">,
+  PosFlag<SetTrue, [], [], "MinGW specific. Enable code generation support for "
+          "automatic dllimport, and enable support for it in the linker. "
+          "Enabled by default.">>;
+} // let Flags = [TargetSpecific]
 
 // In the future this option will be supported by other offloading
 // languages and accept other values such as CPU/GPU architectures,

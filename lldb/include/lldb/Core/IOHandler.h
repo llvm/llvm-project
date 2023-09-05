@@ -403,7 +403,7 @@ public:
 
   void SetInterruptExits(bool b) { m_interrupt_exits = b; }
 
-  const StringList *GetCurrentLines() const { return m_current_lines_ptr; }
+  StringList GetCurrentLines() const;
 
   uint32_t GetCurrentLineIndex() const;
 

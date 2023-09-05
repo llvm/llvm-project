@@ -653,7 +653,7 @@ HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
 
 bool HexagonShuffler::shuffle() {
   if (size() > HEXAGON_PACKET_SIZE) {
-    // Ignore a packet with with more than what a packet can hold
+    // Ignore a packet with more than what a packet can hold
     // or with compound or duplex insns for now.
     reportError("invalid instruction packet");
     return false;

@@ -423,7 +423,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Subtarget.hasStdExtZfa() ? Legal : Promote);
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
-                        ISD::FEXP2, ISD::FLOG, ISD::FLOG2, ISD::FLOG10},
+                        ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
+                        ISD::FLOG10},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -871,6 +872,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FEXP10, VT, Expand);
       setOperationAction(ISD::FLOG, VT, Expand);
       setOperationAction(ISD::FLOG2, VT, Expand);
       setOperationAction(ISD::FLOG10, VT, Expand);
@@ -4228,8 +4230,8 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 }
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
-// reinterpret it as a shuffle of v2i32 where the two i32s are bit rotated, and
-// lower it as a vror.vi (if legal with zvbb enabled).
+// reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
+// as a vror.vi if we have zvbb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4246,8 +4248,7 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                   NumElts / NumSubElts);
 
   // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
-  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::ROTL,
-                                                               RotateVT))
+  if (!Subtarget.getTargetLowering()->isTypeLegal(RotateVT))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -4274,12 +4275,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  // Lower to a vror.vi of a larger element type if possible. Do this before we
-  // promote i1s to i8s.
-  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
-    return V;
-
   if (VT.getVectorElementType() == MVT::i1) {
+    // Lower to a vror.vi of a larger element type if possible before we promote
+    // i1s to i8s.
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
     if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
       return V;
 
@@ -4381,6 +4381,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
+
+  // A bitrotate will be one instruction on zvbb, so try to lower to it first if
+  // available.
+  if (Subtarget.hasStdExtZvbb())
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
 
   // Lower rotations to a SLIDEDOWN and a SLIDEUP. One of the source vectors may
   // be undef which can be handled with a single SLIDEDOWN/UP.
@@ -4507,6 +4513,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   if (IsSelect)
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+
+  // We might be able to express the shuffle as a bitrotate. But even if we
+  // don't have zvbb and have to expand, the expanded sequence of approx. 2
+  // shifts and a vor will have a higher throughput than a vrgather.
+  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+    return V;
 
   if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
     // On such a large vector we're unable to use i8 as the index type.
@@ -4809,10 +4821,13 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   // Special case. See if we can build the constant as (ADD (SLLI X, 32), X) do
   // that if it will avoid a constant pool.
   // It will require an extra temporary register though.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
   if (!DAG.shouldOptForSize()) {
     int64_t LoVal = SignExtend64<32>(Imm);
     int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-    if (LoVal == HiVal) {
+    if (LoVal == HiVal ||
+        (Subtarget.hasStdExtZba() && Lo_32(Imm) == Hi_32(Imm))) {
       RISCVMatInt::InstSeq SeqLo =
           RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
       if ((SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
@@ -12901,12 +12916,10 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
   // shift can be omitted.
   // Fold setlt (sra X, N), 0 -> setlt X, 0 and
   // setge (sra X, N), 0 -> setge X, 0
-  if (auto *RHSConst = dyn_cast<ConstantSDNode>(RHS.getNode())) {
-    if ((CCVal == ISD::SETGE || CCVal == ISD::SETLT) &&
-        LHS.getOpcode() == ISD::SRA && RHSConst->isZero()) {
-      LHS = LHS.getOperand(0);
-      return true;
-    }
+  if (isNullConstant(RHS) && (CCVal == ISD::SETGE || CCVal == ISD::SETLT) &&
+      LHS.getOpcode() == ISD::SRA) {
+    LHS = LHS.getOperand(0);
+    return true;
   }
 
   if (!ISD::isIntEqualitySetCC(CCVal))

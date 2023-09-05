@@ -5,39 +5,27 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the \c APINotesWriter class that writes out
-// source API notes data providing additional information about source
-// code as a separate input, such as the non-nil/nilable annotations
-// for method parameters.
-//
-//===----------------------------------------------------------------------===//
+
 #include "clang/APINotes/APINotesWriter.h"
 #include "APINotesFormat.h"
+#include "clang/APINotes/Types.h"
 #include "clang/Basic/FileManager.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/DataTypes.h"
-#include <tuple>
-#include <vector>
-using namespace clang;
-using namespace api_notes;
-using namespace llvm::support;
+#include "llvm/Support/VersionTuple.h"
 
 namespace clang {
 namespace api_notes {
-template <typename T>
-using VersionedSmallVector =
-    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1>;
-
 class APINotesWriter::Implementation {
+  friend class APINotesWriter;
+
+  template <typename T>
+  using VersionedSmallVector =
+      llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1>;
+
   std::string ModuleName;
   const FileEntry *SourceFile;
 
@@ -47,7 +35,6 @@ class APINotesWriter::Implementation {
   /// Mapping from strings to identifier IDs.
   llvm::StringMap<IdentifierID> IdentifierIDs;
 
-public:
   bool SwiftInferImportAsMember = false;
 
   /// Information about contexts (Objective-C classes or protocols or C++
@@ -126,37 +113,36 @@ public:
       Typedefs;
 
   /// Retrieve the ID for the given identifier.
-  IdentifierID getIdentifier(StringRef identifier) {
-    if (identifier.empty())
+  IdentifierID getIdentifier(StringRef Identifier) {
+    if (Identifier.empty())
       return 0;
 
-    auto known = IdentifierIDs.find(identifier);
-    if (known != IdentifierIDs.end())
-      return known->second;
+    auto Known = IdentifierIDs.find(Identifier);
+    if (Known != IdentifierIDs.end())
+      return Known->second;
 
     // Add to the identifier table.
-    known = IdentifierIDs.insert({identifier, IdentifierIDs.size() + 1}).first;
-    return known->second;
+    Known = IdentifierIDs.insert({Identifier, IdentifierIDs.size() + 1}).first;
+    return Known->second;
   }
 
   /// Retrieve the ID for the given selector.
-  SelectorID getSelector(ObjCSelectorRef selectorRef) {
+  SelectorID getSelector(ObjCSelectorRef SelectorRef) {
     // Translate the selector reference into a stored selector.
-    StoredObjCSelector selector;
-    selector.NumPieces = selectorRef.NumPieces;
-    selector.Identifiers.reserve(selectorRef.Identifiers.size());
-    for (auto piece : selectorRef.Identifiers) {
-      selector.Identifiers.push_back(getIdentifier(piece));
-    }
+    StoredObjCSelector Selector;
+    Selector.NumPieces = SelectorRef.NumPieces;
+    Selector.Identifiers.reserve(SelectorRef.Identifiers.size());
+    for (auto piece : SelectorRef.Identifiers)
+      Selector.Identifiers.push_back(getIdentifier(piece));
 
     // Look for the stored selector.
-    auto known = SelectorIDs.find(selector);
-    if (known != SelectorIDs.end())
-      return known->second;
+    auto Known = SelectorIDs.find(Selector);
+    if (Known != SelectorIDs.end())
+      return Known->second;
 
     // Add to the selector table.
-    known = SelectorIDs.insert({selector, SelectorIDs.size()}).first;
-    return known->second;
+    Known = SelectorIDs.insert({Selector, SelectorIDs.size()}).first;
+    return Known->second;
   }
 
 private:
@@ -1279,129 +1265,128 @@ void APINotesWriter::writeToStream(llvm::raw_ostream &OS) {
   Implementation->writeToStream(OS);
 }
 
-ContextID
-APINotesWriter::addObjCContext(std::optional<ContextID> parentContextID,
-                               StringRef name, ContextKind contextKind,
-                               const ObjCContextInfo &info,
-                               VersionTuple swiftVersion) {
-  IdentifierID nameID = Implementation->getIdentifier(name);
+ContextID APINotesWriter::addObjCContext(std::optional<ContextID> ParentCtxID,
+                                         StringRef Name, ContextKind Kind,
+                                         const ObjCContextInfo &Info,
+                                         VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
 
-  uint32_t rawParentContextID = parentContextID ? parentContextID->Value : -1;
-  ContextTableKey key(rawParentContextID, (uint8_t)contextKind, nameID);
-  auto known = Implementation->ObjCContexts.find(key);
-  if (known == Implementation->ObjCContexts.end()) {
-    unsigned nextID = Implementation->ObjCContexts.size() + 1;
+  uint32_t RawParentCtxID = ParentCtxID ? ParentCtxID->Value : -1;
+  ContextTableKey Key(RawParentCtxID, static_cast<uint8_t>(Kind), NameID);
+  auto Known = Implementation->ObjCContexts.find(Key);
+  if (Known == Implementation->ObjCContexts.end()) {
+    unsigned NextID = Implementation->ObjCContexts.size() + 1;
 
-    VersionedSmallVector<ObjCContextInfo> emptyVersionedInfo;
-    known = Implementation->ObjCContexts.insert(
-              std::make_pair(key, std::make_pair(nextID, emptyVersionedInfo)))
-              .first;
+    Implementation::VersionedSmallVector<ObjCContextInfo> EmptyVersionedInfo;
+    Known = Implementation->ObjCContexts
+                .insert(std::make_pair(
+                    Key, std::make_pair(NextID, EmptyVersionedInfo)))
+                .first;
 
-    Implementation->ObjCContextNames[nextID] = nameID;
-    Implementation->ParentContexts[nextID] = rawParentContextID;
+    Implementation->ObjCContextNames[NextID] = NameID;
+    Implementation->ParentContexts[NextID] = RawParentCtxID;
   }
 
   // Add this version information.
-  auto &versionedVec = known->second.second;
-  bool found = false;
-  for (auto &versioned : versionedVec){
-    if (versioned.first == swiftVersion) {
-      versioned.second |= info;
-      found = true;
+  auto &VersionedVec = Known->second.second;
+  bool Found = false;
+  for (auto &Versioned : VersionedVec) {
+    if (Versioned.first == SwiftVersion) {
+      Versioned.second |= Info;
+      Found = true;
       break;
     }
   }
 
-  if (!found)
-    versionedVec.push_back({swiftVersion, info});
+  if (!Found)
+    VersionedVec.push_back({SwiftVersion, Info});
 
-  return ContextID(known->second.first);
+  return ContextID(Known->second.first);
 }
 
-void APINotesWriter::addObjCProperty(ContextID contextID, StringRef name,
-                                     bool isInstance,
-                                     const ObjCPropertyInfo &info,
-                                     VersionTuple swiftVersion) {
-  IdentifierID nameID = Implementation->getIdentifier(name);
+void APINotesWriter::addObjCProperty(ContextID CtxID, StringRef Name,
+                                     bool IsInstanceProperty,
+                                     const ObjCPropertyInfo &Info,
+                                     VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
   Implementation
-      ->ObjCProperties[std::make_tuple(contextID.Value, nameID, isInstance)]
-      .push_back({swiftVersion, info});
+      ->ObjCProperties[std::make_tuple(CtxID.Value, NameID, IsInstanceProperty)]
+      .push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addObjCMethod(ContextID contextID,
-                                   ObjCSelectorRef selector,
-                                   bool isInstanceMethod,
-                                   const ObjCMethodInfo &info,
-                                   VersionTuple swiftVersion) {
-  SelectorID selectorID = Implementation->getSelector(selector);
-  auto key = std::tuple<unsigned, unsigned, char>{contextID.Value, selectorID,
-                                                  isInstanceMethod};
-  Implementation->ObjCMethods[key].push_back({swiftVersion, info});
+void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
+                                   bool IsInstanceMethod,
+                                   const ObjCMethodInfo &Info,
+                                   VersionTuple SwiftVersion) {
+  SelectorID SelID = Implementation->getSelector(Selector);
+  auto Key = std::tuple<unsigned, unsigned, char>{CtxID.Value, SelID,
+                                                  IsInstanceMethod};
+  Implementation->ObjCMethods[Key].push_back({SwiftVersion, Info});
 
   // If this method is a designated initializer, update the class to note that
   // it has designated initializers.
-  if (info.DesignatedInit) {
-    assert(Implementation->ParentContexts.contains(contextID.Value));
-    uint32_t parentContextID = Implementation->ParentContexts[contextID.Value];
-    ContextTableKey ctxKey(parentContextID, (uint8_t)ContextKind::ObjCClass,
-                           Implementation->ObjCContextNames[contextID.Value]);
-    assert(Implementation->ObjCContexts.contains(ctxKey));
-    auto &versionedVec = Implementation->ObjCContexts[ctxKey].second;
-    bool found = false;
-    for (auto &versioned : versionedVec) {
-      if (versioned.first == swiftVersion) {
-        versioned.second.setHasDesignatedInits(true);
-        found = true;
+  if (Info.DesignatedInit) {
+    assert(Implementation->ParentContexts.contains(CtxID.Value));
+    uint32_t ParentCtxID = Implementation->ParentContexts[CtxID.Value];
+    ContextTableKey CtxKey(ParentCtxID,
+                           static_cast<uint8_t>(ContextKind::ObjCClass),
+                           Implementation->ObjCContextNames[CtxID.Value]);
+    assert(Implementation->ObjCContexts.contains(CtxKey));
+    auto &VersionedVec = Implementation->ObjCContexts[CtxKey].second;
+    bool Found = false;
+    for (auto &Versioned : VersionedVec) {
+      if (Versioned.first == SwiftVersion) {
+        Versioned.second.setHasDesignatedInits(true);
+        Found = true;
         break;
       }
     }
 
-    if (!found) {
-      versionedVec.push_back({swiftVersion, ObjCContextInfo()});
-      versionedVec.back().second.setHasDesignatedInits(true);
+    if (!Found) {
+      VersionedVec.push_back({SwiftVersion, ObjCContextInfo()});
+      VersionedVec.back().second.setHasDesignatedInits(true);
     }
   }
 }
 
-void APINotesWriter::addGlobalVariable(std::optional<Context> context,
-                                       llvm::StringRef name,
-                                       const GlobalVariableInfo &info,
-                                       VersionTuple swiftVersion) {
-  IdentifierID variableID = Implementation->getIdentifier(name);
-  ContextTableKey key(context, variableID);
-  Implementation->GlobalVariables[key].push_back({swiftVersion, info});
+void APINotesWriter::addGlobalVariable(std::optional<Context> Ctx,
+                                       llvm::StringRef Name,
+                                       const GlobalVariableInfo &Info,
+                                       VersionTuple SwiftVersion) {
+  IdentifierID VariableID = Implementation->getIdentifier(Name);
+  ContextTableKey Key(Ctx, VariableID);
+  Implementation->GlobalVariables[Key].push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addGlobalFunction(std::optional<Context> context,
-                                       llvm::StringRef name,
-                                       const GlobalFunctionInfo &info,
-                                       VersionTuple swiftVersion) {
-  IdentifierID nameID = Implementation->getIdentifier(name);
-  ContextTableKey key(context, nameID);
-  Implementation->GlobalFunctions[key].push_back({swiftVersion, info});
+void APINotesWriter::addGlobalFunction(std::optional<Context> Ctx,
+                                       llvm::StringRef Name,
+                                       const GlobalFunctionInfo &Info,
+                                       VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
+  ContextTableKey Key(Ctx, NameID);
+  Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addEnumConstant(llvm::StringRef name,
-                                     const EnumConstantInfo &info,
-                                     VersionTuple swiftVersion) {
-  IdentifierID enumConstantID = Implementation->getIdentifier(name);
-  Implementation->EnumConstants[enumConstantID].push_back({swiftVersion, info});
+void APINotesWriter::addEnumConstant(llvm::StringRef Name,
+                                     const EnumConstantInfo &Info,
+                                     VersionTuple SwiftVersion) {
+  IdentifierID EnumConstantID = Implementation->getIdentifier(Name);
+  Implementation->EnumConstants[EnumConstantID].push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addTag(std::optional<Context> context,
-                            llvm::StringRef name, const TagInfo &info,
-                            VersionTuple swiftVersion) {
-  IdentifierID tagID = Implementation->getIdentifier(name);
-  ContextTableKey key(context, tagID);
-  Implementation->Tags[key].push_back({swiftVersion, info});
+void APINotesWriter::addTag(std::optional<Context> Ctx, llvm::StringRef Name,
+                            const TagInfo &Info, VersionTuple SwiftVersion) {
+  IdentifierID TagID = Implementation->getIdentifier(Name);
+  ContextTableKey Key(Ctx, TagID);
+  Implementation->Tags[Key].push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addTypedef(std::optional<Context> context,
-                                llvm::StringRef name, const TypedefInfo &info,
-                                VersionTuple swiftVersion) {
-  IdentifierID typedefID = Implementation->getIdentifier(name);
-  ContextTableKey key(context, typedefID);
-  Implementation->Typedefs[key].push_back({swiftVersion, info});
+void APINotesWriter::addTypedef(std::optional<Context> Ctx,
+                                llvm::StringRef Name, const TypedefInfo &Info,
+                                VersionTuple SwiftVersion) {
+  IdentifierID TypedefID = Implementation->getIdentifier(Name);
+  ContextTableKey Key(Ctx, TypedefID);
+  Implementation->Typedefs[Key].push_back({SwiftVersion, Info});
 }
 
 void APINotesWriter::addModuleOptions(ModuleOptions opts) {

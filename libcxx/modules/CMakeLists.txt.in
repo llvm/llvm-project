@@ -40,7 +40,7 @@ target_sources(std
 )
 
 target_compile_definitions(std PRIVATE _LIBCPP_ENABLE_EXPERIMENTAL)
-target_include_directories(std SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIR@)
+target_include_directories(std SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
 
 target_compile_options(std
   PUBLIC

@@ -252,7 +252,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
+  getActionDefinitionsBuilder(G_FREM)
+      .libcallFor({s32, s64})
+      .minScalar(0, s32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
@@ -274,7 +277,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(
-      {G_FCOS, G_FSIN, G_FLOG10, G_FLOG, G_FLOG2, G_FEXP, G_FEXP2, G_FPOW})
+      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10,
+       G_FEXP, G_FEXP2, G_FEXP10})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
@@ -692,12 +696,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0] != EltTy;
       })
       .minScalar(2, s64)
-      .legalIf([=](const LegalityQuery &Query) {
+      .customIf([=](const LegalityQuery &Query) {
         const LLT &VecTy = Query.Types[1];
         return VecTy == v2s16 || VecTy == v4s16 || VecTy == v8s16 ||
                VecTy == v4s32 || VecTy == v2s64 || VecTy == v2s32 ||
-               VecTy == v8s8 || VecTy == v16s8 || VecTy == v2s32 ||
-               VecTy == v2p0;
+               VecTy == v8s8 || VecTy == v16s8 || VecTy == v2p0;
       })
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
@@ -1018,6 +1021,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeMemOps(MI, Helper);
   case TargetOpcode::G_FCOPYSIGN:
     return legalizeFCopySign(MI, Helper);
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    return legalizeExtractVectorElt(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1170,7 +1175,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // MO_TAGGED on the page indicates a tagged address. Set the tag now. We do so
   // by creating a MOVK that sets bits 48-63 of the register to (global address
   // + 0x100000000 - PC) >> 48. The additional 0x100000000 offset here is to
-  // prevent an incorrect tag being generated during relocation when the the
+  // prevent an incorrect tag being generated during relocation when the
   // global appears before the code section. Without the offset, a global at
   // `0x0f00'0000'0000'1000` (i.e. at `0x1000` with tag `0xf`) that's referenced
   // by code at `0x2000` would result in `0x0f00'0000'0000'1000 - 0x2000 =
@@ -1796,4 +1801,15 @@ bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
   MIRBuilder.buildUnmerge(DstRegs, Sel);
   MI.eraseFromParent();
   return true;
+}
+
+bool AArch64LegalizerInfo::legalizeExtractVectorElt(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
+  auto VRegAndVal =
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (VRegAndVal)
+    return true;
+  return Helper.lowerExtractInsertVectorElt(MI) !=
+         LegalizerHelper::LegalizeResult::UnableToLegalize;
 }
