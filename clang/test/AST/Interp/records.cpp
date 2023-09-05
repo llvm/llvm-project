@@ -911,3 +911,115 @@ namespace TemporaryObjectExpr {
   }
   static_assert(foo(F()) == 0, "");
 }
+
+namespace ZeroInit {
+  struct F {
+    int a;
+  };
+
+  namespace Simple {
+    struct A {
+      char a;
+      bool b;
+      int c[4];
+      float d;
+    };
+    constexpr int foo(A x) {
+      return x.a + static_cast<int>(x.b) + x.c[0] + x.c[3] + static_cast<int>(x.d);
+    }
+    static_assert(foo(A()) == 0, "");
+  }
+
+  namespace Inheritance {
+    struct F2 : F {
+      float f;
+    };
+
+    constexpr int foo(F2 f) {
+      return (int)f.f + f.a;
+    }
+    static_assert(foo(F2()) == 0, "");
+  }
+
+  namespace BitFields {
+    struct F {
+      unsigned a : 6;
+    };
+    constexpr int foo(F f) {
+      return f.a;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  namespace Nested {
+    struct F2 {
+      float f;
+      char c;
+    };
+
+    struct F {
+      F2 f2;
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.f2.f + f.f2.c;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  namespace CompositeArrays {
+    struct F2 {
+      float f;
+      char c;
+    };
+
+    struct F {
+      F2 f2[2];
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.f2[0].f + f.f2[0].c + f.f2[1].f + f.f2[1].c;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  /// FIXME: This needs support for unions on the new interpreter.
+  /// We diagnose an uninitialized object in c++14.
+#if __cplusplus > 201402L
+  namespace Unions {
+    struct F {
+      union {
+        int a;
+        char c[4];
+        float f;
+      } U;
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+    }
+    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to}}
+  }
+#endif
+
+#if __cplusplus >= 202002L
+  namespace Failure {
+    struct S {
+      int a;
+      F f{12};
+    };
+    constexpr int foo(S x) {
+      return x.a; // expected-note {{read of uninitialized object}} \
+                  // ref-note {{read of uninitialized object}}
+    }
+    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{in call to}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to}}
+  };
+#endif
+}
