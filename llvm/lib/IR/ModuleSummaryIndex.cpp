@@ -554,6 +554,17 @@ void ModuleSummaryIndex::exportToDot(
   std::map<StringRef, GVSOrderedMapTy> ModuleToDefinedGVS;
   collectDefinedGVSummariesPerModule(ModuleToDefinedGVS);
 
+  // Assign an id to each module path for use in graph labels. Since the
+  // StringMap iteration order isn't guaranteed, order by path string before
+  // assigning ids.
+  std::vector<StringRef> ModulePaths;
+  for (auto &[ModPath, _] : modulePaths())
+    ModulePaths.push_back(ModPath);
+  llvm::sort(ModulePaths);
+  DenseMap<StringRef, uint64_t> ModuleIdMap;
+  for (auto &ModPath : ModulePaths)
+    ModuleIdMap.try_emplace(ModPath, ModuleIdMap.size());
+
   // Get node identifier in form MXXX_<GUID>. The MXXX prefix is required,
   // because we may have multiple linkonce functions summaries.
   auto NodeId = [](uint64_t ModId, GlobalValue::GUID Id) {
@@ -589,7 +600,10 @@ void ModuleSummaryIndex::exportToDot(
 
   OS << "digraph Summary {\n";
   for (auto &ModIt : ModuleToDefinedGVS) {
-    auto ModId = getModuleId(ModIt.first);
+    // Will be empty for a just built per-module index, which doesn't setup a
+    // module paths table. In that case use 0 as the module id.
+    assert(ModuleIdMap.count(ModIt.first) || ModuleIdMap.empty());
+    auto ModId = ModuleIdMap.empty() ? 0 : ModuleIdMap[ModIt.first];
     OS << "  // Module: " << ModIt.first << "\n";
     OS << "  subgraph cluster_" << std::to_string(ModId) << " {\n";
     OS << "    style = filled;\n";
