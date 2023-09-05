@@ -326,16 +326,16 @@
 /clang/lib/CodeGen/Targets/M68k.cpp @llvm/pr-subscribers-m68k
 
 # libcxx
-/libcxx/ @llvm/pr-subscribers-libcxx
-/runtimes/ @llvm/pr-subscribers-libcxx
+/libcxx/ @llvm/reviewers-libcxx
+/runtimes/ @llvm/reviewers-libcxx
 
 # libcxxabi
-/libcxxabi/ @llvm/pr-subscribers-libcxxabi
-/runtimes/ @llvm/pr-subscribers-libcxxabi
+/libcxxabi/ @llvm/reviewers-libcxxabi
+/runtimes/ @llvm/reviewers-libcxxabi
 
 # libunwind
-/libunwind/ @llvm/pr-subscribers-libunwind
-/runtimes/ @llvm/pr-subscribers-libunwind
+/libunwind/ @llvm/reviewers-libunwind
+/runtimes/ @llvm/reviewers-libunwind
 
 # objectyaml
 /llvm/include/llvm/ObjectYAML/ @llvm/pr-subscribers-objectyaml
