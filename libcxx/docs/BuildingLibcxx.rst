@@ -79,7 +79,8 @@ CMake invocation at ``<monorepo>/llvm``:
   away from that terminology, which is too confusing.
 
 .. warning::
-  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not* freshen the cmake cache of any of the enabled runtimes.
+  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
+  freshen the cmake cache of any of the enabled runtimes.
 
 Support for Windows
 ===================
