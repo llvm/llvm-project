@@ -11,7 +11,8 @@
 // The dbgeng driver doesn't support \DexLimitSteps yet.
 // UNSUPPORTED: system-windows
 //
-// RUN: not %dexter_regression_test -v -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s
 
 // CHECK: Resolved Addresses:
 // CHECK-NEXT: 'x_2': 0x[[X2_VAL:[0-9a-f]+]]
