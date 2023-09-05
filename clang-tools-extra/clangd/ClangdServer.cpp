@@ -34,6 +34,7 @@
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -52,8 +53,8 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -112,6 +113,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
                  Stdlib(Stdlib)]() mutable {
+      clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
       if (Stdlib->isBest(LO))
