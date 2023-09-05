@@ -1394,7 +1394,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (AccessTy) {
     AMNew.HasBaseReg = true;
     TargetLoweringBase::AddrMode AMOld;
-    AMOld.BaseOffs = MaybeImm2Val->Value.getSExtValue();
+    AMOld.BaseOffs = MaybeImmVal->Value.getSExtValue();
     AMOld.HasBaseReg = true;
     unsigned AS = MRI.getType(Add2).getAddressSpace();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
