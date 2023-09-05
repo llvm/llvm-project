@@ -2625,6 +2625,45 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   replaceRegWith(MRI, OldReg, Replacement);
 }
 
+bool CombinerHelper::matchConstantLargerBitWidth(MachineInstr &MI,
+                                                 unsigned ConstIdx) {
+  Register ConstReg = MI.getOperand(ConstIdx).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  // Get the shift amount
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  if (!VRegAndVal)
+    return false;
+
+  // Return true of shift amount >= Bitwidth
+  return (VRegAndVal->Value.uge(DstTy.getSizeInBits()));
+}
+
+void CombinerHelper::applyFunnelShiftConstantModulo(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_FSHL ||
+          MI.getOpcode() == TargetOpcode::G_FSHR) &&
+         "This is not a funnel shift operation");
+
+  Register ConstReg = MI.getOperand(3).getReg();
+  LLT ConstTy = MRI.getType(ConstReg);
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  assert((VRegAndVal) && "Value is not a constant");
+
+  // Calculate the new Shift Amount = Old Shift Amount % BitWidth
+  APInt NewConst = VRegAndVal->Value.urem(
+      APInt(ConstTy.getSizeInBits(), DstTy.getScalarSizeInBits()));
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto NewConstInstr = Builder.buildConstant(ConstTy, NewConst.getZExtValue());
+  Builder.buildInstr(
+      MI.getOpcode(), {MI.getOperand(0)},
+      {MI.getOperand(1), MI.getOperand(2), NewConstInstr.getReg(0)});
+
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   // Match (cond ? x : x)
