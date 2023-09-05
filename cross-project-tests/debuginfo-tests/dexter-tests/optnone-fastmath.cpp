@@ -1,9 +1,9 @@
-// RUN: %clang -O2 -ffast-math -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
-// RUN: %clang -O0 -ffast-math -g %s -o %t
+// RUN:     --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-ffast-math -O2 -g" -- %s
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --builder 'clang' --debugger 'lldb' \
+// RUN:     --cflags "-ffast-math -O0 -g" -- %s
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
