@@ -349,8 +349,8 @@ struct VPTransformState {
   /// vector of instructions.
   void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
-  /// Set the debug location in the builder using the debug location in \p V.
-  void setDebugLocFromInst(const Value *V);
+  /// Set the debug location in the builder using the debug location \p DL.
+  void setDebugLocFrom(DebugLoc DL);
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
   void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance);
