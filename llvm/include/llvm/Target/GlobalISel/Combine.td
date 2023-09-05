@@ -429,11 +429,20 @@ def right_identity_zero: GICombineRule<
 >;
 
 // Fold x op 1 -> x
-def right_identity_one: GICombineRule<
+def right_identity_one_int: GICombineRule<
   (defs root:$dst),
   (match (G_MUL $dst, $x, 1)),
   (apply (GIReplaceReg $dst, $x))
 >;
+
+def right_identity_one_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FMUL $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, 1.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;
 
 // Fold (x op x) - > x
 def binop_same_val_frags : GICombinePatFrag<
