@@ -50,11 +50,11 @@
         lduw [%g1], %o2
         ! V8:      error: invalid instruction mnemonic
         ! V8-NEXT: lduwa [%i0 + %l6] 131, %o2
-        ! V9: lda [%i0+%l6] 131, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
+        ! V9: lda [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
         lduwa [%i0 + %l6] 131, %o2
         ! V8:      error: invalid instruction mnemonic
         ! V8-NEXT: lduwa [%i0 + %l6] (130+1), %o2
-        ! V9: lda [%i0+%l6] 131, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
+        ! V9: lda [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
         lduwa [%i0 + %l6] (130+1), %o2
 
         ! V9: ldsw [%i0+%l6], %o2    ! encoding: [0xd4,0x46,0x00,0x16]
@@ -63,9 +63,9 @@
         ldsw [%i0 + 32], %o2
         ! V9: ldsw [%g1], %o2        ! encoding: [0xd4,0x40,0x40,0x00]
         ldsw [%g1], %o2
-        ! V9: ldswa [%i0+%l6] 131, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
+        ! V9: ldswa [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
         ldswa [%i0 + %l6] 131, %o2
-        ! V9: ldswa [%i0+%l6] 131, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
+        ! V9: ldswa [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
         ldswa [%i0 + %l6] (130+1), %o2
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
@@ -141,9 +141,9 @@
         ! V9: ldx [%g2+%i5], %fsr   ! encoding: [0xc3,0x08,0x80,0x1d]
         ldx [%g2 + %i5],%fsr
 
-        ! V9: ldxa [%g2+%i5] 131, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
+        ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
         ldxa [%g2 + %i5] 131, %g0
-        ! V9: ldxa [%g2+%i5] 131, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
+        ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
         ldxa [%g2 + %i5] (130+1), %g0
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
@@ -156,9 +156,9 @@
         ! V9: stx %fsr, [%g2+%i5]   ! encoding: [0xc3,0x28,0x80,0x1d]
         stx %fsr,[%g2 + %i5]
 
-        ! V9: stxa %g0, [%g2+%i5] 131   ! encoding: [0xc0,0xf0,0x90,0x7d]
+        ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] 131
-        ! V9: stxa %g0, [%g2+%i5] 131   ! encoding: [0xc0,0xf0,0x90,0x7d]
+        ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] (130+1)
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
@@ -505,6 +505,12 @@
         ldxa [%g2 + 5] %asi, %g0
         ! V9: stxa %g0, [%g2+5] %asi    ! encoding: [0xc0,0xf0,0xa0,0x05]
         stxa %g0, [%g2 + 5] %asi
+
+        !! Also make sure named ASI tags are parsed properly.
+        ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
+        ldxa [%g2 + %i5] #ASI_SNF, %g0
+        ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
+        stxa %g0, [%g2 + %i5] #ASI_SNF
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], 1

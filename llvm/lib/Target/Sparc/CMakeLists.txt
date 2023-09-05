@@ -10,6 +10,7 @@ tablegen(LLVM SparcGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM SparcGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SparcGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SparcGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM SparcGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM SparcGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(SparcCommonTableGen)

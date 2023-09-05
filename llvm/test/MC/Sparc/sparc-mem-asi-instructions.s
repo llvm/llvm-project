@@ -3,19 +3,19 @@
 
 ! V8: error: malformed ASI tag, must be a constant integer expression
 ! V8-NEXT: lduba [%i0] asi, %o2
-! V9: error: malformed ASI tag, must be %asi or a constant integer expression
+! V9: error: malformed ASI tag, must be %asi, a constant integer expression, or a named tag
 ! V9-NEXT: lduba [%i0] asi, %o2
 lduba [%i0] asi, %o2
 
 ! V8: error: malformed ASI tag, must be a constant integer expression
 ! V8-NEXT: lduba [%i0] %g0, %o2
-! V9: error: malformed ASI tag, must be %asi or a constant integer expression
+! V9: error: malformed ASI tag, must be %asi, a constant integer expression, or a named tag
 ! V9-NEXT: lduba [%i0] %g0, %o2
 lduba [%i0] %g0, %o2
 
 ! V8: error: malformed ASI tag, must be a constant integer expression
 ! V8-NEXT: lduba [%i0] %0, %o2
-! V9: error: malformed ASI tag, must be %asi or a constant integer expression
+! V9: error: malformed ASI tag, must be %asi, a constant integer expression, or a named tag
 ! V9-NEXT: lduba [%i0] %0, %o2
 lduba [%i0] %0, %o2
 
