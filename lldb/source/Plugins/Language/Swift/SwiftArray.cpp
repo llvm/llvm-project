@@ -14,7 +14,6 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Process.h"
@@ -23,7 +22,6 @@
 // FIXME: we should not need this
 #include "Plugins/Language/ObjC/Cocoa.h"
 
-#include "swift/AST/ASTContext.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace lldb;

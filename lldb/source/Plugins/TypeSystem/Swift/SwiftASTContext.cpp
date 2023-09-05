@@ -5073,6 +5073,11 @@ bool SwiftASTContext::IsPossibleDynamicType(opaque_compiler_type_t type,
       can_type->isAnyExistentialType())
     return true;
 
+  if (!IsImportedType(type) &&
+      (swift::isa<swift::EnumType>(can_type) ||
+       swift::isa<swift::BoundGenericEnumType>(can_type)))
+    return true;
+
   // Dynamic Self types are resolved inside DoArchetypeBindingForType(),
   // right before the actual archetype binding.
   if (can_type->hasDynamicSelfType())

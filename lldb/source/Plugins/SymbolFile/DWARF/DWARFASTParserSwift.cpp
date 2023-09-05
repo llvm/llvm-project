@@ -19,12 +19,6 @@
 #include "DWARFDefines.h"
 #include "SymbolFileDWARF.h"
 
-#include "swift/AST/ASTContext.h"
-#include "swift/AST/Decl.h"
-#include "swift/Demangling/Demangle.h"
-
-#include "clang/AST/DeclObjC.h"
-
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
@@ -37,6 +31,8 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+
+#include "clang/AST/DeclObjC.h"
 
 using namespace lldb;
 using namespace lldb_private;

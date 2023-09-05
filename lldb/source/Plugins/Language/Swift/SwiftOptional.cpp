@@ -12,7 +12,6 @@
 
 #include "SwiftOptional.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"

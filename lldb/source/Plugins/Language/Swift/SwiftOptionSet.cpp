@@ -18,8 +18,6 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "swift/AST/Decl.h"
-#include "swift/ClangImporter/ClangImporter.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/StringRef.h"
 

@@ -34,9 +34,6 @@
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
 #include "swift/Frontend/Frontend.h"
-#include "swift/AST/ClangModuleLoader.h"
-#include "swift/Basic/Version.h"
-#include "swift/Strings.h"
 
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
@@ -2220,9 +2217,10 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
       case Node::Kind::ExistentialMetatype:
       case Node::Kind::DynamicSelf:
       case Node::Kind::OpaqueType:
+      case Node::Kind::Enum:
+      case Node::Kind::BoundGenericEnum:
         return true;
-      case Node::Kind::BoundGenericStructure:
-      case Node::Kind::BoundGenericEnum: {
+      case Node::Kind::BoundGenericStructure: {
         if (node->getNumChildren() < 2)
           return false;
         NodePointer type_list = node->getLastChild();
@@ -3103,7 +3101,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     assert(Equivalent(child_is_base_class, ast_child_is_base_class));
     assert(Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent));
     // There are cases where only the runtime correctly detects an indirect enum.
-    ast_language_flags |= language_flags & LanguageFlags::eIsIndirectEnumCase;
+    ast_language_flags |= (language_flags & LanguageFlags::eIsIndirectEnumCase);
     assert(Equivalent(language_flags, ast_language_flags));
   });
 #endif
