@@ -1044,6 +1044,10 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
     frame_sp 
         = m_process.GetThreadList().GetSelectedThread()
             ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+  if (!frame_sp) {
+    log->Printf("no execution context to run expression in");
+    return false;
+  }
   auto eval_result = m_process.GetTarget().EvaluateExpression(
       expr_string,
       frame_sp.get(),
