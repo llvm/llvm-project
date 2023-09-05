@@ -223,47 +223,47 @@ VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
       LVer(nullptr),
       TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
 
-Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
+Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
     return Def->getLiveInIRValue();
 
-  if (hasScalarValue(Def, Instance)) {
-    return Data
-        .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
+  if (hasScalarValue(Def, Lane)) {
+    return Data.Scalars[Def][Lane.mapToCacheIndex(VF)];
   }
 
-  assert(hasVectorValue(Def, Instance.Part));
-  auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
+  assert(hasVectorValue(Def));
+  auto *VecPart = Data.Output[Def];
   if (!VecPart->getType()->isVectorTy()) {
-    assert(Instance.Lane.isFirstLane() && "cannot get lane > 0 for scalar");
+    assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
   // TODO: Cache created scalar values.
-  Value *Lane = Instance.Lane.getAsRuntimeExpr(Builder, VF);
-  auto *Extract = Builder.CreateExtractElement(VecPart, Lane);
-  // set(Def, Extract, Instance);
+  Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
+  auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
+  // set(Def, Extract, Lane);
   return Extract;
 }
 
-Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
+Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def, Part) ||
-            (hasScalarValue(Def, VPIteration(Part, 0)) &&
-             Data.PerPartScalars[Def][Part].size() == 1)) &&
-           "Trying to access a single scalar per part but has multiple scalars "
-           "per part.");
-    return get(Def, VPIteration(Part, 0));
+    assert(
+        (VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
+         (hasScalarValue(Def, VPLane(0)) && Data.Scalars[Def].size() == 1)) &&
+        "Trying to access a single scalar per part but has multiple scalars "
+        "per part.");
+    return get(Def, VPLane(0));
   }
 
   // If Values have been set for this Def return the one relevant for \p Part.
-  if (hasVectorValue(Def, Part))
-    return Data.PerPartOutput[Def][Part];
+  if (hasVectorValue(Def))
+    return Data.Output[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
     bool SafeToHoist = Def->isDefinedOutsideVectorRegions();
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
+    // Place the code for broadcasting invariant variables in the new
+    // preheader.
     IRBuilder<>::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
       BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
@@ -272,56 +272,55 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
         Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     }
 
-    // Place the code for broadcasting invariant variables in the new preheader.
-    // Broadcast the scalar into all locations in the vector.
+    // Place the code for broadcasting invariant variables in the new
+    // preheader. Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
 
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {Part, 0})) {
+  if (!hasScalarValue(Def, VPLane(0))) {
     assert(Def->isLiveIn() && "expected a live-in");
-    if (Part != 0)
-      return get(Def, 0);
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
-    set(Def, B, Part);
+    set(Def, B);
     return B;
   }
 
-  Value *ScalarValue = get(Def, {Part, 0});
+  Value *ScalarValue = get(Def, VPLane(0));
   // If we aren't vectorizing, we can just copy the scalar map values over
   // to the vector map.
   if (VF.isScalar()) {
-    set(Def, ScalarValue, Part);
+    set(Def, ScalarValue);
     return ScalarValue;
   }
 
   bool IsUniform = vputils::isUniformAfterVectorization(Def);
 
-  unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
+  VPLane LastLane = VPLane(IsUniform ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, {Part, LastLane})) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be uniform.
+  if (!hasScalarValue(Def, LastLane)) {
+    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes
+    // and VPExpandSCEVRecipes can also be uniform.
     assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
             isa<VPScalarIVStepsRecipe>(Def->getDefiningRecipe()) ||
             isa<VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
     IsUniform = true;
-    LastLane = 0;
+    LastLane = VPLane(0);
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
-  // Set the insert point after the last scalarized instruction or after the
-  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-  // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP =
-      isa<PHINode>(LastInst)
-          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
-          : std::next(BasicBlock::iterator(LastInst));
-  Builder.SetInsertPoint(&*NewIP);
+  if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane))) {
+    // Set the insert point after the last scalarized instruction or after the
+    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+    // will directly follow the scalar definitions.
+    auto NewIP =
+        isa<PHINode>(LastInst)
+            ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+            : std::next(BasicBlock::iterator(LastInst));
+    Builder.SetInsertPoint(&*NewIP);
+  }
 
   // However, if we are vectorizing, we need to construct the vector values.
   // If the value is known to be uniform after vectorization, we can just
@@ -332,15 +331,16 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
   Value *VectorValue = nullptr;
   if (IsUniform) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
-    set(Def, VectorValue, Part);
+    set(Def, VectorValue);
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
-    set(Def, Undef, Part);
+    Value *Undef =
+        PoisonValue::get(VectorType::get(ScalarValue->getType(), VF));
+    set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      packScalarIntoVectorValue(Def, {Part, Lane});
-    VectorValue = get(Def, Part);
+      packScalarIntoVectorValue(Def, Lane);
+    VectorValue = get(Def);
   }
   Builder.restoreIP(OldIP);
   return VectorValue;
@@ -392,12 +392,12 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
 }
 
 void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
-                                                 const VPIteration &Instance) {
-  Value *ScalarInst = get(Def, Instance);
-  Value *VectorValue = get(Def, Instance.Part);
-  VectorValue = Builder.CreateInsertElement(
-      VectorValue, ScalarInst, Instance.Lane.getAsRuntimeExpr(Builder, VF));
-  set(Def, VectorValue, Instance.Part);
+                                                 const VPLane &Lane) {
+  Value *ScalarInst = get(Def, Lane);
+  Value *VectorValue = get(Def);
+  VectorValue = Builder.CreateInsertElement(VectorValue, ScalarInst,
+                                            Lane.getAsRuntimeExpr(Builder, VF));
+  set(Def, VectorValue);
 }
 
 BasicBlock *
@@ -453,7 +453,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
-  bool Replica = State->Instance && !State->Instance->isFirstIteration();
+  bool Replica = State->Lane && !State->Lane->isFirstLane();
   VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
   VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
@@ -724,27 +724,24 @@ void VPRegionBlock::execute(VPTransformState *State) {
     return;
   }
 
-  assert(!State->Instance && "Replicating a Region with non-null instance.");
+  assert(!State->Lane && "Replicating a Region with non-null instance.");
 
   // Enter replicating mode.
-  State->Instance = VPIteration(0, 0);
+  State->Lane = VPLane(0);
 
-  for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part) {
-    State->Instance->Part = Part;
-    assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
-    for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
-         ++Lane) {
-      State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
-      // Visit the VPBlocks connected to \p this, starting from it.
-      for (VPBlockBase *Block : RPOT) {
-        LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
-        Block->execute(State);
-      }
+  assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
+  for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
+       ++Lane) {
+    State->Lane = VPLane(Lane, VPLane::Kind::First);
+    // Visit the VPBlocks connected to \p this, starting from it.
+    for (VPBlockBase *Block : RPOT) {
+      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+      Block->execute(State);
     }
   }
 
   // Exit replicating mode.
-  State->Instance.reset();
+  State->Lane.reset();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -816,10 +813,15 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // FIXME: Model VF * UF computation completely in VPlan.
   VFxUF.setUnderlyingValue(
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+  if (VF.getNumUsers() > 0) {
+    VF.setUnderlyingValue(
+        createStepForVF(Builder, TripCountV->getType(), State.VF, 1));
+  }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue
+  // loop.
   if (CanonicalIVStartValue) {
     VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
@@ -871,12 +873,12 @@ void VPlan::execute(VPTransformState *State) {
         isa<VPWidenIntOrFpInductionRecipe>(&R)) {
       PHINode *Phi = nullptr;
       if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
+        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
         assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
                "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
+        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }
 
@@ -885,6 +887,9 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      if (isa<VPWidenIntOrFpInductionRecipe>(&R) && R.getNumOperands() == 4)
+        Inc->setOperand(0, State->get(R.getOperand(3)));
+
       Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
       continue;
     }
@@ -894,24 +899,13 @@ void VPlan::execute(VPTransformState *State) {
     // only a single part is generated, which provides the last part from the
     // previous iteration. For non-ordered reductions all UF parts are
     // generated.
-    bool SinglePartNeeded =
-        isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-        isa<VPFirstOrderRecurrencePHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-        (isa<VPReductionPHIRecipe>(PhiR) &&
-         cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
     bool NeedsScalar =
         isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
         (isa<VPReductionPHIRecipe>(PhiR) &&
          cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-    unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
-
-    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *Phi = State->get(PhiR, Part, NeedsScalar);
-      Value *Val =
-          State->get(PhiR->getBackedgeValue(),
-                     SinglePartNeeded ? State->UF - 1 : Part, NeedsScalar);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-    }
+    Value *Phi = State->get(PhiR, NeedsScalar);
+    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
 
   State->CFG.DTU.flush();
@@ -1248,6 +1242,10 @@ void VPlanIngredient::print(raw_ostream &O) const {
 #endif
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
+
+bool VPValue::isDefinedOutsideVectorRegions() const {
+  return !hasDefiningRecipe() || !getDefiningRecipe()->getParent()->getParent();
+}
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });

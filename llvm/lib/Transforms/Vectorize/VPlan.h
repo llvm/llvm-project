@@ -164,6 +164,7 @@ private:
 
 public:
   VPLane(unsigned Lane, Kind LaneKind) : Lane(Lane), LaneKind(LaneKind) {}
+  VPLane(unsigned Lane) : Lane(Lane), LaneKind(Kind::First) {}
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
@@ -252,93 +253,76 @@ struct VPTransformState {
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
-  std::optional<VPIteration> Instance;
+  std::optional<VPLane> Lane;
 
   struct DataState {
-    /// A type for vectorized values in the new loop. Each value from the
-    /// original loop, when vectorized, is represented by UF vector values in
-    /// the new unrolled loop, where UF is the unroll factor.
-    typedef SmallVector<Value *, 2> PerPartValuesTy;
+    /// A type for vectorized values in the new loop.
 
-    DenseMap<VPValue *, PerPartValuesTy> PerPartOutput;
+    DenseMap<VPValue *, Value *> Output;
 
-    using ScalarsPerPartValuesTy = SmallVector<SmallVector<Value *, 4>, 2>;
-    DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
+    using ScalarsPerPartValuesTy = SmallVector<Value *, 4>;
+    DenseMap<VPValue *, ScalarsPerPartValuesTy> Scalars;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def and a given \p
   /// Part if \p IsScalar is false, otherwise return the generated scalar
   /// for \p Part. \See set.
-  Value *get(VPValue *Def, unsigned Part, bool IsScalar = false);
+  Value *get(VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(VPValue *Def, const VPIteration &Instance);
+  Value *get(VPValue *Def, const VPLane &Lane);
 
-  bool hasVectorValue(VPValue *Def, unsigned Part) {
-    auto I = Data.PerPartOutput.find(Def);
-    return I != Data.PerPartOutput.end() && Part < I->second.size() &&
-           I->second[Part];
+  bool hasVectorValue(VPValue *Def) {
+    auto I = Data.Output.find(Def);
+    return I != Data.Output.end() && I->second;
   }
 
-  bool hasScalarValue(VPValue *Def, VPIteration Instance) {
-    auto I = Data.PerPartScalars.find(Def);
-    if (I == Data.PerPartScalars.end())
+  bool hasScalarValue(VPValue *Def, VPLane Lane) {
+    auto I = Data.Scalars.find(Def);
+    if (I == Data.Scalars.end())
       return false;
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    return Instance.Part < I->second.size() &&
-           CacheIdx < I->second[Instance.Part].size() &&
-           I->second[Instance.Part][CacheIdx];
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
+    return CacheIdx < I->second.size() && I->second[CacheIdx];
   }
 
   /// Set the generated vector Value for a given VPValue and a given Part, if \p
   /// IsScalar is false. If \p IsScalar is true, set the scalar in (Part, 0).
-  void set(VPValue *Def, Value *V, unsigned Part, bool IsScalar = false) {
+  void set(VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
-      set(Def, V, VPIteration(Part, 0));
+      set(Def, V, VPLane(0));
       return;
     }
     assert((VF.isScalar() || V->getType()->isVectorTy()) &&
            "scalar values must be stored as (Part, 0)");
-    if (!Data.PerPartOutput.count(Def)) {
-      DataState::PerPartValuesTy Entry(UF);
-      Data.PerPartOutput[Def] = Entry;
-    }
-    Data.PerPartOutput[Def][Part] = V;
+    Data.Output[Def] = V;
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(VPValue *Def, Value *V, unsigned Part) {
-    auto Iter = Data.PerPartOutput.find(Def);
-    assert(Iter != Data.PerPartOutput.end() &&
-           "need to overwrite existing value");
-    Iter->second[Part] = V;
+  void reset(VPValue *Def, Value *V) {
+    auto Iter = Data.Output.find(Def);
+    assert(Iter != Data.Output.end() && "need to overwrite existing value");
+    Iter->second = V;
   }
 
-  /// Set the generated scalar \p V for \p Def and the given \p Instance.
-  void set(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.insert({Def, {}});
-    auto &PerPartVec = Iter.first->second;
-    if (PerPartVec.size() <= Instance.Part)
-      PerPartVec.resize(Instance.Part + 1);
-    auto &Scalars = PerPartVec[Instance.Part];
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
+  /// Set the generated scalar \p V for \p Def and the given \p Lane.
+  void set(VPValue *Def, Value *V, const VPLane &Lane) {
+    auto Iter = Data.Scalars.insert({Def, {}});
+    auto &Scalars = Iter.first->second;
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
   }
 
-  /// Reset an existing scalar value for \p Def and a given \p Instance.
-  void reset(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.find(Def);
-    assert(Iter != Data.PerPartScalars.end() &&
+  /// Reset an existing scalar value for \p Def and a given \p Lane.
+  void reset(VPValue *Def, Value *V, const VPLane &Lane) {
+    auto Iter = Data.Scalars.find(Def);
+    assert(Iter != Data.Scalars.end() && "need to overwrite existing value");
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
+    assert(CacheIdx < Iter->second.size() &&
            "need to overwrite existing value");
-    assert(Instance.Part < Iter->second.size() &&
-           "need to overwrite existing value");
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    assert(CacheIdx < Iter->second[Instance.Part].size() &&
-           "need to overwrite existing value");
-    Iter->second[Instance.Part][CacheIdx] = V;
+    Iter->second[CacheIdx] = V;
   }
 
   /// Add additional metadata to \p To that was not present on \p Orig.
@@ -359,7 +343,7 @@ struct VPTransformState {
   void setDebugLocFrom(DebugLoc DL);
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
-  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance);
+  void packScalarIntoVectorValue(VPValue *Def, const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -1224,12 +1208,12 @@ private:
   /// modeled instruction for a given part. \returns the generated value for \p
   /// Part. In some cases an existing value is returned rather than a generated
   /// one.
-  Value *generatePerPart(VPTransformState &State, unsigned Part);
+  Value *generate(VPTransformState &State);
 
   /// Utility methods serving execute(): generates a scalar single instance of
   /// the modeled instruction for a given lane. \returns the scalar generated
   /// value for lane \p Lane.
-  Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
+  Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
 
 #if !defined(NDEBUG)
   /// Return true if the VPInstruction is a floating point math operation, i.e.
@@ -1422,7 +1406,7 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
 
   Type *ResultTy;
 
-  Value *generate(VPTransformState &State, unsigned Part);
+  Value *generate(VPTransformState &State);
 
 public:
   VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
@@ -2604,6 +2588,9 @@ public:
     return getStartValue()->getLiveInIRValue()->getType();
   }
 
+  /// Returns the scalar type of the induction.
+  Type *getScalarType() { return getOperand(0)->getLiveInIRValue()->getType(); }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -2637,7 +2624,9 @@ public:
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
   VPActiveLaneMaskPHIRecipe *clone() override {
-    return new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
+    auto *R = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
+    R->addOperand(getOperand(1));
+    return R;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
@@ -3144,6 +3133,7 @@ class VPlan {
 
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
+  VPValue VF;
 
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
@@ -3232,6 +3222,7 @@ public:
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
+  VPValue &getVF() { return VF; }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
@@ -3665,6 +3656,29 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->isVectorToScalar();
   return false;
 }
+
+/// Checks if \p C is uniform across all VFs and UFs. It is considered as such
+/// if it is either defined outside the vector region or its operand is known to
+/// be uniform across all VFs and UFs (e.g. VPDerivedIV or VPCanonicalIVPHI).
+inline bool isUniformAcrossVFsAndUFs(VPValue *V) {
+  if (auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe())) {
+    return VPI ==
+           VPI->getParent()->getPlan()->getCanonicalIV()->getBackedgeValue();
+  }
+  if (isa<VPCanonicalIVPHIRecipe, VPDerivedIVRecipe>(V))
+    return true;
+  if (isa<VPReplicateRecipe>(V) && cast<VPReplicateRecipe>(V)->isUniform() &&
+      (isa<LoadInst, StoreInst>(V->getUnderlyingValue())) &&
+      all_of(V->getDefiningRecipe()->operands(),
+             [](VPValue *Op) { return Op->isDefinedOutsideVectorRegions(); }))
+    return true;
+
+  auto *C = dyn_cast_or_null<VPScalarCastRecipe>(V->getDefiningRecipe());
+  return C && (C->isDefinedOutsideVectorRegions() ||
+               isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
+               isa<VPCanonicalIVPHIRecipe>(C->getOperand(0)));
+}
+
 } // end namespace vputils
 
 } // end namespace llvm

@@ -40,7 +40,10 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[TMP17]]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = mul <vscale x 2 x i64> [[TMP18]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 8, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[VECTOR_GEP]]
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP13]], 1
+; CHECK-NEXT:    [[VS2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[VS2_1:%.*]] = mul i64 [[VS2]], 2
+; CHECK-NEXT:    [[VS2_2:%.*]] = mul i64 [[VS2_1]], 2
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[VS2_1]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT5]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()

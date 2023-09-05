@@ -629,9 +629,6 @@ define void @wide_iv_trunc_reuse(ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 6
