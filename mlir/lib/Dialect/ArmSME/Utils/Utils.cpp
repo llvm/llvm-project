@@ -31,7 +31,7 @@ bool mlir::arm_sme::isValidSMETileElementType(Type type) {
 }
 
 bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
-  if ((vType.getRank() != 2) && vType.allDimsScalable())
+  if ((vType.getRank() != 2) || !vType.allDimsScalable())
     return false;
 
   auto elemType = vType.getElementType();
