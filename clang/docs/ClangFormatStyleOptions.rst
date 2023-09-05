@@ -2747,6 +2747,7 @@ the configuration (without a prefix: ``Auto``).
      false:
      var x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
   C# and JavaScript interpolated strings are not broken.
 
   In Verilog:
