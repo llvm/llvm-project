@@ -345,6 +345,7 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 - Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
+- ``__builtin_isfpclass`` builtin now supports vector types.
 
 AST Matchers
 ------------
