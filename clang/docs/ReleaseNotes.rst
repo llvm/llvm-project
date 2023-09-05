@@ -852,6 +852,10 @@ Bug Fixes to C++ Support
 - Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
   (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
 
+- Fix a crash caused by substitution failure in expression requirements.
+  (`#64172 <https://github.com/llvm/llvm-project/issues/64172>`_) and
+  (`#64723 <https://github.com/llvm/llvm-project/issues/64723>`_).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
