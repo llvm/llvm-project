@@ -365,7 +365,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
-  auto Bounds = ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
   auto PreambleContents = llvm::MemoryBuffer::getMemBufferCopy(
       llvm::StringRef(PI.Contents).take_front(Bounds.Size));
   auto Clang = prepareCompilerInstance(
@@ -596,7 +596,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // without those.
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
@@ -622,7 +622,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
                                            const clang::Diagnostic &Info) {
     if (Cfg.Diagnostics.SuppressAll ||
         isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
-                                      *CI.getLangOpts()))
+                                      CI.getLangOpts()))
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
@@ -732,7 +732,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const CompilerInvocation &CI) {
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
