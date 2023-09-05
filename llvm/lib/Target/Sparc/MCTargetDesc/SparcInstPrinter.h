@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCINSTPRINTER_H
 #define LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCINSTPRINTER_H
 
+#include "SparcMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -24,6 +25,7 @@ public:
       : MCInstPrinter(MAI, MII, MRI) {}
 
   void printRegName(raw_ostream &OS, MCRegister Reg) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg, unsigned AltIdx) const;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   bool printSparcAliasInstr(const MCInst *MI, const MCSubtargetInfo &STI,
@@ -39,7 +41,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(MCRegister Reg,
+                                     unsigned AltIdx = SP::NoRegAltName);
 
   void printOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);
