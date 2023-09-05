@@ -386,8 +386,7 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
 # globalisel
 /llvm/**/GlobalISel/ @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
+/llvm/utils/TableGen/GlobalISel* @llvm/pr-subscribers-globalisel
 
 # selection-dag
 /llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
@@ -561,4 +560,3 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/test/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/unittests/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
-
