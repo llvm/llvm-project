@@ -39,6 +39,24 @@ transform.sequence failures(propagate) {
 
 // -----
 
+func.func @foo(%a: tensor<4x4xf32>, %b: tensor<4x4xf32>, %c: tensor<4x4xf32>) {
+  %c0 = arith.constant 0.0 : f32
+  // expected-remark @below {{tileable}}
+  %r = linalg.fill ins(%c0 : f32) outs(%c : tensor<4x4xf32>) -> tensor<4x4xf32>
+  // expected-remark @below {{tileable}}
+  linalg.matmul ins(%a, %b : tensor<4x4xf32>, tensor<4x4xf32>) outs(%r : tensor<4x4xf32>) -> tensor<4x4xf32>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %matched = transform.structured.match interface{TilingInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %matched, "tileable" : !transform.any_op
+  transform.yield
+}
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
