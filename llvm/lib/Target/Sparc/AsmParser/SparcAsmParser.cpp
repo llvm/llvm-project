@@ -1175,7 +1175,8 @@ SparcAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
                                                  Parser.getTok().getLoc()));
     Parser.Lex(); // Eat the [
 
-    if (Mnemonic == "cas" || Mnemonic == "casx" || Mnemonic == "casa") {
+    if (Mnemonic == "cas" || Mnemonic == "casl" || Mnemonic == "casa" ||
+        Mnemonic == "casx" || Mnemonic == "casxl" || Mnemonic == "casxa") {
       SMLoc S = Parser.getTok().getLoc();
       if (getLexer().getKind() != AsmToken::Percent)
         return MatchOperand_NoMatch;
