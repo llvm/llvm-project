@@ -2022,6 +2022,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/Sparc/SparcGenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/Sparc/SparcGenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/Sparc/SparcGenDisassemblerTables.inc"),
+            ("-gen-searchable-tables", "lib/Target/Sparc/SparcGenSearchableTables.inc"),
         ],
     },
     {
