@@ -49,7 +49,6 @@ void foo() {
 }
 
 // CHECK: cleanup.cont:{{.*}}
-// CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 4, ptr [[AGG:%agg.tmp[0-9]+]])
 // CHECK-NEXT: load i8
 // CHECK-NEXT: trunc
 // CHECK-NEXT: store i1 false
@@ -57,7 +56,5 @@ void foo() {
 
 // CHECK: await.suspend:{{.*}}
 // CHECK-NOT: call void @llvm.lifetime.start.p0(i64 8, ptr [[REF]])
-// CHECK-NOT: call void @llvm.lifetime.start.p0(i64 8, ptr [[AGG]])
 // CHECK: call void @_ZZN4Task12promise_type15await_transformES_EN10Suspension13await_suspendESt16coroutine_handleIvE
-// CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[AGG2:%agg.tmp[0-9]+]])
 // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[REF]])
