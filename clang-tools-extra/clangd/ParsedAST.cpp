@@ -425,8 +425,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   StoreDiags ASTDiags;
   ASTDiags.setDiagCallback(
       [&ASTListeners](const clang::Diagnostic &D, clangd::Diag &Diag) {
-        llvm::for_each(ASTListeners,
-                       [&](const auto &L) { L->sawDiagnostic(D, Diag); });
+        for (const auto &L : ASTListeners)
+          L->sawDiagnostic(D, Diag);
       });
 
   std::optional<PreamblePatch> Patch;
