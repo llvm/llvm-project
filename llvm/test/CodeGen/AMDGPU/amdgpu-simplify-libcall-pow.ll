@@ -1610,7 +1610,7 @@ define float @test_pow_f32_x_assumed_oge_0(float %x, float %y) {
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_OGE_ZERO:%.*]] = fcmp oge float [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_OGE_ZERO]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %x.oge.zero = fcmp oge float %x, 0.0
@@ -1624,7 +1624,7 @@ define float @test_pow_f32_x_assumed_ogt_0(float %x, float %y) {
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_OGE_ZERO:%.*]] = fcmp ogt float [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_OGE_ZERO]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %x.oge.zero = fcmp ogt float %x, 0.0
@@ -1638,7 +1638,7 @@ define float @test_pow_f32_x_assumed_uge_0(float %x, float %y) {
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_UGE_ZERO:%.*]] = fcmp uge float [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_UGE_ZERO]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %x.uge.zero = fcmp uge float %x, 0.0
@@ -1652,7 +1652,7 @@ define float @test_pow_f32_x_assumed_ugt_0(float %x, float %y) {
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_UGT_ZERO:%.*]] = fcmp ugt float [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_UGT_ZERO]])
-; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %x.ugt.zero = fcmp ugt float %x, 0.0
