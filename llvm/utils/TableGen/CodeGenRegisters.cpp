@@ -818,6 +818,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     BitInit *Bit = cast<BitInit>(TSF->getBit(I));
     TSFlags |= uint8_t(Bit->getValue()) << I;
   }
+
+  Synthetic = R->getValueAsBit("Synthetic");
 }
 
 // Create an inferred register class that was missing from the .td files.
@@ -828,7 +830,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
       CopyCost(0), Allocatable(true), AllocationPriority(0),
-      GlobalPriority(false), TSFlags(0) {
+      GlobalPriority(false), TSFlags(0), Synthetic(false) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
@@ -1096,7 +1098,8 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   for (auto *SuperRegRC : SuperRegRCs) {
     for (const auto &SuperRegClassPair : SuperRegClasses) {
       const BitVector &SuperRegClassBV = SuperRegClassPair.second;
-      if (SuperRegClassBV[SuperRegRC->EnumValue]) {
+      if (SuperRegClassBV[SuperRegRC->EnumValue] &&
+          !SuperRegClassPair.first->Synthetic) {
         SubRegRC = SuperRegClassPair.first;
         ChosenSuperRegClass = SuperRegRC;
 

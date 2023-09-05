@@ -3451,7 +3451,8 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
 
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC =
+        RegInfo->getMinimalPhysRegClass(Reg, MF.getRegInfo());
 
     unsigned Size = RegInfo->getSpillSize(*RC);
     Align Alignment(RegInfo->getSpillAlign(*RC));

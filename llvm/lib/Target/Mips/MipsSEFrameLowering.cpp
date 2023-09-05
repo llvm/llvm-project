@@ -259,7 +259,8 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
   //  copy dst_hi, $vr1
 
   unsigned Dst = I->getOperand(0).getReg(), Src = I->getOperand(1).getReg();
-  const TargetRegisterClass *DstRC = RegInfo.getMinimalPhysRegClass(Dst);
+  const TargetRegisterClass *DstRC =
+      RegInfo.getMinimalPhysRegClass(Dst, MBB.getParent()->getRegInfo());
   unsigned VRegSize = RegInfo.getRegSizeInBits(*DstRC) / 16;
   const TargetRegisterClass *RC = RegInfo.intRegClass(VRegSize);
   Register VR0 = MRI.createVirtualRegister(RC);
@@ -796,6 +797,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   for (const CalleeSavedInfo &I : CSI) {
     // Add the callee-saved register as live-in. Do not add if the register is
@@ -831,7 +833,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
 
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
     TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI,
                             Register());
   }

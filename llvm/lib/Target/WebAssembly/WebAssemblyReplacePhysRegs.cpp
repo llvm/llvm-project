@@ -80,7 +80,7 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // Replace explicit uses of the physical register with a virtual register.
-    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PReg);
+    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PReg, MRI);
     unsigned VReg = WebAssembly::NoRegister;
     for (MachineOperand &MO :
          llvm::make_early_inc_range(MRI.reg_operands(PReg))) {

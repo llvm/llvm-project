@@ -456,6 +456,7 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
   const PPCInstrInfo *InstrInfo =  Subtarget.getInstrInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &Info = MFI.getCalleeSavedInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   LLVM_DEBUG(dbgs() << "requiresFrameIndexScavenging for " << MF.getName()
                     << ".\n");
@@ -486,7 +487,7 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
     int FrIdx = CSI.getFrameIdx();
     Register Reg = CSI.getReg();
 
-    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, MRI);
     unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);
     if (!MFI.isFixedObjectIndex(FrIdx)) {
       // This is not a fixed object. If it requires alignment then we may still

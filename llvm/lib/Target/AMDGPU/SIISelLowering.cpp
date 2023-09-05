@@ -16285,7 +16285,8 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
 
 bool SITargetLowering::checkForPhysRegDependency(
     SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
-    const TargetInstrInfo *TII, unsigned &PhysReg, int &Cost) const {
+    const MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    unsigned &PhysReg, int &Cost) const {
   if (User->getOpcode() != ISD::CopyToReg)
     return false;
   if (!Def->isMachineOpcode())
@@ -16300,8 +16301,8 @@ bool SITargetLowering::checkForPhysRegDependency(
   const MCInstrDesc &II = TII->get(MDef->getMachineOpcode());
   if (II.isCompare() && II.hasImplicitDefOfPhysReg(AMDGPU::SCC)) {
     PhysReg = AMDGPU::SCC;
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
+        PhysReg, MRI, Def->getSimpleValueType(ResNo));
     Cost = RC->getCopyCost();
     return true;
   }

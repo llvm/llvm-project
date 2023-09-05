@@ -245,7 +245,8 @@ protected:
   /// multiple subregisters that alias the register.
   ///
   /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineReg(const TargetRegisterInfo &TRI, llvm::Register MachineReg,
+  bool addMachineReg(const TargetRegisterInfo &TRI,
+                     const MachineRegisterInfo &MRI, llvm::Register MachineReg,
                      unsigned MaxSize = ~1U);
 
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
@@ -325,6 +326,7 @@ public:
   /// \return                         false if no DWARF register exists
   ///                                 for MachineReg.
   bool addMachineRegExpression(const TargetRegisterInfo &TRI,
+                               const MachineRegisterInfo &MRI,
                                DIExpressionCursor &Expr,
                                llvm::Register MachineReg,
                                unsigned FragmentOffsetInBits = 0);

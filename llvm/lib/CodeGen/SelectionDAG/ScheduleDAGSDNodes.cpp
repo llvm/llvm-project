@@ -111,12 +111,14 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
                                       const TargetLowering &TLI,
+                                      const MachineRegisterInfo &MRI,
                                       unsigned &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
   unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
+  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, MRI, TII, PhysReg,
+                                    Cost))
     return;
 
   if (Register::isVirtualRegister(Reg))
@@ -134,7 +136,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
 
   if (PhysReg != 0) {
     const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
+        TRI->getMinimalPhysRegClass(Reg, MRI, Def->getSimpleValueType(ResNo));
     Cost = RC->getCopyCost();
   }
 }
@@ -490,7 +492,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         int Cost = 1;
         // Determine if this is a physical register dependency.
         const TargetLowering &TLI = DAG->getTargetLoweringInfo();
-        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
+        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, MRI, PhysReg, Cost);
         assert((PhysReg == 0 || !isChain) &&
                "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler

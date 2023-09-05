@@ -193,14 +193,15 @@ Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
 /// getAllocatableClass - Return the maximal subclass of the given register
 /// class that is alloctable, or NULL.
 const TargetRegisterClass *
-TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
+TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC,
+                                        const MachineRegisterInfo &MRI) const {
   if (!RC || RC->isAllocatable())
     return RC;
 
   for (BitMaskClassIterator It(RC->getSubClassMask(), *this); It.isValid();
        ++It) {
     const TargetRegisterClass *SubRC = getRegClass(It.getID());
-    if (SubRC->isAllocatable())
+    if (SubRC->isAllocatable() && MRI.isEnabled(SubRC))
       return SubRC;
   }
   return nullptr;
@@ -209,8 +210,8 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
 /// getMinimalPhysRegClass - Returns the Register Class of a physical
 /// register of the given type, picking the most sub register class of
 /// the right type that contains this physreg.
-const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
+const TargetRegisterClass *TargetRegisterInfo::getMinimalPhysRegClass(
+    MCRegister reg, const MachineRegisterInfo &MRI, MVT VT) const {
   assert(Register::isPhysicalRegister(reg) &&
          "reg must be a physical register");
 
@@ -219,7 +220,8 @@ TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
   const TargetRegisterClass* BestRC = nullptr;
   for (const TargetRegisterClass* RC : regclasses()) {
     if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
-        RC->contains(reg) && (!BestRC || BestRC->hasSubClass(RC)))
+        RC->contains(reg) && MRI.isEnabled(RC) &&
+        (!BestRC || BestRC->hasSubClass(RC)))
       BestRC = RC;
   }
 
@@ -227,8 +229,8 @@ TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
   return BestRC;
 }
 
-const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
+const TargetRegisterClass *TargetRegisterInfo::getMinimalPhysRegClassLLT(
+    MCRegister reg, const MachineRegisterInfo &MRI, LLT Ty) const {
   assert(Register::isPhysicalRegister(reg) &&
          "reg must be a physical register");
 
@@ -237,7 +239,7 @@ TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
   const TargetRegisterClass *BestRC = nullptr;
   for (const TargetRegisterClass *RC : regclasses()) {
     if ((!Ty.isValid() || isTypeLegalForClass(*RC, Ty)) && RC->contains(reg) &&
-        (!BestRC || BestRC->hasSubClass(RC)))
+        MRI.isEnabled(RC) && (!BestRC || BestRC->hasSubClass(RC)))
       BestRC = RC;
   }
 
@@ -248,7 +250,8 @@ TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
 /// registers for the specific register class.
 static void getAllocatableSetForRC(const MachineFunction &MF,
                                    const TargetRegisterClass *RC, BitVector &R){
-  assert(RC->isAllocatable() && "invalid for nonallocatable sets");
+  assert(RC->isAllocatable() && MF.getRegInfo().isEnabled(RC) &&
+         "invalid for nonallocatable sets");
   ArrayRef<MCPhysReg> Order = RC->getRawAllocationOrder(MF);
   for (MCPhysReg PR : Order)
     R.set(PR);
@@ -257,38 +260,44 @@ static void getAllocatableSetForRC(const MachineFunction &MF,
 BitVector TargetRegisterInfo::getAllocatableSet(const MachineFunction &MF,
                                           const TargetRegisterClass *RC) const {
   BitVector Allocatable(getNumRegs());
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (RC) {
     // A register class with no allocatable subclass returns an empty set.
-    const TargetRegisterClass *SubClass = getAllocatableClass(RC);
+    const TargetRegisterClass *SubClass = getAllocatableClass(RC, MRI);
     if (SubClass)
       getAllocatableSetForRC(MF, SubClass, Allocatable);
   } else {
     for (const TargetRegisterClass *C : regclasses())
-      if (C->isAllocatable())
+      if (C->isAllocatable() && MRI.isEnabled(C))
         getAllocatableSetForRC(MF, C, Allocatable);
   }
 
   // Mask out the reserved registers
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   const BitVector &Reserved = MRI.getReservedRegs();
   Allocatable.reset(Reserved);
 
   return Allocatable;
 }
 
-static inline
-const TargetRegisterClass *firstCommonClass(const uint32_t *A,
-                                            const uint32_t *B,
-                                            const TargetRegisterInfo *TRI) {
-  for (unsigned I = 0, E = TRI->getNumRegClasses(); I < E; I += 32)
-    if (unsigned Common = *A++ & *B++)
-      return TRI->getRegClass(I + llvm::countr_zero(Common));
+static inline const TargetRegisterClass *
+firstCommonClass(const uint32_t *A, const uint32_t *B,
+                 const TargetRegisterInfo *TRI,
+                 const MachineRegisterInfo &MRI) {
+  for (unsigned I = 0, E = TRI->getNumRegClasses(); I < E; I += 32) {
+    if (unsigned Common = *A++ & *B++) {
+      const TargetRegisterClass *RC =
+          TRI->getRegClass(I + llvm::countr_zero(Common));
+      if (MRI.isEnabled(RC))
+        return RC;
+    }
+  }
   return nullptr;
 }
 
 const TargetRegisterClass *
 TargetRegisterInfo::getCommonSubClass(const TargetRegisterClass *A,
-                                      const TargetRegisterClass *B) const {
+                                      const TargetRegisterClass *B,
+                                      const MachineRegisterInfo &MRI) const {
   // First take care of the trivial cases.
   if (A == B)
     return A;
@@ -297,13 +306,13 @@ TargetRegisterInfo::getCommonSubClass(const TargetRegisterClass *A,
 
   // Register classes are ordered topologically, so the largest common
   // sub-class it the common sub-class with the smallest ID.
-  return firstCommonClass(A->getSubClassMask(), B->getSubClassMask(), this);
+  return firstCommonClass(A->getSubClassMask(), B->getSubClassMask(), this,
+                          MRI);
 }
 
-const TargetRegisterClass *
-TargetRegisterInfo::getMatchingSuperRegClass(const TargetRegisterClass *A,
-                                             const TargetRegisterClass *B,
-                                             unsigned Idx) const {
+const TargetRegisterClass *TargetRegisterInfo::getMatchingSuperRegClass(
+    const TargetRegisterClass *A, const TargetRegisterClass *B, unsigned Idx,
+    const MachineRegisterInfo &MRI) const {
   assert(A && B && "Missing register class");
   assert(Idx && "Bad sub-register index");
 
@@ -312,14 +321,14 @@ TargetRegisterInfo::getMatchingSuperRegClass(const TargetRegisterClass *A,
     if (RCI.getSubReg() == Idx)
       // The bit mask contains all register classes that are projected into B
       // by Idx. Find a class that is also a sub-class of A.
-      return firstCommonClass(RCI.getMask(), A->getSubClassMask(), this);
+      return firstCommonClass(RCI.getMask(), A->getSubClassMask(), this, MRI);
   return nullptr;
 }
 
-const TargetRegisterClass *TargetRegisterInfo::
-getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
-                       const TargetRegisterClass *RCB, unsigned SubB,
-                       unsigned &PreA, unsigned &PreB) const {
+const TargetRegisterClass *TargetRegisterInfo::getCommonSuperRegClass(
+    const TargetRegisterClass *RCA, unsigned SubA,
+    const TargetRegisterClass *RCB, unsigned SubB, unsigned &PreA,
+    unsigned &PreB, const MachineRegisterInfo &MRI) const {
   assert(RCA && SubA && RCB && SubB && "Invalid arguments");
 
   // Search all pairs of sub-register indices that project into RCA and RCB
@@ -352,7 +361,7 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
     for (SuperRegClassIterator IB(RCB, this, true); IB.isValid(); ++IB) {
       // Check if a common super-register class exists for this index pair.
       const TargetRegisterClass *RC =
-        firstCommonClass(IA.getMask(), IB.getMask(), this);
+          firstCommonClass(IA.getMask(), IB.getMask(), this, MRI);
       if (!RC || getRegSizeInBits(*RC) < MinSize)
         continue;
 
@@ -384,7 +393,8 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
                                   const TargetRegisterClass *DefRC,
                                   unsigned DefSubReg,
                                   const TargetRegisterClass *SrcRC,
-                                  unsigned SrcSubReg) {
+                                  unsigned SrcSubReg,
+                                  const MachineRegisterInfo &MRI) {
   // Same register class.
   if (DefRC == SrcRC)
     return true;
@@ -393,7 +403,7 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
   unsigned SrcIdx, DefIdx;
   if (SrcSubReg && DefSubReg) {
     return TRI.getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg,
-                                      SrcIdx, DefIdx) != nullptr;
+                                      SrcIdx, DefIdx, MRI) != nullptr;
   }
 
   // At most one of the register is a sub register, make it Src to avoid
@@ -405,18 +415,19 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
 
   // One of the register is a sub register, check if we can get a superclass.
   if (SrcSubReg)
-    return TRI.getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg) != nullptr;
+    return TRI.getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg, MRI) !=
+           nullptr;
 
   // Plain copy.
-  return TRI.getCommonSubClass(DefRC, SrcRC) != nullptr;
+  return TRI.getCommonSubClass(DefRC, SrcRC, MRI) != nullptr;
 }
 
-bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                              unsigned DefSubReg,
-                                              const TargetRegisterClass *SrcRC,
-                                              unsigned SrcSubReg) const {
+bool TargetRegisterInfo::shouldRewriteCopySrc(
+    const TargetRegisterClass *DefRC, unsigned DefSubReg,
+    const TargetRegisterClass *SrcRC, unsigned SrcSubReg,
+    const MachineRegisterInfo &MRI) const {
   // If this source does not incur a cross register bank copy, use it.
-  return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
+  return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg, MRI);
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
@@ -507,7 +518,7 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
-    RC = getMinimalPhysRegClass(Reg);
+    RC = getMinimalPhysRegClass(Reg, MRI);
     assert(RC && "Unable to deduce the register class");
     return getRegSizeInBits(*RC);
   }

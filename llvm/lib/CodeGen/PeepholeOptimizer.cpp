@@ -793,7 +793,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
       if (!TRI->shouldRewriteCopySrc(DefRC, RegSubReg.SubReg, SrcRC,
-                                     CurSrcPair.SubReg))
+                                     CurSrcPair.SubReg, *MRI))
         continue;
 
       // We currently cannot deal with subreg operands on PHI instructions

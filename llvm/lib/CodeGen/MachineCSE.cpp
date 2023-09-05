@@ -196,7 +196,7 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
     // cse-add-with-overflow.ll). This can be done here as follows:
     // if (SrcSubReg)
     //  RC = TRI->getMatchingSuperRegClass(MRI->getRegClass(SrcReg), RC,
-    //                                     SrcSubReg);
+    //                                     SrcSubReg, MRI);
     // MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
     //
     // The 2-addr pass has been updated to handle coalesced subregs. However,

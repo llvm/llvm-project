@@ -477,7 +477,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
         continue;
 
       unsigned Reg = CS.getReg();
-      const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+          RegInfo->getMinimalPhysRegClass(Reg, F.getRegInfo());
 
       int FrameIdx;
       if (RegInfo->hasReservedSpillSlot(F, Reg, FrameIdx)) {
@@ -607,7 +608,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                 TII.get(TargetOpcode::COPY), CS.getDstReg())
           .addReg(Reg, getKillRegState(true));
       } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC =
+            TRI->getMinimalPhysRegClass(Reg, MF.getRegInfo());
         TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
                                 TRI, Register());
       }
@@ -634,7 +636,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
           .addReg(CI.getDstReg(), getKillRegState(true));
       } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC =
+            TRI->getMinimalPhysRegClass(Reg, MF.getRegInfo());
         TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC,
                                  TRI, Register());
         assert(I != RestoreBlock.begin() &&

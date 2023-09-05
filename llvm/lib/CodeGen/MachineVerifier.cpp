@@ -2109,14 +2109,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
-          TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
+          TRI->getMinimalPhysRegClassLLT(SrcReg, *MRI, DstTy);
       if (SrcRC)
         SrcSize = TRI->getRegSizeInBits(*SrcRC);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
-          TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
+          TRI->getMinimalPhysRegClassLLT(DstReg, *MRI, SrcTy);
       if (DstRC)
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
@@ -2490,7 +2490,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
               report("No largest legal super class exists.", MO, MONum);
               return;
             }
-            DRC = TRI->getMatchingSuperRegClass(SuperRC, DRC, SubIdx);
+            DRC = TRI->getMatchingSuperRegClass(SuperRC, DRC, SubIdx, *MRI);
             if (!DRC) {
               report("No matching super-reg register class.", MO, MONum);
               return;

@@ -422,6 +422,7 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
   XCoreFunctionInfo *XFI = MF->getInfo<XCoreFunctionInfo>();
   bool emitFrameMoves = XCoreRegisterInfo::needsFrameMoves(*MF);
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   DebugLoc DL;
   if (MI != MBB.end() && !MI->isDebugInstr())
@@ -434,7 +435,7 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
 
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
     TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI,
                             Register());
     if (emitFrameMoves) {
@@ -453,6 +454,7 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
   const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
   bool AtStart = MI == MBB.begin();
   MachineBasicBlock::iterator BeforeI = MI;
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (!AtStart)
     --BeforeI;
   for (const CalleeSavedInfo &CSR : CSI) {
@@ -460,7 +462,7 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitEpilogue");
 
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, TRI,
                              Register());
     assert(MI != MBB.begin() &&

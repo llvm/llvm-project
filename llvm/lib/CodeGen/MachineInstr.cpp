@@ -940,36 +940,40 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
 const TargetRegisterClass *MachineInstr::getRegClassConstraintEffectForVReg(
     Register Reg, const TargetRegisterClass *CurRC, const TargetInstrInfo *TII,
-    const TargetRegisterInfo *TRI, bool ExploreBundle) const {
+    const TargetRegisterInfo *TRI, const MachineRegisterInfo &MRI,
+    bool ExploreBundle) const {
   // Check every operands inside the bundle if we have
   // been asked to.
   if (ExploreBundle)
     for (ConstMIBundleOperands OpndIt(*this); OpndIt.isValid() && CurRC;
          ++OpndIt)
       CurRC = OpndIt->getParent()->getRegClassConstraintEffectForVRegImpl(
-          OpndIt.getOperandNo(), Reg, CurRC, TII, TRI);
+          OpndIt.getOperandNo(), Reg, CurRC, TII, TRI, MRI);
   else
     // Otherwise, just check the current operands.
     for (unsigned i = 0, e = NumOperands; i < e && CurRC; ++i)
-      CurRC = getRegClassConstraintEffectForVRegImpl(i, Reg, CurRC, TII, TRI);
+      CurRC =
+          getRegClassConstraintEffectForVRegImpl(i, Reg, CurRC, TII, TRI, MRI);
   return CurRC;
 }
 
 const TargetRegisterClass *MachineInstr::getRegClassConstraintEffectForVRegImpl(
     unsigned OpIdx, Register Reg, const TargetRegisterClass *CurRC,
-    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI) const {
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    const MachineRegisterInfo &MRI) const {
   assert(CurRC && "Invalid initial register class");
   // Check if Reg is constrained by some of its use/def from MI.
   const MachineOperand &MO = getOperand(OpIdx);
   if (!MO.isReg() || MO.getReg() != Reg)
     return CurRC;
   // If yes, accumulate the constraints through the operand.
-  return getRegClassConstraintEffect(OpIdx, CurRC, TII, TRI);
+  return getRegClassConstraintEffect(OpIdx, CurRC, TII, TRI, MRI);
 }
 
 const TargetRegisterClass *MachineInstr::getRegClassConstraintEffect(
     unsigned OpIdx, const TargetRegisterClass *CurRC,
-    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI) const {
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    const MachineRegisterInfo &MRI) const {
   const TargetRegisterClass *OpRC = getRegClassConstraint(OpIdx, TII, TRI);
   const MachineOperand &MO = getOperand(OpIdx);
   assert(MO.isReg() &&
@@ -977,11 +981,11 @@ const TargetRegisterClass *MachineInstr::getRegClassConstraintEffect(
   assert(CurRC && "Invalid initial register class");
   if (unsigned SubIdx = MO.getSubReg()) {
     if (OpRC)
-      CurRC = TRI->getMatchingSuperRegClass(CurRC, OpRC, SubIdx);
+      CurRC = TRI->getMatchingSuperRegClass(CurRC, OpRC, SubIdx, MRI);
     else
       CurRC = TRI->getSubClassWithSubReg(CurRC, SubIdx);
   } else if (OpRC)
-    CurRC = TRI->getCommonSubClass(CurRC, OpRC);
+    CurRC = TRI->getCommonSubClass(CurRC, OpRC, MRI);
   return CurRC;
 }
 

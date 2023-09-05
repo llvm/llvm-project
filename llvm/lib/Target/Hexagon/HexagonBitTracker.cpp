@@ -120,7 +120,8 @@ uint16_t HexagonEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
         return TRI.getRegSizeInBits(RC);
   }
   // Default treatment for other physical registers.
-  if (const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg))
+  if (const TargetRegisterClass *RC =
+          TRI.getMinimalPhysRegClass(Reg, MF.getRegInfo()))
     return TRI.getRegSizeInBits(*RC);
 
   llvm_unreachable(

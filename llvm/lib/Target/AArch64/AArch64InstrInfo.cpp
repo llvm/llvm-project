@@ -703,15 +703,15 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        int &FalseCycles) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RC =
-      RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
+  const TargetRegisterClass *RC = RI.getCommonSubClass(
+      MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg), MRI);
   if (!RC)
     return false;
 
   // Also need to check the dest regclass, in case we're trying to optimize
   // something like:
   // %1(gpr) = PHI %2(fpr), bb1, %(fpr), bb2
-  if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg)))
+  if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg), MRI))
     return false;
 
   // Expanding cbz/tbz requires an extra cycle of latency on the condition.
@@ -5557,8 +5557,9 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     // This is slightly expensive to compute for physical regs since
     // getMinimalPhysRegClass is slow.
     auto getRegClass = [&](unsigned Reg) {
-      return Register::isVirtualRegister(Reg) ? MRI.getRegClass(Reg)
-                                              : TRI.getMinimalPhysRegClass(Reg);
+      return Register::isVirtualRegister(Reg)
+                 ? MRI.getRegClass(Reg)
+                 : TRI.getMinimalPhysRegClass(Reg, MRI);
     };
 
     if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {

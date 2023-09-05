@@ -48,8 +48,9 @@ bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       assert(Register::isPhysicalRegister(DstR.Reg));
       assert(Register::isPhysicalRegister(SrcR.Reg));
       const TargetRegisterInfo &TRI = DFG.getTRI();
-      if (TRI.getMinimalPhysRegClass(DstR.Reg) !=
-          TRI.getMinimalPhysRegClass(SrcR.Reg))
+      const MachineRegisterInfo &MRI = DFG.getMF().getRegInfo();
+      if (TRI.getMinimalPhysRegClass(DstR.Reg, MRI) !=
+          TRI.getMinimalPhysRegClass(SrcR.Reg, MRI))
         return false;
       if (!DFG.isTracked(SrcR) || !DFG.isTracked(DstR))
         return false;
@@ -158,7 +159,8 @@ bool CopyPropagation::run() {
 
   auto MinPhysReg = [this] (RegisterRef RR) -> unsigned {
     const TargetRegisterInfo &TRI = DFG.getTRI();
-    const TargetRegisterClass &RC = *TRI.getMinimalPhysRegClass(RR.Reg);
+    const TargetRegisterClass &RC =
+        *TRI.getMinimalPhysRegClass(RR.Reg, DFG.getMF().getRegInfo());
     if ((RC.LaneMask & RR.Mask) == RC.LaneMask)
       return RR.Reg;
     for (MCSubRegIndexIterator S(RR.Reg, &TRI); S.isValid(); ++S)

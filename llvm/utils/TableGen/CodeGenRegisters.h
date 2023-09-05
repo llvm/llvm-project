@@ -333,6 +333,7 @@ public:
   uint8_t AllocationPriority;
   bool GlobalPriority;
   uint8_t TSFlags;
+  bool Synthetic;
   /// Contains the combination of the lane masks of all subregisters.
   LaneBitmask LaneMask;
   /// True if there are at least 2 subregisters which do not interfere.

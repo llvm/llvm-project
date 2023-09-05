@@ -9738,9 +9738,11 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
           Register TiedReg = R->getReg();
           MVT RegVT = R->getSimpleValueType(0);
           const TargetRegisterClass *RC =
-              TiedReg.isVirtual()     ? MRI.getRegClass(TiedReg)
-              : RegVT != MVT::Untyped ? TLI.getRegClassFor(RegVT)
-                                      : TRI.getMinimalPhysRegClass(TiedReg);
+              TiedReg.isVirtual()
+                  ? MRI.getRegClass(TiedReg)
+                  : RegVT != MVT::Untyped
+                        ? TLI.getRegClassFor(RegVT)
+                        : TRI.getMinimalPhysRegClass(TiedReg, MRI);
           for (unsigned i = 0, e = Flag.getNumOperandRegisters(); i != e; ++i)
             Regs.push_back(MRI.createVirtualRegister(RC));
 

@@ -86,7 +86,7 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
   if (!Reg.isVirtual()) {
     // FIXME: This was probably a copy to a virtual register that does have a
     // type we could use.
-    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, TRI);
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg, TRI, MRI);
     return RC ? &getRegBankFromRegClass(*RC, LLT()) : nullptr;
   }
 
@@ -101,12 +101,14 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
 
 const TargetRegisterClass *
 RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
-                                         const TargetRegisterInfo &TRI) const {
+                                         const TargetRegisterInfo &TRI,
+                                         const MachineRegisterInfo &MRI) const {
   assert(Reg.isPhysical() && "Reg must be a physreg");
   const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
   if (RegRCIt != PhysRegMinimalRCs.end())
     return RegRCIt->second;
-  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
+  const TargetRegisterClass *PhysRC =
+      TRI.getMinimalPhysRegClassLLT(Reg, MRI, LLT());
   PhysRegMinimalRCs[Reg] = PhysRC;
   return PhysRC;
 }
@@ -503,7 +505,7 @@ TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
     // Because this is expensive, we'll cache the register class by calling
-    auto *RC = getMinimalPhysRegClass(Reg, TRI);
+    auto *RC = getMinimalPhysRegClass(Reg, TRI, MRI);
     assert(RC && "Expecting Register class");
     return TRI.getRegSizeInBits(*RC);
   }

@@ -62,8 +62,8 @@ public:
   /// specified sub-register index which is in the specified register class B.
   const TargetRegisterClass *
   getMatchingSuperRegClass(const TargetRegisterClass *A,
-                           const TargetRegisterClass *B,
-                           unsigned Idx) const override;
+                           const TargetRegisterClass *B, unsigned Idx,
+                           const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *
   getSubClassWithSubReg(const TargetRegisterClass *RC,
@@ -76,7 +76,8 @@ public:
   bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                             unsigned DefSubReg,
                             const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
+                            unsigned SrcSubReg,
+                            const MachineRegisterInfo &MRI) const override;
 
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.

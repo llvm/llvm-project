@@ -1065,7 +1065,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
        << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
        << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << ", "
-       << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
+       << (RC.getBaseClassOrder() ? "true" : "false") << " ,"
+       << (RC.Synthetic ? "true" : "false") << " },\n";
   }
 
   OS << "};\n\n";

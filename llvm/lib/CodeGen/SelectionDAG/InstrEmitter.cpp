@@ -131,13 +131,13 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
           const TargetRegisterClass *RC = nullptr;
           if (i + II.getNumDefs() < II.getNumOperands()) {
             RC = TRI->getAllocatableClass(
-                TII->getRegClass(II, i + II.getNumDefs(), TRI, *MF));
+                TII->getRegClass(II, i + II.getNumDefs(), TRI, *MF), *MRI);
           }
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
             const TargetRegisterClass *ComRC =
-                TRI->getCommonSubClass(UseRC, RC);
+                TRI->getCommonSubClass(UseRC, RC, *MRI);
             // If multiple uses expect disjoint register classes, we emit
             // copies in AddRegisterOperand.
             if (ComRC)
@@ -152,7 +152,7 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
-  SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
+  SrcRC = TRI->getMinimalPhysRegClass(SrcReg, *MRI, VT);
 
   // Figure out the register class to create for the destreg.
   if (VRBase) {
@@ -203,7 +203,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     // register instead of creating a new vreg.
     Register VRBase;
     const TargetRegisterClass *RC =
-      TRI->getAllocatableClass(TII->getRegClass(II, i, TRI, *MF));
+        TRI->getAllocatableClass(TII->getRegClass(II, i, TRI, *MF), *MRI);
     // Always let the value type influence the used register class. The
     // constraints on the instruction may be too lax to represent the value
     // type correctly. For example, a 64-bit float (X86::FR64) can't live in
@@ -213,7 +213,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
           Node->getSimpleValueType(i),
           (Node->isDivergent() || (RC && TRI->isDivergentRegClass(RC))));
       if (RC)
-        VTRC = TRI->getCommonSubClass(RC, VTRC);
+        VTRC = TRI->getCommonSubClass(RC, VTRC, *MRI);
       if (VTRC)
         RC = VTRC;
     }
@@ -350,7 +350,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
       const TargetRegisterClass *ConstrainedRC
         = MRI->constrainRegClass(VReg, OpRC, MinNumRegs);
       if (!ConstrainedRC) {
-        OpRC = TRI->getAllocatableClass(OpRC);
+        OpRC = TRI->getAllocatableClass(OpRC, *MRI);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         Register NewVReg = MRI->createVirtualRegister(OpRC);
         BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
@@ -412,7 +412,8 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
     Register VReg = R->getReg();
     MVT OpVT = Op.getSimpleValueType();
     const TargetRegisterClass *IIRC =
-        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI, *MF))
+        II ? TRI->getAllocatableClass(TII->getRegClass(*II, IIOpNum, TRI, *MF),
+                                      *MRI)
            : nullptr;
     const TargetRegisterClass *OpRC =
         TLI->isTypeLegal(OpVT)
@@ -640,7 +641,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
   const TargetRegisterClass *DstRC =
-    TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
+      TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx), *MRI);
   Register NewVReg = MRI->createVirtualRegister(DstRC);
   BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
     NewVReg).addReg(VReg);
@@ -658,7 +659,8 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
                                   bool IsClone, bool IsCloned) {
   unsigned DstRCIdx = Node->getConstantOperandVal(0);
   const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
-  Register NewVReg = MRI->createVirtualRegister(TRI->getAllocatableClass(RC));
+  Register NewVReg =
+      MRI->createVirtualRegister(TRI->getAllocatableClass(RC, *MRI));
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
   unsigned NumOps = Node->getNumOperands();
@@ -681,7 +683,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
         unsigned SubReg = getVR(Node->getOperand(i-1), VRBaseMap);
         const TargetRegisterClass *TRC = MRI->getRegClass(SubReg);
         const TargetRegisterClass *SRC =
-        TRI->getMatchingSuperRegClass(RC, TRC, SubIdx);
+            TRI->getMatchingSuperRegClass(RC, TRC, SubIdx, *MRI);
         if (SRC && SRC != RC) {
           MRI->setRegClass(NewVReg, SRC);
           RC = SRC;

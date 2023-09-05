@@ -1342,8 +1342,9 @@ static unsigned getNumAllocatableRegsForConstraints(
   assert(SuperRC && "Invalid register class");
 
   const TargetRegisterClass *ConstrainedRC =
-      MI->getRegClassConstraintEffectForVReg(Reg, SuperRC, TII, TRI,
-                                             /* ExploreBundle */ true);
+      MI->getRegClassConstraintEffectForVReg(
+          Reg, SuperRC, TII, TRI, MI->getParent()->getParent()->getRegInfo(),
+          /* ExploreBundle */ true);
   if (!ConstrainedRC)
     return 0;
   return RCI.getNumAllocatableRegs(ConstrainedRC);

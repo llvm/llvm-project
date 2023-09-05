@@ -175,7 +175,7 @@ bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
     auto SrcSub = MI->getOperand(1).getSubReg();
     auto SrcRC = MRI->getRegClass(Src);
     auto DstRC = MRI->getRegClass(Dst);
-    return TRI->getMatchingSuperRegClass(SrcRC, DstRC, SrcSub) != nullptr;
+    return TRI->getMatchingSuperRegClass(SrcRC, DstRC, SrcSub, *MRI) != nullptr;
   }
 
   if (Src.isPhysical() && Dst.isPhysical())

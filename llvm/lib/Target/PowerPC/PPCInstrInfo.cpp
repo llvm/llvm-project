@@ -1526,8 +1526,8 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RC =
-    RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
+  const TargetRegisterClass *RC = RI.getCommonSubClass(
+      MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg), MRI);
   if (!RC)
     return false;
 
@@ -1559,8 +1559,8 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   // Get the register classes.
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RC =
-    RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
+  const TargetRegisterClass *RC = RI.getCommonSubClass(
+      MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg), MRI);
   assert(RC && "TrueReg and FalseReg must have overlapping register classes");
 
   bool Is64Bit = PPC::G8RCRegClass.hasSubClassEq(RC) ||

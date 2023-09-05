@@ -612,7 +612,7 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
       PhysR = RS.Reg;
     }
     MCRegister PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysS);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysS, *MRI);
     switch (TRI->getRegSizeInBits(*RC)) {
       case 32:
         return IfTrue ? Hexagon::A2_tfrt : Hexagon::A2_tfrf;

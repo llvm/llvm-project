@@ -1391,10 +1391,11 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (auto &CS : CSI) {
     unsigned Reg = CS.getReg();
-    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg, MRI);
     unsigned Size = RegInfo->getSpillSize(*RC);
 
     // This might need a fixed stack slot.
@@ -1483,10 +1484,11 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   for (auto &CS : UnmanagedCSI) {
     // Insert the spill to the stack frame.
     Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
     TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg), CS.getFrameIdx(),
                             RC, TRI, Register());
   }
@@ -1513,9 +1515,10 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   // load-to-use data hazard between loading RA and return by RA.
   // loadRegFromStackSlot can insert multiple instructions.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   for (auto &CS : UnmanagedCSI) {
     Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
                              Register());
     assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");

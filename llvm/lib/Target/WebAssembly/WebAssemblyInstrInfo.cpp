@@ -64,7 +64,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterClass *RC =
       Register::isVirtualRegister(DestReg)
           ? MRI.getRegClass(DestReg)
-          : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(DestReg);
+          : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(DestReg, MRI);
 
   unsigned CopyOpcode = WebAssembly::getCopyOpcodeForRegClass(RC);
 

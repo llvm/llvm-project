@@ -4028,8 +4028,8 @@ bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RC =
-      RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
+  const TargetRegisterClass *RC = RI.getCommonSubClass(
+      MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg), MRI);
   if (!RC)
     return false;
 

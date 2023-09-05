@@ -498,21 +498,21 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       if (Src == Dst && SrcSub != DstSub)
         return false;
 
-      NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub,
-                                         SrcIdx, DstIdx);
+      NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub, SrcIdx,
+                                         DstIdx, MRI);
       if (!NewRC)
         return false;
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
-      NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+      NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub, MRI);
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
-      NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSub);
+      NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSub, MRI);
     } else {
       // This is a straight copy without sub-registers.
-      NewRC = TRI.getCommonSubClass(DstRC, SrcRC);
+      NewRC = TRI.getCommonSubClass(DstRC, SrcRC, MRI);
     }
 
     // The combined constraint may be impossible to satisfy.
@@ -1387,7 +1387,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
              && "Shouldn't have SrcIdx+DstIdx at this point");
       const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
       const TargetRegisterClass *CommonRC =
-        TRI->getCommonSubClass(DefRC, DstRC);
+          TRI->getCommonSubClass(DefRC, DstRC, *MRI);
       if (CommonRC != nullptr) {
         NewRC = CommonRC;
 
@@ -1481,9 +1481,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
     if (DefRC != nullptr) {
       if (NewIdx)
-        NewRC = TRI->getMatchingSuperRegClass(NewRC, DefRC, NewIdx);
+        NewRC = TRI->getMatchingSuperRegClass(NewRC, DefRC, NewIdx, *MRI);
       else
-        NewRC = TRI->getCommonSubClass(NewRC, DefRC);
+        NewRC = TRI->getCommonSubClass(NewRC, DefRC, *MRI);
       assert(NewRC && "subreg chosen for remat incompatible with instruction");
     }
     // Remap subranges to new lanemask and change register class.

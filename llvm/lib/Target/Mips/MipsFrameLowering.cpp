@@ -114,6 +114,7 @@ bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {
 uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   int64_t Size = 0;
 
@@ -124,7 +125,7 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
 
   // Conservatively assume all callee-saved registers will be saved.
   for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
-    unsigned RegSize = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
+    unsigned RegSize = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R, MRI));
     Size = alignTo(Size + RegSize, RegSize);
   }
 

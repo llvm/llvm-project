@@ -146,12 +146,11 @@ bool SystemZRegisterInfo::getRegAllocationHints(
             Use.getOpcode() == SystemZ::SELRMux) {
           MachineOperand &TrueMO = Use.getOperand(1);
           MachineOperand &FalseMO = Use.getOperand(2);
-          const TargetRegisterClass *RC =
-            TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
-                                   getRC32(TrueMO, VRM, MRI));
+          const TargetRegisterClass *RC = TRI->getCommonSubClass(
+              getRC32(FalseMO, VRM, MRI), getRC32(TrueMO, VRM, MRI), *MRI);
           if (Use.getOpcode() == SystemZ::SELRMux)
-            RC = TRI->getCommonSubClass(RC,
-                                        getRC32(Use.getOperand(0), VRM, MRI));
+            RC = TRI->getCommonSubClass(
+                RC, getRC32(Use.getOperand(0), VRM, MRI), *MRI);
           if (RC && RC != &SystemZ::GRX32BitRegClass) {
             addHints(Order, Hints, RC, MRI);
             // Return true to make these hints the only regs available to

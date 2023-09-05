@@ -264,13 +264,14 @@ public:
   /// a register tuple), return null.
   const TargetRegisterClass *
   getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
-                           const TargetRegisterClass *SubRC,
-                           unsigned SubIdx) const;
+                           const TargetRegisterClass *SubRC, unsigned SubIdx,
+                           const MachineRegisterInfo &MRI) const;
 
   bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                             unsigned DefSubReg,
                             const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
+                            unsigned SrcSubReg,
+                            const MachineRegisterInfo &MRI) const override;
 
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).

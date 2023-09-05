@@ -1387,7 +1387,7 @@ inline bool isOfRegClass(const TargetInstrInfo::RegSubRegPair &P,
   if (!P.SubReg)
     return RC == &TRC;
   auto *TRI = MRI.getTargetRegisterInfo();
-  return RC == TRI->getMatchingSuperRegClass(RC, &TRC, P.SubReg);
+  return RC == TRI->getMatchingSuperRegClass(RC, &TRC, P.SubReg, MRI);
 }
 
 /// \brief Create RegSubRegPair from a register MachineOperand

@@ -121,6 +121,9 @@ public:
   /// Return true if this register class has a defined BaseClassOrder.
   bool isBaseClass() const { return MC->isBaseClass(); }
 
+  /// Return true if this register class is marked synthetic.
+  bool isSynthetic() const { return MC->isSynthetic(); }
+
   /// Return true if the specified TargetRegisterClass
   /// is a proper sub-class of this TargetRegisterClass.
   bool hasSubClass(const TargetRegisterClass *RC) const {
@@ -338,20 +341,23 @@ public:
   /// Returns the Register Class of a physical register of the given type,
   /// picking the most sub register class of the right type that contains this
   /// physreg.
-  const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
-                                                    MVT VT = MVT::Other) const;
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg, const MachineRegisterInfo &MRI,
+                         MVT VT = MVT::Other) const;
 
   /// Returns the Register Class of a physical register of the given type,
   /// picking the most sub register class of the right type that contains this
   /// physreg. If there is no register class compatible with the given type,
   /// returns nullptr.
-  const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
-                                                       LLT Ty = LLT()) const;
+  const TargetRegisterClass *
+  getMinimalPhysRegClassLLT(MCRegister Reg, const MachineRegisterInfo &MRI,
+                            LLT Ty = LLT()) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
   const TargetRegisterClass *
-    getAllocatableClass(const TargetRegisterClass *RC) const;
+  getAllocatableClass(const TargetRegisterClass *RC,
+                      const MachineRegisterInfo &MRI) const;
 
   /// Returns a bitset indexed by register number indicating if a register is
   /// allocatable or not. If a register class is specified, returns the subset
@@ -630,7 +636,8 @@ public:
   /// TableGen will synthesize missing A sub-classes.
   virtual const TargetRegisterClass *
   getMatchingSuperRegClass(const TargetRegisterClass *A,
-                           const TargetRegisterClass *B, unsigned Idx) const;
+                           const TargetRegisterClass *B, unsigned Idx,
+                           const MachineRegisterInfo &MRI) const;
 
   // For a copy-like instruction that defines a register of class DefRC with
   // subreg index DefSubReg, reading from another source with class SrcRC and
@@ -639,7 +646,8 @@ public:
   virtual bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                                     unsigned DefSubReg,
                                     const TargetRegisterClass *SrcRC,
-                                    unsigned SrcSubReg) const;
+                                    unsigned SrcSubReg,
+                                    const MachineRegisterInfo &MRI) const;
 
   /// Returns the largest legal sub-class of RC that
   /// supports the sub-register index Idx.
@@ -769,10 +777,11 @@ public:
   /// corresponding argument register class.
   ///
   /// The function returns NULL if no register class can be found.
-  const TargetRegisterClass*
+  const TargetRegisterClass *
   getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
                          const TargetRegisterClass *RCB, unsigned SubB,
-                         unsigned &PreA, unsigned &PreB) const;
+                         unsigned &PreA, unsigned &PreB,
+                         const MachineRegisterInfo &MRI) const;
 
   //===--------------------------------------------------------------------===//
   // Register Class Information
@@ -809,8 +818,8 @@ public:
   /// Find the largest common subclass of A and B.
   /// Return NULL if there is no common subclass.
   const TargetRegisterClass *
-  getCommonSubClass(const TargetRegisterClass *A,
-                    const TargetRegisterClass *B) const;
+  getCommonSubClass(const TargetRegisterClass *A, const TargetRegisterClass *B,
+                    const MachineRegisterInfo &MRI) const;
 
   /// Returns a TargetRegisterClass used for pointer values.
   /// If a target supports multiple different pointer register classes,

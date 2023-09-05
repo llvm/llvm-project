@@ -253,6 +253,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   AVRMachineFunctionInfo *AVRFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     Register Reg = I.getReg();
@@ -268,7 +269,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
           break;
         }
 
-    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
+    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg, MRI)) == 8 &&
            "Invalid register size");
 
     // Add the callee-saved register as live-in only if it is not already a
@@ -301,11 +302,12 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
   const MachineFunction &MF = *MBB.getParent();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (const CalleeSavedInfo &CCSI : CSI) {
     Register Reg = CCSI.getReg();
 
-    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
+    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg, MRI)) == 8 &&
            "Invalid register size");
 
     BuildMI(MBB, MI, DL, TII.get(AVR::POPRd), Reg);

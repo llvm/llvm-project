@@ -208,7 +208,8 @@ const BitVector &GCNRewritePartialRegUses::getAllocatableAndAlignedRegClassMask(
     BV.resize(TRI->getNumRegClasses());
     for (unsigned ClassID = 0; ClassID < TRI->getNumRegClasses(); ++ClassID) {
       auto *RC = TRI->getRegClass(ClassID);
-      if (RC->isAllocatable() && TRI->isRegClassAligned(RC, AlignNumBits))
+      if (RC->isAllocatable() && MRI->isEnabled(RC) &&
+          TRI->isRegClassAligned(RC, AlignNumBits))
         BV.set(ClassID);
     }
   }
@@ -437,7 +438,7 @@ bool GCNRewritePartialRegUses::rewriteReg(Register Reg) const {
       if (const TargetRegisterClass *OpDescRC = getOperandRegClass(MO)) {
         LLVM_DEBUG(dbgs() << TRI->getRegClassName(SubRegRC) << " & "
                           << TRI->getRegClassName(OpDescRC) << " = ");
-        SubRegRC = TRI->getCommonSubClass(SubRegRC, OpDescRC);
+        SubRegRC = TRI->getCommonSubClass(SubRegRC, OpDescRC, *MRI);
       }
     }
 

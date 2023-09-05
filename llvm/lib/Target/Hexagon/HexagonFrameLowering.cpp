@@ -1411,6 +1411,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     return true;
   }
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
     // Add live in registers. We treat eh_return callee saved register r0 - r3
@@ -1418,7 +1419,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     // supposed to be killed.
     bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
     int FI = I.getFrameIdx();
-    const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg, MRI);
     HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, &HRI, Register());
     if (IsKill)
       MBB.addLiveIn(Reg);
@@ -1480,9 +1481,10 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     return true;
   }
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
-    const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg, MRI);
     int FI = I.getFrameIdx();
     HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI, Register());
   }
@@ -1560,6 +1562,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
       const TargetRegisterInfo *TRI, std::vector<CalleeSavedInfo> &CSI) const {
   LLVM_DEBUG(dbgs() << __func__ << " on " << MF.getName() << '\n');
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector SRegs(Hexagon::NUM_TARGET_REGS);
 
   // Generate a set of unique, callee-saved registers (SRegs), where each
@@ -1665,7 +1668,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   for (const SpillSlot *S = FixedSlots; S != FixedSlots+NumFixed; ++S) {
     if (!SRegs[S->Reg])
       continue;
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(S->Reg);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(S->Reg, MRI);
     int FI = MFI.CreateFixedSpillStackObject(TRI->getSpillSize(*RC), S->Offset);
     MinOffset = std::min(MinOffset, S->Offset);
     CSI.push_back(CalleeSavedInfo(S->Reg, FI));
@@ -1677,7 +1680,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // such register, create a non-fixed stack object.
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R, MRI);
     unsigned Size = TRI->getSpillSize(*RC);
     int Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());

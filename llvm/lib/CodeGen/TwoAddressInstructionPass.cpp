@@ -1328,9 +1328,8 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
       if (UnfoldMCID.getNumDefs() == 1) {
         // Unfold the load.
         LLVM_DEBUG(dbgs() << "2addr:   UNFOLDING: " << MI);
-        const TargetRegisterClass *RC =
-          TRI->getAllocatableClass(
-            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
+        const TargetRegisterClass *RC = TRI->getAllocatableClass(
+            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF), *MRI);
         Register Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
         if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
@@ -1531,7 +1530,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     if (SubRegB) {
       if (RegA.isVirtual()) {
         assert(TRI->getMatchingSuperRegClass(RC, MRI->getRegClass(RegA),
-                                             SubRegB) &&
+                                             SubRegB, *MRI) &&
                "tied subregister must be a truncation");
         // The superreg class will not be used to constrain the subreg class.
         RC = nullptr;

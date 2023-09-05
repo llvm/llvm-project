@@ -19094,7 +19094,8 @@ struct LoadedSlice {
     const TargetRegisterInfo *TRI = DAG->getSubtarget().getRegisterInfo();
     // Assume bitcasts are cheap, unless both register classes do not
     // explicitly share a common sub class.
-    if (!TRI || TRI->getCommonSubClass(ArgRC, ResRC))
+    if (!TRI || TRI->getCommonSubClass(ArgRC, ResRC,
+                                       DAG->getMachineFunction().getRegInfo()))
       return false;
 
     // Check if it will be merged with the load.

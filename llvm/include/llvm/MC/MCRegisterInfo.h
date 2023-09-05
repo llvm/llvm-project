@@ -47,6 +47,7 @@ public:
   const int8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;
+  const bool Synthetic;
 
   /// getID() - Return the register class ID number.
   ///
@@ -101,6 +102,9 @@ public:
 
   /// Return true if this register class has a defined BaseClassOrder.
   bool isBaseClass() const { return BaseClass; }
+  /// isSynthetic - Return true if this is a synthetic class. This field helps
+  /// targets to dynamically enable the regclass during codegen.
+  bool isSynthetic() const { return Synthetic; }
 };
 
 /// MCRegisterDesc - This record contains information about a particular

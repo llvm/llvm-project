@@ -417,7 +417,7 @@ void TailDuplicator::duplicateInstruction(
           const TargetRegisterClass *ConstrRC;
           if (VI->second.SubReg != 0) {
             ConstrRC = TRI->getMatchingSuperRegClass(MappedRC, OrigRC,
-                                                     VI->second.SubReg);
+                                                     VI->second.SubReg, *MRI);
             if (ConstrRC) {
               // The actual constraining (as in "find appropriate new class")
               // is done by getMatchingSuperRegClass, so now we only need to

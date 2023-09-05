@@ -555,7 +555,7 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   BitVector ReservedRegs = getReservedRegs(MF);
   for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R; ++R) {
     if (!ReservedRegs.test(Reg))
-      CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+      CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg, MRI));
   }
 
   int64_t MaxFPOffset = Offset - CalleeSavedSize;

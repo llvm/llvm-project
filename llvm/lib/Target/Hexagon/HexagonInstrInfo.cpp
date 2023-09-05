@@ -1730,12 +1730,14 @@ bool HexagonInstrInfo::ClobbersPredicate(MachineInstr &MI,
                                          std::vector<MachineOperand> &Pred,
                                          bool SkipDead) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (!MO.isDef())
         continue;
-      const TargetRegisterClass* RC = HRI.getMinimalPhysRegClass(MO.getReg());
+      const TargetRegisterClass *RC =
+          HRI.getMinimalPhysRegClass(MO.getReg(), MRI);
       if (RC == &Hexagon::PredRegsRegClass) {
         Pred.push_back(MO);
         return true;

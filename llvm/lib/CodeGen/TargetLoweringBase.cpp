@@ -1365,7 +1365,8 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
   for (unsigned i : SuperRegRC.set_bits()) {
     const TargetRegisterClass *SuperRC = TRI->getRegClass(i);
     // We want the largest possible spill size.
-    if (TRI->getSpillSize(*SuperRC) <= TRI->getSpillSize(*BestRC))
+    if (SuperRC->isSynthetic() ||
+        (TRI->getSpillSize(*SuperRC) <= TRI->getSpillSize(*BestRC)))
       continue;
     if (!isLegalRC(*TRI, *SuperRC))
       continue;

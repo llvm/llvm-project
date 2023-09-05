@@ -879,7 +879,6 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   if (RenameReg) {
     MCRegister RegToRename = getLdStRegOp(*I).getReg();
     DefinedInBB.addReg(*RenameReg);
-
     // Return the sub/super register for RenameReg, matching the size of
     // OriginalReg.
     auto GetMatchingSubReg =
@@ -895,6 +894,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     std::function<bool(MachineInstr &, bool)> UpdateMIs =
         [this, RegToRename, GetMatchingSubReg, MergeForward](MachineInstr &MI,
                                                              bool IsDef) {
+          const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
           if (IsDef) {
             bool SeenDef = false;
             for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
@@ -916,7 +916,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                   if (!isRewritableImplicitDef(MI.getOpcode()))
                     continue;
                   MatchingReg = GetMatchingSubReg(
-                      TRI->getMinimalPhysRegClass(MOP.getReg()));
+                      TRI->getMinimalPhysRegClass(MOP.getReg(), MRI));
                 }
                 MOP.setReg(MatchingReg);
                 SeenDef = true;
@@ -936,7 +936,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                   MatchingReg = GetMatchingSubReg(RC);
                 else
                   MatchingReg = GetMatchingSubReg(
-                      TRI->getMinimalPhysRegClass(MOP.getReg()));
+                      TRI->getMinimalPhysRegClass(MOP.getReg(), MRI));
                 assert(MatchingReg != AArch64::NoRegister &&
                        "Cannot find matching regs for renaming");
                 MOP.setReg(MatchingReg);
@@ -1422,7 +1422,8 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
 static bool canRenameMOP(const MachineOperand &MOP,
                          const TargetRegisterInfo *TRI) {
   if (MOP.isReg()) {
-    auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
+    const MachineRegisterInfo &MRI = MOP.getParent()->getMF()->getRegInfo();
+    auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg(), MRI);
     // Renaming registers with multiple disjunct sub-registers (e.g. the
     // result of a LD3) means that all sub-registers are renamed, potentially
     // impacting other instructions we did not check. Bail out.
@@ -1496,6 +1497,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
     // loop.
     FoundDef = IsDef;
 
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     // For defs, check if we can rename the first def of RegToRename.
     if (FoundDef) {
       // For some pseudo instructions, we might not generate code in the end
@@ -1518,7 +1520,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
-        RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
+        RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg(), MRI));
       }
       return true;
     } else {
@@ -1531,7 +1533,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
           LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
-        RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
+        RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg(), MRI));
       }
     }
     return true;
@@ -1577,6 +1579,8 @@ static bool canRenameUntilSecondLoad(
           return false;
         }
 
+        const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
         for (auto &MOP : MI.operands()) {
           if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
               !TRI->regsOverlap(MOP.getReg(), RegToRename))
@@ -1585,7 +1589,8 @@ static bool canRenameUntilSecondLoad(
             LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
             return false;
           }
-          RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
+          RequiredClasses.insert(
+              TRI->getMinimalPhysRegClass(MOP.getReg(), MRI));
         }
 
         return true;
@@ -1625,7 +1630,7 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
     });
   };
 
-  auto *RegClass = TRI->getMinimalPhysRegClass(Reg);
+  auto *RegClass = TRI->getMinimalPhysRegClass(Reg, RegInfo);
   for (const MCPhysReg &PR : *RegClass) {
     if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
         !RegInfo.isReserved(PR) && !AnySubOrSuperRegCalleePreserved(PR) &&
@@ -1653,7 +1658,9 @@ static std::optional<MCPhysReg> findRenameRegForSameLdStRegPair(
   if (!DebugCounter::shouldExecute(RegRenamingCounter))
     return RenameReg;
 
-  auto *RegClass = TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg());
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  auto *RegClass =
+      TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg(), MRI);
   MachineFunction &MF = *FirstMI.getParent()->getParent();
   if (!RegClass || !MF.getRegInfo().tracksLiveness())
     return RenameReg;

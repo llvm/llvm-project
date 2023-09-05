@@ -705,13 +705,14 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
     unsigned predRegNumSrc = 0;
     unsigned predRegNumDst = 0;
     const TargetRegisterClass* predRegClass = nullptr;
+    const MachineRegisterInfo &MRI = PacketMI.getMF()->getRegInfo();
 
     // Get predicate register used in the source instruction.
     for (auto &MO : PacketMI.operands()) {
       if (!MO.isReg())
         continue;
       predRegNumSrc = MO.getReg();
-      predRegClass = HRI->getMinimalPhysRegClass(predRegNumSrc);
+      predRegClass = HRI->getMinimalPhysRegClass(predRegNumSrc, MRI);
       if (predRegClass == &Hexagon::PredRegsRegClass)
         break;
     }
@@ -723,7 +724,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
       if (!MO.isReg())
         continue;
       predRegNumDst = MO.getReg();
-      predRegClass = HRI->getMinimalPhysRegClass(predRegNumDst);
+      predRegClass = HRI->getMinimalPhysRegClass(predRegNumDst, MRI);
       if (predRegClass == &Hexagon::PredRegsRegClass)
         break;
     }
@@ -1406,6 +1407,8 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
   if (!SUJ->isSucc(SUI))
     return true;
 
+  const MachineRegisterInfo &MRI = I.getMF()->getRegInfo();
+
   for (unsigned i = 0; i < SUJ->Succs.size(); ++i) {
     if (FoundSequentialDependence)
       break;
@@ -1433,7 +1436,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     const TargetRegisterClass *RC = nullptr;
     if (DepType == SDep::Data) {
       DepReg = SUJ->Succs[i].getReg();
-      RC = HRI->getMinimalPhysRegClass(DepReg);
+      RC = HRI->getMinimalPhysRegClass(DepReg, MRI);
     }
 
     if (I.isCall() || HII->isJumpR(I) || I.isReturn() || HII->isTailCall(I)) {

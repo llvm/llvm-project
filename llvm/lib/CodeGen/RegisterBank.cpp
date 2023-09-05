@@ -36,7 +36,7 @@ bool RegisterBank::verify(const RegisterBankInfo &RBI,
     for (unsigned SubRCId = 0; SubRCId != End; ++SubRCId) {
       const TargetRegisterClass &SubRC = *TRI.getRegClass(RCId);
 
-      if (!RC.hasSubClassEq(&SubRC))
+      if (SubRC.isSynthetic() || !RC.hasSubClassEq(&SubRC))
         continue;
 
       // Verify that the Size of the register bank is big enough to cover
@@ -91,7 +91,7 @@ void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
   for (unsigned RCId = 0, End = TRI->getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI->getRegClass(RCId);
 
-    if (covers(RC))
+    if (covers(RC) && !RC.isSynthetic())
       OS << LS << TRI->getRegClassName(&RC);
   }
 }

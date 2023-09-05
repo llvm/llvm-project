@@ -89,8 +89,9 @@ INITIALIZE_PASS_END(FixupStatepointCallerSaved, DEBUG_TYPE,
                     "Fixup Statepoint Caller Saved", false, false)
 
 // Utility function to get size of the register.
-static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg) {
-  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg,
+                                const MachineRegisterInfo &MRI) {
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg, MRI);
   return TRI.getSpillSize(*RC);
 }
 
@@ -124,6 +125,7 @@ static Register performCopyPropagation(Register Reg,
   MachineBasicBlock *MBB = RI->getParent();
   MachineBasicBlock::reverse_iterator E = MBB->rend();
   MachineInstr *Def = nullptr, *Use = nullptr;
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   for (auto It = ++(RI.getReverse()); It != E; ++It) {
     if (It->readsRegister(Reg, &TRI) && !Use)
       Use = &*It;
@@ -142,7 +144,7 @@ static Register performCopyPropagation(Register Reg,
 
   Register SrcReg = DestSrc->Source->getReg();
 
-  if (getRegisterSize(TRI, Reg) != getRegisterSize(TRI, SrcReg))
+  if (getRegisterSize(TRI, Reg, MRI) != getRegisterSize(TRI, SrcReg, MRI))
     return Reg;
 
   LLVM_DEBUG(dbgs() << "spillRegisters: perform copy propagation "
@@ -209,6 +211,7 @@ private:
   };
   MachineFrameInfo &MFI;
   const TargetRegisterInfo &TRI;
+  const MachineRegisterInfo &MRI;
   // Map size to list of frame indexes of this size. If the mode is
   // FixupSCSExtendSlotSize then the key 0 is used to keep all frame indexes.
   // If the size of required spill slot is greater than in a cache then the
@@ -232,8 +235,9 @@ private:
   }
 
 public:
-  FrameIndexesCache(MachineFrameInfo &MFI, const TargetRegisterInfo &TRI)
-      : MFI(MFI), TRI(TRI) {}
+  FrameIndexesCache(MachineFrameInfo &MFI, const TargetRegisterInfo &TRI,
+                    const MachineRegisterInfo &MRI)
+      : MFI(MFI), TRI(TRI), MRI(MRI) {}
   // Reset the current state of used frame indexes. After invocation of
   // this function all frame indexes are available for allocation with
   // the exception of slots reserved for landing pad processing (if any).
@@ -265,7 +269,7 @@ public:
       }
     }
 
-    unsigned Size = getRegisterSize(TRI, Reg);
+    unsigned Size = getRegisterSize(TRI, Reg, MRI);
     FrameIndexesPerSize &Line = getCacheBucket(Size);
     while (Line.Index < Line.Slots.size()) {
       int FI = Line.Slots[Line.Index++];
@@ -299,11 +303,12 @@ public:
   // Sort all registers to spill in descendent order. In the
   // FixupSCSExtendSlotSize mode it will minimize the total frame size.
   // In non FixupSCSExtendSlotSize mode we can skip this step.
-  void sortRegisters(SmallVectorImpl<Register> &Regs) {
+  void sortRegisters(SmallVectorImpl<Register> &Regs,
+                     const MachineRegisterInfo &MRI) {
     if (!FixupSCSExtendSlotSize)
       return;
     llvm::sort(Regs, [&](Register &A, Register &B) {
-      return getRegisterSize(TRI, A) > getRegisterSize(TRI, B);
+      return getRegisterSize(TRI, A, MRI) > getRegisterSize(TRI, B, MRI);
     });
   }
 };
@@ -398,7 +403,7 @@ public:
         RegsToSpill.push_back(Reg);
       OpsToSpill.push_back(Idx);
     }
-    CacheFI.sortRegisters(RegsToSpill);
+    CacheFI.sortRegisters(RegsToSpill, MF.getRegInfo());
     return !RegsToSpill.empty();
   }
 
@@ -418,7 +423,8 @@ public:
       bool IsKill = true;
       MachineBasicBlock::iterator InsertBefore(MI);
       Reg = performCopyPropagation(Reg, InsertBefore, IsKill, TII, TRI);
-      const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+          TRI.getMinimalPhysRegClass(Reg, MF.getRegInfo());
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
@@ -428,7 +434,8 @@ public:
 
   void insertReloadBefore(unsigned Reg, MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) {
-    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+    const TargetRegisterClass *RC =
+        TRI.getMinimalPhysRegClass(Reg, MF.getRegInfo());
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
       TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
@@ -519,7 +526,7 @@ public:
       if (I == OpsToSpill[CurOpIdx]) {
         int FI = RegToSlotIdx[MO.getReg()];
         MIB.addImm(StackMaps::IndirectMemRefOp);
-        MIB.addImm(getRegisterSize(TRI, MO.getReg()));
+        MIB.addImm(getRegisterSize(TRI, MO.getReg(), MF.getRegInfo()));
         assert(MO.isReg() && "Should be register");
         assert(MO.getReg().isPhysical() && "Should be physical register");
         MIB.addFrameIndex(FI);
@@ -538,6 +545,7 @@ public:
     assert(CurOpIdx == (OpsToSpill.size() - 1) && "Not all operands processed");
     // Add mem operands.
     NewMI->setMemRefs(MF, MI.memoperands());
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
     for (auto It : RegToSlotIdx) {
       Register R = It.first;
       int FrameIndex = It.second;
@@ -546,7 +554,7 @@ public:
       if (is_contained(RegsToReload, R))
         Flags |= MachineMemOperand::MOStore;
       auto *MMO =
-          MF.getMachineMemOperand(PtrInfo, Flags, getRegisterSize(TRI, R),
+          MF.getMachineMemOperand(PtrInfo, Flags, getRegisterSize(TRI, R, MRI),
                                   MFI.getObjectAlign(FrameIndex));
       NewMI->addMemOperand(MF, MMO);
     }
@@ -570,7 +578,7 @@ private:
 public:
   StatepointProcessor(MachineFunction &MF)
       : MF(MF), TRI(*MF.getSubtarget().getRegisterInfo()),
-        CacheFI(MF.getFrameInfo(), TRI) {}
+        CacheFI(MF.getFrameInfo(), TRI, MF.getRegInfo()) {}
 
   bool process(MachineInstr &MI, bool AllowGCPtrInCSR) {
     StatepointOpers SO(&MI);

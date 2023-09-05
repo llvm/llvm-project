@@ -97,6 +97,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 }
 
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
+                                    const MachineRegisterInfo &MRI,
                                     llvm::Register MachineReg,
                                     unsigned MaxSize) {
   if (!MachineReg.isPhysical()) {
@@ -134,7 +135,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // For example, Q0 on ARM is a composition of D0+D1.
   unsigned CurPos = 0;
   // The size of the register in bits.
-  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg);
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg, MRI);
   unsigned RegSize = TRI.getRegSizeInBits(*RC);
   // Keep track of the bits in the register we already emitted, so we
   // can avoid emitting redundant aliasing subregs. Because this is
@@ -248,11 +249,13 @@ void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
 }
 
 bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
+                                              const MachineRegisterInfo &MRI,
                                               DIExpressionCursor &ExprCursor,
                                               llvm::Register MachineReg,
                                               unsigned FragmentOffsetInBits) {
   auto Fragment = ExprCursor.getFragmentInfo();
-  if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U)) {
+  if (!addMachineReg(TRI, MRI, MachineReg,
+                     Fragment ? Fragment->SizeInBits : ~1U)) {
     LocationKind = Unknown;
     return false;
   }

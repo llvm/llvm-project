@@ -712,7 +712,7 @@ BT::BitMask BT::MachineEvaluator::mask(Register Reg, unsigned Sub) const {
 }
 
 uint16_t BT::MachineEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
-  const TargetRegisterClass &PC = *TRI.getMinimalPhysRegClass(Reg);
+  const TargetRegisterClass &PC = *TRI.getMinimalPhysRegClass(Reg, MRI);
   return TRI.getRegSizeInBits(PC);
 }
 

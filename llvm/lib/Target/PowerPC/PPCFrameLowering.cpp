@@ -2502,7 +2502,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         }
         Spilled.set(Dst);
       } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
         // Use !IsLiveIn for the kill flag.
         // We do not want to kill registers that are live in this function
         // before their use because they will become undefined registers.
@@ -2605,6 +2605,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
   bool CR4Spilled = false;
   unsigned CSIIndex = 0;
   BitVector Restored(TRI->getNumRegs());
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   // Initialize insertion-point logic; we will be restoring in reverse
   // order of spill.
@@ -2677,7 +2678,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
 
       } else {
         // Default behavior for non-CR saves.
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, MRI);
 
         // Functions without NoUnwind need to preserve the order of elements in
         // saved vector registers.

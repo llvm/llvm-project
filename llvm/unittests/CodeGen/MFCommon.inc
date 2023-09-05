@@ -17,12 +17,50 @@ public:
   bool hasFP(const MachineFunction &MF) const override { return false; }
 };
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
+// Dummy regclass fields ...
+namespace {
+enum {
+  NoRegister,
+  GPR0 = 1,
+  NUM_TARGET_REGS
+};
+
+enum {
+  GPRsRegClassID = 0,
+};
+
+const MCPhysReg GPRs[] = {GPR0};
+
+const uint8_t GPRsBits[] = { 0x00 };
+
+static const uint32_t GPRsSubClassMask[] = {
+  0x00000001,
+};
+} // namespace
+
+static const TargetRegisterClass *const NullRegClasses[] = { nullptr };
+static const MCRegisterClass BogusMCRegisterClasses[] = {{ GPRs, GPRsBits, 0, 1,
+    sizeof(GPRsBits), GPRsRegClassID, 1, -1, false, true ,false }};
+static const TargetRegisterClass GPRsRegClass = {
+    &BogusMCRegisterClasses[GPRsRegClassID],
+    GPRsSubClassMask,
+    0,
+    LaneBitmask(0x0000000000000001),
+    0,
+    false,
+    0x0,
+    false,
+    false,
+    NullRegClasses,
+    nullptr
+};
+
+ static const TargetRegisterClass *const BogusRegisterClasses[] = {&GPRsRegClass};
 
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
+      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses+1,
                            nullptr, nullptr, LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr);

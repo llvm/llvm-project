@@ -124,10 +124,10 @@ Register llvm::constrainOperandRegClass(
     // register types (E.g., AMDGPU's VGPR and AGPR). The regbank ambiguity
     // resolved by targets during regbankselect should not be overridden.
     if (const auto *SubRC = TRI.getCommonSubClass(
-            OpRC, TRI.getConstrainedRegClassForOperand(RegMO, MRI)))
+            OpRC, TRI.getConstrainedRegClassForOperand(RegMO, MRI), MRI))
       OpRC = SubRC;
 
-    OpRC = TRI.getAllocatableClass(OpRC);
+    OpRC = TRI.getAllocatableClass(OpRC, MRI);
   }
 
   if (!OpRC) {

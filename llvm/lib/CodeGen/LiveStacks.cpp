@@ -45,6 +45,7 @@ void LiveStacks::releaseMemory() {
 
 bool LiveStacks::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
+  MRI = &MF.getRegInfo();
   // FIXME: No analysis is being done right now. We are relying on the
   // register allocators to provide the information.
   return false;
@@ -64,7 +65,7 @@ LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
   } else {
     // Use the largest common subclass register class.
     const TargetRegisterClass *OldRC = S2RCMap[Slot];
-    S2RCMap[Slot] = TRI->getCommonSubClass(OldRC, RC);
+    S2RCMap[Slot] = TRI->getCommonSubClass(OldRC, RC, *MRI);
   }
   return I->second;
 }
