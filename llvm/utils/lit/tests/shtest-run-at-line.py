@@ -6,7 +6,7 @@
 # END.
 
 
-# CHECK: Testing: 6 tests
+# CHECK: Testing: 4 tests
 
 
 # In the case of the external shell, we check for only RUN lines in stderr in
@@ -14,27 +14,15 @@
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/basic.txt
 
-#      CHECK: Command Output (stderr)
-# CHECK-NEXT: --
-#      CHECK: {{^}}RUN: at line 4: true
-#      CHECK: {{^}}RUN: at line 5: false
-#  CHECK-NOT: RUN
-
-# CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/empty-run-line.txt
-
-#      CHECK: Command Output (stderr)
-# CHECK-NEXT: --
-#      CHECK: {{^}}RUN: at line 2 has no command after substitutions
-#      CHECK: {{^}}RUN: at line 3: false
-#  CHECK-NOT: RUN
+# CHECK:     RUN: at line 4
+# CHECK:     RUN: at line 5
+# CHECK-NOT: RUN
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/line-continuation.txt
 
-#      CHECK: Command Output (stderr)
-# CHECK-NEXT: --
-#      CHECK: {{^}}RUN: at line 4: echo 'foo bar' | FileCheck
-#      CHECK: {{^}}RUN: at line 6: echo 'foo baz' | FileCheck
-#  CHECK-NOT: RUN
+# CHECK:     RUN: at line 4
+# CHECK:     RUN: at line 6
+# CHECK-NOT: RUN
 
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/basic.txt
@@ -48,16 +36,6 @@
 # CHECK-NEXT: false
 # CHECK-NEXT: # executed command: false
 # CHECK-NOT:  RUN
-
-# CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/empty-run-line.txt
-
-#      CHECK: Command Output (stdout)
-# CHECK-NEXT: --
-# CHECK-NEXT: # RUN: at line 2 has no command after substitutions
-# CHECK-NEXT: # RUN: at line 3
-# CHECK-NEXT: false
-# CHECK-NEXT: # executed command: false
-#  CHECK-NOT: RUN
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/line-continuation.txt
 
