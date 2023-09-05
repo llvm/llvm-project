@@ -23,6 +23,7 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
@@ -1966,26 +1967,11 @@ LogicalResult spirv::ShiftRightLogicalOp::verify() {
 // spirv.BtiwiseAndOp
 //===----------------------------------------------------------------------===//
 
-static std::optional<APInt> extractIntConstant(Attribute attr) {
-  IntegerAttr intAttr;
-  if (auto splat = dyn_cast_if_present<SplatElementsAttr>(attr))
-    intAttr = dyn_cast<IntegerAttr>(splat.getSplatValue<Attribute>());
-  else
-    intAttr = dyn_cast_if_present<IntegerAttr>(attr);
-
-  if (!intAttr)
-    return std::nullopt;
-
-  return intAttr.getValue();
-}
-
 OpFoldResult
 spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
-  std::optional<APInt> rhsVal = extractIntConstant(adaptor.getOperand2());
-  if (!rhsVal)
+  APInt rhsMask;
+  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
     return {};
-
-  APInt rhsMask = *rhsVal;
 
   // x & 0 -> 0
   if (rhsMask.isZero())
@@ -2011,11 +1997,9 @@ spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
-  std::optional<APInt> rhsVal = extractIntConstant(adaptor.getOperand2());
-  if (!rhsVal)
+  APInt rhsMask;
+  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
     return {};
-
-  APInt rhsMask = *rhsVal;
 
   // x | 0 -> x
   if (rhsMask.isZero())
