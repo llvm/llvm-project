@@ -5529,11 +5529,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
         return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
       break;
-    case ISD::STEP_VECTOR: {
-      if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
-        return V;
-      break;
-    }
     }
   }
 
@@ -5585,7 +5580,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::CTPOP: {
+  case ISD::CTPOP:
+  case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
       return Fold;
@@ -6103,6 +6099,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                           APFloat::rmNearestTiesToEven, &Ignored);
         return getConstantFP(FPV, DL, VT);
       }
+      case ISD::STEP_VECTOR:
+        if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
+          return V;
+        break;
       }
     }
 
