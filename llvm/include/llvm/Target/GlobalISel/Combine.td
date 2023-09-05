@@ -396,19 +396,24 @@ def select_to_logical : GICombineRule<
 // Fold (C op x) -> (x op C)
 // TODO: handle more isCommutable opcodes
 // TODO: handle compares (currently not marked as isCommutable)
-def commute_constant_to_rhs : GICombineRule<
+def commute_int_constant_to_rhs : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root,
     [{ return Helper.matchCommuteConstantToRHS(*${root}); }]),
-  (apply [{
-    Observer.changingInstr(*${root});
-    Register LHSReg = ${root}->getOperand(1).getReg();
-    Register RHSReg = ${root}->getOperand(2).getReg();
-    ${root}->getOperand(1).setReg(RHSReg);
-    ${root}->getOperand(2).setReg(LHSReg);
-    Observer.changedInstr(*${root});
-  }])
+  (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
+
+def commute_fp_constant_to_rhs : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FADD, G_FMUL):$root,
+    [{ return Helper.matchCommuteFPConstantToRHS(*${root}); }]),
+  (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
+>;
+
+def commute_constant_to_rhs : GICombineGroup<[
+  commute_int_constant_to_rhs,
+  commute_fp_constant_to_rhs
+]>;
 
 // Fold x op 0 -> x
 def right_identity_zero_frags : GICombinePatFrag<
