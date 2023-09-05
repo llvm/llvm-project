@@ -13,6 +13,9 @@
         ! CHECK: swapa [%i0+%l6] 131, %o2   ! encoding: [0xd4,0xfe,0x10,0x76]
         swapa [%i0+%l6] 131, %o2
 
+        ! CHECK: swapa [%i0+%l6] 131, %o2   ! encoding: [0xd4,0xfe,0x10,0x76]
+        swapa [%i0+%l6] (130+1), %o2
+
         ! CHECK: ldstub [%i0+40], %g1 ! encoding: [0xc2,0x6e,0x20,0x28]
         ldstub [%i0+40], %g1
 
@@ -21,3 +24,6 @@
 
         ! CHECK: ldstuba [%i0+%i2] 131, %g1 ! encoding: [0xc2,0xee,0x10,0x7a]
         ldstuba [%i0+%i2] 131, %g1
+
+        ! CHECK: ldstuba [%i0+%i2] 131, %g1 ! encoding: [0xc2,0xee,0x10,0x7a]
+        ldstuba [%i0+%i2] (130+1), %g1
