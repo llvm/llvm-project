@@ -693,7 +693,7 @@ protected:
   /// false otherwise.
   bool hasInvalidConstraint() const;
 
-  /// Returns the constant lower bound bound if isLower is true, and the upper
+  /// Returns the constant lower bound if isLower is true, and the upper
   /// bound if isLower is false.
   template <bool isLower>
   std::optional<MPInt> computeConstantLowerOrUpperBound(unsigned pos);
