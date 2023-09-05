@@ -1649,6 +1649,49 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
       RegKind = SparcOperand::rk_Special;
       return true;
     }
+
+    // JPS1 extension - aliases for ASRs
+    // Section A.51 - Read State Register
+    if (name.equals("pcr")) {
+      RegNo = Sparc::ASR16;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("pic")) {
+      RegNo = Sparc::ASR17;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("dcr")) {
+      RegNo = Sparc::ASR18;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("gsr")) {
+      RegNo = Sparc::ASR19;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("softint")) {
+      RegNo = Sparc::ASR22;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("tick_cmpr")) {
+      RegNo = Sparc::ASR23;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("stick") || name.equals("sys_tick")) {
+      RegNo = Sparc::ASR24;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
+    if (name.equals("stick_cmpr") || name.equals("sys_tick_cmpr")) {
+      RegNo = Sparc::ASR25;
+      RegKind = SparcOperand::rk_Special;
+      return true;
+    }
   }
   return false;
 }
