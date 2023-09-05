@@ -439,7 +439,7 @@ def right_identity_one_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FMUL $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, 1.0); }]),
-  (apply (COPY $dst, $x))
+  (apply (GIReplaceReg $dst, $x))
 >;
 
 def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;
