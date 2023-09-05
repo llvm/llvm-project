@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: NORM2, PARITY
-
 #ifndef FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 #define FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 
@@ -77,7 +75,8 @@ static Expr<T> FoldDotProduct(
         overflow |= next.overflow;
         sum = std::move(next.value);
       }
-    } else { // T::category == TypeCategory::Real
+    } else {
+      static_assert(T::category == TypeCategory::Real);
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
@@ -172,7 +171,8 @@ static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
 }
 
 // Generalized reduction to an array of one dimension fewer (w/ DIM=)
-// or to a scalar (w/o DIM=).
+// or to a scalar (w/o DIM=).  The ACCUMULATOR type must define
+// operator()(Scalar<T> &, const ConstantSubscripts &) and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
 static Constant<T> DoReduction(const Constant<ARRAY> &array,
     std::optional<int> &dim, const Scalar<T> &identity,
@@ -193,6 +193,7 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
       for (ConstantSubscript j{0}; j < dimExtent; ++j, ++dimAt) {
         accumulator(elements.back(), at);
       }
+      accumulator.Done(elements.back());
     }
   } else { // no DIM=, result is scalar
     elements.push_back(identity);
@@ -200,6 +201,7 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
          IncrementSubscripts(at, array.shape())) {
       accumulator(elements.back(), at);
     }
+    accumulator.Done(elements.back());
   }
   if constexpr (T::category == TypeCategory::Character) {
     return {static_cast<ConstantSubscript>(identity.size()),
@@ -210,58 +212,85 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
 }
 
 // MAXVAL & MINVAL
+template <typename T, bool ABS = false> class MaxvalMinvalAccumulator {
+public:
+  MaxvalMinvalAccumulator(
+      RelationalOperator opr, FoldingContext &context, const Constant<T> &array)
+      : opr_{opr}, context_{context}, array_{array} {};
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) const {
+    auto aAt{array_.At(at)};
+    if constexpr (ABS) {
+      aAt = aAt.ABS();
+    }
+    Expr<LogicalResult> test{PackageRelation(
+        opr_, Expr<T>{Constant<T>{aAt}}, Expr<T>{Constant<T>{element}})};
+    auto folded{GetScalarConstantValue<LogicalResult>(
+        test.Rewrite(context_, std::move(test)))};
+    CHECK(folded.has_value());
+    if (folded->IsTrue()) {
+      element = array_.At(at);
+    }
+  }
+  void Done(Scalar<T> &) const {}
+
+private:
+  RelationalOperator opr_;
+  FoldingContext &context_;
+  const Constant<T> &array_;
+};
+
 template <typename T>
 static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
     RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
-  using Element = Scalar<T>;
   std::optional<int> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
-      Expr<LogicalResult> test{PackageRelation(opr,
-          Expr<T>{Constant<T>{array->At(at)}}, Expr<T>{Constant<T>{element}})};
-      auto folded{GetScalarConstantValue<LogicalResult>(
-          test.Rewrite(context, std::move(test)))};
-      CHECK(folded.has_value());
-      if (folded->IsTrue()) {
-        element = array->At(at);
-      }
-    }};
+    MaxvalMinvalAccumulator accumulator{opr, context, *array};
     return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
 
 // PRODUCT
+template <typename T> class ProductAccumulator {
+public:
+  ProductAccumulator(const Constant<T> &array) : array_{array} {}
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+    if constexpr (T::category == TypeCategory::Integer) {
+      auto prod{element.MultiplySigned(array_.At(at))};
+      overflow_ |= prod.SignedMultiplicationOverflowed();
+      element = prod.lower;
+    } else { // Real & Complex
+      auto prod{element.Multiply(array_.At(at))};
+      overflow_ |= prod.flags.test(RealFlag::Overflow);
+      element = prod.value;
+    }
+  }
+  bool overflow() const { return overflow_; }
+  void Done(Scalar<T> &) const {}
+
+private:
+  const Constant<T> &array_;
+  bool overflow_{false};
+};
+
 template <typename T>
 static Expr<T> FoldProduct(
     FoldingContext &context, FunctionRef<T> &&ref, Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
-  using Element = typename Constant<T>::Element;
   std::optional<int> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    bool overflow{false};
-    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
-      if constexpr (T::category == TypeCategory::Integer) {
-        auto prod{element.MultiplySigned(array->At(at))};
-        overflow |= prod.SignedMultiplicationOverflowed();
-        element = prod.lower;
-      } else { // Real & Complex
-        auto prod{element.Multiply(array->At(at))};
-        overflow |= prod.flags.test(RealFlag::Overflow);
-        element = prod.value;
-      }
-    }};
+    ProductAccumulator accumulator{*array};
     auto result{Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)}};
-    if (overflow) {
+    if (accumulator.overflow()) {
       context.messages().Say(
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
@@ -271,6 +300,46 @@ static Expr<T> FoldProduct(
 }
 
 // SUM
+template <typename T> class SumAccumulator {
+  using Element = typename Constant<T>::Element;
+
+public:
+  SumAccumulator(const Constant<T> &array, Rounding rounding)
+      : array_{array}, rounding_{rounding} {}
+  void operator()(Element &element, const ConstantSubscripts &at) {
+    if constexpr (T::category == TypeCategory::Integer) {
+      auto sum{element.AddSigned(array_.At(at))};
+      overflow_ |= sum.overflow;
+      element = sum.value;
+    } else { // Real & Complex: use Kahan summation
+      auto next{array_.At(at).Add(correction_, rounding_)};
+      overflow_ |= next.flags.test(RealFlag::Overflow);
+      auto sum{element.Add(next.value, rounding_)};
+      overflow_ |= sum.flags.test(RealFlag::Overflow);
+      // correction = (sum - element) - next; algebraically zero
+      correction_ = sum.value.Subtract(element, rounding_)
+                        .value.Subtract(next.value, rounding_)
+                        .value;
+      element = sum.value;
+    }
+  }
+  bool overflow() const { return overflow_; }
+  void Done([[maybe_unused]] Element &element) {
+    if constexpr (T::category != TypeCategory::Integer) {
+      auto corrected{element.Add(correction_, rounding_)};
+      overflow_ |= corrected.flags.test(RealFlag::Overflow);
+      correction_ = Scalar<T>{};
+      element = corrected.value;
+    }
+  }
+
+private:
+  const Constant<T> &array_;
+  Rounding rounding_;
+  bool overflow_{false};
+  Element correction_{};
+};
+
 template <typename T>
 static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer ||
@@ -278,31 +347,14 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
   std::optional<int> dim;
-  Element identity{}, correction{};
+  Element identity{};
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    bool overflow{false};
-    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
-      if constexpr (T::category == TypeCategory::Integer) {
-        auto sum{element.AddSigned(array->At(at))};
-        overflow |= sum.overflow;
-        element = sum.value;
-      } else { // Real & Complex: use Kahan summation
-        const auto &rounding{context.targetCharacteristics().roundingMode()};
-        auto next{array->At(at).Add(correction, rounding)};
-        overflow |= next.flags.test(RealFlag::Overflow);
-        auto sum{element.Add(next.value, rounding)};
-        overflow |= sum.flags.test(RealFlag::Overflow);
-        // correction = (sum - element) - next; algebraically zero
-        correction = sum.value.Subtract(element, rounding)
-                         .value.Subtract(next.value, rounding)
-                         .value;
-        element = sum.value;
-      }
-    }};
+    SumAccumulator accumulator{
+        *array, context.targetCharacteristics().roundingMode()};
     auto result{Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)}};
-    if (overflow) {
+    if (accumulator.overflow()) {
       context.messages().Say(
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
@@ -310,6 +362,22 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
   }
   return Expr<T>{std::move(ref)};
 }
+
+// Utility for IALL, IANY, IPARITY, ALL, ANY, & PARITY
+template <typename T> class OperationAccumulator {
+public:
+  OperationAccumulator(const Constant<T> &array,
+      Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const)
+      : array_{array}, operation_{operation} {}
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+    element = (element.*operation_)(array_.At(at));
+  }
+  void Done(Scalar<T> &) const {}
+
+private:
+  const Constant<T> &array_;
+  Scalar<T> (Scalar<T>::*operation_)(const Scalar<T> &) const;
+};
 
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_FOLD_REDUCTION_H_
