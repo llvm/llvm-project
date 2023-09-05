@@ -202,7 +202,7 @@ template <typename T> void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec,
   if (scale == 0)
     return;
   for (unsigned col = 0; col < nColumns; ++col)
-    at(row, col) += scale * rowVec[col];
+    at(row, col) = at(row, col) + scale * rowVec[col];
 }
 
 template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
@@ -210,7 +210,7 @@ template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigne
   if (scale == 0)
     return;
   for (unsigned row = 0, e = getNumRows(); row < e; ++row)
-    at(row, targetColumn) += scale * at(row, sourceColumn);
+    at(row, targetColumn) = at(row, targetColumn) + scale * at(row, sourceColumn);
 }
 
 template <typename T> void Matrix<T>::negateColumn(unsigned column) {
@@ -229,7 +229,7 @@ template <typename T> SmallVector<T, 8> Matrix<T>::preMultiplyWithRow(ArrayRef<T
   SmallVector<T, 8> result(getNumColumns(), T(0));
   for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
     for (unsigned i = 0, e = getNumRows(); i < e; ++i)
-      result[col] += rowVec[i] * at(i, col);
+      result[col] = result[col] + rowVec[i] * at(i, col);
   return result;
 }
 
@@ -241,7 +241,7 @@ Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
   SmallVector<T, 8> result(getNumRows(), T(0));
   for (unsigned row = 0, e = getNumRows(); row < e; row++)
     for (unsigned i = 0, e = getNumColumns(); i < e; i++)
-      result[row] += at(row, i) * colVec[i];
+      result[row] = result[row] + at(row, i) * colVec[i];
   return result;
 }
 
