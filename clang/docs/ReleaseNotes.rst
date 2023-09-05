@@ -211,6 +211,8 @@ Bug Fixes in This Version
 - Clang now reports ``-Wformat`` for bool value and char specifier confusion
   in scanf. Fixes
   (`#64987 <https://github.com/llvm/llvm-project/issues/64987>`_)
+- Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
+  an invalid conversion during method function overload resolution.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
