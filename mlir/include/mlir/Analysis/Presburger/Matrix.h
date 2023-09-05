@@ -36,7 +36,7 @@ namespace presburger {
 /// space in the underlying SmallVector's capacity.
 template<typename T>
 class Matrix {
-  // This class is not intended for general use: it supports only integers and rational numbers
+  // This class is not intended for general use: it supports only integers and rational numbers.
 static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
 public:
   Matrix() = delete;
