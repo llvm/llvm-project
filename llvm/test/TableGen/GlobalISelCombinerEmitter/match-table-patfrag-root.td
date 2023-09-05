@@ -22,7 +22,7 @@ def Test0 : GICombineRule<
   (match (MatchFooPerms $root, (i32 10))),
   (apply (COPY $root, (i32 0)))>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   Test0
 ]>;
 
