@@ -11,8 +11,6 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
     - uses: actions/labeler@v4
-      configuration-path: .github/workflows/new-prs-labeler.yml
-      sync-labels: false
       with:
         configuration-path: .github/workflows/new-prs-labeler.yml
         sync-labels: false
