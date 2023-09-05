@@ -149,40 +149,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
   return os;
 }
 
-inline Fraction operator/(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den, x.den * y.num);
-}
-
-inline Fraction operator+(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
-}
-
-inline Fraction operator-(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
-  x.print(os);
-  return os;
-}
-
-inline Fraction operator/(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den, x.den * y.num);
-}
-
-inline Fraction operator+(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
-}
-
-inline Fraction operator-(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
-  x.print(os);
-  return os;
-}
-
 } // namespace presburger
 } // namespace mlir
 
