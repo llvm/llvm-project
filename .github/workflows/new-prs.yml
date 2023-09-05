@@ -1,0 +1,16 @@
+name: "Labelling new pull requests"
+on:
+- pull_request_target
+
+jobs:
+  automate-prs-labels:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+    - uses: actions/labeler@v4
+      with:
+        configuration-path: .github/new-prs-labeler.yml
+        sync-labels: false
