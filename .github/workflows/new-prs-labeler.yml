@@ -68,9 +68,6 @@ backend:loongarch:
   - clang/lib/CodeGen/Targets/LoongArch.cpp
   - clang/include/clang/Basic/BuiltinsLoongArch*
 
-clang:
-  - all: ['clang/**/*', '!clang/clang-tools-extra/**/*']
-
 clang-format:
   - clang/**/Format/**/*
   - clang/tools/clang-format/**/*
@@ -87,7 +84,7 @@ clang:dataflow:
   - clang/**/Analysis/**/*
 
 clang:driver:
-  - clang/**/Driver/**
+  - clang/**/Driver/**/*
 
 clang:frontend:
   - clang/lib/AST/**/*
