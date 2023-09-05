@@ -767,6 +767,20 @@ public:
     createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineOperand> &Cond) = 0;
 
+    /// Create a condtion to determine if the remaining trip count represented
+    /// by the loop counter CounterReg is greater than TC. Some instructions
+    /// such as comparisons may be inserted at the bottom of MBB. CounterReg
+    /// must be accessible there.
+    ///
+    /// The definition of the return value is the same as for the variant above.
+    virtual std::optional<bool>
+    createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
+                                    SmallVectorImpl<MachineOperand> &Cond,
+                                    Register CounterReg) {
+      llvm_unreachable(
+          "Target didn't implement createTripCountGreaterCondition");
+    }
+
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
     virtual void adjustTripCount(int TripCountAdjust) = 0;
@@ -780,6 +794,16 @@ public:
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
     virtual void disposed() = 0;
+
+    /// Return the initial value of the loop counter.
+    virtual Register getCounterInitReg() {
+      llvm_unreachable("Target didn't implement getCounterInitReg");
+    }
+
+    /// Return the updated value of the loop counter in the original loop.
+    virtual Register getCounterUpdatedReg() {
+      llvm_unreachable("Target didn't implement getCounterUpdatedReg");
+    }
   };
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the

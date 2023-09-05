@@ -192,6 +192,10 @@ static cl::opt<int>
                       cl::desc("Margin representing the unused percentage of "
                                "the register pressure limit"));
 
+static cl::opt<bool>
+    MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
+               cl::desc("Use the MVE code generator for software pipelining"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -676,6 +680,11 @@ void SwingSchedulerDAG::schedule() {
   // The experimental code generator can't work if there are InstChanges.
   if (ExperimentalCodeGen && NewInstrChanges.empty()) {
     PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+    MSE.expand();
+  }
+  if (MVECodeGen && NewInstrChanges.empty() &&
+      ModuloScheduleExpanderMVE::canApply(Loop)) {
+    ModuloScheduleExpanderMVE MSE(MF, MS, LIS);
     MSE.expand();
   } else {
     ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
