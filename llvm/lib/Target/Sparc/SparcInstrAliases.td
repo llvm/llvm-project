@@ -350,6 +350,8 @@ defm : int_cond_alias<"vs",   0b0111>;
 let EmitPriority = 0 in
 {
   defm : int_cond_alias<"",     0b1000>; // same as a; gnu asm, not in manual
+  defm : int_cond_alias<"gt",   0b1010>; // same as g; gnu asm, not in manual
+  defm : int_cond_alias<"lt",   0b0011>; // same as l; gnu asm, not in manual
   defm : int_cond_alias<"nz",   0b1001>; // same as ne
   defm : int_cond_alias<"eq",   0b0001>; // same as e
   defm : int_cond_alias<"z",    0b0001>; // same as e
@@ -537,6 +539,11 @@ def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 
 // End of Section A.3
 
+// or imm, reg, rd -> or reg, imm, rd
+// Nonstandard GNU extension.
+let EmitPriority = 0 in
+  def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+
 // wr reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 // (aka: omit the first arg when it's g0. This is not in the manual, but is
 // supported by gnu and solaris as)
@@ -579,7 +586,14 @@ def : MnemonicAlias<"stsh", "sth">;
 
 def : MnemonicAlias<"stuha", "stha">;
 def : MnemonicAlias<"stsha", "stha">;
+
 def : MnemonicAlias<"stw", "st">, Requires<[HasV9]>;
+def : MnemonicAlias<"stuw", "st">, Requires<[HasV9]>;
+def : MnemonicAlias<"stsw", "st">, Requires<[HasV9]>;
+
+def : MnemonicAlias<"stwa", "sta">, Requires<[HasV9]>;
+def : MnemonicAlias<"stuwa", "sta">, Requires<[HasV9]>;
+def : MnemonicAlias<"stswa", "sta">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"lduw", "ld">, Requires<[HasV9]>;
 def : MnemonicAlias<"lduwa", "lda">, Requires<[HasV9]>;
