@@ -195,6 +195,8 @@ class BufferizeToAllocationOp:
             memcpy_op=memcpy_op,
             alloc_op=alloc_op,
             bufferize_destination_only=bufferize_destination_only,
+            loc=loc,
+            ip=ip,
         )
 
 
@@ -395,6 +397,8 @@ class MaskedVectorizeOp:
             static_vector_sizes=static_vector_sizes,
             scalable_sizes=scalable_sizes,
             vectorize_nd_extract=vectorize_nd_extract,
+            loc=loc,
+            ip=ip,
         )
 
 
