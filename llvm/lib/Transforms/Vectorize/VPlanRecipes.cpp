@@ -500,7 +500,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   auto &CI = *cast<CallInst>(getUnderlyingInstr());
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
-  State.setDebugLocFromInst(&CI);
+  State.setDebugLocFrom(CI.getDebugLoc());
 
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl;
@@ -592,7 +592,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
   auto &I = *cast<SelectInst>(getUnderlyingInstr());
-  State.setDebugLocFromInst(&I);
+  State.setDebugLocFrom(I.getDebugLoc());
 
   // The condition can be loop invariant but still defined inside the
   // loop. This means that we can't just use the original 'cond' value.
@@ -683,7 +683,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   case Instruction::Or:
   case Instruction::Xor: {
     // Just widen unops and binops.
-    State.setDebugLocFromInst(&I);
+    State.setDebugLocFrom(I.getDebugLoc());
 
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       SmallVector<Value *, 2> Ops;
@@ -703,7 +703,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     break;
   }
   case Instruction::Freeze: {
-    State.setDebugLocFromInst(&I);
+    State.setDebugLocFrom(I.getDebugLoc());
 
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Op = State.get(getOperand(0), Part);
@@ -718,7 +718,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     // Widen compares. Generate vector compares.
     bool FCmp = (I.getOpcode() == Instruction::FCmp);
     auto *Cmp = cast<CmpInst>(&I);
-    State.setDebugLocFromInst(Cmp);
+    State.setDebugLocFrom(Cmp->getDebugLoc());
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *A = State.get(getOperand(0), Part);
       Value *B = State.get(getOperand(1), Part);
@@ -758,7 +758,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenCastRecipe::execute(VPTransformState &State) {
   auto *I = cast_or_null<Instruction>(getUnderlyingValue());
   if (I)
-    State.setDebugLocFromInst(I);
+    State.setDebugLocFrom(I->getDebugLoc());
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
@@ -1193,7 +1193,7 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPBlendRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFromInst(Phi);
+  State.setDebugLocFrom(Phi->getDebugLoc());
   // We know that all PHIs in non-header blocks are converted into
   // selects, so we don't have to worry about the insertion order and we
   // can just use the builder.
