@@ -248,6 +248,9 @@ enum NodeType : unsigned {
   SADDV,
   UADDV,
 
+  // Unsigned sum Long across Vector
+  UADDLV,
+
   // Add Pairwise of two vectors
   ADDP,
   // Add Long Pairwise
