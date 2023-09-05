@@ -9,12 +9,12 @@
 #ifndef LLVM_CLANG_PARSE_LOOPHINT_H
 #define LLVM_CLANG_PARSE_LOOPHINT_H
 
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/Ownership.h"
-#include "clang/Sema/ParsedAttr.h"
 
 namespace clang {
+
+class Expr;
+struct IdentifierLoc;
 
 /// Loop optimization hint for loop and unroll pragmas.
 struct LoopHint {
