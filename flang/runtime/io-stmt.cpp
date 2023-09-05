@@ -1271,7 +1271,7 @@ bool InquireNoUnitState::Inquire(
 bool InquireNoUnitState::Inquire(InquiryKeywordHash inquiry, bool &result) {
   switch (inquiry) {
   case HashInquiryKeyword("EXIST"):
-    result = true;
+    result = badUnitNumber() >= 0;
     return true;
   case HashInquiryKeyword("NAMED"):
   case HashInquiryKeyword("OPENED"):
