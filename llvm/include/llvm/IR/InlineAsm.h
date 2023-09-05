@@ -443,10 +443,10 @@ public:
       return "m";
     case InlineAsm::Constraint_o:
       return "o";
-    case InlineAsm::Constraint_A:
-      return "A";
     case InlineAsm::Constraint_v:
       return "v";
+    case InlineAsm::Constraint_A:
+      return "A";
     case InlineAsm::Constraint_Q:
       return "Q";
     case InlineAsm::Constraint_R:
