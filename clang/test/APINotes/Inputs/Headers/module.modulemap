@@ -25,3 +25,7 @@ module ModuleWithWrongCasePrivate {
 module Namespaces {
   header "Namespaces.h"
 }
+
+module SwiftImportAs {
+  header "SwiftImportAs.h"
+}

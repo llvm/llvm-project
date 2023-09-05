@@ -536,6 +536,28 @@ namespace {
             static_cast<EnumExtensibilityKind>((payload & 0x3) - 1);
       }
 
+      unsigned ImportAsLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (ImportAsLength > 0) {
+        info.SwiftImportAs = std::string(reinterpret_cast<const char *>(data),
+                                         ImportAsLength - 1);
+        data += ImportAsLength - 1;
+      }
+      unsigned RetainOpLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (RetainOpLength > 0) {
+        info.SwiftRetainOp = std::string(reinterpret_cast<const char *>(data),
+                                         RetainOpLength - 1);
+        data += RetainOpLength - 1;
+      }
+      unsigned ReleaseOpLength =
+          endian::readNext<uint16_t, little, unaligned>(data);
+      if (ReleaseOpLength > 0) {
+        info.SwiftReleaseOp = std::string(reinterpret_cast<const char *>(data),
+                                          ReleaseOpLength - 1);
+        data += ReleaseOpLength - 1;
+      }
+
       readCommonTypeInfo(data, info);
       return info;
     }
