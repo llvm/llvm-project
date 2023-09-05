@@ -22,7 +22,7 @@ define void @floor() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.floor.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.floor.f32(float undef)
   call <2 x float> @llvm.floor.v2f32(<2 x float> undef)
@@ -67,7 +67,7 @@ define void @ceil() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.ceil.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.ceil.f32(float undef)
   call <2 x float> @llvm.ceil.v2f32(<2 x float> undef)
@@ -112,7 +112,7 @@ define void @trunc() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %18 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %19 = call <vscale x 8 x double> @llvm.trunc.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.trunc.f32(float undef)
   call <2 x float> @llvm.trunc.v2f32(<2 x float> undef)
@@ -157,7 +157,7 @@ define void @rint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %18 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %19 = call <vscale x 8 x double> @llvm.rint.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.rint.f32(float undef)
   call <2 x float> @llvm.rint.v2f32(<2 x float> undef)
@@ -202,7 +202,7 @@ define void @nearbyint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.nearbyint.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.nearbyint.f32(float undef)
   call <2 x float> @llvm.nearbyint.v2f32(<2 x float> undef)
@@ -247,7 +247,7 @@ define void @round() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.round.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.round.f32(float undef)
   call <2 x float> @llvm.round.v2f32(<2 x float> undef)
@@ -292,7 +292,7 @@ define void @roundeven() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.roundeven.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.roundeven.f32(float undef)
   call <2 x float> @llvm.roundeven.v2f32(<2 x float> undef)
@@ -335,7 +335,7 @@ define void @vp_ceil() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.ceil.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.ceil.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.ceil.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.ceil.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.ceil.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -376,7 +376,7 @@ define void @vp_floor() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.floor.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.floor.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.floor.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.floor.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.floor.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -417,7 +417,7 @@ define void @vp_round() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.round.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.round.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.round.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.round.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.round.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -458,7 +458,7 @@ define void @vp_roundeven() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.roundeven.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.roundeven.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.roundeven.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.roundeven.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.roundeven.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -499,7 +499,7 @@ define void @vp_roundtozero() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.roundtozero.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.roundtozero.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.roundtozero.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.roundtozero.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.roundtozero.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -540,7 +540,7 @@ define void @vp_rint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.rint.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.rint.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.rint.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.rint.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.rint.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -581,7 +581,7 @@ define void @vp_nearbyint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.nearbyint.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.nearbyint.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.nearbyint.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.nearbyint.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.nearbyint.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
