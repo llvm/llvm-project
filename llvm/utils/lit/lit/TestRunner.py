@@ -1153,8 +1153,14 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     for j, ln in enumerate(commands):
         match = re.match(kPdbgRegex, ln)
         if match:
+            dbg = match.group(1)
             command = match.group(2)
-            commands[j] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
+            commands[j] = f"echo '{dbg}'"
+            if command:
+                commands[j] += f": {shlex.quote(command.lstrip())} >&2 " \
+                               f"&& {command}"
+            else:
+                commands[j] += " has no command after substitutions >&2"
             if litConfig.per_test_coverage:
                 # Extract the test case name from the test object
                 test_case_name = test.path_in_suite[-1]
