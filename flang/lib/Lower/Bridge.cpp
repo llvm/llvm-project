@@ -836,7 +836,9 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(symbol, scopeBlockIdMap);
+    return Fortran::lower::mangle::mangleName(
+        symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
+        getLoweringOptions().getUnderscoring());
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
