@@ -122,6 +122,18 @@ inline Fraction operator-(const Fraction &x, const Fraction &y) {
   return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
 }
 
+inline Fraction& operator+=(const Fraction &g, const Fraction &f) {
+  Fraction *r = NULL;
+  *r = g+f;
+  return *r;
+}
+
+inline Fraction& operator-=(const Fraction &g, const Fraction &f) {
+  Fraction *r = NULL;
+  *r = g-f;
+  return *r;
+}
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
   x.print(os);
   return os;
