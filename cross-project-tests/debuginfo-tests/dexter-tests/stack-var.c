@@ -1,8 +1,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 //
-// RUN: %clang -O -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'lldb' -- %s
+// RUN: %dexter --fail-lt 1.0 -w \
+// RUN:     --builder clang-c --debugger 'lldb' --cflags "-O -glldb" -- %s
 
 void __attribute__((noinline, optnone)) bar(int *test) {}
 int main() {

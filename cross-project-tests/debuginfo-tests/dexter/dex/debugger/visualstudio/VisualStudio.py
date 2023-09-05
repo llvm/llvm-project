@@ -40,6 +40,7 @@ VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 class VisualStudio(
     DebuggerBase, metaclass=abc.ABCMeta
 ):  # pylint: disable=abstract-method
+
     # Constants for results of Debugger.CurrentMode
     # (https://msdn.microsoft.com/en-us/library/envdte.debugger.currentmode.aspx)
     dbgDesignMode = 1
