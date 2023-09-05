@@ -344,7 +344,7 @@ TEST_F(HeadersForSymbolTest, RankByName) {
 }
 
 TEST_F(HeadersForSymbolTest, Ranking) {
-  // Sorting is done over (canonical, public, complete, origin)-tuple.
+  // Sorting is done over (public, complete, canonical, origin)-tuple.
   Inputs.Code = R"cpp(
     #include "private.h"
     #include "public.h"
@@ -363,11 +363,11 @@ TEST_F(HeadersForSymbolTest, Ranking) {
   )cpp");
   Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
   buildAST();
-  EXPECT_THAT(headersForFoo(), ElementsAre(Header("\"canonical.h\""),
-                                           physicalHeader("public_complete.h"),
-                                           physicalHeader("public.h"),
-                                           physicalHeader("exporter.h"),
-                                           physicalHeader("private.h")));
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("public_complete.h"),
+                          Header("\"canonical.h\""), physicalHeader("public.h"),
+                          physicalHeader("exporter.h"),
+                          physicalHeader("private.h")));
 }
 
 TEST_F(HeadersForSymbolTest, PreferPublicOverComplete) {
@@ -391,14 +391,11 @@ TEST_F(HeadersForSymbolTest, PreferNameMatch) {
     #include "public_complete.h"
     #include "test/foo.fwd.h"
   )cpp";
-  Inputs.ExtraFiles["public_complete.h"] = guard(R"cpp(
-    struct foo {};
-  )cpp");
+  Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
   Inputs.ExtraFiles["test/foo.fwd.h"] = guard("struct foo;");
   buildAST();
-  EXPECT_THAT(headersForFoo(),
-              ElementsAre(physicalHeader("test/foo.fwd.h"),
-                          physicalHeader("public_complete.h")));
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("public_complete.h"),
+                                           physicalHeader("test/foo.fwd.h")));
 }
 
 TEST_F(HeadersForSymbolTest, MainFile) {
