@@ -71,9 +71,13 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  set(COMPILER_RESOURCE_DIR OFF)
-  message(STATUS "COMPILER_RESOURCE_DIR not set
-                  --print-resource-dir not supported by host compiler")
+  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+  else()
+    set(COMPILER_RESOURCE_DIR OFF)
+    message(STATUS "COMPILER_RESOURCE_DIR not set
+                    --print-resource-dir not supported by host compiler")
+  endif()
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
