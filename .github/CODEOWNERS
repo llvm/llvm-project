@@ -240,6 +240,8 @@
 /llvm/docs/CommandGuide/lit.rst @llvm/pr-subscribers-testing-tools
 /llvm/docs/TestingGuide.rst @llvm/pr-subscribers-testing-tools
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
+/llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
+/llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
 
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
