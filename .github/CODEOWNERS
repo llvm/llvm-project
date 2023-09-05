@@ -541,5 +541,5 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/test/Transforms/inline/ML/ @llvm/pr-subscribers-mlgo
 /llvm/lib/CodeGen/ML* @llvm/pr-subscribers-mlgo
 /llvm/unittests/CodeGen/ML* @llvm/pr-subscribers-mlgo
-/llvm/test/CodeGen/MLRegalloc/ @llvm/pr-subscribers-mlgo
+/llvm/test/CodeGen/MLRegAlloc/ @llvm/pr-subscribers-mlgo
 
