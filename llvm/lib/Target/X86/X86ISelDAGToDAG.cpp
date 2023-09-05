@@ -3819,7 +3819,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   }
 
   if (Subtarget->hasBMI2()) {
-    // Great, just emit the the BZHI..
+    // Great, just emit the BZHI..
     if (NVT != MVT::i32) {
       // But have to place the bit count into the wide-enough register first.
       NBits = CurDAG->getNode(ISD::ANY_EXTEND, DL, NVT, NBits);

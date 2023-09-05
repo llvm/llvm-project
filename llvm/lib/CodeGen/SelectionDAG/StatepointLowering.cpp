@@ -525,7 +525,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // deopt argument length, deopt arguments.., gc arguments...
 
   // Figure out what lowering strategy we're going to use for each part
-  // Note: Is is conservatively correct to lower both "live-in" and "live-out"
+  // Note: It is conservatively correct to lower both "live-in" and "live-out"
   // as "live-through". A "live-through" variable is one which is "live-in",
   // "live-out", and live throughout the lifetime of the call (i.e. we can find
   // it from any PC within the transitive callee of the statepoint).  In

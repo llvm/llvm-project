@@ -149,7 +149,7 @@ bool matchAArch64MulConstCombine(
   APInt ConstValue = Const->Value.sext(Ty.getSizeInBits());
   // The following code is ported from AArch64ISelLowering.
   // Multiplication of a power of two plus/minus one can be done more
-  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.

@@ -3033,7 +3033,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
   if (!BlockInsertion.second)
     return;
 
-  // Create a lexical block containing the variables and collect the the
+  // Create a lexical block containing the variables and collect the
   // lexical block information for the children.
   const InsnRange &Range = Ranges.front();
   assert(Range.first && Range.second);
