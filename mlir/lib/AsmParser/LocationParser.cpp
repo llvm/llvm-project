@@ -53,6 +53,9 @@ ParseResult Parser::parseCallSiteLocation(LocationAttr &loc) {
   if (parseToken(Token::r_paren, "expected ')' in callsite location"))
     return failure();
 
+  if (syntaxOnly())
+    return success();
+
   // Return the callsite location.
   loc = CallSiteLoc::get(calleeLoc, callerLoc);
   return success();
@@ -79,6 +82,9 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
     LocationAttr newLoc;
     if (parseLocationInstance(newLoc))
       return failure();
+    if (syntaxOnly())
+      return success();
+
     locations.push_back(newLoc);
     return success();
   };
@@ -135,12 +141,15 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
     if (parseLocationInstance(childLoc))
       return failure();
 
-    loc = NameLoc::get(StringAttr::get(ctx, str), childLoc);
-
     // Parse the closing ')'.
     if (parseToken(Token::r_paren,
                    "expected ')' after child location of NameLoc"))
       return failure();
+
+    if (syntaxOnly())
+      return success();
+
+    loc = NameLoc::get(StringAttr::get(ctx, str), childLoc);
   } else {
     loc = NameLoc::get(StringAttr::get(ctx, str));
   }
@@ -154,6 +163,10 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
     Attribute locAttr = parseExtendedAttr(Type());
     if (!locAttr)
       return failure();
+
+    if (syntaxOnly())
+      return success();
+
     if (!(loc = dyn_cast<LocationAttr>(locAttr)))
       return emitError("expected location attribute, but got") << locAttr;
     return success();
