@@ -35,6 +35,11 @@ void test_builtin_ppc_flm() {
 
   // CHECK: call double @llvm.ppc.setflm(double %1)
   res = __builtin_setflm(res);
+
+#ifdef _ARCH_PWR9
+  // P9: call double @llvm.ppc.mffsl()
+  res = __builtin_ppc_mffsl();
+#endif
 }
 
 double test_builtin_unpack_ldbl(long double x) {
