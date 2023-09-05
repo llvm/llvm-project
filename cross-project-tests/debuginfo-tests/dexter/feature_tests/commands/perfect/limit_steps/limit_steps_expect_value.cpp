@@ -1,8 +1,7 @@
 // Purpose:
 //      Ensure that limited stepping breaks for all expected values.
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: limit_steps_expect_value.cpp
 
 int main() {

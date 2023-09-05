@@ -8,6 +8,7 @@ from collections import OrderedDict
 import os
 from typing import List
 
+from dex.dextIR.BuilderIR import BuilderIR
 from dex.dextIR.DebuggerIR import DebuggerIR
 from dex.dextIR.StepIR import StepIR, StepKind
 
@@ -46,12 +47,14 @@ class DextIR:
         dexter_version: str,
         executable_path: str,
         source_paths: List[str],
+        builder: BuilderIR = None,
         debugger: DebuggerIR = None,
         commands: OrderedDict = None,
     ):
         self.dexter_version = dexter_version
         self.executable_path = executable_path
         self.source_paths = source_paths
+        self.builder = builder
         self.debugger = debugger
         self.commands = commands
         self.steps: List[StepIR] = []

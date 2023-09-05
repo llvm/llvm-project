@@ -96,6 +96,7 @@ class DefaultController(DebuggerControllerBase):
         total_timeout = Timeout(self.context.options.timeout_total)
         max_steps = self.context.options.max_steps
         for _ in range(max_steps):
+
             breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
             while self.debugger.is_running and not timed_out:
                 # Check to see whether we've timed out while we're waiting.
