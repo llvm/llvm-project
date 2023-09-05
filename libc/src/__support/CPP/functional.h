@@ -9,8 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
 
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/CPP/utility.h"
+#include "src/__support/CPP/type_traits/enable_if.h"
+#include "src/__support/CPP/type_traits/is_convertible.h"
+#include "src/__support/CPP/type_traits/is_same.h"
+#include "src/__support/CPP/type_traits/is_void.h"
+#include "src/__support/CPP/type_traits/remove_cvref.h"
+#include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/macros/attributes.h"
 
 #include <stdint.h>
@@ -42,8 +46,7 @@ public:
   LIBC_INLINE function(
       Callable &&callable,
       // This is not the copy-constructor.
-      enable_if_t<!is_same<remove_cvref_t<Callable>, function>::value> * =
-          nullptr,
+      enable_if_t<!is_same_v<remove_cvref_t<Callable>, function>> * = nullptr,
       // Functor must be callable and return a suitable type.
       enable_if_t<is_void_v<Ret> ||
                   is_convertible_v<
