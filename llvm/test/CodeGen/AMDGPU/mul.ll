@@ -3354,20 +3354,20 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX1210-NEXT:    v_mov_b32_e32 v17, v13
 ; GFX1210-NEXT:    v_mul_u64_e32 v[10:11], v[10:11], v[12:13]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[8:9], null, v4, v6, v[8:9]
+; GFX1210-NEXT:    v_mad_nc_u64_u32 v[8:9], v4, v6, v[8:9]
 ; GFX1210-NEXT:    v_mov_b32_e32 v12, v11
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1210-NEXT:    v_mad_nc_u64_u32 v[14:15], v7, v2, v[12:13]
 ; GFX1210-NEXT:    v_mad_u32 v1, v5, v6, v9
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[14:15], null, v7, v2, v[12:13]
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1210-NEXT:    v_mad_u32 v9, v4, v7, v1
 ; GFX1210-NEXT:    v_dual_mov_b32 v12, v15 :: v_dual_mov_b32 v15, v13
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[14:15], null, v6, v3, v[14:15]
+; GFX1210-NEXT:    v_mad_nc_u64_u32 v[14:15], v6, v3, v[14:15]
 ; GFX1210-NEXT:    v_dual_mov_b32 v16, v15 :: v_dual_mov_b32 v11, v14
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[12:13], v[12:13], v[16:17]
-; GFX1210-NEXT:    v_mad_co_u64_u32 v[2:3], null, v7, v3, v[12:13]
+; GFX1210-NEXT:    v_mad_nc_u64_u32 v[2:3], v7, v3, v[12:13]
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[12:13], v[2:3], v[8:9]
 ; GFX1210-NEXT:    global_store_b128 v0, v[10:13], s[2:3] scale_offset

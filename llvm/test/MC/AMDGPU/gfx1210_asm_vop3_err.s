@@ -100,6 +100,16 @@ v_min_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX1210-ERR-NEXT:{{^}}v_min_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX1210-ERR-NEXT:{{^}}                                 ^
 
+v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210-ERR-NEXT:{{^}}                                        ^
+
+v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210-ERR-NEXT:{{^}}                                        ^
+
 v_lshl_add_u64 v[2:3], v[4:5], v7, v[8:9] quad_perm:[3,2,1,0]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
 // GFX1210-ERR-NEXT:{{^}}v_lshl_add_u64 v[2:3], v[4:5], v7, v[8:9] quad_perm:[3,2,1,0]
@@ -199,6 +209,16 @@ v_min_u64 v[2:3], v[4:5], v[6:7] quad_perm:[3,2,1,0]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
 // GFX1210-ERR-NEXT:{{^}}v_min_u64 v[2:3], v[4:5], v[6:7] quad_perm:[3,2,1,0]
 // GFX1210-ERR-NEXT:{{^}}                                 ^
+
+v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX1210-ERR-NEXT:{{^}}v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
+// GFX1210-ERR-NEXT:{{^}}                                        ^
+
+v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX1210-ERR-NEXT:{{^}}v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
+// GFX1210-ERR-NEXT:{{^}}                                        ^
 
 v_trig_preop_f64 v[4:5], v[8:9], v2 row_share:1
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

@@ -88,6 +88,11 @@ def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64> {
   let HasExt64BitDPP = 1;
 }
 
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
+  let HasExt64BitDPP = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
 //===----------------------------------------------------------------------===//
@@ -183,6 +188,10 @@ defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_a
 
 let SubtargetPredicate = isGFX12_10Plus in {
 defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
+let SchedRW = [WriteDoubleAdd] in {
+defm V_MAD_NC_U64_U32 : VOP3Inst <"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
+defm V_MAD_NC_I64_I32 : VOP3Inst <"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
+} // End SchedRW = [WriteDoubleAdd]
 }
 
 let SchedRW = [WriteDoubleAdd] in {
@@ -1154,6 +1163,8 @@ defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx12<0x234>;
 
 let SubtargetPredicate = isGFX12_10Plus in {
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx12<0x235>;
+defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx12<0x2fa>;
+defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx12<0x2fb>;
 defm V_MIN_U64 : VOP3Only_Realtriple_gfx12<0x318>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx12<0x319>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx12<0x31a>;

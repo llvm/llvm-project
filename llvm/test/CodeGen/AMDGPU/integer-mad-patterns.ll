@@ -4645,12 +4645,12 @@ define i64 @clpeak_imad_pat_i64(i64 %x, i64 %y) {
 ; GFX1210-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], v[4:5], v[0:1]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mul_u64_e32 v[2:3], v[0:1], v[2:3]
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[6:7], null, v2, v4, v[2:3]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[6:7], v2, v4, v[2:3]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v0, v3, v4, v7
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v7, v2, v5, v0
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[0:1], null, v6, v2, v[6:7]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[0:1], v6, v2, v[6:7]
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v1, v7, v2, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v1, v6, v3, v1
@@ -5348,8 +5348,8 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1210-SDAG-NEXT:    v_mul_u64_e32 v[4:5], v[0:1], v[4:5]
 ; GFX1210-SDAG-NEXT:    v_mul_u64_e32 v[6:7], v[2:3], v[6:7]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[12:13], null, v4, v8, v[4:5]
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[14:15], null, v6, v10, v[6:7]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[12:13], v4, v8, v[4:5]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[14:15], v6, v10, v[6:7]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v0, v5, v8, v13
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v1, v7, v10, v15
@@ -5357,8 +5357,8 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v13, v4, v9, v0
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v15, v6, v11, v1
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[0:1], null, v12, v4, v[12:13]
-; GFX1210-SDAG-NEXT:    v_mad_co_u64_u32 v[2:3], null, v14, v6, v[14:15]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[0:1], v12, v4, v[12:13]
+; GFX1210-SDAG-NEXT:    v_mad_nc_u64_u32 v[2:3], v14, v6, v[14:15]
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v1, v13, v4, v1
 ; GFX1210-SDAG-NEXT:    v_mad_u32 v3, v15, v6, v3
