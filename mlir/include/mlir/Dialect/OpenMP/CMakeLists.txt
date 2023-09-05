@@ -2,18 +2,15 @@ set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/OpenMP/OMP.td
 mlir_tablegen(OmpCommon.td --gen-directive-decl --directives-dialect=OpenMP)
 add_public_tablegen_target(omp_common_td)
 
+add_mlir_dialect(OpenMPOps omp)
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
-mlir_tablegen(OpenMPOpsDialect.h.inc -gen-dialect-decls -dialect=omp)
-mlir_tablegen(OpenMPOpsDialect.cpp.inc -gen-dialect-defs -dialect=omp)
-mlir_tablegen(OpenMPOps.h.inc -gen-op-decls)
-mlir_tablegen(OpenMPOps.cpp.inc -gen-op-defs)
 mlir_tablegen(OpenMPOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OpenMPOpsEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(OpenMPOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=omp)
 mlir_tablegen(OpenMPOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=omp)
 add_mlir_doc(OpenMPOps OpenMPDialect Dialects/ -gen-dialect-doc -dialect=omp)
-add_public_tablegen_target(MLIROpenMPOpsIncGen)
 add_dependencies(OpenMPDialectDocGen omp_common_td)
+
 add_mlir_interface(OpenMPOpsInterfaces)
 
 set(LLVM_TARGET_DEFINITIONS OpenMPTypeInterfaces.td)

@@ -1,4 +1,4 @@
-//===- OpenMPDialect.cpp - MLIR Dialect for OpenMP implementation ---------===//
+﻿//===- OpenMPDialect.cpp - MLIR Dialect for OpenMP implementation ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,6 +64,10 @@ void OpenMPDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
       >();
 
   addInterface<OpenMPDialectFoldInterface>();
@@ -1524,8 +1528,123 @@ LogicalResult CancellationPointOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CanonicaLoopOp
+//===----------------------------------------------------------------------===//
+
+Value mlir::omp::CanonicalLoopOp::getInductionVar() {
+  return getRegion().getArgument(0);
+}
+
+void mlir::omp::CanonicalLoopOp::print(OpAsmPrinter &p) {
+  p << " " << getInductionVar() << " : " << getInductionVar().getType()
+    << " in [0, " << getTripCount() << ") ";
+
+  // omp.yield is implicit if no arguments passed to it.
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/getResultTypes().size() > 1);
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult
+mlir::omp::CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
+                                  ::mlir::OperationState &result) {
+  Builder &builder = parser.getBuilder();
+  MLIRContext *context = parser.getContext();
+
+  // We derive the type of tripCount from inductionVariable. Unfortunatelty we
+  // cannot do the other way around because MLIR requires the type of tripCount
+  // to be known when calling resolveOperand.
+  OpAsmParser::Argument inductionVariable;
+  if (parser.parseArgument(inductionVariable, /*allowType*/ true) ||
+      parser.parseKeyword("in") || parser.parseLSquare())
+    return failure();
+
+  int zero = -1;
+  SMLoc zeroLoc = parser.getCurrentLocation();
+  if (parser.parseInteger(zero))
+    return failure();
+  if (zero != 0) {
+    parser.emitError(zeroLoc, "Logical iteration space starts with zero");
+    return failure();
+  }
+
+  OpAsmParser::UnresolvedOperand tripcount;
+  if (parser.parseComma() || parser.parseOperand(tripcount) ||
+      parser.parseRParen() ||
+      parser.resolveOperand(tripcount, inductionVariable.type, result.operands))
+    return failure();
+
+  // Parse the loop body.
+  Region *region = result.addRegion();
+  if (parser.parseRegion(*region, {inductionVariable}))
+    return failure();
+  CanonicalLoopOp::ensureTerminator(*region, builder, result.location);
+
+  // Return the CanonicalLoopInfo for this loop, plus the CanonicalLoopInfos
+  // passed to omp.yield.
+  int numResults = 0;
+  for (Block &block : *region) {
+    if (auto yield = dyn_cast<YieldOp>(block.getTerminator())) {
+      numResults = yield.getNumOperands();
+      break;
+    }
+  }
+  numResults += 1;
+  for (int i = 0; i < numResults; ++i)
+    result.types.push_back(CanonicalLoopInfoType::get(context));
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+LogicalResult CanonicalLoopOp::verify() {
+  Value indVar = getInductionVar();
+  Value tripCount = getTripCount();
+  Block *body = getBody();
+  Region &region = getRegion();
+
+  if (indVar.getType() != tripCount.getType())
+    return emitOpError(
+        "Region argument must be the same type as the trip count");
+
+  auto numResults = getResultTypes().size();
+  if (numResults <= 0)
+    return emitOpError(
+        "omp.canonical_loop must return at least one CanonicalLoopInfo");
+
+  // Check arguments to omp.yield operations
+  YieldOp *firstYield = nullptr;
+  for (Block &block : region) {
+    if (auto yield = dyn_cast<YieldOp>(block.getTerminator())) {
+      if (yield.getNumOperands() != numResults - 1)
+        return emitOpError("omp.yield arguments must match number of return "
+                           "CanonicalLoopInfo's");
+
+      if (!firstYield) {
+        firstYield = &yield;
+        continue;
+      }
+
+      for (int i = 0; i < numResults - 1; ++i) {
+        if (yield.getOperand(i) != firstYield->getOperand(i))
+          return emitOpError("Each omp.yield must return the same values");
+      }
+    }
+  }
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
