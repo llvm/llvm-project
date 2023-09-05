@@ -11612,6 +11612,7 @@ cc_library(
         ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
+        ":SCFDialect",
         ":Support",
         ":TensorDialect",
         ":Transforms",

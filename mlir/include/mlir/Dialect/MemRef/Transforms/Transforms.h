@@ -63,6 +63,10 @@ void populateExpandStridedMetadataPatterns(RewritePatternSet &patterns);
 /// `memref.extract_strided_metadata` of its source.
 void populateResolveExtractStridedMetadataPatterns(RewritePatternSet &patterns);
 
+/// Appends patterns for expanding `memref.realloc` operations.
+void populateExpandReallocPatterns(RewritePatternSet &patterns,
+                                   bool emitDeallocs = true);
+
 /// Appends patterns for emulating wide integer memref operations with ops over
 /// narrower integer types.
 void populateMemRefWideIntEmulationPatterns(
