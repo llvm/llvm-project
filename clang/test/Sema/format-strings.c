@@ -58,16 +58,15 @@ void check_string_literal( FILE* fp, const char* s, char *buf, ... ) {
   const char *const fmt = "%d"; // FIXME -- defined here
   printf(fmt, 1, 2); // expected-warning{{data argument not used}}
 
-  // rdar://6079877
   printf("abc"
          "%*d", 1, 1); // no-warning
   printf("abc\
 def"
          "%*d", 1, 1); // no-warning
 
-  // <rdar://problem/6079850>, allow 'unsigned' (instead of 'int') to be used for both
-  // the field width and precision.  This deviates from C99, but is reasonably safe
-  // and is also accepted by GCC.
+  // Allow 'unsigned' (instead of 'int') to be used for both the field width
+  // and precision. This deviates from C99, but is reasonably safe and is also
+  // accepted by GCC.
   printf("%*d", (unsigned) 1, 1); // no-warning
 }
 
@@ -202,7 +201,8 @@ void check_invalid_specifier(FILE* fp, char *buf)
   printf("%s%lv%d","unix",10,20); // expected-warning {{invalid conversion specifier 'v'}} expected-warning {{data argument not used by format string}}
   fprintf(fp,"%%%l"); // expected-warning {{incomplete format specifier}}
   sprintf(buf,"%%%%%ld%d%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
-  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}}
+  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}} \
+                                            // expected-warning{{'snprintf' will always be truncated; specified size is 2, but format string expands to at least 7}}
 }
 
 void check_null_char_string(char* b)
@@ -361,12 +361,10 @@ typedef struct __aslclient *aslclient;
 typedef struct __aslmsg *aslmsg;
 int asl_log(aslclient asl, aslmsg msg, int level, const char *format, ...) __attribute__((__format__ (__printf__, 4, 5)));
 void test_asl(aslclient asl) {
-  // Test case from <rdar://problem/7341605>.
   asl_log(asl, 0, 3, "Error: %m"); // no-warning
   asl_log(asl, 0, 3, "Error: %W"); // expected-warning{{invalid conversion specifier 'W'}}
 }
 
-// <rdar://problem/7595366>
 typedef enum { A } int_t;
 void f0(int_t x) { printf("%d\n", x); }
 
@@ -482,7 +480,7 @@ void pr7981(wint_t c, wchar_t c2) {
 #endif
 }
 
-// <rdar://problem/8269537> -Wformat-security says NULL is not a string literal
+// -Wformat-security says NULL is not a string literal
 void rdar8269537(void) {
   // This is likely to crash in most cases, but -Wformat-nonliteral technically
   // doesn't warn in this case.
@@ -507,7 +505,6 @@ void pr8641(void) {
 
 void posix_extensions(void) {
   // Test %'d, "thousands grouping".
-  // <rdar://problem/8816343>
   printf("%'d\n", 123456789); // no-warning
   printf("%'i\n", 123456789); // no-warning
   printf("%'f\n", (float) 1.0); // no-warning
@@ -673,7 +670,6 @@ void test_other_formats(void) {
 }
 
 // Do not warn about unused arguments coming from system headers.
-// <rdar://problem/11317765>
 #include <format-unused-system-args.h>
 void test_unused_system_args(int x) {
   PRINT1("%d\n", x); // no-warning{{extra argument is system header is OK}}
@@ -751,7 +747,6 @@ void test_qualifiers(volatile int *vip, const int *cip,
 
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #pragma GCC diagnostic warning "-Wformat-security"
-// <rdar://problem/14178260>
 extern void test_format_security_extra_args(const char*, int, ...)
     __attribute__((__format__(__printf__, 1, 3)));
 void test_format_security_pos(char* string) {

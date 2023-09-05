@@ -2,7 +2,7 @@
 
 llvm.func @_QPopenmp_target_data() {
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr<i32>
+  %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr<i32>
   omp.target_data   map((tofrom -> %1 : !llvm.ptr<i32>)) {
     %2 = llvm.mlir.constant(99 : i32) : i32
     llvm.store %2, %1 : !llvm.ptr<i32>
@@ -79,9 +79,9 @@ llvm.func @_QPopenmp_target_data_region(%1 : !llvm.ptr<array<1024 x i32>>) {
 
 llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr<array<1024 x i32>>, %3 : !llvm.ptr<array<512 x i32>>) {
   %4 = llvm.mlir.constant(1 : i64) : i64
-  %5 = llvm.alloca %4 x i32 {bindc_name = "dvc", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEdvc"} : (i64) -> !llvm.ptr<i32>
+  %5 = llvm.alloca %4 x i32 {bindc_name = "dvc", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEdvc"} : (i64) -> !llvm.ptr<i32>
   %6 = llvm.mlir.constant(1 : i64) : i64
-  %7 = llvm.alloca %6 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEi"} : (i64) -> !llvm.ptr<i32>
+  %7 = llvm.alloca %6 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEi"} : (i64) -> !llvm.ptr<i32>
   %8 = llvm.mlir.constant(5 : i32) : i32
   llvm.store %8, %7 : !llvm.ptr<i32>
   %9 = llvm.mlir.constant(2 : i32) : i32

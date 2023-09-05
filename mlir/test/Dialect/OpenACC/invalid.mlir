@@ -493,3 +493,17 @@ acc.loop gang() {
 // expected-error@+1 {{num_gangs expects a maximum of 3 values}}
 acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i64, i64) {
 }
+
+// -----
+
+%i64value = arith.constant 1 : i64
+acc.parallel {
+// expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
+  acc.set device_type(%i64value : i64)
+  acc.yield
+}
+
+// -----
+
+// expected-error@+1 {{'acc.set' op at least one default_async, device_num, or device_type operand must appear}}
+acc.set

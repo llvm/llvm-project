@@ -13,16 +13,16 @@ define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.b, z0.b[5]
+; CHECK-NEXT:    mov z3.b, z0.b[5]
 ; CHECK-NEXT:    mov z0.b, z0.b[4]
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    strh w8, [sp, #14]
+; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    strh w11, [sp, #8]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    strh w9, [sp, #8]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
@@ -40,16 +40,16 @@ define <4 x i8> @extract_subvector_v8i8(<8 x i8> %op) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.b, z0.b[5]
+; CHECK-NEXT:    mov z3.b, z0.b[5]
 ; CHECK-NEXT:    mov z0.b, z0.b[4]
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    strh w8, [sp, #14]
+; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    strh w11, [sp, #8]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    strh w9, [sp, #8]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret

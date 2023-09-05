@@ -15,7 +15,7 @@
 }
 
 #VEC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ], posWidth = 32, crdWidth = 32 }>
-#COO = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO = #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
 #CCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
 
 //

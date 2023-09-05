@@ -1,5 +1,6 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -finalize-memref-to-llvm \
-// RUN:             -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm \
+// RUN: -convert-vector-to-llvm -convert-index-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm \
+// RUN: -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry \
 // RUN:      --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \

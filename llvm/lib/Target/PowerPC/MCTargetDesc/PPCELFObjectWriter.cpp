@@ -28,7 +28,7 @@ namespace {
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                           const MCFixup &Fixup, bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCSymbol &Sym,
+    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
   };
 }
@@ -456,7 +456,13 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       }
       break;
     case FK_Data_4:
-      Type = ELF::R_PPC_ADDR32;
+      switch (Modifier) {
+      case MCSymbolRefExpr::VK_DTPREL:
+        Type = ELF::R_PPC_DTPREL32;
+        break;
+      default:
+        Type = ELF::R_PPC_ADDR32;
+      }
       break;
     case FK_Data_2:
       Type = ELF::R_PPC_ADDR16;
@@ -466,7 +472,8 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   return Type;
 }
 
-bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
+bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
+                                                 const MCSymbol &Sym,
                                                  unsigned Type) const {
   switch (Type) {
     default:

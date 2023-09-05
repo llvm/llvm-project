@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpGenHelpers.h"
+
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
@@ -170,7 +172,7 @@ constexpr const char *opVariadicSegmentTemplate = R"Py(
   def {0}(self):
     {1}_range = _ods_segmented_accessor(
          self.operation.{1}s,
-         self.operation.attributes["{1}_segment_sizes"], {2})
+         self.operation.attributes["{1}SegmentSizes"], {2})
     return {1}_range{3}
 )Py";
 
@@ -277,18 +279,6 @@ static llvm::cl::opt<std::string> clDialectExtensionName(
     llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
 
 using AttributeClasses = DenseMap<StringRef, StringRef>;
-
-/// Checks whether `str` is a Python keyword or would shadow builtin function.
-static bool isPythonReserved(StringRef str) {
-  static llvm::StringSet<> reserved(
-      {"and",      "as",    "assert", "break",      "callable", "class",
-       "continue", "def",   "del",    "elif",       "else",     "except",
-       "finally",  "for",   "from",   "global",     "if",       "import",
-       "in",       "is",    "lambda", "nonlocal",   "not",      "or",
-       "pass",     "raise", "return", "issubclass", "try",      "type",
-       "while",    "with",  "yield"});
-  return reserved.contains(str);
-}
 
 /// Checks whether `str` would shadow a generated variable or attribute
 /// part of the OpView API.

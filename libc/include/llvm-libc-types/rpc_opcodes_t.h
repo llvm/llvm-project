@@ -22,6 +22,7 @@ typedef enum : unsigned short {
   RPC_MALLOC = 9,
   RPC_FREE = 10,
   RPC_HOST_CALL = 11,
+  RPC_ABORT = 12,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__

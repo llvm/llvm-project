@@ -112,17 +112,19 @@ void FTN_STDCALL FTN_SET_BLOCKTIME(int KMP_DEREF arg) {
 #ifdef KMP_STUB
   __kmps_set_blocktime(KMP_DEREF arg);
 #else
-  int gtid, tid;
+  int gtid, tid, bt = (KMP_DEREF arg);
   kmp_info_t *thread;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
   thread = __kmp_thread_from_gtid(gtid);
 
-  __kmp_aux_set_blocktime(KMP_DEREF arg, thread, tid);
+  __kmp_aux_convert_blocktime(&bt);
+  __kmp_aux_set_blocktime(bt, thread, tid);
 #endif
 }
 
+// Gets blocktime in units used for KMP_BLOCKTIME, ms otherwise
 int FTN_STDCALL FTN_GET_BLOCKTIME(void) {
 #ifdef KMP_STUB
   return __kmps_get_blocktime();
@@ -136,21 +138,24 @@ int FTN_STDCALL FTN_GET_BLOCKTIME(void) {
 
   /* These must match the settings used in __kmp_wait_sleep() */
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME) {
-    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d\n", gtid,
-                  team->t.t_id, tid, KMP_MAX_BLOCKTIME));
+    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d%cs\n", gtid,
+                  team->t.t_id, tid, KMP_MAX_BLOCKTIME, __kmp_blocktime_units));
     return KMP_MAX_BLOCKTIME;
   }
 #ifdef KMP_ADJUST_BLOCKTIME
   else if (__kmp_zero_bt && !get__bt_set(team, tid)) {
-    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d\n", gtid,
-                  team->t.t_id, tid, 0));
+    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d%cs\n", gtid,
+                  team->t.t_id, tid, 0, __kmp_blocktime_units));
     return 0;
   }
 #endif /* KMP_ADJUST_BLOCKTIME */
   else {
-    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d\n", gtid,
-                  team->t.t_id, tid, get__blocktime(team, tid)));
-    return get__blocktime(team, tid);
+    int bt = get__blocktime(team, tid);
+    if (__kmp_blocktime_units == 'm')
+      bt = bt / 1000;
+    KF_TRACE(10, ("kmp_get_blocktime: T#%d(%d:%d), blocktime=%d%cs\n", gtid,
+                  team->t.t_id, tid, bt, __kmp_blocktime_units));
+    return bt;
   }
 #endif
 }
@@ -802,6 +807,10 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_LIMIT)(void) {
 
   gtid = __kmp_entry_gtid();
   thread = __kmp_threads[gtid];
+  // If thread_limit for the target task is defined, return that instead of the
+  // regular task thread_limit
+  if (int thread_limit = thread->th.th_current_task->td_icvs.task_thread_limit)
+    return thread_limit;
   return thread->th.th_current_task->td_icvs.thread_limit;
 #endif
 }

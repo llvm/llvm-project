@@ -6597,6 +6597,7 @@ TEST(APFloatTest, getExactLog2) {
     if (I == APFloat::S_PPCDoubleDouble) {
       // Not implemented
       EXPECT_EQ(INT_MIN, One.getExactLog2());
+      EXPECT_EQ(INT_MIN, One.getExactLog2Abs());
       continue;
     }
 
@@ -6607,10 +6608,16 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(0, One.getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
     EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
     EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
+    EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
+    EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
+    EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
+    EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
 
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
@@ -6618,6 +6625,13 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
 
     EXPECT_EQ(INT_MIN,
               scalbn(One, MinExp - Precision - 1, APFloat::rmNearestTiesToEven)

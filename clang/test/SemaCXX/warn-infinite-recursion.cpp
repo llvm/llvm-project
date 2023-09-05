@@ -203,3 +203,13 @@ int unevaluated_recursive_function() {
   (void)typeid(unevaluated_recursive_function());
   return 0;
 }
+
+void func1(int i) { // expected-warning {{call itself}}
+  if (i || !i)
+    func1(i);
+}
+void func2(int i) { // expected-warning {{call itself}}
+  if (!i && i) {}
+  else
+    func2(i);
+}

@@ -827,6 +827,50 @@ func.func @lane_dependent_warp_propagate_read(
 
 // -----
 
+func.func @warp_propagate_read_3d(%laneid: index, %src: memref<32x4x32xf32>) -> vector<1x1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<1x1x4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    vector.yield %2 : vector<32x4x32xf32>
+  }
+  return %r : vector<1x1x4xf32>
+}
+
+//   CHECK-PROP-DAG: #[[$ID0MAP:.+]] = affine_map<()[s0] -> (s0 * 4 - (s0 floordiv 8) * 32)>
+//   CHECK-PROP-DAG: #[[$ID1MAP:.+]] = affine_map<()[s0] -> ((s0 floordiv 8) mod 4)>
+//   CHECK-PROP-DAG: #[[$ID2MAP:.+]] = affine_map<()[s0] -> ((s0 floordiv 8) floordiv 32)>
+// CHECK-PROP-LABEL: func.func @warp_propagate_read_3d
+//  CHECK-PROP-SAME: (%[[LANE:.+]]: index, %[[SRC:.+]]: memref<32x4x32xf32>)
+//   CHECK-PROP-DAG: %[[ID0:.+]] = affine.apply #[[$ID0MAP]]()[%[[LANE]]]
+//   CHECK-PROP-DAG: %[[ID1:.+]] = affine.apply #[[$ID1MAP]]()[%[[LANE]]]
+//   CHECK-PROP-DAG: %[[ID2:.+]] = affine.apply #[[$ID2MAP]]()[%[[LANE]]]
+//       CHECK-PROP: %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[ID2]], %[[ID1]], %[[ID0]]], %{{.+}} : memref<32x4x32xf32>, vector<1x1x4xf32>
+//       CHECK-PROP: return %[[READ]] : vector<1x1x4xf32>
+
+// -----
+
+func.func @warp_propagate_read_broadcast(%laneid: index, %src: memref<32x1xf32>) -> vector<1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[512] -> (vector<1x4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d0, 0)>} : memref<32x1xf32>, vector<32x64xf32>
+    vector.yield %2 : vector<32x64xf32>
+  }
+  return %r : vector<1x4xf32>
+}
+
+//   CHECK-PROP-DAG: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 16)>
+//   CHECK-PROP-DAG: #[[$READMAP:.+]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK-PROP-LABEL: func.func @warp_propagate_read_broadcast
+//  CHECK-PROP-SAME: (%[[LANE:.+]]: index, %[[SRC:.+]]: memref<32x1xf32>)
+//       CHECK-PROP:  %[[C0:.+]] = arith.constant 0 : index
+//       CHECK-PROP:  %[[ID:.+]] = affine.apply #[[$MAP]]()[%[[LANE]]]
+//       CHECK-PROP:  %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[ID]], %[[C0]]], %{{.+}} {in_bounds = [true, true], permutation_map = #[[$READMAP]]} : memref<32x1xf32>, vector<1x4xf32>
+//       CHECK-PROP:  return %[[READ]] : vector<1x4xf32>
+
+// -----
+
 // CHECK-PROP:   func @dont_duplicate_read
 func.func @dont_duplicate_read(
   %laneid: index, %src: memref<1024xf32>) -> vector<1xf32> {
@@ -1173,3 +1217,37 @@ func.func @dont_fold_vector_broadcast(%laneid: index) {
   vector.print %r : vector<1x2xf32>
   return
 }
+
+// -----
+
+func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[1024] -> (vector<4xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0, %c0], %cst : memref<32x4x32xf32>, vector<32x4x32xf32>
+    %3 = vector.shape_cast %2 : vector<32x4x32xf32> to vector<4096xf32>
+    vector.yield %3 : vector<4096xf32>
+  }
+  return %r : vector<4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast
+// CHECK-PROP:   %[[READ:.+]] = vector.transfer_read {{.+}} : memref<32x4x32xf32>, vector<1x1x4xf32>
+// CHECK-PROP:   %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<1x1x4xf32> to vector<4xf32>
+// CHECK-PROP:   return %[[CAST]] : vector<4xf32>
+
+// -----
+
+func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<4096xf32>, %index: index) -> vector<1xf32> {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>) {
+    %1 = vector.transfer_read %src[%index], %f0 {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+    vector.yield %1 : vector<1xf32>
+  }
+  return %r : vector<1xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_uniform_transfer_read
+//  CHECK-PROP-SAME: (%{{.+}}: index, %[[SRC:.+]]: memref<4096xf32>, %[[INDEX:.+]]: index)
+//       CHECK-PROP:   %[[READ:.+]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %cst {in_bounds = [true]} : memref<4096xf32>, vector<1xf32>
+//       CHECK-PROP:   return %[[READ]] : vector<1xf32>

@@ -13,7 +13,7 @@ a list of open projects that one can start with:
    `LLVM style <https://llvm.org/docs/CodingStandards.html>`_ but differs in a
    few aspects: We use ``snake_case`` for non-constant variable and function
    names,``CamelCase`` for internal type names (those which are not defined in a
-   public header), and ``CAPITILIZED_SNAKE_CASE`` for constants. When we started
+   public header), and ``CAPITALIZED_SNAKE_CASE`` for constants. When we started
    working on the project, we started using the general LLVM style for
    everything. However, for a short period, we switched to the style that is
    currently followed by the `LLD project <https://github.com/llvm/llvm-project/tree/main/lld>`_.

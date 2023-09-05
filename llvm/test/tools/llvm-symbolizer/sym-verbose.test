@@ -13,7 +13,7 @@
 
 RUN: llvm-symbolizer --verbose --print-address --obj=%p/Inputs/discrim < %p/Inputs/discrim.inp | FileCheck %s
 
-CHECK: some text
+CHECK: ??
 
 CHECK: 0x400590
 CHECK-NEXT: foo
@@ -118,4 +118,4 @@ CHECK-NEXT: Line: 10
 CHECK-NEXT: Column: 0
 CHECK-NEXT: Discriminator: 2
 
-CHECK: some more text
+CHECK: ??

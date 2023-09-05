@@ -68,3 +68,14 @@ define <vscale x 4 x i32> @test_incp(<vscale x 16 x i1> %Pg, <vscale x 4 x i32> 
   %1 = tail call <vscale x 4 x i32> asm "incp $0.s, $1", "=w,@3Upa,0"(<vscale x 16 x i1> %Pg, <vscale x 4 x i32> %Zn)
   ret <vscale x 4 x i32> %1
 }
+
+; Function Attrs: nounwind readnone
+; CHECK: [[ARG1:%[0-9]+]]:zpr = COPY $z1
+; CHECK: [[ARG2:%[0-9]+]]:zpr = COPY $z0
+; CHECK: [[ARG3:%[0-9]+]]:ppr = COPY $p0
+; CHECK: [[ARG4:%[0-9]+]]:ppr_p8to15 = COPY [[ARG3]]
+; CHECK: INLINEASM {{.*}} [[ARG4]]
+define <vscale x 8 x half> @test_svfadd_f16_Uph_constraint(<vscale x 16 x i1> %Pg, <vscale x 8 x half> %Zn, <vscale x 8 x half> %Zm) {
+  %1 = tail call <vscale x 8 x half> asm "fadd $0.h, $1/m, $2.h, $3.h", "=w,@3Uph,w,w"(<vscale x 16 x i1> %Pg, <vscale x 8 x half> %Zn, <vscale x 8 x half> %Zm)
+  ret <vscale x 8 x half> %1
+}

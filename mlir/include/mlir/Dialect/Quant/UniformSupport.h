@@ -171,7 +171,7 @@ private:
 
 /// An utility class to quantize an attribute by the per-axis quantization
 /// parameters. The size of the quantization dim in the converted elements
-/// attribute should matche the size of of scales/zeroPoints vectors in the
+/// attribute should match the size of scales/zeroPoints vectors in the
 /// quantization parameters.
 class UniformQuantizedPerAxisValueConverter {
 public:

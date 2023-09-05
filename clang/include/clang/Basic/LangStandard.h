@@ -49,7 +49,7 @@ enum LangFeatures {
   C99 = (1 << 1),
   C11 = (1 << 2),
   C17 = (1 << 3),
-  C2x = (1 << 4),
+  C23 = (1 << 4),
   CPlusPlus = (1 << 5),
   CPlusPlus11 = (1 << 6),
   CPlusPlus14 = (1 << 7),
@@ -101,8 +101,8 @@ public:
   /// isC17 - Language is a superset of C17.
   bool isC17() const { return Flags & C17; }
 
-  /// isC2x - Language is a superset of C2x.
-  bool isC2x() const { return Flags & C2x; }
+  /// isC23 - Language is a superset of C23.
+  bool isC23() const { return Flags & C23; }
 
   /// isCPlusPlus - Language is a C++ variant.
   bool isCPlusPlus() const { return Flags & CPlusPlus; }

@@ -18,6 +18,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   MissingStdForwardCheck.cpp
   NarrowingConversionsCheck.cpp
   NoMallocCheck.cpp
+  NoSuspendWithLockCheck.cpp
   OwningMemoryCheck.cpp
   PreferMemberInitializerCheck.cpp
   ProBoundsArrayToPointerDecayCheck.cpp
@@ -50,6 +51,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
 
 clang_target_link_libraries(clangTidyCppCoreGuidelinesModule
   PRIVATE
+  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic

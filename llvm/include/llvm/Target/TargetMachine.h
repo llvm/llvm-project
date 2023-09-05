@@ -232,6 +232,9 @@ public:
   /// target default.
   CodeModel::Model getCodeModel() const { return CMModel; }
 
+  /// Returns the maximum code size possible under the code model.
+  uint64_t getMaxCodeSize() const;
+
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 

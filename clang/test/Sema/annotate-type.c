@@ -20,10 +20,10 @@ void foo(float *[[clang::annotate_type("foo")]] a) {
   [[clang::annotate_type("bar")]] int *z1; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
   int *z2 [[clang::annotate_type("bar")]]; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
   [[clang::annotate_type("bar")]]; // expected-error {{'annotate_type' attribute cannot be applied to a statement}}
-  int *[[clang::annotate_type(1)]] z3; // expected-error {{'annotate_type' attribute requires a string}}
+  int *[[clang::annotate_type(1)]] z3; // expected-error {{expected string literal as argument of 'annotate_type' attribute}}
   int *[[clang::annotate_type()]] z4; // expected-error {{'annotate_type' attribute takes at least 1 argument}}
   int *[[clang::annotate_type]] z5; // expected-error {{'annotate_type' attribute takes at least 1 argument}}
-  int *[[clang::annotate_type(some_function())]] z6; // expected-error {{'annotate_type' attribute requires a string}}
+  int *[[clang::annotate_type(some_function())]] z6; // expected-error {{expected string literal as argument of 'annotate_type' attribute}}
   int *[[clang::annotate_type("bar", some_function())]] z7; // expected-error {{'annotate_type' attribute requires parameter 1 to be a constant expression}} expected-note{{subexpression not valid in a constant expression}}
   int *[[clang::annotate_type("bar", z7)]] z8; // expected-error {{'annotate_type' attribute requires parameter 1 to be a constant expression}} expected-note{{subexpression not valid in a constant expression}}
   int *[[clang::annotate_type("bar", int)]] z9; // expected-error {{expected expression}}

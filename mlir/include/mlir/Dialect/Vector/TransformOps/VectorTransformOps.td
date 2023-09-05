@@ -15,6 +15,28 @@ include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.vector_to_llvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert vector dialect ops to LLVM dialect ops. These
+    patterns require an "LLVMTypeConverter".
+
+    The patterns can be customized as follows:
+    - `reassociate_fp_reductions`: Allows LLVM to reassociate floating-point
+      reductions for speed.
+    - `force_32bit_vector_indices`: Allows the compiler to assume that vector
+      indices fit in 32-bit if that yields faster code.
+  }];
+
+  let arguments = (ins
+      DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
+      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices);
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ApplyCastAwayVectorLeadingOneDimPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.cast_away_vector_leading_one_dim",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

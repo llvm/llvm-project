@@ -903,10 +903,10 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.2s v0, v0, #24
 ; CHECK-NEXT:    shl.2s v1, v1, #24
-; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
 ; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    ssra.2s v0, v1, #24
-; CHECK-NEXT:    and.8b v0, v0, v2
+; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    and.8b v0, v0, v1
 ; CHECK-NEXT:    ushr.2s v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
@@ -968,10 +968,10 @@ define <4 x i16> @rhadd8_sext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.4h v0, v0, #8
 ; CHECK-NEXT:    shl.4h v1, v1, #8
-; CHECK-NEXT:    movi.4h v2, #1
 ; CHECK-NEXT:    sshr.4h v0, v0, #8
 ; CHECK-NEXT:    ssra.4h v0, v1, #8
-; CHECK-NEXT:    add.4h v0, v0, v2
+; CHECK-NEXT:    movi.4h v1, #1
+; CHECK-NEXT:    add.4h v0, v0, v1
 ; CHECK-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <4 x i8> %src1 to <4 x i16>
@@ -1283,13 +1283,13 @@ define <16 x i8> @andmaskv16i8(<16 x i16> %src1, <16 x i8> %src2) {
 define <16 x i8> @andmask2v16i8(<16 x i16> %src1, <16 x i16> %src2) {
 ; CHECK-LABEL: andmask2v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.16b v4, #3
-; CHECK-NEXT:    movi.16b v5, #7
 ; CHECK-NEXT:    uzp1.16b v2, v2, v3
+; CHECK-NEXT:    movi.16b v3, #3
 ; CHECK-NEXT:    uzp1.16b v0, v0, v1
-; CHECK-NEXT:    and.16b v1, v2, v4
-; CHECK-NEXT:    and.16b v0, v0, v5
-; CHECK-NEXT:    uhadd.16b v0, v0, v1
+; CHECK-NEXT:    movi.16b v1, #7
+; CHECK-NEXT:    and.16b v2, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    uhadd.16b v0, v0, v2
 ; CHECK-NEXT:    ret
   %zextsrc1 = and <16 x i16> %src1, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   %zextsrc2 = and <16 x i16> %src2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>

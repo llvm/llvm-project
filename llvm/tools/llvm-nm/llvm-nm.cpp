@@ -1818,6 +1818,12 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
               dyn_cast<const XCOFFObjectFile>(&Obj))
         S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
 
+      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
+        const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
+        if (WasmSym.isTypeData())
+          S.Size = WasmSym.Info.DataRef.Size;
+      }
+
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
         Expected<uint64_t> AddressOrErr = SymRef.getAddress();
@@ -2260,6 +2266,14 @@ static std::vector<NMSymbol> dumpSymbolNamesFromFile(StringRef Filename) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (error(BufferOrErr.getError(), Filename))
+    return SymbolList;
+
+  // Ignore AIX linker import files (these files start with "#!"), when
+  // exporting symbols.
+  const char *BuffStart = (*BufferOrErr)->getBufferStart();
+  size_t BufferSize = (*BufferOrErr)->getBufferSize();
+  if (ExportSymbols && BufferSize >= 2 && BuffStart[0] == '#' &&
+      BuffStart[1] == '!')
     return SymbolList;
 
   LLVMContext Context;

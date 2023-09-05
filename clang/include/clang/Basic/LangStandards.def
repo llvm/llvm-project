@@ -87,13 +87,17 @@ LANGSTANDARD(gnu17, "gnu17",
              LineComment | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat)
 LANGSTANDARD_ALIAS(gnu17, "gnu18")
 
-// C2x modes
-LANGSTANDARD(c2x, "c2x",
-             C, "Working Draft for ISO C2x",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | HexFloat)
-LANGSTANDARD(gnu2x, "gnu2x",
-             C, "Working Draft for ISO C2x with GNU extensions",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | GNUMode | HexFloat)
+// C23 modes
+LANGSTANDARD(c23, "c23",
+             C, "Working Draft for ISO C23",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(c23, "c2x")
+LANGSTANDARD(gnu23, "gnu23",
+             C, "Working Draft for ISO C23 with GNU extensions",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | GNUMode | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(gnu23, "gnu2x")
+// FIXME: Add the alias for iso9899:202* once we know the year ISO publishes
+// the document (expected to be 2024).
 
 // C++ modes
 LANGSTANDARD(cxx98, "c++98",

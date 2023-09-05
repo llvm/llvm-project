@@ -98,10 +98,10 @@ private:
 
     /// When the entry contains a single declaration, this is
     /// the index associated with that entry.
-    unsigned SingleDeclIndex;
+    unsigned SingleDeclIndex = 0;
 
   public:
-    ShadowMapEntry() : SingleDeclIndex(0) {}
+    ShadowMapEntry() = default;
     ShadowMapEntry(const ShadowMapEntry &) = delete;
     ShadowMapEntry(ShadowMapEntry &&Move) { *this = std::move(Move); }
     ShadowMapEntry &operator=(const ShadowMapEntry &) = delete;
@@ -225,6 +225,7 @@ public:
     case CodeCompletionContext::CCC_ObjCMessageReceiver:
     case CodeCompletionContext::CCC_ParenthesizedExpression:
     case CodeCompletionContext::CCC_Statement:
+    case CodeCompletionContext::CCC_TopLevelOrExpression:
     case CodeCompletionContext::CCC_Recovery:
       if (ObjCMethodDecl *Method = SemaRef.getCurMethodDecl())
         if (Method->isInstanceMethod())
@@ -1850,6 +1851,7 @@ static void AddFunctionSpecifiers(Sema::ParserCompletionContext CCC,
   case Sema::PCC_ObjCInstanceVariableList:
   case Sema::PCC_Expression:
   case Sema::PCC_Statement:
+  case Sema::PCC_TopLevelOrExpression:
   case Sema::PCC_ForInit:
   case Sema::PCC_Condition:
   case Sema::PCC_RecoveryInFunction:
@@ -1907,6 +1909,7 @@ static bool WantTypesInContext(Sema::ParserCompletionContext CCC,
   case Sema::PCC_Type:
   case Sema::PCC_ParenthesizedExpression:
   case Sema::PCC_LocalDeclarationSpecifiers:
+  case Sema::PCC_TopLevelOrExpression:
     return true;
 
   case Sema::PCC_Expression:
@@ -2219,6 +2222,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
     break;
 
   case Sema::PCC_RecoveryInFunction:
+  case Sema::PCC_TopLevelOrExpression:
   case Sema::PCC_Statement: {
     if (SemaRef.getLangOpts().CPlusPlus11)
       AddUsingAliasResult(Builder, Results);
@@ -2673,7 +2677,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (SemaRef.getLangOpts().C2x) {
+    if (SemaRef.getLangOpts().C23) {
       // nullptr
       Builder.AddResultTypeChunk("nullptr_t");
       Builder.AddTypedTextChunk("nullptr");
@@ -4208,6 +4212,8 @@ mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
 
   case Sema::PCC_LocalDeclarationSpecifiers:
     return CodeCompletionContext::CCC_Type;
+  case Sema::PCC_TopLevelOrExpression:
+    return CodeCompletionContext::CCC_TopLevelOrExpression;
   }
 
   llvm_unreachable("Invalid ParserCompletionContext!");
@@ -4348,6 +4354,7 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
     break;
 
   case PCC_Statement:
+  case PCC_TopLevelOrExpression:
   case PCC_ParenthesizedExpression:
   case PCC_Expression:
   case PCC_ForInit:
@@ -4385,6 +4392,7 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   case PCC_ParenthesizedExpression:
   case PCC_Expression:
   case PCC_Statement:
+  case PCC_TopLevelOrExpression:
   case PCC_RecoveryInFunction:
     if (S->getFnParent())
       AddPrettyFunctionResults(getLangOpts(), Results);
@@ -4533,7 +4541,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
   }
   bool SyntaxSupportsGuards = Syntax == AttributeCommonInfo::AS_GNU ||
                               Syntax == AttributeCommonInfo::AS_CXX11 ||
-                              Syntax == AttributeCommonInfo::AS_C2x;
+                              Syntax == AttributeCommonInfo::AS_C23;
 
   llvm::DenseSet<llvm::StringRef> FoundScopes;
   auto AddCompletions = [&](const ParsedAttrInfo &A) {
@@ -4547,7 +4555,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
       llvm::StringRef Name = S.NormalizedFullName;
       llvm::StringRef Scope;
       if ((Syntax == AttributeCommonInfo::AS_CXX11 ||
-           Syntax == AttributeCommonInfo::AS_C2x)) {
+           Syntax == AttributeCommonInfo::AS_C23)) {
         std::tie(Scope, Name) = Name.split("::");
         if (Name.empty()) // oops, unscoped
           std::swap(Name, Scope);
@@ -6066,12 +6074,21 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   if (!Target)
     return {};
 
-  if (auto P = Target.getAs<PointerTypeLoc>()) {
-    Target = P.getPointeeLoc();
-  }
-
-  if (auto P = Target.getAs<ParenTypeLoc>()) {
-    Target = P.getInnerLoc();
+  // Unwrap types that may be wrapping the function type
+  while (true) {
+    if (auto P = Target.getAs<PointerTypeLoc>()) {
+      Target = P.getPointeeLoc();
+      continue;
+    }
+    if (auto A = Target.getAs<AttributedTypeLoc>()) {
+      Target = A.getModifiedLoc();
+      continue;
+    }
+    if (auto P = Target.getAs<ParenTypeLoc>()) {
+      Target = P.getInnerLoc();
+      continue;
+    }
+    break;
   }
 
   if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {

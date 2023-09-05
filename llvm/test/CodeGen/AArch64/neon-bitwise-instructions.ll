@@ -896,9 +896,9 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <8 x i8> @vselect_equivalent_shuffle_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI89_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    adrp x8, .LCPI89_0
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI89_0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
@@ -929,8 +929,8 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8_zero(<8 x i8> %a) {
 define <8 x i8> @vselect_equivalent_shuffle_v8i8_zeroswap(<8 x i8> %a) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v8i8_zeroswap:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI91_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI91_0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
@@ -961,8 +961,8 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI92_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI92_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
@@ -1495,10 +1495,11 @@ entry:
 define <8 x i32> @bic_shifted_knownbits2(<8 x i16> %v) {
 ; CHECK-LABEL: bic_shifted_knownbits2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
 ; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    bic v2.4s, #255, lsl #8
 ; CHECK-NEXT:    bic v1.4s, #255, lsl #8
-; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %vshr_n = zext <8 x i16> %v to <8 x i32>
@@ -1522,8 +1523,8 @@ define <8 x i32> @bic_shifted_knownbits3(<8 x i16> %v) {
 define <8 x i32> @bic_shifted_knownbits4(<8 x i32> %v) {
 ; CHECK-LABEL: bic_shifted_knownbits4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shl v0.4s, v0.4s, #8
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #8
+; CHECK-NEXT:    shl v0.4s, v0.4s, #8
 ; CHECK-NEXT:    bic v0.4s, #255, lsl #8
 ; CHECK-NEXT:    bic v1.4s, #255, lsl #8
 ; CHECK-NEXT:    ret

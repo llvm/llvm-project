@@ -1162,6 +1162,7 @@ public:
   CFGCallback() = default;
   virtual ~CFGCallback() = default;
 
+  virtual void logicAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) {}
   virtual void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) {}
   virtual void compareBitwiseEquality(const BinaryOperator *B,
                                       bool isAlwaysTrue) {}

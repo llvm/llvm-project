@@ -190,8 +190,6 @@ private:
                                       MachineRegisterInfo &MRI);
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI);
-  bool selectIntrinsicTrunc(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  bool selectIntrinsicRound(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -2631,12 +2629,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       default:
         llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
       case 32:
-        // For s32, use a cp load if we have optsize/minsize.
-        if (!shouldOptForSize(&MF))
+      case 64: {
+        bool OptForSize = shouldOptForSize(&MF);
+        const auto &TLI = MF.getSubtarget().getTargetLowering();
+        // If TLI says that this fpimm is illegal, then we'll expand to a
+        // constant pool load.
+        if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
+                              EVT::getFloatingPointVT(DefSize), OptForSize))
           break;
         [[fallthrough]];
+      }
       case 16:
-      case 64:
       case 128: {
         auto *FPImm = I.getOperand(1).getFPImm();
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
@@ -2650,11 +2653,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
       }
 
+      assert(DefSize == 32 || DefSize == 64 && "Unexpected const def size");
       // Either emit a FMOV, or emit a copy to emit a normal mov.
-      assert(DefSize == 32 &&
-             "Expected constant pool loads for all sizes other than 32!");
-      const Register DefGPRReg =
-          MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+      const Register DefGPRReg = MRI.createVirtualRegister(
+          DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
       MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
@@ -3494,10 +3496,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-    return selectIntrinsicTrunc(I, MRI);
-  case TargetOpcode::G_INTRINSIC_ROUND:
-    return selectIntrinsicRound(I, MRI);
   case TargetOpcode::G_BUILD_VECTOR:
     return selectBuildVector(I, MRI);
   case TargetOpcode::G_MERGE_VALUES:
@@ -3638,6 +3636,9 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
   auto JumpTableInst = MIB.buildInstr(AArch64::JumpTableDest32,
                                       {TargetReg, ScratchReg}, {JTAddr, Index})
                            .addJumpTableIndex(JTI);
+  // Save the jump table info.
+  MIB.buildInstr(TargetOpcode::JUMP_TABLE_DEBUG_INFO, {},
+                 {static_cast<int64_t>(JTI)});
   // Build the indirect branch.
   MIB.buildInstr(AArch64::BR, {}, {TargetReg});
   I.eraseFromParent();
@@ -3694,116 +3695,6 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
                                MRI);
   I.eraseFromParent();
   return true;
-}
-
-bool AArch64InstructionSelector::selectIntrinsicTrunc(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
-  const LLT SrcTy = MRI.getType(I.getOperand(0).getReg());
-
-  // Select the correct opcode.
-  unsigned Opc = 0;
-  if (!SrcTy.isVector()) {
-    switch (SrcTy.getSizeInBits()) {
-    default:
-    case 16:
-      Opc = AArch64::FRINTZHr;
-      break;
-    case 32:
-      Opc = AArch64::FRINTZSr;
-      break;
-    case 64:
-      Opc = AArch64::FRINTZDr;
-      break;
-    }
-  } else {
-    unsigned NumElts = SrcTy.getNumElements();
-    switch (SrcTy.getElementType().getSizeInBits()) {
-    default:
-      break;
-    case 16:
-      if (NumElts == 4)
-        Opc = AArch64::FRINTZv4f16;
-      else if (NumElts == 8)
-        Opc = AArch64::FRINTZv8f16;
-      break;
-    case 32:
-      if (NumElts == 2)
-        Opc = AArch64::FRINTZv2f32;
-      else if (NumElts == 4)
-        Opc = AArch64::FRINTZv4f32;
-      break;
-    case 64:
-      if (NumElts == 2)
-        Opc = AArch64::FRINTZv2f64;
-      break;
-    }
-  }
-
-  if (!Opc) {
-    // Didn't get an opcode above, bail.
-    LLVM_DEBUG(dbgs() << "Unsupported type for G_INTRINSIC_TRUNC!\n");
-    return false;
-  }
-
-  // Legalization would have set us up perfectly for this; we just need to
-  // set the opcode and move on.
-  I.setDesc(TII.get(Opc));
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-}
-
-bool AArch64InstructionSelector::selectIntrinsicRound(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
-  const LLT SrcTy = MRI.getType(I.getOperand(0).getReg());
-
-  // Select the correct opcode.
-  unsigned Opc = 0;
-  if (!SrcTy.isVector()) {
-    switch (SrcTy.getSizeInBits()) {
-    default:
-    case 16:
-      Opc = AArch64::FRINTAHr;
-      break;
-    case 32:
-      Opc = AArch64::FRINTASr;
-      break;
-    case 64:
-      Opc = AArch64::FRINTADr;
-      break;
-    }
-  } else {
-    unsigned NumElts = SrcTy.getNumElements();
-    switch (SrcTy.getElementType().getSizeInBits()) {
-    default:
-      break;
-    case 16:
-      if (NumElts == 4)
-        Opc = AArch64::FRINTAv4f16;
-      else if (NumElts == 8)
-        Opc = AArch64::FRINTAv8f16;
-      break;
-    case 32:
-      if (NumElts == 2)
-        Opc = AArch64::FRINTAv2f32;
-      else if (NumElts == 4)
-        Opc = AArch64::FRINTAv4f32;
-      break;
-    case 64:
-      if (NumElts == 2)
-        Opc = AArch64::FRINTAv2f64;
-      break;
-    }
-  }
-
-  if (!Opc) {
-    // Didn't get an opcode above, bail.
-    LLVM_DEBUG(dbgs() << "Unsupported type for G_INTRINSIC_ROUND!\n");
-    return false;
-  }
-
-  // Legalization would have set us up perfectly for this; we just need to
-  // set the opcode and move on.
-  I.setDesc(TII.get(Opc));
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
 bool AArch64InstructionSelector::selectVectorICmp(
@@ -6195,7 +6086,7 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
 
   // It's better to avoid folding and recomputing shifts when we don't have a
   // fastpath.
-  if (!STI.hasLSLFast())
+  if (!STI.hasAddrLSLFast())
     return false;
 
   // We have a fastpath, so folding a shift in and potentially computing it

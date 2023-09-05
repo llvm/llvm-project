@@ -1067,9 +1067,9 @@ public:
           thread_sp->GetProcess()->GetUnixSignals()->GetShouldNotify(m_value);
       if (should_notify) {
         StreamString strm;
-        strm.Printf(
-            "thread %d received signal: %s", thread_sp->GetIndexID(),
-            thread_sp->GetProcess()->GetUnixSignals()->GetSignalAsCString(
+        strm.Format(
+            "thread {0:d} received signal: {1}", thread_sp->GetIndexID(),
+            thread_sp->GetProcess()->GetUnixSignals()->GetSignalAsStringRef(
                 m_value));
         Process::ProcessEventData::AddRestartedReason(event_ptr,
                                                       strm.GetData());

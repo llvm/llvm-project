@@ -49,7 +49,7 @@ void __asan_init(void) {
 
   __asan_abi_init();
 }
-void __asan_version_mismatch_check_v8(void) {}
+
 void __asan_handle_no_return(void) { __asan_abi_handle_no_return(); }
 
 // Variables concerning RTL state. These provisionally exist for completeness

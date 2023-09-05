@@ -1190,6 +1190,162 @@ for.body:
 for.end:
   ret void
 }
+;
+; When there is no 'nsz' attribute, the transformation should not happen.
+;
+
+define void @innermost_loop_2d_nonsz_reassociated(i32 %i, double %d1, double %d2, double %delta, ptr %cells) {
+; REASSOCIATE_ONLY-LABEL: define void @innermost_loop_2d_nonsz_reassociated
+; REASSOCIATE_ONLY-SAME: (i32 [[I:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
+; REASSOCIATE_ONLY-NEXT:  entry:
+; REASSOCIATE_ONLY-NEXT:    br label [[FOR_COND:%.*]]
+; REASSOCIATE_ONLY:       for.cond:
+; REASSOCIATE_ONLY-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
+; REASSOCIATE_ONLY-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[J]], [[I]]
+; REASSOCIATE_ONLY-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; REASSOCIATE_ONLY:       for.body:
+; REASSOCIATE_ONLY-NEXT:    [[ADD_J_1]] = add nuw nsw i32 [[J]], 1
+; REASSOCIATE_ONLY-NEXT:    [[IDXPROM_J_1:%.*]] = zext i32 [[ADD_J_1]] to i64
+; REASSOCIATE_ONLY-NEXT:    [[ARRAYIDX_J_1:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J_1]]
+; REASSOCIATE_ONLY-NEXT:    [[CELL_1:%.*]] = load double, ptr [[ARRAYIDX_J_1]], align 8
+; REASSOCIATE_ONLY-NEXT:    [[FMUL_1:%.*]] = fmul reassoc double [[D1]], [[CELL_1]]
+; REASSOCIATE_ONLY-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
+; REASSOCIATE_ONLY-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J]]
+; REASSOCIATE_ONLY-NEXT:    [[CELL_2:%.*]] = load double, ptr [[ARRAYIDX_J]], align 8
+; REASSOCIATE_ONLY-NEXT:    [[FMUL_2:%.*]] = fmul reassoc double [[D2]], [[CELL_2]]
+; REASSOCIATE_ONLY-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc double [[FMUL_1]], [[FMUL_2]]
+; REASSOCIATE_ONLY-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc double [[DELTA]], [[REASS_ADD]]
+; REASSOCIATE_ONLY-NEXT:    store double [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
+; REASSOCIATE_ONLY-NEXT:    br label [[FOR_COND]]
+; REASSOCIATE_ONLY:       for.end:
+; REASSOCIATE_ONLY-NEXT:    ret void
+;
+; LICM_ONLY-LABEL: define void @innermost_loop_2d_nonsz_reassociated
+; LICM_ONLY-SAME: (i32 [[I:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
+; LICM_ONLY-NEXT:  entry:
+; LICM_ONLY-NEXT:    br label [[FOR_COND:%.*]]
+; LICM_ONLY:       for.cond:
+; LICM_ONLY-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
+; LICM_ONLY-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[J]], [[I]]
+; LICM_ONLY-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; LICM_ONLY:       for.body:
+; LICM_ONLY-NEXT:    [[ADD_J_1]] = add nuw nsw i32 [[J]], 1
+; LICM_ONLY-NEXT:    [[IDXPROM_J_1:%.*]] = zext i32 [[ADD_J_1]] to i64
+; LICM_ONLY-NEXT:    [[ARRAYIDX_J_1:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J_1]]
+; LICM_ONLY-NEXT:    [[CELL_1:%.*]] = load double, ptr [[ARRAYIDX_J_1]], align 8
+; LICM_ONLY-NEXT:    [[FMUL_1:%.*]] = fmul reassoc double [[CELL_1]], [[D1]]
+; LICM_ONLY-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
+; LICM_ONLY-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J]]
+; LICM_ONLY-NEXT:    [[CELL_2:%.*]] = load double, ptr [[ARRAYIDX_J]], align 8
+; LICM_ONLY-NEXT:    [[FMUL_2:%.*]] = fmul reassoc double [[CELL_2]], [[D2]]
+; LICM_ONLY-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc double [[FMUL_2]], [[FMUL_1]]
+; LICM_ONLY-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc double [[REASS_ADD]], [[DELTA]]
+; LICM_ONLY-NEXT:    store double [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
+; LICM_ONLY-NEXT:    br label [[FOR_COND]]
+; LICM_ONLY:       for.end:
+; LICM_ONLY-NEXT:    ret void
+;
+; LICM_ONLY_CONSTRAINED-LABEL: define void @innermost_loop_2d_nonsz_reassociated
+; LICM_ONLY_CONSTRAINED-SAME: (i32 [[I:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
+; LICM_ONLY_CONSTRAINED-NEXT:  entry:
+; LICM_ONLY_CONSTRAINED-NEXT:    br label [[FOR_COND:%.*]]
+; LICM_ONLY_CONSTRAINED:       for.cond:
+; LICM_ONLY_CONSTRAINED-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[J]], [[I]]
+; LICM_ONLY_CONSTRAINED-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; LICM_ONLY_CONSTRAINED:       for.body:
+; LICM_ONLY_CONSTRAINED-NEXT:    [[ADD_J_1]] = add nuw nsw i32 [[J]], 1
+; LICM_ONLY_CONSTRAINED-NEXT:    [[IDXPROM_J_1:%.*]] = zext i32 [[ADD_J_1]] to i64
+; LICM_ONLY_CONSTRAINED-NEXT:    [[ARRAYIDX_J_1:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J_1]]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[CELL_1:%.*]] = load double, ptr [[ARRAYIDX_J_1]], align 8
+; LICM_ONLY_CONSTRAINED-NEXT:    [[FMUL_1:%.*]] = fmul reassoc double [[CELL_1]], [[D1]]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
+; LICM_ONLY_CONSTRAINED-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J]]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[CELL_2:%.*]] = load double, ptr [[ARRAYIDX_J]], align 8
+; LICM_ONLY_CONSTRAINED-NEXT:    [[FMUL_2:%.*]] = fmul reassoc double [[CELL_2]], [[D2]]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc double [[FMUL_2]], [[FMUL_1]]
+; LICM_ONLY_CONSTRAINED-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc double [[REASS_ADD]], [[DELTA]]
+; LICM_ONLY_CONSTRAINED-NEXT:    store double [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
+; LICM_ONLY_CONSTRAINED-NEXT:    br label [[FOR_COND]]
+; LICM_ONLY_CONSTRAINED:       for.end:
+; LICM_ONLY_CONSTRAINED-NEXT:    ret void
+;
+; LICM_AFTER_REASSOCIATE-LABEL: define void @innermost_loop_2d_nonsz_reassociated
+; LICM_AFTER_REASSOCIATE-SAME: (i32 [[I:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
+; LICM_AFTER_REASSOCIATE-NEXT:  entry:
+; LICM_AFTER_REASSOCIATE-NEXT:    br label [[FOR_COND:%.*]]
+; LICM_AFTER_REASSOCIATE:       for.cond:
+; LICM_AFTER_REASSOCIATE-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[J]], [[I]]
+; LICM_AFTER_REASSOCIATE-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; LICM_AFTER_REASSOCIATE:       for.body:
+; LICM_AFTER_REASSOCIATE-NEXT:    [[ADD_J_1]] = add nuw nsw i32 [[J]], 1
+; LICM_AFTER_REASSOCIATE-NEXT:    [[IDXPROM_J_1:%.*]] = zext i32 [[ADD_J_1]] to i64
+; LICM_AFTER_REASSOCIATE-NEXT:    [[ARRAYIDX_J_1:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J_1]]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[CELL_1:%.*]] = load double, ptr [[ARRAYIDX_J_1]], align 8
+; LICM_AFTER_REASSOCIATE-NEXT:    [[FMUL_1:%.*]] = fmul reassoc double [[D1]], [[CELL_1]]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
+; LICM_AFTER_REASSOCIATE-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J]]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[CELL_2:%.*]] = load double, ptr [[ARRAYIDX_J]], align 8
+; LICM_AFTER_REASSOCIATE-NEXT:    [[FMUL_2:%.*]] = fmul reassoc double [[D2]], [[CELL_2]]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc double [[FMUL_1]], [[FMUL_2]]
+; LICM_AFTER_REASSOCIATE-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc double [[DELTA]], [[REASS_ADD]]
+; LICM_AFTER_REASSOCIATE-NEXT:    store double [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
+; LICM_AFTER_REASSOCIATE-NEXT:    br label [[FOR_COND]]
+; LICM_AFTER_REASSOCIATE:       for.end:
+; LICM_AFTER_REASSOCIATE-NEXT:    ret void
+;
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-LABEL: define void @innermost_loop_2d_nonsz_reassociated
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-SAME: (i32 [[I:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[DELTA:%.*]], ptr [[CELLS:%.*]]) {
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:  entry:
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    br label [[FOR_COND:%.*]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED:       for.cond:
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_J_1:%.*]], [[FOR_BODY:%.*]] ]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[J]], [[I]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED:       for.body:
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[ADD_J_1]] = add nuw nsw i32 [[J]], 1
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[IDXPROM_J_1:%.*]] = zext i32 [[ADD_J_1]] to i64
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[ARRAYIDX_J_1:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J_1]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[CELL_1:%.*]] = load double, ptr [[ARRAYIDX_J_1]], align 8
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[FMUL_1:%.*]] = fmul reassoc double [[D1]], [[CELL_1]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[IDXPROM_J:%.*]] = zext i32 [[J]] to i64
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[ARRAYIDX_J:%.*]] = getelementptr inbounds double, ptr [[CELLS]], i64 [[IDXPROM_J]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[CELL_2:%.*]] = load double, ptr [[ARRAYIDX_J]], align 8
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[FMUL_2:%.*]] = fmul reassoc double [[D2]], [[CELL_2]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc double [[FMUL_1]], [[FMUL_2]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc double [[DELTA]], [[REASS_ADD]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    store double [[REASS_MUL]], ptr [[ARRAYIDX_J]], align 8
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    br label [[FOR_COND]]
+; LICM_AFTER_REASSOCIATE_CONSTRAINED:       for.end:
+; LICM_AFTER_REASSOCIATE_CONSTRAINED-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %j = phi i32 [ 0, %entry ], [ %add.j.1, %for.body ]
+  %cmp.not = icmp sgt i32 %j, %i
+  br i1 %cmp.not, label %for.end, label %for.body
+
+for.body:
+  %add.j.1 = add nuw nsw i32 %j, 1
+  %idxprom.j.1 = zext i32 %add.j.1 to i64
+  %arrayidx.j.1 = getelementptr inbounds double, ptr %cells, i64 %idxprom.j.1
+  %cell.1 = load double, ptr %arrayidx.j.1, align 8
+  %fmul.1 = fmul reassoc double %cell.1, %d1
+  %idxprom.j = zext i32 %j to i64
+  %arrayidx.j = getelementptr inbounds double, ptr %cells, i64 %idxprom.j
+  %cell.2 = load double, ptr %arrayidx.j, align 8
+  %fmul.2 = fmul reassoc double %cell.2, %d2
+  %reass.add = fadd reassoc double %fmul.2, %fmul.1
+  %reass.mul = fmul reassoc double %reass.add, %delta
+  store double %reass.mul, ptr %arrayidx.j, align 8
+  br label %for.cond
+
+for.end:
+  ret void
+}
 
 ;
 ; The following loop will not be modified by the LICM pass:

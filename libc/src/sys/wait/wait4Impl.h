@@ -14,7 +14,7 @@
 #include "src/__support/error_or.h"
 #include "src/errno/libc_errno.h"
 
-#include <sys/signal.h>
+#include <signal.h>
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/wait.h>
 

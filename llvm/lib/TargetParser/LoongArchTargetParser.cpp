@@ -46,3 +46,15 @@ bool LoongArch::getArchFeatures(StringRef Arch,
   }
   return false;
 }
+
+bool LoongArch::isValidCPUName(StringRef Name) { return isValidArchName(Name); }
+
+void LoongArch::fillValidCPUList(SmallVectorImpl<StringRef> &Values) {
+  for (const auto A : AllArchs)
+    Values.emplace_back(A.Name);
+}
+
+StringRef LoongArch::getDefaultArch(bool Is64Bit) {
+  // TODO: use a real 32-bit arch name.
+  return Is64Bit ? "loongarch64" : "";
+}

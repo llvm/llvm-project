@@ -45,6 +45,12 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
   return "normalized.lb";
 }
 
+/// Model operations which affect global debugging information
+struct DebuggingResource
+    : public mlir::SideEffects::Resource::Base<DebuggingResource> {
+  mlir::StringRef getName() final { return "DebuggingResource"; }
+};
+
 } // namespace fir
 
 #define GET_OP_CLASSES

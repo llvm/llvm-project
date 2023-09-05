@@ -3,11 +3,11 @@
 /// 4.7 enables cfg_checksum.
 /// 4.8 (default, compatible with gcov 7) emits the exit block the second.
 // RUN: rm -rf %t && mkdir %t && cd %t
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file /dev/null -coverage-version='304*' %s -o - | \
+// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='304*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,304 %s
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file /dev/null -coverage-version='407*' %s -o - | \
+// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null -coverage-version='407*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,407 %s
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file /dev/null %s -o - | \
+// RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file=/dev/null %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,408 %s
 
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO

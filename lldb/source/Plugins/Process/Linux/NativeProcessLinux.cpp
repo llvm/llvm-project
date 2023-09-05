@@ -671,7 +671,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     SetCurrentThreadID(main_thread->GetID());
     main_thread->SetStoppedByExec();
 
-    // Tell coordinator about about the "new" (since exec) stopped main thread.
+    // Tell coordinator about the "new" (since exec) stopped main thread.
     ThreadWasCreated(*main_thread);
 
     // Let our delegate know we have just exec'd.

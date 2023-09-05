@@ -15,10 +15,10 @@
 #include "WebAssemblyMCInstLower.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
@@ -202,12 +202,12 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           const MachineRegisterInfo &MRI =
               MI->getParent()->getParent()->getRegInfo();
           for (const MachineOperand &MO : MI->defs())
-            Returns.push_back(
-                WebAssembly::regClassToValType(MRI.getRegClass(MO.getReg())));
+            Returns.push_back(WebAssembly::regClassToValType(
+                MRI.getRegClass(MO.getReg())->getID()));
           for (const MachineOperand &MO : MI->explicit_uses())
             if (MO.isReg())
-              Params.push_back(
-                  WebAssembly::regClassToValType(MRI.getRegClass(MO.getReg())));
+              Params.push_back(WebAssembly::regClassToValType(
+                  MRI.getRegClass(MO.getReg())->getID()));
 
           // call_indirect instructions have a callee operand at the end which
           // doesn't count as a param.

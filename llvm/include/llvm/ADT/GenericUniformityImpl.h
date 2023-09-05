@@ -946,19 +946,22 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
   if (Cycle->contains(DivTermBlock))
     return nullptr;
 
+  const auto *OriginalCycle = Cycle;
+  const auto *Parent = Cycle->getParentCycle();
+  while (Parent && !Parent->contains(DivTermBlock)) {
+    Cycle = Parent;
+    Parent = Cycle->getParentCycle();
+  }
+
+  // If the original cycle is not the outermost cycle, then the outermost cycle
+  // is irreducible. If the outermost cycle were reducible, then external
+  // diverged paths would not reach the original inner cycle.
+  (void)OriginalCycle;
+  assert(Cycle == OriginalCycle || !Cycle->isReducible());
+
   if (Cycle->isReducible()) {
     assert(Cycle->getHeader() == JoinBlock);
     return nullptr;
-  }
-
-  const auto *Parent = Cycle->getParentCycle();
-  while (Parent && !Parent->contains(DivTermBlock)) {
-    // If the join is inside a child, then the parent must be
-    // irreducible. The only join in a reducible cyle is its own
-    // header.
-    assert(!Parent->isReducible());
-    Cycle = Parent;
-    Parent = Cycle->getParentCycle();
   }
 
   LLVM_DEBUG(dbgs() << "cycle made divergent by external branch\n");
@@ -976,7 +979,7 @@ getIntDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
                const BlockT *JoinBlock, const DominatorTreeT &DT,
                ContextT &Context) {
   LLVM_DEBUG(dbgs() << "examine join " << Context.print(JoinBlock)
-                    << "for internal branch " << Context.print(DivTermBlock)
+                    << " for internal branch " << Context.print(DivTermBlock)
                     << "\n");
   if (DT.properlyDominates(DivTermBlock, JoinBlock))
     return nullptr;

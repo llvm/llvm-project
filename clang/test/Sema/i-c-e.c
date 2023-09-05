@@ -6,7 +6,7 @@
 int a(void) {int p; *(1 ? &p : (void*)(0 && (a(),1))) = 10;} /* expected-error {{incomplete type 'void' is not assignable}}
                                                                 expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
 
-// rdar://6091492 - ?: with __builtin_constant_p as the operand is an i-c-e.
+// ?: with __builtin_constant_p as the operand is an i-c-e.
 int expr;
 char w[__builtin_constant_p(expr) ? expr : 1];
 
@@ -64,8 +64,6 @@ void func(int x)
   }
 }
 
-
-// rdar://4213768
 int expr;
 char y[__builtin_constant_p(expr) ? -1 : 1];
 char z[__builtin_constant_p(4) ? 1 : -1];

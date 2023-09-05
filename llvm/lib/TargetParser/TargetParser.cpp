@@ -332,6 +332,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx11-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
+      Features["gws"] = true;
       break;
     case GK_GFX1036:
     case GK_GFX1035:
@@ -357,6 +358,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
       break;
     case GK_GFX1012:
     case GK_GFX1011:
@@ -379,6 +381,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
       break;
     case GK_GFX942:
     case GK_GFX941:
@@ -408,6 +411,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memrealtime"] = true;
       Features["ci-insts"] = true;
       Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
       break;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
@@ -458,6 +462,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX600:
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
       break;
     case GK_NONE:
       break;

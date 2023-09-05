@@ -2390,6 +2390,10 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
     BatchAAResults &BAA, unsigned &UpwardWalkLimit) {
   assert(!isa<MemoryUse>(StartingAccess) && "Use cannot be defining access");
 
+  // If location is undefined, conservatively return starting access.
+  if (Loc.Ptr == nullptr)
+    return StartingAccess;
+
   Instruction *I = nullptr;
   if (auto *StartingUseOrDef = dyn_cast<MemoryUseOrDef>(StartingAccess)) {
     if (MSSA->isLiveOnEntryDef(StartingUseOrDef))

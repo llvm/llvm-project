@@ -231,7 +231,6 @@ feature_test_macros = [
             "name": "__cpp_lib_bitset",
             "values": {"c++26": 202306}, # P2697R1 Interfacing bitset with string_view
             "headers": ["bitset"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_bool_constant",
@@ -1055,7 +1054,7 @@ feature_test_macros = [
             "name": "__cpp_lib_to_chars",
             "values": {
                          "c++17": 201611,
-                         #"c++26: 202306, # P2497R0 Testing for success or failure of <charconv> functions
+                         "c++26": 202306, # P2497R0 Testing for success or failure of <charconv> functions
                       },
             "headers": ["charconv"],
             "unimplemented": True,

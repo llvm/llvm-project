@@ -25,7 +25,7 @@ append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic SCUDO_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SCUDO_CFLAGS)
 
 if(COMPILER_RT_DEBUG)
-  list(APPEND SCUDO_CFLAGS -O0 -DSCUDO_DEBUG=1)
+  list(APPEND SCUDO_CFLAGS -O0 -DSCUDO_DEBUG=1 -DSCUDO_ENABLE_HOOKS=1)
 else()
   list(APPEND SCUDO_CFLAGS -O3)
 endif()
@@ -83,7 +83,6 @@ set(SCUDO_HEADERS
   quarantine.h
   release.h
   report.h
-  rss_limit_checker.h
   secondary.h
   size_class_map.h
   stack_depot.h
@@ -113,7 +112,6 @@ set(SCUDO_SOURCES
   mem_map_linux.cpp
   release.cpp
   report.cpp
-  rss_limit_checker.cpp
   string_utils.cpp
   timing.cpp
   )

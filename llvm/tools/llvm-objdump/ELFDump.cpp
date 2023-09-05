@@ -38,6 +38,7 @@ private:
   void printDynamicSection();
   void printProgramHeaders();
   void printSymbolVersion();
+  void printSymbolVersionDependency(const typename ELFT::Shdr &Sec);
 };
 } // namespace
 
@@ -346,19 +347,13 @@ template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
 }
 
 template <class ELFT>
-static void printSymbolVersionDependency(StringRef FileName,
-                                         const ELFFile<ELFT> &Obj,
-                                         const typename ELFT::Shdr &Sec) {
+void ELFDumper<ELFT>::printSymbolVersionDependency(
+    const typename ELFT::Shdr &Sec) {
   outs() << "\nVersion References:\n";
-
-  auto WarningHandler = [&](const Twine &Msg) {
-    reportWarning(Msg, FileName);
-    return Error::success();
-  };
   Expected<std::vector<VerNeed>> V =
-      Obj.getVersionDependencies(Sec, WarningHandler);
+      getELFFile().getVersionDependencies(Sec, this->WarningHandler);
   if (!V) {
-    reportWarning(toString(V.takeError()), FileName);
+    reportWarning(toString(V.takeError()), Obj.getFileName());
     return;
   }
 
@@ -420,7 +415,7 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
     StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
 
     if (Shdr.sh_type == ELF::SHT_GNU_verneed)
-      printSymbolVersionDependency<ELFT>(FileName, Elf, Shdr);
+      printSymbolVersionDependency(Shdr);
     else
       printSymbolVersionDefinition<ELFT>(Shdr, Contents, StrTab);
   }

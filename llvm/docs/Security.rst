@@ -40,7 +40,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Dimitry Andric (individual; FreeBSD) [dim]
 * Ed Maste (individual; FreeBSD) [emaste]
 * George Burgess IV (Google) [george.burgess.iv]
-* Josh Stone (RedHat; Rust) [cuviper]
+* Josh Stone (Red Hat; Rust) [cuviper]
 * Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [kristof.beyls]
 * Matthew Riley (Google) [mattdr]

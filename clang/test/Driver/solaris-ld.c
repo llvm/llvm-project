@@ -2,10 +2,14 @@
 // sysroot to make these tests independent of the host system.
 
 // Check sparc-sun-solaris2.11, 32bit
-// RUN: %clang -### %s 2>&1 --target=sparc-sun-solaris2.11 \
+// RUN: %clang -### %s --target=sparc-sun-solaris2.11 -fuse-ld= \
 // RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-LD-SPARC32 %s
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-LD-SPARC32,CHECK-LD %s
+// RUN: %clang -### %s --target=sparc-sun-solaris2.11 -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-LD-SPARC32,CHECK-GLD %s
 // CHECK-LD-SPARC32-NOT: warning:
 // CHECK-LD-SPARC32: "-cc1" "-triple" "sparc-sun-solaris2.11"
 // CHECK-LD-SPARC32-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -16,7 +20,8 @@
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2"
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/../../.."
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-SPARC32-SAME: "-zignore" "-latomic" "-zrecord"
+// CHECK-LD: "-z" "ignore" "-latomic" "-z" "record"
+// CHECK-GLD: "--as-needed" "-latomic" "--no-as-needed"
 // CHECK-LD-SPARC32-SAME: "-lgcc_s"
 // CHECK-LD-SPARC32-SAME: "-lc"
 // CHECK-LD-SPARC32-SAME: "-lgcc"
@@ -106,6 +111,55 @@
 // CHECK-SPARC32-SHARED-NOT: "-lgcc"
 // CHECK-SPARC32-SHARED-NOT: "-lm"
 
+// Check the right ld flags are present with -pie.
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie -fuse-ld= \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PIE-LD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PIE-GLD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie -fuse-ld= \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
+
+// Check that -shared/-r/-static disable PIE.
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared -pie -fuse-ld= \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared -pie -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -r -pie -fuse-ld= \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -r -pie -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -static -pie -fuse-ld= \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -static -pie -fuse-ld=gld \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
+
+// CHECK-PIE-LD: "-z" "type=pie"
+// CHECK-PIE-GLD: "-pie"
+// CHECK-NOPIE-LD-NOT: "-z" "type=pie"
+// CHECK-NOPIE-GLD-NOT: "-pie"
+
 // -r suppresses default -l and crt*.o, values-*.o like -nostdlib.
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 -r 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
@@ -114,6 +168,28 @@
 // CHECK-RELOCATABLE-NOT: "-l
 // CHECK-RELOCATABLE-NOT: /crt{{[^.]+}}.o
 // CHECK-RELOCATABLE-NOT: /values-{{[^.]+}}.o
+
+// Check that crt{begin,end}S.o is linked with -shared/-pie.
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTS %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTS %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTS %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTS %s
+// CHECK-CRTS: crtbeginS.o
+// CHECK-CRTS: crtendS.o
+// CHECK-NOCRTS-NOT: crtbeginS.o
+// CHECK-NOCRTS-NOT: crtendS.o
 
 // Check that crtfastmath.o is linked with -ffast-math.
 

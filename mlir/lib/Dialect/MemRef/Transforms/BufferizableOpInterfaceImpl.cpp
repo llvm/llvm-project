@@ -21,8 +21,8 @@ namespace {
 struct TensorStoreOpInterface
     : public BufferizableOpInterface::ExternalModel<TensorStoreOpInterface,
                                                     memref::TensorStoreOp> {
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 

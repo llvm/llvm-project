@@ -44,10 +44,10 @@ body: |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX6-NEXT: [[S_MAX_I32_:%[0-9]+]]:sreg_32 = S_MAX_I32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX6-NEXT: [[S_MIN_I32_:%[0-9]+]]:sreg_32 = S_MIN_I32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX6-NEXT: [[S_MAX_I32_1:%[0-9]+]]:sreg_32 = S_MAX_I32 [[S_MIN_I32_]], [[COPY2]], implicit-def $scc
-    ; GFX6-NEXT: [[S_MIN_I32_1:%[0-9]+]]:sreg_32 = S_MIN_I32 [[S_MAX_I32_]], [[S_MAX_I32_1]], implicit-def $scc
+    ; GFX6-NEXT: [[S_MAX_I32_:%[0-9]+]]:sreg_32 = S_MAX_I32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; GFX6-NEXT: [[S_MIN_I32_:%[0-9]+]]:sreg_32 = S_MIN_I32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; GFX6-NEXT: [[S_MAX_I32_1:%[0-9]+]]:sreg_32 = S_MAX_I32 [[S_MIN_I32_]], [[COPY2]], implicit-def dead $scc
+    ; GFX6-NEXT: [[S_MIN_I32_1:%[0-9]+]]:sreg_32 = S_MIN_I32 [[S_MAX_I32_]], [[S_MAX_I32_1]], implicit-def dead $scc
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[S_MIN_I32_1]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1

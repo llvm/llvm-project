@@ -284,27 +284,37 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     break;
   case RT_EXEC_COUNT: {
     std::vector<BinaryFunction *> SortedFunctions(BFs.size());
-    uint32_t Index = 0;
     llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
                     [](BinaryFunction &BF) { return &BF; });
-    llvm::stable_sort(SortedFunctions, [&](const BinaryFunction *A,
-                                           const BinaryFunction *B) {
-      if (A->isIgnored())
-        return false;
-      const size_t PadA = opts::padFunction(*A);
-      const size_t PadB = opts::padFunction(*B);
-      if (!PadA || !PadB) {
-        if (PadA)
-          return true;
-        if (PadB)
-          return false;
-      }
-      return !A->hasProfile() && (B->hasProfile() || (A->getExecutionCount() >
-                                                      B->getExecutionCount()));
-    });
+    llvm::stable_sort(SortedFunctions,
+                      [&](const BinaryFunction *A, const BinaryFunction *B) {
+                        if (A->isIgnored())
+                          return false;
+                        if (B->isIgnored())
+                          return true;
+                        const size_t PadA = opts::padFunction(*A);
+                        const size_t PadB = opts::padFunction(*B);
+                        if (!PadA || !PadB) {
+                          if (PadA)
+                            return true;
+                          if (PadB)
+                            return false;
+                        }
+                        if (!A->hasProfile())
+                          return false;
+                        if (!B->hasProfile())
+                          return true;
+                        return A->getExecutionCount() > B->getExecutionCount();
+                      });
+    uint32_t Index = 0;
     for (BinaryFunction *BF : SortedFunctions)
-      if (BF->hasProfile())
+      if (BF->hasProfile()) {
         BF->setIndex(Index++);
+        LLVM_DEBUG(if (opts::Verbosity > 1) {
+          dbgs() << "BOLT-INFO: hot func " << BF->getPrintName() << " ("
+                 << BF->getExecutionCount() << ")\n";
+        });
+      }
   } break;
   case RT_HFSORT:
     Clusters = clusterize(Cg);

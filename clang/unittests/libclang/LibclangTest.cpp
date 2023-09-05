@@ -1246,6 +1246,52 @@ static_assert(true, message);
   EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
 }
 
+TEST_F(LibclangParseTest, ExposesAnnotateArgs) {
+  const char testSource[] = R"cpp(
+[[clang::annotate("category", 42)]]
+void func() {}
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  int attrCount = 0;
+
+  Traverse(
+      [&attrCount](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+        if (cursor.kind == CXCursor_AnnotateAttr) {
+          int childCount = 0;
+          clang_visitChildren(
+              cursor,
+              [](CXCursor child, CXCursor,
+                 CXClientData data) -> CXChildVisitResult {
+                int *pcount = static_cast<int *>(data);
+
+                // we only expect one argument here, so bail otherwise
+                EXPECT_EQ(*pcount, 0);
+
+                auto *result = clang_Cursor_Evaluate(child);
+                EXPECT_NE(result, nullptr);
+                EXPECT_EQ(clang_EvalResult_getAsInt(result), 42);
+                clang_EvalResult_dispose(result);
+
+                ++*pcount;
+
+                return CXChildVisit_Recurse;
+              },
+              &childCount);
+          attrCount++;
+          return CXChildVisit_Continue;
+        }
+        return CXChildVisit_Recurse;
+      });
+
+  EXPECT_EQ(attrCount, 1);
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;

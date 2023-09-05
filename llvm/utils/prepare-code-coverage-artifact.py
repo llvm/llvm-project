@@ -67,6 +67,7 @@ def prepare_html_report(
             "-o",
             report_dir,
             "-show-line-counts-or-regions",
+            "-show-directory-coverage",
             "-Xdemangler",
             "c++filt",
             "-Xdemangler",

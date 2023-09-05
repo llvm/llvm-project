@@ -923,9 +923,16 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
                                          /*IsInstanceMethod=*/std::nullopt,
                                          /*ReturnType=*/nullptr);
     }
-    Actions.CodeCompleteOrdinaryName(
-        getCurScope(),
-        CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
+
+    Sema::ParserCompletionContext PCC;
+    if (CurParsedObjCImpl) {
+      PCC = Sema::PCC_ObjCImplementation;
+    } else if (PP.isIncrementalProcessingEnabled()) {
+      PCC = Sema::PCC_TopLevelOrExpression;
+    } else {
+      PCC = Sema::PCC_Namespace;
+    };
+    Actions.CodeCompleteOrdinaryName(getCurScope(), PCC);
     return nullptr;
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
@@ -2111,7 +2118,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
     }
 
     if (!getLangOpts().CPlusPlus) {
-      // If we're in C, the only place we can have :: tokens is C2x
+      // If we're in C, the only place we can have :: tokens is C23
       // attribute which is parsed elsewhere. If the identifier is not a type,
       // then it can't be scope either, just early exit.
       return false;

@@ -18,10 +18,10 @@ define void @st1b(<vscale x 16 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 define void @st1b_with_addr_offset(<vscale x 16 x i1> %pg, ptr %ptr, i64 %index, i32 %sliceidx) {
 ; CHECK-LABEL: st1b_with_addr_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    mov w13, w2
-; CHECK-NEXT:    st1b {za0h.b[w12, 0]}, p0, [x0, x1]
-; CHECK-NEXT:    st1b {za0v.b[w13, 15]}, p0, [x0, x1]
+; CHECK-NEXT:    mov w13, wzr
+; CHECK-NEXT:    mov w12, w2
+; CHECK-NEXT:    st1b {za0h.b[w13, 0]}, p0, [x0, x1]
+; CHECK-NEXT:    st1b {za0v.b[w12, 15]}, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 15
@@ -92,10 +92,10 @@ define void @st1w(<vscale x 4 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 define void @st1w_with_addr_offset(<vscale x 4 x i1> %pg, ptr %ptr, i64 %index, i32 %sliceidx) {
 ; CHECK-LABEL: st1w_with_addr_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    mov w13, w2
-; CHECK-NEXT:    st1w {za0h.s[w12, 0]}, p0, [x0, x1, lsl #2]
-; CHECK-NEXT:    st1w {za3v.s[w13, 3]}, p0, [x0, x1, lsl #2]
+; CHECK-NEXT:    mov w13, wzr
+; CHECK-NEXT:    mov w12, w2
+; CHECK-NEXT:    st1w {za0h.s[w13, 0]}, p0, [x0, x1, lsl #2]
+; CHECK-NEXT:    st1w {za3v.s[w12, 3]}, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %base = getelementptr i32, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 3

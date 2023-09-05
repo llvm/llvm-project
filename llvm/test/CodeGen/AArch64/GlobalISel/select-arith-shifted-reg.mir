@@ -11,10 +11,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: add_shl_s64_rhs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY]], [[COPY]], 8
-    ; CHECK: $x0 = COPY [[ADDXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY]], [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_SHL %0, %1:gpr(s64)
@@ -33,11 +34,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: add_shl_s64_lhs
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY1]], [[COPY]], 8
-    ; CHECK: $x0 = COPY [[ADDXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY1]], [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %4:gpr(s64) = COPY $x1
     %1:gpr(s64) = G_CONSTANT i64 8
@@ -57,10 +59,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: sub_shl_s64_rhs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 8, implicit-def $nzcv
-    ; CHECK: $x0 = COPY [[SUBSXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 8, implicit-def dead $nzcv
+    ; CHECK-NEXT: $x0 = COPY [[SUBSXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_SHL %0, %1:gpr(s64)
@@ -94,11 +97,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: add_lshr_s64_lhs
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: %param2:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs %param2, [[COPY]], 72
-    ; CHECK: $x0 = COPY [[ADDXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: %param2:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs %param2, [[COPY]], 72
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %param2:gpr(s64) = COPY $x1
     %1:gpr(s64) = G_CONSTANT i64 8
@@ -118,10 +122,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: sub_lshr_s64_rhs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 72, implicit-def $nzcv
-    ; CHECK: $x0 = COPY [[SUBSXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 72, implicit-def dead $nzcv
+    ; CHECK-NEXT: $x0 = COPY [[SUBSXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_LSHR %0, %1:gpr(s64)
@@ -140,10 +145,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: add_ashr_s64_rhs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY]], [[COPY]], 136
-    ; CHECK: $x0 = COPY [[ADDXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY]], [[COPY]], 136
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_ASHR %0, %1:gpr(s64)
@@ -162,11 +168,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: add_ashr_s64_lhs
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: %param2:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs %param2, [[COPY]], 136
-    ; CHECK: $x0 = COPY [[ADDXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: %param2:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs %param2, [[COPY]], 136
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %param2:gpr(s64) = COPY $x1
     %1:gpr(s64) = G_CONSTANT i64 8
@@ -186,10 +193,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: sub_ashr_s64_rhs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 136, implicit-def $nzcv
-    ; CHECK: $x0 = COPY [[SUBSXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs [[COPY]], [[COPY]], 136, implicit-def dead $nzcv
+    ; CHECK-NEXT: $x0 = COPY [[SUBSXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_ASHR %0, %1:gpr(s64)
@@ -223,11 +231,12 @@ body:             |
     liveins: $w0, $w1
     ; CHECK-LABEL: name: add_shl_s32_lhs
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: %param2:gpr32 = COPY $w1
-    ; CHECK: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 8
-    ; CHECK: $w0 = COPY [[ADDWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: %param2:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 8
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %param2:gpr(s32) = COPY $w1
     %1:gpr(s32) = G_CONSTANT i32 8
@@ -247,10 +256,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sub_shl_s32_rhs
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 8, implicit-def $nzcv
-    ; CHECK: $w0 = COPY [[SUBSWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 8, implicit-def dead $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[SUBSWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_SHL %0, %1:gpr(s32)
@@ -269,10 +279,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: add_lshr_s32_rhs
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[COPY]], [[COPY]], 72
-    ; CHECK: $w0 = COPY [[ADDWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[COPY]], [[COPY]], 72
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_LSHR %0, %1:gpr(s32)
@@ -291,11 +302,12 @@ body:             |
     liveins: $w0, $w1
     ; CHECK-LABEL: name: add_lshr_s32_lhs
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: %param2:gpr32 = COPY $w1
-    ; CHECK: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 72
-    ; CHECK: $w0 = COPY [[ADDWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: %param2:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 72
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %param2:gpr(s32) = COPY $w1
     %1:gpr(s32) = G_CONSTANT i32 8
@@ -315,10 +327,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sub_lshr_s32_rhs
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 72, implicit-def $nzcv
-    ; CHECK: $w0 = COPY [[SUBSWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 72, implicit-def dead $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[SUBSWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_LSHR %0, %1:gpr(s32)
@@ -337,10 +350,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: add_ashr_s32_rhs
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[COPY]], [[COPY]], 136
-    ; CHECK: $w0 = COPY [[ADDWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[COPY]], [[COPY]], 136
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_ASHR %0, %1:gpr(s32)
@@ -359,11 +373,12 @@ body:             |
     liveins: $w0, $w1
     ; CHECK-LABEL: name: add_ashr_s32_lhs
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: %param2:gpr32 = COPY $w1
-    ; CHECK: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 136
-    ; CHECK: $w0 = COPY [[ADDWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: %param2:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs %param2, [[COPY]], 136
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %param2:gpr(s32) = COPY $w1
     %1:gpr(s32) = G_CONSTANT i32 8
@@ -383,10 +398,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sub_ashr_s32_rhs
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 136, implicit-def $nzcv
-    ; CHECK: $w0 = COPY [[SUBSWrs]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[COPY]], [[COPY]], 136, implicit-def dead $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[SUBSWrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_ASHR %0, %1:gpr(s32)

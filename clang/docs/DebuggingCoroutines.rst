@@ -501,7 +501,7 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
           # In the example, the continuation is the first field member of the promise_type.
           # So they have the same addresses.
           # If we want to generalize the scripts to other coroutine types, we need to be sure
-          # the continuation field is the first memeber of promise_type.
+          # the continuation field is the first member of promise_type.
           self.continuation_addr = self.promise_addr
 
       def next_task_addr(self):

@@ -531,10 +531,6 @@ ds_add_f64 v1, v[2:3]
 ds_add_f64 v1, v[2:3] offset:4
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX90A: ds_add_f64 v1, v[2:3] offset:65535 gds ; encoding: [0xff,0xff,0xb9,0xd8,0x01,0x02,0x00,0x00]
-ds_add_f64 v1, v[2:3] offset:65535 gds
-
-// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 ; encoding: [0xff,0xff,0xf8,0xd8,0x01,0x02,0x00,0x04]
 ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535
 
@@ -561,10 +557,6 @@ ds_add_rtn_f64 v[4:5], v1, v[2:3]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4 ; encoding: [0x04,0x00,0xf8,0xd8,0x01,0x02,0x00,0x04]
 ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4
-
-// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds ; encoding: [0xff,0xff,0xf9,0xd8,0x01,0x02,0x00,0x04]
-ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0xff,0x0f,0x3c,0xdd,0x00,0x02,0x00,0x00]

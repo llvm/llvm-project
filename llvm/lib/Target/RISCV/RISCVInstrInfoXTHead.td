@@ -236,13 +236,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in
-  def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", /*EarlyClobber*/1>;
+  def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
   let RVVConstraint = WidenV in
-  def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", /*EarlyClobber*/1>;
+  def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -330,7 +330,6 @@ if (NOT MSVC)
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       x86_64/chkstk.S
-      x86_64/chkstk2.S
     )
   endif()
 
@@ -364,7 +363,6 @@ if (NOT MSVC)
     set(i386_SOURCES
       ${i386_SOURCES}
       i386/chkstk.S
-      i386/chkstk2.S
     )
   endif()
 else () # MSVC
@@ -567,7 +565,7 @@ endif()
 
 foreach(pat cas swp ldadd ldclr ldeor ldset)
   foreach(size 1 2 4 8 16)
-    foreach(model 1 2 3 4)
+    foreach(model 1 2 3 4 5)
       if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
         set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
         list(APPEND lse_builtins "${helper_asm}")
@@ -880,7 +878,7 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
                               ARCHS ${arch}
                               SOURCES atomic.c
                               LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
-                              DEPS builtins
+                              LINK_LIBS clang_rt.builtins-${arch}
                               PARENT_TARGET builtins-standalone-atomic)
     endif()
   endforeach()

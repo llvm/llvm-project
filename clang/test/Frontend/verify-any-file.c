@@ -7,8 +7,8 @@
 
 // expected-error@*:123 {{invalid line : "*" required}}
 //
-//      CHECK: error: 'error' diagnostics expected but not seen:
+//      CHECK: error: 'expected-error' diagnostics expected but not seen:
 // CHECK-NEXT:   File * Line * (directive at {{.*}}verify-any-file.c:6): missing error
-// CHECK-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-NEXT:   File {{.*}}verify-any-file.c Line 8: missing or invalid line number following '@' in expected '*'
 // CHECK-NEXT: 2 errors generated.

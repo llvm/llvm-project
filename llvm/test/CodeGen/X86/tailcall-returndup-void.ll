@@ -13,7 +13,9 @@ c263:
   br i1 %ln268, label %c26a, label %n26p
 
 n26p:                                             ; preds = %c263
-  br i1 icmp ne (i64 and (i64 ptrtoint (ptr @sES_closure to i64), i64 7), i64 0), label %c1ZP.i, label %n1ZQ.i
+  %and = and i64 ptrtoint (ptr @sES_closure to i64), 7
+  %cmp = icmp ne i64 %and, 0
+  br i1 %cmp, label %c1ZP.i, label %n1ZQ.i
 
 n1ZQ.i:                                           ; preds = %n26p
   %ln1ZT.i = load i64, ptr @sES_closure, align 8

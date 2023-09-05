@@ -49,28 +49,8 @@ public:
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
 
-protected:
+private:
   NamedAttrList convertedAttr;
-};
-
-/// Wrapper around AttrConvertFastMathToLLVM that also sets the "kinds"
-/// attribute to the bitmask specified in `Kinds`, which is used for converting
-/// operations that lower to llvm.is.fpclass.
-template <unsigned Kinds, typename SourceOp, typename TargetOp>
-class AttrConvertAddFpclassKinds
-    : public AttrConvertFastMathToLLVM<SourceOp, TargetOp> {
-public:
-  AttrConvertAddFpclassKinds(SourceOp op)
-      : AttrConvertFastMathToLLVM<SourceOp, TargetOp>(op) {
-    convertedAttr.set(
-        "kinds",
-        IntegerAttr::get(IntegerType::get(op.getContext(), 32), Kinds));
-  }
-
-  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-
-protected:
-  using AttrConvertFastMathToLLVM<SourceOp, TargetOp>::convertedAttr;
 };
 } // namespace arith
 } // namespace mlir

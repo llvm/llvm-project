@@ -648,8 +648,6 @@ external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
-external const_and : llvalue -> llvalue -> llvalue = "llvm_const_and"
-external const_or : llvalue -> llvalue -> llvalue = "llvm_const_or"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
 external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
                     = "llvm_const_icmp"

@@ -1,5 +1,9 @@
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
 
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith" --split-input-file %s | FileCheck %s
+
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
 // CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
@@ -69,28 +73,6 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK: = llvm.lshr %arg2, %arg3 : i32
   %18 = arith.shrui %arg2, %arg3 : i32
   return %0, %4 : f32, i32
-}
-
-// CHECK-LABEL: @float_pred_ops
-func.func @float_pred_ops(%arg0: f32) {
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 516 : i32}> : (f32) -> i1
-  arith.is_inf %arg0 : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<nnan>, kinds = 516 : i32}> : (f32) -> i1
-  arith.is_inf %arg0 fastmath <nnan> : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 3 : i32}> : (f32) -> i1
-  arith.is_nan %arg0 : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<ninf>, kinds = 3 : i32}> : (f32) -> i1
-  arith.is_nan %arg0 fastmath <ninf> : f32
-  return
-}
-
-// CHECK-LABEL: @vector_float_pred_ops
-func.func @vector_float_pred_ops(%arg0: vector<4xf32>) {
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 516 : i32}> : (vector<4xf32>) -> vector<4xi1>
-  arith.is_inf %arg0 : vector<4xf32>
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 3 : i32}> : (vector<4xf32>) -> vector<4xi1>
-  arith.is_nan %arg0 : vector<4xf32>
-  return
 }
 
 // Checking conversion of index types to integers using i1, assuming no target

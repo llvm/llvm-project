@@ -4,7 +4,7 @@
 
 int f1() __attribute__((no_sanitize)); // expected-error{{'no_sanitize' attribute takes at least 1 argument}}
 
-int f2() __attribute__((no_sanitize(1))); // expected-error{{'no_sanitize' attribute requires a string}}
+int f2() __attribute__((no_sanitize(1))); // expected-error{{expected string literal as argument of 'no_sanitize' attribute}}
 
 __attribute__((no_sanitize("all"))) int global; // expected-warning{{'no_sanitize' attribute argument 'all' not supported on a global variable}}
 __attribute__((no_sanitize("unknown"))) int global2; // expected-warning{{unknown sanitizer 'unknown' ignored}}

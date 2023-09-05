@@ -20,6 +20,7 @@
 #include "flang/Semantics/expression.h"
 #include <list>
 #include <map>
+#include <sstream>
 
 namespace Fortran::semantics {
 
@@ -264,6 +265,7 @@ private:
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveAcc(Symbol &, Symbol::Flag, Scope &);
   Symbol *ResolveName(const parser::Name &, bool parentScope = false);
+  Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
@@ -273,6 +275,8 @@ private:
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void EnsureAllocatableOrPointer(
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
+  void AddRoutineInfoToSymbol(
+      Symbol &, const parser::OpenACCRoutineConstruct &);
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -832,21 +836,106 @@ Symbol *AccAttributeVisitor::ResolveName(
   return prev;
 }
 
+Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
+  Symbol *prev{currScope().FindSymbol(name.source)};
+  if (!prev || (prev && prev->IsFuncResult())) {
+    prev = currScope().parent().FindSymbol(name.source);
+  }
+  if (prev != name.symbol) {
+    name.symbol = prev;
+  }
+  return prev;
+}
+
+template <typename T>
+common::IfNoLvalue<T, T> FoldExpr(
+    evaluate::FoldingContext &foldingContext, T &&expr) {
+  return evaluate::Fold(foldingContext, std::move(expr));
+}
+
+template <typename T>
+MaybeExpr EvaluateExpr(
+    Fortran::semantics::SemanticsContext &semanticsContext, const T &expr) {
+  return FoldExpr(
+      semanticsContext.foldingContext(), AnalyzeExpr(semanticsContext, expr));
+}
+
+void AccAttributeVisitor::AddRoutineInfoToSymbol(
+    Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
+  if (symbol.has<SubprogramDetails>()) {
+    Fortran::semantics::OpenACCRoutineInfo info;
+    const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
+    for (const Fortran::parser::AccClause &clause : clauses.v) {
+      if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+        info.set_isSeq();
+      } else if (const auto *gangClause =
+                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
+        info.set_isGang();
+        if (gangClause->v) {
+          const Fortran::parser::AccGangArgList &x = *gangClause->v;
+          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+            if (const auto *dim =
+                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
+              if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                info.set_gangDim(*v);
+              }
+            }
+          }
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+        info.set_isVector();
+      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+        info.set_isWorker();
+      } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
+        info.set_isNohost();
+      } else if (const auto *bindClause =
+                     std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
+        if (const auto *name =
+                std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
+          if (Symbol *sym = ResolveName(*name, true)) {
+            info.set_bindName(sym->name().ToString());
+          } else {
+            context_.Say((*name).source,
+                "No function or subroutine declared for '%s'"_err_en_US,
+                (*name).source);
+          }
+        } else if (const auto charExpr =
+                       std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
+                           &bindClause->v.u)) {
+          auto *charConst =
+              Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
+                  *charExpr);
+          std::string str{std::get<std::string>(charConst->t)};
+          std::stringstream bindName;
+          bindName << "\"" << str << "\"";
+          info.set_bindName(bindName.str());
+        }
+      }
+    }
+    symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
+  }
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
   if (optName) {
-    if (!ResolveName(*optName, true)) {
+    if (Symbol *sym = ResolveFctName(*optName)) {
+      Symbol &ultimate{sym->GetUltimate()};
+      AddRoutineInfoToSymbol(ultimate, x);
+    } else {
       context_.Say((*optName).source,
           "No function or subroutine declared for '%s'"_err_en_US,
           (*optName).source);
     }
+  } else {
+    AddRoutineInfoToSymbol(*currScope().symbol(), x);
   }
   return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::AccBindClause &x) {
   if (const auto *name{std::get_if<parser::Name>(&x.u)}) {
-    if (!ResolveName(*name)) {
+    if (!ResolveName(*name, true)) {
       context_.Say(name->source,
           "No function or subroutine declared for '%s'"_err_en_US,
           name->source);
@@ -999,8 +1088,8 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     return nullptr;
   };
 
-  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+  const auto &outer{std::get<parser::DoConstruct>(x.t)};
+  for (const parser::DoConstruct *loop{&outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
     const parser::Name *iv{GetLoopIndex(*loop)};
     if (iv) {
@@ -1024,7 +1113,7 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &lastName{GetLastName(designator)};
-              if (!IsAllocatableOrPointer(*lastName.symbol)) {
+              if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
                 context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "
                     "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
@@ -1370,7 +1459,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (targetIt == dirContext_.rend()) {
       return;
     }
-    if (llvm::omp::parallelSet.test(targetIt->directive) ||
+    if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
     }
@@ -1471,7 +1560,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
-  if (!llvm::omp::simdSet.test(GetContext().directive)) {
+  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1) {
     ivDSA = Symbol::Flag::OmpLinear;
@@ -1864,6 +1953,17 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "Variable '%s' may not "
                       "appear on both USE_DEVICE_PTR and USE_DEVICE_ADDR "
                       "clauses on a TARGET DATA construct"_err_en_US,
+                      symbol->name());
+                }
+                if (llvm::omp::allDistributeSet.test(GetContext().directive) &&
+                    (((ompFlag == Symbol::Flag::OmpFirstPrivate) &&
+                         symbol->test(Symbol::Flag::OmpLastPrivate)) ||
+                        ((ompFlag == Symbol::Flag::OmpLastPrivate) &&
+                            symbol->test(Symbol::Flag::OmpFirstPrivate)))) {
+                  context_.Say(designator.source,
+                      "Variable '%s' may not "
+                      "appear on both FIRSTPRIVATE and LASTPRIVATE "
+                      "clauses on a DISTRIBUTE construct"_err_en_US,
                       symbol->name());
                 }
               }

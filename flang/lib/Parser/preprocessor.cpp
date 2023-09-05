@@ -296,16 +296,18 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     if (!def->isFunctionLike()) {
       bool isRenaming{false};
       if (def->isPredefined()) {
-        std::string name{def->replacement().TokenAt(0).ToString()};
         std::string repl;
-        if (name == "__FILE__") {
-          repl = "\""s +
-              allSources_.GetPath(prescanner.GetCurrentProvenance()) + '"';
-        } else if (name == "__LINE__") {
-          std::string buf;
-          llvm::raw_string_ostream ss{buf};
-          ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
-          repl = ss.str();
+        if (!def->replacement().empty()) {
+          std::string name{def->replacement().TokenAt(0).ToString()};
+          if (name == "__FILE__") {
+            repl = "\""s +
+                allSources_.GetPath(prescanner.GetCurrentProvenance()) + '"';
+          } else if (name == "__LINE__") {
+            std::string buf;
+            llvm::raw_string_ostream ss{buf};
+            ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
+            repl = ss.str();
+          }
         }
         if (!repl.empty()) {
           ProvenanceRange insert{allSources_.AddCompilerInsertion(repl)};
@@ -504,12 +506,10 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
         }
       }
       j = dir.SkipBlanks(j + 1);
-      CheckForUnbalancedParentheses(dir, j, tokens - j);
       definitions_.emplace(std::make_pair(
           nameToken, Definition{argName, dir, j, tokens - j, isVariadic}));
     } else {
       j = dir.SkipBlanks(j + 1);
-      CheckForUnbalancedParentheses(dir, j, tokens - j);
       definitions_.emplace(
           std::make_pair(nameToken, Definition{dir, j, tokens - j}));
     }
@@ -679,6 +679,11 @@ CharBlock Preprocessor::SaveTokenAsName(const CharBlock &t) {
 
 bool Preprocessor::IsNameDefined(const CharBlock &token) {
   return definitions_.find(token) != definitions_.end();
+}
+
+bool Preprocessor::IsFunctionLikeDefinition(const CharBlock &token) {
+  auto it{definitions_.find(token)};
+  return it != definitions_.end() && it->second.isFunctionLike();
 }
 
 static std::string GetDirectiveName(
@@ -1181,23 +1186,4 @@ void Preprocessor::LineDirective(
   }
 }
 
-void Preprocessor::CheckForUnbalancedParentheses(
-    const TokenSequence &tokens, std::size_t j, std::size_t n) {
-  if (!anyMacroWithUnbalancedParentheses_) {
-    int nesting{0};
-    for (; n-- > 0; ++j) {
-      char ch{tokens.TokenAt(j).OnlyNonBlank()};
-      if (ch == '(') {
-        ++nesting;
-      } else if (ch == ')') {
-        if (nesting-- == 0) {
-          break;
-        }
-      }
-    }
-    if (nesting != 0) {
-      anyMacroWithUnbalancedParentheses_ = true;
-    }
-  }
-}
 } // namespace Fortran::parser

@@ -10,7 +10,7 @@
 define void @foo(i64  %len, ptr %a) {
 ; CHECK-LABEL: Loop access info in function 'foo':
 ; CHECK-NEXT:  loop:
-; CHECK-NEXT:    Memory dependences are safe with a maximum dependence distance of 24 bytes
+; CHECK-NEXT:   Memory dependences are safe with a maximum safe vector width of 64 bits
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      BackwardVectorizable:
 ; CHECK-NEXT:          store i32 %0, ptr %arrayidx2, align 4 ->

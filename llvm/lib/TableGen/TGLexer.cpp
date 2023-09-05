@@ -462,56 +462,62 @@ bool TGLexer::SkipCComment() {
 ///    0x[0-9a-fA-F]+
 ///    0b[01]+
 tgtok::TokKind TGLexer::LexNumber() {
+  unsigned Base = 0;
+  const char *NumStart;
+
+  // Check if it's a hex or a binary value.
   if (CurPtr[-1] == '0') {
+    NumStart = CurPtr + 1;
     if (CurPtr[0] == 'x') {
-      ++CurPtr;
-      const char *NumStart = CurPtr;
-      while (isxdigit(CurPtr[0]))
+      Base = 16;
+      do
         ++CurPtr;
-
-      // Requires at least one hex digit.
-      if (CurPtr == NumStart)
-        return ReturnError(TokStart, "Invalid hexadecimal number");
-
-      errno = 0;
-      CurIntVal = strtoll(NumStart, nullptr, 16);
-      if (errno == EINVAL)
-        return ReturnError(TokStart, "Invalid hexadecimal number");
-      if (errno == ERANGE) {
-        errno = 0;
-        CurIntVal = (int64_t)strtoull(NumStart, nullptr, 16);
-        if (errno == EINVAL)
-          return ReturnError(TokStart, "Invalid hexadecimal number");
-        if (errno == ERANGE)
-          return ReturnError(TokStart, "Hexadecimal number out of range");
-      }
-      return tgtok::IntVal;
+      while (isxdigit(CurPtr[0]));
     } else if (CurPtr[0] == 'b') {
-      ++CurPtr;
-      const char *NumStart = CurPtr;
-      while (CurPtr[0] == '0' || CurPtr[0] == '1')
+      Base = 2;
+      do
         ++CurPtr;
-
-      // Requires at least one binary digit.
-      if (CurPtr == NumStart)
-        return ReturnError(CurPtr-2, "Invalid binary number");
-      CurIntVal = strtoll(NumStart, nullptr, 2);
-      return tgtok::BinaryIntVal;
+      while (CurPtr[0] == '0' || CurPtr[0] == '1');
     }
   }
 
-  // Check for a sign without a digit.
-  if (!isdigit(CurPtr[0])) {
-    if (CurPtr[-1] == '-')
-      return tgtok::minus;
-    else if (CurPtr[-1] == '+')
-      return tgtok::plus;
+  // For a hex or binary value, we always convert it to an unsigned value.
+  bool IsMinus = false;
+
+  // Check if it's a decimal value.
+  if (Base == 0) {
+    // Check for a sign without a digit.
+    if (!isdigit(CurPtr[0])) {
+      if (CurPtr[-1] == '-')
+        return tgtok::minus;
+      else if (CurPtr[-1] == '+')
+        return tgtok::plus;
+    }
+
+    Base = 10;
+    NumStart = TokStart;
+    IsMinus = CurPtr[-1] == '-';
+
+    while (isdigit(CurPtr[0]))
+      ++CurPtr;
   }
 
-  while (isdigit(CurPtr[0]))
-    ++CurPtr;
-  CurIntVal = strtoll(TokStart, nullptr, 10);
-  return tgtok::IntVal;
+  // Requires at least one digit.
+  if (CurPtr == NumStart)
+    return ReturnError(TokStart, "Invalid number");
+
+  errno = 0;
+  if (IsMinus)
+    CurIntVal = strtoll(NumStart, nullptr, Base);
+  else
+    CurIntVal = strtoull(NumStart, nullptr, Base);
+
+  if (errno == EINVAL)
+    return ReturnError(TokStart, "Invalid number");
+  if (errno == ERANGE)
+    return ReturnError(TokStart, "Number out of range");
+
+  return Base == 2 ? tgtok::BinaryIntVal : tgtok::IntVal;
 }
 
 /// LexBracket - We just read '['.  If this is a code block, return it,

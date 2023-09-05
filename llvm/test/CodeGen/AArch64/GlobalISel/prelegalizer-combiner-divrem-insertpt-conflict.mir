@@ -8,14 +8,16 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test
-    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-    ; CHECK-NEXT: [[UDIVREM:%[0-9]+]]:_(s32), [[UDIVREM1:%[0-9]+]]:_ = G_UDIVREM [[SEXT]], [[SEXT1]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UDIVREM1]](s32)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UDIVREM]](s32)
-    ; CHECK-NEXT: [[SEXT2:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[SEXT2]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483647
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[C]], [[C1]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UMULH]], [[C2]](s32)
+    ; CHECK-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[C]], [[C]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UREM]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LSHR]](s32)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[SEXT]]
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[OR]](s64)
     ; CHECK-NEXT: $w0 = COPY [[TRUNC1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -47,14 +49,12 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_inverted_div_rem
-    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-    ; CHECK-NEXT: [[UDIVREM:%[0-9]+]]:_(s32), [[UDIVREM1:%[0-9]+]]:_ = G_UDIVREM [[SEXT]], [[SEXT1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[UDIVREM:%[0-9]+]]:_(s32), [[UDIVREM1:%[0-9]+]]:_ = G_UDIVREM [[C]], [[C]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UDIVREM]](s32)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UDIVREM1]](s32)
-    ; CHECK-NEXT: [[SEXT2:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[SEXT2]]
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[SEXT]]
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[OR]](s64)
     ; CHECK-NEXT: $w0 = COPY [[TRUNC1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

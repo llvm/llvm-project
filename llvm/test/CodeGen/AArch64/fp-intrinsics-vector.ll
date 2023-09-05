@@ -233,22 +233,22 @@ define <4 x i1> @fcmp_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    mov s2, v1.s[1]
 ; CHECK-NEXT:    mov s3, v0.s[1]
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov s4, v1.s[2]
-; CHECK-NEXT:    mov s5, v0.s[2]
+; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    fcmp s3, s2
+; CHECK-NEXT:    mov s2, v1.s[2]
+; CHECK-NEXT:    mov s3, v0.s[2]
+; CHECK-NEXT:    fmov s4, w8
 ; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    mov v4.s[1], w8
 ; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmp s5, s4
-; CHECK-NEXT:    mov v2.s[1], w8
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
+; CHECK-NEXT:    mov v4.s[2], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    xtn v0.4h, v2.4s
+; CHECK-NEXT:    mov v4.s[3], w8
+; CHECK-NEXT:    xtn v0.4h, v4.4s
 ; CHECK-NEXT:    ret
 entry:
   %val = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")
@@ -261,22 +261,22 @@ define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    mov s2, v1.s[1]
 ; CHECK-NEXT:    mov s3, v0.s[1]
 ; CHECK-NEXT:    fcmpe s0, s1
-; CHECK-NEXT:    mov s4, v1.s[2]
-; CHECK-NEXT:    mov s5, v0.s[2]
+; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    fcmpe s3, s2
+; CHECK-NEXT:    mov s2, v1.s[2]
+; CHECK-NEXT:    mov s3, v0.s[2]
+; CHECK-NEXT:    fmov s4, w8
 ; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    mov v4.s[1], w8
 ; CHECK-NEXT:    fcmpe s3, s2
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmpe s5, s4
-; CHECK-NEXT:    mov v2.s[1], w8
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    fcmpe s0, s1
-; CHECK-NEXT:    mov v2.s[2], w8
+; CHECK-NEXT:    mov v4.s[2], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    xtn v0.4h, v2.4s
+; CHECK-NEXT:    mov v4.s[3], w8
+; CHECK-NEXT:    xtn v0.4h, v4.4s
 ; CHECK-NEXT:    ret
 entry:
   %val = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")

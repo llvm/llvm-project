@@ -64,6 +64,32 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer64";
   case Pointer32:
     return "Pointer32";
+  case Pointer16:
+    return "Pointer16";
+  case Pointer16DS:
+    return "Pointer16DS";
+  case Pointer16HA:
+    return "Pointer16HA";
+  case Pointer16HI:
+    return "Pointer16HI";
+  case Pointer16HIGH:
+    return "Pointer16HIGH";
+  case Pointer16HIGHA:
+    return "Pointer16HIGHA";
+  case Pointer16HIGHER:
+    return "Pointer16HIGHER";
+  case Pointer16HIGHERA:
+    return "Pointer16HIGHERA";
+  case Pointer16HIGHEST:
+    return "Pointer16HIGHEST";
+  case Pointer16HIGHESTA:
+    return "Pointer16HIGHESTA";
+  case Pointer16LO:
+    return "Pointer16LO";
+  case Pointer16LODS:
+    return "Pointer16LODS";
+  case Pointer14:
+    return "Pointer14";
   case Delta64:
     return "Delta64";
   case Delta34:
@@ -76,14 +102,22 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Delta16";
   case Delta16HA:
     return "Delta16HA";
+  case Delta16HI:
+    return "Delta16HI";
   case Delta16LO:
     return "Delta16LO";
-  case TOCDelta16HA:
-    return "TOCDelta16HA";
-  case TOCDelta16LO:
-    return "TOCDelta16LO";
+  case TOC:
+    return "TOC";
+  case TOCDelta16:
+    return "TOCDelta16";
   case TOCDelta16DS:
     return "TOCDelta16DS";
+  case TOCDelta16HA:
+    return "TOCDelta16HA";
+  case TOCDelta16HI:
+    return "TOCDelta16HI";
+  case TOCDelta16LO:
+    return "TOCDelta16LO";
   case TOCDelta16LODS:
     return "TOCDelta16LODS";
   case CallBranchDelta:

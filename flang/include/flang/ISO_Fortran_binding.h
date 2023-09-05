@@ -18,7 +18,9 @@
  * implementation.
  */
 
-#include "Runtime/api-attrs.h"
+#ifndef RT_API_ATTRS
+#define RT_API_ATTRS
+#endif
 
 #ifdef __cplusplus
 namespace Fortran {

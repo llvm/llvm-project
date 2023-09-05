@@ -394,7 +394,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   trace::Span Tracer("include_cleaner::walkUsed");
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
-      AST.getPragmaIncludes().get(), SM,
+      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         bool Satisfied = false;

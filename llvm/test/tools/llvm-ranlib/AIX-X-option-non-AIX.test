@@ -1,0 +1,6 @@
+# UNSUPPORTED: system-aix
+## Test the -X option is not supported on non-AIX os.
+
+# RUN: not llvm-ranlib -X32 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefix=INVALID-X-OPTION %s
+
+# INVALID-X-OPTION: error: -X32 option not supported on non AIX OS

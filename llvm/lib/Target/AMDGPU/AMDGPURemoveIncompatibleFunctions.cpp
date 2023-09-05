@@ -105,6 +105,9 @@ constexpr unsigned FeaturesToCheck[] = {
     AMDGPU::FeatureDot7Insts,
     AMDGPU::FeatureDot8Insts,
     AMDGPU::FeatureExtendedImageInsts,
+    AMDGPU::FeatureSMemRealTime,
+    AMDGPU::FeatureSMemTimeInst,
+    AMDGPU::FeatureGWS
 };
 
 FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
@@ -128,7 +131,6 @@ void reportFunctionRemoved(Function &F, unsigned Feature) {
            << getFeatureName(Feature)
            << " is not supported on the current target";
   });
-  return;
 }
 } // end anonymous namespace
 

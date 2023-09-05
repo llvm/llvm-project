@@ -170,10 +170,10 @@ class Reporter {
   std::string spellHeader(const Header &H) {
     switch (H.kind()) {
     case Header::Physical: {
-      bool IsSystem = false;
+      bool IsAngled = false;
       std::string Path = HS.suggestPathToFileForDiagnostics(
-          H.physical(), MainFE->tryGetRealPathName(), &IsSystem);
-      return IsSystem ? "<" + Path + ">" : "\"" + Path + "\"";
+          H.physical(), MainFE->tryGetRealPathName(), &IsAngled);
+      return IsAngled ? "<" + Path + ">" : "\"" + Path + "\"";
     }
     case Header::Standard:
       return H.standard().name().str();

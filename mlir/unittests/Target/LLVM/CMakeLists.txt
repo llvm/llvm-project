@@ -1,5 +1,6 @@
 add_mlir_unittest(MLIRTargetLLVMTests
   SerializeNVVMTarget.cpp
+  SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
 )
 
@@ -9,12 +10,14 @@ target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
   MLIRNVVMTarget
+  MLIRROCDLTarget
   MLIRGPUDialect
   MLIRNVVMDialect
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRBuiltinToLLVMIRTranslation
   MLIRNVVMToLLVMIRTranslation
+  MLIRROCDLToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
   ${llvm_libs}
 )

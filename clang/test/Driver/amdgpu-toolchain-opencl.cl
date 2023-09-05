@@ -28,3 +28,7 @@
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -x cl -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHK-LINK %s
 // CHK-LINK: ld.lld{{.*}} "--no-undefined" "-shared"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -Wl,--unresolved-symbols=ignore-all -x cl -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHK-LINK_UR %s
+// RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -Xlinker --unresolved-symbols=ignore-all -x cl -mcpu=fiji -nogpulib %s 2>&1 | FileCheck -check-prefix=CHK-LINK_UR %s
+// CHK-LINK_UR: ld.lld{{.*}} "--no-undefined"{{.*}} "--unresolved-symbols=ignore-all"

@@ -899,7 +899,8 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX]] = %[[NEG_DBL_MAX]]) -> (f64) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
-// CHECK:             %[[NEW_MAX:.*]] = arith.maxf %[[ITEM_VAL]], %[[MAX]] : f64
+// CHECK:             %[[CMP:.*]] = arith.cmpf ogt, %[[ITEM_VAL]], %[[MAX]] : f64
+// CHECK:             %[[NEW_MAX:.*]] = arith.select %[[CMP]], %[[ITEM_VAL]], %[[MAX]] : f64
 // CHECK:             fir.result %[[NEW_MAX]] : f64
 // CHECK:           }
 // CHECK:           return %[[RES]] : f64

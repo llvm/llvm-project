@@ -134,7 +134,7 @@ public:
       const Twine &Warning, StringRef Context, const DWARFDie *DIE)>;
   using ObjFileLoaderTy = std::function<ErrorOr<DWARFFile &>(
       StringRef ContainerName, StringRef Path)>;
-  using InputVerificationHandlerTy = std::function<void(const DWARFFile &File)>;
+  using InputVerificationHandlerTy = std::function<void(const DWARFFile &File, llvm::StringRef Output)>;
   using ObjectPrefixMapTy = std::map<std::string, std::string>;
   using CompileUnitHandlerTy = function_ref<void(const DWARFUnit &Unit)>;
   using TranslatorFuncTy = std::function<StringRef(StringRef)>;

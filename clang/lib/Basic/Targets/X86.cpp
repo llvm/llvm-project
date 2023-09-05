@@ -526,6 +526,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Tremont:
     defineCPUMacros(Builder, "tremont");
     break;
+  // Gracemont and later atom-cores use P-core cpu macros.
+  case CK_Gracemont:
   case CK_Nehalem:
   case CK_Westmere:
   case CK_SandyBridge:
@@ -1168,6 +1170,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
@@ -1420,6 +1423,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Goldmont:
     case CK_GoldmontPlus:
     case CK_Tremont:
+    case CK_Gracemont:
 
     case CK_Westmere:
     case CK_SandyBridge:

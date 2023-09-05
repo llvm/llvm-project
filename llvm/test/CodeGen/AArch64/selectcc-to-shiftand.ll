@@ -6,7 +6,7 @@
 define i32 @neg_sel_constants(i32 %a) {
 ; CHECK-LABEL: neg_sel_constants:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    and w0, w8, w0, asr #31
 ; CHECK-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
@@ -58,7 +58,7 @@ define i32 @not_pos_sel_same_variable(i32 %a) {
 define i32 @pos_sel_constants(i32 %a) {
 ; CHECK-LABEL: pos_sel_constants:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    bic w0, w8, w0, asr #31
 ; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -71,7 +71,7 @@ define i32 @pos_sel_constants(i32 %a) {
 define i32 @pos_sel_special_constant(i32 %a) {
 ; CHECK-LABEL: pos_sel_special_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #512
+; CHECK-NEXT:    mov w8, #512 // =0x200
 ; CHECK-NEXT:    bic w0, w8, w0, lsr #22
 ; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -121,7 +121,7 @@ define i32 @PR31175(i32 %x, i32 %y) {
 define i8 @sel_shift_bool_i8(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-128
+; CHECK-NEXT:    mov w8, #-128 // =0xffffff80
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csel w0, w8, wzr, ne
 ; CHECK-NEXT:    ret
@@ -132,7 +132,7 @@ define i8 @sel_shift_bool_i8(i1 %t) {
 define i16 @sel_shift_bool_i16(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
+; CHECK-NEXT:    mov w8, #128 // =0x80
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csel w0, w8, wzr, ne
 ; CHECK-NEXT:    ret
@@ -143,7 +143,7 @@ define i16 @sel_shift_bool_i16(i1 %t) {
 define i32 @sel_shift_bool_i32(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64
+; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csel w0, w8, wzr, ne
 ; CHECK-NEXT:    ret
@@ -154,7 +154,7 @@ define i32 @sel_shift_bool_i32(i1 %t) {
 define i64 @sel_shift_bool_i64(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65536
+; CHECK-NEXT:    mov w8, #65536 // =0x10000
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csel x0, x8, xzr, ne
 ; CHECK-NEXT:    ret
@@ -165,8 +165,8 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 ; CHECK-LABEL: sel_shift_bool_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.16b, #128
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    movi v1.16b, #128
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -204,9 +204,9 @@ define <2 x i64> @sel_shift_bool_v2i64(<2 x i1> %t) {
 ; CHECK-LABEL: sel_shift_bool_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    mov w8, #65536
-; CHECK-NEXT:    shl v0.2d, v0.2d, #63
+; CHECK-NEXT:    mov w8, #65536 // =0x10000
 ; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    shl v0.2d, v0.2d, #63
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

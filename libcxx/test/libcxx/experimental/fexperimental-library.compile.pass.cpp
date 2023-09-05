@@ -28,5 +28,5 @@
 #endif
 
 #ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
-#  error "-fexperimental-library should enable the PSTL"
+#  error "-fexperimental-library should enable the stop_token"
 #endif

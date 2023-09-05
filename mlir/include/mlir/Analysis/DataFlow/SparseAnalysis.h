@@ -243,7 +243,7 @@ private:
   /// regions or the parent operation itself, and set either the argument or
   /// parent result lattices.
   void visitRegionSuccessors(ProgramPoint point, RegionBranchOpInterface branch,
-                             std::optional<unsigned> successorIndex,
+                             RegionBranchPoint successor,
                              ArrayRef<AbstractSparseLattice *> lattices);
 };
 
@@ -363,8 +363,11 @@ protected:
       Operation *op, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
 
-  // Visit operands on branch instructions that are not forwarded
+  // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
+
+  // Visit operands on call instructions that are not forwarded.
+  virtual void visitCallOperand(OpOperand &operand) = 0;
 
   /// Set the given lattice element(s) at control flow exit point(s).
   virtual void setToExitState(AbstractSparseLattice *lattice) = 0;

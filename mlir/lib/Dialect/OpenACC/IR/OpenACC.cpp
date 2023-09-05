@@ -1015,11 +1015,21 @@ static LogicalResult checkDeclareOperands(Op &op,
     if (!declareAttribute)
       return op.emitError(
           "expect declare attribute on variable in declare operation");
-    if (mlir::cast<mlir::acc::DeclareAttr>(declareAttribute)
-            .getDataClause()
-            .getValue() != dataClauseOptional.value())
+
+    auto declAttr = mlir::cast<mlir::acc::DeclareAttr>(declareAttribute);
+    if (declAttr.getDataClause().getValue() != dataClauseOptional.value())
       return op.emitError(
           "expect matching declare attribute on variable in declare operation");
+
+    // If the variable is marked with implicit attribute, the matching declare
+    // data action must also be marked implicit. The reverse is not checked
+    // since implicit data action may be inserted to do actions like updating
+    // device copy, in which case the variable is not necessarily implicitly
+    // declare'd.
+    if (declAttr.getImplicit() &&
+        declAttr.getImplicit() != acc::getImplicitFlag(operand.getDefiningOp()))
+      return op.emitError(
+          "implicitness must match between declare op and flag on variable");
   }
 
   return success();
@@ -1034,6 +1044,14 @@ LogicalResult acc::DeclareEnterOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::DeclareExitOp::verify() {
+  return checkDeclareOperands(*this, this->getDataClauseOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::DeclareOp::verify() {
   return checkDeclareOperands(*this, this->getDataClauseOperands());
 }
 
@@ -1113,6 +1131,21 @@ LogicalResult acc::ShutdownOp::verify() {
   while ((currOp = currOp->getParentOp()))
     if (isComputeOperation(currOp))
       return emitOpError("cannot be nested in a compute operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SetOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::SetOp::verify() {
+  Operation *currOp = *this;
+  while ((currOp = currOp->getParentOp()))
+    if (isComputeOperation(currOp))
+      return emitOpError("cannot be nested in a compute operation");
+  if (!getDeviceType() && !getDefaultAsync() && !getDeviceNum())
+    return emitOpError("at least one default_async, device_num, or device_type "
+                       "operand must appear");
   return success();
 }
 
@@ -1210,4 +1243,12 @@ mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
               [&](auto entry) { return entry.getDataClause(); })
           .Default([&](mlir::Operation *) { return std::nullopt; })};
   return dataClause;
+}
+
+bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
+  auto implicit{llvm::TypeSwitch<mlir::Operation *, bool>(accDataEntryOp)
+                    .Case<ACC_DATA_ENTRY_OPS>(
+                        [&](auto entry) { return entry.getImplicit(); })
+                    .Default([&](mlir::Operation *) { return false; })};
+  return implicit;
 }

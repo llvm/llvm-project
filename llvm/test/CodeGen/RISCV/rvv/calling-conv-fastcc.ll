@@ -265,10 +265,10 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32
 ; CHECK-NEXT:    vadd.vv v8, v24, v8
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vadd.vv v24, v8, v24
-; CHECK-NEXT:    vadd.vv v8, v0, v16
-; CHECK-NEXT:    vadd.vx v8, v8, a4
-; CHECK-NEXT:    vadd.vx v16, v24, a4
+; CHECK-NEXT:    vadd.vv v8, v8, v24
+; CHECK-NEXT:    vadd.vv v24, v0, v16
+; CHECK-NEXT:    vadd.vx v16, v8, a4
+; CHECK-NEXT:    vadd.vx v8, v24, a4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0

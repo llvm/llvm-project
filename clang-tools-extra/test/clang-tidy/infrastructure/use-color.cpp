@@ -5,9 +5,9 @@
 // RUN: clang-tidy -config='UseColor: false' -dump-config | FileCheck -check-prefix=CHECK-CONFIG-NO-COLOR %s
 // RUN: clang-tidy -help | FileCheck -check-prefix=CHECK-OPT-PRESENT %s
 
-// RUN: clang-tidy -checks='-*, modernize-use-override' -extra-arg=-std=c++11 -use-color=false %s | FileCheck -check-prefix=CHECK-NO-COLOR %s
-// RUN: clang-tidy -checks='-*, modernize-use-override' -extra-arg=-std=c++11 %s | FileCheck -check-prefix=CHECK-NO-COLOR %s
-// RUN: clang-tidy -checks='-*, modernize-use-override' -extra-arg=-std=c++11 -use-color %s | FileCheck -check-prefix=CHECK-COLOR %s
+// RUN: clang-tidy -checks='-*, modernize-use-override' -use-color=false %s -- -std=c++11 | FileCheck -check-prefix=CHECK-NO-COLOR %s
+// RUN: clang-tidy -checks='-*, modernize-use-override' %s -- -std=c++11 | FileCheck -check-prefix=CHECK-NO-COLOR %s
+// RUN: clang-tidy -checks='-*, modernize-use-override' -use-color %s -- -std=c++11 | FileCheck -check-prefix=CHECK-COLOR %s
 
 // CHECK-NOT: UseColor
 // CHECK-CONFIG-NO-COLOR: UseColor: false

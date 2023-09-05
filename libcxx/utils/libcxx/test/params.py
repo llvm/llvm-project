@@ -57,6 +57,14 @@ _warningFlags = [
     # Don't fail compilation in case the compiler fails to perform the requested
     # loop vectorization.
     "-Wno-pass-failed",
+
+    # TODO: Find out why GCC warns in lots of places (is this a problem with always_inline?)
+    "-Wno-dangling-reference",
+    "-Wno-mismatched-new-delete",
+    "-Wno-redundant-move",
+
+    # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
+    "-Wno-self-move",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -77,7 +85,7 @@ def getStdFlag(cfg, std):
     return None
 
 
-_allModules = ["none", "clang", "std"]
+_allModules = ["none", "clang"]
 
 
 def getModuleFlag(cfg, enable_modules):
@@ -121,7 +129,7 @@ DEFAULT_PARAMETERS = [
         choices=_allModules,
         type=str,
         help="Whether to build the test suite with modules enabled. Select "
-        "`clang` for Clang modules and `std` for C++23 std module",
+        "`clang` for Clang modules",
         default=lambda cfg: next(s for s in _allModules if getModuleFlag(cfg, s)),
         actions=lambda enable_modules: [
             AddFeature("modules-build"),
@@ -133,19 +141,6 @@ DEFAULT_PARAMETERS = [
             AddCompileFlag(lambda cfg: f"-fmodules-cache-path={cfg.test_exec_root}/ModuleCache"),
         ]
         if enable_modules == "clang"
-        else [
-            AddFeature("use_module_std"),
-            AddCompileFlag("-DTEST_USE_MODULE"),
-            AddCompileFlag("-DTEST_USE_MODULE_STD"),
-            AddCompileFlag(
-                lambda cfg: "-fprebuilt-module-path="
-                + os.path.join(
-                    cfg.test_exec_root, "__config_module__/CMakeFiles/std.dir"
-                )
-            ),
-            BuildStdModule(),
-        ]
-        if enable_modules == "std"
         else [],
     ),
     Parameter(

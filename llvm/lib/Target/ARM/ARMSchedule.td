@@ -49,7 +49,7 @@
 //    NumMicroOps = 2; // Dispatch 2 micro-ops.
 //    // The two instances of resource P01 are occupied for one cycle. It is one
 //    // cycle because these resources happen to be pipelined.
-//    ResourceCycles = [1, 1];
+//    ReleaseAtCycles = [1, 1];
 //  }
 //  def : ReadAdvance<ReadAdvanceALUsr, 3>;
 
@@ -195,7 +195,7 @@ class BranchWriteRes<int lat, int uops, list<ProcResourceKind> resl,
                      list<int> rcl, SchedWriteRes wr> :
   SchedWriteRes<!listconcat(wr.ProcResources, resl)> {
   let Latency = !add(wr.Latency, lat);
-  let ResourceCycles = !listconcat(wr.ResourceCycles, rcl);
+  let ReleaseAtCycles = !listconcat(wr.ReleaseAtCycles, rcl);
   let NumMicroOps = !add(wr.NumMicroOps, uops);
   SchedWriteRes BaseWr = wr;
 }

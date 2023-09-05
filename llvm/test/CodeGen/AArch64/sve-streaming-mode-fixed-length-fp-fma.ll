@@ -10,8 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) {
 ; CHECK-LABEL: fma_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
@@ -25,8 +25,8 @@ define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) 
 define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) {
 ; CHECK-LABEL: fma_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
@@ -40,13 +40,13 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
 define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z4.h
+; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ldp q1, q5, [x2]
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    fmla z1.h, p0/m, z3.h, z4.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -61,8 +61,8 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3) {
 ; CHECK-LABEL: fma_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
@@ -76,8 +76,8 @@ define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %o
 define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3) {
 ; CHECK-LABEL: fma_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
@@ -91,13 +91,13 @@ define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %o
 define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z4.s
+; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ldp q1, q5, [x2]
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    fmad z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    fmla z1.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -125,8 +125,8 @@ define <1 x double> @fma_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double
 define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3) {
 ; CHECK-LABEL: fma_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
@@ -140,13 +140,13 @@ define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double
 define void @fma_v4f64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z4.d
+; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ldp q1, q5, [x2]
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    fmad z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z4.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a

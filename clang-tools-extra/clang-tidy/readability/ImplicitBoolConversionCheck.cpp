@@ -170,7 +170,7 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return "true";
   }
 
-  return StringRef();
+  return {};
 }
 
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,

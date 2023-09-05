@@ -57,4 +57,7 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
           "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
+// mlir::SideEffects::Resource for modelling operations which add debugging information
+def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
 #endif // FIR_DIALECT_FIR_ATTRS

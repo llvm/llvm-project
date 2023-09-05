@@ -533,9 +533,9 @@ public:
 
 template <typename EVENT>
 class EventDispatcher {
-  CheckerManager *Mgr;
+  CheckerManager *Mgr = nullptr;
 public:
-  EventDispatcher() : Mgr(nullptr) { }
+  EventDispatcher() = default;
 
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {

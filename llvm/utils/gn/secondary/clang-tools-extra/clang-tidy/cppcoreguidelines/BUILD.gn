@@ -30,6 +30,7 @@ static_library("cppcoreguidelines") {
     "MissingStdForwardCheck.cpp",
     "NarrowingConversionsCheck.cpp",
     "NoMallocCheck.cpp",
+    "NoSuspendWithLockCheck.cpp",
     "OwningMemoryCheck.cpp",
     "PreferMemberInitializerCheck.cpp",
     "ProBoundsArrayToPointerDecayCheck.cpp",

@@ -215,10 +215,10 @@ DynoStats getDynoStats(BinaryFunction &BF) {
         }
       }
 
-      if (BC.MIB->isStore(Instr)) {
+      if (BC.MIB->mayStore(Instr)) {
         Stats[DynoStats::STORES] += BBExecutionCount;
       }
-      if (BC.MIB->isLoad(Instr)) {
+      if (BC.MIB->mayLoad(Instr)) {
         Stats[DynoStats::LOADS] += BBExecutionCount;
       }
       if (!BC.MIB->isCall(Instr))

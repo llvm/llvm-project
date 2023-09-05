@@ -74,12 +74,12 @@ public:
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
-  char *data() {
+  std::byte *data() {
     // rawData might contain metadata as well.
     size_t DataOffset = Desc->getMetadataSize();
     return rawData() + DataOffset;
   }
-  const char *data() const {
+  const std::byte *data() const {
     // rawData might contain metadata as well.
     size_t DataOffset = Desc->getMetadataSize();
     return rawData() + DataOffset;
@@ -87,9 +87,11 @@ public:
 
   /// Returns a pointer to the raw data, including metadata.
   /// You are allowed to read Desc->getAllocSize() bytes from this address.
-  char *rawData() { return reinterpret_cast<char *>(this) + sizeof(Block); }
-  const char *rawData() const {
-    return reinterpret_cast<const char *>(this) + sizeof(Block);
+  std::byte *rawData() {
+    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
+  }
+  const std::byte *rawData() const {
+    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
   /// Returns a view over the data.
@@ -153,7 +155,8 @@ public:
   DeadBlock(DeadBlock *&Root, Block *Blk);
 
   /// Returns a pointer to the stored data.
-  char *data() { return B.data(); }
+  std::byte *data() { return B.data(); }
+  std::byte *rawData() { return B.rawData(); }
 
 private:
   friend class Block;

@@ -47,15 +47,29 @@ SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
 }
 
 void SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(
-    SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
+    const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
+    const std::map<std::string, unsigned> *HwModes) {
   OS << "// Bits for subtarget features that participate in "
      << "instruction matching.\n";
-  OS << "enum SubtargetFeatureBits : "
-     << getMinimalTypeForRange(SubtargetFeatures.size()) << " {\n";
+  unsigned Size = SubtargetFeatures.size();
+  if (HwModes)
+    Size += HwModes->size();
+
+  OS << "enum SubtargetFeatureBits : " << getMinimalTypeForRange(Size)
+     << " {\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
     OS << "  " << SFI.getEnumBitName() << " = " << SFI.Index << ",\n";
   }
+
+  if (HwModes) {
+    unsigned Offset = SubtargetFeatures.size();
+    for (const auto &M : *HwModes) {
+      OS << "  Feature_HwMode" << M.second << "Bit = " << (M.second + Offset)
+         << ",\n";
+    }
+  }
+
   OS << "};\n\n";
 }
 
@@ -87,8 +101,8 @@ void SubtargetFeatureInfo::emitNameTable(
 
 void SubtargetFeatureInfo::emitComputeAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
-    SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
-    StringRef ExtraParams) {
+    const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
+    StringRef ExtraParams, const std::map<std::string, unsigned> *HwModes) {
   OS << "PredicateBitset " << ClassName << "::\n"
      << FuncName << "(const " << TargetName << "Subtarget *Subtarget";
   if (!ExtraParams.empty())
@@ -103,6 +117,14 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
     OS << "  if (" << CondStr << ")\n";
     OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }
+
+  if (HwModes) {
+    for (const auto &M : *HwModes) {
+      OS << "  if (" << M.first << ")\n";
+      OS << "    Features.set(Feature_HwMode" << M.second << "Bit);\n";
+    }
+  }
+
   OS << "  return Features;\n";
   OS << "}\n\n";
 }

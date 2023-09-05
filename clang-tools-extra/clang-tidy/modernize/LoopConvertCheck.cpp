@@ -38,7 +38,7 @@ template <> struct OptionEnumMapping<modernize::Confidence::Level> {
         Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
                      {modernize::Confidence::CL_Safe, "safe"},
                      {modernize::Confidence::CL_Risky, "risky"}};
-    return ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -51,7 +51,7 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
                      {modernize::VariableNamer::NS_CamelBack, "camelBack"},
                      {modernize::VariableNamer::NS_LowerCase, "lower_case"},
                      {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
-    return ArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -368,15 +368,15 @@ static std::optional<ContainerCall> getContainerExpr(const Expr *Call) {
       return ContainerCall{TheCall->getImplicitObjectArgument(),
                            Member->getMemberDecl()->getName(),
                            Member->isArrow(), CallKind};
-    } else {
-      if (TheCall->getDirectCallee() == nullptr ||
-          !MemberNames.contains(TheCall->getDirectCallee()->getName()))
-        return std::nullopt;
-      return ContainerCall{TheCall->getArg(0),
-                           TheCall->getDirectCallee()->getName(), false,
-                           CallKind};
     }
-  } else if (const auto *TheCall = dyn_cast_or_null<CallExpr>(Dug)) {
+    if (TheCall->getDirectCallee() == nullptr ||
+        !MemberNames.contains(TheCall->getDirectCallee()->getName()))
+      return std::nullopt;
+    return ContainerCall{TheCall->getArg(0),
+                         TheCall->getDirectCallee()->getName(), false,
+                         CallKind};
+  }
+  if (const auto *TheCall = dyn_cast_or_null<CallExpr>(Dug)) {
     if (TheCall->getNumArgs() != 1)
       return std::nullopt;
 
@@ -465,7 +465,7 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
       SourceMgr.getFileID(Range.getEnd())) {
-    return StringRef(); // Empty string.
+    return {}; // Empty string.
   }
 
   return Lexer::getSourceText(CharSourceRange(Range, true), SourceMgr,
@@ -962,8 +962,8 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   Confidence ConfidenceLevel(Confidence::CL_Safe);
   ASTContext *Context = Result.Context;
 
-  const ForStmt *Loop;
-  LoopFixerKind FixerKind;
+  const ForStmt *Loop = nullptr;
+  LoopFixerKind FixerKind{};
   RangeDescriptor Descriptor;
 
   if ((Loop = Nodes.getNodeAs<ForStmt>(LoopNameArray))) {

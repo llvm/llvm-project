@@ -10,6 +10,6 @@ This check implements `C.83 <https://isocpp.github.io/CppCoreGuidelines/CppCoreG
 and `C.85 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c85-make-swap-noexcept>`_
 from the C++ Core Guidelines.
 
-The cppcoreguidelines-noexcept-swap check is an alias, please see
-`performance-noexcept-swap <../performance/noexcept-swap.html>`_
+The `cppcoreguidelines-noexcept-swap check` is an alias, please see
+:doc:`performance-noexcept-swap <../performance/noexcept-swap>`
 for more information.

@@ -937,8 +937,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (zero)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
 ; CHECK-NEXT:    vmv4r.v v20, v16
 ; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
@@ -1065,3 +1065,15 @@ define <vscale x 2 x i32> @vmerge_larger_vl_poison_passthru(<vscale x 2 x i32> %
   ret <vscale x 2 x i32> %b
 }
 
+; The vadd's new policy should be tail undisturbed since the false op of the
+; vmerge moves from the the body to the tail, and we need to preserve it.
+define <vscale x 2 x i32> @vmerge_larger_vl_false_becomes_tail(<vscale x 2 x i32> %false, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
+; CHECK-LABEL: vmerge_larger_vl_false_becomes_tail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i64 2)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %false, <vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i64 3)
+  ret <vscale x 2 x i32> %b
+}

@@ -37,8 +37,7 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label %exit, label %scalar.ph
+; CHECK-NEXT:    br i1 true, label %exit, label %scalar.ph
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[GEP_LCSSA:%.*]] = phi ptr [ %gep.src, %loop.latch ], [ [[TMP2]], %middle.block ]
 ; CHECK-NEXT:    ret ptr [[GEP_LCSSA]]

@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
 #include <optional>
@@ -171,6 +172,13 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
     // Remove the now unused option.
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
   }
+
+  // Apply -Wsystem-headers-in-module for the current module.
+  if (llvm::is_contained(CI.getDiagnosticOpts().SystemHeaderWarningsModules,
+                         Deps.ID.ModuleName))
+    CI.getDiagnosticOpts().Warnings.push_back("system-headers");
+  // Remove the now unused option(s).
+  CI.getDiagnosticOpts().SystemHeaderWarningsModules.clear();
 
   Optimize(CI);
 
@@ -459,18 +467,19 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
           M->getASTFile());
-  MDC.ScanInstance.getASTReader()->visitInputFiles(
-      *MF, true, true, [&](const serialization::InputFile &IF, bool isSystem) {
+  MDC.ScanInstance.getASTReader()->visitInputFileInfos(
+      *MF, /*IncludeSystem=*/true,
+      [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
         // __inferred_module.map is the result of the way in which an implicit
         // module build handles inferred modules. It adds an overlay VFS with
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (IF.getFile()->getName().endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
-        MDC.addFileDep(MD, IF.getFile()->getName());
+        MDC.addFileDep(MD, IFI.Filename);
       });
 
   llvm::DenseSet<const Module *> SeenDeps;
@@ -478,11 +487,15 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   addAllSubmoduleDeps(M, MD, SeenDeps);
   addAllAffectingClangModules(M, MD, SeenDeps);
 
-  MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
-      *MF, [&](FileEntryRef FE) {
-        if (FE.getNameAsRequested().endswith("__inferred_module.map"))
+  MDC.ScanInstance.getASTReader()->visitInputFileInfos(
+      *MF, /*IncludeSystem=*/true,
+      [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
+        if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
-        MD.ModuleMapFileDeps.emplace_back(FE.getNameAsRequested());
+        if (StringRef(IFI.FilenameAsRequested)
+                .endswith("__inferred_module.map"))
+          return;
+        MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });
 
   CompilerInvocation CI = MDC.makeInvocationForModuleBuildWithoutOutputs(

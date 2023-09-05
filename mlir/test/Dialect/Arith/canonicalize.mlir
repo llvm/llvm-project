@@ -2568,77 +2568,19 @@ func.func @foldOrXor6(%arg0: index) -> index {
   return %2 : index
 }
 
-// -----
+// CHECK-LABEL: @selectOfPoison
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]: i32
+// CHECK: %[[UB:.*]] = ub.poison : i32
+// CHECK: return %[[ARG]], %[[ARG]], %[[UB]], %[[ARG]]
+func.func @selectOfPoison(%cond : i1, %arg: i32) -> (i32, i32, i32, i32) {
+  %poison = ub.poison : i32
+  %select1 = arith.select %cond, %poison, %arg : i32
+  %select2 = arith.select %cond, %arg, %poison : i32
 
-// CHECK-LABEL: @foldIsNanFastmath
-//  CHECK-SAME: (%[[ARG:.+]]: f32)
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldIsNanFastmath(%arg0: f32) -> i1 {
-  %0 = arith.is_nan %arg0 fastmath <nnan> : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: @foldIsNan
-//      CHECK:   %[[TRUE:.+]] = arith.constant true
-//      CHECK:   return %[[TRUE]]
-func.func @foldIsNan() -> i1 {
-  %cNan = arith.constant 0x7FFFFFFF : f32
-  %0 = arith.is_nan %cNan : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: @foldNanIsNotNanWithFastmath
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldNanIsNotNanWithFastmath() -> i1 {
-  %cNan = arith.constant 0x7FFFFFFF : f32
-  %0 = arith.is_nan %cNan fastmath<nnan> : f32
-  func.return %0 : i1
-}
-
-
-// CHECK-LABEL: @foldIsNotNan
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldIsNotNan() -> i1 {
-  %cNan = arith.constant 1.0 : f32
-  %0 = arith.is_nan %cNan : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: @foldIsInfFastmath
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldIsInfFastmath(%arg0: f32) -> i1 {
-  %0 = arith.is_inf %arg0 fastmath <ninf> : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: @foldIsInf
-//      CHECK:   %[[TRUE:.+]] = arith.constant true
-//      CHECK:   return %[[TRUE]]
-func.func @foldIsInf() -> i1 {
-  %cInf = arith.constant 0x7F800000 : f32
-  %0 = arith.is_inf %cInf : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: @foldInfIsNotInfWithFastmath
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldInfIsNotInfWithFastmath() -> i1 {
-  %cInf = arith.constant 0x7F800000 : f32
-  %0 = arith.is_inf %cInf fastmath<ninf> : f32
-  func.return %0 : i1
-}
-
-
-// CHECK-LABEL: @foldIsNotInf
-//      CHECK:   %[[FALSE:.+]] = arith.constant false
-//      CHECK:   return %[[FALSE]]
-func.func @foldIsNotInf() -> i1 {
-  %cInf = arith.constant 1.0 : f32
-  %0 = arith.is_inf %cInf : f32
-  func.return %0 : i1
+  // Check that constant folding is applied prior to poison handling.
+  %true = arith.constant true
+  %false = arith.constant false
+  %select3 = arith.select %true, %poison, %arg : i32
+  %select4 = arith.select %false, %poison, %arg : i32
+  return %select1, %select2, %select3, %select4 : i32, i32, i32, i32
 }

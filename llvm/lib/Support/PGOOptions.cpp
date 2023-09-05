@@ -16,13 +16,14 @@ PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
                        std::string MemoryProfile,
                        IntrusiveRefCntPtr<vfs::FileSystem> FS, PGOAction Action,
                        CSPGOAction CSAction, bool DebugInfoForProfiling,
-                       bool PseudoProbeForProfiling)
+                       bool PseudoProbeForProfiling, bool AtomicCounterUpdate)
     : ProfileFile(ProfileFile), CSProfileGenFile(CSProfileGenFile),
       ProfileRemappingFile(ProfileRemappingFile), MemoryProfile(MemoryProfile),
       Action(Action), CSAction(CSAction),
       DebugInfoForProfiling(DebugInfoForProfiling ||
                             (Action == SampleUse && !PseudoProbeForProfiling)),
-      PseudoProbeForProfiling(PseudoProbeForProfiling), FS(std::move(FS)) {
+      PseudoProbeForProfiling(PseudoProbeForProfiling),
+      AtomicCounterUpdate(AtomicCounterUpdate), FS(std::move(FS)) {
   // Note, we do allow ProfileFile.empty() for Action=IRUse LTO can
   // callback with IRUse action without ProfileFile.
 

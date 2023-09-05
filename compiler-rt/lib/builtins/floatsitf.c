@@ -29,7 +29,7 @@ COMPILER_RT_ABI fp_t __floatsitf(si_int a) {
   su_int aAbs = (su_int)a;
   if (a < 0) {
     sign = signBit;
-    aAbs = ~(su_int)a + (su_int)1U;
+    aAbs = -aAbs;
   }
 
   // Exponent of (fp_t)a is the width of abs(a).

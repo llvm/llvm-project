@@ -7,7 +7,7 @@
 ; RUN:   | FileCheck -check-prefix=RV32ZICBOP %s
 ; RUN: llc -mtriple=riscv64 -mattr=zicbop -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64ZICBOP %s
-; RUN: llc -mtriple=riscv64 -mattr=+zicbop,+experimental-zihintntl -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zicbop,+zihintntl -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64ZICBOPZIHINTNTL %s
 
 declare void @llvm.prefetch(ptr, i32, i32, i32)

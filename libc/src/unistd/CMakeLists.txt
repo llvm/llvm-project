@@ -266,6 +266,7 @@ add_entrypoint_object(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
+    libc.src.__support.File.platform_stderr
     libc.src.stdio.fprintf
 )
 

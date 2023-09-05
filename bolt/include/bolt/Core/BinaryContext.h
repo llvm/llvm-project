@@ -13,6 +13,7 @@
 #ifndef BOLT_CORE_BINARY_CONTEXT_H
 #define BOLT_CORE_BINARY_CONTEXT_H
 
+#include "bolt/Core/AddressMap.h"
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
@@ -220,6 +221,9 @@ class BinaryContext {
 
   bool ContainsDwarf5{false};
   bool ContainsDwarfLegacy{false};
+
+  /// Mapping from input to output addresses.
+  std::optional<AddressMap> IOAddressMap;
 
   /// Preprocess DWO debug information.
   void preprocessDWODebugInfo();
@@ -1342,6 +1346,12 @@ public:
         /* IncrementalLinkerCompatible */ false,
         /* DWARFMustBeAtTheEnd */ false));
     return Streamer;
+  }
+
+  void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
+  const AddressMap &getIOAddressMap() const {
+    assert(IOAddressMap && "Address map not set yet");
+    return *IOAddressMap;
   }
 };
 

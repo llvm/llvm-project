@@ -76,3 +76,13 @@ subroutine acc_loop()
 ! CHECK: !$ACC LOOP GANG(STATIC:gangstatic,DIM:gangdim)
 
 end subroutine
+
+subroutine routine1()
+  !$acc routine bind("routine1_")
+! CHECK: !$ACC ROUTINE BIND("routine1_")
+end subroutine
+
+subroutine routine2()
+  !$acc routine(routine2) bind(routine2)
+! CHECK: !$ACC ROUTINE(routine2) BIND(routine2)
+end subroutine

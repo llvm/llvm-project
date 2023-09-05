@@ -10,8 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <2 x half> @frintp_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frintp_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -22,8 +22,8 @@ define <2 x half> @frintp_v2f16(<2 x half> %op) {
 define <4 x half> @frintp_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frintp_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -34,8 +34,8 @@ define <4 x half> @frintp_v4f16(<4 x half> %op) {
 define <8 x half> @frintp_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frintp_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -46,8 +46,8 @@ define <8 x half> @frintp_v8f16(<8 x half> %op) {
 define void @frintp_v16f16(ptr %a) {
 ; CHECK-LABEL: frintp_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frintp z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -61,8 +61,8 @@ define void @frintp_v16f16(ptr %a) {
 define <2 x float> @frintp_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frintp_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -73,8 +73,8 @@ define <2 x float> @frintp_v2f32(<2 x float> %op) {
 define <4 x float> @frintp_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frintp_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -85,8 +85,8 @@ define <4 x float> @frintp_v4f32(<4 x float> %op) {
 define void @frintp_v8f32(ptr %a) {
 ; CHECK-LABEL: frintp_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frintp z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -110,8 +110,8 @@ define <1 x double> @frintp_v1f64(<1 x double> %op) {
 define <2 x double> @frintp_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frintp_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintp z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -122,8 +122,8 @@ define <2 x double> @frintp_v2f64(<2 x double> %op) {
 define void @frintp_v4f64(ptr %a) {
 ; CHECK-LABEL: frintp_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintp z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintp z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -141,8 +141,8 @@ define void @frintp_v4f64(ptr %a) {
 define <2 x half> @frintm_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frintm_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -153,8 +153,8 @@ define <2 x half> @frintm_v2f16(<2 x half> %op) {
 define <4 x half> @frintm_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frintm_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -165,8 +165,8 @@ define <4 x half> @frintm_v4f16(<4 x half> %op) {
 define <8 x half> @frintm_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frintm_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -177,8 +177,8 @@ define <8 x half> @frintm_v8f16(<8 x half> %op) {
 define void @frintm_v16f16(ptr %a) {
 ; CHECK-LABEL: frintm_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frintm z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -192,8 +192,8 @@ define void @frintm_v16f16(ptr %a) {
 define <2 x float> @frintm_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frintm_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -204,8 +204,8 @@ define <2 x float> @frintm_v2f32(<2 x float> %op) {
 define <4 x float> @frintm_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frintm_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -216,8 +216,8 @@ define <4 x float> @frintm_v4f32(<4 x float> %op) {
 define void @frintm_v8f32(ptr %a) {
 ; CHECK-LABEL: frintm_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frintm z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -241,8 +241,8 @@ define <1 x double> @frintm_v1f64(<1 x double> %op) {
 define <2 x double> @frintm_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frintm_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintm z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -253,8 +253,8 @@ define <2 x double> @frintm_v2f64(<2 x double> %op) {
 define void @frintm_v4f64(ptr %a) {
 ; CHECK-LABEL: frintm_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintm z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintm z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -272,8 +272,8 @@ define void @frintm_v4f64(ptr %a) {
 define <2 x half> @frinti_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frinti_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -284,8 +284,8 @@ define <2 x half> @frinti_v2f16(<2 x half> %op) {
 define <4 x half> @frinti_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frinti_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -296,8 +296,8 @@ define <4 x half> @frinti_v4f16(<4 x half> %op) {
 define <8 x half> @frinti_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frinti_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -308,8 +308,8 @@ define <8 x half> @frinti_v8f16(<8 x half> %op) {
 define void @frinti_v16f16(ptr %a) {
 ; CHECK-LABEL: frinti_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frinti z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -323,8 +323,8 @@ define void @frinti_v16f16(ptr %a) {
 define <2 x float> @frinti_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frinti_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -335,8 +335,8 @@ define <2 x float> @frinti_v2f32(<2 x float> %op) {
 define <4 x float> @frinti_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frinti_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -347,8 +347,8 @@ define <4 x float> @frinti_v4f32(<4 x float> %op) {
 define void @frinti_v8f32(ptr %a) {
 ; CHECK-LABEL: frinti_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frinti z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -372,8 +372,8 @@ define <1 x double> @frinti_v1f64(<1 x double> %op) {
 define <2 x double> @frinti_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frinti_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinti z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -384,8 +384,8 @@ define <2 x double> @frinti_v2f64(<2 x double> %op) {
 define void @frinti_v4f64(ptr %a) {
 ; CHECK-LABEL: frinti_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinti z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frinti z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -403,8 +403,8 @@ define void @frinti_v4f64(ptr %a) {
 define <2 x half> @frintx_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frintx_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -415,8 +415,8 @@ define <2 x half> @frintx_v2f16(<2 x half> %op) {
 define <4 x half> @frintx_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frintx_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -427,8 +427,8 @@ define <4 x half> @frintx_v4f16(<4 x half> %op) {
 define <8 x half> @frintx_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frintx_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -439,8 +439,8 @@ define <8 x half> @frintx_v8f16(<8 x half> %op) {
 define void @frintx_v16f16(ptr %a) {
 ; CHECK-LABEL: frintx_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frintx z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -454,8 +454,8 @@ define void @frintx_v16f16(ptr %a) {
 define <2 x float> @frintx_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frintx_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -466,8 +466,8 @@ define <2 x float> @frintx_v2f32(<2 x float> %op) {
 define <4 x float> @frintx_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frintx_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -478,8 +478,8 @@ define <4 x float> @frintx_v4f32(<4 x float> %op) {
 define void @frintx_v8f32(ptr %a) {
 ; CHECK-LABEL: frintx_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frintx z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -503,8 +503,8 @@ define <1 x double> @frintx_v1f64(<1 x double> %op) {
 define <2 x double> @frintx_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frintx_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -515,8 +515,8 @@ define <2 x double> @frintx_v2f64(<2 x double> %op) {
 define void @frintx_v4f64(ptr %a) {
 ; CHECK-LABEL: frintx_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintx z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -534,8 +534,8 @@ define void @frintx_v4f64(ptr %a) {
 define <2 x half> @frinta_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frinta_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -546,8 +546,8 @@ define <2 x half> @frinta_v2f16(<2 x half> %op) {
 define <4 x half> @frinta_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frinta_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -558,8 +558,8 @@ define <4 x half> @frinta_v4f16(<4 x half> %op) {
 define <8 x half> @frinta_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frinta_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -570,8 +570,8 @@ define <8 x half> @frinta_v8f16(<8 x half> %op) {
 define void @frinta_v16f16(ptr %a) {
 ; CHECK-LABEL: frinta_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frinta z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -585,8 +585,8 @@ define void @frinta_v16f16(ptr %a) {
 define <2 x float> @frinta_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frinta_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -597,8 +597,8 @@ define <2 x float> @frinta_v2f32(<2 x float> %op) {
 define <4 x float> @frinta_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frinta_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -609,8 +609,8 @@ define <4 x float> @frinta_v4f32(<4 x float> %op) {
 define void @frinta_v8f32(ptr %a) {
 ; CHECK-LABEL: frinta_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frinta z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -634,8 +634,8 @@ define <1 x double> @frinta_v1f64(<1 x double> %op) {
 define <2 x double> @frinta_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frinta_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frinta z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -646,8 +646,8 @@ define <2 x double> @frinta_v2f64(<2 x double> %op) {
 define void @frinta_v4f64(ptr %a) {
 ; CHECK-LABEL: frinta_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frinta z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frinta z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -665,8 +665,8 @@ define void @frinta_v4f64(ptr %a) {
 define <2 x half> @frintn_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frintn_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -677,8 +677,8 @@ define <2 x half> @frintn_v2f16(<2 x half> %op) {
 define <4 x half> @frintn_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frintn_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -689,8 +689,8 @@ define <4 x half> @frintn_v4f16(<4 x half> %op) {
 define <8 x half> @frintn_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frintn_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -701,8 +701,8 @@ define <8 x half> @frintn_v8f16(<8 x half> %op) {
 define void @frintn_v16f16(ptr %a) {
 ; CHECK-LABEL: frintn_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frintn z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -716,8 +716,8 @@ define void @frintn_v16f16(ptr %a) {
 define <2 x float> @frintn_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frintn_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -728,8 +728,8 @@ define <2 x float> @frintn_v2f32(<2 x float> %op) {
 define <4 x float> @frintn_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frintn_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -740,8 +740,8 @@ define <4 x float> @frintn_v4f32(<4 x float> %op) {
 define void @frintn_v8f32(ptr %a) {
 ; CHECK-LABEL: frintn_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frintn z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -765,8 +765,8 @@ define <1 x double> @frintn_v1f64(<1 x double> %op) {
 define <2 x double> @frintn_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frintn_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintn z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -777,8 +777,8 @@ define <2 x double> @frintn_v2f64(<2 x double> %op) {
 define void @frintn_v4f64(ptr %a) {
 ; CHECK-LABEL: frintn_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintn z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintn z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -796,8 +796,8 @@ define void @frintn_v4f64(ptr %a) {
 define <2 x half> @frintz_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: frintz_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -808,8 +808,8 @@ define <2 x half> @frintz_v2f16(<2 x half> %op) {
 define <4 x half> @frintz_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: frintz_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -820,8 +820,8 @@ define <4 x half> @frintz_v4f16(<4 x half> %op) {
 define <8 x half> @frintz_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: frintz_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -832,8 +832,8 @@ define <8 x half> @frintz_v8f16(<8 x half> %op) {
 define void @frintz_v16f16(ptr %a) {
 ; CHECK-LABEL: frintz_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    frintz z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -847,8 +847,8 @@ define void @frintz_v16f16(ptr %a) {
 define <2 x float> @frintz_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: frintz_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -859,8 +859,8 @@ define <2 x float> @frintz_v2f32(<2 x float> %op) {
 define <4 x float> @frintz_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: frintz_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -871,8 +871,8 @@ define <4 x float> @frintz_v4f32(<4 x float> %op) {
 define void @frintz_v8f32(ptr %a) {
 ; CHECK-LABEL: frintz_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    frintz z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -896,8 +896,8 @@ define <1 x double> @frintz_v1f64(<1 x double> %op) {
 define <2 x double> @frintz_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: frintz_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    frintz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -908,8 +908,8 @@ define <2 x double> @frintz_v2f64(<2 x double> %op) {
 define void @frintz_v4f64(ptr %a) {
 ; CHECK-LABEL: frintz_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    frintz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    frintz z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]

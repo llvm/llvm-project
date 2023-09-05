@@ -13,6 +13,9 @@
 // RUN: %push_to_device  %t.supp %device_rundir/%t.supp
 // RUN: %env_lsan_opts="use_registers=0:use_stacks=0:suppressions='%device_rundir/%t.supp':symbolize=false" %run %t
 
+// FIXME: Investigate.
+// XFAIL: internal_symbolizer && lsan-standalone && i386-linux
+
 #include <stdio.h>
 #include <stdlib.h>
 

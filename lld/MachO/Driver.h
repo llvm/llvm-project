@@ -40,7 +40,9 @@ enum {
 #undef OPTION
 };
 
-void parseLCLinkerOption(InputFile *, unsigned argc, StringRef data);
+void parseLCLinkerOption(llvm::SmallVectorImpl<StringRef> &LCLinkerOptions,
+                         InputFile *f, unsigned argc, StringRef data);
+void resolveLCLinkerOptions();
 
 std::string createResponseFile(const llvm::opt::InputArgList &args);
 

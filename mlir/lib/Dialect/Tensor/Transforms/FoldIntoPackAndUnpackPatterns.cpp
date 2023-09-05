@@ -59,6 +59,11 @@ struct FoldUnpackWithExtractSliceOp : public OpRewritePattern<ExtractSliceOp> {
     if (!unpackOp)
       return failure();
 
+    if (sliceOp.getResultType().getRank() != unpackOp.getDestType().getRank()) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "rank-reduced folding is not supported");
+    }
+
     // Check all offsets are zeros, and all strides are ones.
     if (!areAllConstantIntValue(sliceOp.getMixedOffsets(), 0) ||
         !areAllConstantIntValue(sliceOp.getMixedStrides(), 1)) {

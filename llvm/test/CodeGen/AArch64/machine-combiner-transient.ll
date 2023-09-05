@@ -11,10 +11,10 @@
 define i32 @test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub w8, w2, w0
-; CHECK-NEXT:    eor w9, w1, w0, lsl #8
-; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    eor w0, w8, w9, asr #13
+; CHECK-NEXT:    eor w8, w1, w0, lsl #8
+; CHECK-NEXT:    sub w9, w2, w0
+; CHECK-NEXT:    sub w9, w9, w8
+; CHECK-NEXT:    eor w0, w9, w8, asr #13
 ; CHECK-NEXT:    ret
 entry:
   %shl = shl i32 %a, 8
@@ -30,10 +30,10 @@ entry:
 define i64 @test2(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x2, x0
-; CHECK-NEXT:    eor x9, x1, x0, lsl #8
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    eor x0, x8, x9, asr #13
+; CHECK-NEXT:    eor x8, x1, x0, lsl #8
+; CHECK-NEXT:    sub x9, x2, x0
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    eor x0, x9, x8, asr #13
 ; CHECK-NEXT:    ret
 entry:
   %shl = shl i64 %a, 8

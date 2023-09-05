@@ -69,9 +69,44 @@ template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
 
 template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
-  if (isControlledConvergent(I)) {
+  auto ID = ContextT::getIntrinsicID(I);
+  auto *TokenDef = findAndCheckConvergenceTokenUsed(I);
+
+  bool IsCtrlIntrinsic = true;
+
+  switch (ID) {
+  case Intrinsic::experimental_convergence_entry:
+    Check(isInsideConvergentFunction(I),
+          "Entry intrinsic can occur only in a convergent function.",
+          {Context.print(&I)});
+    Check(I.getParent()->isEntryBlock(),
+          "Entry intrinsic can occur only in the entry block.",
+          {Context.print(&I)});
+    Check(I.getParent()->getFirstNonPHI() == &I,
+          "Entry intrinsic can occur only at the start of the basic block.",
+          {Context.print(&I)});
+    LLVM_FALLTHROUGH;
+  case Intrinsic::experimental_convergence_anchor:
+    Check(!TokenDef,
+          "Entry or anchor intrinsic cannot have a convergencectrl token "
+          "operand.",
+          {Context.print(&I)});
+    break;
+  case Intrinsic::experimental_convergence_loop:
+    Check(TokenDef, "Loop intrinsic must have a convergencectrl token operand.",
+          {Context.print(&I)});
+    Check(I.getParent()->getFirstNonPHI() == &I,
+          "Loop intrinsic can occur only at the start of the basic block.",
+          {Context.print(&I)});
+    break;
+  default:
+    IsCtrlIntrinsic = false;
+    break;
+  }
+
+  if (TokenDef || IsCtrlIntrinsic) {
     Check(isConvergent(I),
-          "Expected convergent attribute on a controlled convergent call.",
+          "Convergence control token can only be used in a convergent call.",
           {Context.print(&I)});
     Check(ConvergenceKind != UncontrolledConvergence,
           "Cannot mix controlled and uncontrolled convergence in the same "

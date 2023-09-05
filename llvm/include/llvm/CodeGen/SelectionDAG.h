@@ -731,6 +731,7 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
+  SDValue getJumpTableDebugInfo(int JTI, SDValue Chain, const SDLoc &DL);
   SDValue getConstantPool(const Constant *C, EVT VT,
                           MaybeAlign Align = std::nullopt, int Offs = 0,
                           bool isT = false, unsigned TargetFlags = 0);
@@ -947,11 +948,42 @@ public:
   SDValue getZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
 
   /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by either any/sign/zero-extending (depending on IsAny /
+  /// IsSigned) or truncating it.
+  SDValue getExtOrTrunc(SDValue Op, const SDLoc &DL,
+                        EVT VT, unsigned Opcode) {
+    switch(Opcode) {
+      case ISD::ANY_EXTEND:
+        return getAnyExtOrTrunc(Op, DL, VT);
+      case ISD::ZERO_EXTEND:
+        return getZExtOrTrunc(Op, DL, VT);
+      case ISD::SIGN_EXTEND:
+        return getSExtOrTrunc(Op, DL, VT);
+    }
+    llvm_unreachable("Unsupported opcode");
+  }
+
+  /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either sign/zero-extending (depending on IsSigned) or
   /// truncating it.
   SDValue getExtOrTrunc(bool IsSigned, SDValue Op, const SDLoc &DL, EVT VT) {
     return IsSigned ? getSExtOrTrunc(Op, DL, VT) : getZExtOrTrunc(Op, DL, VT);
   }
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either any-extending or truncating it.
+  SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either sign-extending or truncating it.
+  SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either zero-extending or truncating it.
+  SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
 
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
@@ -2010,6 +2042,11 @@ public:
                     : computeOverflowForUnsignedAdd(N0, N1);
   }
 
+  /// Determine if the result of the addition of 2 nodes can never overflow.
+  bool willNotOverflowAdd(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForAdd(IsSigned, N0, N1) == OFK_Never;
+  }
+
   /// Determine if the result of the signed sub of 2 nodes can overflow.
   OverflowKind computeOverflowForSignedSub(SDValue N0, SDValue N1) const;
 
@@ -2021,6 +2058,11 @@ public:
                                      SDValue N1) const {
     return IsSigned ? computeOverflowForSignedSub(N0, N1)
                     : computeOverflowForUnsignedSub(N0, N1);
+  }
+
+  /// Determine if the result of the sub of 2 nodes can never overflow.
+  bool willNotOverflowSub(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForSub(IsSigned, N0, N1) == OFK_Never;
   }
 
   /// Test if the given value is known to have exactly one bit set. This differs

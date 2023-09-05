@@ -44,6 +44,7 @@
 
 using namespace llvm;
 using namespace llvm::rc;
+using namespace llvm::opt;
 
 namespace {
 
@@ -129,20 +130,24 @@ ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
   if (MainExecPath.empty())
     MainExecPath = Argv0;
 
-  StringRef Parent = llvm::sys::path::parent_path(MainExecPath);
   ErrorOr<std::string> Path = std::error_code();
   std::string TargetClang = (Triple + "-clang").str();
   std::string VersionedClang = ("clang-" + Twine(LLVM_VERSION_MAJOR)).str();
-  if (!Parent.empty()) {
-    // First look for the tool with all potential names in the specific
-    // directory of Argv0, if known
-    for (const auto *Name :
-         {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
+  for (const auto *Name :
+       {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
+    for (const StringRef Parent :
+         {llvm::sys::path::parent_path(MainExecPath),
+          llvm::sys::path::parent_path(Argv0)}) {
+      // Look for various versions of "clang" first in the MainExecPath parent
+      // directory and then in the argv[0] parent directory.
+      // On Windows (but not Unix) argv[0] is overwritten with the eqiuvalent
+      // of MainExecPath by InitLLVM.
       Path = sys::findProgramByName(Name, Parent);
       if (Path)
         return Path;
     }
   }
+
   // If no parent directory known, or not found there, look everywhere in PATH
   for (const auto *Name : {"clang", "clang-cl"}) {
     Path = sys::findProgramByName(Name);
@@ -456,7 +461,14 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
     // done this double escaping) probably is confined to cases like these
     // quoted string defines, and those happen to work the same across unix
     // and windows.
-    std::string Unescaped = unescape(Arg->getValue());
+    //
+    // If GNU windres is executed with --use-temp-file, it doesn't use
+    // popen() to invoke the preprocessor, but uses another function which
+    // actually preserves tricky characters better. To mimic this behaviour,
+    // don't unescape arguments here.
+    std::string Value = Arg->getValue();
+    if (!InputArgs.hasArg(WINDRES_use_temp_file))
+      Value = unescape(Value);
     switch (Arg->getOption().getID()) {
     case WINDRES_include_dir:
       // Technically, these are handled the same way as e.g. defines, but
@@ -470,17 +482,19 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
       break;
     case WINDRES_define:
       Opts.PreprocessArgs.push_back("-D");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_undef:
       Opts.PreprocessArgs.push_back("-U");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_preprocessor_arg:
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     }
   }
+  // TODO: If --use-temp-file is set, we shouldn't be unescaping
+  // the --preprocessor argument either, only splitting it.
   if (InputArgs.hasArg(WINDRES_preprocessor))
     Opts.PreprocessCmd =
         unescapeSplit(InputArgs.getLastArgValue(WINDRES_preprocessor));

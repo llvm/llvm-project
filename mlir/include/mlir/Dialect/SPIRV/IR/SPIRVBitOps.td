@@ -67,7 +67,7 @@ def SPIRV_BitCountOp : SPIRV_BitUnaryOp<"BitCount", []> {
   let summary = "Count the number of set bits in an object.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.  The components
     must be wide enough to hold the unsigned Width of Base as an unsigned
@@ -108,11 +108,11 @@ def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
   }];
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base and Insert must be the same as Result Type.
+    The type of Base and Insert must be the same as Result Type.
 
     Any result bits numbered outside [Offset, Offset + Count -  1]
     (inclusive) will come from the corresponding bits in Base.
@@ -180,11 +180,11 @@ def SPIRV_BitFieldSExtractOp : SPIRV_BitFieldExtractOp<"BitFieldSExtract",
   let summary = "Extract a bit field from an object, with sign extension.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base must be the same as Result Type.
+    The type of Base must be the same as Result Type.
 
     If Count is greater than 0: The bits of Base numbered in [Offset, Offset
     + Count -  1] (inclusive) become the bits numbered [0, Count - 1] of the
@@ -271,11 +271,11 @@ def SPIRV_BitReverseOp : SPIRV_BitUnaryOp<"BitReverse", []> {
   let summary = "Reverse the bits in an object.";
 
   let description = [{
-     Results are computed per component.
+    Results are computed per component.
 
     Result Type must be a scalar or vector of integer type.
 
-     The type of Base must be the same as Result Type.
+    The type of Base must be the same as Result Type.
 
     The bit-number n of the result will be taken from bit-number Width - 1 -
     n of Base, where Width is the OpTypeInt operand of the Result Type.
@@ -315,7 +315,7 @@ def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
   }];
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.  The type of
     Operand 1 and Operand 2  must be a scalar or vector of integer type.
@@ -338,6 +338,8 @@ def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
     %2 = spirv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -373,6 +375,8 @@ def SPIRV_BitwiseOrOp : SPIRV_BitBinaryOp<"BitwiseOr",
     %2 = spirv.BitwiseOr %0, %1 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -385,7 +389,7 @@ def SPIRV_BitwiseXorOp : SPIRV_BitBinaryOp<"BitwiseXor",
   }];
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.  The type of
     Operand 1 and Operand 2  must be a scalar or vector of integer type.
@@ -422,7 +426,7 @@ def SPIRV_ShiftLeftLogicalOp : SPIRV_ShiftOp<"ShiftLeftLogical",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -467,7 +471,7 @@ def SPIRV_ShiftRightArithmeticOp : SPIRV_ShiftOp<"ShiftRightArithmetic",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -475,7 +479,7 @@ def SPIRV_ShiftRightArithmeticOp : SPIRV_ShiftOp<"ShiftRightArithmetic",
     Shift is treated as unsigned. The result is undefined if Shift is
     greater than or equal to the bit width of the components of Base.
 
-     Results are computed per component.
+    Results are computed per component.
 
     <!-- End of AutoGen section -->
 
@@ -509,7 +513,7 @@ def SPIRV_ShiftRightLogicalOp : SPIRV_ShiftOp<"ShiftRightLogical",
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-     The type of each Base and Shift must be a scalar or vector of integer
+    The type of each Base and Shift must be a scalar or vector of integer
     type. Base and Shift must have the same number of components.  The
     number of components and bit width of the type of Base must be the same
     as in Result Type.
@@ -518,7 +522,7 @@ def SPIRV_ShiftRightLogicalOp : SPIRV_ShiftOp<"ShiftRightLogical",
     Shift is greater than or equal to the bit width of the components of
     Base.
 
-     Results are computed per component.
+    Results are computed per component.
 
     <!-- End of AutoGen section -->
 
@@ -546,7 +550,7 @@ def SPIRV_NotOp : SPIRV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
   let summary = "Complement the bits of Operand.";
 
   let description = [{
-     Results are computed per component, and within each component, per bit.
+    Results are computed per component, and within each component, per bit.
 
     Result Type must be a scalar or vector of integer type.
 

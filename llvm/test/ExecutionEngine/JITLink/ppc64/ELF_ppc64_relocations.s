@@ -1,22 +1,30 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc --triple=powerpc64le-unknown-linux-gnu --filetype=obj -o \
+# RUN:   %t/elf_reloc.o --defsym LE=1 %s
+# RUN: llvm-jitlink --noexec \
+# RUN:              --abs external_data=0xdeadbeef \
+# RUN:              --abs external_func=0xcafef00d \
+# RUN:              --abs external_func_notoc=0x88880000 \
+# RUN:              --abs external_addr14_func=0x0880 \
+# RUN:              --abs external_addr16_data=0x6000 \
+# RUN:              --abs external_addr32_data=0x36668840 \
+# RUN:              --check %s %t/elf_reloc.o
+# RUN: llvm-mc --triple=powerpc64-unknown-linux-gnu --filetype=obj -o \
 # RUN:   %t/elf_reloc.o %s
 # RUN: llvm-jitlink --noexec \
 # RUN:              --abs external_data=0xdeadbeef \
 # RUN:              --abs external_func=0xcafef00d \
 # RUN:              --abs external_func_notoc=0x88880000 \
-# RUN:              --check %s %t/elf_reloc.o
-# RUN: llvm-mc --triple=powerpc64-unknown-linux-gnu --filetype=obj -o \
-# RUN:   %t/elf_reloc.o %s
-# RUN: not llvm-jitlink --noexec \
-# RUN:              --abs external_data=0xdeadbeef \
-# RUN:              --abs external_func=0xcafef00d \
-# RUN:              --abs external_func_notoc=0x88880000 \
+# RUN:              --abs external_addr14_func=0x0880 \
+# RUN:              --abs external_addr16_data=0x6000 \
+# RUN:              --abs external_addr32_data=0x36668840 \
 # RUN:              --check %s %t/elf_reloc.o
 
 # jitlink-check: section_addr(elf_reloc.o, $__GOT) + 0x8000 = __TOC__
   .text
   .abiversion 2
+  .global external_addr32_data
+  .global external_addr16_data
   .global main
   .p2align 4
   .type main,@function
@@ -99,6 +107,138 @@ test_pcrel34:
   paddi 3, 0, .L.str@PCREL, 1
   blr
   .size test_pcrel34, .-test_pcrel34
+
+# Check R_PPC64_ADDR14
+# jitlink-check: decode_operand(reloc_addr14, 2) << 2 = external_addr14_func
+  .global reloc_addr14
+  .p2align 4
+  .type reloc_addr14,@function
+reloc_addr14:
+  bca 21, 30, external_addr14_func
+  .size reloc_addr14, .-reloc_addr14
+
+# Check R_PPC64_TOC16
+# jitlink-check: decode_operand(reloc_toc16, 1) & 0xffff = \
+# jitlink-check:   (section_addr(elf_reloc.o, .rodata.str1.1) - __TOC__) & 0xffff
+# jitlink-check: decode_operand(reloc_toc16 + 4, 1) & 0xffff = \
+# jitlink-check:   ((section_addr(elf_reloc.o, .rodata.str1.1) - __TOC__) >> 16) & 0xffff
+# jitlink-check: decode_operand(reloc_toc16 + 8, 1) & 0xffff = \
+# jitlink-check:   (((section_addr(elf_reloc.o, .rodata.str1.1) - __TOC__) + 0x8000) >> 16) & 0xffff
+# jitlink-check: decode_operand(reloc_toc16 + 12, 1) & 0xffff = \
+# jitlink-check:   (section_addr(elf_reloc.o, .rodata.str1.1) - __TOC__) & 0xffff
+  .global reloc_toc16
+  .p2align 4
+  .type reloc_toc16,@function
+reloc_toc16:
+.ifdef LE
+  li 3, 0
+  .reloc reloc_toc16, R_PPC64_TOC16, .L.str
+  li 3, 0
+  .reloc reloc_toc16+4, R_PPC64_TOC16_HI, .L.str
+  li 3, 0
+  .reloc reloc_toc16+8, R_PPC64_TOC16_HA, .L.str
+  li 3, 0
+  .reloc reloc_toc16+12, R_PPC64_TOC16_DS, .L.str
+.else
+  li 3, 0
+  .reloc reloc_toc16+2, R_PPC64_TOC16, .L.str
+  li 3, 0
+  .reloc reloc_toc16+6, R_PPC64_TOC16_HI, .L.str
+  li 3, 0
+  .reloc reloc_toc16+10, R_PPC64_TOC16_HA, .L.str
+  li 3, 0
+  .reloc reloc_toc16+14, R_PPC64_TOC16_DS, .L.str
+.endif
+  blr
+  .size reloc_toc16, .-reloc_toc16
+
+# Check R_PPC64_ADDR16*
+# R_PPC64_ADDR16_DS
+# jitlink-check: decode_operand(reloc_addr16, 1) & 0xffff = \
+# jitlink-check: external_addr16_data
+# R_PPC64_ADDR16_LO
+# jitlink-check: decode_operand(reloc_addr16 + 4, 1) & 0xffff = \
+# jitlink-check: external_addr32_data & 0xffff
+# R_PPC64_ADDR16_LO_DS
+# jitlink-check: decode_operand(reloc_addr16 + 8, 1) & 0xffff = \
+# jitlink-check: external_addr32_data & 0xffff
+# R_PPC64_ADDR16
+# jitlink-check: decode_operand(reloc_addr16 + 12, 1) & 0xffff = \
+# jitlink-check: external_addr16_data
+# R_PPC64_ADDR16_HI
+# jitlink-check: decode_operand(reloc_addr16 + 16, 1) & 0xffff = \
+# jitlink-check: (external_addr32_data >> 16) & 0xffff
+# R_PPC64_ADDR16_HA
+# jitlink-check: decode_operand(reloc_addr16 + 20, 1) & 0xffff = \
+# jitlink-check: ((external_addr32_data + 0x8000) >> 16) & 0xffff
+# R_PPC64_ADDR16_HIGH
+# jitlink-check: decode_operand(reloc_addr16 + 24, 1) & 0xffff = \
+# jitlink-check: (external_addr32_data >> 16) & 0xffff
+# R_PPC64_ADDR16_HIGHA
+# jitlink-check: decode_operand(reloc_addr16 + 28, 1) & 0xffff = \
+# jitlink-check: ((external_addr32_data + 0x8000) >> 16) & 0xffff
+# R_PPC64_ADDR16_HIGHER
+# jitlink-check: decode_operand(reloc_addr16 + 32, 1) & 0xffff = \
+# jitlink-check: (external_addr32_data >> 32) & 0xffff
+# R_PPC64_ADDR16_HIGHERA
+# jitlink-check: decode_operand(reloc_addr16 + 36, 1) & 0xffff = \
+# jitlink-check: ((external_addr32_data + 0x8000) >> 32) & 0xffff
+# R_PPC64_ADDR16_HIGHEST
+# jitlink-check: decode_operand(reloc_addr16 + 40, 1) & 0xffff = \
+# jitlink-check: (external_addr32_data >> 48) & 0xffff
+# R_PPC64_ADDR16_HIGHESTA
+# jitlink-check: decode_operand(reloc_addr16 + 44, 1) & 0xffff = \
+# jitlink-check: ((external_addr32_data + 0x8000) >> 48) & 0xffff
+  .global reloc_addr16
+  .p2align 4
+  .type reloc_addr16,@function
+reloc_addr16:
+.ifdef LE
+  li 3, 0
+  .reloc reloc_addr16, R_PPC64_ADDR16_DS, external_addr16_data
+  li 3, 0
+  .reloc reloc_addr16+4, R_PPC64_ADDR16_LO, external_addr32_data
+  li 3, 0
+  .reloc reloc_addr16+8, R_PPC64_ADDR16_LO_DS, external_addr32_data
+  li 3, 0
+  .reloc reloc_addr16+12, R_PPC64_ADDR16, external_addr16_data
+  li 3, 0
+  .reloc reloc_addr16+16, R_PPC64_ADDR16_HI, external_addr32_data
+.else
+  li 3, 0
+  .reloc reloc_addr16+2, R_PPC64_ADDR16_DS, external_addr16_data
+  li 3, 0
+  .reloc reloc_addr16+6, R_PPC64_ADDR16_LO, external_addr32_data
+  li 3, 0
+  .reloc reloc_addr16+10, R_PPC64_ADDR16_LO_DS, external_addr32_data
+  li 3, 0
+  .reloc reloc_addr16+14, R_PPC64_ADDR16, external_addr16_data
+  li 3, 0
+  .reloc reloc_addr16+18, R_PPC64_ADDR16_HI, external_addr32_data
+.endif
+  li 3, external_addr32_data@ha
+  li 3, external_addr32_data@high
+  li 3, external_addr32_data@higha
+  li 3, external_addr32_data@higher
+  li 3, external_addr32_data@highera
+  li 3, external_addr32_data@highest
+  li 3, external_addr32_data@highesta
+  blr
+  .size reloc_addr16, .-reloc_addr16
+
+# Check R_PPC64_REL16*
+# jitlink-check: decode_operand(reloc_rel16, 1) & 0xffff = \
+# jitlink-check:   (__TOC__ - reloc_rel16) & 0xffff
+# jitlink-check: decode_operand(reloc_rel16 + 4, 1) & 0xffff = \
+# jitlink-check:   ((__TOC__ - reloc_rel16) >> 16) & 0xffff
+  .global reloc_rel16
+  .p2align 4
+  .type reloc_rel16,@function
+reloc_rel16:
+  li 3, .TOC.-reloc_rel16
+  li 3, .TOC.-reloc_rel16@h
+  blr
+  .size reloc_rel16, .-reloc_rel16
 
   .type	.L.str,@object
 	.section	.rodata.str1.1,"aMS",@progbits,1

@@ -76,7 +76,7 @@ transform.sequence failures(propagate) {
 "transform.sequence"(%0) ({
 ^bb0(%arg0: !transform.any_op):
   "transform.yield"() : () -> ()
-}) {failure_propagation_mode = 1 : i32, operand_segment_sizes = array<i32: 0, 1>} : (!transform.any_op) -> ()
+}) {failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 1>} : (!transform.any_op) -> ()
 
 // -----
 

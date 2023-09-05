@@ -333,8 +333,8 @@ declare <2 x i32> @test_movi1d(<2 x i32>, <2 x i32>)
 define <2 x i32> @movi1d() {
 ; CHECK-LABEL: movi1d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI40_0
 ; CHECK-NEXT:    movi d1, #0x00ffffffff0000
+; CHECK-NEXT:    adrp x8, .LCPI40_0
 ; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI40_0]
 ; CHECK-NEXT:    b test_movi1d
   %1 = tail call <2 x i32> @test_movi1d(<2 x i32> <i32 -2147483648, i32 2147450880>, <2 x i32> <i32 -65536, i32 65535>)

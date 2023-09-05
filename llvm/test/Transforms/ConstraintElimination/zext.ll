@@ -8,7 +8,6 @@ define i1 @uge_zext(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i16 [[Y]], [[X_EXT]]
@@ -17,8 +16,6 @@ define i1 @uge_zext(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i16 [[Y]], [[X_EXT]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -60,7 +57,6 @@ define i1 @uge_compare_short_and_extended(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i8 [[Y]] to i16
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y_EXT]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i16 [[Y_EXT]], [[X_EXT]]
@@ -69,8 +65,6 @@ define i1 @uge_compare_short_and_extended(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i16 [[Y_EXT]], [[X_EXT]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y_EXT]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -123,8 +117,6 @@ define i1 @uge_zext_add(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i16 [[Y]], [[X_EXT]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -167,7 +159,6 @@ define i1 @sge_zext(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i16 [[X_EXT]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i16 [[Y]], [[X_EXT]]
@@ -176,8 +167,6 @@ define i1 @sge_zext(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i16 [[Y]], [[X_EXT]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i16 [[X_EXT]], [[Y]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i16 [[X_EXT]], 10
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
@@ -266,6 +255,21 @@ bb2:
 }
 
 define i1 @test_pr58009_const_zext() {
+; CHECK-LABEL: @test_pr58009_const_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXT_T_1:%.*]] = zext i1 true to i16
+; CHECK-NEXT:    [[EXT_T_2:%.*]] = zext i1 true to i16
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
+; CHECK-NEXT:    [[EXT_F_1:%.*]] = zext i1 false to i16
+; CHECK-NEXT:    [[EXT_F_2:%.*]] = zext i1 false to i16
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i16 [[EXT_F_1]], [[EXT_T_2]]
+; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i16 [[EXT_F_1]], [[EXT_T_2]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_3]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[F_3]]
+; CHECK-NEXT:    ret i1 [[RES_5]]
+;
 entry:
   %ext.t.1 = zext i1 true to i16
   %ext.t.2 = zext i1 true to i16

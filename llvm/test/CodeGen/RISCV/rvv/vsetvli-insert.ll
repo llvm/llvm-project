@@ -584,9 +584,8 @@ entry:
 define i64 @bad_removal(<2 x i64> %arg) {
 ; CHECK-LABEL: bad_removal:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetivli a1, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli a0, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
 bb:

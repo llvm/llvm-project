@@ -4292,8 +4292,8 @@ bool IEEEFloat::getExactInverse(APFloat *inv) const {
   return true;
 }
 
-int IEEEFloat::getExactLog2() const {
-  if (!isFinite() || isZero() || isNegative())
+int IEEEFloat::getExactLog2Abs() const {
+  if (!isFinite() || isZero())
     return INT_MIN;
 
   const integerPart *Parts = significandParts();
@@ -5117,6 +5117,11 @@ bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
 }
 
 int DoubleAPFloat::getExactLog2() const {
+  // TODO: Implement me
+  return INT_MIN;
+}
+
+int DoubleAPFloat::getExactLog2Abs() const {
   // TODO: Implement me
   return INT_MIN;
 }

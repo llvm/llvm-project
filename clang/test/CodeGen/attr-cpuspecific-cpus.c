@@ -83,3 +83,4 @@ ATTR(cpu_specific(graniterapids_d)) void CPU34(void){}
 ATTR(cpu_specific(arrowlake)) void CPU35(void){}
 ATTR(cpu_specific(arrowlake_s)) void CPU36(void){}
 ATTR(cpu_specific(lunarlake)) void CPU37(void){}
+ATTR(cpu_specific(gracemont)) void CPU38(void){}

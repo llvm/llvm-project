@@ -601,22 +601,32 @@ let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
   defm V_CVT_PK_F32_BF8 : VOP1Inst<"v_cvt_pk_f32_bf8", VOPProfileCVT_PK_F32_F8>;
 }
 
-class Cvt_F32_F8_Pat_sdwa<SDPatternOperator node, int index,
-    VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
+class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
+    VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
     (f32 (node i32:$src, index)),
-    !if (index,
-         (inst_sdwa 0, $src, 0, 0, index),
-         (inst_e32 $src))
+    (inst_sdwa 0, $src, 0, 0, index)
 >;
 
 let SubtargetPredicate = isGFX9Only in {
-  foreach Index = [0, 1, 2, 3] in {
-    def : Cvt_F32_F8_Pat_sdwa<int_amdgcn_cvt_f32_fp8, Index,
-                              V_CVT_F32_FP8_e32, V_CVT_F32_FP8_sdwa>;
-    def : Cvt_F32_F8_Pat_sdwa<int_amdgcn_cvt_f32_bf8, Index,
-                              V_CVT_F32_BF8_e32, V_CVT_F32_BF8_sdwa>;
-  }
+let OtherPredicates = [HasCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_sdwa 0, $src, 0, 0, 0)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_sdwa 0, $src, 0, 0, 0)>;
 }
+
+let OtherPredicates = [HasNoCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_e32 $src)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_e32 $src)>;
+}
+
+foreach Index = [1, 2, 3] in {
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index, V_CVT_F32_FP8_sdwa>;
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index, V_CVT_F32_BF8_sdwa>;
+}
+} // End SubtargetPredicate = isGFX9Only
 
 class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
@@ -1359,14 +1369,17 @@ def : GCNPat <
                        (as_i1timm $bound_ctrl))
 >;
 
-def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl,
+class UpdateDPPPat<ValueType vt> : GCNPat <
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl,
                               timm:$row_mask, timm:$bank_mask,
                               timm:$bound_ctrl)),
   (V_MOV_B32_dpp VGPR_32:$old, VGPR_32:$src, (as_i32timm $dpp_ctrl),
                  (as_i32timm $row_mask), (as_i32timm $bank_mask),
                  (as_i1timm $bound_ctrl))
 >;
+
+def : UpdateDPPPat<i32>;
+def : UpdateDPPPat<f32>;
 
 } // End OtherPredicates = [isGFX8Plus]
 

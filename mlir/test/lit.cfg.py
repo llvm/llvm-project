@@ -98,6 +98,7 @@ tools = [
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
+    add_runtime("mlir_float16_utils"),
     "mlir-linalg-ods-yaml-gen",
     "mlir-reduce",
     "mlir-pdll",
@@ -210,3 +211,9 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
+
+if config.run_cuda_tests:
+    config.available_features.add("host-supports-nvptx")
+
+if config.run_rocm_tests:
+    config.available_features.add("host-supports-amdgpu")

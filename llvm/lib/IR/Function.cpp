@@ -37,6 +37,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -1755,7 +1756,8 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCallbackUses,
                                bool IgnoreAssumeLikeCalls, bool IgnoreLLVMUsed,
-                               bool IgnoreARCAttachedCall) const {
+                               bool IgnoreARCAttachedCall,
+                               bool IgnoreCastedDirectCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1804,7 +1806,8 @@ bool Function::hasAddressTaken(const User **PutOffender,
           continue;
     }
 
-    if (!Call->isCallee(&U) || Call->getFunctionType() != getFunctionType()) {
+    if (!Call->isCallee(&U) || (!IgnoreCastedDirectCall &&
+                                Call->getFunctionType() != getFunctionType())) {
       if (IgnoreARCAttachedCall &&
           Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
                                       U.getOperandNo()))

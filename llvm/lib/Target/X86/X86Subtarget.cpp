@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86Subtarget.h"
+#include "GISel/X86CallLowering.h"
+#include "GISel/X86LegalizerInfo.h"
+#include "GISel/X86RegisterBankInfo.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
-#include "X86CallLowering.h"
-#include "X86LegalizerInfo.h"
 #include "X86MacroFusion.h"
-#include "X86RegisterBankInfo.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -323,7 +323,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
-  if (!isPositionIndependent())
+  if (!isPositionIndependent() || TM.getCodeModel() == CodeModel::Large)
+    // With the large code model, None forces all memory accesses to be indirect
+    // rather than RIP-relative.
     setPICStyle(PICStyles::Style::None);
   else if (is64Bit())
     setPICStyle(PICStyles::Style::RIPRel);

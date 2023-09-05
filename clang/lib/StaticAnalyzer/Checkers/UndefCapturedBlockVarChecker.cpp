@@ -72,7 +72,7 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
       if (ExplodedNode *N = C.generateErrorNode()) {
         if (!BT)
           BT.reset(
-              new BuiltinBug(this, "uninitialized variable captured by block"));
+              new BugType(this, "uninitialized variable captured by block"));
 
         // Generate a bug report.
         SmallString<128> buf;

@@ -19,7 +19,7 @@ def run(f):
 @run
 def testMemRefMultiBufferOpCompact():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("memref.alloc"),
     )
@@ -35,7 +35,7 @@ def testMemRefMultiBufferOpCompact():
 @run
 def testMemRefMultiBufferOpTyped():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("memref.alloc"),
     )
@@ -53,7 +53,7 @@ def testMemRefMultiBufferOpTyped():
 @run
 def testMemRefMultiBufferOpAttributes():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("memref.alloc"),
     )

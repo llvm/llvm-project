@@ -113,8 +113,7 @@ class ModelAdaptorAnalysis
     : public DataflowAnalysis<ModelAdaptorAnalysis<Model>, NoopLattice> {
 public:
   explicit ModelAdaptorAnalysis(ASTContext &Context)
-      : DataflowAnalysis<ModelAdaptorAnalysis, NoopLattice>(
-            Context, /*ApplyBuiltinTransfer=*/true) {}
+      : DataflowAnalysis<ModelAdaptorAnalysis, NoopLattice>(Context) {}
 
   static NoopLattice initialElement() { return NoopLattice(); }
 

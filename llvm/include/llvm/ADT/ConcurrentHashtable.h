@@ -154,7 +154,7 @@ public:
     MaxBucketSize = 1Ull << (std::min((size_t)31, LeadingZerosNumber));
 
     // Calculate mask for extended hash bits.
-    ExtHashMask = (NumberOfBuckets * MaxBucketSize) - 1;
+    ExtHashMask = (uint64_t)NumberOfBuckets * MaxBucketSize - 1;
   }
 
   virtual ~ConcurrentHashTableByPtr() {

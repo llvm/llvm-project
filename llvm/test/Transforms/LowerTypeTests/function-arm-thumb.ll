@@ -46,4 +46,4 @@ define void @addrtaken() {
 ; CHECK-NEXT: }
 
 ; CHECK-DAG: attributes #[[AA]] = { naked nounwind "target-features"="-thumb-mode" }
-; CHECK-DAG: attributes #[[AT]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; CHECK-DAG: attributes #[[AT]] = { naked nounwind "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }

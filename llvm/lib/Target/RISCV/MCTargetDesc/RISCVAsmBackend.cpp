@@ -80,24 +80,6 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_call_plt", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_relax", 0, 0, 0},
       {"fixup_riscv_align", 0, 0, 0},
-
-      {"fixup_riscv_set_8", 0, 8, 0},
-      {"fixup_riscv_add_8", 0, 8, 0},
-      {"fixup_riscv_sub_8", 0, 8, 0},
-
-      {"fixup_riscv_set_16", 0, 16, 0},
-      {"fixup_riscv_add_16", 0, 16, 0},
-      {"fixup_riscv_sub_16", 0, 16, 0},
-
-      {"fixup_riscv_set_32", 0, 32, 0},
-      {"fixup_riscv_add_32", 0, 32, 0},
-      {"fixup_riscv_sub_32", 0, 32, 0},
-
-      {"fixup_riscv_add_64", 0, 64, 0},
-      {"fixup_riscv_sub_64", 0, 64, 0},
-
-      {"fixup_riscv_set_6b", 2, 6, 0},
-      {"fixup_riscv_sub_6b", 2, 6, 0},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -306,27 +288,31 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   auto AddFixups = [&Fixups, &AddrDelta](unsigned Offset,
                                          std::pair<unsigned, unsigned> Fixup) {
     const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-    Fixups.push_back(MCFixup::create(
-        Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
-    Fixups.push_back(MCFixup::create(
-        Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+    Fixups.push_back(
+        MCFixup::create(Offset, MBE.getLHS(),
+                        static_cast<MCFixupKind>(FirstLiteralRelocationKind +
+                                                 std::get<0>(Fixup))));
+    Fixups.push_back(
+        MCFixup::create(Offset, MBE.getRHS(),
+                        static_cast<MCFixupKind>(FirstLiteralRelocationKind +
+                                                 std::get<1>(Fixup))));
   };
 
   if (isUIntN(6, Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc);
-    AddFixups(0, {RISCV::fixup_riscv_set_6b, RISCV::fixup_riscv_sub_6b});
+    AddFixups(0, {ELF::R_RISCV_SET6, ELF::R_RISCV_SUB6});
   } else if (isUInt<8>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc1);
     support::endian::write<uint8_t>(OS, 0, support::little);
-    AddFixups(1, {RISCV::fixup_riscv_set_8, RISCV::fixup_riscv_sub_8});
+    AddFixups(1, {ELF::R_RISCV_SET8, ELF::R_RISCV_SUB8});
   } else if (isUInt<16>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc2);
     support::endian::write<uint16_t>(OS, 0, support::little);
-    AddFixups(1, {RISCV::fixup_riscv_set_16, RISCV::fixup_riscv_sub_16});
+    AddFixups(1, {ELF::R_RISCV_SET16, ELF::R_RISCV_SUB16});
   } else if (isUInt<32>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc4);
     support::endian::write<uint32_t>(OS, 0, support::little);
-    AddFixups(1, {RISCV::fixup_riscv_set_32, RISCV::fixup_riscv_sub_32});
+    AddFixups(1, {ELF::R_RISCV_SET32, ELF::R_RISCV_SUB32});
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
@@ -405,25 +391,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case RISCV::fixup_riscv_tls_got_hi20:
   case RISCV::fixup_riscv_tls_gd_hi20:
     llvm_unreachable("Relocation should be unconditionally forced\n");
-  case RISCV::fixup_riscv_set_8:
-  case RISCV::fixup_riscv_add_8:
-  case RISCV::fixup_riscv_sub_8:
-  case RISCV::fixup_riscv_set_16:
-  case RISCV::fixup_riscv_add_16:
-  case RISCV::fixup_riscv_sub_16:
-  case RISCV::fixup_riscv_set_32:
-  case RISCV::fixup_riscv_add_32:
-  case RISCV::fixup_riscv_sub_32:
-  case RISCV::fixup_riscv_add_64:
-  case RISCV::fixup_riscv_sub_64:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_Data_6b:
     return Value;
-  case RISCV::fixup_riscv_set_6b:
-    return Value & 0x03;
   case RISCV::fixup_riscv_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_tprel_lo12_i:

@@ -144,7 +144,7 @@ private:
 
   public:
     template <bool IsConstDest,
-              typename = std::enable_if<IsConstDest && !IsConst>>
+              typename = std::enable_if_t<IsConstDest && !IsConst>>
     operator NeighborEdgeIteratorT<IsConstDest, IsOut, BaseIt,
                                    const EdgeValueType>() const {
       return NeighborEdgeIteratorT<IsConstDest, IsOut, BaseIt,

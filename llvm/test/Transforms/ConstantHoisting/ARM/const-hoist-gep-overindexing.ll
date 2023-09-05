@@ -13,14 +13,12 @@ define void @test_inbounds() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast ptr getelementptr inbounds ([[TMP0:%.*]], ptr @global, i32 0, i32 1, i32 0) to ptr
 ; CHECK-NEXT:    store i16 undef, ptr [[CONST]], align 2
-; CHECK-NEXT:    [[BASE_BITCAST:%.*]] = bitcast ptr [[CONST]] to ptr
-; CHECK-NEXT:    [[MAT_GEP:%.*]] = getelementptr i8, ptr [[BASE_BITCAST]], i32 2
+; CHECK-NEXT:    [[MAT_GEP:%.*]] = getelementptr i8, ptr [[CONST]], i32 2
 ; CHECK-NEXT:    [[MAT_BITCAST:%.*]] = bitcast ptr [[MAT_GEP]] to ptr
 ; CHECK-NEXT:    store i16 undef, ptr [[MAT_BITCAST]], align 2
-; CHECK-NEXT:    [[BASE_BITCAST1:%.*]] = bitcast ptr [[CONST]] to ptr
-; CHECK-NEXT:    [[MAT_GEP2:%.*]] = getelementptr i8, ptr [[BASE_BITCAST1]], i32 20
-; CHECK-NEXT:    [[MAT_BITCAST3:%.*]] = bitcast ptr [[MAT_GEP2]] to ptr
-; CHECK-NEXT:    store i16 undef, ptr [[MAT_BITCAST3]], align 2
+; CHECK-NEXT:    [[MAT_GEP1:%.*]] = getelementptr i8, ptr [[CONST]], i32 20
+; CHECK-NEXT:    [[MAT_BITCAST2:%.*]] = bitcast ptr [[MAT_GEP1]] to ptr
+; CHECK-NEXT:    store i16 undef, ptr [[MAT_BITCAST2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 bb:

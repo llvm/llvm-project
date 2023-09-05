@@ -301,7 +301,7 @@ void dr489(void) {
   switch (i) {
   case (int)0.0f: break;    /* okay, a valid ICE */
 
-  /* FIXME: this should be accepted in C2x and up without a diagnostic, as C23
+  /* FIXME: this should be accepted in C23 and up without a diagnostic, as C23
    * added compound literals to the allowed list of things in an ICE. The
    * diagnostic is correct for C17 and earlier though.
    */

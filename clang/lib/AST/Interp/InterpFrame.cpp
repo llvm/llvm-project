@@ -176,10 +176,10 @@ Frame *InterpFrame::getCaller() const {
   return S.getSplitFrame();
 }
 
-SourceLocation InterpFrame::getCallLocation() const {
+SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func)
-    return S.getLocation(nullptr, {});
-  return S.getLocation(Caller->Func, RetPC - sizeof(uintptr_t));
+    return S.getRange(nullptr, {});
+  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {

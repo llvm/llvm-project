@@ -36,7 +36,7 @@ static cl::opt<InlinePriorityMode> UseInlinePriority(
                clEnumValN(InlinePriorityMode::ML, "ml", "Use ML.")));
 
 static cl::opt<int> ModuleInlinerTopPriorityThreshold(
-    "moudle-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
+    "module-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
     cl::desc("The cost threshold for call sites that get inlined without the "
              "cost-benefit analysis"));
 

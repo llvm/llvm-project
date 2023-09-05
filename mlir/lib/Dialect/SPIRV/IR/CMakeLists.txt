@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
 
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces

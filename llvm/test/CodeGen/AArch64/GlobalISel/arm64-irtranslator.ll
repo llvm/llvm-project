@@ -2392,8 +2392,8 @@ declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 define void @test_stacksaverestore() {
   ; CHECK-LABEL: name: test_stacksaverestore
-  ; CHECK: [[SAVE:%[0-9]+]]:_(p0) = COPY $sp
-  ; CHECK-NEXT: $sp = COPY [[SAVE]](p0)
+  ; CHECK: [[SAVE:%[0-9]+]]:_(p0) = G_STACKSAVE
+  ; CHECK-NEXT: G_STACKRESTORE [[SAVE]]
   ; CHECK-NEXT: RET_ReallyLR
   %sp = call ptr @llvm.stacksave()
   call void @llvm.stackrestore(ptr %sp)

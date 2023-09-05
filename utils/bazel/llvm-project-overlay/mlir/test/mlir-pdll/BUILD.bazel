@@ -13,8 +13,7 @@ package(default_visibility = ["//visibility:public"])
             "CodeGen/MLIR/include/**",
             "CodeGen/CPP/include/**",
         ]) + [
-            "//mlir:include/mlir/IR/DialectBase.td",
-            "//mlir:include/mlir/IR/OpBase.td",
+            "//mlir:OpBaseTdFiles",
             "//mlir:mlir-pdll",
             "//mlir/test:lit_data",
         ],

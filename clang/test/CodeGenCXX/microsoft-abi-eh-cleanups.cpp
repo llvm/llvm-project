@@ -16,7 +16,7 @@ void HasEHCleanup() {
 
 // With exceptions, we need to clean up at least one of these temporaries.
 // WIN32-LABEL: define dso_local void @"?HasEHCleanup@@YAXXZ"() {{.*}} {
-// WIN32:   %[[base:.*]] = call ptr @llvm.stacksave()
+// WIN32:   %[[base:.*]] = call ptr @llvm.stacksave.p0()
 //    If this call throws, we have to restore the stack.
 // WIN32:   call void @"?getA@@YA?AUA@@XZ"(ptr sret(%struct.A) align 4 %{{.*}})
 //    If this call throws, we have to cleanup the first temporary.
@@ -41,7 +41,7 @@ void HasEHCleanupNoexcept() noexcept {
 
 // With exceptions, we need to clean up at least one of these temporaries.
 // WIN32-LABEL: define dso_local void @"?HasEHCleanupNoexcept@@YAXXZ"() {{.*}} {
-// WIN32:   %[[base:.*]] = call ptr @llvm.stacksave()
+// WIN32:   %[[base:.*]] = call ptr @llvm.stacksave.p0()
 // WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(ptr sret(%struct.A) align 4 %{{.*}})
 // WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(ptr sret(%struct.A) align 4 %{{.*}})
 // WIN32:   invoke noundef i32 @"?TakesTwo@@YAHUA@@0@Z"
@@ -61,7 +61,7 @@ int HasDeactivatedCleanups() {
 
 // WIN32-LABEL: define dso_local noundef i32 @"?HasDeactivatedCleanups@@YAHXZ"() {{.*}} {
 // WIN32:   %[[isactive:.*]] = alloca i1
-// WIN32:   call ptr @llvm.stacksave()
+// WIN32:   call ptr @llvm.stacksave.p0()
 // WIN32:   %[[argmem:.*]] = alloca inalloca [[argmem_ty:<{ %struct.A, %struct.A }>]]
 // WIN32:   %[[arg1:.*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
 // WIN32:   call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
@@ -97,7 +97,7 @@ int HasConditionalCleanup(bool cond) {
 // WIN32-LABEL: define dso_local noundef i32 @"?HasConditionalCleanup@@YAH_N@Z"(i1 noundef zeroext %{{.*}}) {{.*}} {
 // WIN32:   store i1 false
 // WIN32:   br i1
-// WIN32:   call ptr @llvm.stacksave()
+// WIN32:   call ptr @llvm.stacksave.p0()
 // WIN32:   call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 // WIN32:   store i1 true
 // WIN32:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})

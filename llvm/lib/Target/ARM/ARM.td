@@ -1227,6 +1227,7 @@ include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
 include "ARMScheduleM55.td"
 include "ARMScheduleM7.td"
+include "ARMScheduleM85.td"
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -1511,7 +1512,7 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
-def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,

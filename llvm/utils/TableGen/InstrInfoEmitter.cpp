@@ -801,7 +801,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     OS << "},\n";
   }
   OS << "  };\n"
-     << "  static " << getMinimalTypeForRange(FeatureBitsets.size())
+     << "  static constexpr " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
   unsigned InstIdx = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {

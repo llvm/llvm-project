@@ -1385,7 +1385,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
   // If the instruction to move defines a dead physical register which is live
   // when leaving the basic block, don't move it because it could turn into a
-  // "zombie" define of that preg. E.g., EFLAGS. (<rdar://problem/8030636>)
+  // "zombie" define of that preg. E.g., EFLAGS.
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (Reg == 0 || !Reg.isPhysical())
@@ -1704,10 +1704,9 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
   for (auto U : UsedOpsInCopy) {
     Register SrcReg = MI->getOperand(U).getReg();
     LaneBitmask Mask;
-    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S) {
+    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S)
       Mask |= (*S).second;
-    }
-    SuccBB->addLiveIn(SrcReg, Mask.any() ? Mask : LaneBitmask::getAll());
+    SuccBB->addLiveIn(SrcReg, Mask);
   }
   SuccBB->sortUniqueLiveIns();
 }

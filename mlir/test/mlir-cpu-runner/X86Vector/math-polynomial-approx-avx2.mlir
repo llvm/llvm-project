@@ -1,8 +1,10 @@
 // RUN:   mlir-opt %s -test-math-polynomial-approximation="enable-avx2"        \
+// RUN:               -convert-vector-to-scf                                   \
+// RUN:               -convert-scf-to-cf                                       \
 // RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-vector-to-llvm="enable-x86vector"               \
 // RUN:               -convert-math-to-llvm                                    \
-// RUN:               -convert-func-to-llvm                                     \
+// RUN:               -convert-func-to-llvm                                    \
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \

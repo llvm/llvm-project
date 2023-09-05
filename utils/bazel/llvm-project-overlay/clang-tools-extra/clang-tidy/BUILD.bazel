@@ -267,6 +267,7 @@ clang_tidy_library(
         ":performance",
         ":readability",
         ":utils",
+        "//clang:analysis",
     ],
 )
 

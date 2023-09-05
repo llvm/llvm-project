@@ -106,70 +106,77 @@ def simm5_plus1_nonzero : ImmLeaf<XLenVT,
 //                  in order.
 //   `reads`        SchedReads that are listed for each explicit use operand.
 //   `forceMasked`  Forced to be masked (e.g. Add-with-Carry Instructions).
+//   `forceMergeOpRead` Force to have read for merge operand.
 class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
-                  string mx = "WorstCase", int sew = 0, bit forceMasked = 0>
-    : Sched<[]> {
+                  string mx = "WorstCase", int sew = 0, bit forceMasked = 0,
+                  bit forceMergeOpRead = 0> : Sched<[]> {
   defvar isMasked = !ne(!find(NAME, "_MASK"), -1);
   defvar isMaskedOrForceMasked = !or(forceMasked, isMasked);
-  defvar mergeOp = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
+  defvar mergeRead = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
                             !cast<SchedRead>("ReadVMergeOp_" # mx),
                             !cast<SchedRead>("ReadVMergeOp_" # mx # "_E" #sew));
-  defvar allReads = !if(isMaskedOrForceMasked,
-                        !listconcat([mergeOp], reads, [ReadVMask]),
-                        reads);
+  defvar needsMergeRead = !or(isMaskedOrForceMasked, forceMergeOpRead);
+  defvar readsWithMask =
+      !if(isMaskedOrForceMasked, !listconcat(reads, [ReadVMask]), reads);
+  defvar allReads =
+      !if(needsMergeRead, !listconcat([mergeRead], readsWithMask), reads);
   let SchedRW = !listconcat(writes, allReads);
 }
 
 // Common class of scheduling definitions for n-ary instructions.
 // The scheudling resources are relevant to LMUL and may be relevant to SEW.
-class SchedNary<string write, list<string> reads,
-                string mx, int sew = 0, bit forceMasked = 0>:
-  SchedCommon<[!cast<SchedWrite>(
-                 !if(sew, write # "_" # mx # "_E" # sew,
+class SchedNary<string write, list<string> reads, string mx, int sew = 0,
+                bit forceMasked = 0, bit forceMergeOpRead = 0>
+    : SchedCommon<[!cast<SchedWrite>(
+                      !if(sew,
+                          write # "_" # mx # "_E" # sew,
                           write # "_" # mx))],
-              !foreach(read, reads,
-                !cast<SchedRead>(
-                  !if(sew, read # "_" # mx # "_E" # sew,
-                           read # "_" # mx))),
-              mx, sew, forceMasked>;
+                  !foreach(read, reads,
+                           !cast<SchedRead>(!if(sew, read #"_" #mx #"_E" #sew,
+                                                 read #"_" #mx))),
+                  mx, sew, forceMasked, forceMergeOpRead>;
 
 // Classes with postfix "MC" are only used in MC layer.
 // For these classes, we assume that they are with the worst case costs and
 // `ReadVMask` is always needed (with some exceptions).
 
 // For instructions with no operand.
-class SchedNullary<string write, string mx, int sew = 0, bit forceMasked = 0>:
-  SchedNary<write, [], mx, sew, forceMasked>;
+class SchedNullary<string write, string mx, int sew = 0, bit forceMasked = 0,
+                   bit forceMergeOpRead = 0>:
+  SchedNary<write, [], mx, sew, forceMasked, forceMergeOpRead>;
 class SchedNullaryMC<string write, bit forceMasked = 1>:
   SchedNullary<write, "WorstCase", forceMasked=forceMasked>;
 
 // For instructions with one operand.
 class SchedUnary<string write, string read0, string mx, int sew = 0,
-                 bit forceMasked = 0>:
-  SchedNary<write, [read0], mx, sew, forceMasked>;
+                 bit forceMasked = 0, bit forceMergeOpRead = 0>:
+  SchedNary<write, [read0], mx, sew, forceMasked, forceMergeOpRead>;
 class SchedUnaryMC<string write, string read0, bit forceMasked = 1>:
   SchedUnary<write, read0, "WorstCase", forceMasked=forceMasked>;
 
 // For instructions with two operands.
-class SchedBinary<string write, string read0, string read1,
-                  string mx, int sew = 0, bit forceMasked = 0>:
-  SchedNary<write, [read0, read1], mx, sew, forceMasked>;
+class SchedBinary<string write, string read0, string read1, string mx,
+                  int sew = 0, bit forceMasked = 0, bit forceMergeOpRead = 0>
+    : SchedNary<write, [read0, read1], mx, sew, forceMasked, forceMergeOpRead>;
 class SchedBinaryMC<string write, string read0, string read1,
                     bit forceMasked = 1>:
   SchedBinary<write, read0, read1, "WorstCase", forceMasked=forceMasked>;
 
 // For instructions with three operands.
 class SchedTernary<string write, string read0, string read1, string read2,
-                   string mx, int sew = 0, bit forceMasked = 0>:
-  SchedNary<write, [read0, read1, read2], mx, sew, forceMasked>;
+                   string mx, int sew = 0, bit forceMasked = 0,
+                   bit forceMergeOpRead = 0>
+    : SchedNary<write, [read0, read1, read2], mx, sew, forceMasked,
+                forceMergeOpRead>;
 class SchedTernaryMC<string write, string read0, string read1, string read2,
                      int sew = 0, bit forceMasked = 1>:
   SchedNary<write, [read0, read1, read2], "WorstCase", sew, forceMasked>;
 
 // For reduction instructions.
-class SchedReduction<string write, string read, string mx, int sew>:
-  SchedCommon<[!cast<SchedWrite>(write # "_" # mx # "_E" # sew)],
-              !listsplat(!cast<SchedRead>(read), 3), mx, sew>;
+class SchedReduction<string write, string read, string mx, int sew,
+                     bit forceMergeOpRead = 0>
+    : SchedCommon<[!cast<SchedWrite>(write #"_" #mx #"_E" #sew)],
+                  !listsplat(!cast<SchedRead>(read), 3), mx, sew, forceMergeOpRead>;
 class SchedReductionMC<string write, string readV, string readV0>:
   SchedCommon<[!cast<SchedWrite>(write # "_WorstCase")],
               [!cast<SchedRead>(readV), !cast<SchedRead>(readV0)],
@@ -620,7 +627,7 @@ multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
    : VWMAC_MV_X<opcodestr, funct6> {
   let RVVConstraint = WidenV in
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", /*EarlyClobber*/1>,
+  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                          "ReadVIWMulAddV">;
 }
@@ -721,10 +728,10 @@ multiclass VMAC_FV_V_F<string opcodestr, bits<6> funct6> {
 
 multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", /*EarlyClobber*/1>,
+  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddV", "ReadVFWMulAddV", "ReadVFWMulAddV",
                          "ReadVFWMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", /*EarlyClobber*/1>,
+  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddF", "ReadVFWMulAddV", "ReadVFWMulAddF",
                          "ReadVFWMulAddV">;
   }

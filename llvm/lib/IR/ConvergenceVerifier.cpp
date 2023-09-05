@@ -51,26 +51,18 @@ GenericConvergenceVerifier<SSAContext>::findAndCheckConvergenceTokenUsed(
 }
 
 template <>
-bool GenericConvergenceVerifier<SSAContext>::isConvergent(
-    const InstructionT &I) const {
-  if (auto *CB = dyn_cast<CallBase>(&I)) {
-    return CB->isConvergent();
-  }
-  return false;
+bool GenericConvergenceVerifier<SSAContext>::isInsideConvergentFunction(
+    const InstructionT &I) {
+  auto *F = I.getFunction();
+  return F->isConvergent();
 }
 
 template <>
-bool GenericConvergenceVerifier<SSAContext>::isControlledConvergent(
+bool GenericConvergenceVerifier<SSAContext>::isConvergent(
     const InstructionT &I) {
-  // First find a token and place it in the map.
-  if (findAndCheckConvergenceTokenUsed(I))
-    return true;
-
-  // The entry and anchor intrinsics do not use a token, so we do a broad check
-  // here. The loop intrinsic will be checked separately for a missing token.
-  if (isConvergenceControlIntrinsic(SSAContext::getIntrinsicID(I)))
-    return true;
-
+  if (auto *CB = dyn_cast<CallBase>(&I)) {
+    return CB->isConvergent();
+  }
   return false;
 }
 

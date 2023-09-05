@@ -131,7 +131,22 @@ class OpenACC_Attr<string name, string attrMnemonic,
 // easier to find out whether the variable is in a declare clause and what kind
 // of clause it is.
 def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
-  let parameters = (ins "DataClauseAttr":$dataClause);
+  let parameters = (ins "DataClauseAttr":$dataClause,
+                        DefaultValuedParameter<"bool", "false">:$implicit);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let builders = [AttrBuilder<(ins "DataClauseAttr":$dataClause), [{
+      return $_get($_ctxt, dataClause, /*implicit=*/false);
+    }]>
+  ];
+}
+
+// Attribute to attach functions that perform the pre/post allocation actions or
+// pre/post deallocation actions as described in section 2.13.
+def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
+  let parameters = (ins OptionalParameter<"SymbolRefAttr">:$preAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$postAlloc,
+                        OptionalParameter<"SymbolRefAttr">:$preDealloc,
+                        OptionalParameter<"SymbolRefAttr">:$postDealloc);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1322,6 +1337,36 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
   let hasVerifier = 0;
 }
 
+def OpenACC_DeclareOp : OpenACC_Op<"declare", [RecursiveMemoryEffects]> {
+  let summary = "declare implicit region";
+
+  let description = [{
+    The "acc.declare" operation represents an implicit declare region in
+    function (and subroutine in Fortran).
+
+    Example:
+
+    ```mlir
+    %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+    acc.declare dataOperands(%pa: memref<10x10xf32>) {
+      // implicit region
+    }
+    ```
+  }];
+
+  let arguments = (ins
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+      `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.15.1 Routine Directive
 //===----------------------------------------------------------------------===//
@@ -1449,6 +1494,39 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
     oilist(`device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
     |`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
     |`if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.14.3. Set
+//===----------------------------------------------------------------------===//
+
+def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments]> {
+  let summary = "set operation";
+
+  let description = [{
+    The "acc.set" operation represents the OpenACC set directive.
+
+    Example:
+
+    ```mlir
+    acc.set device_num(%dev1 : i32)
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$deviceType,
+                       Optional<IntOrIndex>:$defaultAsync,
+                       Optional<IntOrIndex>:$deviceNum,
+                       Optional<I1>:$ifCond);
+
+  let assemblyFormat = [{
+    oilist(
+      `device_type` `(` $deviceType `:` type($deviceType) `)`
+    | `default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
+    | `device_num` `(` $deviceNum `:` type($deviceNum) `)`
+    | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;

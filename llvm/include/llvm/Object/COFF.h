@@ -745,12 +745,18 @@ struct chpe_metadata {
   support::ulittle32_t AuxiliaryIATCopy;
 };
 
+enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };
+
 struct chpe_range_entry {
   support::ulittle32_t StartOffset;
   support::ulittle32_t Length;
-};
 
-enum chpe_range_type { CHPE_RANGE_ARM64, CHPE_RANGE_ARM64EC, CHPE_RANGE_AMD64 };
+  // The two low bits of StartOffset contain a range type.
+  static constexpr uint32_t TypeMask = 3;
+
+  uint32_t getStart() const { return StartOffset & ~TypeMask; }
+  uint16_t getType() const { return StartOffset & TypeMask; }
+};
 
 struct chpe_code_range_entry {
   support::ulittle32_t StartRva;

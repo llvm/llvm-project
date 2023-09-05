@@ -1151,7 +1151,7 @@ TEST(Local, CanReplaceOperandWithVariable) {
 
   // Test that it's invalid to replace gcroot operands, even though it can't use
   // immarg.
-  Type *PtrPtr = B.getInt8Ty()->getPointerTo(0);
+  Type *PtrPtr = B.getPtrTy(0);
   Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
   CallInst *GCRoot = B.CreateIntrinsic(Intrinsic::gcroot, {},
     {Alloca, Constant::getNullValue(PtrPtr)});

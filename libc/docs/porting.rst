@@ -11,7 +11,7 @@ Bringup on a New OS or Architecture
 CI builders
 ===========
 
-If you are contributing a port for a operating system or architecture which
+If you are contributing a port for an operating system or architecture which
 is not covered by existing CI builders, you will also have to present a plan
 for testing and contribute a CI builder. See
 `this guide <https://llvm.org/docs/HowToAddABuilder.html>`_ for information

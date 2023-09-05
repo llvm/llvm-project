@@ -771,6 +771,6 @@ __cxa_uncaught_exceptions() throw()
     return globals->uncaughtExceptions;
 }
 
-}  // extern "C"
+} // extern "C"
 
 }  // abi

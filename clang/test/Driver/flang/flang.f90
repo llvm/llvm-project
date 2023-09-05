@@ -22,10 +22,6 @@
 ! CHECK-E-DAG: "-E"
 ! CHECK-E-DAG: "-o" "-"
 
-! RUN: %clang --driver-mode=flang -### -emit-ast           %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-AST %s
-! CHECK-EMIT-AST-DAG: "-emit-ast"
-! CHECK-EMIT-AST-DAG: "-o" "{{[^"]*}}.ast"
-
 ! RUN: %clang --driver-mode=flang -### -fsyntax-only       %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-SYNTAX-ONLY %s
 ! CHECK-SYNTAX-ONLY-NOT: "-o"
 ! CHECK-SYNTAX-ONLY-DAG: "-fsyntax-only"
@@ -42,7 +38,7 @@
 ! CHECK-S-DAG: "-S"
 ! CHECK-S-DAG: "-o" "{{[^"]*}}.s"
 
-! RUN: %clang --driver-mode=flang -### -fintegrated-as     %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-OBJ %s
+! RUN: %clang --driver-mode=flang -###                     %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-OBJ %s
 ! CHECK-EMIT-OBJ-DAG: "-emit-obj"
 ! CHECK-EMIT-OBJ-DAG: "-o" "{{[^"]*}}.o"
 

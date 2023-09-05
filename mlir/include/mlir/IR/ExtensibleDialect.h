@@ -545,10 +545,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicTypeDefinition *lookupTypeDefinition(StringRef name) const {
-    auto it = nameToDynTypes.find(name);
-    if (it == nameToDynTypes.end())
-      return nullptr;
-    return it->second;
+    return nameToDynTypes.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.
@@ -561,10 +558,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicAttrDefinition *lookupAttrDefinition(StringRef name) const {
-    auto it = nameToDynAttrs.find(name);
-    if (it == nameToDynAttrs.end())
-      return nullptr;
-    return it->second;
+    return nameToDynAttrs.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.

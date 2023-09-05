@@ -16,100 +16,55 @@ define <2 x i8> @vslide1down_2xi8(<2 x i8> %v, i8 %b) {
 }
 
 define <4 x i8> @vslide1down_4xi8(<4 x i8> %v, i8 %b) {
-; RV32-LABEL: vslide1down_4xi8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a0
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-NEXT:    vslideup.vi v8, v9, 3
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vslide1down_4xi8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vslide1down_4xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <4 x i8> %v, <4 x i8> %vb, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i8> %v1
 }
 
 define <4 x i8> @vslide1down_4xi8_swapped(<4 x i8> %v, i8 %b) {
-; RV32-LABEL: vslide1down_4xi8_swapped:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a0
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-NEXT:    vslideup.vi v8, v9, 3
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vslide1down_4xi8_swapped:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vslide1down_4xi8_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <4 x i8> %vb, <4 x i8> %v, <4 x i32> <i32 5, i32 6, i32 7, i32 0>
   ret <4 x i8> %v1
 }
 
 define <2 x i16> @vslide1down_2xi16(<2 x i16> %v, i16 %b) {
-; RV32-LABEL: vslide1down_2xi16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a0
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-NEXT:    vslideup.vi v8, v9, 1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vslide1down_2xi16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vslide1down_2xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
   %vb = insertelement <2 x i16> poison, i16 %b, i64 0
   %v1 = shufflevector <2 x i16> %v, <2 x i16> %vb, <2 x i32> <i32 1, i32 2>
   ret <2 x i16> %v1
 }
 
 define <4 x i16> @vslide1down_4xi16(<4 x i16> %v, i16 %b) {
-; RV32-LABEL: vslide1down_4xi16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vslide1down_4xi16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v9, a0
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-NEXT:    vslideup.vi v8, v9, 3
-; RV64-NEXT:    ret
+; CHECK-LABEL: vslide1down_4xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
   %vb = insertelement <4 x i16> poison, i16 %b, i64 0
   %v1 = shufflevector <4 x i16> %v, <4 x i16> %vb, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i16> %v1
 }
 
 define <2 x i32> @vslide1down_2xi32(<2 x i32> %v, i32 %b) {
-; RV32-LABEL: vslide1down_2xi32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vslide1down_2xi32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v9, a0
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-NEXT:    vslideup.vi v8, v9, 1
-; RV64-NEXT:    ret
+; CHECK-LABEL: vslide1down_2xi32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
   %vb = insertelement <2 x i32> poison, i32 %b, i64 0
   %v1 = shufflevector <2 x i32> %v, <2 x i32> %vb, <2 x i32> <i32 1, i32 2>
   ret <2 x i32> %v1

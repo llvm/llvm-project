@@ -147,18 +147,78 @@ void complexDeclarator(int * (*a[10])[10]) {
   if (++a){}
 }
 
-// Make sure we do not generate fixes for the following cases:
+// Tests parameters with cv-qualifiers
 
-#define MACRO_NAME MyName
-
-void macroIdentifier(int *MACRO_NAME) { // The fix-it ends with a macro. It will be discarded due to overlap with macros.
-  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]
-  if (++MyName){}
+void const_ptr(int * const x) { // expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:16-[[@LINE-1]]:29}:"std::span<int> const x"
+  int tmp = x[5]; // expected-note{{used in buffer access here}}
 }
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_ptr(int * const x) {return const_ptr(std::span<int>(x, <# size #>));}\n"
 
-// CHECK-NOT: fix-it:{{.*}}:
-void parmHasNoName(int *p, int *) { // cannot fix the function because there is one parameter has no name.
+void const_ptr_to_const(const int * const x) {// expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:25-[[@LINE-1]]:44}:"std::span<int const> const x"
+  int tmp = x[5]; // expected-note{{used in buffer access here}}
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_ptr_to_const(const int * const x) {return const_ptr_to_const(std::span<int const>(x, <# size #>));}\n"
+
+void const_volatile_ptr(int * const volatile x) { // expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:25-[[@LINE-1]]:47}:"std::span<int> const volatile x"
+  int tmp = x[5]; // expected-note{{used in buffer access here}}
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_volatile_ptr(int * const volatile x) {return const_volatile_ptr(std::span<int>(x, <# size #>));}\n"
+
+void volatile_const_ptr(int * volatile const x) { // expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:25-[[@LINE-1]]:47}:"std::span<int> const volatile x"
+  int tmp = x[5]; // expected-note{{used in buffer access here}}
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void volatile_const_ptr(int * volatile const x) {return volatile_const_ptr(std::span<int>(x, <# size #>));}\n"
+
+void const_volatile_ptr_to_const_volatile(const volatile int * const volatile x) {// expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:43-[[@LINE-1]]:80}:"std::span<int const volatile> const volatile x"
+  int tmp = x[5]; // expected-note{{used in buffer access here}}
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_volatile_ptr_to_const_volatile(const volatile int * const volatile x) {return const_volatile_ptr_to_const_volatile(std::span<int const volatile>(x, <# size #>));}\n"
+
+
+// Test if function declaration specifiers are handled correctly:
+
+static void static_f(int *p) {
   p[5] = 5;
 }
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} static void static_f(int *p) {return static_f(std::span<int>(p, <# size #>));}\n"
+
+static inline void static_inline_f(int *p) {
+  p[5] = 5;
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} static inline void static_inline_f(int *p) {return static_inline_f(std::span<int>(p, <# size #>));}\n"
+
+inline void static static_inline_f2(int *p) {
+  p[5] = 5;
+}
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} inline void static static_inline_f2(int *p) {return static_inline_f2(std::span<int>(p, <# size #>));}\n"
+
+
+// Test when unnamed types are involved:
+
+typedef struct {int x;} UNNAMED_STRUCT;
+struct {int x;} VarOfUnnamedType;
+
+void useUnnamedType(UNNAMED_STRUCT * p) {  // expected-warning{{'p' is an unsafe pointer used for buffer access}} \
+                                              expected-note{{change type of 'p' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:21-[[@LINE-2]]:39}:"std::span<UNNAMED_STRUCT> p"
+  if (++p) {  // expected-note{{used in pointer arithmetic here}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:10}:"(p = p.subspan(1)).data()"
+  }
+}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void useUnnamedType(UNNAMED_STRUCT * p) {return useUnnamedType(std::span<UNNAMED_STRUCT>(p, <# size #>));}\n"
+
+void useUnnamedType2(decltype(VarOfUnnamedType) * p) { // expected-warning{{'p' is an unsafe pointer used for buffer access}} \
+						          expected-note{{change type of 'p' to 'std::span' to preserve bounds information}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:22-[[@LINE-2]]:52}:"std::span<decltype(VarOfUnnamedType)> p"
+  if (++p) {  // expected-note{{used in pointer arithmetic here}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:10}:"(p = p.subspan(1)).data()"
+  }
+}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void useUnnamedType2(decltype(VarOfUnnamedType) * p) {return useUnnamedType2(std::span<decltype(VarOfUnnamedType)>(p, <# size #>));}\n"
 
 #endif

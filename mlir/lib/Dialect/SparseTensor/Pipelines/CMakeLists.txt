@@ -29,7 +29,7 @@ add_mlir_dialect_library(MLIRSparseTensorPipelines
 )
 
 if(MLIR_ENABLE_CUDA_RUNNER)
-   # Enable gpu-to-cubin pass.
+  # Enable gpu-to-cubin pass.
   target_compile_definitions(obj.MLIRSparseTensorPipelines
     PRIVATE
     MLIR_GPU_TO_CUBIN_PASS_ENABLE=1

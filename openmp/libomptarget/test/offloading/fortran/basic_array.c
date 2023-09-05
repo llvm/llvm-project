@@ -2,7 +2,7 @@
 // REQUIRES: flang, amdgcn-amd-amdhsa
 
 // RUN: %flang -c -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
-// RUN:   %S/basic_array.f90 -o basic_array.o
+// RUN:   %S/../../Inputs/basic_array.f90 -o basic_array.o
 // RUN: %libomptarget-compile-generic basic_array.o
 // RUN: %t | %fcheck-generic
 

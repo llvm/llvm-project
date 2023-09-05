@@ -1,4 +1,3 @@
-; RUN: llc %s --filetype=asm -o - | FileCheck %s
 ; RUN: opt %s -dxil-embed -S -o - | FileCheck %s
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 target triple = "dxil-unknown-shadermodel6.5-library"

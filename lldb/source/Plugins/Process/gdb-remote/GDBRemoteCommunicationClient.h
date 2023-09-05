@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -237,7 +238,7 @@ public:
 
   ArchSpec GetSystemArchitecture();
 
-  uint32_t GetAddressingBits();
+  lldb_private::AddressableBits GetAddressableBits();
 
   bool GetHostname(std::string &s);
 
@@ -580,7 +581,8 @@ protected:
   lldb::tid_t m_curr_tid_run = LLDB_INVALID_THREAD_ID;
 
   uint32_t m_num_supported_hardware_watchpoints = 0;
-  uint32_t m_addressing_bits = 0;
+  uint32_t m_low_mem_addressing_bits = 0;
+  uint32_t m_high_mem_addressing_bits = 0;
 
   ArchSpec m_host_arch;
   std::string m_host_distribution_id;

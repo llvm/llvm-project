@@ -15,14 +15,14 @@ define <4 x i1> @reshuffle_v4i1_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-NEXT:    mov z1.s, z0.s[3]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z3.s, z0.s[1]
 ; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w11, [sp, #10]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    strh w8, [sp, #14]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret

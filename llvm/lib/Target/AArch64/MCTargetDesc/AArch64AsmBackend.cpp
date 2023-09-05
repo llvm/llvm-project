@@ -314,6 +314,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     return (Value >> 2) & 0x3fff;
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
+    if (TheTriple.isOSBinFormatCOFF() && !IsResolved && SignedValue != 0) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     // Signed 28-bit immediate
     if (!isInt<28>(SignedValue))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -393,6 +400,19 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved,
                                    const MCSubtargetInfo *STI) const {
+  if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
+    auto RefKind = static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+    AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+    if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
+        SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
+      assert(Value == 0);
+      const auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
+      Value = (uint64_t(Expr->getDiscriminator()) << 32) |
+              (uint64_t(Expr->getKey()) << 60) |
+              (uint64_t(Expr->hasAddressDiversity()) << 63);
+    }
+  }
+
   if (!Value)
     return; // Doesn't change encoding.
   unsigned Kind = Fixup.getKind();

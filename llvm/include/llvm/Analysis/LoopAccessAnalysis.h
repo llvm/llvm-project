@@ -18,7 +18,6 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
@@ -48,6 +47,13 @@ struct VectorizerParams {
   /// \When performing memory disambiguation checks at runtime do not
   /// make more than this number of comparisons.
   static unsigned RuntimeMemoryCheckThreshold;
+
+  // When creating runtime checks for nested loops, where possible try to
+  // write the checks in a form that allows them to be easily hoisted out of
+  // the outermost loop. For example, we can do this by expanding the range of
+  // addresses considered to include the entire nested loop so that they are
+  // loop invariant.
+  static bool HoistRuntimeChecks;
 };
 
 /// Checks memory dependences among accesses to the same underlying
@@ -127,8 +133,8 @@ public:
       ForwardButPreventsForwarding,
       // Lexically backward.
       Backward,
-      // Backward, but the distance allows a vectorization factor of
-      // MaxSafeDepDistBytes.
+      // Backward, but the distance allows a vectorization factor of dependent
+      // on MinDepDistBytes.
       BackwardVectorizable,
       // Same, but may prevent store-to-load forwarding.
       BackwardVectorizableButPreventsForwarding
@@ -197,10 +203,6 @@ public:
   bool isSafeForAnyVectorWidth() const {
     return MaxSafeVectorWidthInBits == UINT_MAX;
   }
-
-  /// The maximum number of bytes of a vector register we can vectorize
-  /// the accesses safely with.
-  uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
 
   /// Return the number of elements that are safe to operate on
   /// simultaneously, multiplied by the size of the element in bits.
@@ -275,8 +277,10 @@ private:
   /// The program order index to be used for the next instruction.
   unsigned AccessIdx = 0;
 
-  // We can access this many bytes in parallel safely.
-  uint64_t MaxSafeDepDistBytes = 0;
+  /// The smallest dependence distance in bytes in the loop. This may not be
+  /// the same as the maximum number of bytes that are safe to operate on
+  /// simultaneously.
+  uint64_t MinDepDistBytes = 0;
 
   /// Number of elements (from consecutive iterations) that are safe to
   /// operate on simultaneously, multiplied by the size of the element in bits.
@@ -311,7 +315,7 @@ private:
   /// This function checks  whether there is a plausible dependence (or the
   /// absence of such can't be proved) between the two accesses. If there is a
   /// plausible dependence but the dependence distance is bigger than one
-  /// element access it records this distance in \p MaxSafeDepDistBytes (if this
+  /// element access it records this distance in \p MinDepDistBytes (if this
   /// distance is smaller than any other distance encountered so far).
   /// Otherwise, this function returns true signaling a possible dependence.
   Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
@@ -322,7 +326,7 @@ private:
   /// forwarding.
   ///
   /// \return false if we shouldn't vectorize at all or avoid larger
-  /// vectorization factors by limiting MaxSafeDepDistBytes.
+  /// vectorization factors by limiting MinDepDistBytes.
   bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
 
   /// Updates the current safety status with \p S. We can go from Safe to
@@ -678,8 +682,6 @@ private:
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
-
-  uint64_t MaxSafeDepDistBytes = -1;
 
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;

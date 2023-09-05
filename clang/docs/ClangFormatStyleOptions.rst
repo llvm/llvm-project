@@ -1549,14 +1549,14 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     x = (char *__capability)&y;
-    int function(void) __ununsed;
+    int function(void) __unused;
     void only_writes_to_buffer(char *__output buffer);
 
   In the .clang-format configuration file, this can be configured like:
 
   .. code-block:: yaml
 
-    AttributeMacros: ['__capability', '__output', '__ununsed']
+    AttributeMacros: ['__capability', '__output', '__unused']
 
 .. _BinPackArguments:
 
@@ -2722,6 +2722,8 @@ the configuration (without a prefix: ``Auto``).
 **BreakStringLiterals** (``Boolean``) :versionbadge:`clang-format 3.9` :ref:`¶ <BreakStringLiterals>`
   Allow breaking string literals when formatting.
 
+  In C, C++, and Objective-C:
+
   .. code-block:: c++
 
      true:
@@ -2731,7 +2733,35 @@ the configuration (without a prefix: ``Auto``).
 
      false:
      const char* x =
-       "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  In C#, Java, and JavaScript:
+
+  .. code-block:: c++
+
+     true:
+     var x = "veryVeryVeryVeryVeryVe" +
+             "ryVeryVeryVeryVeryVery" +
+             "VeryLongString";
+
+     false:
+     var x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  C# and JavaScript interpolated strings are not broken.
+
+  In Verilog:
+
+  .. code-block:: c++
+
+     true:
+     string x = {"veryVeryVeryVeryVeryVe",
+                 "ryVeryVeryVeryVeryVery",
+                 "VeryLongString"};
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
 .. _ColumnLimit:
 
@@ -3832,7 +3862,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Macros:
 
-**Macros** (``List of Strings``) :versionbadge:`clang-format 17.0` :ref:`¶ <Macros>`
+**Macros** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <Macros>`
   A list of macros of the form ``<definition>=<expansion>`` .
 
   Code will be parsed with macros expanded, in order to determine how to
@@ -5097,7 +5127,7 @@ the configuration (without a prefix: ``Auto``).
       AfterControlStatements: true
       AfterFunctionDefinitionName: true
 
-  * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
+  * ``bool AfterControlStatements`` If ``true``, put space between control statement keywords
     (for/if/while...) and opening parentheses.
 
     .. code-block:: c++

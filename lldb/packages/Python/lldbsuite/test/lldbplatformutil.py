@@ -1,8 +1,6 @@
 """ This module contains functions used by the test cases to hide the
 architecture and/or the platform dependent nature of the tests. """
 
-from __future__ import absolute_import
-
 # System modules
 import itertools
 import re

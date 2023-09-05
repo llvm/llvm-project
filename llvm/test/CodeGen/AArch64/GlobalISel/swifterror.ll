@@ -55,8 +55,8 @@ handler:
 ; "caller2" is the caller of "foo", it calls "foo" inside a loop.
 define float @caller2(ptr %error_ref) {
 ; CHECK-LABEL: caller2:
-; CHECK: mov [[ID:x[0-9]+]], x0
 ; CHECK: fmov [[CMP:s[0-9]+]], #1.0
+; CHECK: mov [[ID:x[0-9]+]], x0
 ; CHECK: mov x21, xzr
 ; CHECK: bl {{.*}}foo
 ; CHECK: cbnz x21
@@ -160,8 +160,8 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-DAG: mov w0, #16
 ; CHECK: malloc
 ; CHECK: mov [[ID:w[0-9]+]], #1
-; CHECK: mov x21, x0
 ; CHECK: strb [[ID]], [x0, #8]
+; CHECK: mov x21, x0
 ; CHECK: str w{{.*}}, [{{.*}}[[SRET]], #4]
 ; CHECK-NOT: x21
 
@@ -214,9 +214,8 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK: mov w0, #16
 ; CHECK: malloc
 ; CHECK: mov [[ID:w[0-9]+]], #1
-; CHECK: mov x21, x0
-; CHECK-NOT: x21
 ; CHECK: strb [[ID]], [x0, #8]
+; CHECK: mov x21, x0
 ; CHECK-NOT: x21
 
 ; First vararg
@@ -336,6 +335,7 @@ entry:
 ; CHECK:  str     xzr, [sp]
 ; CHECK:  bl      _params_in_reg2
 ; Restore original arguments for next call.
+; CHECK:  ldr     x8, [sp, #24]
 ; CHECK:  mov      x1, x20
 ; CHECK:  mov      x2, x22
 ; CHECK:  mov      x3, x23
@@ -345,11 +345,12 @@ entry:
 ; CHECK:  mov      x7, x27
 ; Restore original swiftself argument and swifterror %err.
 ; CHECK:  mov      x21, x28
-; CHECK:  ldr      x8, [sp
 ; CHECK:  bl      _params_in_reg2
 ; Restore calle save registers but don't clober swifterror x21.
 ; CHECK-NOT: x21
 ; CHECK:  ldp     x29, x30, [sp
+; CHECK-NOT: x21
+; CHECK:  ldr     x28, [sp
 ; CHECK-NOT: x21
 ; CHECK:  ldp     x20, x19, [sp
 ; CHECK-NOT: x21
@@ -358,8 +359,6 @@ entry:
 ; CHECK:  ldp     x25, x24, [sp
 ; CHECK-NOT: x21
 ; CHECK:  ldp     x27, x26, [sp
-; CHECK-NOT: x21
-; CHECK:  ldr     x28, [sp
 ; CHECK-NOT: x21
 ; CHECK:  ret
 define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr, ptr nocapture swifterror %err) {
@@ -373,7 +372,7 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 
 ; CHECK-LABEL: params_and_return_in_reg
 ; Store callee saved registers.
-; CHECK:  stp     x28, x21, [sp, #16
+; CHECK:  stp     x28, x0, [sp, #16
 ; CHECK:  stp     x27, x26, [sp
 ; CHECK:  stp     x25, x24, [sp
 ; CHECK:  stp     x23, x22, [sp
@@ -399,9 +398,9 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov      x21, xzr
 ; CHECK:  bl      _params_in_reg2
 ; Store swifterror %error_ptr_ref.
+; CHECK:  ldr     x0, [sp, #24]
 ; CHECK:  stp     {{x[0-9]+}}, x21, [sp]
 ; Setup call arguments from original arguments.
-; CHECK:  mov      x0, x19
 ; CHECK:  mov      x1, x20
 ; CHECK:  mov      x2, x22
 ; CHECK:  mov      x3, x23
@@ -409,19 +408,19 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov      x5, x25
 ; CHECK:  mov      x6, x26
 ; CHECK:  mov      x7, x27
-; CHECK:  ldr      x21, [sp, #24
+; CHECK:  mov      x21, x28
 ; CHECK:  bl      _params_and_return_in_reg2
+; CHECK:  mov      x19, x21
+; CHECK:  ldr      x21, [sp, #8
 ; Store return values.
-; CHECK:  mov      x19, x0
-; CHECK:  mov      x20, x1
-; CHECK:  mov      x22, x2
-; CHECK:  mov      x23, x3
-; CHECK:  mov      x24, x4
-; CHECK:  mov      x25, x5
-; CHECK:  mov      x26, x6
-; CHECK:  mov      x27, x7
-; Save swifterror %err.
-; CHECK:  mov      x28, x21
+; CHECK:  mov     x20, x0
+; CHECK:  mov     x22, x1
+; CHECK:  mov     x23, x2
+; CHECK:  mov     x24, x3
+; CHECK:  mov     x25, x4
+; CHECK:  mov     x26, x5
+; CHECK:  mov     x27, x6
+; CHECK:  mov     x28, x7
 ; Setup call.
 ; CHECK:  mov     w0, #1
 ; CHECK:  mov     w1, #2
@@ -431,26 +430,25 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov     w5, #6
 ; CHECK:  mov     w6, #7
 ; CHECK:  mov     w7, #8
-; ... setup call with swiferror %error_ptr_ref.
-; CHECK:  ldr     x21, [sp, #8]
+; CHECK:  str     xzr, [sp]
 ; CHECK:  bl      _params_in_reg2
 ; Restore return values for return from this function.
-; CHECK:  mov      x0, x19
-; CHECK:  mov      x1, x20
-; CHECK:  mov      x2, x22
-; CHECK:  mov      x3, x23
-; CHECK:  mov      x4, x24
-; CHECK:  mov      x5, x25
-; CHECK:  mov      x6, x26
-; CHECK:  mov      x7, x27
-; CHECK:  ldp     x29, x30, [sp
-; CHECK:  mov      x21, x28
-; Restore callee save registers.
-; CHECK:  ldp     x20, x19, [sp
-; CHECK:  ldp     x23, x22, [sp
-; CHECK:  ldp     x25, x24, [sp
-; CHECK:  ldp     x27, x26, [sp
-; CHECK:  ldr     x28, [sp
+; CHECK:  mov     x0, x20
+; CHECK:  mov     x1, x22
+; CHECK:  mov     x2, x23
+; CHECK:  mov     x3, x24
+; CHECK:  mov     x4, x25
+; CHECK:  mov     x5, x26
+; CHECK:  mov     x6, x27
+; CHECK:  mov     x21, x19
+; CHECK:  mov     x7, x28
+; CHECK:  ldp     x29, x30, [sp, #96]             ; 16-byte Folded Reload
+; CHECK:  ldr     x28, [sp, #16]                  ; 8-byte Folded Reload
+; CHECK:  ldp     x20, x19, [sp, #80]             ; 16-byte Folded Reload
+; CHECK:  ldp     x23, x22, [sp, #64]             ; 16-byte Folded Reload
+; CHECK:  ldp     x25, x24, [sp, #48]             ; 16-byte Folded Reload
+; CHECK:  ldp     x27, x26, [sp, #32]             ; 16-byte Folded Reload
+; CHECK:  add     sp, sp, #112
 ; CHECK:  ret
 define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr , ptr nocapture swifterror %err) {
   %error_ptr_ref = alloca swifterror ptr, align 8

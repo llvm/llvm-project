@@ -33,6 +33,9 @@ static cl::opt<bool> Disable_sdiv_smod("disable-sdiv-smod", cl::Hidden,
   cl::init(false), cl::desc("Disable sdiv/smod insns"));
 static cl::opt<bool> Disable_gotol("disable-gotol", cl::Hidden, cl::init(false),
   cl::desc("Disable gotol insn"));
+static cl::opt<bool>
+    Disable_StoreImm("disable-storeimm", cl::Hidden, cl::init(false),
+                     cl::desc("Disable BPF_ST (immediate store) insn"));
 
 void BPFSubtarget::anchor() {}
 
@@ -54,6 +57,7 @@ void BPFSubtarget::initializeEnvironment() {
   HasBswap = false;
   HasSdivSmod = false;
   HasGotol = false;
+  HasStoreImm = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
@@ -80,6 +84,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasBswap = !Disable_bswap;
     HasSdivSmod = !Disable_sdiv_smod;
     HasGotol = !Disable_gotol;
+    HasStoreImm = !Disable_StoreImm;
     return;
   }
 }

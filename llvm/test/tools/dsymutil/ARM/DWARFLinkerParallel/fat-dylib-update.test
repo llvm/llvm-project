@@ -1,0 +1,110 @@
+# REQUIRES: object-emission,system-darwin
+# RUN: dsymutil --linker llvm -oso-prepend-path %p/../..  %p/../../Inputs/fat-test.arm.dylib -o %t.dSYM
+# RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
+# RUN: dsymutil --linker llvm -u %t.dSYM
+# RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
+# RUN: dsymutil --linker llvm -u %t.dSYM -o %t1.dSYM
+# RUN: llvm-dwarfdump -a -v %t1.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
+
+CHECK: /Contents/Resources/DWARF/fat-test.arm.dylib(armv7):	file format Mach-O arm
+
+CHECK: .debug_info contents:
+CHECK:  Compile Unit: length = 0x00000034, format = DWARF32, version = 0x0002, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000038)
+CHECK:  DW_TAG_compile_unit [1] *
+CHECK:    DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000001] = "clang version 3.8.0 (trunk 243776)")
+CHECK:    DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
+CHECK:    DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000024] = "fat-test.c")
+CHECK:    DW_AT_stmt_list [DW_FORM_data4]	(0x00000000)
+CHECK:    DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000002f] = "/Inputs")
+CHECK:    DW_TAG_variable [2]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000037] = "armv7_var")
+CHECK:      DW_AT_type [DW_FORM_ref4]	(cu + 0x0030 => {0x00000030}
+CHECK:      DW_AT_external [DW_FORM_flag]	(0x01)
+CHECK:      DW_AT_decl_file [DW_FORM_data1]	("/Inputs/fat-test.c")
+CHECK:      DW_AT_decl_line [DW_FORM_data1]	(23)
+CHECK:      DW_AT_location [DW_FORM_block1]	(DW_OP_addr 0x1000)
+CHECK:    DW_TAG_base_type [3]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000041] = "int")
+CHECK:      DW_AT_encoding [DW_FORM_data1]	(DW_ATE_signed)
+CHECK:      DW_AT_byte_size [DW_FORM_data1]	(0x04)
+CHECK:    NULL
+
+
+CHECK: .debug_line contents:
+CHECK: Line table prologue:
+CHECK:     total_length: 0x0000002a
+CHECK:          version: 2
+CHECK:  prologue_length: 0x00000021
+CHECK:  min_inst_length: 1
+CHECK:  default_is_stmt: 1
+CHECK:        line_base: -5
+CHECK:       line_range: 14
+CHECK:      opcode_base: 13
+
+CHECK: /Contents/Resources/DWARF/fat-test.arm.dylib(armv7s):	file format Mach-O arm
+
+CHECK: .debug_info contents:
+CHECK:  Compile Unit: length = 0x00000034, format = DWARF32, version = 0x0002, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000038)
+CHECK:  DW_TAG_compile_unit [1] *
+CHECK:    DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000001] = "clang version 3.8.0 (trunk 243776)")
+CHECK:    DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
+CHECK:    DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000024] = "fat-test.c")
+CHECK:    DW_AT_stmt_list [DW_FORM_data4]	(0x00000000)
+CHECK:    DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000002f] = "/Inputs")
+CHECK:    DW_TAG_variable [2]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000037] = "armv7s_var")
+CHECK:      DW_AT_type [DW_FORM_ref4]	(cu + 0x0030 => {0x00000030}
+CHECK:      DW_AT_external [DW_FORM_flag]	(0x01)
+CHECK:      DW_AT_decl_file [DW_FORM_data1]	("/Inputs/fat-test.c")
+CHECK:      DW_AT_decl_line [DW_FORM_data1]	(21)
+CHECK:      DW_AT_location [DW_FORM_block1]	(DW_OP_addr 0x1000)
+CHECK:    DW_TAG_base_type [3]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000042] = "int")
+CHECK:      DW_AT_encoding [DW_FORM_data1]	(DW_ATE_signed)
+CHECK:      DW_AT_byte_size [DW_FORM_data1]	(0x04)
+CHECK:    NULL
+
+CHECK: .debug_line contents:
+CHECK: Line table prologue:
+CHECK:     total_length: 0x0000002a
+CHECK:          version: 2
+CHECK:  prologue_length: 0x00000021
+CHECK:  min_inst_length: 1
+CHECK:  default_is_stmt: 1
+CHECK:        line_base: -5
+CHECK:       line_range: 14
+CHECK:      opcode_base: 13
+
+CHECK: /Contents/Resources/DWARF/fat-test.arm.dylib(arm64):	file format Mach-O arm64
+
+CHECK: .debug_info contents:
+CHECK:  Compile Unit: length = 0x00000038, format = DWARF32, version = 0x0002, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000003c)
+CHECK:  DW_TAG_compile_unit [1] *
+CHECK:    DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000001] = "clang version 3.8.0 (trunk 243776)")
+CHECK:    DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
+CHECK:    DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000024] = "fat-test.c")
+CHECK:    DW_AT_stmt_list [DW_FORM_data4]	(0x00000000)
+CHECK:    DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000002f] = "/Inputs")
+CHECK:    DW_TAG_variable [2]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000037] = "arm64_var")
+CHECK:      DW_AT_type [DW_FORM_ref4]	(cu + 0x0034 => {0x00000034}
+CHECK:      DW_AT_external [DW_FORM_flag]	(0x01)
+CHECK:      DW_AT_decl_file [DW_FORM_data1]	("/Inputs/fat-test.c")
+CHECK:      DW_AT_decl_line [DW_FORM_data1]	(25)
+CHECK:      DW_AT_location [DW_FORM_block1]	(DW_OP_addr 0x4000)
+CHECK:    DW_TAG_base_type [3]
+CHECK:      DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000041] = "int")
+CHECK:      DW_AT_encoding [DW_FORM_data1]	(DW_ATE_signed)
+CHECK:      DW_AT_byte_size [DW_FORM_data1]	(0x04)
+CHECK:    NULL
+
+CHECK: .debug_line contents:
+CHECK: Line table prologue:
+CHECK:     total_length: 0x0000002a
+CHECK:          version: 2
+CHECK:  prologue_length: 0x00000021
+CHECK:  min_inst_length: 1
+CHECK:  default_is_stmt: 1
+CHECK:        line_base: -5
+CHECK:       line_range: 14
+CHECK:      opcode_base: 13

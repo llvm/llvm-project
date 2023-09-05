@@ -25,6 +25,13 @@ static constexpr const VarKind everyVarKind[] = {
 // `Var` implementation.
 //===----------------------------------------------------------------------===//
 
+std::string Var::str() const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os);
+  return os.str();
+}
+
 void Var::print(AsmPrinter &printer) const { print(printer.getStream()); }
 
 void Var::print(llvm::raw_ostream &os) const {

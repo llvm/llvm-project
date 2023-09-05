@@ -1,12 +1,14 @@
-// RUN: mlir-opt %s -test-lower-to-llvm | \
-// RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli_aarch64_cmd --march=aarch64 --mattr="+sve,+sme" \
-// RUN:      -force-streaming-compatible-sve \
-// RUN:      --entry-function=entry \
-// RUN:      --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{entry_point} = entry
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
+// DEFINE: %{run} = %mcr_aarch64_cmd \
+// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  --force-streaming-compatible-sve \
+// DEFINE:  -e %{entry_point} -entry-point-result=i32 \
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // NOTE: To run this test, your CPU must support SME.
+
+// RUN: %{compile} | %{run} | FileCheck %s
 
 // VLA memcopy in streaming mode.
 func.func @streaming_kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) attributes {arm_streaming} {

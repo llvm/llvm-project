@@ -1,24 +1,23 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 
-; CHECK:      - Name:            test_ro_arg
-; CHECK-NEXT:   SymbolName:      'test_ro_arg@kd'
-; CHECK-NEXT:   Args:
-; CHECK-NEXT: - Name:            in
-; CHECK-NEXT:   TypeName:        'float*'
-; CHECK-NEXT:   Size:            8
-; CHECK-NEXT:   Align:           8
-; CHECK-NEXT:   ValueKind:       GlobalBuffer
-; CHECK-NEXT:   AddrSpaceQual:   Global
-; CHECK-NEXT:   AccQual:         ReadOnly
-; CHECK-NEXT:   IsConst:         true
-; CHECK-NEXT:   IsRestrict:      true
-; CHECK-NEXT: - Name:            out
-; CHECK-NEXT:   TypeName:        'float*'
-; CHECK-NEXT:   Size:            8
-; CHECK-NEXT:   Align:           8
-; CHECK-NEXT:   ValueKind:       GlobalBuffer
-; CHECK-NEXT:   AddrSpaceQual:   Global
-; CHECK-NEXT:   AccQual:         Default
+; CHECK:        - .args:
+; CHECK-NEXT:       - .actual_access:  read_only
+; CHECK-NEXT:         .address_space:  global
+; CHECK-NEXT:         .is_const:       true
+; CHECK-NEXT:         .is_restrict:    true
+; CHECK-NEXT:         .name:           in
+; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .type_name:      'float*'
+; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .name:           out
+; CHECK-NEXT:         .offset:         8
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .type_name:      'float*'
+; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK:          .name:           test_ro_arg
+; CHECK:          .symbol:         test_ro_arg.kd
 
 define amdgpu_kernel void @test_ro_arg(ptr addrspace(1) noalias readonly %in, ptr addrspace(1) %out)
     !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2
@@ -30,6 +29,3 @@ define amdgpu_kernel void @test_ro_arg(ptr addrspace(1) noalias readonly %in, pt
 !1 = !{!"none", !"none"}
 !2 = !{!"float*", !"float*"}
 !3 = !{!"const restrict", !""}
-
-!llvm.module.flags = !{!99}
-!99 = !{i32 1, !"amdgpu_code_object_version", i32 200}

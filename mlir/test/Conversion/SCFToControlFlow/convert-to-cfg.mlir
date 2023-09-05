@@ -621,29 +621,30 @@ func.func @func_execute_region_elim_multi_yield() {
 // CHECK:     "test.bar"(%[[z]])
 // CHECK:     return
 
-// SWITCH-LABEL: @index_switch
+// CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
-  // SWITCH: cf.switch %arg0 : index
-  // SWITCH-NEXT: default: ^bb3
-  // SWITCH-NEXT: 0: ^bb1
-  // SWITCH-NEXT: 1: ^bb2
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
+  // CHECK: cf.switch %[[CASE]] : i32
+  // CHECK-NEXT: default: ^[[DEFAULT:.+]],
+  // CHECK-NEXT: 0: ^[[bb1:.+]],
+  // CHECK-NEXT: 1: ^[[bb2:.+]]
   %0 = scf.index_switch %i -> i32
-  // SWITCH: ^bb1:
+  // CHECK: ^[[bb1]]:
   case 0 {
-    // SWITCH-NEXT: llvm.br ^bb4(%arg1
+    // CHECK-NEXT: br ^[[bb4:.+]](%arg1 : i32)
     scf.yield %a : i32
   }
-  // SWITCH: ^bb2:
+  // CHECK: ^[[bb2]]:
   case 1 {
-    // SWITCH-NEXT: llvm.br ^bb4(%arg2
+    // CHECK-NEXT: br ^[[bb4]](%arg2 : i32)
     scf.yield %b : i32
   }
-  // SWITCH: ^bb3:
+  // CHECK: ^[[DEFAULT]]:
   default {
-    // SWITCH-NEXT: llvm.br ^bb4(%arg3
+    // CHECK-NEXT: br ^[[bb4]](%arg3 : i32)
     scf.yield %c : i32
   }
-  // SWITCH: ^bb4(%[[V:.*]]: i32
-  // SWITCH-NEXT: return %[[V]]
+  // CHECK: ^[[bb4]](%[[V:.*]]: i32
+  // CHECK-NEXT: return %[[V]]
   return %0 : i32
 }

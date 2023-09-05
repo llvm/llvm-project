@@ -325,9 +325,9 @@ define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminsw 2, 2, 3
-; CHECK-NEXT:    xxleqv 35, 35, 35
-; CHECK-NEXT:    vcmpgtsw 2, 2, 3
+; CHECK-NEXT:    xxleqv 36, 36, 36
+; CHECK-NEXT:    xxlor 34, 34, 35
+; CHECK-NEXT:    vcmpgtsw 2, 2, 4
 ; CHECK-NEXT:    blr
   %a = icmp sgt <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = icmp sgt <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -351,9 +351,9 @@ define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxsw 2, 2, 3
-; CHECK-NEXT:    xxlxor 35, 35, 35
-; CHECK-NEXT:    vcmpgtsw 2, 3, 2
+; CHECK-NEXT:    xxlxor 36, 36, 36
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    vcmpgtsw 2, 4, 2
 ; CHECK-NEXT:    blr
   %a = icmp slt <4 x i32> %P, zeroinitializer
   %b = icmp slt <4 x i32> %Q, zeroinitializer
@@ -378,9 +378,9 @@ define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminsw 2, 2, 3
-; CHECK-NEXT:    xxlxor 35, 35, 35
-; CHECK-NEXT:    vcmpgtsw 2, 3, 2
+; CHECK-NEXT:    xxlxor 36, 36, 36
+; CHECK-NEXT:    xxlor 34, 34, 35
+; CHECK-NEXT:    vcmpgtsw 2, 4, 2
 ; CHECK-NEXT:    blr
   %a = icmp slt <4 x i32> %P, zeroinitializer
   %b = icmp slt <4 x i32> %Q, zeroinitializer
@@ -405,9 +405,9 @@ define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxsw 2, 2, 3
-; CHECK-NEXT:    xxleqv 35, 35, 35
-; CHECK-NEXT:    vcmpgtsw 2, 2, 3
+; CHECK-NEXT:    xxleqv 36, 36, 36
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    vcmpgtsw 2, 2, 4
 ; CHECK-NEXT:    blr
   %a = icmp sgt <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = icmp sgt <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>

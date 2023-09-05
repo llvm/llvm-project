@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -131,7 +132,7 @@ MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
 
-bool SPIRVTypeConverter::allows(spirv::Capability capability) {
+bool SPIRVTypeConverter::allows(spirv::Capability capability) const {
   return targetEnv.allows(capability);
 }
 
@@ -303,16 +304,35 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   type = cast<VectorType>(convertIndexElementType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot convert non-scalar element type\n");
-    return nullptr;
+    // If this is not a spec allowed scalar type, try to handle sub-byte integer
+    // types.
+    auto intType = dyn_cast<IntegerType>(type.getElementType());
+    if (!intType) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type
+                 << " illegal: cannot convert non-scalar element type\n");
+      return nullptr;
+    }
+
+    Type elementType = convertSubByteIntegerType(options, intType);
+    if (type.getRank() <= 1 && type.getNumElements() == 1)
+      return elementType;
+
+    if (type.getNumElements() > 4) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type << " illegal: > 4-element unimplemented\n");
+      return nullptr;
+    }
+
+    return VectorType::get(type.getShape(), elementType);
   }
 
   if (type.getRank() <= 1 && type.getNumElements() == 1)
     return convertScalarType(targetEnv, options, scalarType, storageClass);
 
   if (!spirv::CompositeType::isValid(type)) {
-    LLVM_DEBUG(llvm::dbgs() << type << " illegal: > 4-element unimplemented\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: not a valid composite type\n");
     return nullptr;
   }
 
@@ -972,7 +992,7 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
   return linearizedIndex;
 }
 
-Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -1003,7 +1023,7 @@ Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }
 
-Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
                                        OpBuilder &builder) {
@@ -1038,7 +1058,7 @@ Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
                                                  linearizedIndices);
 }
 
-Value mlir::spirv::getElementPtr(SPIRVTypeConverter &typeConverter,
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
                                  OpBuilder &builder) {

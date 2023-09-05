@@ -1,5 +1,7 @@
 // This tests that the coroutine heap allocation elision optimization could happen succesfully.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 -emit-llvm %s \
+// RUN:   -fcxx-exceptions -fexceptions -o - | FileCheck %s
 
 #include "Inputs/coroutine.h"
 #include "Inputs/numeric.h"

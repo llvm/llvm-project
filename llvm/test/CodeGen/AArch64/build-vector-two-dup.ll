@@ -78,8 +78,8 @@ entry:
 define <16 x i8> @test5(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ldr b0, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ld1r { v1.16b }, [x1]
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
@@ -212,8 +212,8 @@ define <4 x i32> @test12(ptr nocapture noundef readonly %a, ptr nocapture nounde
 ; CHECK-NEXT:    ld1r { v0.2s }, [x0]
 ; CHECK-NEXT:    ldr w8, [x1]
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.s[0], w8
 ; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    mov v1.s[0], w8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:

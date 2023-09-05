@@ -135,9 +135,24 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE int get_exponent() const {
-    if (get_unbiased_exponent() == 0)
-      return int(1) - EXPONENT_BIAS;
     return int(get_unbiased_exponent()) - EXPONENT_BIAS;
+  }
+
+  // If the number is subnormal, the exponent is treated as if it were the
+  // minimum exponent for a normal number. This is to keep continuity between
+  // the normal and subnormal ranges, but it causes problems for functions where
+  // values are calculated from the exponent, since just subtracting the bias
+  // will give a slightly incorrect result. Additionally, zero has an exponent
+  // of zero, and that should actually be treated as zero.
+  LIBC_INLINE int get_explicit_exponent() const {
+    const int unbiased_exp = int(get_unbiased_exponent());
+    if (is_zero()) {
+      return 0;
+    } else if (unbiased_exp == 0) {
+      return 1 - EXPONENT_BIAS;
+    } else {
+      return unbiased_exp - EXPONENT_BIAS;
+    }
   }
 
   LIBC_INLINE bool is_zero() const {

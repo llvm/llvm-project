@@ -88,8 +88,8 @@ declare void @llvm.stackrestore(ptr)
 ; VLA allocation
 ; CHECK: ubfiz	x8, x0, #2, #32
 ; CHECK: mov	x9, sp
-; CHECK: add	x8, x8, #15
 ; CHECK: mov	[[SAVE:x[0-9]+]], sp
+; CHECK: add	x8, x8, #15
 ; CHECK: and	[[X1:x[0-9]+]], [[X1]], #0x7fffffff0
 ; Saving the SP via llvm.stacksave()
 ; CHECK: sub	[[X1]], [[X2:x[0-9]+]], [[X1]]

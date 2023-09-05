@@ -151,23 +151,23 @@ define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cinc w9, w0, lt
-; CHECK-NEXT:    asr w9, w9, #1
+; CHECK-NEXT:    mov w9, wzr
+; CHECK-NEXT:    cinc w8, w0, lt
+; CHECK-NEXT:    asr w8, w8, #1
 ; CHECK-NEXT:  .LBB11_1: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    add x10, sp, #16
-; CHECK-NEXT:    bfi x10, x8, #2, #2
 ; CHECK-NEXT:    mov x11, sp
-; CHECK-NEXT:    bfi x11, x8, #2, #2
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    cmp w8, #5
+; CHECK-NEXT:    bfi x10, x9, #2, #2
+; CHECK-NEXT:    bfi x11, x9, #2, #2
+; CHECK-NEXT:    add w9, w9, #1
+; CHECK-NEXT:    cmp w9, #5
 ; CHECK-NEXT:    str q1, [sp, #16]
 ; CHECK-NEXT:    str w0, [x10]
 ; CHECK-NEXT:    ldr q1, [sp, #16]
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    str w9, [x11]
+; CHECK-NEXT:    str w8, [x11]
 ; CHECK-NEXT:    ldr q0, [sp]
 ; CHECK-NEXT:    b.ne .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %do.end

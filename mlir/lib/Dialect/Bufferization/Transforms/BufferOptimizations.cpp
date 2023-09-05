@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -37,6 +38,22 @@ using namespace mlir::bufferization;
 /// based control-flow interface.
 static bool isKnownControlFlowInterface(Operation *op) {
   return isa<LoopLikeOpInterface, RegionBranchOpInterface>(op);
+}
+
+/// Returns true if the given operation implements the AllocationOpInterface
+/// and it supports the dominate block hoisting.
+static bool allowAllocDominateBlockHoisting(Operation *op) {
+  auto allocOp = dyn_cast<AllocationOpInterface>(op);
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Block);
+}
+
+/// Returns true if the given operation implements the AllocationOpInterface
+/// and it supports the loop hoisting.
+static bool allowAllocLoopHoisting(Operation *op) {
+  auto allocOp = dyn_cast<AllocationOpInterface>(op);
+  return allocOp &&
+         static_cast<uint8_t>(allocOp.getHoistingKind() & HoistingKind::Loop);
 }
 
 /// Check if the size of the allocation is less than the given size. The
@@ -279,7 +296,7 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
-    return llvm::isa<memref::AllocOp>(op);
+    return allowAllocDominateBlockHoisting(op);
   }
 
   /// Sets the current placement block to the given block.
@@ -316,7 +333,7 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
-    return llvm::isa<memref::AllocOp, memref::AllocaOp>(op);
+    return allowAllocLoopHoisting(op);
   }
 
   /// Does not change the internal placement block, as we want to move
@@ -356,13 +373,15 @@ public:
       // `AutomaticAllocationScope` determined during the initialization phase.
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
-      Operation *alloca = builder.create<memref::AllocaOp>(
-          alloc.getLoc(), cast<MemRefType>(alloc.getType()),
-          allocOp->getOperands(), allocOp->getAttrs());
-
-      // Replace the original alloc by a newly created alloca.
-      allocOp->replaceAllUsesWith(alloca);
-      allocOp->erase();
+      if (auto allocInterface = dyn_cast<AllocationOpInterface>(allocOp)) {
+        Operation *alloca =
+            allocInterface.buildPromotedAlloc(builder, alloc).value();
+        if (!alloca)
+          continue;
+        // Replace the original alloc by a newly created alloca.
+        allocOp->replaceAllUsesWith(alloca);
+        allocOp->erase();
+      }
     }
   }
 };

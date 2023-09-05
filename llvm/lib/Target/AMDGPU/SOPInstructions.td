@@ -933,6 +933,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       def S_MAX_F32 : SOP2_F32_Inst<"s_max_f32", fmaxnum_like>;
       def S_MUL_F32 : SOP2_F32_Inst<"s_mul_f32", any_fmul>;
 
+      let FixedSize = 1 in
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
         (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, KImmFP32:$imm),
@@ -955,6 +956,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     def S_CVT_PK_RTZ_F16_F32 : SOP2_F32_Inst<"s_cvt_pk_rtz_f16_f32",
                                              AMDGPUpkrtz_f16_f32, v2f16>;
 
+    let FixedSize = 1 in
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
       (ins SSrc_f32_Deferred:$src0, KImmFP32:$imm, SSrc_f32_Deferred:$src1),

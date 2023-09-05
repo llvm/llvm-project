@@ -35,6 +35,7 @@ static_library("bugprone") {
     "ImplicitWideningOfMultiplicationResultCheck.cpp",
     "InaccurateEraseCheck.cpp",
     "IncDecInConditionsCheck.cpp",
+    "IncorrectEnableIfCheck.cpp",
     "IncorrectRoundingsCheck.cpp",
     "InfiniteLoopCheck.cpp",
     "IntegerDivisionCheck.cpp",

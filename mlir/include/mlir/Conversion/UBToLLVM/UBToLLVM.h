@@ -13,6 +13,7 @@
 
 namespace mlir {
 
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -23,6 +24,8 @@ class Pass;
 namespace ub {
 void populateUBToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                         RewritePatternSet &patterns);
+
+void registerConvertUBToLLVMInterface(DialectRegistry &registry);
 } // namespace ub
 } // namespace mlir
 

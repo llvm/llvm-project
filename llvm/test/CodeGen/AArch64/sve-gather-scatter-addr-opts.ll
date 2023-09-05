@@ -6,10 +6,10 @@
 define void @scatter_i8_index_offset_maximum(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_maximum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33554431
-; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    mov w8, #33554431 // =0x1ffffff
 ; CHECK-NEXT:    index z1.s, #0, w8
-; CHECK-NEXT:    st1b { z0.s }, p0, [x9, z1.s, sxtw]
+; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    st1b { z0.s }, p0, [x8, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -27,10 +27,10 @@ define void @scatter_i8_index_offset_maximum(ptr %base, i64 %offset, <vscale x 4
 define void @scatter_i16_index_offset_minimum(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i16> %data) #0 {
 ; CHECK-LABEL: scatter_i16_index_offset_minimum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-33554432
-; CHECK-NEXT:    add x9, x0, x1, lsl #1
+; CHECK-NEXT:    mov w8, #-33554432 // =0xfe000000
 ; CHECK-NEXT:    index z1.s, #0, w8
-; CHECK-NEXT:    st1h { z0.s }, p0, [x9, z1.s, sxtw #1]
+; CHECK-NEXT:    add x8, x0, x1, lsl #1
+; CHECK-NEXT:    st1h { z0.s }, p0, [x8, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -48,8 +48,8 @@ define void @scatter_i16_index_offset_minimum(ptr %base, i64 %offset, <vscale x 
 define <vscale x 4 x i8> @gather_i8_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: gather_i8_index_offset_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, z0.s, sxtw]
 ; CHECK-NEXT:    ret
   %splat.insert0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -73,17 +73,17 @@ define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z3.d, x1
-; CHECK-NEXT:    incd z2.d
-; CHECK-NEXT:    mad z1.d, p1/m, z3.d, z3.d
-; CHECK-NEXT:    mad z2.d, p1/m, z3.d, z3.d
-; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z2.d, x1
+; CHECK-NEXT:    movprfx z4, z2
+; CHECK-NEXT:    mla z4.d, p1/m, z1.d, z2.d
+; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1h { z3.d }, p1, [x0, z1.d, lsl #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, lsl #1]
+; CHECK-NEXT:    incd z1.d
+; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z4.d, lsl #1]
+; CHECK-NEXT:    mad z1.d, p1/m, z2.d, z2.d
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d, lsl #1]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -101,18 +101,18 @@ define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <v
 define void @scatter_i8_index_offset_maximum_plus_one(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_maximum_plus_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #67108864
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    add x11, x0, x1
-; CHECK-NEXT:    mov w10, #33554432
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    madd x8, x8, x9, x11
+; CHECK-NEXT:    mov w8, #33554432 // =0x2000000
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    mov w10, #67108864 // =0x4000000
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    index z1.d, #0, x10
-; CHECK-NEXT:    st1b { z2.d }, p1, [x11, z1.d]
+; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
+; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -131,19 +131,19 @@ define void @scatter_i8_index_offset_maximum_plus_one(ptr %base, i64 %offset, <v
 define void @scatter_i8_index_offset_minimum_minus_one(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_minimum_minus_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov x9, #-2
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    movk x9, #64511, lsl #16
-; CHECK-NEXT:    add x11, x0, x1
-; CHECK-NEXT:    mov x10, #-33554433
-; CHECK-NEXT:    madd x8, x8, x9, x11
 ; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov x8, #-33554433 // =0xfffffffffdffffff
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    mov x10, #-2 // =0xfffffffffffffffe
+; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    movk x10, #64511, lsl #16
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    index z1.d, #0, x10
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1b { z2.d }, p1, [x11, z1.d]
+; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
+; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -162,18 +162,18 @@ define void @scatter_i8_index_offset_minimum_minus_one(ptr %base, i64 %offset, <
 define void @scatter_i8_index_stride_too_big(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_stride_too_big:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov x9, #-9223372036854775808
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    add x11, x0, x1
-; CHECK-NEXT:    mov x10, #4611686018427387904
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    madd x8, x8, x9, x11
+; CHECK-NEXT:    mov x8, #4611686018427387904 // =0x4000000000000000
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    index z1.d, #0, x10
-; CHECK-NEXT:    st1b { z2.d }, p1, [x11, z1.d]
+; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
+; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -194,8 +194,8 @@ define void @scatter_i8_index_stride_too_big(ptr %base, i64 %offset, <vscale x 4
 define <vscale x 4 x i8> @gather_8i8_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: gather_8i8_index_offset_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #3
 ; CHECK-NEXT:    index z0.s, #0, #8
+; CHECK-NEXT:    add x8, x0, x1, lsl #3
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, z0.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -214,10 +214,10 @@ define <vscale x 4 x i8> @gather_8i8_index_offset_8(ptr %base, i64 %offset, <vsc
 define <vscale x 4 x float> @gather_f32_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: gather_f32_index_offset_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32
-; CHECK-NEXT:    add x9, x0, x1, lsl #5
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    index z0.s, #0, w8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, z0.s, sxtw]
+; CHECK-NEXT:    add x8, x0, x1, lsl #5
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, z0.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -235,8 +235,8 @@ define <vscale x 4 x float> @gather_f32_index_offset_8(ptr %base, i64 %offset, <
 define void @scatter_i8_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, lsl #3
 ; CHECK-NEXT:    index z1.s, #0, #8
+; CHECK-NEXT:    add x8, x0, x1, lsl #3
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x8, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
@@ -255,10 +255,10 @@ define void @scatter_i8_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1>
 define void @scatter_f16_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x half> %data) #0 {
 ; CHECK-LABEL: scatter_f16_index_offset_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16
-; CHECK-NEXT:    add x9, x0, x1, lsl #4
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    index z1.s, #0, w8
-; CHECK-NEXT:    st1h { z0.s }, p0, [x9, z1.s, sxtw]
+; CHECK-NEXT:    add x8, x0, x1, lsl #4
+; CHECK-NEXT:    st1h { z0.s }, p0, [x8, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -274,11 +274,11 @@ define void @scatter_f16_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1
 define void @scatter_f16_index_add_add(ptr %base, i64 %offset, i64 %offset2, <vscale x 4 x i1> %pg, <vscale x 4 x half> %data) #0 {
 ; CHECK-LABEL: scatter_f16_index_add_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    add x9, x0, x2, lsl #4
-; CHECK-NEXT:    add x9, x9, x1, lsl #4
 ; CHECK-NEXT:    index z1.s, #0, w8
-; CHECK-NEXT:    st1h { z0.s }, p0, [x9, z1.s, sxtw]
+; CHECK-NEXT:    add x8, x9, x1, lsl #4
+; CHECK-NEXT:    st1h { z0.s }, p0, [x8, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %splat.offset.ins = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %splat.offset = shufflevector <vscale x 4 x i64> %splat.offset.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -297,11 +297,11 @@ define void @scatter_f16_index_add_add(ptr %base, i64 %offset, i64 %offset2, <vs
 define void @scatter_f16_index_add_add_mul(ptr %base, i64 %offset, i64 %offset2, <vscale x 4 x i1> %pg, <vscale x 4 x half> %data) #0 {
 ; CHECK-LABEL: scatter_f16_index_add_add_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
+; CHECK-NEXT:    mov w8, #128 // =0x80
 ; CHECK-NEXT:    add x9, x0, x2, lsl #7
-; CHECK-NEXT:    add x9, x9, x1, lsl #7
 ; CHECK-NEXT:    index z1.s, #0, w8
-; CHECK-NEXT:    st1h { z0.s }, p0, [x9, z1.s, sxtw]
+; CHECK-NEXT:    add x8, x9, x1, lsl #7
+; CHECK-NEXT:    st1h { z0.s }, p0, [x8, z1.s, sxtw]
 ; CHECK-NEXT:    ret
   %splat.offset.ins = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %splat.offset = shufflevector <vscale x 4 x i64> %splat.offset.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -322,7 +322,7 @@ define void @scatter_f16_index_add_add_mul(ptr %base, i64 %offset, i64 %offset2,
 define <vscale x 2 x i64> @masked_gather_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_const_with_vec_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i64, ptr inttoptr (i64 8 to ptr), <vscale x 2 x i64> %vector_offsets
@@ -347,7 +347,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offse
 define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
@@ -400,7 +400,7 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32_u32s8_offsets(ptr %base, <vscal
 define void @masked_scatter_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_const_with_vec_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i64, ptr inttoptr (i64 8 to ptr), <vscale x 2 x i64> %vector_offsets
@@ -425,7 +425,7 @@ define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 
 define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0

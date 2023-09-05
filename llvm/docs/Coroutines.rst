@@ -7,8 +7,7 @@ Coroutines in LLVM
    :depth: 3
 
 .. warning::
-  This is a work in progress. Compatibility across LLVM releases is not
-  guaranteed.
+  Compatibility across LLVM releases is not guaranteed.
 
 Introduction
 ============
@@ -1607,7 +1606,7 @@ Overview:
 """""""""
 
 The '``llvm.coro.suspend.async``' intrinsic marks the point where
-execution of a async coroutine is suspended and control is passed to a callee.
+execution of an async coroutine is suspended and control is passed to a callee.
 
 Arguments:
 """"""""""

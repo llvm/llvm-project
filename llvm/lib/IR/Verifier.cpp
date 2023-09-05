@@ -796,8 +796,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     if (ArrayType *ATy = dyn_cast<ArrayType>(GV.getValueType())) {
       StructType *STy = dyn_cast<StructType>(ATy->getElementType());
       PointerType *FuncPtrTy =
-          FunctionType::get(Type::getVoidTy(Context), false)->
-          getPointerTo(DL.getProgramAddressSpace());
+          PointerType::get(Context, DL.getProgramAddressSpace());
       Check(STy && (STy->getNumElements() == 2 || STy->getNumElements() == 3) &&
                 STy->getTypeAtIndex(0u)->isIntegerTy(32) &&
                 STy->getTypeAtIndex(1) == FuncPtrTy,
@@ -5831,7 +5830,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
 
-    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
     // overrun the parent vector.
     if (VecEC.isScalable() == ResultEC.isScalable()) {
@@ -5920,26 +5919,18 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
+
+    Check(Call.paramHasAttr(2, Attribute::InReg),
+          "SGPR arguments must have the `inreg` attribute", &Call);
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
+          "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    Check(Call.getFunction()->isConvergent(),
-          "Entry intrinsic can occur only in a convergent function.", &Call);
-    Check(Call.getParent()->isEntryBlock(),
-          "Entry intrinsic must occur in the entry block.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Entry intrinsic must occur at the start of the basic block.", &Call);
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
-    Check(!Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Entry or anchor intrinsic must not have a convergencectrl bundle.",
-          &Call);
     break;
   case Intrinsic::experimental_convergence_loop:
-    Check(Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Loop intrinsic must have a convergencectrl bundle.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Loop intrinsic must occur at the start of the basic block.", &Call);
     break;
   };
 
@@ -6086,6 +6077,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
     auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
     Check(CmpInst::isIntPredicate(Pred),
           "invalid predicate for VP integer comparison intrinsic", &VPI);
+  }
+  if (VPI.getIntrinsicID() == Intrinsic::vp_is_fpclass) {
+    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
+    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
+          "unsupported bits for llvm.vp.is.fpclass test mask");
   }
 }
 
@@ -6399,12 +6395,16 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
   if (!E || !E->isValid())
     return;
 
-  // We allow EntryValues for swift async arguments, as they have an
-  // ABI-guarantee to be turned into a specific register.
-  if (isa<ValueAsMetadata>(I.getRawLocation()))
-    if (auto *ArgLoc = dyn_cast_or_null<Argument>(I.getVariableLocationOp(0));
+  if (isa<ValueAsMetadata>(I.getRawLocation())) {
+    Value *VarValue = I.getVariableLocationOp(0);
+    if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
+      return;
+    // We allow EntryValues for swift async arguments, as they have an
+    // ABI-guarantee to be turned into a specific register.
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
         ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
       return;
+  }
 
   CheckDI(!E->isEntryValue(),
           "Entry values are only allowed in MIR unless they target a "

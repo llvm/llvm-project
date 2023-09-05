@@ -7,9 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/IR/ValueRange.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::irdl;
+
+/// Maps given `args` to the index in the `valueToConstr`
+static SmallVector<unsigned>
+getConstraintIndicesForArgs(mlir::OperandRange args,
+                            ArrayRef<Value> valueToConstr) {
+  SmallVector<unsigned> constraints;
+  for (Value arg : args) {
+    for (auto [i, value] : enumerate(valueToConstr)) {
+      if (value == arg) {
+        constraints.push_back(i);
+        break;
+      }
+    }
+  }
+  return constraints;
+}
 
 std::unique_ptr<Constraint> IsOp::getVerifier(
     ArrayRef<Value> valueToConstr,
@@ -24,15 +42,8 @@ std::unique_ptr<Constraint> ParametricOp::getVerifier(
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
         &attrs) {
-  SmallVector<unsigned> constraints;
-  for (Value arg : getArgs()) {
-    for (auto [i, value] : enumerate(valueToConstr)) {
-      if (value == arg) {
-        constraints.push_back(i);
-        break;
-      }
-    }
-  }
+  SmallVector<unsigned> constraints =
+      getConstraintIndicesForArgs(getArgs(), valueToConstr);
 
   // Symbol reference case for the base
   SymbolRefAttr symRef = getBaseType();
@@ -60,17 +71,8 @@ std::unique_ptr<Constraint> AnyOfOp::getVerifier(
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
         &attrs) {
-  SmallVector<unsigned> constraints;
-  for (Value arg : getArgs()) {
-    for (auto [i, value] : enumerate(valueToConstr)) {
-      if (value == arg) {
-        constraints.push_back(i);
-        break;
-      }
-    }
-  }
-
-  return std::make_unique<AnyOfConstraint>(constraints);
+  return std::make_unique<AnyOfConstraint>(
+      getConstraintIndicesForArgs(getArgs(), valueToConstr));
 }
 
 std::unique_ptr<Constraint> AllOfOp::getVerifier(
@@ -78,17 +80,8 @@ std::unique_ptr<Constraint> AllOfOp::getVerifier(
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
         &attrs) {
-  SmallVector<unsigned> constraints;
-  for (Value arg : getArgs()) {
-    for (auto [i, value] : enumerate(valueToConstr)) {
-      if (value == arg) {
-        constraints.push_back(i);
-        break;
-      }
-    }
-  }
-
-  return std::make_unique<AllOfConstraint>(constraints);
+  return std::make_unique<AllOfConstraint>(
+      getConstraintIndicesForArgs(getArgs(), valueToConstr));
 }
 
 std::unique_ptr<Constraint> AnyOp::getVerifier(
@@ -97,4 +90,16 @@ std::unique_ptr<Constraint> AnyOp::getVerifier(
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
         &attrs) {
   return std::make_unique<AnyAttributeConstraint>();
+}
+
+std::unique_ptr<RegionConstraint> RegionOp::getVerifier(
+    ArrayRef<Value> valueToConstr,
+    DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
+    DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
+        &attrs) {
+  return std::make_unique<RegionConstraint>(
+      getConstrainedArguments() ? std::optional{getConstraintIndicesForArgs(
+                                      getEntryBlockArgs(), valueToConstr)}
+                                : std::nullopt,
+      getNumberOfBlocks());
 }

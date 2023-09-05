@@ -32,7 +32,7 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed-nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
 
 func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>)
                             -> tensor<100x2xf64, #SparseVector> {
@@ -68,7 +68,7 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: ten
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed-nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
 
 func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>) {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
@@ -270,7 +270,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 // -----
 
-#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed-nu", "singleton"]}>
+#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"]}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> index {
   // expected-error@+1 {{requested position memory size on a singleton level}}

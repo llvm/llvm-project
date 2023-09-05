@@ -68,7 +68,7 @@ normalizeAttrScopeName(const IdentifierInfo *Scope,
   // to be "clang".
   StringRef ScopeName = Scope->getName();
   if (SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-      SyntaxUsed == AttributeCommonInfo::AS_C2x) {
+      SyntaxUsed == AttributeCommonInfo::AS_C23) {
     if (ScopeName == "__gnu__")
       ScopeName = "gnu";
     else if (ScopeName == "_Clang")
@@ -85,7 +85,7 @@ static StringRef normalizeAttrName(const IdentifierInfo *Name,
   bool ShouldNormalize =
       SyntaxUsed == AttributeCommonInfo::AS_GNU ||
       ((SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-        SyntaxUsed == AttributeCommonInfo::AS_C2x) &&
+        SyntaxUsed == AttributeCommonInfo::AS_C23) &&
        (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
         NormalizedScopeName == "clang"));
   StringRef AttrName = Name->getName();
@@ -115,7 +115,7 @@ static SmallString<64> normalizeName(const IdentifierInfo *Name,
   SmallString<64> FullName = ScopeName;
   if (!ScopeName.empty()) {
     assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-           SyntaxUsed == AttributeCommonInfo::AS_C2x);
+           SyntaxUsed == AttributeCommonInfo::AS_C23);
     FullName += "::";
   }
   FullName += AttrName;

@@ -80,6 +80,7 @@ namespace lipo {
 #include "LipoOpts.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
 #include "LipoOpts.inc"

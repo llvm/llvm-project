@@ -83,7 +83,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[ARGV]], ptr [[ARGV_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16
 // CHECK1-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
@@ -94,7 +94,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]])
 // CHECK1-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP4]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP4]])
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    ret i32 [[TMP5]]
 //
@@ -157,13 +157,13 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA1:%.*]] = alloca i32, i64 [[TMP0]], align 16
 // CHECK1-NEXT:    store i64 [[TMP0]], ptr [[__VLA_EXPR0]], align 8
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 3, ptr @main.omp_outlined.1.omp_outlined, i64 [[TMP0]], ptr [[VLA1]], ptr [[GLOBAL]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP2]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP2]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -316,7 +316,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    call void @llvm.dbg.declare(metadata ptr [[ARGV_ADDR]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG21:![0-9]+]]
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG22:![0-9]+]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg [[DBG23:![0-9]+]]
-// CHECK2-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave(), !dbg [[DBG23]]
+// CHECK2-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0(), !dbg [[DBG23]]
 // CHECK2-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8, !dbg [[DBG23]]
 // CHECK2-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16, !dbg [[DBG23]]
 // CHECK2-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8, !dbg [[DBG23]]
@@ -329,7 +329,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]]), !dbg [[DBG36:![0-9]+]]
 // CHECK2-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4, !dbg [[DBG37:![0-9]+]]
 // CHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8, !dbg [[DBG38:![0-9]+]]
-// CHECK2-NEXT:    call void @llvm.stackrestore(ptr [[TMP4]]), !dbg [[DBG38]]
+// CHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP4]]), !dbg [[DBG38]]
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[RETVAL]], align 4, !dbg [[DBG38]]
 // CHECK2-NEXT:    ret i32 [[TMP5]], !dbg [[DBG38]]
 //
@@ -425,7 +425,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VLA_ADDR]], metadata [[META81:![0-9]+]], metadata !DIExpression()), !dbg [[DBG79]]
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8, !dbg [[DBG82:![0-9]+]]
 // CHECK2-NEXT:    call void @llvm.dbg.declare(metadata ptr [[GLOBAL]], metadata [[META83:![0-9]+]], metadata !DIExpression()), !dbg [[DBG79]]
-// CHECK2-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave(), !dbg [[DBG82]]
+// CHECK2-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0(), !dbg [[DBG82]]
 // CHECK2-NEXT:    store ptr [[TMP1]], ptr [[SAVED_STACK]], align 8, !dbg [[DBG82]]
 // CHECK2-NEXT:    [[VLA1:%.*]] = alloca i32, i64 [[TMP0]], align 16, !dbg [[DBG82]]
 // CHECK2-NEXT:    store i64 [[TMP0]], ptr [[__VLA_EXPR0]], align 8, !dbg [[DBG82]]
@@ -433,7 +433,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VLA1]], metadata [[META85:![0-9]+]], metadata !DIExpression()), !dbg [[DBG79]]
 // CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @main.omp_outlined_debug__.1.omp_outlined, i64 [[TMP0]], ptr [[VLA1]], ptr [[GLOBAL]]), !dbg [[DBG82]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8, !dbg [[DBG86:![0-9]+]]
-// CHECK2-NEXT:    call void @llvm.stackrestore(ptr [[TMP2]]), !dbg [[DBG86]]
+// CHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP2]]), !dbg [[DBG86]]
 // CHECK2-NEXT:    ret void, !dbg [[DBG88:![0-9]+]]
 //
 //
@@ -725,7 +725,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store ptr [[ARGV]], ptr [[ARGV_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK3-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8
 // CHECK3-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16
 // CHECK3-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
@@ -743,7 +743,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]])
 // CHECK3-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK3-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK3-NEXT:    call void @llvm.stackrestore(ptr [[TMP4]])
+// CHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP4]])
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK3-NEXT:    ret i32 [[TMP5]]
 //
@@ -865,7 +865,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    call void @llvm.dbg.declare(metadata ptr [[ARGV_ADDR]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG21:![0-9]+]]
 // CHECK4-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg [[DBG21]]
-// CHECK4-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave(), !dbg [[DBG21]]
+// CHECK4-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0(), !dbg [[DBG21]]
 // CHECK4-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8, !dbg [[DBG21]]
 // CHECK4-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16, !dbg [[DBG21]]
 // CHECK4-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8, !dbg [[DBG21]]
@@ -885,7 +885,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]]), !dbg [[DBG31]]
 // CHECK4-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4, !dbg [[DBG31]]
 // CHECK4-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8, !dbg [[DBG32:![0-9]+]]
-// CHECK4-NEXT:    call void @llvm.stackrestore(ptr [[TMP4]]), !dbg [[DBG32]]
+// CHECK4-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP4]]), !dbg [[DBG32]]
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32, ptr [[RETVAL]], align 4, !dbg [[DBG32]]
 // CHECK4-NEXT:    ret i32 [[TMP5]], !dbg [[DBG32]]
 //

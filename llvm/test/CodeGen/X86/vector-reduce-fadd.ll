@@ -1898,6 +1898,28 @@ define double @test_v16f64_undef(<16 x double> %a0) {
   ret double %1
 }
 
+define float @PR64627() {
+; SSE-LABEL: PR64627:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR64627:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: PR64627:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    retq
+  %1 = bitcast i5 0 to <5 x i1>
+  %2 = select <5 x i1> %1, <5 x float> zeroinitializer, <5 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>
+  %3 = call float @llvm.vector.reduce.fadd.v5f32(float -0.0, <5 x float> %2)
+  ret float %3
+}
+declare float @llvm.vector.reduce.fadd.v5f32(float, <5 x float>)
+
 declare float @llvm.vector.reduce.fadd.f32.v2f32(float, <2 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)

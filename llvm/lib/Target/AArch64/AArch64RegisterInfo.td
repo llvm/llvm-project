@@ -438,7 +438,7 @@ def Q31   : AArch64Reg<31, "q31", [D31], ["v31", ""]>, DwarfRegAlias<B31>;
 def FPR8  : RegisterClass<"AArch64", [i8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
 }
-def FPR16 : RegisterClass<"AArch64", [f16, bf16], 16, (sequence "H%u", 0, 31)> {
+def FPR16 : RegisterClass<"AArch64", [f16, bf16, i16], 16, (sequence "H%u", 0, 31)> {
   let Size = 16;
 }
 
@@ -1331,16 +1331,16 @@ def ZStridedQuadsHi : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [
   (trunc (rotl ZPR, 24), 4), (trunc (rotl ZPR, 28), 4)
 ]>;
 
-def ZPR2Strided : RegisterClass<"AArch64", [untyped], 256,
+def ZPR2Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedPairsLo, ZStridedPairsHi)>  {
   let Size = 256;
 }
-def ZPR4Strided : RegisterClass<"AArch64", [untyped], 512,
+def ZPR4Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedQuadsLo, ZStridedQuadsHi)>  {
   let Size = 512;
 }
 
-def ZPR2StridedOrContiguous : RegisterClass<"AArch64", [untyped], 256,
+def ZPR2StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedPairsLo, ZStridedPairsHi,
                                 (decimate ZSeqPairs, 2))> {
   let Size = 256;
@@ -1387,7 +1387,7 @@ let EncoderMethod = "EncodeZPR2StridedRegisterClass",
       : RegisterOperand<ZPR2StridedOrContiguous, "printTypedVectorList<0,'d'>">;
 }
 
-def ZPR4StridedOrContiguous : RegisterClass<"AArch64", [untyped], 512,
+def ZPR4StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedQuadsLo, ZStridedQuadsHi,
                                 (decimate ZSeqQuads, 4))>  {
   let Size = 512;

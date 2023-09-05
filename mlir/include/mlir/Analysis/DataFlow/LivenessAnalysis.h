@@ -43,8 +43,9 @@ namespace mlir::dataflow {
 ///
 /// A value "has memory effects" iff it:
 ///   (1.a) is an operand of an op with memory effects OR
-///   (1.b) is a non-forwarded branch operand and a block where its op could
-///   take the control has an op with memory effects.
+///   (1.b) is a non-forwarded branch operand and its branch op could take the
+///   control to a block that has an op with memory effects OR
+///   (1.c) is a non-forwarded call operand.
 ///
 /// A value `A` is said to be "used to compute" value `B` iff `B` cannot be
 /// computed in the absence of `A`. Thus, in this implementation, we say that
@@ -82,6 +83,8 @@ public:
                       ArrayRef<const Liveness *> results) override;
 
   void visitBranchOperand(OpOperand &operand) override;
+
+  void visitCallOperand(OpOperand &operand) override;
 
   void setToExitState(Liveness *lattice) override;
 };

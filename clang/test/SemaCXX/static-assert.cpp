@@ -29,13 +29,19 @@ template<typename T> struct S {
 S<char> s1; // expected-note {{in instantiation of template class 'S<char>' requested here}}
 S<int> s2;
 
-static_assert(false, L"\xFFFFFFFF"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}} \
-                                     // expected-error {{invalid escape sequence '\xFFFFFFFF' in an unevaluated string literal}}
-static_assert(false, u"\U000317FF"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
-// FIXME: render this as u8"\u03A9"
-static_assert(false, u8"Ω");     // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
-static_assert(false, L"\u1234"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
-static_assert(false, L"\x1ff"    // expected-error {{an unevaluated string literal cannot have an encoding prefix}} \
+static_assert(false, L"\xFFFFFFFF"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                     // expected-error {{invalid escape sequence '\xFFFFFFFF' in an unevaluated string literal}} \
+                                     // expected-error {{hex escape sequence out of range}}
+static_assert(false, u"\U000317FF"); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                     // expected-error {{static assertion failed}}
+
+static_assert(false, u8"Ω");     // expected-warning {{encoding prefix 'u8' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{static assertion failed: Ω}}
+static_assert(false, L"\u1234"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{static assertion failed: ሴ}}
+
+static_assert(false, L"\x1ff"    // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}} \
+                                 // expected-error {{hex escape sequence out of range}} \
                                  // expected-error {{invalid escape sequence '\x1ff' in an unevaluated string literal}}
                      "0\x123"    // expected-error {{invalid escape sequence '\x123' in an unevaluated string literal}}
                      "fx\xfffff" // expected-error {{invalid escape sequence '\xfffff' in an unevaluated string literal}}

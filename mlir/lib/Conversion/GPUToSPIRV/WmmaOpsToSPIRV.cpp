@@ -88,7 +88,7 @@ struct WmmaLoadOpToSPIRVLowering
     auto memrefType =
         cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType());
     Value bufferPtr = spirv::getElementPtr(
-        *getTypeConverter<SPIRVTypeConverter>(), memrefType,
+        *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
         adaptor.getSrcMemref(), adaptor.getIndices(), loc, rewriter);
     auto coopType = convertMMAToSPIRVType(retType);
     int64_t stride = subgroupMmaLoadMatrixOp.getLeadDimension().getSExtValue();
@@ -119,7 +119,7 @@ struct WmmaStoreOpToSPIRVLowering
     auto memrefType =
         cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType());
     Value bufferPtr = spirv::getElementPtr(
-        *getTypeConverter<SPIRVTypeConverter>(), memrefType,
+        *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
         adaptor.getDstMemref(), adaptor.getIndices(), loc, rewriter);
     int64_t stride = subgroupMmaStoreMatrixOp.getLeadDimension().getSExtValue();
     auto i32Type = rewriter.getI32Type();

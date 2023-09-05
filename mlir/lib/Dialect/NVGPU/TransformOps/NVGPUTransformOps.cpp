@@ -9,6 +9,8 @@
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -38,6 +40,45 @@ using namespace mlir::transform;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
+//===----------------------------------------------------------------------===//
+// Apply...ConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  /// device-side async tokens cannot be materialized in nvvm. We just
+  /// convert them to a dummy i32 type in order to easily drop them during
+  /// conversion.
+  llvmTypeConverter.addConversion(
+      [&](nvgpu::DeviceAsyncTokenType type) -> Type {
+        return llvmTypeConverter.convertType(
+            IntegerType::get(type.getContext(), 32));
+      });
+  llvmTypeConverter.addConversion([&](nvgpu::MBarrierTokenType type) -> Type {
+    return llvmTypeConverter.convertType(
+        IntegerType::get(type.getContext(), 64));
+  });
+  llvmTypeConverter.addConversion([&](nvgpu::MBarrierType type) -> Type {
+    return llvmTypeConverter.convertType(
+        getMBarrierMemrefType(type.getContext(), type));
+  });
+  llvmTypeConverter.addConversion(
+      [&](nvgpu::TensorMapDescriptorType type) -> Type {
+        return llvmTypeConverter.getPointerType(
+            type.getTensor().getElementType());
+      });
+  populateNVGPUToNVVMConversionPatterns(llvmTypeConverter, patterns);
+}
+
+LogicalResult
+transform::ApplyNVGPUToNVVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
 
 //===---------------------------------------------------------------------===//
 // CreateAsyncGroupsOp
@@ -966,7 +1007,8 @@ SmallVector<Operation *> CopyBuilder::rewrite(ArrayRef<Operation *> copyOps) {
     auto copyOp = cast<linalg::CopyOp>(op);
     auto inMemRef =
         cast<TypedValue<MemRefType>>(copyOp.getDpsInputOperand(0)->get());
-    assert(inMemRef.getType().getRank() == 2 && "expected in to be a 2D memref");
+    assert(inMemRef.getType().getRank() == 2 &&
+           "expected in to be a 2D memref");
 
     // 2. Build global memory descriptor.
     TypedValue<nvgpu::TensorMapDescriptorType> globalDesc =

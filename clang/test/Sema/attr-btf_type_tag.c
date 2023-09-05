@@ -8,7 +8,7 @@
 #define __tag6 __attribute__((btf_type_tag("tag6")))
 
 int __attribute__((btf_type_tag("tag1", "tag2"))) *invalid1; // expected-error {{'btf_type_tag' attribute takes one argument}}
-int __attribute__((btf_type_tag(2))) *invalid2; // expected-error {{'btf_type_tag' attribute requires a string}}
+int __attribute__((btf_type_tag(2))) *invalid2; // expected-error {{expected string literal as argument of 'btf_type_tag' attribute}}
 
 int * __tag1 __tag2 * __tag3 __tag4 * __tag5 __tag6 *g;
 

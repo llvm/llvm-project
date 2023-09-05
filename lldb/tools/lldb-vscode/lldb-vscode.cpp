@@ -76,6 +76,8 @@ typedef int socklen_t;
 using namespace lldb_vscode;
 
 namespace {
+using namespace llvm::opt;
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -1736,7 +1738,7 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
     // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the the launch commands are not run using the synchronous
+    // proceeding as the launch commands are not run using the synchronous
     // mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }

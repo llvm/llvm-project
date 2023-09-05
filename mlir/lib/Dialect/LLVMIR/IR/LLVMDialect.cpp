@@ -21,9 +21,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1012,7 +1012,7 @@ MutableOperandRange CallOp::getArgOperandsMutable() {
 /// debug-info-bearing function has a debug location attached to it. This
 /// mirrors an LLVM IR verifier.
 static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
-  if (callee.isDeclaration())
+  if (callee.isExternal())
     return success();
   auto parentFunc = callOp->getParentOfType<FunctionOpInterface>();
   if (!parentFunc)

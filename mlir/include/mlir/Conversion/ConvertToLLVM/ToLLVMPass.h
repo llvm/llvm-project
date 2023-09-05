@@ -11,8 +11,12 @@
 
 #include <memory>
 
+#include "mlir/Pass/Pass.h"
+
+#define GEN_PASS_DECL_CONVERTTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace mlir {
-class Pass;
 
 /// Create a pass that performs dialect conversion to LLVM  for all dialects
 /// implementing `ConvertToLLVMPatternInterface`.

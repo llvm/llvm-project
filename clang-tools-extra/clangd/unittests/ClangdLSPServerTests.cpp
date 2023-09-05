@@ -8,19 +8,38 @@
 
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
+#include "ClangdServer.h"
+#include "ConfigProvider.h"
+#include "Diagnostics.h"
+#include "FeatureModule.h"
+#include "LSPBinder.h"
 #include "LSPClient.h"
-#include "Protocol.h"
 #include "TestFS.h"
+#include "support/Function.h"
 #include "support/Logger.h"
 #include "support/TestTracer.h"
+#include "support/Threading.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cassert>
+#include <condition_variable>
+#include <cstddef>
+#include <deque>
+#include <memory>
+#include <mutex>
 #include <optional>
+#include <thread>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -358,7 +377,7 @@ TEST_F(LSPTest, FeatureModulesThreadingTest) {
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
   Client.notify("increment", nullptr);
-  EXPECT_THAT_EXPECTED(Client.call("sync", nullptr).take(), Succeeded());
+  Client.sync();
   EXPECT_EQ(3, FeatureModules.get<AsyncCounter>()->getSync());
   // Throw some work on the queue to make sure shutdown blocks on it.
   Client.notify("increment", nullptr);

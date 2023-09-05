@@ -1,7 +1,7 @@
 # Meta test using merge-fdata binary
 UNSUPPORTED: asan
 # Instrumentation currently only works on X86
-REQUIRES: x86_64-linux,bolt-runtime
+REQUIRES: bolt-runtime
 
 # Instrumentation, should test:
 # - Direct branches

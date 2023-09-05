@@ -173,9 +173,60 @@ static void emitThumbRegPlusImmInReg(
         .addReg(LdReg, RegState::Kill)
         .setMIFlags(MIFlags);
   } else if (ST.genExecuteOnly()) {
-    unsigned XOInstr = ST.useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
-    BuildMI(MBB, MBBI, dl, TII.get(XOInstr), LdReg)
-      .addImm(NumBytes).setMIFlags(MIFlags);
+    if (ST.useMovt()) {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm ), LdReg)
+          .addImm(NumBytes)
+          .setMIFlags(MIFlags);
+    } else if (!CanChangeCC) {
+      // tMOVi32imm is lowered to a sequence of flag-setting instructions, so
+      // if CPSR is live we need to save and restore CPSR around it.
+      // TODO Try inserting the tMOVi32imm at an earlier point, where CPSR is
+      // dead.
+      bool LiveCpsr = false, CpsrWrite = false;
+      auto isCpsr = [](auto &MO) { return MO.getReg() == ARM::CPSR; };
+      for (auto Iter = MBBI; Iter != MBB.instr_end(); ++Iter) {
+        // If CPSR is used after this instruction (and there's not a def before
+        // that) then CPSR is live.
+        if (any_of(Iter->all_uses(), isCpsr)) {
+          LiveCpsr = true;
+          break;
+        }
+        if (any_of(Iter->all_defs(), isCpsr)) {
+          CpsrWrite = true;
+          break;
+        }
+      }
+      // If there's no use or def of CPSR then it may be live if it's a
+      // live-out value.
+      auto liveOutIsCpsr = [](auto &Out) { return Out.PhysReg == ARM::CPSR; };
+      if (!LiveCpsr && !CpsrWrite)
+        LiveCpsr = any_of(MBB.liveouts(), liveOutIsCpsr);
+
+      Register CPSRSaveReg;
+      unsigned APSREncoding;
+      if (LiveCpsr) {
+        CPSRSaveReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
+        APSREncoding =
+            ARMSysReg::lookupMClassSysRegByName("apsr_nzcvq")->Encoding;
+        BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MRS_M), CPSRSaveReg)
+            .addImm(APSREncoding)
+            .add(predOps(ARMCC::AL))
+            .addReg(ARM::CPSR, RegState::Implicit);
+      }
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi32imm), LdReg)
+          .addImm(NumBytes)
+          .setMIFlags(MIFlags);
+      if (LiveCpsr) {
+        BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MSR_M))
+            .addImm(APSREncoding)
+            .addReg(CPSRSaveReg, RegState::Kill)
+            .add(predOps(ARMCC::AL));
+      }
+    } else {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi32imm), LdReg)
+          .addImm(NumBytes)
+          .setMIFlags(MIFlags);
+    }
   } else
     MRI.emitLoadConstPool(MBB, MBBI, dl, LdReg, 0, NumBytes, ARMCC::AL, 0,
                           MIFlags);

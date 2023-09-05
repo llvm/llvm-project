@@ -41,6 +41,7 @@ void ConvertMemRefToSPIRVPass::runOnOperation() {
 
   SPIRVConversionOptions options;
   options.boolNumBits = this->boolNumBits;
+  options.use64bitIndex = this->use64bitIndex;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   // Use UnrealizedConversionCast as the bridge so that we don't need to pull in

@@ -225,9 +225,7 @@ assignSections(MachineFunction &MF,
       // blocks are ordered canonically.
       MBB.setSectionID(MBB.getNumber());
     } else {
-      // TODO: Replace `getBBIDOrNumber` with `getBBID` once version 1 is
-      // deprecated.
-      auto I = FuncBBClusterInfo.find(MBB.getBBIDOrNumber());
+      auto I = FuncBBClusterInfo.find(*MBB.getBBID());
       if (I != FuncBBClusterInfo.end()) {
         MBB.setSectionID(I->second.ClusterID);
       } else {
@@ -260,7 +258,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
   [[maybe_unused]] const MachineBasicBlock *EntryBlock = &MF.front();
   SmallVector<MachineBasicBlock *> PreLayoutFallThroughs(MF.getNumBlockIDs());
   for (auto &MBB : MF)
-    PreLayoutFallThroughs[MBB.getNumber()] = MBB.getFallThrough();
+    PreLayoutFallThroughs[MBB.getNumber()] =
+        MBB.getFallThrough(/*JumpToFallThrough=*/false);
 
   MF.sort(MBBCmp);
   assert(&MF.front() == EntryBlock &&
@@ -285,9 +284,7 @@ void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
       MachineBasicBlock::iterator MI = MBB.begin();
       while (!MI->isEHLabel())
         ++MI;
-      MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
-      BuildMI(MBB, MI, DebugLoc(),
-              MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
+      MF.getSubtarget().getInstrInfo()->insertNoop(MBB, MI);
     }
   }
 }
@@ -327,14 +324,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   if (BBSectionsType == BasicBlockSection::List &&
       hasInstrProfHashMismatch(MF))
     return true;
-  // Renumber blocks before sorting them. This is useful during sorting,
-  // basic blocks in the same section will retain the default order.
-  // This renumbering should also be done for basic block labels to match the
-  // profiles with the correct blocks.
-  // For LLVM_BB_ADDR_MAP versions 2 and higher, this renumbering serves
-  // the different purpose of accessing the original layout positions and
-  // finding the original fallthroughs.
-  // TODO: Change the above comment accordingly when version 1 is deprecated.
+  // Renumber blocks before sorting them. This is useful for accessing the
+  // original layout positions and finding the original fallthroughs.
   MF.RenumberBlocks();
 
   if (BBSectionsType == BasicBlockSection::Labels) {
@@ -385,8 +376,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
     // If the two basic block are in the same section, the order is decided by
     // their position within the section.
     if (XSectionID.Type == MBBSectionID::SectionType::Default)
-      return FuncBBClusterInfo.lookup(X.getBBIDOrNumber()).PositionInCluster <
-             FuncBBClusterInfo.lookup(Y.getBBIDOrNumber()).PositionInCluster;
+      return FuncBBClusterInfo.lookup(*X.getBBID()).PositionInCluster <
+             FuncBBClusterInfo.lookup(*Y.getBBID()).PositionInCluster;
     return X.getNumber() < Y.getNumber();
   };
 

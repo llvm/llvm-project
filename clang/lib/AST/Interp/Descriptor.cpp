@@ -18,24 +18,26 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T>
-static void ctorTy(Block *, char *Ptr, bool, bool, bool, const Descriptor *) {
+static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool,
+                   const Descriptor *) {
   new (Ptr) T();
 }
 
 template <typename T>
-static void dtorTy(Block *, char *Ptr, const Descriptor *) {
+static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
   reinterpret_cast<T *>(Ptr)->~T();
 }
 
 template <typename T>
-static void moveTy(Block *, const char *Src, char *Dst, const Descriptor *) {
+static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
+                   const Descriptor *) {
   const auto *SrcPtr = reinterpret_cast<const T *>(Src);
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
 
 template <typename T>
-static void ctorArrayTy(Block *, char *Ptr, bool, bool, bool,
+static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool,
                         const Descriptor *D) {
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     new (&reinterpret_cast<T *>(Ptr)[I]) T();
@@ -43,7 +45,7 @@ static void ctorArrayTy(Block *, char *Ptr, bool, bool, bool,
 }
 
 template <typename T>
-static void dtorArrayTy(Block *, char *Ptr, const Descriptor *D) {
+static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
   InitMap *IM = *reinterpret_cast<InitMap **>(Ptr);
   if (IM != (InitMap *)-1)
     free(IM);
@@ -55,7 +57,7 @@ static void dtorArrayTy(Block *, char *Ptr, const Descriptor *D) {
 }
 
 template <typename T>
-static void moveArrayTy(Block *, const char *Src, char *Dst,
+static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
@@ -64,8 +66,8 @@ static void moveArrayTy(Block *, const char *Src, char *Dst,
   }
 }
 
-static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
-                          bool IsActive, const Descriptor *D) {
+static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
+                          bool IsMutable, bool IsActive, const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
@@ -74,7 +76,7 @@ static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
-    auto *ElemLoc = reinterpret_cast<char *>(Desc + 1);
+    auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
     auto *SD = D->ElemDesc;
 
     Desc->Offset = ElemOffset + sizeof(InlineDescriptor);
@@ -90,7 +92,7 @@ static void ctorArrayDesc(Block *B, char *Ptr, bool IsConst, bool IsMutable,
   }
 }
 
-static void dtorArrayDesc(Block *B, char *Ptr, const Descriptor *D) {
+static void dtorArrayDesc(Block *B, std::byte *Ptr, const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
@@ -99,13 +101,13 @@ static void dtorArrayDesc(Block *B, char *Ptr, const Descriptor *D) {
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
-    auto *ElemLoc = reinterpret_cast<char *>(Desc + 1);
+    auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
     if (auto Fn = D->ElemDesc->DtorFn)
       Fn(B, ElemLoc, D->ElemDesc);
   }
 }
 
-static void moveArrayDesc(Block *B, const char *Src, char *Dst,
+static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
                           const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
@@ -117,9 +119,9 @@ static void moveArrayDesc(Block *B, const char *Src, char *Dst,
     auto *DstPtr = Dst + ElemOffset;
 
     const auto *SrcDesc = reinterpret_cast<const InlineDescriptor *>(SrcPtr);
-    const auto *SrcElemLoc = reinterpret_cast<const char *>(SrcDesc + 1);
+    const auto *SrcElemLoc = reinterpret_cast<const std::byte *>(SrcDesc + 1);
     auto *DstDesc = reinterpret_cast<InlineDescriptor *>(DstPtr);
-    auto *DstElemLoc = reinterpret_cast<char *>(DstDesc + 1);
+    auto *DstElemLoc = reinterpret_cast<std::byte *>(DstDesc + 1);
 
     *DstDesc = *SrcDesc;
     if (auto Fn = D->ElemDesc->MoveFn)
@@ -127,7 +129,7 @@ static void moveArrayDesc(Block *B, const char *Src, char *Dst,
   }
 }
 
-static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
+static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, const Descriptor *D) {
   const bool IsUnion = D->ElemRecord->isUnion();
   auto CtorSub = [=](unsigned SubOff, Descriptor *F, bool IsBase) {
@@ -151,7 +153,7 @@ static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
     CtorSub(V.Offset, V.Desc, /*isBase=*/true);
 }
 
-static void dtorRecord(Block *B, char *Ptr, const Descriptor *D) {
+static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
   auto DtorSub = [=](unsigned SubOff, Descriptor *F) {
     if (auto Fn = F->DtorFn)
       Fn(B, Ptr + SubOff, F);
@@ -164,13 +166,12 @@ static void dtorRecord(Block *B, char *Ptr, const Descriptor *D) {
     DtorSub(F.Offset, F.Desc);
 }
 
-static void moveRecord(Block *B, const char *Src, char *Dst,
+static void moveRecord(Block *B, const std::byte *Src, std::byte *Dst,
                        const Descriptor *D) {
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOff = F.Offset;
-    auto FieldDesc = F.Desc;
+    auto *FieldDesc = F.Desc;
 
-    *(reinterpret_cast<Descriptor **>(Dst + FieldOff) - 1) = FieldDesc;
     if (auto Fn = FieldDesc->MoveFn)
       Fn(B, Src + FieldOff, Dst + FieldOff, FieldDesc);
   }
@@ -282,6 +283,12 @@ QualType Descriptor::getType() const {
   if (auto *T = dyn_cast<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
+}
+
+QualType Descriptor::getElemQualType() const {
+  assert(isArray());
+  const auto *AT = cast<ArrayType>(getType());
+  return AT->getElementType();
 }
 
 SourceLocation Descriptor::getLocation() const {

@@ -542,10 +542,8 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
 
   // Inline both regions.
-  Block *after = &whileOp.getAfter().front();
-  Block *afterLast = &whileOp.getAfter().back();
-  Block *before = &whileOp.getBefore().front();
-  Block *beforeLast = &whileOp.getBefore().back();
+  Block *after = whileOp.getAfterBody();
+  Block *before = whileOp.getBeforeBody();
   rewriter.inlineRegionBefore(whileOp.getAfter(), continuation);
   rewriter.inlineRegionBefore(whileOp.getBefore(), after);
 
@@ -556,14 +554,14 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
   // Replace terminators with branches. Assuming bodies are SESE, which holds
   // given only the patterns from this file, we only need to look at the last
   // block. This should be reconsidered if we allow break/continue in SCF.
-  rewriter.setInsertionPointToEnd(beforeLast);
-  auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
+  rewriter.setInsertionPointToEnd(before);
+  auto condOp = cast<ConditionOp>(before->getTerminator());
   rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
                                                 after, condOp.getArgs(),
                                                 continuation, ValueRange());
 
-  rewriter.setInsertionPointToEnd(afterLast);
-  auto yieldOp = cast<scf::YieldOp>(afterLast->getTerminator());
+  rewriter.setInsertionPointToEnd(after);
+  auto yieldOp = cast<scf::YieldOp>(after->getTerminator());
   rewriter.replaceOpWithNewOp<cf::BranchOp>(yieldOp, before,
                                             yieldOp.getResults());
 
@@ -577,12 +575,7 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
 LogicalResult
 DoWhileLowering::matchAndRewrite(WhileOp whileOp,
                                  PatternRewriter &rewriter) const {
-  if (!llvm::hasSingleElement(whileOp.getAfter()))
-    return rewriter.notifyMatchFailure(whileOp,
-                                       "do-while simplification applicable to "
-                                       "single-block 'after' region only");
-
-  Block &afterBlock = whileOp.getAfter().front();
+  Block &afterBlock = *whileOp.getAfterBody();
   if (!llvm::hasSingleElement(afterBlock))
     return rewriter.notifyMatchFailure(whileOp,
                                        "do-while simplification applicable "
@@ -601,8 +594,7 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
 
   // Only the "before" region should be inlined.
-  Block *before = &whileOp.getBefore().front();
-  Block *beforeLast = &whileOp.getBefore().back();
+  Block *before = whileOp.getBeforeBody();
   rewriter.inlineRegionBefore(whileOp.getBefore(), continuation);
 
   // Branch to the "before" region.
@@ -610,8 +602,8 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   rewriter.create<cf::BranchOp>(whileOp.getLoc(), before, whileOp.getInits());
 
   // Loop around the "before" region based on condition.
-  rewriter.setInsertionPointToEnd(beforeLast);
-  auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
+  rewriter.setInsertionPointToEnd(before);
+  auto condOp = cast<ConditionOp>(before->getTerminator());
   rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
                                                 before, condOp.getArgs(),
                                                 continuation, ValueRange());
@@ -673,8 +665,13 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   // Create the switch.
   rewriter.setInsertionPointToEnd(condBlock);
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
+
+  // Cast switch index to integer case value.
+  Value caseValue = rewriter.create<arith::IndexCastOp>(
+      op.getLoc(), rewriter.getI32Type(), op.getArg());
+
   rewriter.create<cf::SwitchOp>(
-      op.getLoc(), op.getArg(), *defaultBlock, ValueRange(),
+      op.getLoc(), caseValue, *defaultBlock, ValueRange(),
       rewriter.getDenseI32ArrayAttr(caseValues), caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
@@ -694,8 +691,8 @@ void SCFToControlFlowPass::runOnOperation() {
 
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
-  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp, scf::WhileOp,
-                      scf::ExecuteRegionOp>();
+  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
+                      scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

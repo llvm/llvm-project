@@ -57,7 +57,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // arguments to the 'after' region.
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
-    rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
+    rewriter.setInsertionPointToStart(whileOp.getBeforeBody());
     auto cmpOp = rewriter.create<arith::CmpIOp>(
         whileOp.getLoc(), arith::CmpIPredicate::slt,
         beforeBlock->getArgument(0), forOp.getUpperBound());

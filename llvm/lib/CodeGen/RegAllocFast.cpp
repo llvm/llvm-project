@@ -1509,7 +1509,11 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 void RegAllocFast::handleDebugValue(MachineInstr &MI) {
   // Ignore DBG_VALUEs that aren't based on virtual registers. These are
   // mostly constants and frame indices.
-  for (Register Reg : MI.getUsedDebugRegs()) {
+  assert(MI.isDebugValue() && "not a DBG_VALUE*");
+  for (const auto &MO : MI.debug_operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
     if (!Reg.isVirtual())
       continue;
     if (!shouldAllocateRegister(Reg))

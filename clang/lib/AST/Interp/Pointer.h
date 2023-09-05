@@ -27,7 +27,11 @@ namespace interp {
 class Block;
 class DeadBlock;
 class Pointer;
+class Context;
 enum PrimType : unsigned;
+
+class Pointer;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -84,6 +88,9 @@ public:
     return reinterpret_cast<uintptr_t>(Pointee) + Offset;
   }
 
+  /// Converts the pointer to an APValue that is an rvalue.
+  APValue toRValue(const Context &Ctx) const;
+
   /// Offsets a pointer inside an array.
   Pointer atIndex(unsigned Idx) const {
     if (Base == RootPtrMark)
@@ -100,6 +107,14 @@ public:
   Pointer atField(unsigned Off) const {
     unsigned Field = Offset + Off;
     return Pointer(Pointee, Field, Field);
+  }
+
+  /// Subtract the given offset from the current Base and Offset
+  /// of the pointer.
+  Pointer atFieldSub(unsigned Off) const {
+    assert(Offset >= Off);
+    unsigned O = Offset - Off;
+    return Pointer(Pointee, O, O);
   }
 
   /// Restricts the scope of an array element pointer.
@@ -205,7 +220,11 @@ public:
   }
 
   /// Returns the type of the innermost field.
-  QualType getType() const { return getFieldDesc()->getType(); }
+  QualType getType() const {
+    if (inPrimitiveArray() && Offset != Base)
+      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    return getFieldDesc()->getType();
+  }
 
   Pointer getDeclPtr() const { return Pointer(Pointee); }
 
@@ -350,7 +369,17 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << Pointee << " {" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {";
+    if (Base == RootPtrMark)
+      OS << "rootptr, ";
+    else
+      OS << Base << ", ";
+
+    if (Offset == PastEndMark)
+      OS << "pastend, ";
+    else
+      OS << Offset << ", ";
+
     if (Pointee)
       OS << Pointee->getSize();
     else

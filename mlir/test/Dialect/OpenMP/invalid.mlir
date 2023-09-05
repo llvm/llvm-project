@@ -197,7 +197,7 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0,0,0>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} :
     (index, index, i32) -> ()
 
   return
@@ -225,7 +225,7 @@ func.func @omp_simdloop_aligned_mismatch(%arg0 : index, %arg1 : index,
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [128],
-      operand_segment_sizes = array<i32: 1, 1, 1, 2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+      operandSegmentSizes = array<i32: 1, 1, 1, 2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -238,7 +238,7 @@ func.func @omp_simdloop_aligned_negative(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [-1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [-1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -251,7 +251,7 @@ func.func @omp_simdloop_unexpected_alignment(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0>} : (index, index, index) -> ()
+  }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0>} : (index, index, index) -> ()
   return
 }
 
@@ -264,7 +264,7 @@ func.func @omp_simdloop_aligned_float(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1.5, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [1.5, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -277,7 +277,7 @@ func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg3) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {alignment_values = [1, 128], operandSegmentSizes = array<i32: 1, 1, 1,2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -291,7 +291,7 @@ func.func @omp_simdloop_nontemporal_the_same_var(%arg0 : index,
   "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg3) ({
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 2>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 2>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -1121,7 +1121,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operand_segment_sizes = array<i32: 0,0,0,0,1,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1134,7 +1134,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operand_segment_sizes = array<i32: 1,0,0,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1159,7 +1159,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = array<i32: 0,1,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,1,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1169,7 +1169,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = array<i32: 1,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1284,7 +1284,7 @@ func.func @omp_single(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.single" (%data_var) ({
     omp.barrier
-  }) {operand_segment_sizes = array<i32: 1,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1294,7 +1294,7 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depends = [], operand_segment_sizes = array<i32: 0, 0, 0, 0, 1, 0, 0>} : (memref<i32>) -> ()
+    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -1486,7 +1486,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testmemref) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, memref<i32>) -> ()
   return
 }
 
@@ -1499,7 +1499,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0>, reductions = [@add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0>, reductions = [@add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
   return
 }
 
@@ -1512,7 +1512,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0>, reductions = [@add_f32, @add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
+  }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0>, reductions = [@add_f32, @add_f32]} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
   return
 }
 
@@ -1525,7 +1525,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {in_reductions = [@add_f32], operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
+  }) {in_reductions = [@add_f32], operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>, !llvm.ptr<f32>) -> ()
   return
 }
 
@@ -1538,7 +1538,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   "omp.taskloop"(%lb, %ub, %ub, %lb, %step, %step, %testf32_2) ({
   ^bb0(%arg3: i32, %arg4: i32):
     "omp.terminator"() : () -> ()
-  }) {in_reductions = [@add_f32, @add_f32], operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
+  }) {in_reductions = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0>} : (i32, i32, i32, i32, i32, i32, !llvm.ptr<f32>) -> ()
   return
 }
 

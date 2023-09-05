@@ -247,7 +247,7 @@ FlowFunction SampleProfileInference<BT>::createFlowFunction(
   // Create FlowBlocks
   for (const auto *BB : BasicBlocks) {
     FlowBlock Block;
-    if (SampleBlockWeights.find(BB) != SampleBlockWeights.end()) {
+    if (SampleBlockWeights.contains(BB)) {
       Block.HasUnknownWeight = false;
       Block.Weight = SampleBlockWeights[BB];
     } else {

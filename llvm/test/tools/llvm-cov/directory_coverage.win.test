@@ -1,0 +1,44 @@
+# REQUIRES: system-windows
+# RUN: mkdir -p %t
+
+# RUN: llvm-cov show %S/Inputs/directory_coverage/main.covmapping \
+# RUN:   --instr-profile %S/Inputs/directory_coverage/main.profdata \
+# RUN:   --path-equivalence=/tmp/directory_coverage,%S/Inputs/directory_coverage \
+# RUN:   --format=text --show-directory-coverage -o %t/report-text
+
+# RUN: llvm-cov show %S/Inputs/directory_coverage/main.covmapping \
+# RUN:   --instr-profile %S/Inputs/directory_coverage/main.profdata \
+# RUN:   --path-equivalence=/tmp/directory_coverage,%S/Inputs/directory_coverage \
+# RUN:   --format=html --show-directory-coverage -o %t/report-html
+
+# RUN: FileCheck --input-file %t/report-text/index.txt %s --check-prefix=ROOT
+# RUN: FileCheck --input-file %t/report-text/coverage/tmp/directory_coverage/index.txt %s --check-prefix=ROOT
+# RUN: FileCheck --input-file %t/report-text/coverage/tmp/directory_coverage/b0/index.txt %s --check-prefix=B0
+# RUN: FileCheck --input-file %t/report-text/coverage/tmp/directory_coverage/c0/c1/index.txt %s --check-prefix=C1
+
+# RUN: FileCheck --input-file %t/report-html/index.html %s --check-prefix=HTML-TOP --allow-empty
+# RUN: FileCheck --input-file %t/report-html/coverage/tmp/directory_coverage/index.html %s --check-prefix=ROOT
+# RUN: FileCheck --input-file %t/report-html/coverage/tmp/directory_coverage/b0/index.html %s --check-prefix=B0
+# RUN: FileCheck --input-file %t/report-html/coverage/tmp/directory_coverage/c0/c1/index.html %s --check-prefix=C1
+
+
+
+# HTML-TOP: coverage\index.html
+
+# ROOT: a0\a1\a2.cc
+# ROOT: b0\
+# ROOT-NOT: b1_1.cc
+# ROOT-NOT: b1_2.cc
+# ROOT: c0\c1\
+# ROOT-NOT: c2_1.cc
+# ROOT-NOT: b2_2.cc
+# ROOT: main.cc
+
+# B0: b1_1.cc
+# B0: b1_2.cc
+
+# C1: c2.h
+# C1: c2_1.cc
+
+
+The input of this test is generated on Linux. See 'directory_coverage.linux.test'.

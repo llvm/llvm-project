@@ -13,7 +13,7 @@ struct Y {
 void f(int argc, const char* argv[]) {
   // CHECK: call void @_ZN1XC1Ev
   X x;
-  // CHECK: call ptr @llvm.stacksave(
+  // CHECK: call ptr @llvm.stacksave.p0(
   const char *argv2[argc];
   // CHECK: call void @_ZN1YC1Ev
   Y y;
@@ -21,7 +21,7 @@ void f(int argc, const char* argv[]) {
     argv2[i] = argv[i];
 
   // CHECK: call void @_ZN1YD1Ev
-  // CHECK: call void @llvm.stackrestore
+  // CHECK: call void @llvm.stackrestore.p0
   // CHECK: call void @_ZN1XD1Ev
   // CHECK: ret void
 }

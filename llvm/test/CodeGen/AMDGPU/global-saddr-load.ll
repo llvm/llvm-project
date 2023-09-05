@@ -1911,7 +1911,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) i
 ; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0
+  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep = getelementptr inbounds float, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load float, ptr addrspace(1) %gep
@@ -1946,7 +1946,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_imm_offset(ptr add
 ; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0
+  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds float, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds float, ptr addrspace(1) %gep0, i64 100
@@ -2008,7 +2008,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addr
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !1
+  %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !1, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep = getelementptr inbounds float, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load float, ptr addrspace(1) %gep

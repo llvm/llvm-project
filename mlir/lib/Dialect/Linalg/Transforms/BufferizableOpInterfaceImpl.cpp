@@ -106,8 +106,8 @@ struct LinalgOpInterface
     return dpsOp.isDpsInit(&opOperand);
   }
 
-  bool bufferizesToElementwiseAccess(Operation *op,
-                                     const AnalysisState &state) const {
+  bool bufferizesToElementwiseAccess(Operation *op, const AnalysisState &state,
+                                     ArrayRef<OpOperand *> opOperands) const {
     auto linalgOp = cast<linalg::LinalgOp>(op);
 
     // All loops must be parallel.
@@ -119,10 +119,13 @@ struct LinalgOpInterface
     assert(linalgOp->getNumOperands() == indexingMaps.size() &&
            "unexpected number of indexing maps");
     for (auto [operand, map] :
-         llvm::zip(linalgOp->getOperands(), indexingMaps)) {
+         llvm::zip(linalgOp->getOpOperands(), indexingMaps)) {
       // Non-tensors do not participate in bufferization, so they can be
       // ignored.
-      if (!isa<RankedTensorType, MemRefType>(operand.getType()))
+      if (!isa<RankedTensorType, MemRefType>(operand.get().getType()))
+        continue;
+      // Only consider operands in `opOperands`.
+      if (llvm::find(opOperands, &operand) == opOperands.end())
         continue;
       // TODO: This could be generalized to other indexing maps. (All indexing
       // must be the same.)

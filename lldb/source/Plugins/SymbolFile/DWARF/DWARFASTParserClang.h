@@ -317,6 +317,21 @@ private:
       const lldb::ModuleSP &module_sp,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  /// Parses DW_TAG_variant_part DIE into a structure that encodes all variants
+  /// Note that this is currently being emitted by rustc and not Clang
+  /// \param die DW_TAG_variant_part DIE to parse
+  /// \param parent_die The parent DW_TAG_structure_type to parse
+  /// \param class_clang_type The Rust struct representing parent_die.
+  /// \param default_accesibility The default accessibility that is given to
+  ///  base classes if they don't have an explicit accessibility set
+  /// \param layout_info The layout information that will be updated for
+  //   base classes with the base offset
+  void
+  ParseRustVariantPart(DWARFDIE &die, const DWARFDIE &parent_die,
+                       lldb_private::CompilerType &class_clang_type,
+                       const lldb::AccessType default_accesibility,
+                       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

@@ -200,7 +200,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Sorted Coordinate Scheme.
     #SortedCOO = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed-nu", "singleton" ]
+      lvlTypes = [ "compressed_nu", "singleton" ]
     }>
     ... tensor<?x?xf64, #SortedCOO> ...
 

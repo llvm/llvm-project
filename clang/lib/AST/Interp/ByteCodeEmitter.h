@@ -69,10 +69,9 @@ protected:
   Local createLocal(Descriptor *D);
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, unsigned> Params;
+  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Lambda captures.
-  /// Map from Decl* to [Offset, IsReference] pair.
-  llvm::DenseMap<const ValueDecl *, std::pair<unsigned, bool>> LambdaCaptures;
+  llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   unsigned LambdaThisCapture;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;

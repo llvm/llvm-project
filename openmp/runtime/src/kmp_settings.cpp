@@ -149,70 +149,6 @@ static size_t __kmp_round4k(size_t size) {
 } // __kmp_round4k
 #endif
 
-/* Here, multipliers are like __kmp_convert_to_seconds, but floating-point
-   values are allowed, and the return value is in milliseconds.  The default
-   multiplier is milliseconds.  Returns INT_MAX only if the value specified
-   matches "infinit*".  Returns -1 if specified string is invalid. */
-int __kmp_convert_to_milliseconds(char const *data) {
-  int ret, nvalues, factor;
-  char mult, extra;
-  double value;
-
-  if (data == NULL)
-    return (-1);
-  if (__kmp_str_match("infinit", -1, data))
-    return (INT_MAX);
-  value = (double)0.0;
-  mult = '\0';
-#if KMP_OS_WINDOWS && KMP_MSVC_COMPAT
-  // On Windows, each %c parameter needs additional size parameter for sscanf_s
-  nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, 1, &extra, 1);
-#else
-  nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, &extra);
-#endif
-  if (nvalues < 1)
-    return (-1);
-  if (nvalues == 1)
-    mult = '\0';
-  if (nvalues == 3)
-    return (-1);
-
-  if (value < 0)
-    return (-1);
-
-  switch (mult) {
-  case '\0':
-    /*  default is milliseconds  */
-    factor = 1;
-    break;
-  case 's':
-  case 'S':
-    factor = 1000;
-    break;
-  case 'm':
-  case 'M':
-    factor = 1000 * 60;
-    break;
-  case 'h':
-  case 'H':
-    factor = 1000 * 60 * 60;
-    break;
-  case 'd':
-  case 'D':
-    factor = 1000 * 24 * 60 * 60;
-    break;
-  default:
-    return (-1);
-  }
-
-  if (value >= ((INT_MAX - 1) / factor))
-    ret = INT_MAX - 1; /* Don't allow infinite value here */
-  else
-    ret = (int)(value * (double)factor); /* truncate to int  */
-
-  return ret;
-}
-
 static int __kmp_strcasecmp_with_sentinel(char const *a, char const *b,
                                           char sentinel) {
   if (a == NULL)
@@ -731,24 +667,73 @@ static void __kmp_stg_print_use_yield(kmp_str_buf_t *buffer, char const *name,
 
 static void __kmp_stg_parse_blocktime(char const *name, char const *value,
                                       void *data) {
-  __kmp_dflt_blocktime = __kmp_convert_to_milliseconds(value);
-  if (__kmp_dflt_blocktime < 0) {
-    __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+  const char *buf = value;
+  const char *next;
+  const int ms_mult = 1000;
+  int multiplier = 1;
+  int num;
+
+  // Read integer blocktime value
+  SKIP_WS(buf);
+  if ((*buf >= '0') && (*buf <= '9')) {
+    next = buf;
+    SKIP_DIGITS(next);
+    num = __kmp_basic_str_to_int(buf);
+    KMP_ASSERT(num >= 0);
+    buf = next;
+    SKIP_WS(buf);
+  } else {
+    num = -1;
+  }
+
+  // Read units: note that __kmp_dflt_blocktime units is now us
+  next = buf;
+  if (*buf == '\0' || __kmp_match_str("ms", buf, &next)) {
+    // units are in ms; convert
+    __kmp_dflt_blocktime = ms_mult * num;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  } else if (__kmp_match_str("us", buf, &next)) {
+    // units are in us
+    __kmp_dflt_blocktime = num;
+    __kmp_blocktime_units = 'u';
+  } else if (__kmp_match_str("infinite", buf, &next) ||
+             __kmp_match_str("infinity", buf, &next)) {
+    // units are in ms
+    __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  } else {
+    KMP_WARNING(StgInvalidValue, name, value);
+    // default units are in ms
+    __kmp_dflt_blocktime = ms_mult * num;
+    __kmp_blocktime_units = 'm';
+    multiplier = ms_mult;
+  }
+
+  if (num < 0 && __kmp_dflt_blocktime < 0) { // num out of range
+    __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME; // now in us
     __kmp_msg(kmp_ms_warning, KMP_MSG(InvalidValue, name, value),
               __kmp_msg_null);
-    KMP_INFORM(Using_int_Value, name, __kmp_dflt_blocktime);
+    // Inform in appropriate units
+    KMP_INFORM(Using_int_Value, name, __kmp_dflt_blocktime / multiplier);
     __kmp_env_blocktime = FALSE; // Revert to default as if var not set.
+  } else if (num > 0 && __kmp_dflt_blocktime < 0) { // overflow
+    __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+    __kmp_msg(kmp_ms_warning, KMP_MSG(LargeValue, name, value), __kmp_msg_null);
+    KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime / multiplier);
+    __kmp_env_blocktime = TRUE; // KMP_BLOCKTIME was specified.
   } else {
     if (__kmp_dflt_blocktime < KMP_MIN_BLOCKTIME) {
       __kmp_dflt_blocktime = KMP_MIN_BLOCKTIME;
       __kmp_msg(kmp_ms_warning, KMP_MSG(SmallValue, name, value),
                 __kmp_msg_null);
-      KMP_INFORM(MinValueUsing, name, __kmp_dflt_blocktime);
+      KMP_INFORM(MinValueUsing, name, __kmp_dflt_blocktime / multiplier);
     } else if (__kmp_dflt_blocktime > KMP_MAX_BLOCKTIME) {
       __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
       __kmp_msg(kmp_ms_warning, KMP_MSG(LargeValue, name, value),
                 __kmp_msg_null);
-      KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime);
+      KMP_INFORM(MaxValueUsing, name, __kmp_dflt_blocktime / multiplier);
     }
     __kmp_env_blocktime = TRUE; // KMP_BLOCKTIME was specified.
   }
@@ -768,7 +753,17 @@ static void __kmp_stg_parse_blocktime(char const *name, char const *value,
 
 static void __kmp_stg_print_blocktime(kmp_str_buf_t *buffer, char const *name,
                                       void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_dflt_blocktime);
+  int num = __kmp_dflt_blocktime;
+  if (__kmp_blocktime_units == 'm') {
+    num = num / 1000;
+  }
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME_EX(name);
+  } else {
+    __kmp_str_buf_print(buffer, "   %s=", name);
+  }
+  __kmp_str_buf_print(buffer, "%d", num);
+  __kmp_str_buf_print(buffer, "%cs\n", __kmp_blocktime_units);
 } // __kmp_stg_print_blocktime
 
 // -----------------------------------------------------------------------------
@@ -1598,7 +1593,7 @@ static void __kmp_stg_parse_debug(char const *name, char const *value,
 static void __kmp_stg_parse_debug_buf(char const *name, char const *value,
                                       void *data) {
   __kmp_stg_parse_bool(name, value, &__kmp_debug_buf);
-  // !!! TODO: Move buffer initialization of of this file! It may works
+  // !!! TODO: Move buffer initialization of this file! It may works
   // incorrectly if KMP_DEBUG_BUF is parsed before KMP_DEBUG_BUF_LINES or
   // KMP_DEBUG_BUF_CHARS.
   if (__kmp_debug_buf) {
@@ -6097,7 +6092,13 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
   /* KMP_BLOCKTIME */
   value = __kmp_env_blk_var(block, "KMP_BLOCKTIME");
   if (value) {
-    kmpc_set_blocktime(__kmp_dflt_blocktime);
+    int gtid, tid;
+    kmp_info_t *thread;
+
+    gtid = __kmp_entry_gtid();
+    tid = __kmp_tid_from_gtid(gtid);
+    thread = __kmp_thread_from_gtid(gtid);
+    __kmp_aux_set_blocktime(__kmp_dflt_blocktime, thread, tid);
   }
 
   /* OMP_NESTED */

@@ -45,8 +45,8 @@ entry:
   ret i32 %ret
 ; Checking that the address laoded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_subreg_use
-; CHECK:      ldr x8, [x0]
-; CHECK-NEXT: cmp sp, #0
+; CHECK:      cmp sp, #0
+; CHECK-NEXT: ldr x8, [x0]
 ; CHECK-NEXT: csetm x16, ne
 ; CHECK-NEXT: and x8, x8, x16
 ; csdb instruction must occur before the add instruction with w8 as operand.
@@ -70,8 +70,8 @@ entry:
   ret i64 %ret
 ; Checking that the address laoded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_superreg_use
-; CHECK:      ldr w8, [x0]
-; CHECK-NEXT: cmp sp, #0
+; CHECK:      cmp sp, #0
+; CHECK-NEXT: ldr w8, [x0]
 ; CHECK-NEXT: csetm x16, ne
 ; CHECK-NEXT: and w8, w8, w16
 ; csdb instruction must occur before the add instruction with x8 as operand.

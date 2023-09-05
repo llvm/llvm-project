@@ -230,7 +230,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
@@ -311,7 +311,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Quiet is true, or normal output if Quiet is false. This can stop the
   // errors and warnings from being displayed and producing too much output
   // when they aren't desired.
-  auto &LogOS = Quiet ? nulls() : outs();
+  raw_ostream *LogOS = Quiet ? nullptr : &outs();
 
   GsymCreator Gsym(Quiet);
 
@@ -337,19 +337,26 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   }
 
   // Make sure there is DWARF to convert first.
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      Obj,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
+      /*DWPName=*/"",
+      /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
+      /*WarningHandler=*/WithColor::defaultWarningHandler,
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, LogOS, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
   // Convert all DWARF to GSYM.
-  if (auto Err = DT.convert(ThreadCount))
+  if (auto Err = DT.convert(ThreadCount, LogOS))
     return Err;
 
   // Get the UUID and convert symbol table to GSYM.
@@ -375,7 +382,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   // Verify the DWARF if requested. This will ensure all the info in the DWARF
   // can be looked up in the GSYM and that all lookups get matching data.
   if (Verify) {
-    if (auto Err = DT.verify(OutFile))
+    if (auto Err = DT.verify(OutFile, OS))
       return Err;
   }
 

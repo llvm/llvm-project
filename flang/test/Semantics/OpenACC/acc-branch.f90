@@ -167,4 +167,12 @@ program openacc_clause_validity
   end do
   !$acc end serial
 
+
+  !$acc data create(a)
+
+  !ERROR: RETURN statement is not allowed in a DATA construct
+  if (size(a) == 10) return
+
+  !$acc end data
+
 end program openacc_clause_validity

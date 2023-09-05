@@ -18,6 +18,38 @@ func.func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
   return %1: vector<4x2xf32>
 }
 
+// Regression test. Previously, this example would trigger
+// CastAwayElementwiseLeadingOneDim as:
+//    * `vector<2x[4]x1xf32>`, would be reformulated as
+//    * `vector<2x4x1xf32>`.
+// With the updated shape, the conversion pattern would incorrectly assume that
+// some leading dims have been dropped.
+// CHECK-LABEL:   func.func @no_change(
+// CHECK-SAME:      %[[VAL_0:.*]]: vector<2x[4]x1xf32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: vector<2x[4]x1xf32>)
+// CHECK-NEXT:           %[[VAL_2:.*]] = arith.mulf %[[VAL_0]], %[[VAL_1]] : vector<2x[4]x1xf32>
+// CHECK-NEXT:           return %[[VAL_2]]
+func.func @no_change(%arg0: vector<2x[4]x1xf32>, %arg1: vector<2x[4]x1xf32>) -> vector<2x[4]x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<2x[4]x1xf32>
+  return %1 : vector<2x[4]x1xf32>
+}
+
+// CHECK-LABEL:   func.func @cast_away_leading_one_dim(
+// CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<4x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
+func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4x1xf32>) -> vector<1x4x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
+  return %1: vector<1x4x1xf32>
+}
+
+// CHECK-LABEL:   func.func @cast_away_leading_one_dim_scalable(
+// CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<[4]x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
+func.func @cast_away_leading_one_dim_scalable(%arg0: vector<1x[4]x1xf32>, %arg1: vector<1x[4]x1xf32>) -> vector<1x[4]x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<1x[4]x1xf32>
+  return %1: vector<1x[4]x1xf32>
+}
+
 // CHECK-LABEL: func @add4x4
 //      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>

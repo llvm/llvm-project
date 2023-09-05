@@ -297,15 +297,15 @@ entry:
 ; CHECK: .cfi_offset w20, -16
 ; CHECK: .cfi_offset w30, -24
 ; CHECK: .cfi_offset w29, -32
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+; CHECK: ubfiz	 x8, x0, #2, #32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-; CHECK: ubfiz	 x9, x0, #2, #32
-; CHECK: add	 x9, x9, #15
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-; CHECK: and	 x9, x9, #0x7fffffff0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through frame pointer
 ; CHECK: ldur	w[[ILOC:[0-9]+]], [x29, #-4]
@@ -342,16 +342,16 @@ entry:
 ;   Check that space is reserved on the stack for the local variable,
 ;   rounded up to a multiple of 16 to keep the stack pointer 16-byte aligned.
 ; CHECK: sub	sp, sp, #16
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+; CHECK: ubfiz	x8, x0, #2, #32
 ;   Check correctness of cfi pseudo-instructions
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #24]
-;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
-; CHECK: ubfiz	x9, x0, #2, #32
-; CHECK: add	x9, x9, #15
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #40]
-; CHECK: and	x9, x9, #0x7fffffff0
+; CHECK: add	x8, x8, #15
+; CHECK: and	x8, x8, #0x7fffffff0
 ; CHECK: mov	x10, sp
-; CHECK: sub	x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through frame pointer
 ; CHECK: ldur	w[[ILOC:[0-9]+]], [x29, #-4]
@@ -402,16 +402,16 @@ entry:
 ; CHECK: .cfi_offset w21, -32
 ; CHECK: .cfi_offset w30, -40
 ; CHECK: .cfi_offset w29, -48
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #56]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK: ubfiz	 x9, x0, #2, #32
-; CHECK: add	 x9, x9, #15
+; CHECK: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #56]
 ; CHECK: ldr	 d[[DARG:[0-9]+]], [x29, #72]
-; CHECK: and	 x9, x9, #0x7fffffff0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -448,16 +448,16 @@ entry:
 ; CHECK-MACHO: .cfi_offset w20, -32
 ; CHECK-MACHO: .cfi_offset w21, -40
 ; CHECK-MACHO: .cfi_offset w22, -48
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK-MACHO: ubfiz	 x9, x0, #2, #32
-; CHECK-MACHO: add	 x9, x9, #15
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-; CHECK-MACHO: and	 x9, x9, #0x7fffffff0
+; CHECK-MACHO: add	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -500,16 +500,16 @@ entry:
 ; CHECK: sub	x9, sp, #96
 ; CHECK: and	sp, x9, #0xffffffffffffff80
 ; CHECK: mov    x19, sp
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK: ubfiz	 x9, x0, #2, #32
-; CHECK: add	 x9, x9, #15
+; CHECK: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-; CHECK: and	 x9, x9, #0x7fffffff0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -534,16 +534,16 @@ entry:
 ; CHECK-MACHO: sub	x9, sp, #96
 ; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
 ; CHECK-MACHO: mov    x19, sp
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK-MACHO: ubfiz	 x9, x0, #2, #32
-; CHECK-MACHO: add 	 x9, x9, #15
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-; CHECK-MACHO: and	 x9, x9, #0x7fffffff0
+; CHECK-MACHO: add 	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -584,16 +584,16 @@ entry:
 ; CHECK: sub	x9, sp, #7, lsl #12
 ; CHECK: and	sp, x9, #0xffffffffffff8000
 ; CHECK: mov    x19, sp
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK: ubfiz	 x9, x0, #2, #32
-; CHECK: add	 x9, x9, #15
+; CHECK: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #56]
-; CHECK: and	 x9, x9, #0x7fffffff0
+; CHECK: add	 x8, x8, #15
+; CHECK: and	 x8, x8, #0x7fffffff0
 ; CHECK: mov	 x10, sp
-; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [x19]
@@ -618,16 +618,16 @@ entry:
 ; CHECK-MACHO: sub	x9, sp, #7, lsl #12
 ; CHECK-MACHO: and	sp, x9, #0xffffffffffff8000
 ; CHECK-MACHO: mov    x19, sp
-;   Check correct access to arguments passed on the stack, through frame pointer
-; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
 ;   and set-up of base pointer (x19).
-; CHECK-MACHO: ubfiz	 x9, x0, #2, #32
-; CHECK-MACHO: add	 x9, x9, #15
+; CHECK-MACHO: ubfiz	 x8, x0, #2, #32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
 ; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
-; CHECK-MACHO: and	 x9, x9, #0x7fffffff0
+; CHECK-MACHO: add	 x8, x8, #15
+; CHECK-MACHO: and	 x8, x8, #0x7fffffff0
 ; CHECK-MACHO: mov	 x10, sp
-; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x8
 ; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
 ;   Check correct access to local variable, through base pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]

@@ -157,14 +157,12 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
   const bool IsPS4 = TC.getTriple().isPS4();
-  const bool IsPS5 = TC.getTriple().isPS5();
-  assert(IsPS4 || IsPS5);
 
   const char *PS4LTOArgs = "";
   auto AddCodeGenFlag = [&](Twine Flag) {
     if (IsPS4)
       PS4LTOArgs = Args.MakeArgString(Twine(PS4LTOArgs) + " " + Flag);
-    else if (IsPS5)
+    else
       CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
   };
 

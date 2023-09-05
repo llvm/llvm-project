@@ -1,4 +1,4 @@
-; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -S 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "arm-apple-ios"
 
@@ -427,21 +427,6 @@ entry:
 ; CHECK: NoModRef:   call void @an_argmemonly_func(ptr %q) #12 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
 ; CHECK: Both ModRef:   call void @an_argmemonly_func(ptr %q) #12 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(ptr %q) #11 [ "unknown"() ]
 }
-
-
-; CHECK:      attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK-NEXT: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK-NEXT: attributes #2 = { nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK-NEXT: attributes #3 = { noinline nounwind memory(read) }
-; CHECK-NEXT: attributes #4 = { noinline nounwind memory(write) }
-; CHECK-NEXT: attributes #5 = { nounwind ssp }
-; CHECK-NEXT: attributes #6 = { nounwind memory(inaccessiblemem: readwrite) }
-; CHECK-NEXT: attributes #7 = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK-NEXT: attributes #8 = { nounwind memory(argmem: readwrite) }
-; CHECK-NEXT: attributes #9 = { memory(read) }
-; CHECK-NEXT: attributes #10 = { memory(inaccessiblemem: readwrite) }
-; CHECK-NEXT: attributes #11 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK-NEXT: attributes #12 = { memory(argmem: readwrite) }
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { noinline nounwind readonly }

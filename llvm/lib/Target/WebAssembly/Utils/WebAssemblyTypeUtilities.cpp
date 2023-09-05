@@ -13,7 +13,6 @@
 
 #include "WebAssemblyTypeUtilities.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 // Get register classes enum.
 #define GET_REGINFO_ENUM
@@ -61,11 +60,6 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   default:
     llvm_unreachable("unexpected type");
   }
-}
-
-wasm::ValType WebAssembly::regClassToValType(const TargetRegisterClass *RC) {
-  assert(RC != nullptr);
-  return regClassToValType(RC->getID());
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,

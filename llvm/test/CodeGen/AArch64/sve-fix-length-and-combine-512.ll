@@ -4,9 +4,9 @@
 define void @vls_sve_and_64xi8(ptr %ap, ptr %out) nounwind {
 ; CHECK-LABEL: vls_sve_and_64xi8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI0_0
-; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x8]
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d

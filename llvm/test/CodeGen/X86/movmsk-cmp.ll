@@ -422,25 +422,15 @@ define i1 @allzeros_v16i16_sign(<16 x i16> %arg) {
 }
 
 define i1 @allones_v32i16_sign(<32 x i16> %arg) {
-; SSE2-LABEL: allones_v32i16_sign:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: allones_v32i16_sign:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmaxsw %xmm3, %xmm1
-; SSE41-NEXT:    pmaxsw %xmm2, %xmm0
-; SSE41-NEXT:    packsswb %xmm1, %xmm0
-; SSE41-NEXT:    pmovmskb %xmm0, %eax
-; SSE41-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: allones_v32i16_sign:
+; SSE:       # %bb.0:
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: allones_v32i16_sign:
 ; AVX1:       # %bb.0:
@@ -496,25 +486,15 @@ define i1 @allones_v32i16_sign(<32 x i16> %arg) {
 }
 
 define i1 @allzeros_v32i16_sign(<32 x i16> %arg) {
-; SSE2-LABEL: allzeros_v32i16_sign:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: allzeros_v32i16_sign:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pminsw %xmm3, %xmm1
-; SSE41-NEXT:    pminsw %xmm2, %xmm0
-; SSE41-NEXT:    packsswb %xmm1, %xmm0
-; SSE41-NEXT:    pmovmskb %xmm0, %eax
-; SSE41-NEXT:    testl %eax, %eax
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: allzeros_v32i16_sign:
+; SSE:       # %bb.0:
+; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: allzeros_v32i16_sign:
 ; AVX1:       # %bb.0:
@@ -4370,10 +4350,8 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k1
-; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    kmovw %k0, %ecx
-; KNL-NEXT:    testb $1, %al
+; KNL-NEXT:    testb $2, %cl
 ; KNL-NEXT:    movl $42, %eax
 ; KNL-NEXT:    movl $99, %edx
 ; KNL-NEXT:    cmovel %edx, %eax
@@ -4385,10 +4363,8 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; SKX-LABEL: PR39665_c_ray:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
-; SKX-NEXT:    kshiftrb $1, %k0, %k1
-; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    kmovd %k0, %ecx
-; SKX-NEXT:    testb $1, %al
+; SKX-NEXT:    testb $2, %cl
 ; SKX-NEXT:    movl $42, %eax
 ; SKX-NEXT:    movl $99, %edx
 ; SKX-NEXT:    cmovel %edx, %eax

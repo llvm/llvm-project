@@ -236,8 +236,8 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 ; CHECK-LABEL: _gen10
 ; CHECK:  fmov         d1, d0
 ; CHECK:  fmov         d2, d0
-; CHECK:  fmov         d3, d0
 ; CHECK:  mov      w1, w0
+; CHECK:  fmov         d3, d0
 ; CHECK:  mov      w2, w0
 ; CHECK:  mov      w3, w0
 ; CHECK:  ret

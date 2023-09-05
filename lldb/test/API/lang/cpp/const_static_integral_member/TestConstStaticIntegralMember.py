@@ -90,7 +90,7 @@ class TestCase(TestBase):
             self.expect(
                 "expr const int *i = &A::int_val; *i",
                 error=True,
-                substrs=["Couldn't lookup symbols:"],
+                substrs=["Couldn't look up symbols:"],
             )
 
         # This should work on all platforms.

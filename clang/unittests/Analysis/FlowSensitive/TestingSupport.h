@@ -402,8 +402,8 @@ llvm::Error checkDataflowWithNoopAnalysis(
     std::function<
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
-        VerifyResults,
-    DataflowAnalysisOptions Options,
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
 

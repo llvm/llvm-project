@@ -1838,6 +1838,20 @@ TEST_P(ASTMatchersTest, TypedefType) {
                                                 namesType(typedefType()))))));
 }
 
+TEST_P(ASTMatchersTest, MacroQualifiedType) {
+  EXPECT_TRUE(matches(
+      R"(
+        #define CDECL __attribute__((cdecl))
+        typedef void (CDECL *X)();
+      )",
+      typedefDecl(hasType(pointerType(pointee(macroQualifiedType()))))));
+  EXPECT_TRUE(notMatches(
+      R"(
+        typedef void (__attribute__((cdecl)) *Y)();
+      )",
+      typedefDecl(hasType(pointerType(pointee(macroQualifiedType()))))));
+}
+
 TEST_P(ASTMatchersTest, TemplateSpecializationType) {
   if (!GetParam().isCXX()) {
     return;

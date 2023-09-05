@@ -10,7 +10,7 @@ def run_apply_patterns(f):
         module = Module.create()
         with InsertionPoint(module.body):
             sequence = transform.SequenceOp(
-                transform.FailurePropagationMode.PROPAGATE,
+                transform.FailurePropagationMode.Propagate,
                 [],
                 transform.AnyOpType.get(),
             )
@@ -72,12 +72,12 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.lower_contraction
     # CHECK-SAME: lowering_strategy = matmulintrinsics
     vector.ApplyLowerContractionPatternsOp(
-        lowering_strategy=vector.VectorContractLowering.MATMUL
+        lowering_strategy=vector.VectorContractLowering.Matmul
     )
     # CHECK: transform.apply_patterns.vector.lower_contraction
     # CHECK-SAME: lowering_strategy = parallelarith
     vector.ApplyLowerContractionPatternsOp(
-        lowering_strategy=vector.VectorContractLowering.PARALLEL_ARITH
+        lowering_strategy=vector.VectorContractLowering.ParallelArith
     )
 
     # CHECK: transform.apply_patterns.vector.lower_multi_reduction
@@ -85,12 +85,12 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.lower_multi_reduction
     # This is the default mode, not printed.
     vector.ApplyLowerMultiReductionPatternsOp(
-        lowering_strategy=vector.VectorMultiReductionLowering.INNER_PARALLEL
+        lowering_strategy=vector.VectorMultiReductionLowering.InnerParallel
     )
     # CHECK: transform.apply_patterns.vector.lower_multi_reduction
     # CHECK-SAME: lowering_strategy = innerreduction
     vector.ApplyLowerMultiReductionPatternsOp(
-        lowering_strategy=vector.VectorMultiReductionLowering.INNER_REDUCTION
+        lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 
     # CHECK: transform.apply_patterns.vector.lower_transpose
@@ -101,31 +101,31 @@ def enum_configurable_patterns():
     # CHECK-SAME: lowering_strategy = eltwise
     # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.ELT_WISE
+        lowering_strategy=vector.VectorTransposeLowering.EltWise
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = flat_transpose
     # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.FLAT
+        lowering_strategy=vector.VectorTransposeLowering.Flat
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = shuffle_1d
     # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.SHUFFLE1_D
+        lowering_strategy=vector.VectorTransposeLowering.Shuffle1D
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = shuffle_16x16
     # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.SHUFFLE16X16
+        lowering_strategy=vector.VectorTransposeLowering.Shuffle16x16
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = flat_transpose
     # CHECK-SAME: avx2_lowering_strategy = true
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.FLAT,
+        lowering_strategy=vector.VectorTransposeLowering.Flat,
         avx2_lowering_strategy=True,
     )
 
@@ -134,20 +134,20 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # CHECK-SAME: split_transfer_strategy = none
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.NONE
+        split_transfer_strategy=vector.VectorTransferSplit.None_
     )
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # CHECK-SAME: split_transfer_strategy = "vector-transfer"
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.VECTOR_TRANSFER
+        split_transfer_strategy=vector.VectorTransferSplit.VectorTransfer
     )
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # This is the default mode, not printed.
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.LINALG_COPY
+        split_transfer_strategy=vector.VectorTransferSplit.LinalgCopy
     )
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # CHECK-SAME: split_transfer_strategy = "force-in-bounds"
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.FORCE_IN_BOUNDS
+        split_transfer_strategy=vector.VectorTransferSplit.ForceInBounds
     )

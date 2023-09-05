@@ -386,12 +386,6 @@ public:
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
 
-  /// Transform fabs(fabs(x)) to fabs(x).
-  void applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
-
-  /// Transform fabs(fneg(x)) to fabs(x).
-  bool matchCombineFAbsOfFNeg(MachineInstr &MI, BuildFnTy &MatchInfo);
-
   /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
   bool matchCombineTruncOfExt(MachineInstr &MI,
                               std::pair<Register, unsigned> &MatchInfo);
@@ -638,7 +632,10 @@ public:
   bool matchReassocCommBinOp(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Do constant folding when opportunities are exposed after MIR building.
-  bool matchConstantFold(MachineInstr &MI, APInt &MatchInfo);
+  bool matchConstantFoldCastOp(MachineInstr &MI, APInt &MatchInfo);
+
+  /// Do constant folding when opportunities are exposed after MIR building.
+  bool matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo);
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
@@ -786,6 +783,9 @@ public:
 
   /// Match shifts greater or equal to the bitwidth of the operation.
   bool matchShiftsTooBig(MachineInstr &MI);
+
+  /// Match constant LHS ops that should be commuted.
+  bool matchCommuteConstantToRHS(MachineInstr &MI);
 
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that

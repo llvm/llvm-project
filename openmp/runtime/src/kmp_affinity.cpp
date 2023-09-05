@@ -2810,7 +2810,7 @@ static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
 // Set the array sizes for the hierarchy layers
 static void __kmp_dispatch_set_hierarchy_values() {
   // Set the maximum number of L1's to number of cores
-  // Set the maximum number of L2's to to either number of cores / 2 for
+  // Set the maximum number of L2's to either number of cores / 2 for
   // Intel(R) Xeon Phi(TM) coprocessor formally codenamed Knights Landing
   // Or the number of cores for Intel(R) Xeon(R) processors
   // Set the maximum number of NUMA nodes and L3's to number of packages
@@ -3316,7 +3316,7 @@ restart_radix_check:
         return false;
       }
 
-      // If the thread ids were not specified and we see entries entries that
+      // If the thread ids were not specified and we see entries that
       // are duplicates, start the loop over and assign the thread ids manually.
       assign_thread_ids = true;
       goto restart_radix_check;
@@ -4260,8 +4260,8 @@ static void __kmp_affinity_get_topology_info(kmp_affinity_t &affinity) {
 
 // Called when __kmp_topology is ready
 static void __kmp_aux_affinity_initialize_other_data(kmp_affinity_t &affinity) {
-  // Initialize data dependent on __kmp_topology
-  if (__kmp_topology) {
+  // Initialize other data structures which depend on the topology
+  if (__kmp_topology && __kmp_topology->get_num_hw_threads()) {
     machine_hierarchy.init(__kmp_topology->get_num_hw_threads());
     __kmp_affinity_get_topology_info(affinity);
   }
@@ -4527,8 +4527,6 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
   if (is_regular_affinity && !__kmp_topology) {
     bool success = __kmp_aux_affinity_initialize_topology(affinity);
     if (success) {
-      // Initialize other data structures which depend on the topology
-      machine_hierarchy.init(__kmp_topology->get_num_hw_threads());
       KMP_ASSERT(__kmp_avail_proc == __kmp_topology->get_num_hw_threads());
     } else {
       affinity.type = affinity_none;
@@ -4866,14 +4864,12 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   kmp_affin_mask_t *mask;
   int i;
   const kmp_affinity_t *affinity;
-  const char *env_var;
   bool is_hidden_helper = KMP_HIDDEN_HELPER_THREAD(gtid);
 
   if (is_hidden_helper)
     affinity = &__kmp_hh_affinity;
   else
     affinity = &__kmp_affinity;
-  env_var = __kmp_get_affinity_env_var(*affinity, /*for_binding=*/true);
 
   if (KMP_AFFINITY_NON_PROC_BIND || is_hidden_helper) {
     if ((affinity->type == affinity_none) ||
@@ -4923,19 +4919,34 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   }
 
   if (i == KMP_PLACE_ALL) {
-    KA_TRACE(100, ("__kmp_affinity_set_init_mask: binding T#%d to all places\n",
+    KA_TRACE(100, ("__kmp_affinity_set_init_mask: setting T#%d to all places\n",
                    gtid));
   } else {
-    KA_TRACE(100, ("__kmp_affinity_set_init_mask: binding T#%d to place %d\n",
+    KA_TRACE(100, ("__kmp_affinity_set_init_mask: setting T#%d to place %d\n",
                    gtid, i));
   }
 
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
+}
 
+void __kmp_affinity_bind_init_mask(int gtid) {
+  if (!KMP_AFFINITY_CAPABLE()) {
+    return;
+  }
+  kmp_info_t *th = (kmp_info_t *)TCR_SYNC_PTR(__kmp_threads[gtid]);
+  const kmp_affinity_t *affinity;
+  const char *env_var;
+  bool is_hidden_helper = KMP_HIDDEN_HELPER_THREAD(gtid);
+
+  if (is_hidden_helper)
+    affinity = &__kmp_hh_affinity;
+  else
+    affinity = &__kmp_affinity;
+  env_var = __kmp_get_affinity_env_var(*affinity, /*for_binding=*/true);
   /* to avoid duplicate printing (will be correctly printed on barrier) */
-  if (affinity->flags.verbose &&
-      (affinity->type == affinity_none ||
-       (i != KMP_PLACE_ALL && affinity->type != affinity_balanced)) &&
+  if (affinity->flags.verbose && (affinity->type == affinity_none ||
+                                  (th->th.th_current_place != KMP_PLACE_ALL &&
+                                   affinity->type != affinity_balanced)) &&
       !KMP_HIDDEN_HELPER_MAIN_THREAD(gtid)) {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
@@ -4955,7 +4966,7 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
     __kmp_set_system_affinity(th->th.th_affin_mask, TRUE);
 }
 
-void __kmp_affinity_set_place(int gtid) {
+void __kmp_affinity_bind_place(int gtid) {
   // Hidden helper threads should not be affected by OMP_PLACES/OMP_PROC_BIND
   if (!KMP_AFFINITY_CAPABLE() || KMP_HIDDEN_HELPER_THREAD(gtid)) {
     return;
@@ -4963,7 +4974,7 @@ void __kmp_affinity_set_place(int gtid) {
 
   kmp_info_t *th = (kmp_info_t *)TCR_SYNC_PTR(__kmp_threads[gtid]);
 
-  KA_TRACE(100, ("__kmp_affinity_set_place: binding T#%d to place %d (current "
+  KA_TRACE(100, ("__kmp_affinity_bind_place: binding T#%d to place %d (current "
                  "place = %d)\n",
                  gtid, th->th.th_new_place, th->th.th_current_place));
 
@@ -4985,9 +4996,6 @@ void __kmp_affinity_set_place(int gtid) {
       KMP_CPU_INDEX(__kmp_affinity.masks, th->th.th_new_place);
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
   th->th.th_current_place = th->th.th_new_place;
-  // Copy topology information associated with the place
-  th->th.th_topology_ids = __kmp_affinity.ids[th->th.th_new_place];
-  th->th.th_topology_attrs = __kmp_affinity.attrs[th->th.th_new_place];
 
   if (__kmp_affinity.flags.verbose) {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];

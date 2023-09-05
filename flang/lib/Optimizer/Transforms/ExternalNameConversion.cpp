@@ -165,7 +165,7 @@ public:
 
 private:
   bool appendUnderscores;
-  bool usePassOpt;
+  bool usePassOpt = false;
 };
 } // namespace
 

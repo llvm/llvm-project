@@ -141,10 +141,10 @@ define void @v32i32_v32i8(<32 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v32i32_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v7.8h
+; CHECK-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    uzp1 v3.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v6.16b
+; CHECK-NEXT:    uzp1 v1.16b, v4.16b, v6.16b
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret

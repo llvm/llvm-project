@@ -372,7 +372,7 @@ private:
     // parent operation. In this case, we have to introduce an additional clone
     // for buffer that is passed to the argument.
     SmallVector<RegionSuccessor, 2> successorRegions;
-    regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
+    regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
                                         successorRegions);
     auto *it =
         llvm::find_if(successorRegions, [&](RegionSuccessor &successorRegion) {
@@ -383,8 +383,7 @@ private:
 
     // Determine the actual operand to introduce a clone for and rewire the
     // operand to point to the clone instead.
-    auto operands =
-        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber());
+    auto operands = regionInterface.getEntrySuccessorOperands(argRegion);
     size_t operandIndex =
         llvm::find(it->getSuccessorInputs(), blockArg).getIndex() +
         operands.getBeginOperandIndex();
@@ -432,8 +431,7 @@ private:
       // Query the regionInterface to get all successor regions of the current
       // one.
       SmallVector<RegionSuccessor, 2> successorRegions;
-      regionInterface.getSuccessorRegions(region.getRegionNumber(),
-                                          successorRegions);
+      regionInterface.getSuccessorRegions(region, successorRegions);
       // Try to find a matching region successor.
       RegionSuccessor *regionSuccessor =
           llvm::find_if(successorRegions, regionPredicate);
@@ -452,8 +450,7 @@ private:
               &region, [&](RegionBranchTerminatorOpInterface terminator) {
                 // Get the actual mutable operands for this terminator op.
                 auto terminatorOperands =
-                    terminator.getMutableSuccessorOperands(
-                        region.getRegionNumber());
+                    terminator.getMutableSuccessorOperands(*regionSuccessor);
                 // Extract the source value from the current terminator.
                 // This conversion needs to exist on a separate line due to a
                 // bug in GCC conversion analysis.
@@ -640,6 +637,22 @@ struct DefaultAllocationInterface
     return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
         .getResult();
   }
+  static ::mlir::HoistingKind getHoistingKind() {
+    return HoistingKind::Loop | HoistingKind::Block;
+  }
+  static ::std::optional<::mlir::Operation *>
+  buildPromotedAlloc(OpBuilder &builder, Value alloc) {
+    Operation *definingOp = alloc.getDefiningOp();
+    return builder.create<memref::AllocaOp>(
+        definingOp->getLoc(), cast<MemRefType>(definingOp->getResultTypes()[0]),
+        definingOp->getOperands(), definingOp->getAttrs());
+  }
+};
+
+struct DefaultAutomaticAllocationHoistingInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAutomaticAllocationHoistingInterface, memref::AllocaOp> {
+  static ::mlir::HoistingKind getHoistingKind() { return HoistingKind::Loop; }
 };
 
 struct DefaultReallocationInterface
@@ -716,6 +729,8 @@ void bufferization::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+    memref::AllocaOp::attachInterface<
+        DefaultAutomaticAllocationHoistingInterface>(*ctx);
     memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
   });
 }

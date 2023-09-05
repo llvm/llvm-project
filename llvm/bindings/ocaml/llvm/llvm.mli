@@ -1125,16 +1125,6 @@ val const_nsw_mul : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWMul]. *)
 val const_nuw_mul : llvalue -> llvalue -> llvalue
 
-(** [const_and c1 c2] returns the constant bitwise [AND] of two integer
-    constants.
-    See the method [llvm::ConstantExpr::getAnd]. *)
-val const_and : llvalue -> llvalue -> llvalue
-
-(** [const_or c1 c2] returns the constant bitwise [OR] of two integer
-    constants.
-    See the method [llvm::ConstantExpr::getOr]. *)
-val const_or : llvalue -> llvalue -> llvalue
-
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)

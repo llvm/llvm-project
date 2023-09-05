@@ -24,7 +24,6 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace fir;
 using namespace mlir;
 
 namespace {
@@ -35,11 +34,10 @@ public:
 
   void runOnOperation() override {
     auto op = dyn_cast<omp::OffloadModuleInterface>(getOperation());
-    if (!op)
+    if (!op || !op.getIsTargetDevice())
       return;
 
-    bool isDeviceCompilation = op.getIsTargetDevice();
-    op->walk<WalkOrder::PostOrder>([&](func::FuncOp funcOp) {
+    op->walk<WalkOrder::PreOrder>([&](func::FuncOp funcOp) {
       // Do not filter functions with target regions inside, because they have
       // to be available for both host and device so that regular and reverse
       // offloading can be supported.
@@ -58,11 +56,21 @@ public:
       if (declareTargetOp && declareTargetOp.isDeclareTarget())
         declareType = declareTargetOp.getDeclareTargetDeviceType();
 
-      if ((isDeviceCompilation &&
-           declareType == omp::DeclareTargetDeviceType::host) ||
-          (!isDeviceCompilation &&
-           declareType == omp::DeclareTargetDeviceType::nohost))
-        funcOp->erase();
+      // Filtering a function here means removing its body and explicitly
+      // setting its omp.declare_target attribute, so that following
+      // translation/lowering/transformation passes will skip processing its
+      // contents, but preventing the calls to undefined symbols that could
+      // result if the function were deleted. The second stage of function
+      // filtering, at the MLIR to LLVM IR translation level, will remove these
+      // from the IR thanks to the mismatch between the omp.declare_target
+      // attribute and the target device.
+      if (declareType == omp::DeclareTargetDeviceType::host) {
+        funcOp.eraseBody();
+        funcOp.setVisibility(SymbolTable::Visibility::Private);
+        if (declareTargetOp)
+          declareTargetOp.setDeclareTarget(declareType,
+                                           omp::DeclareTargetCaptureClause::to);
+      }
     });
   }
 };

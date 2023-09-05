@@ -57,6 +57,8 @@ public:
 
   void visitBranchOperand(OpOperand &operand) override;
 
+  void visitCallOperand(OpOperand &operand) override;
+
   void setToExitState(WrittenTo *lattice) override { lattice->writes.clear(); }
 };
 
@@ -84,6 +86,16 @@ void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
   newWrites.insert(
       StringAttr::get(operand.getOwner()->getContext(),
                       "brancharg" + Twine(operand.getOperandNumber())));
+  propagateIfChanged(lattice, lattice->addWrites(newWrites));
+}
+
+void WrittenToAnalysis::visitCallOperand(OpOperand &operand) {
+  // Mark call operands as "callarg%d", with %d the operand number.
+  WrittenTo *lattice = getLatticeElement(operand.get());
+  SetVector<StringAttr> newWrites;
+  newWrites.insert(
+      StringAttr::get(operand.getOwner()->getContext(),
+                      "callarg" + Twine(operand.getOperandNumber())));
   propagateIfChanged(lattice, lattice->addWrites(newWrites));
 }
 

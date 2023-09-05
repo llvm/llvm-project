@@ -791,9 +791,9 @@ public:
 };
 
 struct DiffEntry {
-  DiffEntry() : Cost(0) {}
+  DiffEntry() = default;
 
-  unsigned Cost;
+  unsigned Cost = 0;
   llvm::SmallVector<char, 8> Path; // actually of DifferenceEngine::DiffChange
 };
 

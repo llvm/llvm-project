@@ -21,7 +21,12 @@ function(_get_common_compile_options output_var flags)
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
-    list(APPEND compile_options "-ffreestanding")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+    endif()
+
     list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
@@ -30,6 +35,8 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fno-rtti")
     list(APPEND compile_options "-Wall")
     list(APPEND compile_options "-Wextra")
+    list(APPEND compile_options "-Wconversion")
+    list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
     list(APPEND compile_options "-Wextra-semi")
@@ -101,6 +108,10 @@ function(get_nvptx_compile_options output_var gpu_arch)
   elseif(${gpu_arch} STREQUAL "sm_80")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   elseif(${gpu_arch} STREQUAL "sm_86")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_89")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_90")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   else()
     message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
@@ -353,9 +364,8 @@ function(create_object_library fq_target_name)
     target_include_directories(
       ${fq_target_name}
       PRIVATE
-        ${LIBC_BUILD_DIR}/include
         ${LIBC_SOURCE_DIR}
-        ${LIBC_BUILD_DIR}
+        ${LIBC_INCLUDE_DIR}
     )
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()
@@ -490,6 +500,7 @@ function(add_object_library target_name)
 endfunction(add_object_library)
 
 set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
+set(ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE "ENTRYPOINT_OBJ_VENDOR")
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -507,12 +518,20 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 function(create_entrypoint_object fq_target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "ALIAS;REDIRECTED" # Optional argument
+    "ALIAS;REDIRECTED;VENDOR" # Optional argument
     "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
     ${ARGN}
   )
 
+  set(entrypoint_target_type ${ENTRYPOINT_OBJ_TARGET_TYPE})
+  if(${ADD_ENTRYPOINT_OBJ_VENDOR})
+    # TODO: We currently rely on external definitions of certain math functions
+    # provided by GPU vendors like AMD or Nvidia. We need to mark these so we
+    # don't end up running tests on these. In the future all of these should be
+    # implemented and this can be removed.
+    set(entrypoint_target_type ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+  endif()
   list(FIND TARGET_ENTRYPOINT_NAME_LIST ${ADD_ENTRYPOINT_OBJ_NAME} entrypoint_name_index)
   if(${entrypoint_name_index} EQUAL -1)
     add_custom_target(${fq_target_name})
@@ -520,7 +539,7 @@ function(create_entrypoint_object fq_target_name)
       ${fq_target_name}
       PROPERTIES
         "ENTRYPOINT_NAME" ${ADD_ENTRYPOINT_OBJ_NAME}
-        "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "TARGET_TYPE" ${entrypoint_target_type}
         "OBJECT_FILE" ""
         "OBJECT_FILE_RAW" ""
         "DEPS" ""
@@ -554,7 +573,8 @@ function(create_entrypoint_object fq_target_name)
     endif()
 
     get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
-    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})))
+    if((NOT obj_type) OR (NOT (${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+                               ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
@@ -566,7 +586,7 @@ function(create_entrypoint_object fq_target_name)
       ${fq_target_name}
       PROPERTIES
         ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-        TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        TARGET_TYPE ${entrypoint_target_type}
         IS_ALIAS "YES"
         OBJECT_FILE ""
         OBJECT_FILE_RAW ""

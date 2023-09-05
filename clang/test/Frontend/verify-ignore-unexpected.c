@@ -3,7 +3,7 @@
 #ifdef TEST_SWITCH
 // expected-no-diagnostics
 #endif
-// CHECK-BAD-SWITCH: error: 'error' diagnostics seen but not expected:
+// CHECK-BAD-SWITCH: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-BAD-SWITCH-NEXT: (frontend): invalid value 'aoeu' in '-verify-ignore-unexpected='
 
 // RUN: %clang_cc1 -DTEST1 -verify %s
@@ -31,32 +31,32 @@ int x;
 float x;
 #endif
 // CHECK-UNEXP: no expected directives found
-// CHECK-UNEXP-NEXT: 'error' diagnostics seen but not expected
+// CHECK-UNEXP-NEXT: 'expected-error' diagnostics seen but not expected
 // CHECK-UNEXP-NEXT: Line {{[0-9]+}}: redefinition of 'x'
-// CHECK-UNEXP-NEXT: 'warning' diagnostics seen but not expected
+// CHECK-UNEXP-NEXT: 'expected-warning' diagnostics seen but not expected
 // CHECK-UNEXP-NEXT: Line {{[0-9]+}}: MyWarning2
-// CHECK-UNEXP-NEXT: 'note' diagnostics seen but not expected
+// CHECK-UNEXP-NEXT: 'expected-note' diagnostics seen but not expected
 // CHECK-UNEXP-NEXT: Line {{[0-9]+}}: previous definition is here
 // CHECK-UNEXP-NEXT: 4 errors generated.
 
 // CHECK-NOTE: no expected directives found
-// CHECK-NOTE-NEXT: 'error' diagnostics seen but not expected
+// CHECK-NOTE-NEXT: 'expected-error' diagnostics seen but not expected
 // CHECK-NOTE-NEXT: Line {{[0-9]+}}: redefinition of 'x'
-// CHECK-NOTE-NEXT: 'warning' diagnostics seen but not expected
+// CHECK-NOTE-NEXT: 'expected-warning' diagnostics seen but not expected
 // CHECK-NOTE-NEXT: Line {{[0-9]+}}: MyWarning2
 // CHECK-NOTE-NEXT: 3 errors generated.
 
 // CHECK-WARN: no expected directives found
-// CHECK-WARN-NEXT: 'error' diagnostics seen but not expected
+// CHECK-WARN-NEXT: 'expected-error' diagnostics seen but not expected
 // CHECK-WARN-NEXT: Line {{[0-9]+}}: redefinition of 'x'
-// CHECK-WARN-NEXT: 'note' diagnostics seen but not expected
+// CHECK-WARN-NEXT: 'expected-note' diagnostics seen but not expected
 // CHECK-WARN-NEXT: Line {{[0-9]+}}: previous definition is here
 // CHECK-WARN-NEXT: 3 errors generated.
 
 // CHECK-ERR: no expected directives found
-// CHECK-ERR-NEXT: 'warning' diagnostics seen but not expected
+// CHECK-ERR-NEXT: 'expected-warning' diagnostics seen but not expected
 // CHECK-ERR-NEXT: Line {{[0-9]+}}: MyWarning2
-// CHECK-ERR-NEXT: 'note' diagnostics seen but not expected
+// CHECK-ERR-NEXT: 'expected-note' diagnostics seen but not expected
 // CHECK-ERR-NEXT: Line {{[0-9]+}}: previous definition is here
 // CHECK-ERR-NEXT: 3 errors generated.
 
@@ -65,7 +65,7 @@ float x;
 #ifdef TEST3
 // expected-error {{test3}}
 #endif
-// CHECK-EXP: 'error' diagnostics expected but not seen
+// CHECK-EXP: 'expected-error' diagnostics expected but not seen
 // CHECK-EXP-NEXT: Line {{[0-9]+}}: test3
 
 // RUN: not %clang_cc1 -DTEST4 -verify -verify-ignore-unexpected %s 2>&1 \

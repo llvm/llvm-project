@@ -221,7 +221,7 @@ private:
     Message.msg_control = ControlBuffer;
     Message.msg_controllen = sizeof(ControlBuffer);
 
-    size_t BytesRead = recvmsg(SocketFD, &Message, 0);
+    ssize_t BytesRead = recvmsg(SocketFD, &Message, 0);
 
     if (BytesRead < 0)
       return make_error<Failure>("Failed to read FD from socket");

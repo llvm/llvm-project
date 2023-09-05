@@ -10,7 +10,7 @@ define void @test(ptr %p) nounwind {
 ; CHECK-NEXT:    cmpl $2, %eax
 ; CHECK-NEXT:    retq
 bb:
-  %i = load i64, ptr %p, align 8, !range !0
+  %i = load i64, ptr %p, align 8, !range !0, !noundef !{}
   %i1 = and i64 %i, 6
   %i2 = icmp eq i64 %i1, 2
   br i1 %i2, label %bb3, label %bb5

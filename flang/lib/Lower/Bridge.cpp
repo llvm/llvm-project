@@ -350,6 +350,8 @@ public:
         fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
                                              bridge.getEnvironmentDefaults());
       });
+
+    finalizeOpenACCLowering();
   }
 
   /// Declare a function.
@@ -499,10 +501,7 @@ public:
   lookupLabel(Fortran::lower::pft::Label label) override final {
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
         *getEval().getOwningProcedure();
-    auto iter = owningProc.labelEvaluationMap.find(label);
-    if (iter == owningProc.labelEvaluationMap.end())
-      return nullptr;
-    return iter->second;
+    return owningProc.labelEvaluationMap.lookup(label);
   }
 
   fir::ExtendedValue
@@ -582,7 +581,7 @@ public:
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
           loc,
-          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
               ? hSymType
               : symType,
           mangleName(sym), toStringRef(sym.GetUltimate().name()),
@@ -952,6 +951,13 @@ private:
       // Do a regular lookup.
       if (Fortran::semantics::IsProcedure(sym))
         return symMap->lookupSymbol(sym);
+
+      // Commonblock names are not variables, but in some lowerings (like
+      // OpenMP) it is useful to maintain the address of the commonblock in an
+      // MLIR value and query it. hlfir.declare need not be created for these.
+      if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
+        return symMap->lookupSymbol(sym);
+
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
@@ -1013,10 +1019,13 @@ private:
       if (!shallowLookupSymbol(sym)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
-        auto newVal = builder->createTemporary(loc, genType(sym),
-                                               toStringRef(sym.name()));
-        bindIfNewSymbol(sym, newVal);
-        return newVal;
+        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(builder->getAllocaBlock());
+        mlir::Type tempTy = genType(sym);
+        mlir::Value temp =
+            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+        bindIfNewSymbol(sym, temp);
+        builder->restoreInsertionPoint(insPt);
       }
     }
     auto entry = lookupSymbol(sym);
@@ -2246,12 +2255,11 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
-    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), getEval(), accDecl);
+                                   bridge.fctCtx(), getEval(), accDecl,
+                                   accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
-    builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
@@ -3577,6 +3585,26 @@ private:
                 // to a result variable of one of the other types requires
                 // conversion to the actual type.
                 mlir::Type toTy = genType(assign.lhs);
+
+                // If Cray pointee, need to handle the address
+                // Array is handled in genCoordinateOp.
+                if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee) &&
+                    sym->Rank() == 0) {
+                  // get the corresponding Cray pointer
+
+                  auto ptrSym = Fortran::lower::getPointer(*sym);
+                  fir::ExtendedValue ptr =
+                      getSymbolExtendedValue(ptrSym, nullptr);
+                  mlir::Value ptrVal = fir::getBase(ptr);
+                  mlir::Type ptrTy = genType(*ptrSym);
+
+                  fir::ExtendedValue pte =
+                      getSymbolExtendedValue(*sym, nullptr);
+                  mlir::Value pteVal = fir::getBase(pte);
+                  mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+                      loc, *builder, ptrVal, ptrTy, pteVal.getType());
+                  addr = builder->create<fir::LoadOp>(loc, cnvrt);
+                }
                 mlir::Value cast =
                     isVector ? val
                              : builder->convertWithSemantics(loc, toTy, val);
@@ -4683,6 +4711,13 @@ private:
         expr.u);
   }
 
+  /// Performing OpenACC lowering action that were deferred to the end of
+  /// lowering.
+  void finalizeOpenACCLowering() {
+    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
+                                                     accRoutineInfos);
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -4726,6 +4761,9 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
+
+  /// Deferred OpenACC routine attachment.
+  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 };
 
 } // namespace

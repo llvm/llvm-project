@@ -25,6 +25,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -448,9 +449,10 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
           mlir::isa<hlfir::GetLengthOp>(useOp)) {
         if (!endAssociate)
           continue;
-        // not known to occur in practice:
+        // If useOp dominates the endAssociate, then it is definitely safe.
         if (useOp->getBlock() != endAssociate->getBlock())
-          TODO(endAssociate->getLoc(), "Associate split over multiple blocks");
+          if (mlir::DominanceInfo{}.dominates(useOp, endAssociate))
+            continue;
         if (useOp->isBeforeInBlock(endAssociate))
           continue;
       }
@@ -530,14 +532,31 @@ struct AssociateOpConversion
       firVar = adjustVar(firVar, associateFirVarType);
       associate.getResult(1).replaceAllUsesWith(firVar);
       associate.getResult(2).replaceAllUsesWith(flag);
-      rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
+      // FIXME: note that the AssociateOp that is being erased
+      // here will continue to be a user of the original Source
+      // operand (e.g. a result of hlfir.elemental), because
+      // the erasure is not immediate in the rewriter.
+      // In case there are multiple uses of the Source operand,
+      // the allOtherUsesAreSafeForAssociate() below will always
+      // see them, so there is no way to reuse the buffer.
+      // I think we have to run this analysis before doing
+      // the conversions, so that we can analyze HLFIR in its
+      // original form and decide which of the AssociateOp
+      // users of hlfir.expr can reuse the buffer (if it can).
+      rewriter.eraseOp(associate);
     };
 
     // If this is the last use of the expression value and this is an hlfir.expr
     // that was bufferized, re-use the storage.
     // Otherwise, create a temp and assign the storage to it.
+    //
+    // WARNING: it is important to use the original Source operand
+    // of the AssociateOp to look for the users, because its replacement
+    // has zero materialized users at this point.
+    // So allOtherUsesAreSafeForAssociate() may incorrectly return
+    // true here.
     if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
-                               adaptor.getSource(), associate.getOperation(),
+                               associate.getSource(), associate.getOperation(),
                                getEndAssociate(associate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility
@@ -771,6 +790,12 @@ struct ElementalOpConversion
 
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, cleanup);
+    // Explicitly delete the body of the elemental to get rid
+    // of any users of hlfir.expr values inside the body as early
+    // as possible.
+    rewriter.startRootUpdate(elemental);
+    rewriter.eraseBlock(elemental.getBody());
+    rewriter.finalizeRootUpdate(elemental);
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }

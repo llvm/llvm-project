@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-pc-linux-gnu %s \
-// RUN:     -dwarf-version=5 -main-file-name %s  -o - | FileCheck %s
+// RUN:     -dwarf-version=5 -main-file-name debug-info-function-context.cpp  -o - | FileCheck %s
 
 struct C {
   void member_function();
@@ -31,8 +31,8 @@ int global_initialized_variable = C::static_member_function();
 
 // The first DIFile is for the CU, the second is what everything else uses.
 // We're using DWARF v5 so both should have MD5 checksums.
-// CHECK: !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5
-// CHECK: ![[FILE:[0-9]+]] = !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5
+// CHECK: !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5, checksum: [[CKSUM:".*"]]
+// CHECK: ![[FILE:[0-9]+]] = !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5, checksum: [[CKSUM]]
 // CHECK: ![[C:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK: ![[NS:.*]] = !DINamespace(name: "ns"
 // CHECK: !DISubprogram(name: "member_function",{{.*}} scope: ![[C]],{{.*}} DISPFlagDefinition

@@ -1872,13 +1872,13 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ; SSE41-LABEL: psubus_16i32_max:
 ; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [65535,65535,65535,65535]
-; SSE41-NEXT:    pminud %xmm6, %xmm5
-; SSE41-NEXT:    pminud %xmm6, %xmm4
-; SSE41-NEXT:    packusdw %xmm5, %xmm4
 ; SSE41-NEXT:    pminud %xmm6, %xmm3
 ; SSE41-NEXT:    pminud %xmm6, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
 ; SSE41-NEXT:    psubusw %xmm2, %xmm0
+; SSE41-NEXT:    pminud %xmm6, %xmm5
+; SSE41-NEXT:    pminud %xmm6, %xmm4
+; SSE41-NEXT:    packusdw %xmm5, %xmm4
 ; SSE41-NEXT:    psubusw %xmm4, %xmm1
 ; SSE41-NEXT:    retq
 ;

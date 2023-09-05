@@ -181,7 +181,7 @@ const interpose_substitution substitution_##func_name[]             \
 // FreeBSD's dynamic linker (incompliantly) gives non-weak symbols higher
 // priority than weak ones so weak aliases won't work for indirect calls
 // in position-independent (-fPIC / -fPIE) mode.
-#   define __ASM_WEAK_WRAPPER(func)
+#   define __ASM_WEAK_WRAPPER(func) ".globl " #func "\n"
 #  else
 #   define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
 #  endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD

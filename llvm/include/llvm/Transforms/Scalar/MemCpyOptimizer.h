@@ -20,6 +20,7 @@
 namespace llvm {
 
 class AAResults;
+class AllocaInst;
 class BatchAAResults;
 class AssumptionCache;
 class CallBase;
@@ -33,6 +34,7 @@ class MemMoveInst;
 class MemorySSA;
 class MemorySSAUpdater;
 class MemSetInst;
+class PostDominatorTree;
 class StoreInst;
 class TargetLibraryInfo;
 class Value;
@@ -42,6 +44,7 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
+  PostDominatorTree *PDT = nullptr;
   MemorySSA *MSSA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
 
@@ -52,7 +55,8 @@ public:
 
   // Glue for the old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI, AAResults *AA,
-               AssumptionCache *AC, DominatorTree *DT, MemorySSA *MSSA);
+               AssumptionCache *AC, DominatorTree *DT, PostDominatorTree *PDT,
+               MemorySSA *MSSA);
 
 private:
   // Helper functions
@@ -77,6 +81,9 @@ private:
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
+  bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
+                             AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
+                             uint64_t Size, BatchAAResults &BAA);
 
   void eraseInstruction(Instruction *I);
   bool iterateOnFunction(Function &F);

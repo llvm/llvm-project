@@ -38,10 +38,18 @@ LIBC_INLINE int ilogb(double x) { return __ocml_ilogb_f64(x); }
 LIBC_INLINE int ilogbf(float x) { return __ocml_ilogb_f32(x); }
 LIBC_INLINE double ldexp(double x, int i) { return __builtin_ldexp(x, i); }
 LIBC_INLINE float ldexpf(float x, int i) { return __builtin_ldexpf(x, i); }
-LIBC_INLINE long long llrint(double x) { return __builtin_rint(x); }
-LIBC_INLINE long long llrintf(float x) { return __builtin_rintf(x); }
-LIBC_INLINE long long llround(double x) { return __builtin_round(x); }
-LIBC_INLINE long long llroundf(float x) { return __builtin_roundf(x); }
+LIBC_INLINE long long llrint(double x) {
+  return static_cast<long long>(__builtin_rint(x));
+}
+LIBC_INLINE long long llrintf(float x) {
+  return static_cast<long long>(__builtin_rintf(x));
+}
+LIBC_INLINE long long llround(double x) {
+  return static_cast<long long>(__builtin_round(x));
+}
+LIBC_INLINE long long llroundf(float x) {
+  return static_cast<long long>(__builtin_roundf(x));
+}
 LIBC_INLINE double nextafter(double x, double y) {
   return __ocml_nextafter_f64(x, y);
 }

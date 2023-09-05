@@ -332,13 +332,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; AMDGPU-DISABLED1:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__1_wrapper.ID
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -386,13 +384,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; AMDGPU-DISABLED2:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__1_wrapper.ID
-; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED2-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -439,13 +435,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED1:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__1_wrapper.ID
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -492,13 +486,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED2:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__1_wrapper.ID
-; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED2-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1014,13 +1006,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l2
 ; AMDGPU-DISABLED1:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__3_wrapper.ID
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1068,13 +1058,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l2
 ; AMDGPU-DISABLED2:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__3_wrapper.ID
-; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED2-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1121,13 +1109,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l2
 ; NVPTX-DISABLED1:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__3_wrapper.ID
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1174,13 +1160,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l2
 ; NVPTX-DISABLED2:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__3_wrapper.ID
-; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED2-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1719,13 +1703,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l
 ; AMDGPU-DISABLED1:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__5_wrapper.ID
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1773,13 +1755,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l
 ; AMDGPU-DISABLED2:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__5_wrapper.ID
-; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED2-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1826,13 +1806,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l
 ; NVPTX-DISABLED1:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__5_wrapper.ID
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1879,13 +1857,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l
 ; NVPTX-DISABLED2:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__5_wrapper.ID
-; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED2-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -2457,13 +2433,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_g
 ; AMDGPU-DISABLED1:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__7_wrapper.ID
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED1:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -2511,13 +2485,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_g
 ; AMDGPU-DISABLED2:       worker_state_machine.is_active.check:
 ; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check:
-; AMDGPU-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__7_wrapper.ID
-; AMDGPU-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-DISABLED2-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU-DISABLED2:       worker_state_machine.parallel_region.end:
 ; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -2564,13 +2536,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_g
 ; NVPTX-DISABLED1:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__7_wrapper.ID
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED1-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED1:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED1:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED1-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED1:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -2617,13 +2587,11 @@ define weak void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_g
 ; NVPTX-DISABLED2:       worker_state_machine.is_active.check:
 ; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check:
-; NVPTX-DISABLED2-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__7_wrapper.ID
-; NVPTX-DISABLED2-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-DISABLED2-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.execute:
 ; NVPTX-DISABLED2-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX-DISABLED2:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-DISABLED2-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX-DISABLED2:       worker_state_machine.parallel_region.check1:
 ; NVPTX-DISABLED2-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX-DISABLED2:       worker_state_machine.parallel_region.end:
 ; NVPTX-DISABLED2-NEXT:    call void @__kmpc_kernel_end_parallel()

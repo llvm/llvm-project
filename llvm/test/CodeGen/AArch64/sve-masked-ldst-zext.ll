@@ -98,9 +98,9 @@ define <vscale x 8 x i64> @masked_zload_nxv8i16(<vscale x 8 x i16>* %a, <vscale 
 define <vscale x 2 x double> @masked_zload_2i16_2f64(<vscale x 2 x i16>* noalias %in, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_zload_2i16_2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ucvtf z0.d, p1/m, z0.d
 ; CHECK-NEXT:    ret
   %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>* %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
   %zext = zext <vscale x 2 x i16> %wide.load to <vscale x 2 x i32>

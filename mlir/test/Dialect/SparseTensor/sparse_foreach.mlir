@@ -141,7 +141,7 @@ func.func @foreach_print_slice(%A: tensor<4x4xf64, #CSR_SLICE>) {
 }
 
 #BCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ],
+  lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ],
 }>
 
 // CHECK-LABEL:   func.func @foreach_bcoo(

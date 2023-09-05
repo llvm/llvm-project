@@ -731,9 +731,8 @@ define ptr @test_gep_nonpow2(ptr %a0, i32 %a1) {
 
 define void @test_memset(i64 %in, i8 %value)  {
 ; CHECK-LABEL: test_memset:
-; CHECK-DAG: and x8, x0, #0xffffffff
 ; CHECK-DAG: lsr x2, x0, #32
-; CHECK-DAG: mov x0, x8
+; CHECK-DAG: and x0, x0, #0xffffffff
 ; CHECK: b _memset
 
   %ptr.i32 = trunc i64 %in to i32

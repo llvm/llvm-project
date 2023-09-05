@@ -281,6 +281,15 @@ class OMPExecutableDirective : public Stmt {
     return Data->getClauses();
   }
 
+  /// Was this directive mapped from an another directive?
+  /// e.g. 1) omp loop bind(parallel) is mapped to OMPD_for
+  ///      2) omp loop bind(teams) is mapped to OMPD_distribute
+  ///      3) omp loop bind(thread) is mapped to OMPD_simd
+  /// It was necessary to note it down in the Directive because of
+  /// clang::TreeTransform::TransformOMPExecutableDirective() pass in
+  /// the frontend.
+  OpenMPDirectiveKind PrevMappedDirective = llvm::omp::OMPD_unknown;
+
 protected:
   /// Data, associated with the directive.
   OMPChildren *Data = nullptr;
@@ -343,6 +352,10 @@ protected:
     auto *Inst = new (Mem) T;
     Inst->Data = Data;
     return Inst;
+  }
+
+  void setMappedDirective(OpenMPDirectiveKind MappedDirective) {
+    PrevMappedDirective = MappedDirective;
   }
 
 public:
@@ -598,6 +611,8 @@ public:
            "Expected directive with the associated statement.");
     return Data->getRawStmt();
   }
+
+  OpenMPDirectiveKind getMappedDirective() const { return PrevMappedDirective; }
 };
 
 /// This represents '#pragma omp parallel' directive.
@@ -1604,7 +1619,8 @@ public:
                                   SourceLocation EndLoc, unsigned CollapsedNum,
                                   ArrayRef<OMPClause *> Clauses,
                                   Stmt *AssociatedStmt,
-                                  const HelperExprs &Exprs);
+                                  const HelperExprs &Exprs,
+                                  OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.
@@ -1682,7 +1698,8 @@ public:
                                  SourceLocation EndLoc, unsigned CollapsedNum,
                                  ArrayRef<OMPClause *> Clauses,
                                  Stmt *AssociatedStmt, const HelperExprs &Exprs,
-                                 Expr *TaskRedRef, bool HasCancel);
+                                 Expr *TaskRedRef, bool HasCancel,
+                                 OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.
@@ -1911,6 +1928,57 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPSectionDirectiveClass;
+  }
+};
+
+/// This represents '#pragma omp scope' directive.
+/// \code
+/// #pragma omp scope private(a,b) nowait
+/// \endcode
+/// In this example directive '#pragma omp scope' has clauses 'private' with
+/// the variables 'a' and 'b' and nowait.
+///
+class OMPScopeDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPScopeDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               StartLoc, EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPScopeDirective()
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  ///
+  static OMPScopeDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   Stmt *AssociatedStmt);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  ///
+  static OMPScopeDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPScopeDirectiveClass;
   }
 };
 
@@ -4406,7 +4474,8 @@ public:
   static OMPDistributeDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt, const HelperExprs &Exprs);
+         Stmt *AssociatedStmt, const HelperExprs &Exprs,
+         OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.

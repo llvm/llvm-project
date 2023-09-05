@@ -1,10 +1,12 @@
-//===--- Linux specialization of the File data structure ------------------===//
+//===--- Implementation of the Linux specialization of File ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#include "file.h"
 
 #include "src/__support/File/file.h"
 
@@ -18,31 +20,7 @@
 
 namespace __llvm_libc {
 
-namespace {
-
-FileIOResult write_func(File *, const void *, size_t);
-FileIOResult read_func(File *, void *, size_t);
-ErrorOr<long> seek_func(File *, long, int);
-int close_func(File *);
-
-} // anonymous namespace
-
-class LinuxFile : public File {
-  int fd;
-
-public:
-  constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
-                      int buffer_mode, bool owned, File::ModeFlags modeflags)
-      : File(&write_func, &read_func, &seek_func, &close_func, buffer,
-             buffer_size, buffer_mode, owned, modeflags),
-        fd(file_descriptor) {}
-
-  int get_fd() const { return fd; }
-};
-
-namespace {
-
-FileIOResult write_func(File *f, const void *data, size_t size) {
+FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = __llvm_libc::syscall_impl<int>(SYS_write, lf->get_fd(), data, size);
   if (ret < 0) {
@@ -51,7 +29,7 @@ FileIOResult write_func(File *f, const void *data, size_t size) {
   return ret;
 }
 
-FileIOResult read_func(File *f, void *buf, size_t size) {
+FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = __llvm_libc::syscall_impl<int>(SYS_read, lf->get_fd(), buf, size);
   if (ret < 0) {
@@ -60,7 +38,7 @@ FileIOResult read_func(File *f, void *buf, size_t size) {
   return ret;
 }
 
-ErrorOr<long> seek_func(File *f, long offset, int whence) {
+ErrorOr<long> linux_file_seek(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   long result;
 #ifdef SYS_lseek
@@ -90,7 +68,7 @@ ErrorOr<long> seek_func(File *f, long offset, int whence) {
   return result;
 }
 
-int close_func(File *f) {
+int linux_file_close(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = __llvm_libc::syscall_impl<int>(SYS_close, lf->get_fd());
   if (ret < 0) {
@@ -99,8 +77,6 @@ int close_func(File *f) {
   delete lf;
   return 0;
 }
-
-} // anonymous namespace
 
 ErrorOr<File *> openfile(const char *path, const char *mode) {
   using ModeFlags = File::ModeFlags;
@@ -166,28 +142,4 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
-constexpr size_t STDIN_BUFFER_SIZE = 512;
-uint8_t stdin_buffer[STDIN_BUFFER_SIZE];
-static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
-                       File::ModeFlags(File::OpenMode::READ));
-File *stdin = &StdIn;
-
-constexpr size_t STDOUT_BUFFER_SIZE = 1024;
-uint8_t stdout_buffer[STDOUT_BUFFER_SIZE];
-static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
-                        File::ModeFlags(File::OpenMode::APPEND));
-File *stdout = &StdOut;
-
-constexpr size_t STDERR_BUFFER_SIZE = 0;
-static LinuxFile StdErr(2, nullptr, STDERR_BUFFER_SIZE, _IONBF, false,
-                        File::ModeFlags(File::OpenMode::APPEND));
-File *stderr = &StdErr;
-
 } // namespace __llvm_libc
-
-// Provide the external defintitions of the standard IO streams.
-extern "C" {
-FILE *stdin = reinterpret_cast<FILE *>(&__llvm_libc::StdIn);
-FILE *stderr = reinterpret_cast<FILE *>(&__llvm_libc::StdErr);
-FILE *stdout = reinterpret_cast<FILE *>(&__llvm_libc::StdOut);
-}

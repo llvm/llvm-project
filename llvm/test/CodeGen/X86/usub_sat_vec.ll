@@ -1057,10 +1057,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    xorl %edi, %edi
-; SSE-NEXT:    subq %r9, %rsi
+; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; SSE-NEXT:    cmovbq %rdi, %rsi
 ; SSE-NEXT:    cmovbq %rdi, %rdx
+; SSE-NEXT:    cmovbq %rdi, %rsi
 ; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; SSE-NEXT:    cmovbq %rdi, %r8
@@ -1075,10 +1075,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    xorl %edi, %edi
-; AVX-NEXT:    subq %r9, %rsi
+; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; AVX-NEXT:    cmovbq %rdi, %rsi
 ; AVX-NEXT:    cmovbq %rdi, %rdx
+; AVX-NEXT:    cmovbq %rdi, %rsi
 ; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; AVX-NEXT:    cmovbq %rdi, %r8

@@ -3,7 +3,6 @@ Generates documentation based off the available static analyzers checks
 References Checkers.td to determine what checks exist
 """
 
-import argparse
 import subprocess
 import json
 import os
@@ -12,28 +11,31 @@ import re
 """Get path of script so files are always in correct directory"""
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
+default_checkers_td_location = "../../../../clang/include/clang/StaticAnalyzer/Checkers/Checkers.td"
+default_checkers_rst_location = "../../../../clang/docs/analyzer/checkers.rst"
+
 """Get dict of checker related info and parse for full check names
 
 Returns:
   checkers: dict of checker info
 """
-
-
-def get_checkers(checkers_td_directory):
+def get_checkers(checkers_td, checkers_rst):
     p = subprocess.Popen(
         [
             "llvm-tblgen",
             "--dump-json",
             "-I",
-            checkers_td_directory,
-            checkers_td_directory + "Checkers.td",
+            os.path.dirname(checkers_td),
+            checkers_td,
         ],
         stdout=subprocess.PIPE,
     )
     table_entries = json.loads(p.communicate()[0])
     documentable_checkers = []
     checkers = table_entries["!instanceof"]["Checker"]
-    packages = table_entries["!instanceof"]["Package"]
+
+    with open(checkers_rst, "r") as f:
+        checker_rst_text = f.read()
 
     for checker_ in checkers:
         checker = table_entries[checker_]
@@ -62,7 +64,9 @@ def get_checkers(checkers_td_directory):
 
         if not hidden and "alpha" not in full_package_name.lower():
             checker["FullPackageName"] = full_package_name
+            checker["ShortName"] = checker_package_prefix + "." + checker_name
             checker["AnchorUrl"] = anchor_url
+            checker["Documentation"] = ".. _%s:" % (checker["ShortName"].replace(".","-")) in checker_rst_text
             documentable_checkers.append(checker)
 
     documentable_checkers.sort(key=lambda x: x["FullPackageName"])
@@ -73,17 +77,15 @@ def get_checkers(checkers_td_directory):
 
 Args:
   checker: Checker for which to generate documentation.
-  only_help_text: Generate documentation based off the checker description.
-    Used when there is no other documentation to link to.
+  has_documentation: Specify that there is other documentation to link to.
 """
+def generate_documentation(checker, has_documentation):
 
-
-def generate_documentation(checker, only_help_text=False):
     with open(
-        os.path.join(__location__, checker["FullPackageName"] + ".rst"), "w"
+        os.path.join(__location__, "clang-analyzer", checker["ShortName"] + ".rst"), "w"
     ) as f:
         f.write(".. title:: clang-tidy - %s\n" % checker["FullPackageName"])
-        if not only_help_text:
+        if has_documentation:
             f.write(".. meta::\n")
             f.write(
                 "   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#%s\n"
@@ -92,18 +94,31 @@ def generate_documentation(checker, only_help_text=False):
         f.write("\n")
         f.write("%s\n" % checker["FullPackageName"])
         f.write("=" * len(checker["FullPackageName"]) + "\n")
-        f.write("\n")
-        if only_help_text:
-            f.write("%s\n" % checker["HelpText"])
-        else:
+        help_text = checker["HelpText"].strip()
+        if not help_text.endswith("."):
+            help_text += "."
+        characters = 80
+        for word in help_text.split(" "):
+            if characters+len(word)+1 > 80:
+                characters = len(word)
+                f.write("\n")
+                f.write(word)
+            else:
+                f.write(" ")
+                f.write(word)
+                characters += len(word) + 1
+        f.write("\n\n")
+        if has_documentation:
             f.write(
-                "The %s check is an alias, please see\n" % checker["FullPackageName"]
+                "The `%s` check is an alias, please see\n" % checker["FullPackageName"]
             )
             f.write(
-                "`Clang Static Analyzer Available Checkers <https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_\n"
+                "`Clang Static Analyzer Available Checkers\n<https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_\n"
                 % checker["AnchorUrl"]
             )
             f.write("for more information.\n")
+        else:
+            f.write("The %s check is an alias of\nClang Static Analyzer %s.\n" % (checker["FullPackageName"], checker["ShortName"]));
         f.close()
 
 
@@ -112,70 +127,44 @@ def generate_documentation(checker, only_help_text=False):
 Args:
   checkers: dict acquired from get_checkers()
 """
-
-
 def update_documentation_list(checkers):
     with open(os.path.join(__location__, "list.rst"), "r+") as f:
         f_text = f.read()
-        header, check_text = f_text.split(".. toctree::\n")
-        checks = check_text.split("\n")
+        check_text = f_text.split(".. csv-table:: Aliases..\n")[1]
+        checks = [x for x in check_text.split("\n") if ":header:" not in x and x]
+        old_check_text = "\n".join(checks)
+        checks = [x for x in checks if "clang-analyzer-" not in x]
         for checker in checkers:
-            if ("   %s" % checker["FullPackageName"]) not in checks:
-                checks.append("   %s" % checker["FullPackageName"])
+            if checker["Documentation"]:
+                checks.append("   :doc:`%s <clang-analyzer/%s>`, `Clang Static Analyzer %s <https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_," % (checker["FullPackageName"],
+                                                        checker["ShortName"],  checker["ShortName"], checker["AnchorUrl"]))
+            else:
+                checks.append("   :doc:`%s <clang-analyzer/%s>`, Clang Static Analyzer %s," % (checker["FullPackageName"], checker["ShortName"],  checker["ShortName"]))
+
         checks.sort()
 
         # Overwrite file with new data
         f.seek(0)
-        f.write(header)
-        f.write(".. toctree::")
-        for check in checks:
-            f.write("%s\n" % check)
+        f_text = f_text.replace(old_check_text, "\n".join(checks))
+        f.write(f_text)
         f.close()
 
 
-default_path_monorepo = "../../../../clang/include/clang/StaticAnalyzer/Checkers/"
-default_path_in_tree = "../../../../../include/clang/StaticAnalyzer/Checkers/"
-
-
-def parse_arguments():
-    """Set up and parse command-line arguments
-    Returns:
-      file_path: Path to Checkers.td"""
-    usage = """Parse Checkers.td to generate documentation for static analyzer checks"""
-    parse = argparse.ArgumentParser(description=usage)
-
-    file_path_help = """Path to Checkers directory
-                    defaults to ../../../../clang/include/clang/StaticAnalyzer/Checkers/ if it exists
-                    then to ../../../../../include/clang/StaticAnalyzer/Checkers/"""
-
-    default_path = None
-    if os.path.exists(default_path_monorepo):
-        default_path = default_path_monorepo
-    elif os.path.exists(default_path_in_tree):
-        default_path = default_path_in_tree
-
-    parse.add_argument(
-        "file", type=str, help=file_path_help, nargs="?", default=default_path
-    )
-    args = parse.parse_args()
-
-    if args.file is None:
-        print("Could not find Checkers directory. Please see -h")
+def main():
+    CheckersPath = os.path.join(__location__, default_checkers_td_location)
+    if not os.path.exists(CheckersPath):
+        print("Could not find Checkers.td under %s." % (os.path.abspath(CheckersPath)))
         exit(1)
 
-    return args.file
+    CheckersDoc = os.path.join(__location__, default_checkers_rst_location)
+    if not os.path.exists(CheckersDoc):
+        print("Could not find checkers.rst under %s." % (os.path.abspath(CheckersDoc)))
+        exit(1)
 
-
-def main():
-    file_path = parse_arguments()
-    checkers = get_checkers(file_path)
+    checkers = get_checkers(CheckersPath, CheckersDoc)
     for checker in checkers:
-        # No documentation nor alpha documentation
-        if checker["Documentation"][1] == 0 and checker["Documentation"][0] == 0:
-            generate_documentation(checker, True)
-        else:
-            generate_documentation(checker)
-        print("Generated documentation for: %s" % checker["FullPackageName"])
+        generate_documentation(checker, checker["Documentation"])
+        print("Generated documentation for: %s" % (checker["FullPackageName"]))
     update_documentation_list(checkers)
 
 

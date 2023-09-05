@@ -170,7 +170,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   state.addTypes(derivedResultTypes);
   state.addAttributes(attributes);
   state.addAttribute(
-      "operand_segment_sizes",
+      "operandSegmentSizes",
       b.getDenseI32ArrayAttr({static_cast<int32_t>(inputs.size()),
                               static_cast<int32_t>(outputs.size())}));
 
@@ -226,18 +226,18 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
     // This is a bit complex because we're trying to be backward compatible with
     // operation syntax that mix the inherent attributes and the discardable
     // ones in the same dictionary. If the properties are used, we append the
-    // operand_segment_sizes there directly. Otherwise we append it to the
+    // operandSegmentSizes there directly. Otherwise we append it to the
     // discardable attributes dictionary where it is handled by the generic
     // Operation::create(...) method.
     if (result.propertiesAttr) {
       NamedAttrList attrs = llvm::cast<DictionaryAttr>(result.propertiesAttr);
-      attrs.append("operand_segment_sizes",
+      attrs.append("operandSegmentSizes",
                    parser.getBuilder().getDenseI32ArrayAttr(
                        {static_cast<int32_t>(inputsOperands.size()),
                         static_cast<int32_t>(outputsOperands.size())}));
       result.propertiesAttr = attrs.getDictionary(parser.getContext());
     } else {
-      result.addAttribute("operand_segment_sizes",
+      result.addAttribute("operandSegmentSizes",
                           parser.getBuilder().getDenseI32ArrayAttr(
                               {static_cast<int32_t>(inputsOperands.size()),
                                static_cast<int32_t>(outputsOperands.size())}));
@@ -332,7 +332,7 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
                                    ValueRange inputs, ValueRange outputs) {
   p.printOptionalAttrDict(
       op->getAttrs(),
-      /*elidedAttrs=*/{"operand_segment_sizes",
+      /*elidedAttrs=*/{"operandSegmentSizes",
                        // See generated code in
                        // LinalgNamedStructuredOps.yamlgen.cpp.inc
                        "linalg.memoized_indexing_maps"});
@@ -900,7 +900,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
                                SmallVector<Value>(getDpsInitOperands()));
 
-  genericAttrNames.push_back("operand_segment_sizes");
+  genericAttrNames.push_back("operandSegmentSizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
@@ -2345,6 +2345,13 @@ SoftmaxOp::reifyResultShapes(OpBuilder &b,
       .reifyResultShapes(b, reifiedReturnShapes);
 }
 
+void SoftmaxOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getDpsInputOperands(), getDpsInitOperands());
+}
+
 // Helper functions for softmax decomposition.
 // @{
 
@@ -2492,7 +2499,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
   Value neutralForMaxF =
-      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
+      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc,
+                              /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
@@ -2503,8 +2511,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
 
   // Step 3: Compute sum along dim.
-  Value zero =
-      arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
+  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
+                                       b, loc, /*useOnlyFiniteValue=*/true);
   Value zeroInit =
       b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
   Value denominator =

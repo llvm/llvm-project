@@ -14,7 +14,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -25,7 +25,7 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -187,8 +187,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     default type converter specify their own type converter.)
 
     The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
-    attributes specify the conversion target. At least one of those four
-    attributes must be specified.
+    attributes specify the conversion target.
 
     This transform consumes the `target` handle and modifies the payload. It
     does not produce any handles.
@@ -201,12 +200,16 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
-                       UnitAttr:$partialConversion);
+                       UnitAttr:$partial_conversion);
   let results = (outs);
-  let regions = (region VariadicRegion<MaxSizedRegion<1>>:$regions);
+  let regions = (region
+      MaxSizedRegion<1>:$patterns,
+      VariadicRegion<MaxSizedRegion<1>>:$default_type_converter_region);
 
   let assemblyFormat = [{
-    `to` $target $regions attr-dict `:` type($target)
+    `to` $target $patterns
+    (`with` `type_converter` $default_type_converter_region^)?
+    attr-dict `:` type($target)
   }];
   let hasVerifier = 1;
 
@@ -221,17 +224,32 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
   ];
 
   let extraClassDeclaration = [{
-    ::mlir::Region &getPatterns() {
-      return getRegion(0);
-    }
-
     ::mlir::transform::TypeConverterBuilderOpInterface getDefaultTypeConverter() {
-      if (getNumRegions() < 2)
+      if (getDefaultTypeConverterRegion().size() == 0)
         return {};
       return ::llvm::cast<::mlir::transform::TypeConverterBuilderOpInterface>(
-          &getRegion(1).front().front());
+          &getDefaultTypeConverterRegion()[0].front().front());
     }
   }];
+}
+
+def ApplyToLLVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.dialect_to_llvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert ops from the specified dialect to LLVM
+    dialect ops. These patterns require an "LLVMTypeConverter".
+
+    Note: Only dialects that implement the `ConvertToLLVMPatternInterface` are
+    supported. Any conversion target modifications by interface implementations
+    are currently ignored. The conversion target is fully specified by the
+    enclosing "apply_conversion_patterns" op.
+  }];
+
+  let arguments = (ins StrAttr:$dialect_name);
+  let assemblyFormat = "$dialect_name attr-dict";
+  let hasVerifier = 1;
 }
 
 def ApplyDeadCodeEliminationOp : TransformDialectOp<"apply_dce",
@@ -367,13 +385,17 @@ def ApplyLoopInvariantCodeMotionOp : TransformDialectOp<"apply_licm",
 def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
     [TransformOpInterface, TransformEachOpTrait,
      FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Applies the specified registered pass";
+  let summary = "Applies the specified registered pass or pass pipeline";
   let description = [{
-    This transform applies the specified pass to the targeted ops. The name of
-    the pass is specified as a string attribute, as set during pass
-    registration. Optionally, pass options may be specified as a string
-    attribute. The pass options syntax is identical to the one used with
-    "mlir-opt".
+    This transform applies the specified pass or pass pipeline to the targeted
+    ops. The name of the pass/pipeline is specified as a string attribute, as
+    set during pass/pipeline registration. Optionally, pass options may be
+    specified as a string attribute. The pass options syntax is identical to the
+    one used with "mlir-opt".
+
+    This op first looks for a pass pipeline with the specified name. If no such
+    pipeline exists, it looks for a pass with the specified name. If no such
+    pass exists either, this op fails definitely.
 
     This transform consumes the target handle and produces a new handle that is
     mapped to the same op. Passes are not allowed to remove/modify the operation
@@ -488,7 +510,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getSuccessorRegions", "getSuccessorEntryOperands"]>,
+         "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each payload op";
@@ -781,8 +803,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
 }
 
 def NamedSequenceOp : TransformDialectOp<"named_sequence",
-    [CallableOpInterface,
-     FunctionOpInterface,
+    [FunctionOpInterface,
      IsolatedFromAbove,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -832,18 +853,8 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     ::llvm::ArrayRef<::mlir::Type> getResultTypes() {
       return getFunctionType().getResults();
     }
-
     ::mlir::Region *getCallableRegion() {
       return &getBody();
-    }
-    ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
-      return getFunctionType().getResults();
-    }
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
     }
   }];
 }
@@ -997,7 +1008,7 @@ def SelectOp : TransformDialectOp<"select",
 
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,

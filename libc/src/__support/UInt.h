@@ -116,7 +116,7 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
-      return (static_cast<T>(val[1]) << 64) + lo;
+      return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }
 

@@ -34,7 +34,7 @@ func.func @test_scalar_at_index(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>, 
 // CHECK: %[[VAL_4:.*]] = fir.declare %[[VAL_1]] {uniq_name = "b"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 // CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
-// CHECK: %[[VAL_7:.*]] = fir.array_coor %[[VAL_2]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, i64) -> !fir.ref<!fir.complex<4>>
+// CHECK: %[[VAL_7:.*]] = fir.array_coor %[[VAL_3]] %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, i64) -> !fir.ref<!fir.complex<4>>
 // CHECK: %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK: %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_8]] : (!fir.ref<!fir.complex<4>>, index) -> !fir.ref<f32>
 
@@ -56,10 +56,10 @@ func.func @test_complete_slice(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
 // CHECK: %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK: %[[VAL_7:.*]] = arith.constant 1 : index
 // CHECK: %[[VAL_8:.*]] = arith.constant 0 : index
-// CHECK: %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_8]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, index) -> (index, index, index)
+// CHECK: %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_8]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, index) -> (index, index, index)
 // CHECK: %[[VAL_10:.*]] = arith.constant 1 : index
 // CHECK: %[[VAL_11:.*]] = fir.slice %[[VAL_7]], %[[VAL_9]]#1, %[[VAL_6]] path %[[VAL_10]] : (index, index, index, index) -> !fir.slice<1>
-// CHECK: %[[VAL_12:.*]] = fir.rebox %[[VAL_2]] [%[[VAL_11]]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+// CHECK: %[[VAL_12:.*]] = fir.rebox %[[VAL_3]] [%[[VAL_11]]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 
 func.func @test_slice_steps(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
   %c3 = arith.constant 3 : index
@@ -80,4 +80,4 @@ func.func @test_slice_steps(%arg0: !fir.box<!fir.array<?x!fir.complex<4>>>) {
 // CHECK: %[[VAL_6:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
 // CHECK: %[[VAL_7:.*]] = arith.constant 0 : index
 // CHECK: %[[VAL_8:.*]] = fir.slice %[[VAL_3]], %[[VAL_2]], %[[VAL_1]] path %[[VAL_7]] : (index, index, index, index) -> !fir.slice<1>
-// CHECK: %[[VAL_9:.*]] = fir.rebox %[[VAL_4]] [%[[VAL_8]]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<3xf32>>
+// CHECK: %[[VAL_9:.*]] = fir.rebox %[[VAL_5]] [%[[VAL_8]]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>) -> !fir.box<!fir.array<3xf32>>

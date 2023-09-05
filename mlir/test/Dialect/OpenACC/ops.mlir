@@ -1664,3 +1664,65 @@ acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(
 // CHECK: acc.routine @acc_func_rout7 func(@acc_func) bind("acc_func_gpu_imp_gang") gang implicit
 // CHECK: acc.routine @acc_func_rout8 func(@acc_func) bind("acc_func_gpu_vector_nohost") vector nohost
 // CHECK: acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(dim = 1 : i32)
+
+// -----
+
+func.func @acc_func() -> () {
+  "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>} : () -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @acc_func
+// CHECK: "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>}
+
+// -----
+
+func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>, %d: memref<10xf32>) {
+  %lb = arith.constant 0 : index
+  %st = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %numGangs = arith.constant 10 : i64
+  %numWorkers = arith.constant 10 : i64
+
+  %c20 = arith.constant 20 : i32
+  %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr<i32>
+  %createlocal = acc.create varPtr(%alloc : !llvm.ptr<i32>) -> !llvm.ptr<i32> {implicit = true}
+
+  %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+  %pb = acc.present varPtr(%b : memref<10x10xf32>) -> memref<10x10xf32>
+  %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
+  %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
+  acc.declare dataOperands(%pa, %pb, %pc, %pd, %createlocal: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>, !llvm.ptr<i32>) {
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @compute3
+// CHECK: acc.declare dataOperands(
+
+// -----
+
+%i64Value = arith.constant 1 : i64
+%i32Value = arith.constant 1 : i32
+%i32Value2 = arith.constant 2 : i32
+%idxValue = arith.constant 1 : index
+%ifCond = arith.constant true
+acc.set device_type(%i32Value : i32)
+acc.set device_num(%i64Value : i64)
+acc.set device_num(%i32Value : i32)
+acc.set device_num(%idxValue : index)
+acc.set device_num(%idxValue : index) if(%ifCond)
+acc.set default_async(%i32Value : i32)
+
+// CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK: [[I32VALUE2:%.*]] = arith.constant 2 : i32
+// CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK: [[IFCOND:%.*]] = arith.constant true
+// CHECK: acc.set device_type([[I32VALUE]] : i32)
+// CHECK: acc.set device_num([[I64VALUE]] : i64)
+// CHECK: acc.set device_num([[I32VALUE]] : i32)
+// CHECK: acc.set device_num([[IDXVALUE]] : index)
+// CHECK: acc.set device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.set default_async([[I32VALUE]] : i32)

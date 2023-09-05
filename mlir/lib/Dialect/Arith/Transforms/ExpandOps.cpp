@@ -179,7 +179,8 @@ public:
     Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
 
     // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
-    Value isNaN = rewriter.create<arith::IsNanOp>(loc, rhs, op.getFastmath());
+    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
+                                                 rhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }

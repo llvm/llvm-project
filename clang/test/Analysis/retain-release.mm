@@ -461,7 +461,6 @@ void	radar13722286::PrepareBitmap() {
 	}
 }
 
-// rdar://34210609
 void _() { _(); }; // no-warning
 
 // Do not assume that IOBSDNameMatching increments a reference counter,

@@ -14,6 +14,7 @@
 #ifndef ARMSME_OPS
 #define ARMSME_OPS
 
+include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -60,6 +61,12 @@ def nxnxv2f64  : SMETileType<F64,  [2,  2 ], "vector<[2]x[2]xf64>">;
 
 def SMETile : AnyTypeOf<[nxnxv16i8, nxnxv8i16, nxnxv4i32, nxnxv2i64, nxnxv1i128,
                          nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64]>;
+
+def SVEVector : ScalableVectorOfRankAndLengthAndType<
+  [1], [16, 8, 4, 2, 1], [I8, I16, I32, I64, I128, F16, BF16, F32, F64]>;
+
+def SVEPredicate : ScalableVectorOfRankAndLengthAndType<
+  [1], [16, 8, 4, 2, 1], [I1]>;
 
 // A type constraint that verifies the bitwidth of the scalar integer returned
 // from 'arm_sme.get_tile_id' matches the element bitwidth of a "virtual tile".
@@ -203,18 +210,21 @@ def GetTileID : ArmSME_Op<"get_tile_id"> {
 
 def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let summary = "Initialize the two-dimensional ZA array with 0s";
-  let results = (outs nxnxv16i8:$res);
+  let results = (outs SMETile:$res);
   let description = [{
     Initialise ZA with 0. This operation is convenient wrapper for the SME
     `zero` intrinsic and instruction. 
 
-    NOTE: At the moment it is assumed that the element type is `i8` and that
-    there's only one "virtual tile".
-
-    Example:
+    Example 1: Zero an 8-bit element ZA tile.
 
     ```mlir
     %0 = arm_sme.zero : vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Zero a 64-bit element ZA tile.
+
+    ```mlir
+    %0 = arm_sme.zero : vector<[2]x[2]xi64>
     ```
   }];
   let extraClassDeclaration = [{
@@ -404,6 +414,51 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
   }];
 }
 
+def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
+    AllTypesMatch<["tile", "result"]>,
+    TypesMatchWith<
+      "type of 'vector' matches type of 'tile' slice",
+      "tile", "vector",
+      "VectorType::get("
+        "::llvm::cast<mlir::VectorType>($_self).getShape().drop_front(),"
+        "::llvm::cast<mlir::VectorType>($_self).getElementType(),"
+        "/*scalableDims=*/{true})">,
+]> {
+  let summary = "Move 1-D scalable vector to slice of 2-D tile";
+  let description = [{
+    The vector to tile slice operation moves a 1-D scalable vector to a slice
+    of a 2-D scalable vector tile at the given index. The type of the 1-D
+    scalable vector to be moved must match the type of the tile slice. A tile
+    slice is a 1-D vector of horizontally or vertically contiguous elements
+    within a ZA tile. Horizontal tile slices are currently assumed when
+    lowering to intrinsics. The updated tile is returned as the result.
+
+    Example 1: Move a vector<[16]xi8> into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[16]xi8> into vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Move a vector<[2]xf64> into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[2]xf64> into vector<[2]x[2]xf64>
+    ```
+  }];
+  let arguments = (ins
+      SVEVector:$vector, SMETile:$tile, Index:$tile_slice_index);
+  let results = (outs SMETile:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getTileType() {
+      return ::llvm::cast<VectorType>(getTile().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $vector `,` $tile `,` $tile_slice_index
+      attr-dict `:` type($vector) `into` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME Intrinsic op definitions
 //===----------------------------------------------------------------------===//
@@ -492,6 +547,18 @@ def LLVM_aarch64_sme_str
     : ArmSME_IntrOp<"str">,
       Arguments<(ins Arg<I32, "Index">,
                  Arg<LLVM_AnyPointer, "Store address", [MemWrite]>)>;
+
+// Vector to tile
+class LLVM_aarch64_sme_write<string direction>
+    : ArmSME_IntrOp<"write." # direction, /*overloadedOperands=*/[3],
+                    [AllShapesMatch<["pg", "vector"]>]>,
+      Arguments<(ins Arg<I32, "Virtual tile ID">,
+                     Arg<I32, "Tile slice">,
+                     Arg<SVEPredicate, "Vector predicate">:$pg,
+                     Arg<SVEVector, "Vector operand">:$vector)>;
+
+def LLVM_aarch64_sme_write_horiz : LLVM_aarch64_sme_write<"horiz">;
+def LLVM_aarch64_sme_write_vert : LLVM_aarch64_sme_write<"vert">;
 
 def LLVM_aarch64_sme_za_enable : ArmSME_IntrOp<"za.enable">;
 def LLVM_aarch64_sme_za_disable : ArmSME_IntrOp<"za.disable">;

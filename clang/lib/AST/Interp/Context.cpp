@@ -128,7 +128,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     return PT_Float;
 
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType())
+      T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
     return PT_FnPtr;
 
   if (T->isReferenceType() || T->isPointerType())

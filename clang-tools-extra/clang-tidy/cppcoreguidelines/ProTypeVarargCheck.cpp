@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProTypeVarargCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -133,7 +134,9 @@ void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       callExpr(callee(functionDecl(isVariadic(),
-                                   unless(hasAnyName(AllowedVariadics)))))
+                                   unless(hasAnyName(AllowedVariadics)))),
+               unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))),
+               unless(hasAncestor(typeLoc())))
           .bind("callvararg"),
       this);
 

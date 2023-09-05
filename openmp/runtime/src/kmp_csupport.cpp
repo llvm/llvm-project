@@ -385,6 +385,24 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
 @ingroup PARALLEL
 @param loc source location information
 @param global_tid global thread number
+@param thread_limit limit on number of threads which can be created within the
+current task
+
+Set the thread_limit for the current task
+This call is there to support `thread_limit` clause on the `target` construct
+*/
+void __kmpc_set_thread_limit(ident_t *loc, kmp_int32 global_tid,
+                             kmp_int32 thread_limit) {
+  __kmp_assert_valid_gtid(global_tid);
+  kmp_info_t *thread = __kmp_threads[global_tid];
+  if (thread_limit > 0)
+    thread->th.th_current_task->td_icvs.task_thread_limit = thread_limit;
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
 @param num_teams_lb lower bound on number of teams requested for the teams
 construct
 @param num_teams_ub upper bound on number of teams requested for the teams
@@ -2065,14 +2083,15 @@ void kmpc_set_stacksize_s(size_t arg) {
 }
 
 void kmpc_set_blocktime(int arg) {
-  int gtid, tid;
+  int gtid, tid, bt = arg;
   kmp_info_t *thread;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
   thread = __kmp_thread_from_gtid(gtid);
 
-  __kmp_aux_set_blocktime(arg, thread, tid);
+  __kmp_aux_convert_blocktime(&bt);
+  __kmp_aux_set_blocktime(bt, thread, tid);
 }
 
 void kmpc_set_library(int arg) {

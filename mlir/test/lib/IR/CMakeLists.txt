@@ -30,6 +30,7 @@ add_mlir_library(MLIRTestIR
   MLIRPass
   MLIRBytecodeReader
   MLIRBytecodeWriter
+  MLIRFunctionInterfaces
   MLIRTestDialect
   )
 

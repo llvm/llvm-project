@@ -288,7 +288,7 @@ protected:
   /// all virtual registers.
   ///
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
-  /// be honored. This is also not generally used for the the fast variant,
+  /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
   void addPreRewrite(AddMachinePass &) const {}
 
@@ -579,7 +579,7 @@ void CodeGenPassBuilder<Derived>::addISelPasses(AddIRPass &addPass) const {
   if (TM.useEmulatedTLS())
     addPass(LowerEmuTLSPass());
 
-  addPass(PreISelIntrinsicLoweringPass());
+  addPass(PreISelIntrinsicLoweringPass(TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);

@@ -9,8 +9,10 @@
 #ifndef __LLVM_LIBC_TYPES_STRUCT_UTSNAME_H__
 #define __LLVM_LIBC_TYPES_STRUCT_UTSNAME_H__
 
-#ifdef __linux__
+#if defined(__linux__)
 #define __UTS_NAME_LENGTH 65
+#elif defined(__APPLE__)
+#define __UTS_NAME_LENGTH 256
 #else
 // Arbitray default. Should be specialized for each platform.
 #define __UTS_NAME_LENGTH 1024

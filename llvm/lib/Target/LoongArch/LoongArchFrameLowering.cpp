@@ -291,18 +291,15 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   if (hasFP(MF)) {
     // Realign stack.
     if (RI->hasStackRealignment(MF)) {
-      unsigned ShiftAmount = Log2(MFI.getMaxAlign());
-      Register VR =
-          MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+      unsigned Align = Log2(MFI.getMaxAlign());
+      assert(Align > 0 && "The stack realignment size is invalid!");
       BuildMI(MBB, MBBI, DL,
-              TII->get(IsLA64 ? LoongArch::SRLI_D : LoongArch::SRLI_W), VR)
+              TII->get(IsLA64 ? LoongArch::BSTRINS_D : LoongArch::BSTRINS_W),
+              SPReg)
           .addReg(SPReg)
-          .addImm(ShiftAmount)
-          .setMIFlag(MachineInstr::FrameSetup);
-      BuildMI(MBB, MBBI, DL,
-              TII->get(IsLA64 ? LoongArch::SLLI_D : LoongArch::SLLI_W), SPReg)
-          .addReg(VR)
-          .addImm(ShiftAmount)
+          .addReg(LoongArch::R0)
+          .addImm(Align - 1)
+          .addImm(0)
           .setMIFlag(MachineInstr::FrameSetup);
       // FP will be used to restore the frame in the epilogue, so we need
       // another base register BP to record SP after re-alignment. SP will

@@ -58,7 +58,7 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; V-NEXT:    lui a3, 983765
 ; V-NEXT:    addiw a3, a3, 873
 ; V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; V-NEXT:    vmv.v.x v0, a3
+; V-NEXT:    vmv.s.x v0, a3
 ; V-NEXT:    li a3, 32
 ; V-NEXT:    li a4, 5
 ; V-NEXT:  .LBB1_1: # %vector.body
@@ -82,7 +82,7 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; ZVE32F-NEXT:    lui a3, 983765
 ; ZVE32F-NEXT:    addiw a3, a3, 873
 ; ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVE32F-NEXT:    vmv.v.x v0, a3
+; ZVE32F-NEXT:    vmv.s.x v0, a3
 ; ZVE32F-NEXT:    li a3, 32
 ; ZVE32F-NEXT:    li a4, 5
 ; ZVE32F-NEXT:  .LBB1_1: # %vector.body
@@ -333,7 +333,7 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; V-NEXT:    lui a4, 983765
 ; V-NEXT:    addiw a4, a4, 873
 ; V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; V-NEXT:    vmv.v.x v0, a4
+; V-NEXT:    vmv.s.x v0, a4
 ; V-NEXT:    li a4, 5
 ; V-NEXT:  .LBB6_1: # %vector.body
 ; V-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -357,7 +357,7 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; ZVE32F-NEXT:    lui a4, 983765
 ; ZVE32F-NEXT:    addiw a4, a4, 873
 ; ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; ZVE32F-NEXT:    vmv.v.x v0, a4
+; ZVE32F-NEXT:    vmv.s.x v0, a4
 ; ZVE32F-NEXT:    li a4, 5
 ; ZVE32F-NEXT:  .LBB6_1: # %vector.body
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1

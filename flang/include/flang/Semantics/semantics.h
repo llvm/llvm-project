@@ -144,14 +144,6 @@ public:
     return *this;
   }
 
-  bool anyDefinedIntrinsicOperator() const {
-    return anyDefinedIntrinsicOperator_;
-  }
-  SemanticsContext &set_anyDefinedIntrinsicOperator(bool yes = true) {
-    anyDefinedIntrinsicOperator_ = yes;
-    return *this;
-  }
-
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
 
@@ -185,6 +177,7 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  void UpdateScopeIndex(Scope &, parser::CharBlock);
 
   bool IsInModuleFile(parser::CharBlock) const;
 
@@ -250,6 +243,13 @@ public:
   CommonBlockList GetCommonBlocks() const;
 
 private:
+  struct ScopeIndexComparator {
+    bool operator()(parser::CharBlock, parser::CharBlock) const;
+  };
+  using ScopeIndex =
+      std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
+  ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
+
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
@@ -269,6 +269,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
@@ -286,7 +287,6 @@ private:
   const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
-  bool anyDefinedIntrinsicOperator_{false};
 };
 
 class Semantics {

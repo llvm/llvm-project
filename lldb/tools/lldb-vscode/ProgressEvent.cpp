@@ -9,6 +9,7 @@
 #include "ProgressEvent.h"
 
 #include "JSONUtils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace lldb_vscode;
@@ -91,12 +92,15 @@ bool ProgressEvent::EqualsForIDE(const ProgressEvent &other) const {
 ProgressEventType ProgressEvent::GetEventType() const { return m_event_type; }
 
 StringRef ProgressEvent::GetEventName() const {
-  if (m_event_type == progressStart)
+  switch (m_event_type) {
+  case progressStart:
     return "progressStart";
-  else if (m_event_type == progressEnd)
-    return "progressEnd";
-  else
+  case progressUpdate:
     return "progressUpdate";
+  case progressEnd:
+    return "progressEnd";
+  }
+  llvm_unreachable("All cases handled above!");
 }
 
 json::Value ProgressEvent::ToJSON() const {

@@ -51,16 +51,17 @@ public:
 } // namespace
 
 // Register the NVVM dialect, the NVVM translation & the target interface.
-void mlir::registerNVVMTarget(DialectRegistry &registry) {
-  registerNVVMDialectTranslation(registry);
+void mlir::NVVM::registerNVVMTargetInterfaceExternalModels(
+    DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     NVVMTargetAttr::attachInterface<NVVMTargetAttrImpl>(*ctx);
   });
 }
 
-void mlir::registerNVVMTarget(MLIRContext &context) {
+void mlir::NVVM::registerNVVMTargetInterfaceExternalModels(
+    MLIRContext &context) {
   DialectRegistry registry;
-  registerNVVMTarget(registry);
+  registerNVVMTargetInterfaceExternalModels(registry);
   context.appendDialectRegistry(registry);
 }
 
@@ -121,7 +122,7 @@ ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
 // Try to append `libdevice` from a CUDA toolkit installation.
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
   StringRef pathRef = getToolkitPath();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     SmallVector<char, 256> path;
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     pathRef = StringRef(path.data(), path.size());
@@ -149,7 +150,7 @@ SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module,
   if (failed(loadBitcodeFilesFromList(module.getContext(), targetMachine,
                                       fileList, bcFiles, true)))
     return std::nullopt;
-  return bcFiles;
+  return std::move(bcFiles);
 }
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED == 1

@@ -27,7 +27,7 @@ using namespace llvm::support::endian;
 namespace llvm {
 
 // This relocation type is used for handling long branch instruction
-// throught the Stub.
+// through the Stub.
 enum InternalRelocationType : unsigned {
   INTERNAL_REL_ARM64_LONG_BRANCH26 = 0x111,
 };

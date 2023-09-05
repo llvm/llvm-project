@@ -32,14 +32,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
 // the default operator= in an object is not volatile, a byte-by-byte copy
 // is required.
-template <typename _Tp, typename _Tv> _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_assignable<_Tp&, _Tv>::value>::type
-__cxx_atomic_assign_volatile(_Tp& __a_value, _Tv const& __val) {
+template <typename _Tp, typename _Tv, __enable_if_t<is_assignable<_Tp&, _Tv>::value, int> = 0> _LIBCPP_HIDE_FROM_ABI
+void __cxx_atomic_assign_volatile(_Tp& __a_value, _Tv const& __val) {
   __a_value = __val;
 }
-template <typename _Tp, typename _Tv> _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_assignable<_Tp&, _Tv>::value>::type
-__cxx_atomic_assign_volatile(_Tp volatile& __a_value, _Tv volatile const& __val) {
+template <typename _Tp, typename _Tv, __enable_if_t<is_assignable<_Tp&, _Tv>::value, int> = 0> _LIBCPP_HIDE_FROM_ABI
+void __cxx_atomic_assign_volatile(_Tp volatile& __a_value, _Tv volatile const& __val) {
   volatile char* __to         = reinterpret_cast<volatile char*>(std::addressof(__a_value));
   volatile char* __end = __to + sizeof(_Tp);
   volatile const char* __from = reinterpret_cast<volatile const char*>(std::addressof(__val));

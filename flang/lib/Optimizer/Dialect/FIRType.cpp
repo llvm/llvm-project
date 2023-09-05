@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
@@ -530,6 +530,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
       ty = refTy.getEleTy();
     } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
       name << "ptr_";
+      ty = ptrTy.getEleTy();
+    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
+      name << "llvmptr_";
       ty = ptrTy.getEleTy();
     } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
       name << "heap_";

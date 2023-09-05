@@ -80,7 +80,7 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 }
 
 static void set_thread_ptr(uintptr_t val) {
-  LIBC_INLINE_ASM("ld tp, %0\n\t" : : "m"(val));
+  LIBC_INLINE_ASM("mv tp, %0\n\t" : : "r"(val));
 }
 
 using InitCallback = void(int, char **, char **);

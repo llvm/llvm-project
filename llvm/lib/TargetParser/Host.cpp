@@ -822,6 +822,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Gracemont
+    case 0xbe:
     // Raptorlake:
     case 0xb7:
     case 0xba:

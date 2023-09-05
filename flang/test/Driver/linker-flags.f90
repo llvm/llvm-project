@@ -10,7 +10,7 @@
 !       'oldnames' on Windows, but they are not needed when compiling
 !       Fortran code and they might bring in additional dependencies.
 !       Make sure they're not added.
-! RUN: %flang -### -target aarch64-windows-msvc %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
+! RUN: %flang -### -target aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
 
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"

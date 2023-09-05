@@ -735,6 +735,34 @@ math_test(
 )
 
 math_test(
+    name = "erff",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp2",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp10",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
     name = "fmod",
     hdrs = ["FModTest.h"],
 )

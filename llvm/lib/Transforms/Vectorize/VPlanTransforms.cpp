@@ -511,7 +511,8 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   Type *TruncTy = TruncI ? TruncI->getType() : IVTy;
   VPValue *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step, TruncTy)) {
-    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step, TruncTy);
+    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step,
+                                   TruncI ? TruncI->getType() : nullptr);
     HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
   }
 

@@ -66,7 +66,7 @@ class AVRAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
+  ParseStatus parseMemriOperand(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, bool maybeReg);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
@@ -559,7 +559,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
   return true;
 }
 
-OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
+ParseStatus AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   LLVM_DEBUG(dbgs() << "parseMemriOperand()\n");
 
   SMLoc E, S;
@@ -571,7 +571,7 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
     RegNo = parseRegister();
 
     if (RegNo == AVR::NoRegister)
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     S = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Parser.Lex(); // Eat register token.
@@ -580,14 +580,14 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   // Parse immediate;
   {
     if (getParser().parseExpression(Expression))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   }
 
   Operands.push_back(AVROperand::CreateMemri(RegNo, Expression, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 bool AVRAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -630,13 +630,12 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     if (OperandNum > 0)
       eatComma();
 
-    auto MatchResult = MatchOperandParserImpl(Operands, Mnemonic);
+    ParseStatus ParseRes = MatchOperandParserImpl(Operands, Mnemonic);
 
-    if (MatchResult == MatchOperand_Success) {
+    if (ParseRes.isSuccess())
       continue;
-    }
 
-    if (MatchResult == MatchOperand_ParseFail) {
+    if (ParseRes.isFailure()) {
       SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
 

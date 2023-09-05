@@ -441,6 +441,20 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
 let SubtargetPredicate = HasDot8Insts  in {
 defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_sudot4>;
 defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_sudot8>;
+
+def : GCNPat < (int_amdgcn_sdot8 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT8_I32_IU4  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
+
+def : GCNPat < (int_amdgcn_sdot4 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT4_I32_IU8  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
 } // End SubtargetPredicate = HasDot8Insts
 
 // Does not use opsel, no src_modifiers on src0 and src1.
@@ -784,12 +798,16 @@ def MAIInstInfoTable : GenericTable {
   let PrimaryKeyName = "getMAIInstInfoHelper";
 }
 
-let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1, isReMaterializable = 1 in {
-  defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
-  defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
-  defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+let isCommutable = 1, isReMaterializable = 1 in {
+  let SubtargetPredicate = HasPackedFP32Ops in {
+    defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
+    defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
+    defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+  } // End SubtargetPredicate = HasPackedFP32Ops
+
+  let SubtargetPredicate = HasPkMovB32 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
-} // End SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1
+} // End isCommutable = 1, isReMaterializable = 1
 
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;

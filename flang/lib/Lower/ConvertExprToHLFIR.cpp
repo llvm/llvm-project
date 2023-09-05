@@ -129,7 +129,7 @@ public:
     // shape is deferred and should not be loaded now to preserve
     // pointer/allocatable aspects.
     if (componentSym.Rank() == 0 ||
-        Fortran::semantics::IsAllocatableOrPointer(componentSym))
+        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
       return mlir::Value{};
 
     fir::FirOpBuilder &builder = getBuilder();
@@ -488,8 +488,8 @@ private:
       // array ref designates the target (this is done in "visit"). Other
       // components need special care to deal with the array%array_comp(indices)
       // case.
-      if (Fortran::semantics::IsAllocatableOrPointer(
-              component->GetLastSymbol()))
+      if (Fortran::semantics::IsAllocatableOrObjectPointer(
+              &component->GetLastSymbol()))
         baseType = visit(*component, partInfo);
       else
         baseType = hlfir::getFortranElementOrSequenceType(
@@ -734,7 +734,7 @@ private:
       if (charTy.hasConstantLen())
         partInfo.typeParams.push_back(
             builder.createIntegerConstant(loc, idxTy, charTy.getLen()));
-      else if (!Fortran::semantics::IsAllocatableOrPointer(componentSym))
+      else if (!Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
         TODO(loc, "compute character length of automatic character component "
                   "in a PDT");
       // Otherwise, the length of the component is deferred and will only
@@ -1525,8 +1525,11 @@ private:
     // Elemental expression.
     mlir::Type elementType;
     if constexpr (R::category == Fortran::common::TypeCategory::Derived) {
-      elementType = Fortran::lower::translateDerivedTypeToFIRType(
-          getConverter(), op.derived().GetType().GetDerivedTypeSpec());
+      if (op.derived().GetType().IsUnlimitedPolymorphic())
+        elementType = mlir::NoneType::get(builder.getContext());
+      else
+        elementType = Fortran::lower::translateDerivedTypeToFIRType(
+            getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {
       elementType =
           Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,

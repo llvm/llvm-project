@@ -201,16 +201,17 @@ Value &Value::operator=(const Value &RHS) {
 }
 
 Value &Value::operator=(Value &&RHS) noexcept {
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
+  if (this != &RHS) {
+    if (IsManuallyAlloc)
+      ValueStorage::getFromPayload(getPtr())->Release();
 
-  Interp = std::exchange(RHS.Interp, nullptr);
-  OpaqueType = std::exchange(RHS.OpaqueType, nullptr);
-  ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
-  IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
+    Interp = std::exchange(RHS.Interp, nullptr);
+    OpaqueType = std::exchange(RHS.OpaqueType, nullptr);
+    ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
+    IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
 
-  Data = RHS.Data;
-
+    Data = RHS.Data;
+  }
   return *this;
 }
 

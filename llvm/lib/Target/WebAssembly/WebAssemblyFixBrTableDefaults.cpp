@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -166,7 +167,7 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = *MBBSet.begin();
     MBBSet.erase(MBB);
     for (auto &MI : *MBB) {
-      if (WebAssembly::isBrTable(MI)) {
+      if (WebAssembly::isBrTable(MI.getOpcode())) {
         fixBrTableIndex(MI, MBB, MF);
         auto *Fixed = fixBrTableDefault(MI, MBB, MF);
         if (Fixed != nullptr) {

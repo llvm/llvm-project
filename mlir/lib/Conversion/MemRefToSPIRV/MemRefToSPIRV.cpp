@@ -42,15 +42,13 @@ using namespace mlir;
 static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
                                   int targetBits, OpBuilder &builder) {
   assert(targetBits % sourceBits == 0);
-  IntegerType targetType = builder.getIntegerType(targetBits);
-  IntegerAttr idxAttr =
-      builder.getIntegerAttr(targetType, targetBits / sourceBits);
-  auto idx = builder.create<spirv::ConstantOp>(loc, targetType, idxAttr);
-  IntegerAttr srcBitsAttr = builder.getIntegerAttr(targetType, sourceBits);
-  auto srcBitsValue =
-      builder.create<spirv::ConstantOp>(loc, targetType, srcBitsAttr);
+  Type type = srcIdx.getType();
+  IntegerAttr idxAttr = builder.getIntegerAttr(type, targetBits / sourceBits);
+  auto idx = builder.create<spirv::ConstantOp>(loc, type, idxAttr);
+  IntegerAttr srcBitsAttr = builder.getIntegerAttr(type, sourceBits);
+  auto srcBitsValue = builder.create<spirv::ConstantOp>(loc, type, srcBitsAttr);
   auto m = builder.create<spirv::UModOp>(loc, srcIdx, idx);
-  return builder.create<spirv::IMulOp>(loc, targetType, m, srcBitsValue);
+  return builder.create<spirv::IMulOp>(loc, type, m, srcBitsValue);
 }
 
 /// Returns an adjusted spirv::AccessChainOp. Based on the
@@ -58,20 +56,19 @@ static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
 /// supported. During conversion if a memref of an unsupported type is used,
 /// load/stores to this memref need to be modified to use a supported higher
 /// bitwidth `targetBits` and extracting the required bits. For an accessing a
-/// 1D array (spirv.array or spirv.rt_array), the last index is modified to load
+/// 1D array (spirv.array or spirv.rtarray), the last index is modified to load
 /// the bits needed. The extraction of the actual bits needed are handled
 /// separately. Note that this only works for a 1-D tensor.
-static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
-                                          spirv::AccessChainOp op,
-                                          int sourceBits, int targetBits,
-                                          OpBuilder &builder) {
+static Value
+adjustAccessChainForBitwidth(const SPIRVTypeConverter &typeConverter,
+                             spirv::AccessChainOp op, int sourceBits,
+                             int targetBits, OpBuilder &builder) {
   assert(targetBits % sourceBits == 0);
   const auto loc = op.getLoc();
-  IntegerType targetType = builder.getIntegerType(targetBits);
-  IntegerAttr attr =
-      builder.getIntegerAttr(targetType, targetBits / sourceBits);
-  auto idx = builder.create<spirv::ConstantOp>(loc, targetType, attr);
-  auto lastDim = op->getOperand(op.getNumOperands() - 1);
+  Value lastDim = op->getOperand(op.getNumOperands() - 1);
+  Type type = lastDim.getType();
+  IntegerAttr attr = builder.getIntegerAttr(type, targetBits / sourceBits);
+  auto idx = builder.create<spirv::ConstantOp>(loc, type, attr);
   auto indices = llvm::to_vector<4>(op.getIndices());
   // There are two elements if this is a 1-D tensor.
   assert(indices.size() == 2);
@@ -83,9 +80,8 @@ static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
 /// Returns the shifted `targetBits`-bit value with the given offset.
 static Value shiftValue(Location loc, Value value, Value offset, Value mask,
                         int targetBits, OpBuilder &builder) {
-  Type targetType = builder.getIntegerType(targetBits);
   Value result = builder.create<spirv::BitwiseAndOp>(loc, value, mask);
-  return builder.create<spirv::ShiftLeftLogicalOp>(loc, targetType, result,
+  return builder.create<spirv::ShiftLeftLogicalOp>(loc, value.getType(), result,
                                                    offset);
 }
 
@@ -277,7 +273,7 @@ public:
     Value src = adaptor.getSource();
     Type srcType = src.getType();
 
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type dstType = converter->convertType(op.getType());
     if (srcType != dstType)
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
@@ -436,7 +432,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
-  auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+  const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
                            adaptor.getIndices(), loc, rewriter);
@@ -768,7 +764,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
       diag << "invalid src type " << src.getType();
     });
 
-  TypeConverter *converter = getTypeConverter();
+  const TypeConverter *converter = getTypeConverter();
 
   auto dstType = converter->convertType<spirv::PointerType>(op.getType());
   if (dstType != srcType)

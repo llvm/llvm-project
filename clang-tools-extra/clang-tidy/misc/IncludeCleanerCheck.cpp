@@ -87,7 +87,7 @@ void IncludeCleanerCheck::registerPPCallbacks(const SourceManager &SM,
                                               Preprocessor *PP,
                                               Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(RecordedPreprocessor.record(*PP));
-  HS = &PP->getHeaderSearchInfo();
+  this->PP = PP;
   RecordedPI.record(*PP);
 }
 
@@ -121,7 +121,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: Find a way to have less code duplication between include-cleaner
   // analysis implementation and the below code.
   walkUsed(MainFileDecls, RecordedPreprocessor.MacroReferences, &RecordedPI,
-           *SM,
+           *PP,
            [&](const include_cleaner::SymbolReference &Ref,
                llvm::ArrayRef<include_cleaner::Header> Providers) {
              // Process each symbol once to reduce noise in the findings.
@@ -200,8 +200,8 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
                                          FileStyle->IncludeStyle);
   for (const auto &Inc : Missing) {
-    std::string Spelling =
-        include_cleaner::spellHeader({Inc.Missing, *HS, MainFile});
+    std::string Spelling = include_cleaner::spellHeader(
+        {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
     bool Angled = llvm::StringRef{Spelling}.starts_with("<");
     // We might suggest insertion of an existing include in edge cases, e.g.,
     // include is present in a PP-disabled region, or spelling of the header

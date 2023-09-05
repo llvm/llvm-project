@@ -400,7 +400,7 @@ TEST(DataLayout, Caching) {
   EXPECT_EQ(sum, 2u);
 
   // A fresh data layout has a new cache, so the call to it should be dispatched
-  // down to the type and abort the proces.
+  // down to the type and abort the process.
   DataLayout second(op);
   ASSERT_DEATH(second.getTypeSize(SingleQueryType::get(&ctx)), "repeated call");
 }

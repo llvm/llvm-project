@@ -147,7 +147,7 @@ struct time_util_base {
           .count();
 
 private:
-  static _LIBCPP_CONSTEXPR fs_duration get_min_nsecs() {
+  static constexpr fs_duration get_min_nsecs() {
     return duration_cast<fs_duration>(
         fs_nanoseconds(min_nsec_timespec) -
         duration_cast<fs_nanoseconds>(fs_seconds(1)));
@@ -157,7 +157,7 @@ private:
                     FileTimeT::duration::min(),
                 "value doesn't roundtrip");
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool check_range() {
+  static constexpr bool check_range() {
     // This kinda sucks, but it's what happens when we don't have __int128_t.
     if (sizeof(TimeT) == sizeof(rep)) {
       typedef duration<long long, ratio<3600 * 24 * 365> > Years;
@@ -225,7 +225,7 @@ struct time_util : time_util_base<FileTimeT, TimeT> {
 
 public:
   template <class CType, class ChronoType>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool checked_set(CType* out,
+  static constexpr bool checked_set(CType* out,
                                                         ChronoType time) {
     using Lim = numeric_limits<CType>;
     if (time > Lim::max() || time < Lim::min())
@@ -234,7 +234,7 @@ public:
     return true;
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool is_representable(TimeSpecT tm) {
+  static constexpr bool is_representable(TimeSpecT tm) {
     if (tm.tv_sec >= 0) {
       return tm.tv_sec < max_seconds ||
              (tm.tv_sec == max_seconds && tm.tv_nsec <= max_nsec);
@@ -245,7 +245,7 @@ public:
     }
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool is_representable(FileTimeT tm) {
+  static constexpr bool is_representable(FileTimeT tm) {
     auto secs = duration_cast<fs_seconds>(tm.time_since_epoch());
     auto nsecs = duration_cast<fs_nanoseconds>(tm.time_since_epoch() - secs);
     if (nsecs.count() < 0) {
@@ -258,7 +258,7 @@ public:
     return secs.count() >= TLim::min();
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 FileTimeT
+  static constexpr FileTimeT
   convert_from_timespec(TimeSpecT tm) {
     if (tm.tv_sec >= 0 || tm.tv_nsec == 0) {
       return FileTimeT(fs_seconds(tm.tv_sec) +
@@ -272,7 +272,7 @@ public:
   }
 
   template <class SubSecT>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+  static constexpr bool
   set_times_checked(TimeT* sec_out, SubSecT* subsec_out, FileTimeT tp) {
     auto dur = tp.time_since_epoch();
     auto sec_dur = duration_cast<fs_seconds>(dur);
@@ -289,7 +289,7 @@ public:
     return checked_set(sec_out, sec_dur.count()) &&
            checked_set(subsec_out, subsec_dur.count());
   }
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 bool convert_to_timespec(TimeSpecT& dest,
+  static constexpr bool convert_to_timespec(TimeSpecT& dest,
                                                                 FileTimeT tp) {
     if (!is_representable(tp))
       return false;

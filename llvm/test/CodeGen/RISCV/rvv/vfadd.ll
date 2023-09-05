@@ -7,6 +7,12 @@
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zfhmin,+zvfh \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
+; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 -mattr=+v,+zfh,+zvfhmin \
+; RUN:   -target-abi=ilp32d 2>&1 | FileCheck %s --check-prefixes=ZVFMIN
+; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 -mattr=+v,+zfh,+zvfhmin \
+; RUN:   -target-abi=lp64d 2>&1 | FileCheck %s --check-prefixes=ZVFMIN
+
+; ZVFMIN: LLVM ERROR: Cannot select: intrinsic %llvm.riscv.vfadd
 
 declare <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
   <vscale x 1 x half>,

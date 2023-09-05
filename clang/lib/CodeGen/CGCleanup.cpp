@@ -207,8 +207,13 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     Scope->setLifetimeMarker();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  // If exceptions are disabled/ignored and SEH is not in use, then there is no
+  // invoke destination. SEH "works" even if exceptions are off. In practice,
+  // this means that C++ destructors and other EH cleanups don't run, which is
+  // consistent with MSVC's behavior, except in the presence of -EHa.
+  // Check getInvokeDest() to generate llvm.seh.scope.begin() as needed.
   if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
-      CGF->getTarget().getCXXABI().isMicrosoft())
+      CGF->getTarget().getCXXABI().isMicrosoft() && CGF->getInvokeDest())
     CGF->EmitSehCppScopeBegin();
 
   return Scope->getCleanupBuffer();
@@ -868,8 +873,13 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
       // If there's exactly one branch-after and no other threads,
       // we can route it without a switch.
+      // Skip for SEH, since ExitSwitch is used to generate code to indicate
+      // abnormal termination. (SEH: Except _leave and fall-through at
+      // the end, all other exits in a _try (return/goto/continue/break)
+      // are considered as abnormal terminations, using NormalCleanupDestSlot
+      // to indicate abnormal termination)
       if (!Scope.hasBranchThroughs() && !HasFixups && !HasFallthrough &&
-          Scope.getNumBranchAfters() == 1) {
+          !currentFunctionUsesSEHTry() && Scope.getNumBranchAfters() == 1) {
         assert(!BranchThroughDest || !IsActive);
 
         // Clean up the possibly dead store to the cleanup dest slot.

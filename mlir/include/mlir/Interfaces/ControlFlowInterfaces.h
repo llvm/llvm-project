@@ -82,6 +82,11 @@ public:
   /// Get the range of operands that are simply forwarded to the successor.
   OperandRange getForwardedOperands() const { return forwardedOperands; }
 
+  /// Get the range of operands that are simply forwarded to the successor.
+  MutableOperandRange getMutableForwardedOperands() const {
+    return forwardedOperands;
+  }
+
   /// Get a slice of the operands forwarded to the successor. The given range
   /// must not contain any operands produced by the operation.
   MutableOperandRange slice(unsigned subStart, unsigned subLen) const {
@@ -184,6 +189,68 @@ private:
   Region *region{nullptr};
   ValueRange inputs;
 };
+
+/// This class represents a point being branched from in the methods of the
+/// `RegionBranchOpInterface`.
+/// One can branch from one of two kinds of places:
+/// * The parent operation (aka the `RegionBranchOpInterface` implementation)
+/// * A region within the parent operation.
+class RegionBranchPoint {
+public:
+  /// Returns an instance of `RegionBranchPoint` representing the parent
+  /// operation.
+  static constexpr RegionBranchPoint parent() { return RegionBranchPoint(); }
+
+  /// Creates a `RegionBranchPoint` that branches from the given region.
+  /// The pointer must not be null.
+  RegionBranchPoint(Region *region) : maybeRegion(region) {
+    assert(region && "Region must not be null");
+  }
+
+  RegionBranchPoint(Region &region) : RegionBranchPoint(&region) {}
+
+  /// Explicitly stops users from constructing with `nullptr`.
+  RegionBranchPoint(std::nullptr_t) = delete;
+
+  /// Constructs a `RegionBranchPoint` from the the target of a
+  /// `RegionSuccessor` instance.
+  RegionBranchPoint(RegionSuccessor successor) {
+    if (successor.isParent())
+      maybeRegion = nullptr;
+    else
+      maybeRegion = successor.getSuccessor();
+  }
+
+  /// Assigns a region being branched from.
+  RegionBranchPoint &operator=(Region &region) {
+    maybeRegion = &region;
+    return *this;
+  }
+
+  /// Returns true if branching from the parent op.
+  bool isParent() const { return maybeRegion == nullptr; }
+
+  /// Returns the region if branching from a region.
+  /// A null pointer otherwise.
+  Region *getRegionOrNull() const { return maybeRegion; }
+
+  /// Returns true if the two branch points are equal.
+  friend bool operator==(RegionBranchPoint lhs, RegionBranchPoint rhs) {
+    return lhs.maybeRegion == rhs.maybeRegion;
+  }
+
+private:
+  // Private constructor to encourage the use of `RegionBranchPoint::parent`.
+  constexpr RegionBranchPoint() : maybeRegion(nullptr) {}
+
+  /// Internal encoding. Uses nullptr for representing branching from the parent
+  /// op and the region being branched from otherwise.
+  Region *maybeRegion;
+};
+
+inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
+  return !(lhs == rhs);
+}
 
 /// This class represents upper and lower bounds on the number of times a region
 /// of a `RegionBranchOpInterface` can be invoked. The lower bound is at least

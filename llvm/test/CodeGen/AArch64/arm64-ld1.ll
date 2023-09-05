@@ -913,8 +913,8 @@ define <2 x float> @ld1_2s_float(<2 x float> %V, ptr %bar) {
 define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture %diff) nounwind ssp {
 entry:
 ; CHECK: ld1r_2s_from_dup
-; CHECK: ld1r.2s { [[ARG2:v[0-9]+]] }, [x1]
-; CHECK-NEXT: ld1r.2s { [[ARG1:v[0-9]+]] }, [x0]
+; CHECK: ld1r.2s { [[ARG1:v[0-9]+]] }, [x0]
+; CHECK-NEXT: ld1r.2s { [[ARG2:v[0-9]+]] }, [x1]
 ; CHECK-NEXT: usubl.8h v[[RESREGNUM:[0-9]+]], [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: str d[[RESREGNUM]], [x2]
 ; CHECK-NEXT: ret

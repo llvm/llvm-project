@@ -125,9 +125,9 @@ define <2 x i64> @v2i64_select_sle(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
 ; CODE:    mov
 ; CODE:    mov
 ; CODE:    mov
-; CODE:    cmge
-; CODE:    cmge
 ; CODE:    ldr
+; CODE:    cmge
+; CODE:    cmge
 ; CODE:    bif
 ; CODE:    bif
 ; CODE:    ext

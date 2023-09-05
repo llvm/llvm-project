@@ -31,7 +31,7 @@
 
 # RUN: not ld.lld --remap-inputs-file=err2.map aa.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
-# ERR2:      error: err2.map:1: invalid glob pattern: aa.[o
+# ERR2:      error: err2.map:1: invalid glob pattern, unmatched '[': aa.[o
 # ERR2-NEXT: error: cannot open aa.o: {{.*}}
 
 # RUN: not ld.lld --remap-inputs=aa.o aa.o -o /dev/null 2>&1 | \

@@ -479,10 +479,6 @@ public:
   // this will always create the children if necessary
   lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
 
-  lldb::ValueObjectSP
-  GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
-                     ConstString *name_of_error = nullptr);
-
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 

@@ -9,14 +9,11 @@ define i1 @test_eq_ne_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i8 [[A]], 0
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ne i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, [[C_3]]
@@ -50,18 +47,14 @@ define i1 @test_ne_eq_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i8 [[A]], 0
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_2]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[C_3]]
-; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], false
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
-; CHECK-NEXT:    [[T_3:%.*]] = icmp uge i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[C_5]]
@@ -69,20 +62,14 @@ define i1 @test_ne_eq_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_6]]
 ; CHECK-NEXT:    ret i1 [[RES_8]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[C_7:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp ne i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_10:%.*]] = xor i1 [[RES_9]], [[C_8]]
 ; CHECK-NEXT:    [[C_9:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 [[RES_10]], [[C_9]]
-; CHECK-NEXT:    [[C_10:%.*]] = icmp eq i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], true
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], false
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], false
-; CHECK-NEXT:    [[C_11:%.*]] = icmp ugt i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], false
 ; CHECK-NEXT:    [[C_12:%.*]] = icmp sgt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], [[C_12]]
@@ -155,8 +142,6 @@ define i1 @test_eq_ne_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_2]]
@@ -215,20 +200,14 @@ define i1 @test_ne_eq_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_6]]
 ; CHECK-NEXT:    ret i1 [[RES_8]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    [[C_9:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_10:%.*]] = icmp ne i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_10:%.*]] = xor i1 [[RES_9]], [[C_10]]
 ; CHECK-NEXT:    [[C_11:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 [[RES_10]], [[C_11]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], false
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], true
-; CHECK-NEXT:    [[T_4:%.*]] = icmp uge i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], true
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[A]], 1
 ; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], false
 ; CHECK-NEXT:    [[C_12:%.*]] = icmp sgt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], [[C_12]]
@@ -300,7 +279,6 @@ define i1 @assume_b_plus_1_ult_a(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[B:%.*]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 true
 ;
   %1 = add nuw i64 %b, 1
@@ -316,7 +294,6 @@ define i1 @assume_a_gt_b_and_b_ge_c(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[B]], [[C:%.*]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[A]], [[C]]
 ; CHECK-NEXT:    ret i1 true
 ;
   %1 = icmp ugt i64 %a, %b

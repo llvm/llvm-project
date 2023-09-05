@@ -176,7 +176,8 @@ Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
   auto L = BC.scopeLock();
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol("InstrEntry");
   Summary->Counters.emplace_back(Label);
-  return BC.MIB->createInstrIncMemory(Label, BC.Ctx.get(), IsLeaf);
+  return BC.MIB->createInstrIncMemory(Label, BC.Ctx.get(), IsLeaf,
+                                      BC.AsmInfo->getCodePointerSize());
 }
 
 // Helper instruction sequence insertion function
@@ -504,9 +505,6 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 void Instrumentation::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
-    return;
-
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
