@@ -130,6 +130,10 @@ Type Parser::parseComplexType() {
   if (!elementType ||
       parseToken(Token::greater, "expected '>' in complex type"))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
+
   if (!isa<FloatType>(elementType) && !isa<IntegerType>(elementType))
     return emitError(elementTypeLoc, "invalid element type for complex"),
            nullptr;
@@ -149,6 +153,9 @@ Type Parser::parseFunctionType() {
       parseToken(Token::arrow, "expected '->' in function type") ||
       parseFunctionResultTypes(results))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   return builder.getFunctionType(arguments, results);
 }
@@ -195,9 +202,10 @@ Type Parser::parseMemRefType() {
   if (!elementType)
     return nullptr;
 
-  // Check that memref is formed from allowed types.
-  if (!BaseMemRefType::isValidElementType(elementType))
-    return emitError(typeLoc, "invalid memref element type"), nullptr;
+  if (!syntaxOnly()) { // Check that memref is formed from allowed types.
+    if (!BaseMemRefType::isValidElementType(elementType))
+      return emitError(typeLoc, "invalid memref element type"), nullptr;
+  }
 
   MemRefLayoutAttrInterface layout;
   Attribute memorySpace;
@@ -207,6 +215,9 @@ Type Parser::parseMemRefType() {
     Attribute attr = parseAttribute();
     if (!attr)
       return failure();
+
+    if (syntaxOnly())
+      return success();
 
     if (isa<MemRefLayoutAttrInterface>(attr)) {
       layout = cast<MemRefLayoutAttrInterface>(attr);
@@ -234,6 +245,9 @@ Type Parser::parseMemRefType() {
       return nullptr;
     }
   }
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   if (isUnranked)
     return getChecked<UnrankedMemRefType>(loc, elementType, memorySpace);
@@ -437,7 +451,7 @@ Type Parser::parseTupleType() {
 /// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
 /// static-dim-list ::= decimal-literal (`x` decimal-literal)*
 ///
-VectorType Parser::parseVectorType() {
+Type Parser::parseVectorType() {
   consumeToken(Token::kw_vector);
 
   if (parseToken(Token::less, "expected '<' in vector type"))
@@ -457,6 +471,9 @@ VectorType Parser::parseVectorType() {
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   if (!VectorType::isValidElementType(elementType))
     return emitError(typeLoc, "vector elements must be int/index/float type"),

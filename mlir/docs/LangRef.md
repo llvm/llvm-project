@@ -183,12 +183,14 @@ starting with a `//` and going until the end of the line.
 
 ```
 // Top level production
-toplevel := (operation | attribute-alias-def | type-alias-def)*
+toplevel := (operation | alias-block-def)*
+alias-block-def := (attribute-alias-def | type-alias-def)*
 ```
 
 The production `toplevel` is the top level production that is parsed by any parsing
-consuming the MLIR syntax. [Operations](#operations),
-[Attribute aliases](#attribute-value-aliases), and [Type aliases](#type-aliases)
+consuming the MLIR syntax. [Operations](#operations) and 
+[Alias Blocks](#alias-block-definitions) consisting of 
+[Attribute aliases](#attribute-value-aliases) and [Type aliases](#type-aliases)
 can be declared on the toplevel.
 
 ### Identifiers and keywords
@@ -880,3 +882,26 @@ version using readAttribute and readType methods.
 There is no restriction on what kind of information a dialect is allowed to
 encode to model its versioning. Currently, versioning is supported only for
 bytecode formats.
+
+## Alias Block Definitions
+
+An alias block is a list of subsequent attribute or type alias definitions that
+are conceptually parsed as one unit.
+This allows any alias definition within the block to reference any other alias 
+definition within the block, regardless if defined lexically later or earlier in
+the block.
+
+```mlir
+// Alias block consisting of #array, !integer_type and #integer_attr.
+#array = [#integer_attr, !integer_type]
+!integer_type = i32
+#integer_attr = 8 : !integer_type
+
+// Illegal. !other_type is not part of this alias block and defined later 
+// in the file.
+!tuple = tuple<i32, !other_type>
+
+func.func @foo() { ... }
+
+!other_type = f32
+```
