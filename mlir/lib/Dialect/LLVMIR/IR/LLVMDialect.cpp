@@ -98,7 +98,7 @@ static Type getI1SameShape(Type type) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing, parsing and builder for LLVM::CmpOp.
+// Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
 void ICmpOp::print(OpAsmPrinter &p) {
@@ -173,6 +173,42 @@ ParseResult ICmpOp::parse(OpAsmParser &parser, OperationState &result) {
 
 ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseCmpOp<FCmpPredicate>(parser, result);
+}
+
+/// Returns a scalar or vector boolean attribute of the given type.
+static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
+  auto boolAttr = BoolAttr::get(ctx, value);
+  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  if (!shapedType)
+    return boolAttr;
+  return DenseElementsAttr::get(shapedType, boolAttr);
+}
+
+OpFoldResult ICmpOp::fold(FoldAdaptor adaptor) {
+  if (getPredicate() != ICmpPredicate::eq &&
+      getPredicate() != ICmpPredicate::ne)
+    return {};
+
+  // cmpi(eq/ne, x, x) -> true/false
+  if (getLhs() == getRhs())
+    return getBoolAttribute(getType(), getContext(),
+                            getPredicate() == ICmpPredicate::eq);
+
+  // cmpi(eq/ne, alloca, null) -> false/true
+  if (getLhs().getDefiningOp<AllocaOp>() && getRhs().getDefiningOp<NullOp>())
+    return getBoolAttribute(getType(), getContext(),
+                            getPredicate() == ICmpPredicate::ne);
+
+  // cmpi(eq/ne, null, alloca) -> cmpi(eq/ne, alloca, null)
+  if (getLhs().getDefiningOp<NullOp>() && getRhs().getDefiningOp<AllocaOp>()) {
+    Value lhs = getLhs();
+    Value rhs = getRhs();
+    getLhsMutable().assign(rhs);
+    getRhsMutable().assign(lhs);
+    return getResult();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
