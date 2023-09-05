@@ -629,6 +629,9 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
       return solveBlockValueIntrinsic(II, BB);
   }
 
+  if (auto *FI = dyn_cast<FreezeInst>(BBI))
+      return solveBlockValueImpl(FI->getOperand(0), BB);
+
   LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                     << "' - unknown inst def found.\n");
   return getFromRangeMetadata(BBI);
