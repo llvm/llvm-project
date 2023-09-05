@@ -1071,18 +1071,18 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool matchUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
                               Register &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
-  if (MI.getNumDefs() != 2)
+  auto &Unmerge = cast<GUnmerge>(MI);
+  if (Unmerge.getNumDefs() != 2)
     return false;
-  if (!MRI.use_nodbg_empty(MI.getOperand(1).getReg()))
+  if (!MRI.use_nodbg_empty(Unmerge.getOperand(1).getReg()))
     return false;
 
-  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT DstTy = MRI.getType(Unmerge.getOperand(0).getReg());
   if (!DstTy.isVector())
     return false;
 
-  MachineInstr *Ext = getDefIgnoringCopies(
-      MI.getOperand(MI.getNumExplicitDefs()).getReg(), MRI);
-  if (!Ext || Ext->getOpcode() != AArch64::G_EXT)
+  MachineInstr *Ext = getOpcodeDef(AArch64::G_EXT, Unmerge.getSourceReg(), MRI);
+  if (!Ext)
     return false;
 
   Register ExtSrc1 = Ext->getOperand(1).getReg();
@@ -1092,13 +1092,11 @@ bool matchUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!LowestVal || LowestVal->Value.getZExtValue() != DstTy.getSizeInBytes())
     return false;
 
-  MachineInstr *Undef = getDefIgnoringCopies(ExtSrc2, MRI);
-  if (!Undef)
+  if (!getOpcodeDef<GImplicitDef>(ExtSrc2, MRI))
     return false;
 
   MatchInfo = ExtSrc1;
-
-  return Undef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+  return true;
 }
 
 void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
