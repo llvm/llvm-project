@@ -79,6 +79,10 @@
         ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
         bg .BB0
 
+        ! CHECK: bg .BB0      ! encoding: [0x14,0b10AAAAAA,A,A]
+        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
+        bgt .BB0
+
         ! CHECK: ble .BB0      ! encoding: [0x04,0b10AAAAAA,A,A]
         ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
         ble .BB0
@@ -90,6 +94,10 @@
         ! CHECK: bl .BB0      ! encoding: [0x06,0b10AAAAAA,A,A]
         ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
         bl .BB0
+
+        ! CHECK: bl .BB0      ! encoding: [0x06,0b10AAAAAA,A,A]
+        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
+        blt .BB0
 
         ! CHECK: bgu .BB0      ! encoding: [0x18,0b10AAAAAA,A,A]
         ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
