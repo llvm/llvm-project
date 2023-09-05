@@ -11659,6 +11659,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":Analysis",
         ":ArithDialect",
         ":IR",
         ":LLVMCommonConversion",
