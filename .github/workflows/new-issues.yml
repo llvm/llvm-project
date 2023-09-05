@@ -20,3 +20,4 @@ jobs:
           include-title: 1
           include-body: 0
           sync-labels: 0
+          enable-versioned-regex: 0

@@ -1,34 +1,32 @@
 'new issue':
   - '/.*/'
 
-'clang'
+'clang':
   - '/\bclang(?!\-)\b/i'
 
-'clang-format'
+'clang-format':
   - '/\bclang-format/i'
 
-'clang-tidy'
+'clang-tidy':
   - '/\bclang-tidy/i'
 
-'libc++'
-  - '/\blibc++(?!\-)/i'
-  - '/\blibcxx(?!\-)/i'
+'libc++':
+  - '/libc[+x]{2}(?!\-)/i'
 
-'libc++-abi'
-  - '/\blibc++-abi/i'
-  - '/\blibcxx-abi/i'
+'libc++-abi':
+  - '/libc[+x]{2}-abi/i'
 
-'libc'
+'libc':
   - '/\blibc(?![-+])\b/i'
 
-'flang'
+'flang':
   - '/\bflang(?!\-)\b/i'
 
-'lld'
+'lld':
   - '/\blld(?!\-)\b/i'
 
-'mlir'
+'mlir':
   - '/\bmlir(?!\-)\b/i'
 
-'bolt'
+'bolt':
   - '/\bbolt(?!\-)\b/i'
