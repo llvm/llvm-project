@@ -214,6 +214,8 @@ struct CommonConfig {
   // Cached gnu_debuglink's target CRC
   uint32_t GnuDebugLinkCRC32;
   std::optional<StringRef> ExtractPartition;
+  uint8_t GapFill = 0;
+  std::optional<uint64_t> PadTo;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;

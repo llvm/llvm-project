@@ -738,6 +738,31 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
     Config.ExtractPartition = Arg->getValue();
 
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_gap_fill)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--gap-fill' is only supported for binary output");
+    ErrorOr<uint8_t> Val = getAsInteger<uint8_t>(A->getValue());
+    if (!Val)
+      return createStringError(Val.getError(), "bad number for --gap-fill: %s",
+                               A->getValue());
+    Config.GapFill = Val.get();
+  } else
+    Config.GapFill = 0; // The value of zero is equivalent to no fill.
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_pad_to)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--pad-to' is only supported for binary output");
+    ErrorOr<uint64_t> Addr = getAsInteger<uint64_t>(A->getValue());
+    if (!Addr)
+      return createStringError(Addr.getError(), "bad address for --pad-to: %s",
+                               A->getValue());
+    Config.PadTo = *Addr;
+  }
+
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
