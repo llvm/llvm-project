@@ -93,6 +93,19 @@
 // CHECK-ARM64-WIN: #define _WIN32 1
 // CHECK-ARM64-WIN: #define _WIN64 1
 
+// RUN: %clang_cc1 -triple arm64ec-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64EC-WIN
+
+// CHECK-ARM64EC-WIN-NOT: #define WIN32 1
+// CHECK-ARM64EC-WIN-NOT: #define WIN64 1
+// CHECK-ARM64EC-WIN-NOT: #define WINNT 1
+// CHECK-ARM64EC-WIN-NOT: #define _M_ARM64 1
+// CHECK-ARM64EC-WIN: #define _M_AMD64 100
+// CHECK-ARM64EC-WIN: #define _M_ARM64EC 1
+// CHECK-ARM64EC-WIN: #define _M_X64 100
+// CHECK-ARM64EC-WIN: #define _WIN32 1
+// CHECK-ARM64EC-WIN: #define _WIN64 1
+
 // RUN: %clang_cc1 -triple i686-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-MINGW
 
@@ -131,3 +144,20 @@
 // CHECK-ARM64-MINGW: #define _WIN64 1
 // CHECK-ARM64-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
 // CHECK-ARM64-MINGW: #define __aarch64__ 1
+
+// RUN: %clang_cc1 -triple arm64ec-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64EC-MINGW
+
+// CHECK-ARM64EC-MINGW-NOT: #define _M_ARM64EC 1
+// CHECK-ARM64EC-MINGW: #define WIN32 1
+// CHECK-ARM64EC-MINGW: #define WIN64 1
+// CHECK-ARM64EC-MINGW: #define WINNT 1
+// CHECK-ARM64EC-MINGW: #define _WIN32 1
+// CHECK-ARM64EC-MINGW: #define _WIN64 1
+// CHECK-ARM64EC-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-ARM64EC-MINGW-NOT: #define __aarch64__ 1
+// CHECK-ARM64EC-MINGW: #define __amd64 1
+// CHECK-ARM64EC-MINGW: #define __amd64__ 1
+// CHECK-ARM64EC-MINGW: #define __arm64ec__ 1
+// CHECK-ARM64EC-MINGW: #define __x86_64 1
+// CHECK-ARM64EC-MINGW: #define __x86_64__ 1
