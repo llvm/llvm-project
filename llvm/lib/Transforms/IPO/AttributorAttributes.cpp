@@ -592,9 +592,8 @@ template <typename AAType, typename BaseType,
           typename StateType = typename BaseType::StateType,
           bool IntroduceCallBaseContext = false,
           Attribute::AttrKind IRAttributeKind = Attribute::None>
-struct AACallSiteReturnedFromReturned : public BaseType {
-  AACallSiteReturnedFromReturned(const IRPosition &IRP, Attributor &A)
-      : BaseType(IRP, A) {}
+struct AACalleeToCallSite : public BaseType {
+  AACalleeToCallSite(const IRPosition &IRP, Attributor &A) : BaseType(IRP, A) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2726,13 +2725,11 @@ struct AANonNullCallSiteArgument final : AANonNullFloating {
 
 /// NonNull attribute for a call site return position.
 struct AANonNullCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AANonNull, AANonNullImpl,
-                                     AANonNull::StateType, false,
-                                     AANonNull::IRAttributeKind> {
+    : AACalleeToCallSite<AANonNull, AANonNullImpl, AANonNull::StateType, false,
+                         AANonNull::IRAttributeKind> {
   AANonNullCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AANonNull, AANonNullImpl,
-                                       AANonNull::StateType, false,
-                                       AANonNull::IRAttributeKind>(IRP, A) {}
+      : AACalleeToCallSite<AANonNull, AANonNullImpl, AANonNull::StateType,
+                           false, AANonNull::IRAttributeKind>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nonnull) }
@@ -5230,9 +5227,8 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableFloating {
 
 /// Dereferenceable attribute deduction for a call site return value.
 struct AADereferenceableCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AADereferenceable, AADereferenceableImpl> {
-  using Base =
-      AACallSiteReturnedFromReturned<AADereferenceable, AADereferenceableImpl>;
+    : AACalleeToCallSite<AADereferenceable, AADereferenceableImpl> {
+  using Base = AACalleeToCallSite<AADereferenceable, AADereferenceableImpl>;
   AADereferenceableCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -5527,8 +5523,8 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
 
 /// Align attribute deduction for a call site return value.
 struct AAAlignCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AAAlign, AAAlignImpl> {
-  using Base = AACallSiteReturnedFromReturned<AAAlign, AAAlignImpl>;
+    : AACalleeToCallSite<AAAlign, AAAlignImpl> {
+  using Base = AACalleeToCallSite<AAAlign, AAAlignImpl>;
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -9660,17 +9656,13 @@ struct AAValueConstantRangeCallSite : AAValueConstantRangeFunction {
 };
 
 struct AAValueConstantRangeCallSiteReturned
-    : AACallSiteReturnedFromReturned<AAValueConstantRange,
-                                     AAValueConstantRangeImpl,
-                                     AAValueConstantRangeImpl::StateType,
-                                     /* IntroduceCallBaseContext */ true> {
+    : AACalleeToCallSite<AAValueConstantRange, AAValueConstantRangeImpl,
+                         AAValueConstantRangeImpl::StateType,
+                         /* IntroduceCallBaseContext */ true> {
   AAValueConstantRangeCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AAValueConstantRange,
-                                       AAValueConstantRangeImpl,
-                                       AAValueConstantRangeImpl::StateType,
-                                       /* IntroduceCallBaseContext */ true>(IRP,
-                                                                            A) {
-  }
+      : AACalleeToCallSite<AAValueConstantRange, AAValueConstantRangeImpl,
+                           AAValueConstantRangeImpl::StateType,
+                           /* IntroduceCallBaseContext */ true>(IRP, A) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
@@ -10189,12 +10181,12 @@ struct AAPotentialConstantValuesCallSite : AAPotentialConstantValuesFunction {
 };
 
 struct AAPotentialConstantValuesCallSiteReturned
-    : AACallSiteReturnedFromReturned<AAPotentialConstantValues,
-                                     AAPotentialConstantValuesImpl> {
+    : AACalleeToCallSite<AAPotentialConstantValues,
+                         AAPotentialConstantValuesImpl> {
   AAPotentialConstantValuesCallSiteReturned(const IRPosition &IRP,
                                             Attributor &A)
-      : AACallSiteReturnedFromReturned<AAPotentialConstantValues,
-                                       AAPotentialConstantValuesImpl>(IRP, A) {}
+      : AACalleeToCallSite<AAPotentialConstantValues,
+                           AAPotentialConstantValuesImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -10416,13 +10408,11 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
 };
 
 struct AANoUndefCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl,
-                                     AANoUndef::StateType, false,
-                                     Attribute::NoUndef> {
+    : AACalleeToCallSite<AANoUndef, AANoUndefImpl, AANoUndef::StateType, false,
+                         Attribute::NoUndef> {
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl,
-                                       AANoUndef::StateType, false,
-                                       Attribute::NoUndef>(IRP, A) {}
+      : AACalleeToCallSite<AANoUndef, AANoUndefImpl, AANoUndef::StateType,
+                           false, Attribute::NoUndef>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
@@ -10572,9 +10562,9 @@ struct AANoFPClassCallSiteArgument final : AANoFPClassFloating {
 };
 
 struct AANoFPClassCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AANoFPClass, AANoFPClassImpl> {
+    : AACalleeToCallSite<AANoFPClass, AANoFPClassImpl> {
   AANoFPClassCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
+      : AACalleeToCallSite<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
