@@ -164,6 +164,7 @@ class ConditionalController(DebuggerControllerBase):
         total_timeout = Timeout(self.context.options.timeout_total)
 
         while not self.debugger.is_finished:
+
             breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
             while self.debugger.is_running and not timed_out:
                 # Check to see whether we've timed out while we're waiting.

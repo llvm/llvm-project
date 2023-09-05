@@ -24,6 +24,7 @@ def _quotify(text):
 def _get_script_environment(
     source_files, compiler_options, linker_options, executable_file
 ):
+
     source_files = [_quotify(f) for f in source_files]
     object_files = [_quotify("{}.o".format(os.path.basename(f))) for f in source_files]
     source_indexes = ["{:02d}".format(i + 1) for i in range(len(source_files))]

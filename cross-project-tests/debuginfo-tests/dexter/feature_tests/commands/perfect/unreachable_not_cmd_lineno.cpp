@@ -4,8 +4,7 @@
 //
 // UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: unreachable_not_cmd_lineno.cpp:
 
 int main(int argc, char **argv)

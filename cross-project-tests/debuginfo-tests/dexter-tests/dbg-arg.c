@@ -2,9 +2,9 @@
 // UNSUPPORTED: system-windows
 //
 // This test case checks debug info during register moves for an argument.
-// RUN: %clang -m64 -mllvm -fast-isel=false -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --builder clang-c --debugger 'lldb' \
+// RUN:     --cflags "-m64 -mllvm -fast-isel=false -g" -- %s
 //
 // Radar 8412415
 

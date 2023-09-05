@@ -6,8 +6,7 @@
 // UNSUPPORTED: system-darwin
 //
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test -- %S | FileCheck %s
 // CHECK: dex_and_source
 
 int main() {
