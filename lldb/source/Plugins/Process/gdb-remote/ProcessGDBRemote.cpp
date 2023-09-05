@@ -2089,7 +2089,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
   switch (stop_type) {
   case 'T':
   case 'S': {
-    // This is a bit of a hack, but is is required. If we did exec, we need to
+    // This is a bit of a hack, but it is required. If we did exec, we need to
     // clear our thread lists and also know to rebuild our dynamic register
     // info before we lookup and threads and populate the expedited register
     // values so we need to know this right away so we can cleanup and update

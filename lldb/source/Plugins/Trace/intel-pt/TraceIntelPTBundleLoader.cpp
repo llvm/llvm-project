@@ -285,7 +285,7 @@ StringRef TraceIntelPTBundleLoader::GetSchema() {
   "tscPerfZeroConversion"?: {
     // Values used to convert between TSCs and nanoseconds. See the time_zero
     // section in https://man7.org/linux/man-pages/man2/perf_event_open.2.html
-    // for for information.
+    // for information.
 
     "timeMult": integer,
     "timeShift": integer,
