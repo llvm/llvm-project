@@ -101,7 +101,7 @@ inline bool operator>=(const Fraction &x, const Fraction &y) {
 
 inline Fraction reduce(const Fraction &f) {
   if (f == Fraction(0))
-    return f;
+    return Fraction(0, 1);
   MPInt g = gcd(f.num, f.den);
   return Fraction(f.num / g, f.den / g);
 }
