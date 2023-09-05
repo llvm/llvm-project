@@ -1232,7 +1232,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
               [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
                 deviceTypeClauseFound = true;
                 if (deviceTypeClause.v.v !=
-                    parser::OmpDeviceTypeClause::Type::Host) {
+                    common::OmpDeviceTypeClauseKind::Host) {
                   // Function / subroutine explicitly marked as runnable by the
                   // target device.
                   deviceConstructFound_ = true;
@@ -1502,7 +1502,7 @@ void OmpStructureChecker::Leave(
 }
 
 void OmpStructureChecker::CheckCancellationNest(
-    const parser::CharBlock &source, const parser::OmpCancelType::Type &type) {
+    const parser::CharBlock &source, const common::OmpCancelKind &type) {
   if (CurrentDirectiveIsNested()) {
     // If construct-type-clause is taskgroup, the cancellation construct must be
     // closely nested inside a task or a taskloop construct and the cancellation
@@ -1514,7 +1514,7 @@ void OmpStructureChecker::CheckCancellationNest(
     // cancellation construct.
     bool eligibleCancellation{false};
     switch (type) {
-    case parser::OmpCancelType::Type::Taskgroup:
+    case common::OmpCancelKind::Taskgroup:
       if (llvm::omp::nestedCancelTaskgroupAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
@@ -1543,24 +1543,23 @@ void OmpStructureChecker::CheckCancellationNest(
             "With %s clause, %s construct must be closely nested inside TASK "
             "or TASKLOOP construct and %s region must be closely nested inside "
             "TASKGROUP region"_err_en_US,
-            parser::ToUpperCaseLetters(
-                parser::OmpCancelType::EnumToString(type)),
+            parser::ToUpperCaseLetters(common::EnumToString(type)),
             ContextDirectiveAsFortran(), ContextDirectiveAsFortran());
       }
       return;
-    case parser::OmpCancelType::Type::Sections:
+    case common::OmpCancelKind::Sections:
       if (llvm::omp::nestedCancelSectionsAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
       }
       break;
-    case Fortran::parser::OmpCancelType::Type::Do:
+    case common::OmpCancelKind::Do:
       if (llvm::omp::nestedCancelDoAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
       }
       break;
-    case parser::OmpCancelType::Type::Parallel:
+    case common::OmpCancelKind::Parallel:
       if (llvm::omp::nestedCancelParallelAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
@@ -1571,7 +1570,7 @@ void OmpStructureChecker::CheckCancellationNest(
       context_.Say(source,
           "With %s clause, %s construct cannot be closely nested inside %s "
           "construct"_err_en_US,
-          parser::ToUpperCaseLetters(parser::OmpCancelType::EnumToString(type)),
+          parser::ToUpperCaseLetters(common::EnumToString(type)),
           ContextDirectiveAsFortran(),
           parser::ToUpperCaseLetters(
               getDirectiveName(GetContextParent().directive).str()));
@@ -1579,37 +1578,33 @@ void OmpStructureChecker::CheckCancellationNest(
   } else {
     // The cancellation directive cannot be orphaned.
     switch (type) {
-    case parser::OmpCancelType::Type::Taskgroup:
+    case common::OmpCancelKind::Taskgroup:
       context_.Say(source,
           "%s %s directive is not closely nested inside "
           "TASK or TASKLOOP"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(common::EnumToString(type)));
       break;
-    case parser::OmpCancelType::Type::Sections:
+    case common::OmpCancelKind::Sections:
       context_.Say(source,
           "%s %s directive is not closely nested inside "
           "SECTION or SECTIONS"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(common::EnumToString(type)));
       break;
-    case Fortran::parser::OmpCancelType::Type::Do:
+    case common::OmpCancelKind::Do:
       context_.Say(source,
           "%s %s directive is not closely nested inside "
           "the construct that matches the DO clause type"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(common::EnumToString(type)));
       break;
-    case parser::OmpCancelType::Type::Parallel:
+    case common::OmpCancelKind::Parallel:
       context_.Say(source,
           "%s %s directive is not closely nested inside "
           "the construct that matches the PARALLEL clause type"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(common::EnumToString(type)));
       break;
     }
   }
@@ -1953,15 +1948,15 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     if (auto *clause{FindClause(llvm::omp::Clause::OMPC_schedule)}) {
       // only one schedule clause is allowed
       const auto &schedClause{std::get<parser::OmpClause::Schedule>(clause->u)};
-      if (ScheduleModifierHasType(schedClause.v,
-              parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
+      if (ScheduleModifierHasType(
+              schedClause.v, common::OmpScheduleModifierKind::Nonmonotonic)) {
         if (FindClause(llvm::omp::Clause::OMPC_ordered)) {
           context_.Say(clause->source,
               "The NONMONOTONIC modifier cannot be specified "
               "if an ORDERED clause is specified"_err_en_US);
         }
-        if (ScheduleModifierHasType(schedClause.v,
-                parser::OmpScheduleModifierType::ModType::Monotonic)) {
+        if (ScheduleModifierHasType(
+                schedClause.v, common::OmpScheduleModifierKind::Monotonic)) {
           context_.Say(clause->source,
               "The MONOTONIC and NONMONOTONIC modifiers "
               "cannot be both specified"_err_en_US);
@@ -2180,7 +2175,7 @@ bool OmpStructureChecker::CheckReductionOperators(
       common::visitors{
           [&](const parser::DefinedOperator &dOpr) {
             const auto &intrinsicOp{
-                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)};
+                std::get<common::IntrinsicOperator>(dOpr.u)};
             ok = CheckIntrinsicOperator(intrinsicOp);
           },
           [&](const parser::ProcedureDesignator &procD) {
@@ -2204,17 +2199,17 @@ bool OmpStructureChecker::CheckReductionOperators(
   return ok;
 }
 bool OmpStructureChecker::CheckIntrinsicOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op) {
+    const common::IntrinsicOperator &op) {
 
   switch (op) {
-  case parser::DefinedOperator::IntrinsicOperator::Add:
-  case parser::DefinedOperator::IntrinsicOperator::Multiply:
-  case parser::DefinedOperator::IntrinsicOperator::AND:
-  case parser::DefinedOperator::IntrinsicOperator::OR:
-  case parser::DefinedOperator::IntrinsicOperator::EQV:
-  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+  case common::IntrinsicOperator::Add:
+  case common::IntrinsicOperator::Multiply:
+  case common::IntrinsicOperator::AND:
+  case common::IntrinsicOperator::OR:
+  case common::IntrinsicOperator::EQV:
+  case common::IntrinsicOperator::NEQV:
     return true;
-  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+  case common::IntrinsicOperator::Subtract:
     context_.Say(GetContext().clauseSource,
         "The minus reduction operator is deprecated since OpenMP 5.2 and is "
         "not supported in the REDUCTION clause."_err_en_US,
@@ -2505,7 +2500,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_defaultmap);
-  using VariableCategory = parser::OmpDefaultmapClause::VariableCategory;
+  using VariableCategory = common::OmpDefaultmapClauseVariableCategory;
   if (!std::get<std::optional<VariableCategory>>(x.v.t)) {
     context_.Say(GetContext().clauseSource,
         "The argument TOFROM:SCALAR must be specified on the DEFAULTMAP "
@@ -2514,7 +2509,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_if);
-  using dirNameModifier = parser::OmpIfClause::DirectiveNameModifier;
+  using dirNameModifier = common::OmpIfClauseDirectiveNameModifier;
   // TODO Check that, when multiple 'if' clauses are applied to a combined
   // construct, at most one of them applies to each directive.
   static std::unordered_map<dirNameModifier, OmpDirectiveSet>
@@ -2540,8 +2535,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
       context_
           .Say(GetContext().clauseSource,
               "Unmatched directive name modifier %s on the IF clause"_err_en_US,
-              parser::ToUpperCaseLetters(
-                  parser::OmpIfClause::EnumToString(*directiveName)))
+              parser::ToUpperCaseLetters(common::EnumToString(*directiveName)))
           .Attach(
               GetContext().directiveSource, "Cannot apply to directive"_en_US);
     }
@@ -2563,16 +2557,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   }
 }
 
-void OmpStructureChecker::CheckAllowedMapTypes(
-    const parser::OmpMapType::Type &type,
-    const std::list<parser::OmpMapType::Type> &allowedMapTypeList) {
+void OmpStructureChecker::CheckAllowedMapTypes(const common::OmpMapKind &type,
+    const std::list<common::OmpMapKind> &allowedMapTypeList) {
   if (!llvm::is_contained(allowedMapTypeList, type)) {
     std::string commaSeperatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),
-        [&](const parser::OmpMapType::Type &mapType) {
-          commaSeperatedMapTypes.append(parser::ToUpperCaseLetters(
-              parser::OmpMapType::EnumToString(mapType)));
+        [&](const common::OmpMapKind &mapType) {
+          commaSeperatedMapTypes.append(
+              parser::ToUpperCaseLetters(common::EnumToString(mapType)));
         },
         [&] { commaSeperatedMapTypes.append(", "); });
     context_.Say(GetContext().clauseSource,
@@ -2586,7 +2579,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_map);
 
   if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.v.t)}) {
-    using Type = parser::OmpMapType::Type;
+    using Type = common::OmpMapKind;
     const Type &type{std::get<Type>(maptype->t)};
     switch (GetContext().directive) {
     case llvm::omp::Directive::OMPD_target:
@@ -2613,7 +2606,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
 
 bool OmpStructureChecker::ScheduleModifierHasType(
     const parser::OmpScheduleClause &x,
-    const parser::OmpScheduleModifierType::ModType &type) {
+    const common::OmpScheduleModifierKind &type) {
   const auto &modifier{
       std::get<std::optional<parser::OmpScheduleModifier>>(x.t)};
   if (modifier) {
@@ -2637,13 +2630,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
     const auto &kind{std::get<1>(scheduleClause.t)};
     const auto &chunk{std::get<2>(scheduleClause.t)};
     if (chunk) {
-      if (kind == parser::OmpScheduleClause::ScheduleType::Runtime ||
-          kind == parser::OmpScheduleClause::ScheduleType::Auto) {
+      if (kind == common::OmpScheduleClauseKind::Runtime ||
+          kind == common::OmpScheduleClauseKind::Auto) {
         context_.Say(GetContext().clauseSource,
             "When SCHEDULE clause has %s specified, "
             "it must not have chunk size specified"_err_en_US,
-            parser::ToUpperCaseLetters(
-                parser::OmpScheduleClause::EnumToString(kind)));
+            parser::ToUpperCaseLetters(common::EnumToString(kind)));
       }
       if (const auto &chunkExpr{std::get<std::optional<parser::ScalarIntExpr>>(
               scheduleClause.t)}) {
@@ -2652,10 +2644,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
       }
     }
 
-    if (ScheduleModifierHasType(scheduleClause,
-            parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
-      if (kind != parser::OmpScheduleClause::ScheduleType::Dynamic &&
-          kind != parser::OmpScheduleClause::ScheduleType::Guided) {
+    if (ScheduleModifierHasType(
+            scheduleClause, common::OmpScheduleModifierKind::Nonmonotonic)) {
+      if (kind != common::OmpScheduleClauseKind::Dynamic &&
+          kind != common::OmpScheduleClauseKind::Guided) {
         context_.Say(GetContext().clauseSource,
             "The NONMONOTONIC modifier can only be specified with "
             "SCHEDULE(DYNAMIC) or SCHEDULE(GUIDED)"_err_en_US);

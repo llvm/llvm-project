@@ -288,20 +288,20 @@ protected:
 
   Attr AccessSpecToAttr(const parser::AccessSpec &x) {
     switch (x.v) {
-    case parser::AccessSpec::Kind::Public:
+    case common::AccessSpecKind::Public:
       return Attr::PUBLIC;
-    case parser::AccessSpec::Kind::Private:
+    case common::AccessSpecKind::Private:
       return Attr::PRIVATE;
     }
     llvm_unreachable("Switch covers all cases"); // suppress g++ warning
   }
   Attr IntentSpecToAttr(const parser::IntentSpec &x) {
     switch (x.v) {
-    case parser::IntentSpec::Intent::In:
+    case common::IntentSpecKind::In:
       return Attr::INTENT_IN;
-    case parser::IntentSpec::Intent::Out:
+    case common::IntentSpecKind::Out:
       return Attr::INTENT_OUT;
-    case parser::IntentSpec::Intent::InOut:
+    case common::IntentSpecKind::InOut:
       return Attr::INTENT_INOUT;
     }
     llvm_unreachable("Switch covers all cases"); // suppress g++ warning
@@ -382,7 +382,7 @@ class ImplicitRulesVisitor : public DeclTypeSpecVisitor {
 public:
   using DeclTypeSpecVisitor::Post;
   using DeclTypeSpecVisitor::Pre;
-  using ImplicitNoneNameSpec = parser::ImplicitStmt::ImplicitNoneNameSpec;
+  using ImplicitNoneNameSpec = common::ImplicitNoneNameSpec;
 
   void Post(const parser::ParameterStmt &);
   bool Pre(const parser::ImplicitStmt &);
@@ -812,7 +812,7 @@ private:
 
 class GenericHandler : public virtual ScopeHandler {
 protected:
-  using ProcedureKind = parser::ProcedureStmt::Kind;
+  using ProcedureKind = common::ProcedureKind;
   void ResolveSpecificsInGeneric(Symbol &, bool isEndOfSpecificationPart);
   void DeclaredPossibleSpecificProc(Symbol &);
 
@@ -2828,7 +2828,7 @@ bool ModuleVisitor::Pre(const parser::Rename::Operators &x) {
 bool ModuleVisitor::Pre(const parser::UseStmt &x) {
   std::optional<bool> isIntrinsic;
   if (x.nature) {
-    isIntrinsic = *x.nature == parser::UseStmt::ModuleNature::Intrinsic;
+    isIntrinsic = *x.nature == common::ModuleNature::Intrinsic;
   } else if (currScope().IsModule() && currScope().symbol() &&
       currScope().symbol()->attrs().test(Attr::INTRINSIC)) {
     // Intrinsic modules USE only other intrinsic modules
@@ -3284,7 +3284,7 @@ bool InterfaceVisitor::Pre(const parser::ProcedureStmt &x) {
   if (!isGeneric()) {
     Say("A PROCEDURE statement is only allowed in a generic interface block"_err_en_US);
   } else {
-    auto kind{std::get<parser::ProcedureStmt::Kind>(x.t)};
+    auto kind{std::get<common::ProcedureKind>(x.t)};
     const auto &names{std::get<std::list<parser::Name>>(x.t)};
     AddSpecificProcs(names, kind);
   }
@@ -4449,10 +4449,10 @@ void DeclarationVisitor::Post(const parser::PointerDecl &x) {
 }
 
 bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
-  auto kind{std::get<parser::BindEntity::Kind>(x.t)};
+  auto kind{std::get<common::BindEntityKind>(x.t)};
   auto &name{std::get<parser::Name>(x.t)};
   Symbol *symbol;
-  if (kind == parser::BindEntity::Kind::Object) {
+  if (kind == common::BindEntityKind::Object) {
     symbol = &HandleAttributeStmt(Attr::BIND_C, name);
   } else {
     symbol = &MakeCommonBlockSymbol(name);
@@ -5648,7 +5648,7 @@ bool DeclarationVisitor::Pre(const parser::TypeBoundGenericStmt &x) {
   const auto &bindingNames{std::get<std::list<parser::Name>>(x.t)};
   GenericSpecInfo info{genericSpec.value()};
   SourceName symbolName{info.symbolName()};
-  bool isPrivate{accessSpec ? accessSpec->v == parser::AccessSpec::Kind::Private
+  bool isPrivate{accessSpec ? accessSpec->v == common::AccessSpecKind::Private
                             : derivedTypeInfo_.privateBindings};
   auto *genericSymbol{FindInScope(symbolName)};
   if (genericSymbol) {
@@ -5980,9 +5980,9 @@ bool DeclarationVisitor::Pre(const parser::SaveStmt &x) {
     currScope().set_hasSAVE();
   } else {
     for (const parser::SavedEntity &y : x.v) {
-      auto kind{std::get<parser::SavedEntity::Kind>(y.t)};
+      auto kind{std::get<common::SavedEntityKind>(y.t)};
       const auto &name{std::get<parser::Name>(y.t)};
-      if (kind == parser::SavedEntity::Kind::Common) {
+      if (kind == common::SavedEntityKind::Common) {
         MakeCommonBlockSymbol(name);
         AddSaveName(specPartState_.saveInfo.commons, name.source);
       } else {

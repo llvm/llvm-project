@@ -22,33 +22,33 @@
   }
 
 using ReductionOpsSet =
-    Fortran::common::EnumSet<Fortran::parser::AccReductionOperator::Operator,
-        Fortran::parser::AccReductionOperator::Operator_enumSize>;
+    Fortran::common::EnumSet<Fortran::common::AccReductionOperatorKind,
+        Fortran::common::AccReductionOperatorKind_enumSize>;
 
 static ReductionOpsSet reductionIntegerSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min,
-    Fortran::parser::AccReductionOperator::Operator::Iand,
-    Fortran::parser::AccReductionOperator::Operator::Ior,
-    Fortran::parser::AccReductionOperator::Operator::Ieor};
+    Fortran::common::AccReductionOperatorKind::Plus,
+    Fortran::common::AccReductionOperatorKind::Multiply,
+    Fortran::common::AccReductionOperatorKind::Max,
+    Fortran::common::AccReductionOperatorKind::Min,
+    Fortran::common::AccReductionOperatorKind::Iand,
+    Fortran::common::AccReductionOperatorKind::Ior,
+    Fortran::common::AccReductionOperatorKind::Ieor};
 
 static ReductionOpsSet reductionRealSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min};
+    Fortran::common::AccReductionOperatorKind::Plus,
+    Fortran::common::AccReductionOperatorKind::Multiply,
+    Fortran::common::AccReductionOperatorKind::Max,
+    Fortran::common::AccReductionOperatorKind::Min};
 
 static ReductionOpsSet reductionComplexSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply};
+    Fortran::common::AccReductionOperatorKind::Plus,
+    Fortran::common::AccReductionOperatorKind::Multiply};
 
 static ReductionOpsSet reductionLogicalSet{
-    Fortran::parser::AccReductionOperator::Operator::And,
-    Fortran::parser::AccReductionOperator::Operator::Or,
-    Fortran::parser::AccReductionOperator::Operator::Eqv,
-    Fortran::parser::AccReductionOperator::Operator::Neqv};
+    Fortran::common::AccReductionOperatorKind::And,
+    Fortran::common::AccReductionOperatorKind::Or,
+    Fortran::common::AccReductionOperatorKind::Eqv,
+    Fortran::common::AccReductionOperatorKind::Neqv};
 
 namespace Fortran::semantics {
 
@@ -411,7 +411,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Create &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
-    if (modifier->v != parser::AccDataModifier::Modifier::Zero) {
+    if (modifier->v != common::AccDataModifierKind::Zero) {
       context_.Say(GetContext().clauseSource,
           "Only the ZERO modifier is allowed for the %s clause "
           "on the %s directive"_err_en_US,
@@ -442,7 +442,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyin &c) {
     if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyin)) {
       return;
     }
-    if (modifier->v != parser::AccDataModifier::Modifier::ReadOnly) {
+    if (modifier->v != common::AccDataModifierKind::ReadOnly) {
       context_.Say(GetContext().clauseSource,
           "Only the READONLY modifier is allowed for the %s clause "
           "on the %s directive"_err_en_US,
@@ -464,7 +464,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
     if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyout)) {
       return;
     }
-    if (modifier->v != parser::AccDataModifier::Modifier::Zero) {
+    if (modifier->v != common::AccDataModifierKind::Zero) {
       context_.Say(GetContext().clauseSource,
           "Only the ZERO modifier is allowed for the %s clause "
           "on the %s directive"_err_en_US,

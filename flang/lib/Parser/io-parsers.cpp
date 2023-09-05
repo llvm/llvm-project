@@ -61,25 +61,25 @@ constexpr auto errLabel{construct<ErrLabel>(label)};
 
 TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "ACCESS =" >> pure(ConnectSpec::CharExpr::Kind::Access),
+        "ACCESS =" >> pure(common::ConnectCharExprKind::Access),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "ACTION =" >> pure(ConnectSpec::CharExpr::Kind::Action),
+        "ACTION =" >> pure(common::ConnectCharExprKind::Action),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "ASYNCHRONOUS =" >> pure(ConnectSpec::CharExpr::Kind::Asynchronous),
+        "ASYNCHRONOUS =" >> pure(common::ConnectCharExprKind::Asynchronous),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "BLANK =" >> pure(ConnectSpec::CharExpr::Kind::Blank),
+        "BLANK =" >> pure(common::ConnectCharExprKind::Blank),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "DECIMAL =" >> pure(ConnectSpec::CharExpr::Kind::Decimal),
+        "DECIMAL =" >> pure(common::ConnectCharExprKind::Decimal),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "DELIM =" >> pure(ConnectSpec::CharExpr::Kind::Delim),
+        "DELIM =" >> pure(common::ConnectCharExprKind::Delim),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "ENCODING =" >> pure(ConnectSpec::CharExpr::Kind::Encoding),
+        "ENCODING =" >> pure(common::ConnectCharExprKind::Encoding),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("ERR =" >> errLabel),
     construct<ConnectSpec>("FILE =" >> fileNameExpr),
@@ -87,42 +87,42 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         "nonstandard usage: NAME= in place of FILE="_port_en_US,
         construct<ConnectSpec>("NAME =" >> fileNameExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "FORM =" >> pure(ConnectSpec::CharExpr::Kind::Form),
+        "FORM =" >> pure(common::ConnectCharExprKind::Form),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("IOMSG =" >> msgVariable),
     construct<ConnectSpec>("IOSTAT =" >> statVariable),
     construct<ConnectSpec>(construct<ConnectSpec::Newunit>(
         "NEWUNIT =" >> scalar(integer(variable)))),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "PAD =" >> pure(ConnectSpec::CharExpr::Kind::Pad),
+        "PAD =" >> pure(common::ConnectCharExprKind::Pad),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "POSITION =" >> pure(ConnectSpec::CharExpr::Kind::Position),
+        "POSITION =" >> pure(common::ConnectCharExprKind::Position),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(
         construct<ConnectSpec::Recl>("RECL =" >> scalarIntExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "ROUND =" >> pure(ConnectSpec::CharExpr::Kind::Round),
+        "ROUND =" >> pure(common::ConnectCharExprKind::Round),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-        "SIGN =" >> pure(ConnectSpec::CharExpr::Kind::Sign),
+        "SIGN =" >> pure(common::ConnectCharExprKind::Sign),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("STATUS =" >> statusExpr),
     extension<LanguageFeature::Carriagecontrol>(
         "nonstandard usage: CARRIAGECONTROL="_port_en_US,
         construct<ConnectSpec>(
             construct<ConnectSpec::CharExpr>("CARRIAGECONTROL =" >>
-                    pure(ConnectSpec::CharExpr::Kind::Carriagecontrol),
+                    pure(common::ConnectCharExprKind::Carriagecontrol),
                 scalarDefaultCharExpr))),
     extension<LanguageFeature::Convert>(
         "nonstandard usage: CONVERT="_port_en_US,
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-            "CONVERT =" >> pure(ConnectSpec::CharExpr::Kind::Convert),
+            "CONVERT =" >> pure(common::ConnectCharExprKind::Convert),
             scalarDefaultCharExpr))),
     extension<LanguageFeature::Dispose>(
         "nonstandard usage: DISPOSE="_port_en_US,
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
-            "DISPOSE =" >> pure(ConnectSpec::CharExpr::Kind::Dispose),
+            "DISPOSE =" >> pure(common::ConnectCharExprKind::Dispose),
             scalarDefaultCharExpr)))))
 
 // R1209 close-spec ->
@@ -192,20 +192,20 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
     construct<IoControlSpec>("NML =" >> name),
     construct<IoControlSpec>(
         "ADVANCE =" >> construct<IoControlSpec::CharExpr>(
-                           pure(IoControlSpec::CharExpr::Kind::Advance),
+                           pure(common::IoControlCharExprKind::Advance),
                            scalarDefaultCharExpr)),
     construct<IoControlSpec>(construct<IoControlSpec::Asynchronous>(
         "ASYNCHRONOUS =" >> scalarDefaultCharConstantExpr)),
     construct<IoControlSpec>("BLANK =" >>
         construct<IoControlSpec::CharExpr>(
-            pure(IoControlSpec::CharExpr::Kind::Blank), scalarDefaultCharExpr)),
+            pure(common::IoControlCharExprKind::Blank), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
         "DECIMAL =" >> construct<IoControlSpec::CharExpr>(
-                           pure(IoControlSpec::CharExpr::Kind::Decimal),
+                           pure(common::IoControlCharExprKind::Decimal),
                            scalarDefaultCharExpr)),
     construct<IoControlSpec>("DELIM =" >>
         construct<IoControlSpec::CharExpr>(
-            pure(IoControlSpec::CharExpr::Kind::Delim), scalarDefaultCharExpr)),
+            pure(common::IoControlCharExprKind::Delim), scalarDefaultCharExpr)),
     construct<IoControlSpec>("END =" >> endLabel),
     construct<IoControlSpec>("EOR =" >> eorLabel),
     construct<IoControlSpec>("ERR =" >> errLabel),
@@ -214,17 +214,17 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
     construct<IoControlSpec>("IOSTAT = " >> statVariable),
     construct<IoControlSpec>("PAD =" >>
         construct<IoControlSpec::CharExpr>(
-            pure(IoControlSpec::CharExpr::Kind::Pad), scalarDefaultCharExpr)),
+            pure(common::IoControlCharExprKind::Pad), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
         "POS =" >> construct<IoControlSpec::Pos>(scalarIntExpr)),
     construct<IoControlSpec>(
         "REC =" >> construct<IoControlSpec::Rec>(scalarIntExpr)),
     construct<IoControlSpec>("ROUND =" >>
         construct<IoControlSpec::CharExpr>(
-            pure(IoControlSpec::CharExpr::Kind::Round), scalarDefaultCharExpr)),
+            pure(common::IoControlCharExprKind::Round), scalarDefaultCharExpr)),
     construct<IoControlSpec>("SIGN =" >>
         construct<IoControlSpec::CharExpr>(
-            pure(IoControlSpec::CharExpr::Kind::Sign), scalarDefaultCharExpr)),
+            pure(common::IoControlCharExprKind::Sign), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
         "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable))))
 
@@ -374,135 +374,135 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("FILE =" >> fileNameExpr),
     construct<InquireSpec>(
         "ACCESS =" >> construct<InquireSpec::CharVar>(
-                          pure(InquireSpec::CharVar::Kind::Access),
+                          pure(common::InquireCharVarKind::Access),
                           scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "ACTION =" >> construct<InquireSpec::CharVar>(
-                          pure(InquireSpec::CharVar::Kind::Action),
+                          pure(common::InquireCharVarKind::Action),
                           scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "ASYNCHRONOUS =" >> construct<InquireSpec::CharVar>(
-                                pure(InquireSpec::CharVar::Kind::Asynchronous),
+                                pure(common::InquireCharVarKind::Asynchronous),
                                 scalarDefaultCharVariable)),
     construct<InquireSpec>("BLANK =" >>
-        construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Blank),
+        construct<InquireSpec::CharVar>(pure(common::InquireCharVarKind::Blank),
             scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "DECIMAL =" >> construct<InquireSpec::CharVar>(
-                           pure(InquireSpec::CharVar::Kind::Decimal),
+                           pure(common::InquireCharVarKind::Decimal),
                            scalarDefaultCharVariable)),
     construct<InquireSpec>("DELIM =" >>
-        construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Delim),
+        construct<InquireSpec::CharVar>(pure(common::InquireCharVarKind::Delim),
             scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "DIRECT =" >> construct<InquireSpec::CharVar>(
-                          pure(InquireSpec::CharVar::Kind::Direct),
+                          pure(common::InquireCharVarKind::Direct),
                           scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "ENCODING =" >> construct<InquireSpec::CharVar>(
-                            pure(InquireSpec::CharVar::Kind::Encoding),
+                            pure(common::InquireCharVarKind::Encoding),
                             scalarDefaultCharVariable)),
     construct<InquireSpec>("ERR =" >> errLabel),
     construct<InquireSpec>("EXIST =" >>
         construct<InquireSpec::LogVar>(
-            pure(InquireSpec::LogVar::Kind::Exist), scalarLogicalVariable)),
+            pure(common::InquireLogVarKind::Exist), scalarLogicalVariable)),
     construct<InquireSpec>("FORM =" >>
         construct<InquireSpec::CharVar>(
-            pure(InquireSpec::CharVar::Kind::Form), scalarDefaultCharVariable)),
+            pure(common::InquireCharVarKind::Form), scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "FORMATTED =" >> construct<InquireSpec::CharVar>(
-                             pure(InquireSpec::CharVar::Kind::Formatted),
+                             pure(common::InquireCharVarKind::Formatted),
                              scalarDefaultCharVariable)),
     construct<InquireSpec>("ID =" >> idExpr),
     construct<InquireSpec>("IOMSG =" >>
-        construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Iomsg),
+        construct<InquireSpec::CharVar>(pure(common::InquireCharVarKind::Iomsg),
             scalarDefaultCharVariable)),
     construct<InquireSpec>("IOSTAT =" >>
-        construct<InquireSpec::IntVar>(pure(InquireSpec::IntVar::Kind::Iostat),
+        construct<InquireSpec::IntVar>(pure(common::InquireIntVarKind::Iostat),
             scalar(integer(variable)))),
     construct<InquireSpec>("NAME =" >>
         construct<InquireSpec::CharVar>(
-            pure(InquireSpec::CharVar::Kind::Name), scalarDefaultCharVariable)),
+            pure(common::InquireCharVarKind::Name), scalarDefaultCharVariable)),
     construct<InquireSpec>("NAMED =" >>
         construct<InquireSpec::LogVar>(
-            pure(InquireSpec::LogVar::Kind::Named), scalarLogicalVariable)),
+            pure(common::InquireLogVarKind::Named), scalarLogicalVariable)),
     construct<InquireSpec>("NEXTREC =" >>
-        construct<InquireSpec::IntVar>(pure(InquireSpec::IntVar::Kind::Nextrec),
+        construct<InquireSpec::IntVar>(pure(common::InquireIntVarKind::Nextrec),
             scalar(integer(variable)))),
     construct<InquireSpec>("NUMBER =" >>
-        construct<InquireSpec::IntVar>(pure(InquireSpec::IntVar::Kind::Number),
+        construct<InquireSpec::IntVar>(pure(common::InquireIntVarKind::Number),
             scalar(integer(variable)))),
     construct<InquireSpec>("OPENED =" >>
         construct<InquireSpec::LogVar>(
-            pure(InquireSpec::LogVar::Kind::Opened), scalarLogicalVariable)),
+            pure(common::InquireLogVarKind::Opened), scalarLogicalVariable)),
     construct<InquireSpec>("PAD =" >>
         construct<InquireSpec::CharVar>(
-            pure(InquireSpec::CharVar::Kind::Pad), scalarDefaultCharVariable)),
+            pure(common::InquireCharVarKind::Pad), scalarDefaultCharVariable)),
     construct<InquireSpec>("PENDING =" >>
         construct<InquireSpec::LogVar>(
-            pure(InquireSpec::LogVar::Kind::Pending), scalarLogicalVariable)),
+            pure(common::InquireLogVarKind::Pending), scalarLogicalVariable)),
     construct<InquireSpec>("POS =" >>
         construct<InquireSpec::IntVar>(
-            pure(InquireSpec::IntVar::Kind::Pos), scalar(integer(variable)))),
+            pure(common::InquireIntVarKind::Pos), scalar(integer(variable)))),
     construct<InquireSpec>(
         "POSITION =" >> construct<InquireSpec::CharVar>(
-                            pure(InquireSpec::CharVar::Kind::Position),
+                            pure(common::InquireCharVarKind::Position),
                             scalarDefaultCharVariable)),
     construct<InquireSpec>("READ =" >>
         construct<InquireSpec::CharVar>(
-            pure(InquireSpec::CharVar::Kind::Read), scalarDefaultCharVariable)),
+            pure(common::InquireCharVarKind::Read), scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "READWRITE =" >> construct<InquireSpec::CharVar>(
-                             pure(InquireSpec::CharVar::Kind::Readwrite),
+                             pure(common::InquireCharVarKind::Readwrite),
                              scalarDefaultCharVariable)),
     construct<InquireSpec>("RECL =" >>
         construct<InquireSpec::IntVar>(
-            pure(InquireSpec::IntVar::Kind::Recl), scalar(integer(variable)))),
+            pure(common::InquireIntVarKind::Recl), scalar(integer(variable)))),
     construct<InquireSpec>("ROUND =" >>
-        construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Round),
+        construct<InquireSpec::CharVar>(pure(common::InquireCharVarKind::Round),
             scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "SEQUENTIAL =" >> construct<InquireSpec::CharVar>(
-                              pure(InquireSpec::CharVar::Kind::Sequential),
+                              pure(common::InquireCharVarKind::Sequential),
                               scalarDefaultCharVariable)),
     construct<InquireSpec>("SIGN =" >>
         construct<InquireSpec::CharVar>(
-            pure(InquireSpec::CharVar::Kind::Sign), scalarDefaultCharVariable)),
+            pure(common::InquireCharVarKind::Sign), scalarDefaultCharVariable)),
     construct<InquireSpec>("SIZE =" >>
         construct<InquireSpec::IntVar>(
-            pure(InquireSpec::IntVar::Kind::Size), scalar(integer(variable)))),
+            pure(common::InquireIntVarKind::Size), scalar(integer(variable)))),
     construct<InquireSpec>(
         "STREAM =" >> construct<InquireSpec::CharVar>(
-                          pure(InquireSpec::CharVar::Kind::Stream),
+                          pure(common::InquireCharVarKind::Stream),
                           scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "STATUS =" >> construct<InquireSpec::CharVar>(
-                          pure(InquireSpec::CharVar::Kind::Status),
+                          pure(common::InquireCharVarKind::Status),
                           scalarDefaultCharVariable)),
     construct<InquireSpec>(
         "UNFORMATTED =" >> construct<InquireSpec::CharVar>(
-                               pure(InquireSpec::CharVar::Kind::Unformatted),
+                               pure(common::InquireCharVarKind::Unformatted),
                                scalarDefaultCharVariable)),
     construct<InquireSpec>("WRITE =" >>
-        construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Write),
+        construct<InquireSpec::CharVar>(pure(common::InquireCharVarKind::Write),
             scalarDefaultCharVariable)),
     extension<LanguageFeature::Carriagecontrol>(
         "nonstandard usage: CARRIAGECONTROL="_port_en_US,
         construct<InquireSpec>("CARRIAGECONTROL =" >>
             construct<InquireSpec::CharVar>(
-                pure(InquireSpec::CharVar::Kind::Carriagecontrol),
+                pure(common::InquireCharVarKind::Carriagecontrol),
                 scalarDefaultCharVariable))),
     extension<LanguageFeature::Convert>(
         "nonstandard usage: CONVERT="_port_en_US,
         construct<InquireSpec>(
             "CONVERT =" >> construct<InquireSpec::CharVar>(
-                               pure(InquireSpec::CharVar::Kind::Convert),
+                               pure(common::InquireCharVarKind::Convert),
                                scalarDefaultCharVariable))),
     extension<LanguageFeature::Dispose>(
         "nonstandard usage: DISPOSE="_port_en_US,
         construct<InquireSpec>(
             "DISPOSE =" >> construct<InquireSpec::CharVar>(
-                               pure(InquireSpec::CharVar::Kind::Dispose),
+                               pure(common::InquireCharVarKind::Dispose),
                                scalarDefaultCharVariable)))))
 
 // R1230 inquire-stmt ->

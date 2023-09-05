@@ -88,17 +88,17 @@ TYPE_PARSER(construct<AccCollapseArg>(
 // 2.5.15 Reduction
 // Operator for reduction
 TYPE_PARSER(sourced(construct<AccReductionOperator>(
-    first("+" >> pure(AccReductionOperator::Operator::Plus),
-        "*" >> pure(AccReductionOperator::Operator::Multiply),
-        "MAX" >> pure(AccReductionOperator::Operator::Max),
-        "MIN" >> pure(AccReductionOperator::Operator::Min),
-        "IAND" >> pure(AccReductionOperator::Operator::Iand),
-        "IOR" >> pure(AccReductionOperator::Operator::Ior),
-        "IEOR" >> pure(AccReductionOperator::Operator::Ieor),
-        ".AND." >> pure(AccReductionOperator::Operator::And),
-        ".OR." >> pure(AccReductionOperator::Operator::Or),
-        ".EQV." >> pure(AccReductionOperator::Operator::Eqv),
-        ".NEQV." >> pure(AccReductionOperator::Operator::Neqv)))))
+    first("+" >> pure(common::AccReductionOperatorKind::Plus),
+        "*" >> pure(common::AccReductionOperatorKind::Multiply),
+        "MAX" >> pure(common::AccReductionOperatorKind::Max),
+        "MIN" >> pure(common::AccReductionOperatorKind::Min),
+        "IAND" >> pure(common::AccReductionOperatorKind::Iand),
+        "IOR" >> pure(common::AccReductionOperatorKind::Ior),
+        "IEOR" >> pure(common::AccReductionOperatorKind::Ieor),
+        ".AND." >> pure(common::AccReductionOperatorKind::And),
+        ".OR." >> pure(common::AccReductionOperatorKind::Or),
+        ".EQV." >> pure(common::AccReductionOperatorKind::Eqv),
+        ".NEQV." >> pure(common::AccReductionOperatorKind::Neqv)))))
 
 // 2.15.1 Bind clause
 TYPE_PARSER(sourced(construct<AccBindClause>(name)) ||
@@ -117,8 +117,8 @@ TYPE_PARSER(construct<AccSelfClause>(Parser<AccObjectList>{}) ||
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(construct<AccDataModifier>(
-    first("ZERO:" >> pure(AccDataModifier::Modifier::Zero),
-        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly))))
+    first("ZERO:" >> pure(common::AccDataModifierKind::Zero),
+        "READONLY:" >> pure(common::AccDataModifierKind::ReadOnly))))
 
 // Combined directives
 TYPE_PARSER(sourced(construct<AccCombinedDirective>(

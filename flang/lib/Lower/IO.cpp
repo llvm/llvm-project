@@ -1196,50 +1196,50 @@ mlir::Value genIOOption<Fortran::parser::ConnectSpec::CharExpr>(
     mlir::Value cookie, const Fortran::parser::ConnectSpec::CharExpr &spec) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::func::FuncOp ioFunc;
-  switch (std::get<Fortran::parser::ConnectSpec::CharExpr::Kind>(spec.t)) {
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Access:
+  switch (std::get<Fortran::common::ConnectCharExprKind>(spec.t)) {
+  case Fortran::common::ConnectCharExprKind::Access:
     ioFunc = getIORuntimeFunc<mkIOKey(SetAccess)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Action:
+  case Fortran::common::ConnectCharExprKind::Action:
     ioFunc = getIORuntimeFunc<mkIOKey(SetAction)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Asynchronous:
+  case Fortran::common::ConnectCharExprKind::Asynchronous:
     ioFunc = getIORuntimeFunc<mkIOKey(SetAsynchronous)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Blank:
+  case Fortran::common::ConnectCharExprKind::Blank:
     ioFunc = getIORuntimeFunc<mkIOKey(SetBlank)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Decimal:
+  case Fortran::common::ConnectCharExprKind::Decimal:
     ioFunc = getIORuntimeFunc<mkIOKey(SetDecimal)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Delim:
+  case Fortran::common::ConnectCharExprKind::Delim:
     ioFunc = getIORuntimeFunc<mkIOKey(SetDelim)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Encoding:
+  case Fortran::common::ConnectCharExprKind::Encoding:
     ioFunc = getIORuntimeFunc<mkIOKey(SetEncoding)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Form:
+  case Fortran::common::ConnectCharExprKind::Form:
     ioFunc = getIORuntimeFunc<mkIOKey(SetForm)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Pad:
+  case Fortran::common::ConnectCharExprKind::Pad:
     ioFunc = getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Position:
+  case Fortran::common::ConnectCharExprKind::Position:
     ioFunc = getIORuntimeFunc<mkIOKey(SetPosition)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Round:
+  case Fortran::common::ConnectCharExprKind::Round:
     ioFunc = getIORuntimeFunc<mkIOKey(SetRound)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Sign:
+  case Fortran::common::ConnectCharExprKind::Sign:
     ioFunc = getIORuntimeFunc<mkIOKey(SetSign)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Carriagecontrol:
+  case Fortran::common::ConnectCharExprKind::Carriagecontrol:
     ioFunc = getIORuntimeFunc<mkIOKey(SetCarriagecontrol)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Convert:
+  case Fortran::common::ConnectCharExprKind::Convert:
     ioFunc = getIORuntimeFunc<mkIOKey(SetConvert)>(loc, builder);
     break;
-  case Fortran::parser::ConnectSpec::CharExpr::Kind::Dispose:
+  case Fortran::common::ConnectCharExprKind::Dispose:
     TODO(loc, "DISPOSE not part of the runtime::io interface");
   }
   Fortran::lower::StatementContext localStatementCtx;
@@ -1273,26 +1273,26 @@ mlir::Value genIOOption<Fortran::parser::IoControlSpec::CharExpr>(
     mlir::Value cookie, const Fortran::parser::IoControlSpec::CharExpr &spec) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::func::FuncOp ioFunc;
-  switch (std::get<Fortran::parser::IoControlSpec::CharExpr::Kind>(spec.t)) {
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Advance:
+  switch (std::get<Fortran::common::IoControlCharExprKind>(spec.t)) {
+  case Fortran::common::IoControlCharExprKind::Advance:
     ioFunc = getIORuntimeFunc<mkIOKey(SetAdvance)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Blank:
+  case Fortran::common::IoControlCharExprKind::Blank:
     ioFunc = getIORuntimeFunc<mkIOKey(SetBlank)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Decimal:
+  case Fortran::common::IoControlCharExprKind::Decimal:
     ioFunc = getIORuntimeFunc<mkIOKey(SetDecimal)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Delim:
+  case Fortran::common::IoControlCharExprKind::Delim:
     ioFunc = getIORuntimeFunc<mkIOKey(SetDelim)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Pad:
+  case Fortran::common::IoControlCharExprKind::Pad:
     ioFunc = getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Round:
+  case Fortran::common::IoControlCharExprKind::Round:
     ioFunc = getIORuntimeFunc<mkIOKey(SetRound)>(loc, builder);
     break;
-  case Fortran::parser::IoControlSpec::CharExpr::Kind::Sign:
+  case Fortran::common::IoControlCharExprKind::Sign:
     ioFunc = getIORuntimeFunc<mkIOKey(SetSign)>(loc, builder);
     break;
   }
@@ -1439,8 +1439,8 @@ ConditionSpecInfo lowerErrorSpec(Fortran::lower::AbstractConverter &converter,
               csi.ioStatExpr = Fortran::semantics::GetExpr(var);
             },
             [&](const Fortran::parser::InquireSpec::IntVar &var) {
-              if (std::get<Fortran::parser::InquireSpec::IntVar::Kind>(var.t) ==
-                  Fortran::parser::InquireSpec::IntVar::Kind::Iostat)
+              if (std::get<Fortran::common::InquireIntVarKind>(var.t) ==
+                  Fortran::common::InquireIntVarKind::Iostat)
                 csi.ioStatExpr = Fortran::semantics::GetExpr(
                     std::get<Fortran::parser::ScalarIntVariable>(var.t));
             },
@@ -1448,9 +1448,8 @@ ConditionSpecInfo lowerErrorSpec(Fortran::lower::AbstractConverter &converter,
               ioMsgExpr = Fortran::semantics::GetExpr(var);
             },
             [&](const Fortran::parser::InquireSpec::CharVar &var) {
-              if (std::get<Fortran::parser::InquireSpec::CharVar::Kind>(
-                      var.t) ==
-                  Fortran::parser::InquireSpec::CharVar::Kind::Iomsg)
+              if (std::get<Fortran::common::InquireCharVarKind>(var.t) ==
+                  Fortran::common::InquireCharVarKind::Iomsg)
                 ioMsgExpr = Fortran::semantics::GetExpr(
                     std::get<Fortran::parser::ScalarDefaultCharVariable>(
                         var.t));
@@ -2302,8 +2301,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::CharVar>(
     const Fortran::parser::InquireSpec::CharVar &var,
     Fortran::lower::StatementContext &stmtCtx) {
   // IOMSG is handled with exception conditions
-  if (std::get<Fortran::parser::InquireSpec::CharVar::Kind>(var.t) ==
-      Fortran::parser::InquireSpec::CharVar::Kind::Iomsg)
+  if (std::get<Fortran::common::InquireCharVarKind>(var.t) ==
+      Fortran::common::InquireCharVarKind::Iomsg)
     return {};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::func::FuncOp specFunc =
@@ -2317,8 +2316,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::CharVar>(
       builder.createIntegerConstant(
           loc, specFuncTy.getInput(1),
           Fortran::runtime::io::HashInquiryKeyword(std::string{
-              Fortran::parser::InquireSpec::CharVar::EnumToString(
-                  std::get<Fortran::parser::InquireSpec::CharVar::Kind>(var.t))}
+              Fortran::common::EnumToString(
+                  std::get<Fortran::common::InquireCharVarKind>(var.t))}
                                                        .c_str())),
       builder.createConvert(loc, specFuncTy.getInput(2), fir::getBase(str)),
       builder.createConvert(loc, specFuncTy.getInput(3), fir::getLen(str))};
@@ -2332,8 +2331,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
     const Fortran::parser::InquireSpec::IntVar &var,
     Fortran::lower::StatementContext &stmtCtx) {
   // IOSTAT is handled with exception conditions
-  if (std::get<Fortran::parser::InquireSpec::IntVar::Kind>(var.t) ==
-      Fortran::parser::InquireSpec::IntVar::Kind::Iostat)
+  if (std::get<Fortran::common::InquireIntVarKind>(var.t) ==
+      Fortran::common::InquireIntVarKind::Iostat)
     return {};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::func::FuncOp specFunc =
@@ -2354,8 +2353,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
       builder.createIntegerConstant(
           loc, specFuncTy.getInput(1),
           Fortran::runtime::io::HashInquiryKeyword(std::string{
-              Fortran::parser::InquireSpec::IntVar::EnumToString(
-                  std::get<Fortran::parser::InquireSpec::IntVar::Kind>(var.t))}
+              Fortran::common::EnumToString(
+                  std::get<Fortran::common::InquireIntVarKind>(var.t))}
                                                        .c_str())),
       builder.createConvert(loc, specFuncTy.getInput(2), addr),
       builder.createConvert(loc, specFuncTy.getInput(3), kind)};
@@ -2369,10 +2368,9 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::LogVar>(
     const Fortran::parser::InquireSpec::LogVar &var,
     Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto logVarKind = std::get<Fortran::parser::InquireSpec::LogVar::Kind>(var.t);
+  auto logVarKind = std::get<Fortran::common::InquireLogVarKind>(var.t);
   bool pendId =
-      idExpr &&
-      logVarKind == Fortran::parser::InquireSpec::LogVar::Kind::Pending;
+      idExpr && logVarKind == Fortran::common::InquireLogVarKind::Pending;
   mlir::func::FuncOp specFunc =
       pendId ? getIORuntimeFunc<mkIOKey(InquirePendingId)>(loc, builder)
              : getIORuntimeFunc<mkIOKey(InquireLogical)>(loc, builder);
@@ -2390,9 +2388,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::LogVar>(
   else
     args.push_back(builder.createIntegerConstant(
         loc, specFuncTy.getInput(1),
-        Fortran::runtime::io::HashInquiryKeyword(std::string{
-            Fortran::parser::InquireSpec::LogVar::EnumToString(logVarKind)}
-                                                     .c_str())));
+        Fortran::runtime::io::HashInquiryKeyword(
+            std::string{Fortran::common::EnumToString(logVarKind)}.c_str())));
   args.push_back(builder.createConvert(loc, specFuncTy.getInput(2), addr));
   auto call = builder.create<fir::CallOp>(loc, specFunc, args);
   boolRefToLogical(loc, builder, addr);

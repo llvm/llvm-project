@@ -138,9 +138,9 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
-      const parser::OmpScheduleModifierType::ModType &);
-  void CheckAllowedMapTypes(const parser::OmpMapType::Type &,
-      const std::list<parser::OmpMapType::Type> &);
+      const common::OmpScheduleModifierKind &);
+  void CheckAllowedMapTypes(
+      const common::OmpMapKind &, const std::list<common::OmpMapKind> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 
@@ -183,11 +183,10 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckCancellationNest(
-      const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
+      const parser::CharBlock &source, const common::OmpCancelKind &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   bool CheckReductionOperators(const parser::OmpClause::Reduction &);
-  bool CheckIntrinsicOperator(
-      const parser::DefinedOperator::IntrinsicOperator &);
+  bool CheckIntrinsicOperator(const common::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();

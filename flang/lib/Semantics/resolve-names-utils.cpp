@@ -25,11 +25,11 @@
 
 namespace Fortran::semantics {
 
+using common::IntrinsicOperator;
 using common::LanguageFeature;
 using common::LogicalOperator;
 using common::NumericOperator;
 using common::RelationalOperator;
-using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
 
 static constexpr const char *operatorPrefix{"operator("};
 

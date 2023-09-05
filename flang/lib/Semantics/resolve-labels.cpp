@@ -424,11 +424,8 @@ public:
           const auto *op{std::get_if<parser::DefinedOperator>(&genericSpec->u)};
           if (endOp && op) {
             const auto *endIntrin{
-                std::get_if<parser::DefinedOperator::IntrinsicOperator>(
-                    &endOp->u)};
-            const auto *intrin{
-                std::get_if<parser::DefinedOperator::IntrinsicOperator>(
-                    &op->u)};
+                std::get_if<common::IntrinsicOperator>(&endOp->u)};
+            const auto *intrin{std::get_if<common::IntrinsicOperator>(&op->u)};
             ok = endIntrin && intrin && *endIntrin == *intrin;
           }
         }

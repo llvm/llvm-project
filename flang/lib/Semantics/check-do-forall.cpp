@@ -305,8 +305,8 @@ public:
   void Post(const parser::IoControlSpec &ioControlSpec) {
     if (auto *charExpr{
             std::get_if<parser::IoControlSpec::CharExpr>(&ioControlSpec.u)}) {
-      if (std::get<parser::IoControlSpec::CharExpr::Kind>(charExpr->t) ==
-          parser::IoControlSpec::CharExpr::Kind::Advance) {
+      if (std::get<common::IoControlCharExprKind>(charExpr->t) ==
+          common::IoControlCharExprKind::Advance) {
         SayWithDo(context_, currentStatementSourcePosition_,
             "ADVANCE specifier is not allowed in DO"
             " CONCURRENT"_err_en_US,

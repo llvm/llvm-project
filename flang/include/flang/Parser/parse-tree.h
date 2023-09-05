@@ -594,9 +594,7 @@ WRAPPER_CLASS(DefinedOpName, Name);
 // R610 extended-intrinsic-op -> intrinsic-operator
 struct DefinedOperator {
   UNION_CLASS_BOILERPLATE(DefinedOperator);
-  ENUM_CLASS(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat,
-      LT, LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV)
-  std::variant<DefinedOpName, IntrinsicOperator> u;
+  std::variant<DefinedOpName, common::IntrinsicOperator> u;
 };
 
 // R804 object-name -> name
@@ -890,8 +888,7 @@ struct LiteralConstant {
 
 // R807 access-spec -> PUBLIC | PRIVATE
 struct AccessSpec {
-  ENUM_CLASS(Kind, Public, Private)
-  WRAPPER_CLASS_BOILERPLATE(AccessSpec, Kind);
+  WRAPPER_CLASS_BOILERPLATE(AccessSpec, common::AccessSpecKind);
 };
 
 // R728 type-attr-spec ->
@@ -1335,8 +1332,7 @@ struct ArraySpec {
 
 // R826 intent-spec -> IN | OUT | INOUT
 struct IntentSpec {
-  ENUM_CLASS(Intent, In, Out, InOut)
-  WRAPPER_CLASS_BOILERPLATE(IntentSpec, Intent);
+  WRAPPER_CLASS_BOILERPLATE(IntentSpec, common::IntentSpecKind);
 };
 
 // R802 attr-spec ->
@@ -1412,8 +1408,7 @@ WRAPPER_CLASS(AsynchronousStmt, std::list<ObjectName>);
 // R833 bind-entity -> entity-name | / common-block-name /
 struct BindEntity {
   TUPLE_CLASS_BOILERPLATE(BindEntity);
-  ENUM_CLASS(Kind, Object, Common)
-  std::tuple<Kind, Name> t;
+  std::tuple<common::BindEntityKind, Name> t;
 };
 
 // R832 bind-stmt -> language-binding-spec [::] bind-entity-list
@@ -1547,8 +1542,7 @@ WRAPPER_CLASS(ProtectedStmt, std::list<Name>);
 // R858 proc-pointer-name -> name
 struct SavedEntity {
   TUPLE_CLASS_BOILERPLATE(SavedEntity);
-  ENUM_CLASS(Kind, Entity, Common)
-  std::tuple<Kind, Name> t;
+  std::tuple<common::SavedEntityKind, Name> t;
 };
 
 // R856 save-stmt -> SAVE [[::] saved-entity-list]
@@ -1581,8 +1575,8 @@ struct ImplicitSpec {
 // R866 implicit-name-spec -> EXTERNAL | TYPE
 struct ImplicitStmt {
   UNION_CLASS_BOILERPLATE(ImplicitStmt);
-  ENUM_CLASS(ImplicitNoneNameSpec, External, Type) // R866
-  std::variant<std::list<ImplicitSpec>, std::list<ImplicitNoneNameSpec>> u;
+  std::variant<std::list<ImplicitSpec>, std::list<common::ImplicitNoneNameSpec>>
+      u;
 };
 
 // R874 common-block-object -> variable-name [( array-spec )]
@@ -2481,9 +2475,10 @@ WRAPPER_CLASS(StopCode, Scalar<Expr>);
 // R1161 error-stop-stmt ->
 //         ERROR STOP [stop-code] [, QUIET = scalar-logical-expr]
 struct StopStmt {
-  ENUM_CLASS(Kind, Stop, ErrorStop)
   TUPLE_CLASS_BOILERPLATE(StopStmt);
-  std::tuple<Kind, std::optional<StopCode>, std::optional<ScalarLogicalExpr>> t;
+  std::tuple<common::StopKind, std::optional<StopCode>,
+      std::optional<ScalarLogicalExpr>>
+      t;
 };
 
 // R1164 sync-all-stmt -> SYNC ALL [( [sync-stat-list] )]
@@ -2608,11 +2603,8 @@ WRAPPER_CLASS(ErrLabel, Label);
 struct ConnectSpec {
   UNION_CLASS_BOILERPLATE(ConnectSpec);
   struct CharExpr {
-    ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Encoding, Form, Pad, Position, Round, Sign,
-        /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
-    std::tuple<Kind, ScalarDefaultCharExpr> t;
+    std::tuple<common::ConnectCharExprKind, ScalarDefaultCharExpr> t;
   };
   WRAPPER_CLASS(Recl, ScalarIntExpr);
   WRAPPER_CLASS(Newunit, ScalarIntVariable);
@@ -2666,9 +2658,8 @@ WRAPPER_CLASS(EorLabel, Label);
 struct IoControlSpec {
   UNION_CLASS_BOILERPLATE(IoControlSpec);
   struct CharExpr {
-    ENUM_CLASS(Kind, Advance, Blank, Decimal, Delim, Pad, Round, Sign)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
-    std::tuple<Kind, ScalarDefaultCharExpr> t;
+    std::tuple<common::IoControlCharExprKind, ScalarDefaultCharExpr> t;
   };
   WRAPPER_CLASS(Asynchronous, ScalarDefaultCharConstantExpr);
   WRAPPER_CLASS(Pos, ScalarIntExpr);
@@ -2824,22 +2815,16 @@ WRAPPER_CLASS(FlushStmt, std::list<PositionOrFlushSpec>);
 struct InquireSpec {
   UNION_CLASS_BOILERPLATE(InquireSpec);
   struct CharVar {
-    ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Direct, Encoding, Form, Formatted, Iomsg, Name, Pad, Position, Read,
-        Readwrite, Round, Sequential, Sign, Stream, Status, Unformatted, Write,
-        /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharVar);
-    std::tuple<Kind, ScalarDefaultCharVariable> t;
+    std::tuple<common::InquireCharVarKind, ScalarDefaultCharVariable> t;
   };
   struct IntVar {
-    ENUM_CLASS(Kind, Iostat, Nextrec, Number, Pos, Recl, Size)
     TUPLE_CLASS_BOILERPLATE(IntVar);
-    std::tuple<Kind, ScalarIntVariable> t;
+    std::tuple<common::InquireIntVarKind, ScalarIntVariable> t;
   };
   struct LogVar {
-    ENUM_CLASS(Kind, Exist, Named, Opened, Pending)
     TUPLE_CLASS_BOILERPLATE(LogVar);
-    std::tuple<Kind, Scalar<Logical<Variable>>> t;
+    std::tuple<common::InquireLogVarKind, Scalar<Logical<Variable>>> t;
   };
   std::variant<FileUnitNumber, FileNameExpr, CharVar, IntVar, LogVar, IdExpr,
       ErrLabel>
@@ -3015,11 +3000,10 @@ struct Only {
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 struct UseStmt {
   BOILERPLATE(UseStmt);
-  ENUM_CLASS(ModuleNature, Intrinsic, Non_Intrinsic) // R1410
   template <typename A>
-  UseStmt(std::optional<ModuleNature> &&nat, Name &&n, std::list<A> &&x)
+  UseStmt(std::optional<common::ModuleNature> &&nat, Name &&n, std::list<A> &&x)
       : nature(std::move(nat)), moduleName(std::move(n)), u(std::move(x)) {}
-  std::optional<ModuleNature> nature;
+  std::optional<common::ModuleNature> nature;
   Name moduleName;
   std::variant<std::list<Rename>, std::list<Only>> u;
 };
@@ -3133,9 +3117,8 @@ struct InterfaceBody {
 
 // R1506 procedure-stmt -> [MODULE] PROCEDURE [::] specific-procedure-list
 struct ProcedureStmt {
-  ENUM_CLASS(Kind, ModuleProcedure, Procedure)
   TUPLE_CLASS_BOILERPLATE(ProcedureStmt);
-  std::tuple<Kind, std::list<Name>> t;
+  std::tuple<common::ProcedureKind, std::list<Name>> t;
 };
 
 // R1502 interface-specification -> interface-body | procedure-stmt
@@ -3379,14 +3362,12 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
 struct OmpProcBindClause {
-  ENUM_CLASS(Type, Close, Master, Spread, Primary)
-  WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, common::OmpProcBindClauseKind);
 };
 
 // 2.15.3.1 default-clause -> DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 struct OmpDefaultClause {
-  ENUM_CLASS(Type, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, common::OmpDefaultClauseKind);
 };
 
 // 2.1 Directives or clauses may accept a list or extended-list.
@@ -3404,8 +3385,7 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 struct OmpMapType {
   TUPLE_CLASS_BOILERPLATE(OmpMapType);
   EMPTY_CLASS(Always);
-  ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
-  std::tuple<std::optional<Always>, Type> t;
+  std::tuple<std::optional<Always>, common::OmpMapKind> t;
 };
 
 // 2.15.5.1 map -> MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
@@ -3417,16 +3397,15 @@ struct OmpMapClause {
 // 2.15.5.2 defaultmap -> DEFAULTMAP (implicit-behavior[:variable-category])
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
-  ENUM_CLASS(
-      ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
-  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
-  std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
+  std::tuple<common::OmpDefaultmapClauseImplicitBehavior,
+      std::optional<common::OmpDefaultmapClauseVariableCategory>>
+      t;
 };
 
 // 2.7.1 sched-modifier -> MONOTONIC | NONMONOTONIC | SIMD
 struct OmpScheduleModifierType {
-  ENUM_CLASS(ModType, Monotonic, Nonmonotonic, Simd)
-  WRAPPER_CLASS_BOILERPLATE(OmpScheduleModifierType, ModType);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpScheduleModifierType, common::OmpScheduleModifierKind);
 };
 
 struct OmpScheduleModifier {
@@ -3440,8 +3419,7 @@ struct OmpScheduleModifier {
 //                                    kind[, chunk_size])
 struct OmpScheduleClause {
   TUPLE_CLASS_BOILERPLATE(OmpScheduleClause);
-  ENUM_CLASS(ScheduleType, Static, Dynamic, Guided, Auto, Runtime)
-  std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
+  std::tuple<std::optional<OmpScheduleModifier>, common::OmpScheduleClauseKind,
       std::optional<ScalarIntExpr>>
       t;
 };
@@ -3449,22 +3427,23 @@ struct OmpScheduleClause {
 // device([ device-modifier :] scalar-integer-expression)
 struct OmpDeviceClause {
   TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
-  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
-  std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
+  std::tuple<std::optional<common::OmpDeviceClauseDeviceModifier>,
+      ScalarIntExpr>
+      t;
 };
 
 // device_type(any | host | nohost)
 struct OmpDeviceTypeClause {
-  ENUM_CLASS(Type, Any, Host, Nohost)
-  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDeviceTypeClause, common::OmpDeviceTypeClauseKind);
 };
 
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
-  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
-      TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
-  std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
+  std::tuple<std::optional<common::OmpIfClauseDirectiveNameModifier>,
+      ScalarLogicalExpr>
+      t;
 };
 
 // 2.8.1 aligned-clause -> ALIGNED (variable-name-list[ : scalar-constant])
@@ -3477,20 +3456,17 @@ struct OmpAlignedClause {
 // 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
 struct OmpOrderModifier {
   UNION_CLASS_BOILERPLATE(OmpOrderModifier);
-  ENUM_CLASS(Kind, Reproducible, Unconstrained)
-  std::variant<Kind> u;
+  std::variant<common::OmpOrderModifierKind> u;
 };
 
 struct OmpOrderClause {
   TUPLE_CLASS_BOILERPLATE(OmpOrderClause);
-  ENUM_CLASS(Type, Concurrent)
-  std::tuple<std::optional<OmpOrderModifier>, Type> t;
+  std::tuple<std::optional<OmpOrderModifier>, common::OmpOrderClauseKind> t;
 };
 
 // 2.15.3.7 linear-modifier -> REF | VAL | UVAL
 struct OmpLinearModifier {
-  ENUM_CLASS(Type, Ref, Val, Uval)
-  WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, common::OmpLinearModifierKind);
 };
 
 // 2.15.3.7 linear-clause -> LINEAR (linear-list[ : linear-step])
@@ -3572,8 +3548,7 @@ struct OmpDependSinkVec {
 
 // 2.13.9 depend-type -> IN | OUT | INOUT | SOURCE | SINK
 struct OmpDependenceType {
-  ENUM_CLASS(Type, In, Out, Inout, Source, Sink)
-  WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, common::OmpDependenceKind);
 };
 
 // 2.13.9 depend-clause -> DEPEND (((IN | OUT | INOUT) : variable-name-list) |
@@ -3593,8 +3568,8 @@ struct OmpDependClause {
 //                 ATOMIC_DEFAULT_MEM_ORDER (SEQ_CST | ACQ_REL |
 //                                           RELAXED)
 struct OmpAtomicDefaultMemOrderClause {
-  ENUM_CLASS(Type, SeqCst, AcqRel, Relaxed)
-  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause,
+      common::OmpAtomicDefaultMemOrderClauseKind);
 };
 
 // OpenMP Clauses
@@ -3881,8 +3856,7 @@ struct OmpLoopDirective {
 
 // 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
 struct OmpCancelType {
-  ENUM_CLASS(Type, Parallel, Sections, Do, Taskgroup)
-  WRAPPER_CLASS_BOILERPLATE(OmpCancelType, Type);
+  WRAPPER_CLASS_BOILERPLATE(OmpCancelType, common::OmpCancelKind);
   CharBlock source;
 };
 
@@ -4027,8 +4001,7 @@ struct AccDefaultClause {
 };
 
 struct AccDataModifier {
-  ENUM_CLASS(Modifier, ReadOnly, Zero)
-  WRAPPER_CLASS_BOILERPLATE(AccDataModifier, Modifier);
+  WRAPPER_CLASS_BOILERPLATE(AccDataModifier, common::AccDataModifierKind);
   CharBlock source;
 };
 
@@ -4039,9 +4012,8 @@ struct AccObjectListWithModifier {
 
 // 2.5.15: + | * | max | min | iand | ior | ieor | .and. | .or. | .eqv. | .neqv.
 struct AccReductionOperator {
-  ENUM_CLASS(
-      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
-  WRAPPER_CLASS_BOILERPLATE(AccReductionOperator, Operator);
+  WRAPPER_CLASS_BOILERPLATE(
+      AccReductionOperator, common::AccReductionOperatorKind);
   CharBlock source;
 };
 

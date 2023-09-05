@@ -246,8 +246,8 @@ TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
-    "INTRINSIC" >> pure(UseStmt::ModuleNature::Intrinsic) ||
-    "NON_INTRINSIC" >> pure(UseStmt::ModuleNature::Non_Intrinsic)};
+    "INTRINSIC" >> pure(common::ModuleNature::Intrinsic) ||
+    "NON_INTRINSIC" >> pure(common::ModuleNature::Non_Intrinsic)};
 
 // R1409 use-stmt ->
 //         USE [[, module-nature] ::] module-name [, rename-list] |
@@ -351,10 +351,10 @@ constexpr auto specificProcedures{
 
 // R1506 procedure-stmt -> [MODULE] PROCEDURE [::] specific-procedure-list
 TYPE_PARSER(construct<ProcedureStmt>("MODULE PROCEDURE"_sptok >>
-                    pure(ProcedureStmt::Kind::ModuleProcedure),
+                    pure(common::ProcedureKind::ModuleProcedure),
                 maybe("::"_tok) >> specificProcedures) ||
     construct<ProcedureStmt>(
-        "PROCEDURE" >> pure(ProcedureStmt::Kind::Procedure),
+        "PROCEDURE" >> pure(common::ProcedureKind::Procedure),
         maybe("::"_tok) >> specificProcedures))
 
 // R1508 generic-spec ->

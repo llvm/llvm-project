@@ -170,8 +170,7 @@ public:
     const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
     const auto &modifier{
         std::get<std::optional<parser::AccDataModifier>>(x.v.t)};
-    if (modifier &&
-        (*modifier).v == parser::AccDataModifier::Modifier::ReadOnly) {
+    if (modifier && (*modifier).v == common::AccDataModifierKind::ReadOnly) {
       ResolveAccObjectList(objectList, Symbol::Flag::AccCopyInReadOnly);
     } else {
       ResolveAccObjectList(objectList, Symbol::Flag::AccCopyIn);
@@ -1686,16 +1685,16 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   if (!dirContext_.empty()) {
     switch (x.v) {
-    case parser::OmpDefaultClause::Type::Private:
+    case common::OmpDefaultClauseKind::Private:
       SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Firstprivate:
+    case common::OmpDefaultClauseKind::Firstprivate:
       SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Shared:
+    case common::OmpDefaultClauseKind::Shared:
       SetContextDefaultDSA(Symbol::Flag::OmpShared);
       break;
-    case parser::OmpDefaultClause::Type::None:
+    case common::OmpDefaultClauseKind::None:
       SetContextDefaultDSA(Symbol::Flag::OmpNone);
       break;
     }

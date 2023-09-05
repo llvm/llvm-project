@@ -440,8 +440,8 @@ TYPE_CONTEXT_PARSER("computed GOTO statement"_en_US,
 // R1161 error-stop-stmt ->
 //         ERROR STOP [stop-code] [, QUIET = scalar-logical-expr]
 TYPE_CONTEXT_PARSER("STOP statement"_en_US,
-    construct<StopStmt>("STOP" >> pure(StopStmt::Kind::Stop) ||
-            "ERROR STOP"_sptok >> pure(StopStmt::Kind::ErrorStop),
+    construct<StopStmt>("STOP" >> pure(common::StopKind::Stop) ||
+            "ERROR STOP"_sptok >> pure(common::StopKind::ErrorStop),
         maybe(Parser<StopCode>{}), maybe(", QUIET =" >> scalarLogicalExpr)))
 
 // R1162 stop-code -> scalar-default-char-expr | scalar-int-expr

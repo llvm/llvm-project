@@ -53,46 +53,45 @@ TYPE_PARSER(space >> sourced(rawName >> construct<Name>()))
 // R610 extended-intrinsic-op -> intrinsic-operator
 // These parsers must be ordered carefully to avoid misrecognition.
 constexpr auto namedIntrinsicOperator{
-    ".LT." >> pure(DefinedOperator::IntrinsicOperator::LT) ||
-    ".LE." >> pure(DefinedOperator::IntrinsicOperator::LE) ||
-    ".EQ." >> pure(DefinedOperator::IntrinsicOperator::EQ) ||
-    ".NE." >> pure(DefinedOperator::IntrinsicOperator::NE) ||
-    ".GE." >> pure(DefinedOperator::IntrinsicOperator::GE) ||
-    ".GT." >> pure(DefinedOperator::IntrinsicOperator::GT) ||
-    ".NOT." >> pure(DefinedOperator::IntrinsicOperator::NOT) ||
-    ".AND." >> pure(DefinedOperator::IntrinsicOperator::AND) ||
-    ".OR." >> pure(DefinedOperator::IntrinsicOperator::OR) ||
-    ".EQV." >> pure(DefinedOperator::IntrinsicOperator::EQV) ||
-    ".NEQV." >> pure(DefinedOperator::IntrinsicOperator::NEQV) ||
+    ".LT." >> pure(common::IntrinsicOperator::LT) ||
+    ".LE." >> pure(common::IntrinsicOperator::LE) ||
+    ".EQ." >> pure(common::IntrinsicOperator::EQ) ||
+    ".NE." >> pure(common::IntrinsicOperator::NE) ||
+    ".GE." >> pure(common::IntrinsicOperator::GE) ||
+    ".GT." >> pure(common::IntrinsicOperator::GT) ||
+    ".NOT." >> pure(common::IntrinsicOperator::NOT) ||
+    ".AND." >> pure(common::IntrinsicOperator::AND) ||
+    ".OR." >> pure(common::IntrinsicOperator::OR) ||
+    ".EQV." >> pure(common::IntrinsicOperator::EQV) ||
+    ".NEQV." >> pure(common::IntrinsicOperator::NEQV) ||
     extension<LanguageFeature::XOROperator>(
         "nonstandard usage: .XOR. spelling of .NEQV."_port_en_US,
-        ".XOR." >> pure(DefinedOperator::IntrinsicOperator::NEQV)) ||
+        ".XOR." >> pure(common::IntrinsicOperator::NEQV)) ||
     extension<LanguageFeature::LogicalAbbreviations>(
         "nonstandard usage: abbreviated logical operator"_port_en_US,
-        ".N." >> pure(DefinedOperator::IntrinsicOperator::NOT) ||
-            ".A." >> pure(DefinedOperator::IntrinsicOperator::AND) ||
-            ".O." >> pure(DefinedOperator::IntrinsicOperator::OR) ||
+        ".N." >> pure(common::IntrinsicOperator::NOT) ||
+            ".A." >> pure(common::IntrinsicOperator::AND) ||
+            ".O." >> pure(common::IntrinsicOperator::OR) ||
             extension<LanguageFeature::XOROperator>(
                 "nonstandard usage: .X. spelling of .NEQV."_port_en_US,
-                ".X." >> pure(DefinedOperator::IntrinsicOperator::NEQV)))};
+                ".X." >> pure(common::IntrinsicOperator::NEQV)))};
 
 constexpr auto intrinsicOperator{
-    "**" >> pure(DefinedOperator::IntrinsicOperator::Power) ||
-    "*" >> pure(DefinedOperator::IntrinsicOperator::Multiply) ||
-    "//" >> pure(DefinedOperator::IntrinsicOperator::Concat) ||
-    "/=" >> pure(DefinedOperator::IntrinsicOperator::NE) ||
-    "/" >> pure(DefinedOperator::IntrinsicOperator::Divide) ||
-    "+" >> pure(DefinedOperator::IntrinsicOperator::Add) ||
-    "-" >> pure(DefinedOperator::IntrinsicOperator::Subtract) ||
-    "<=" >> pure(DefinedOperator::IntrinsicOperator::LE) ||
+    "**" >> pure(common::IntrinsicOperator::Power) ||
+    "*" >> pure(common::IntrinsicOperator::Multiply) ||
+    "//" >> pure(common::IntrinsicOperator::Concat) ||
+    "/=" >> pure(common::IntrinsicOperator::NE) ||
+    "/" >> pure(common::IntrinsicOperator::Divide) ||
+    "+" >> pure(common::IntrinsicOperator::Add) ||
+    "-" >> pure(common::IntrinsicOperator::Subtract) ||
+    "<=" >> pure(common::IntrinsicOperator::LE) ||
     extension<LanguageFeature::AlternativeNE>(
         "nonstandard usage: <> spelling of /= or .NE."_port_en_US,
-        "<>" >> pure(DefinedOperator::IntrinsicOperator::NE)) ||
-    "<" >> pure(DefinedOperator::IntrinsicOperator::LT) ||
-    "==" >> pure(DefinedOperator::IntrinsicOperator::EQ) ||
-    ">=" >> pure(DefinedOperator::IntrinsicOperator::GE) ||
-    ">" >> pure(DefinedOperator::IntrinsicOperator::GT) ||
-    namedIntrinsicOperator};
+        "<>" >> pure(common::IntrinsicOperator::NE)) ||
+    "<" >> pure(common::IntrinsicOperator::LT) ||
+    "==" >> pure(common::IntrinsicOperator::EQ) ||
+    ">=" >> pure(common::IntrinsicOperator::GE) ||
+    ">" >> pure(common::IntrinsicOperator::GT) || namedIntrinsicOperator};
 
 // R609 defined-operator ->
 //        defined-unary-op | defined-binary-op | extended-intrinsic-op
@@ -723,8 +722,9 @@ TYPE_PARSER(construct<EntityDecl>(objectName, maybe(arraySpec),
 TYPE_PARSER(lookAhead(name / "( )") >> construct<NullInit>(expr))
 
 // R807 access-spec -> PUBLIC | PRIVATE
-TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
-    construct<AccessSpec>("PRIVATE" >> pure(AccessSpec::Kind::Private)))
+TYPE_PARSER(
+    construct<AccessSpec>("PUBLIC" >> pure(common::AccessSpecKind::Public)) ||
+    construct<AccessSpec>("PRIVATE" >> pure(common::AccessSpecKind::Private)))
 
 // R808 language-binding-spec ->
 //        BIND ( C [, NAME = scalar-default-char-constant-expr] )
@@ -801,9 +801,10 @@ TYPE_PARSER(construct<ImpliedShapeSpec>(nonemptyList(assumedImpliedSpec)))
 TYPE_PARSER(construct<AssumedRankSpec>(".."_tok))
 
 // R826 intent-spec -> IN | OUT | INOUT
-TYPE_PARSER(construct<IntentSpec>("IN OUT" >> pure(IntentSpec::Intent::InOut) ||
-    "IN" >> pure(IntentSpec::Intent::In) ||
-    "OUT" >> pure(IntentSpec::Intent::Out)))
+TYPE_PARSER(
+    construct<IntentSpec>("IN OUT" >> pure(common::IntentSpecKind::InOut) ||
+        "IN" >> pure(common::IntentSpecKind::In) ||
+        "OUT" >> pure(common::IntentSpecKind::Out)))
 
 // R827 access-stmt -> access-spec [[::] access-id-list]
 TYPE_PARSER(construct<AccessStmt>(accessSpec,
@@ -836,8 +837,9 @@ TYPE_PARSER(construct<BindStmt>(languageBindingSpec / maybe("::"_tok),
     nonemptyList("expected bind entities"_err_en_US, Parser<BindEntity>{})))
 
 // R833 bind-entity -> entity-name | / common-block-name /
-TYPE_PARSER(construct<BindEntity>(pure(BindEntity::Kind::Object), name) ||
-    construct<BindEntity>("/" >> pure(BindEntity::Kind::Common), name / "/"))
+TYPE_PARSER(construct<BindEntity>(pure(common::BindEntityKind::Object), name) ||
+    construct<BindEntity>(
+        "/" >> pure(common::BindEntityKind::Common), name / "/"))
 
 // R834 codimension-stmt -> CODIMENSION [::] codimension-decl-list
 TYPE_PARSER(construct<CodimensionStmt>("CODIMENSION" >> maybe("::"_tok) >>
@@ -973,8 +975,10 @@ TYPE_PARSER(construct<SaveStmt>(
 
 // R857 saved-entity -> object-name | proc-pointer-name | / common-block-name /
 // R858 proc-pointer-name -> name
-TYPE_PARSER(construct<SavedEntity>(pure(SavedEntity::Kind::Entity), name) ||
-    construct<SavedEntity>("/" >> pure(SavedEntity::Kind::Common), name / "/"))
+TYPE_PARSER(
+    construct<SavedEntity>(pure(common::SavedEntityKind::Entity), name) ||
+    construct<SavedEntity>(
+        "/" >> pure(common::SavedEntityKind::Common), name / "/"))
 
 // R859 target-stmt -> TARGET [::] target-decl-list
 TYPE_PARSER(construct<TargetStmt>("TARGET" >> maybe("::"_tok) >>
@@ -989,8 +993,8 @@ TYPE_PARSER(construct<VolatileStmt>("VOLATILE" >> maybe("::"_tok) >>
 
 // R866 implicit-name-spec -> EXTERNAL | TYPE
 constexpr auto implicitNameSpec{
-    "EXTERNAL" >> pure(ImplicitStmt::ImplicitNoneNameSpec::External) ||
-    "TYPE" >> pure(ImplicitStmt::ImplicitNoneNameSpec::Type)};
+    "EXTERNAL" >> pure(common::ImplicitNoneNameSpec::External) ||
+    "TYPE" >> pure(common::ImplicitNoneNameSpec::Type)};
 
 // R863 implicit-stmt ->
 //        IMPLICIT implicit-spec-list |

@@ -606,7 +606,7 @@ static void genDeclareDataOperandOperationsWithModifier(
     const Clause *x, Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
-    Fortran::parser::AccDataModifier::Modifier mod,
+    Fortran::common::AccDataModifierKind mod,
     llvm::SmallVectorImpl<mlir::Value> &dataClauseOperands,
     const mlir::acc::DataClause clause,
     const mlir::acc::DataClause clauseWithModifier) {
@@ -830,27 +830,27 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
 static mlir::acc::ReductionOperator
 getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
   switch (op.v) {
-  case Fortran::parser::AccReductionOperator::Operator::Plus:
+  case Fortran::common::AccReductionOperatorKind::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
-  case Fortran::parser::AccReductionOperator::Operator::Multiply:
+  case Fortran::common::AccReductionOperatorKind::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
-  case Fortran::parser::AccReductionOperator::Operator::Max:
+  case Fortran::common::AccReductionOperatorKind::Max:
     return mlir::acc::ReductionOperator::AccMax;
-  case Fortran::parser::AccReductionOperator::Operator::Min:
+  case Fortran::common::AccReductionOperatorKind::Min:
     return mlir::acc::ReductionOperator::AccMin;
-  case Fortran::parser::AccReductionOperator::Operator::Iand:
+  case Fortran::common::AccReductionOperatorKind::Iand:
     return mlir::acc::ReductionOperator::AccIand;
-  case Fortran::parser::AccReductionOperator::Operator::Ior:
+  case Fortran::common::AccReductionOperatorKind::Ior:
     return mlir::acc::ReductionOperator::AccIor;
-  case Fortran::parser::AccReductionOperator::Operator::Ieor:
+  case Fortran::common::AccReductionOperatorKind::Ieor:
     return mlir::acc::ReductionOperator::AccXor;
-  case Fortran::parser::AccReductionOperator::Operator::And:
+  case Fortran::common::AccReductionOperatorKind::And:
     return mlir::acc::ReductionOperator::AccLand;
-  case Fortran::parser::AccReductionOperator::Operator::Or:
+  case Fortran::common::AccReductionOperatorKind::Or:
     return mlir::acc::ReductionOperator::AccLor;
-  case Fortran::parser::AccReductionOperator::Operator::Eqv:
+  case Fortran::common::AccReductionOperatorKind::Eqv:
     return mlir::acc::ReductionOperator::AccEqv;
-  case Fortran::parser::AccReductionOperator::Operator::Neqv:
+  case Fortran::common::AccReductionOperatorKind::Neqv:
     return mlir::acc::ReductionOperator::AccNeqv;
   }
   llvm_unreachable("unexpected reduction operator");
@@ -1527,7 +1527,7 @@ static void genDataOperandOperationsWithModifier(
     const Clause *x, Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
-    Fortran::parser::AccDataModifier::Modifier mod,
+    Fortran::common::AccDataModifierKind mod,
     llvm::SmallVectorImpl<mlir::Value> &dataClauseOperands,
     const mlir::acc::DataClause clause,
     const mlir::acc::DataClause clauseWithModifier,
@@ -1662,8 +1662,8 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                            Fortran::parser::AccClause::Copyin>(
           copyinClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-          dataClauseOperands, mlir::acc::DataClause::acc_copyin,
+          Fortran::common::AccDataModifierKind::ReadOnly, dataClauseOperands,
+          mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly);
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
@@ -1672,8 +1672,8 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CreateOp,
                                            Fortran::parser::AccClause::Copyout>(
           copyoutClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-          dataClauseOperands, mlir::acc::DataClause::acc_copyout,
+          Fortran::common::AccDataModifierKind::ReadOnly, dataClauseOperands,
+          mlir::acc::DataClause::acc_copyout,
           mlir::acc::DataClause::acc_copyout_zero);
       copyoutEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                   dataClauseOperands.end());
@@ -1683,7 +1683,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CreateOp,
                                            Fortran::parser::AccClause::Create>(
           createClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
+          Fortran::common::AccDataModifierKind::Zero, dataClauseOperands,
           mlir::acc::DataClause::acc_create,
           mlir::acc::DataClause::acc_create_zero);
       createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
@@ -1856,8 +1856,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                            Fortran::parser::AccClause::Copyin>(
           copyinClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-          dataClauseOperands, mlir::acc::DataClause::acc_copyin,
+          Fortran::common::AccDataModifierKind::ReadOnly, dataClauseOperands,
+          mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly);
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
@@ -1866,7 +1866,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CreateOp,
                                            Fortran::parser::AccClause::Copyout>(
           copyoutClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
+          Fortran::common::AccDataModifierKind::Zero, dataClauseOperands,
           mlir::acc::DataClause::acc_copyout,
           mlir::acc::DataClause::acc_copyout_zero);
       copyoutEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
@@ -1877,7 +1877,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperationsWithModifier<mlir::acc::CreateOp,
                                            Fortran::parser::AccClause::Create>(
           createClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::Zero, dataClauseOperands,
+          Fortran::common::AccDataModifierKind::Zero, dataClauseOperands,
           mlir::acc::DataClause::acc_create,
           mlir::acc::DataClause::acc_create_zero);
       createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
@@ -2147,7 +2147,7 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
               listWithModifier.t);
       mlir::acc::DataClause clause = mlir::acc::DataClause::acc_create;
       if (modifier &&
-          (*modifier).v == Fortran::parser::AccDataModifier::Modifier::Zero)
+          (*modifier).v == Fortran::common::AccDataModifierKind::Zero)
         clause = mlir::acc::DataClause::acc_create_zero;
       genDataOperandOperations<mlir::acc::CreateOp>(
           accObjectList, converter, semanticsContext, stmtCtx,
@@ -2761,7 +2761,7 @@ template <typename Clause, typename EntryOp, typename ExitOp>
 static void
 genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                            mlir::OpBuilder &modBuilder, const Clause *x,
-                           Fortran::parser::AccDataModifier::Modifier mod,
+                           Fortran::common::AccDataModifierKind mod,
                            const mlir::acc::DataClause clause,
                            const mlir::acc::DataClause clauseWithModifier) {
   const Fortran::parser::AccObjectListWithModifier &listWithModifier = x->v;
@@ -2832,8 +2832,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       genDeclareDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                                   mlir::acc::DeleteOp>(
           copyinClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-          dataClauseOperands, mlir::acc::DataClause::acc_copyin,
+          Fortran::common::AccDataModifierKind::ReadOnly, dataClauseOperands,
+          mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly);
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
@@ -2935,7 +2935,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
                                  mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
           converter, modBuilder, copyinClause,
-          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+          Fortran::common::AccDataModifierKind::ReadOnly,
           mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly);
     } else if (const auto *deviceResidentClause =

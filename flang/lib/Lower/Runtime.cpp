@@ -94,8 +94,8 @@ void Fortran::lower::genStopStatement(
   }
 
   // Second operand indicates ERROR STOP
-  bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
-                 Fortran::parser::StopStmt::Kind::ErrorStop;
+  bool isError = std::get<Fortran::common::StopKind>(stmt.t) ==
+                 Fortran::common::StopKind::ErrorStop;
   operands.push_back(builder.createIntegerConstant(
       loc, calleeType.getInput(operands.size()), isError));
 

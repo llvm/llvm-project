@@ -94,46 +94,46 @@ public:
   void Unparse(const Name &x) { // R603
     Put(x.ToString());
   }
-  void Unparse(const DefinedOperator::IntrinsicOperator &x) { // R608
+  void Unparse(const common::IntrinsicOperator &x) { // R608
     switch (x) {
-    case DefinedOperator::IntrinsicOperator::Power:
+    case common::IntrinsicOperator::Power:
       Put("**");
       break;
-    case DefinedOperator::IntrinsicOperator::Multiply:
+    case common::IntrinsicOperator::Multiply:
       Put('*');
       break;
-    case DefinedOperator::IntrinsicOperator::Divide:
+    case common::IntrinsicOperator::Divide:
       Put('/');
       break;
-    case DefinedOperator::IntrinsicOperator::Add:
+    case common::IntrinsicOperator::Add:
       Put('+');
       break;
-    case DefinedOperator::IntrinsicOperator::Subtract:
+    case common::IntrinsicOperator::Subtract:
       Put('-');
       break;
-    case DefinedOperator::IntrinsicOperator::Concat:
+    case common::IntrinsicOperator::Concat:
       Put("//");
       break;
-    case DefinedOperator::IntrinsicOperator::LT:
+    case common::IntrinsicOperator::LT:
       Put('<');
       break;
-    case DefinedOperator::IntrinsicOperator::LE:
+    case common::IntrinsicOperator::LE:
       Put("<=");
       break;
-    case DefinedOperator::IntrinsicOperator::EQ:
+    case common::IntrinsicOperator::EQ:
       Put("==");
       break;
-    case DefinedOperator::IntrinsicOperator::NE:
+    case common::IntrinsicOperator::NE:
       Put("/=");
       break;
-    case DefinedOperator::IntrinsicOperator::GE:
+    case common::IntrinsicOperator::GE:
       Put(">=");
       break;
-    case DefinedOperator::IntrinsicOperator::GT:
+    case common::IntrinsicOperator::GT:
       Put('>');
       break;
     default:
-      Put('.'), Word(DefinedOperator::EnumToString(x)), Put('.');
+      Put('.'), Word(common::EnumToString(x)), Put('.');
     }
   }
   void Post(const Star &) { Put('*'); } // R701 &c.
@@ -614,7 +614,8 @@ public:
     Walk(x.t, " :: ");
   }
   void Unparse(const BindEntity &x) { // R833
-    bool isCommon{std::get<BindEntity::Kind>(x.t) == BindEntity::Kind::Common};
+    bool isCommon{std::get<common::BindEntityKind>(x.t) ==
+        common::BindEntityKind::Common};
     const char *slash{isCommon ? "/" : ""};
     Put(slash), Walk(std::get<Name>(x.t)), Put(slash);
   }
@@ -677,8 +678,8 @@ public:
     Word("SAVE"), Walk(" :: ", x.v, ", ");
   }
   void Unparse(const SavedEntity &x) { // R857, R858
-    bool isCommon{
-        std::get<SavedEntity::Kind>(x.t) == SavedEntity::Kind::Common};
+    bool isCommon{std::get<common::SavedEntityKind>(x.t) ==
+        common::SavedEntityKind::Common};
     const char *slash{isCommon ? "/" : ""};
     Put(slash), Walk(std::get<Name>(x.t)), Put(slash);
   }
@@ -693,13 +694,12 @@ public:
   }
   void Unparse(const ImplicitStmt &x) { // R863
     Word("IMPLICIT ");
-    common::visit(
-        common::visitors{
-            [&](const std::list<ImplicitSpec> &y) { Walk(y, ", "); },
-            [&](const std::list<ImplicitStmt::ImplicitNoneNameSpec> &y) {
-              Word("NONE"), Walk(" (", y, ", ", ")");
-            },
-        },
+    common::visit(common::visitors{
+                      [&](const std::list<ImplicitSpec> &y) { Walk(y, ", "); },
+                      [&](const std::list<common::ImplicitNoneNameSpec> &y) {
+                        Word("NONE"), Walk(" (", y, ", ", ")");
+                      },
+                  },
         x.u);
   }
   void Unparse(const ImplicitSpec &x) { // R864
@@ -1140,7 +1140,7 @@ public:
     Word("CONTINUE");
   }
   void Unparse(const StopStmt &x) { // R1160, R1161
-    if (std::get<StopStmt::Kind>(x.t) == StopStmt::Kind::ErrorStop) {
+    if (std::get<common::StopKind>(x.t) == common::StopKind::ErrorStop) {
       Word("ERROR ");
     }
     Word("STOP"), Walk(" ", std::get<std::optional<StopCode>>(x.t));
@@ -1632,8 +1632,8 @@ public:
     Outdent(), Word("END INTERFACE"), Walk(" ", x.v);
   }
   void Unparse(const ProcedureStmt &x) { // R1506
-    if (std::get<ProcedureStmt::Kind>(x.t) ==
-        ProcedureStmt::Kind::ModuleProcedure) {
+    if (std::get<common::ProcedureKind>(x.t) ==
+        common::ProcedureKind::ModuleProcedure) {
       Word("MODULE ");
     }
     Word("PROCEDURE :: ");
@@ -2045,11 +2045,12 @@ public:
   }
   void Unparse(const OmpScheduleClause &x) {
     Walk(std::get<std::optional<OmpScheduleModifier>>(x.t), ":");
-    Walk(std::get<OmpScheduleClause::ScheduleType>(x.t));
+    Walk(std::get<common::OmpScheduleClauseKind>(x.t));
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDeviceClause &x) {
-    Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
+    Walk(std::get<std::optional<common::OmpDeviceClauseDeviceModifier>>(x.t),
+        ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpAlignedClause &x) {
@@ -2058,7 +2059,8 @@ public:
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
   void Unparse(const OmpIfClause &x) {
-    Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
+    Walk(std::get<std::optional<common::OmpIfClauseDirectiveNameModifier>>(x.t),
+        ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
   }
   void Unparse(const OmpLinearClause::WithoutModifier &x) {
@@ -2111,7 +2113,7 @@ public:
   }
   void Unparse(const OmpOrderClause &x) {
     Walk(std::get<std::optional<OmpOrderModifier>>(x.t), ":");
-    Walk(std::get<OmpOrderClause::Type>(x.t));
+    Walk(std::get<common::OmpOrderClauseKind>(x.t));
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
@@ -2146,9 +2148,10 @@ public:
         x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
-    Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
+    Walk(std::get<common::OmpDefaultmapClauseImplicitBehavior>(x.t));
     Walk(":",
-        std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
+        std::get<std::optional<common::OmpDefaultmapClauseVariableCategory>>(
+            x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2308,13 +2311,13 @@ public:
 
   void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
     switch (x.v) {
-    case OmpAtomicDefaultMemOrderClause::Type::SeqCst:
+    case common::OmpAtomicDefaultMemOrderClauseKind::SeqCst:
       Word("SEQ_CST");
       break;
-    case OmpAtomicDefaultMemOrderClause::Type::AcqRel:
+    case common::OmpAtomicDefaultMemOrderClauseKind::AcqRel:
       Word("ACQ_REL");
       break;
-    case OmpAtomicDefaultMemOrderClause::Type::Relaxed:
+    case common::OmpAtomicDefaultMemOrderClauseKind::Relaxed:
       Word("RELAXED");
       break;
     }
@@ -2689,38 +2692,38 @@ public:
   }
   void Unparse(const PauseStmt &x) { Word("PAUSE"), Walk(" ", x.v); }
 
-#define WALK_NESTED_ENUM(CLASS, ENUM) \
-  void Unparse(const CLASS::ENUM &x) { Word(CLASS::EnumToString(x)); }
-  WALK_NESTED_ENUM(AccDataModifier, Modifier)
-  WALK_NESTED_ENUM(AccessSpec, Kind) // R807
-  WALK_NESTED_ENUM(AccReductionOperator, Operator)
-  WALK_NESTED_ENUM(common, TypeParamAttr) // R734
-  WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
-  WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
-  WALK_NESTED_ENUM(IntentSpec, Intent) // R826
-  WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
-  WALK_NESTED_ENUM(ConnectSpec::CharExpr, Kind) // R1205
-  WALK_NESTED_ENUM(IoControlSpec::CharExpr, Kind)
-  WALK_NESTED_ENUM(InquireSpec::CharVar, Kind)
-  WALK_NESTED_ENUM(InquireSpec::IntVar, Kind)
-  WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
-  WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
-  WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpProcBindClause, Type) // OMP PROC_BIND
-  WALK_NESTED_ENUM(OmpDefaultClause, Type) // OMP DEFAULT
-  WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP DEFAULTMAP
-  WALK_NESTED_ENUM(OmpDefaultmapClause, VariableCategory) // OMP DEFAULTMAP
-  WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
-  WALK_NESTED_ENUM(OmpLinearModifier, Type) // OMP linear-modifier
-  WALK_NESTED_ENUM(OmpDependenceType, Type) // OMP dependence-type
-  WALK_NESTED_ENUM(OmpMapType, Type) // OMP map-type
-  WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
-  WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
-  WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
-  WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
-  WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
-  WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
-  WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
+#define WALK_NESTED_ENUM(ENUM) \
+  void Unparse(const common::ENUM &x) { Word(common::EnumToString(x)); }
+  WALK_NESTED_ENUM(AccDataModifierKind)
+  WALK_NESTED_ENUM(AccessSpecKind) // R807
+  WALK_NESTED_ENUM(AccReductionOperatorKind)
+  WALK_NESTED_ENUM(TypeParamAttr) // R734
+  WALK_NESTED_ENUM(CUDADataAttr) // CUDA
+  WALK_NESTED_ENUM(CUDASubprogramAttrs) // CUDA
+  WALK_NESTED_ENUM(IntentSpecKind) // R826
+  WALK_NESTED_ENUM(ImplicitNoneNameSpec) // R866
+  WALK_NESTED_ENUM(ConnectCharExprKind) // R1205
+  WALK_NESTED_ENUM(IoControlCharExprKind)
+  WALK_NESTED_ENUM(InquireCharVarKind)
+  WALK_NESTED_ENUM(InquireIntVarKind)
+  WALK_NESTED_ENUM(InquireLogVarKind)
+  WALK_NESTED_ENUM(ProcedureKind) // R1506
+  WALK_NESTED_ENUM(ModuleNature) // R1410
+  WALK_NESTED_ENUM(OmpProcBindClauseKind) // OMP PROC_BIND
+  WALK_NESTED_ENUM(OmpDefaultClauseKind) // OMP DEFAULT
+  WALK_NESTED_ENUM(OmpDefaultmapClauseImplicitBehavior) // OMP DEFAULTMAP
+  WALK_NESTED_ENUM(OmpDefaultmapClauseVariableCategory) // OMP DEFAULTMAP
+  WALK_NESTED_ENUM(OmpScheduleModifierKind) // OMP schedule-modifier
+  WALK_NESTED_ENUM(OmpLinearModifierKind) // OMP linear-modifier
+  WALK_NESTED_ENUM(OmpDependenceKind) // OMP dependence-type
+  WALK_NESTED_ENUM(OmpMapKind) // OMP map-type
+  WALK_NESTED_ENUM(OmpScheduleClauseKind) // OMP schedule-type
+  WALK_NESTED_ENUM(OmpDeviceClauseDeviceModifier) // OMP device modifier
+  WALK_NESTED_ENUM(OmpDeviceTypeClauseKind) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(OmpIfClauseDirectiveNameModifier) // OMP directive-modifier
+  WALK_NESTED_ENUM(OmpCancelKind) // OMP cancel-type
+  WALK_NESTED_ENUM(OmpOrderClauseKind) // OMP order-type
+  WALK_NESTED_ENUM(OmpOrderModifierKind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
 
   void Unparse(const CUFKernelDoConstruct::Directive &x) {

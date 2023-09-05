@@ -954,8 +954,7 @@ public:
   }
   bool operator()(const parser::StopStmt &stmt) {
     // STOP is an image control statement; ERROR STOP is not
-    return std::get<parser::StopStmt::Kind>(stmt.t) ==
-        parser::StopStmt::Kind::Stop;
+    return std::get<common::StopKind>(stmt.t) == common::StopKind::Stop;
   }
   bool operator()(const parser::IfStmt &stmt) {
     return (*this)(

@@ -75,6 +75,83 @@ enum class RoundingMode : std::uint8_t {
   TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
 };
 
+ENUM_CLASS(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat,
+    LT, LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV)
+
+ENUM_CLASS(AccessSpecKind, Public, Private)
+
+ENUM_CLASS(IntentSpecKind, In, Out, InOut)
+
+ENUM_CLASS(BindEntityKind, Object, Common)
+
+ENUM_CLASS(SavedEntityKind, Entity, Common)
+
+ENUM_CLASS(ImplicitNoneNameSpec, External, Type) // R866
+
+ENUM_CLASS(StopKind, Stop, ErrorStop)
+
+ENUM_CLASS(ConnectCharExprKind, Access, Action, Asynchronous, Blank, Decimal,
+    Delim, Encoding, Form, Pad, Position, Round, Sign,
+    /* extensions: */ Carriagecontrol, Convert, Dispose)
+
+ENUM_CLASS(
+    IoControlCharExprKind, Advance, Blank, Decimal, Delim, Pad, Round, Sign)
+
+ENUM_CLASS(InquireCharVarKind, Access, Action, Asynchronous, Blank, Decimal,
+    Delim, Direct, Encoding, Form, Formatted, Iomsg, Name, Pad, Position, Read,
+    Readwrite, Round, Sequential, Sign, Stream, Status, Unformatted, Write,
+    /* extensions: */ Carriagecontrol, Convert, Dispose)
+
+ENUM_CLASS(InquireIntVarKind, Iostat, Nextrec, Number, Pos, Recl, Size)
+
+ENUM_CLASS(InquireLogVarKind, Exist, Named, Opened, Pending)
+
+ENUM_CLASS(ModuleNature, Intrinsic, Non_Intrinsic) // R1410
+
+ENUM_CLASS(ProcedureKind, ModuleProcedure, Procedure)
+
+// OpenMP kinds
+ENUM_CLASS(OmpProcBindClauseKind, Close, Master, Spread, Primary)
+
+ENUM_CLASS(OmpDefaultClauseKind, Private, Firstprivate, Shared, None)
+
+ENUM_CLASS(OmpMapKind, To, From, Tofrom, Alloc, Release, Delete)
+
+ENUM_CLASS(OmpDefaultmapClauseImplicitBehavior, Alloc, To, From, Tofrom,
+    Firstprivate, None, Default)
+
+ENUM_CLASS(OmpDefaultmapClauseVariableCategory, Scalar, Aggregate, Allocatable,
+    Pointer)
+
+ENUM_CLASS(OmpScheduleModifierKind, Monotonic, Nonmonotonic, Simd)
+
+ENUM_CLASS(OmpScheduleClauseKind, Static, Dynamic, Guided, Auto, Runtime)
+
+ENUM_CLASS(OmpDeviceClauseDeviceModifier, Ancestor, Device_Num)
+
+ENUM_CLASS(OmpDeviceTypeClauseKind, Any, Host, Nohost)
+
+ENUM_CLASS(OmpIfClauseDirectiveNameModifier, Parallel, Simd, Target, TargetData,
+    TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
+
+ENUM_CLASS(OmpOrderModifierKind, Reproducible, Unconstrained)
+
+ENUM_CLASS(OmpOrderClauseKind, Concurrent)
+
+ENUM_CLASS(OmpLinearModifierKind, Ref, Val, Uval)
+
+ENUM_CLASS(OmpDependenceKind, In, Out, Inout, Source, Sink)
+
+ENUM_CLASS(OmpAtomicDefaultMemOrderClauseKind, SeqCst, AcqRel, Relaxed)
+
+ENUM_CLASS(OmpCancelKind, Parallel, Sections, Do, Taskgroup)
+
+// OpenACC kinds
+ENUM_CLASS(AccDataModifierKind, ReadOnly, Zero)
+
+ENUM_CLASS(AccReductionOperatorKind, Plus, Multiply, Max, Min, Iand, Ior, Ieor,
+    And, Or, Eqv, Neqv)
+
 // Fortran label. Must be in [1..99999].
 using Label = std::uint64_t;
 

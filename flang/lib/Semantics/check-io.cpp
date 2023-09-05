@@ -109,7 +109,7 @@ static std::string Normalize(const std::string &value) {
 
 void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   IoSpecKind specKind{};
-  using ParseKind = parser::ConnectSpec::CharExpr::Kind;
+  using ParseKind = common::ConnectCharExprKind;
   switch (std::get<ParseKind>(spec.t)) {
   case ParseKind::Access:
     specKind = IoSpecKind::Access;
@@ -343,7 +343,7 @@ void IoChecker::Enter(const parser::InquireSpec &spec) {
 
 void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
   IoSpecKind specKind{};
-  using ParseKind = parser::InquireSpec::CharVar::Kind;
+  using ParseKind = common::InquireCharVarKind;
   switch (std::get<ParseKind>(spec.t)) {
   case ParseKind::Access:
     specKind = IoSpecKind::Access;
@@ -435,8 +435,8 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
 
 void IoChecker::Enter(const parser::InquireSpec::IntVar &spec) {
   IoSpecKind specKind{};
-  using ParseKind = parser::InquireSpec::IntVar::Kind;
-  switch (std::get<parser::InquireSpec::IntVar::Kind>(spec.t)) {
+  using ParseKind = common::InquireIntVarKind;
+  switch (std::get<ParseKind>(spec.t)) {
   case ParseKind::Iostat:
     specKind = IoSpecKind::Iostat;
     break;
@@ -463,8 +463,8 @@ void IoChecker::Enter(const parser::InquireSpec::IntVar &spec) {
 
 void IoChecker::Enter(const parser::InquireSpec::LogVar &spec) {
   IoSpecKind specKind{};
-  using ParseKind = parser::InquireSpec::LogVar::Kind;
-  switch (std::get<parser::InquireSpec::LogVar::Kind>(spec.t)) {
+  using ParseKind = common::InquireLogVarKind;
+  switch (std::get<ParseKind>(spec.t)) {
   case ParseKind::Exist:
     specKind = IoSpecKind::Exist;
     break;
@@ -502,7 +502,7 @@ void IoChecker::Enter(const parser::IoControlSpec::Asynchronous &spec) {
 
 void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
   IoSpecKind specKind{};
-  using ParseKind = parser::IoControlSpec::CharExpr::Kind;
+  using ParseKind = common::IoControlCharExprKind;
   switch (std::get<ParseKind>(spec.t)) {
   case ParseKind::Advance:
     specKind = IoSpecKind::Advance;

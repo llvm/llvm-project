@@ -26,27 +26,27 @@ constexpr auto endOmpLine = space >> endOfLine;
 // OpenMP Clauses
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
-    "PRIVATE" >> pure(OmpDefaultClause::Type::Private) ||
-    "FIRSTPRIVATE" >> pure(OmpDefaultClause::Type::Firstprivate) ||
-    "SHARED" >> pure(OmpDefaultClause::Type::Shared) ||
-    "NONE" >> pure(OmpDefaultClause::Type::None)))
+    "PRIVATE" >> pure(common::OmpDefaultClauseKind::Private) ||
+    "FIRSTPRIVATE" >> pure(common::OmpDefaultClauseKind::Firstprivate) ||
+    "SHARED" >> pure(common::OmpDefaultClauseKind::Shared) ||
+    "NONE" >> pure(common::OmpDefaultClauseKind::None)))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
-    "CLOSE" >> pure(OmpProcBindClause::Type::Close) ||
-    "MASTER" >> pure(OmpProcBindClause::Type::Master) ||
-    "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
+    "CLOSE" >> pure(common::OmpProcBindClauseKind::Close) ||
+    "MASTER" >> pure(common::OmpProcBindClauseKind::Master) ||
+    "SPREAD" >> pure(common::OmpProcBindClauseKind::Spread)))
 
 // 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
 //          map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
 TYPE_PARSER(construct<OmpMapType>(
     maybe("ALWAYS" >> construct<OmpMapType::Always>() / maybe(","_tok)),
-    ("TO"_id >> pure(OmpMapType::Type::To) ||
-        "FROM" >> pure(OmpMapType::Type::From) ||
-        "TOFROM" >> pure(OmpMapType::Type::Tofrom) ||
-        "ALLOC" >> pure(OmpMapType::Type::Alloc) ||
-        "RELEASE" >> pure(OmpMapType::Type::Release) ||
-        "DELETE" >> pure(OmpMapType::Type::Delete)) /
+    ("TO"_id >> pure(common::OmpMapKind::To) ||
+        "FROM" >> pure(common::OmpMapKind::From) ||
+        "TOFROM" >> pure(common::OmpMapKind::Tofrom) ||
+        "ALLOC" >> pure(common::OmpMapKind::Alloc) ||
+        "RELEASE" >> pure(common::OmpMapKind::Release) ||
+        "DELETE" >> pure(common::OmpMapKind::Delete)) /
         ":"))
 
 TYPE_PARSER(construct<OmpMapClause>(
@@ -58,76 +58,84 @@ TYPE_PARSER(construct<OmpMapClause>(
 //  DEFAULT
 //  variable-category -> SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
-    construct<OmpDefaultmapClause::ImplicitBehavior>(
-        "ALLOC" >> pure(OmpDefaultmapClause::ImplicitBehavior::Alloc) ||
-        "TO"_id >> pure(OmpDefaultmapClause::ImplicitBehavior::To) ||
-        "FROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::From) ||
-        "TOFROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::Tofrom) ||
+    construct<common::OmpDefaultmapClauseImplicitBehavior>(
+        "ALLOC" >> pure(common::OmpDefaultmapClauseImplicitBehavior::Alloc) ||
+        "TO"_id >> pure(common::OmpDefaultmapClauseImplicitBehavior::To) ||
+        "FROM" >> pure(common::OmpDefaultmapClauseImplicitBehavior::From) ||
+        "TOFROM" >> pure(common::OmpDefaultmapClauseImplicitBehavior::Tofrom) ||
         "FIRSTPRIVATE" >>
-            pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
-        "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
-        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
+            pure(common::OmpDefaultmapClauseImplicitBehavior::Firstprivate) ||
+        "NONE" >> pure(common::OmpDefaultmapClauseImplicitBehavior::None) ||
+        "DEFAULT" >>
+            pure(common::OmpDefaultmapClauseImplicitBehavior::Default)),
     maybe(":" >>
-        construct<OmpDefaultmapClause::VariableCategory>(
-            "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
+        construct<common::OmpDefaultmapClauseVariableCategory>("SCALAR" >>
+                pure(common::OmpDefaultmapClauseVariableCategory::Scalar) ||
             "AGGREGATE" >>
-                pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||
+                pure(common::OmpDefaultmapClauseVariableCategory::Aggregate) ||
             "ALLOCATABLE" >>
-                pure(OmpDefaultmapClause::VariableCategory::Allocatable) ||
+                pure(
+                    common::OmpDefaultmapClauseVariableCategory::Allocatable) ||
             "POINTER" >>
-                pure(OmpDefaultmapClause::VariableCategory::Pointer)))))
+                pure(common::OmpDefaultmapClauseVariableCategory::Pointer)))))
 
 // 2.7.1 SCHEDULE ([modifier1 [, modifier2]:]kind[, chunk_size])
 //       Modifier ->  MONITONIC | NONMONOTONIC | SIMD
 //       kind -> STATIC | DYNAMIC | GUIDED | AUTO | RUNTIME
 //       chunk_size -> ScalarIntExpr
 TYPE_PARSER(construct<OmpScheduleModifierType>(
-    "MONOTONIC" >> pure(OmpScheduleModifierType::ModType::Monotonic) ||
-    "NONMONOTONIC" >> pure(OmpScheduleModifierType::ModType::Nonmonotonic) ||
-    "SIMD" >> pure(OmpScheduleModifierType::ModType::Simd)))
+    "MONOTONIC" >> pure(common::OmpScheduleModifierKind::Monotonic) ||
+    "NONMONOTONIC" >> pure(common::OmpScheduleModifierKind::Nonmonotonic) ||
+    "SIMD" >> pure(common::OmpScheduleModifierKind::Simd)))
 
 TYPE_PARSER(construct<OmpScheduleModifier>(Parser<OmpScheduleModifierType>{},
     maybe("," >> Parser<OmpScheduleModifierType>{}) / ":"))
 
 TYPE_PARSER(construct<OmpScheduleClause>(maybe(Parser<OmpScheduleModifier>{}),
-    "STATIC" >> pure(OmpScheduleClause::ScheduleType::Static) ||
-        "DYNAMIC" >> pure(OmpScheduleClause::ScheduleType::Dynamic) ||
-        "GUIDED" >> pure(OmpScheduleClause::ScheduleType::Guided) ||
-        "AUTO" >> pure(OmpScheduleClause::ScheduleType::Auto) ||
-        "RUNTIME" >> pure(OmpScheduleClause::ScheduleType::Runtime),
+    "STATIC" >> pure(common::OmpScheduleClauseKind::Static) ||
+        "DYNAMIC" >> pure(common::OmpScheduleClauseKind::Dynamic) ||
+        "GUIDED" >> pure(common::OmpScheduleClauseKind::Guided) ||
+        "AUTO" >> pure(common::OmpScheduleClauseKind::Auto) ||
+        "RUNTIME" >> pure(common::OmpScheduleClauseKind::Runtime),
     maybe("," >> scalarIntExpr)))
 
 // device([ device-modifier :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpDeviceClause>(
     maybe(
-        ("ANCESTOR" >> pure(OmpDeviceClause::DeviceModifier::Ancestor) ||
-            "DEVICE_NUM" >> pure(OmpDeviceClause::DeviceModifier::Device_Num)) /
+        ("ANCESTOR" >> pure(common::OmpDeviceClauseDeviceModifier::Ancestor) ||
+            "DEVICE_NUM" >>
+                pure(common::OmpDeviceClauseDeviceModifier::Device_Num)) /
         ":"),
     scalarIntExpr))
 
 // device_type(any | host | nohost)
 TYPE_PARSER(construct<OmpDeviceTypeClause>(
-    "ANY" >> pure(OmpDeviceTypeClause::Type::Any) ||
-    "HOST" >> pure(OmpDeviceTypeClause::Type::Host) ||
-    "NOHOST" >> pure(OmpDeviceTypeClause::Type::Nohost)))
+    "ANY" >> pure(common::OmpDeviceTypeClauseKind::Any) ||
+    "HOST" >> pure(common::OmpDeviceTypeClauseKind::Host) ||
+    "NOHOST" >> pure(common::OmpDeviceTypeClauseKind::Nohost)))
 
 // 2.12 IF (directive-name-modifier: scalar-logical-expr)
 TYPE_PARSER(construct<OmpIfClause>(
     maybe(
-        ("PARALLEL" >> pure(OmpIfClause::DirectiveNameModifier::Parallel) ||
-            "SIMD" >> pure(OmpIfClause::DirectiveNameModifier::Simd) ||
+        ("PARALLEL" >>
+                pure(common::OmpIfClauseDirectiveNameModifier::Parallel) ||
+            "SIMD" >> pure(common::OmpIfClauseDirectiveNameModifier::Simd) ||
             "TARGET ENTER DATA" >>
-                pure(OmpIfClause::DirectiveNameModifier::TargetEnterData) ||
+                pure(common::OmpIfClauseDirectiveNameModifier::
+                        TargetEnterData) ||
             "TARGET EXIT DATA" >>
-                pure(OmpIfClause::DirectiveNameModifier::TargetExitData) ||
+                pure(
+                    common::OmpIfClauseDirectiveNameModifier::TargetExitData) ||
             "TARGET DATA" >>
-                pure(OmpIfClause::DirectiveNameModifier::TargetData) ||
+                pure(common::OmpIfClauseDirectiveNameModifier::TargetData) ||
             "TARGET UPDATE" >>
-                pure(OmpIfClause::DirectiveNameModifier::TargetUpdate) ||
-            "TARGET" >> pure(OmpIfClause::DirectiveNameModifier::Target) ||
-            "TASK"_id >> pure(OmpIfClause::DirectiveNameModifier::Task) ||
-            "TASKLOOP" >> pure(OmpIfClause::DirectiveNameModifier::Taskloop) ||
-            "TEAMS" >> pure(OmpIfClause::DirectiveNameModifier::Teams)) /
+                pure(common::OmpIfClauseDirectiveNameModifier::TargetUpdate) ||
+            "TARGET" >>
+                pure(common::OmpIfClauseDirectiveNameModifier::Target) ||
+            "TASK"_id >> pure(common::OmpIfClauseDirectiveNameModifier::Task) ||
+            "TASKLOOP" >>
+                pure(common::OmpIfClauseDirectiveNameModifier::Taskloop) ||
+            "TEAMS" >> pure(common::OmpIfClauseDirectiveNameModifier::Teams)) /
         ":"),
     scalarLogicalExpr))
 
@@ -180,10 +188,10 @@ TYPE_PARSER(construct<OmpDependSinkVecLength>(
 TYPE_PARSER(
     construct<OmpDependSinkVec>(name, maybe(Parser<OmpDependSinkVecLength>{})))
 
-TYPE_PARSER(
-    construct<OmpDependenceType>("IN"_id >> pure(OmpDependenceType::Type::In) ||
-        "INOUT" >> pure(OmpDependenceType::Type::Inout) ||
-        "OUT" >> pure(OmpDependenceType::Type::Out)))
+TYPE_PARSER(construct<OmpDependenceType>(
+    "IN"_id >> pure(common::OmpDependenceKind::In) ||
+    "INOUT" >> pure(common::OmpDependenceKind::Inout) ||
+    "OUT" >> pure(common::OmpDependenceKind::Out)))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(construct<OmpDependClause::Sink>(
@@ -196,10 +204,10 @@ TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
 // 2.15.3.7 LINEAR (linear-list: linear-step)
 //          linear-list -> list | modifier(list)
 //          linear-modifier -> REF | VAL | UVAL
-TYPE_PARSER(
-    construct<OmpLinearModifier>("REF" >> pure(OmpLinearModifier::Type::Ref) ||
-        "VAL" >> pure(OmpLinearModifier::Type::Val) ||
-        "UVAL" >> pure(OmpLinearModifier::Type::Uval)))
+TYPE_PARSER(construct<OmpLinearModifier>(
+    "REF" >> pure(common::OmpLinearModifierKind::Ref) ||
+    "VAL" >> pure(common::OmpLinearModifierKind::Val) ||
+    "UVAL" >> pure(common::OmpLinearModifierKind::Uval)))
 
 TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
     construct<OmpLinearClause>(
@@ -214,14 +222,13 @@ TYPE_PARSER(construct<OmpAlignedClause>(
     Parser<OmpObjectList>{}, maybe(":" >> scalarIntConstantExpr)))
 
 // 2.9.5 ORDER ([order-modifier :]concurrent)
-TYPE_PARSER(construct<OmpOrderModifier>(
-    "REPRODUCIBLE" >> pure(OmpOrderModifier::Kind::Reproducible)) ||
+TYPE_PARSER(construct<OmpOrderModifier>("REPRODUCIBLE" >>
+                pure(common::OmpOrderModifierKind::Reproducible)) ||
     construct<OmpOrderModifier>(
-    "UNCONSTRAINED" >> pure(OmpOrderModifier::Kind::Unconstrained)))
+        "UNCONSTRAINED" >> pure(common::OmpOrderModifierKind::Unconstrained)))
 
-TYPE_PARSER(construct<OmpOrderClause>(
-    maybe(Parser<OmpOrderModifier>{} / ":"),
-    "CONCURRENT" >> pure(OmpOrderClause::Type::Concurrent)))
+TYPE_PARSER(construct<OmpOrderClause>(maybe(Parser<OmpOrderModifier>{} / ":"),
+    "CONCURRENT" >> pure(common::OmpOrderClauseKind::Concurrent)))
 
 TYPE_PARSER(
     construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
@@ -399,10 +406,10 @@ TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
 
 // 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
 TYPE_PARSER(sourced(construct<OmpCancelType>(
-    first("PARALLEL" >> pure(OmpCancelType::Type::Parallel),
-        "SECTIONS" >> pure(OmpCancelType::Type::Sections),
-        "DO" >> pure(OmpCancelType::Type::Do),
-        "TASKGROUP" >> pure(OmpCancelType::Type::Taskgroup)))))
+    first("PARALLEL" >> pure(common::OmpCancelKind::Parallel),
+        "SECTIONS" >> pure(common::OmpCancelKind::Sections),
+        "DO" >> pure(common::OmpCancelKind::Do),
+        "TASKGROUP" >> pure(common::OmpCancelKind::Taskgroup)))))
 
 // 2.14.2 Cancellation Point construct
 TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
@@ -432,9 +439,9 @@ TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
 //                               acq_rel
 //                               relaxed
 TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
-    "SEQ_CST" >> pure(OmpAtomicDefaultMemOrderClause::Type::SeqCst) ||
-    "ACQ_REL" >> pure(OmpAtomicDefaultMemOrderClause::Type::AcqRel) ||
-    "RELAXED" >> pure(OmpAtomicDefaultMemOrderClause::Type::Relaxed)))
+    "SEQ_CST" >> pure(common::OmpAtomicDefaultMemOrderClauseKind::SeqCst) ||
+    "ACQ_REL" >> pure(common::OmpAtomicDefaultMemOrderClauseKind::AcqRel) ||
+    "RELAXED" >> pure(common::OmpAtomicDefaultMemOrderClauseKind::Relaxed)))
 
 // 2.17.7 Atomic construct
 //        atomic-clause -> memory-order-clause | HINT(hint-expression)

@@ -405,11 +405,10 @@ void DataSharingProcessor::collectDefaultSymbols() {
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &defaultClause =
             std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
-      if (defaultClause->v.v ==
-          Fortran::parser::OmpDefaultClause::Type::Private)
+      if (defaultClause->v.v == Fortran::common::OmpDefaultClauseKind::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
       else if (defaultClause->v.v ==
-               Fortran::parser::OmpDefaultClause::Type::Firstprivate)
+               Fortran::common::OmpDefaultClauseKind::Firstprivate)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
     }
   }
@@ -526,7 +525,7 @@ public:
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
   processIf(Fortran::lower::StatementContext &stmtCtx,
-            Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+            Fortran::common::OmpIfClauseDirectiveNameModifier directiveName,
             mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
@@ -641,25 +640,25 @@ static std::string getReductionName(llvm::StringRef name, mlir::Type ty) {
       .str();
 }
 
-static std::string getReductionName(
-    Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-    mlir::Type ty) {
+static std::string
+getReductionName(Fortran::common::IntrinsicOperator intrinsicOp,
+                 mlir::Type ty) {
   std::string reductionName;
 
   switch (intrinsicOp) {
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+  case Fortran::common::IntrinsicOperator::Add:
     reductionName = "add_reduction";
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case Fortran::common::IntrinsicOperator::Multiply:
     reductionName = "multiply_reduction";
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
+  case Fortran::common::IntrinsicOperator::AND:
     return "and_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
+  case Fortran::common::IntrinsicOperator::EQV:
     return "eqv_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+  case Fortran::common::IntrinsicOperator::OR:
     return "or_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+  case Fortran::common::IntrinsicOperator::NEQV:
     return "neqv_reduction";
   default:
     reductionName = "other_reduction";
@@ -830,10 +829,10 @@ createReductionDecl(fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
 /// symbol table. The declaration has a constant initializer with the neutral
 /// value `initValue`, and the reduction combiner carried over from `reduce`.
 /// TODO: Generalize this for non-integer types, add atomic region.
-static mlir::omp::ReductionDeclareOp createReductionDecl(
-    fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
-    Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-    mlir::Type type, mlir::Location loc) {
+static mlir::omp::ReductionDeclareOp
+createReductionDecl(fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
+                    Fortran::common::IntrinsicOperator intrinsicOp,
+                    mlir::Type type, mlir::Location loc) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
 
@@ -849,17 +848,17 @@ static mlir::omp::ReductionDeclareOp createReductionDecl(
 
   mlir::Value reductionOp;
   switch (intrinsicOp) {
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+  case Fortran::common::IntrinsicOperator::Add:
     reductionOp =
         getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp>(
             builder, type, loc, op1, op2);
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case Fortran::common::IntrinsicOperator::Multiply:
     reductionOp =
         getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp>(
             builder, type, loc, op1, op2);
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND: {
+  case Fortran::common::IntrinsicOperator::AND: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
     mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
 
@@ -868,7 +867,7 @@ static mlir::omp::ReductionDeclareOp createReductionDecl(
     reductionOp = builder.createConvert(loc, type, andiOp);
     break;
   }
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::OR: {
+  case Fortran::common::IntrinsicOperator::OR: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
     mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
 
@@ -877,7 +876,7 @@ static mlir::omp::ReductionDeclareOp createReductionDecl(
     reductionOp = builder.createConvert(loc, type, oriOp);
     break;
   }
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV: {
+  case Fortran::common::IntrinsicOperator::EQV: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
     mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
 
@@ -887,7 +886,7 @@ static mlir::omp::ReductionDeclareOp createReductionDecl(
     reductionOp = builder.createConvert(loc, type, cmpiOp);
     break;
   }
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV: {
+  case Fortran::common::IntrinsicOperator::NEQV: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
     mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
 
@@ -908,11 +907,11 @@ static mlir::omp::ReductionDeclareOp createReductionDecl(
 static mlir::omp::ScheduleModifier
 translateScheduleModifier(const Fortran::parser::OmpScheduleModifierType &m) {
   switch (m.v) {
-  case Fortran::parser::OmpScheduleModifierType::ModType::Monotonic:
+  case Fortran::common::OmpScheduleModifierKind::Monotonic:
     return mlir::omp::ScheduleModifier::monotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Nonmonotonic:
+  case Fortran::common::OmpScheduleModifierKind::Nonmonotonic:
     return mlir::omp::ScheduleModifier::nonmonotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Simd:
+  case Fortran::common::OmpScheduleModifierKind::Simd:
     return mlir::omp::ScheduleModifier::simd;
   }
   return mlir::omp::ScheduleModifier::none;
@@ -928,14 +927,12 @@ getScheduleModifier(const Fortran::parser::OmpScheduleClause &x) {
   if (modifier) {
     const auto &modType1 =
         std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v ==
-        Fortran::parser::OmpScheduleModifierType::ModType::Simd) {
+    if (modType1.v.v == Fortran::common::OmpScheduleModifierKind::Simd) {
       const auto &modType2 = std::get<
           std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
           modifier->t);
       if (modType2 &&
-          modType2->v.v !=
-              Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+          modType2->v.v != Fortran::common::OmpScheduleModifierKind::Simd)
         return translateScheduleModifier(modType2->v);
 
       return mlir::omp::ScheduleModifier::none;
@@ -956,14 +953,14 @@ getSimdModifier(const Fortran::parser::OmpScheduleClause &x) {
   if (modifier) {
     const auto &modType1 =
         std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v == Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+    if (modType1.v.v == Fortran::common::OmpScheduleModifierKind::Simd)
       return mlir::omp::ScheduleModifier::simd;
 
     const auto &modType2 = std::get<
         std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
         modifier->t);
-    if (modType2 && modType2->v.v ==
-                        Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+    if (modType2 &&
+        modType2->v.v == Fortran::common::OmpScheduleModifierKind::Simd)
       return mlir::omp::ScheduleModifier::simd;
   }
   return mlir::omp::ScheduleModifier::none;
@@ -1022,16 +1019,16 @@ static mlir::omp::ClauseProcBindKindAttr genProcBindKindAttr(
     const Fortran::parser::OmpClause::ProcBind *procBindClause) {
   mlir::omp::ClauseProcBindKind procBindKind;
   switch (procBindClause->v.v) {
-  case Fortran::parser::OmpProcBindClause::Type::Master:
+  case Fortran::common::OmpProcBindClauseKind::Master:
     procBindKind = mlir::omp::ClauseProcBindKind::Master;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Close:
+  case Fortran::common::OmpProcBindClauseKind::Close:
     procBindKind = mlir::omp::ClauseProcBindKind::Close;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Spread:
+  case Fortran::common::OmpProcBindClauseKind::Spread:
     procBindKind = mlir::omp::ClauseProcBindKind::Spread;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Primary:
+  case Fortran::common::OmpProcBindClauseKind::Primary:
     procBindKind = mlir::omp::ClauseProcBindKind::Primary;
     break;
   }
@@ -1048,13 +1045,13 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
           std::get<Fortran::parser::OmpDependClause::InOut>(dependClause->v.u)
               .t)
           .v) {
-  case Fortran::parser::OmpDependenceType::Type::In:
+  case Fortran::common::OmpDependenceKind::In:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependin;
     break;
-  case Fortran::parser::OmpDependenceType::Type::Out:
+  case Fortran::common::OmpDependenceKind::Out:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependout;
     break;
-  case Fortran::parser::OmpDependenceType::Type::Inout:
+  case Fortran::common::OmpDependenceKind::Inout:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   default:
@@ -1069,11 +1066,11 @@ static mlir::Value getIfClauseOperand(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::StatementContext &stmtCtx,
     const Fortran::parser::OmpClause::If *ifClause,
-    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+    Fortran::common::OmpIfClauseDirectiveNameModifier directiveName,
     mlir::Location clauseLocation) {
   // Only consider the clause if it's intended for the given directive.
   auto &directive = std::get<
-      std::optional<Fortran::parser::OmpIfClause::DirectiveNameModifier>>(
+      std::optional<Fortran::common::OmpIfClauseDirectiveNameModifier>>(
       ifClause->v.t);
   if (directive && directive.value() != directiveName)
     return nullptr;
@@ -1102,15 +1099,14 @@ addReductionDecl(mlir::Location currentLocation,
   if (const auto &redDefinedOp =
           std::get_if<Fortran::parser::DefinedOperator>(&redOperator.u)) {
     const auto &intrinsicOp{
-        std::get<Fortran::parser::DefinedOperator::IntrinsicOperator>(
-            redDefinedOp->u)};
+        std::get<Fortran::common::IntrinsicOperator>(redDefinedOp->u)};
     switch (intrinsicOp) {
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
-    case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+    case Fortran::common::IntrinsicOperator::Add:
+    case Fortran::common::IntrinsicOperator::Multiply:
+    case Fortran::common::IntrinsicOperator::AND:
+    case Fortran::common::IntrinsicOperator::EQV:
+    case Fortran::common::IntrinsicOperator::OR:
+    case Fortran::common::IntrinsicOperator::NEQV:
       break;
 
     default:
@@ -1264,16 +1260,16 @@ bool ClauseProcessor::processDefault() const {
   if (auto *defaultClause = findUniqueClause<ClauseTy::Default>()) {
     // Private, Firstprivate, Shared, None
     switch (defaultClause->v.v) {
-    case Fortran::parser::OmpDefaultClause::Type::Shared:
-    case Fortran::parser::OmpDefaultClause::Type::None:
+    case Fortran::common::OmpDefaultClauseKind::Shared:
+    case Fortran::common::OmpDefaultClauseKind::None:
       // Default clause with shared or none do not require any handling since
       // Shared is the default behavior in the IR and None is only required
       // for semantic checks.
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Private:
+    case Fortran::common::OmpDefaultClauseKind::Private:
       // TODO Support default(private)
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Firstprivate:
+    case Fortran::common::OmpDefaultClauseKind::Firstprivate:
       // TODO Support default(firstprivate)
       break;
     }
@@ -1288,10 +1284,10 @@ bool ClauseProcessor::processDevice(Fortran::lower::StatementContext &stmtCtx,
   if (auto *deviceClause = findUniqueClause<ClauseTy::Device>(&source)) {
     mlir::Location clauseLocation = converter.genLocation(*source);
     if (auto deviceModifier = std::get<
-            std::optional<Fortran::parser::OmpDeviceClause::DeviceModifier>>(
+            std::optional<Fortran::common::OmpDeviceClauseDeviceModifier>>(
             deviceClause->v.t)) {
       if (deviceModifier ==
-          Fortran::parser::OmpDeviceClause::DeviceModifier::Ancestor) {
+          Fortran::common::OmpDeviceClauseDeviceModifier::Ancestor) {
         TODO(clauseLocation, "OMPD_target Device Modifier Ancestor");
       }
     }
@@ -1309,13 +1305,13 @@ bool ClauseProcessor::processDeviceType(
   if (auto *deviceTypeClause = findUniqueClause<ClauseTy::DeviceType>()) {
     // Case: declare target ... device_type(any | host | nohost)
     switch (deviceTypeClause->v.v) {
-    case Fortran::parser::OmpDeviceTypeClause::Type::Nohost:
+    case Fortran::common::OmpDeviceTypeClauseKind::Nohost:
       result = mlir::omp::DeclareTargetDeviceType::nohost;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Host:
+    case Fortran::common::OmpDeviceTypeClauseKind::Host:
       result = mlir::omp::DeclareTargetDeviceType::host;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Any:
+    case Fortran::common::OmpDeviceTypeClauseKind::Any:
       result = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
@@ -1437,24 +1433,23 @@ bool ClauseProcessor::processSchedule(
     mlir::MLIRContext *context = firOpBuilder.getContext();
     const Fortran::parser::OmpScheduleClause &scheduleType = scheduleClause->v;
     const auto &scheduleClauseKind =
-        std::get<Fortran::parser::OmpScheduleClause::ScheduleType>(
-            scheduleType.t);
+        std::get<Fortran::common::OmpScheduleClauseKind>(scheduleType.t);
 
     mlir::omp::ClauseScheduleKind scheduleKind;
     switch (scheduleClauseKind) {
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Static:
+    case Fortran::common::OmpScheduleClauseKind::Static:
       scheduleKind = mlir::omp::ClauseScheduleKind::Static;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Dynamic:
+    case Fortran::common::OmpScheduleClauseKind::Dynamic:
       scheduleKind = mlir::omp::ClauseScheduleKind::Dynamic;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Guided:
+    case Fortran::common::OmpScheduleClauseKind::Guided:
       scheduleKind = mlir::omp::ClauseScheduleKind::Guided;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Auto:
+    case Fortran::common::OmpScheduleClauseKind::Auto:
       scheduleKind = mlir::omp::ClauseScheduleKind::Auto;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Runtime:
+    case Fortran::common::OmpScheduleClauseKind::Runtime:
       scheduleKind = mlir::omp::ClauseScheduleKind::Runtime;
       break;
     }
@@ -1620,7 +1615,7 @@ bool ClauseProcessor::processDepend(
 
 bool ClauseProcessor::processIf(
     Fortran::lower::StatementContext &stmtCtx,
-    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+    Fortran::common::OmpIfClauseDirectiveNameModifier directiveName,
     mlir::Value &result) const {
   bool found = false;
   findRepeatableClause<ClauseTy::If>(
@@ -1665,27 +1660,27 @@ bool ClauseProcessor::processMap(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     // If the map type is specified, then process it else Tofrom is the default.
     if (oMapType) {
-      const Fortran::parser::OmpMapType::Type &mapType =
-          std::get<Fortran::parser::OmpMapType::Type>(oMapType->t);
+      const Fortran::common::OmpMapKind &mapType =
+          std::get<Fortran::common::OmpMapKind>(oMapType->t);
       switch (mapType) {
-      case Fortran::parser::OmpMapType::Type::To:
+      case Fortran::common::OmpMapKind::To:
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
         break;
-      case Fortran::parser::OmpMapType::Type::From:
+      case Fortran::common::OmpMapKind::From:
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         break;
-      case Fortran::parser::OmpMapType::Type::Tofrom:
+      case Fortran::common::OmpMapKind::Tofrom:
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         break;
-      case Fortran::parser::OmpMapType::Type::Alloc:
-      case Fortran::parser::OmpMapType::Type::Release:
+      case Fortran::common::OmpMapKind::Alloc:
+      case Fortran::common::OmpMapKind::Release:
         // alloc and release is the default map_type for the Target Data Ops,
         // i.e. if no bits for map_type is supplied then alloc/release is
         // implicitly assumed based on the target directive. Default value for
         // Target Data and Enter Data is alloc and for Exit Data it is release.
         break;
-      case Fortran::parser::OmpMapType::Type::Delete:
+      case Fortran::common::OmpMapKind::Delete:
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
       }
 
@@ -2213,7 +2208,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
+               Fortran::common::OmpIfClauseDirectiveNameModifier::Parallel,
                ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
@@ -2266,8 +2261,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
+  cp.processIf(stmtCtx, Fortran::common::OmpIfClauseDirectiveNameModifier::Task,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2325,7 +2319,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
+               Fortran::common::OmpIfClauseDirectiveNameModifier::TargetData,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
@@ -2359,15 +2353,15 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> mapOperands;
   llvm::SmallVector<mlir::IntegerAttr> mapTypes;
 
-  Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
+  Fortran::common::OmpIfClauseDirectiveNameModifier directiveName;
   llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
     directiveName =
-        Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetEnterData;
+        Fortran::common::OmpIfClauseDirectiveNameModifier::TargetEnterData;
     directive = llvm::omp::Directive::OMPD_target_enter_data;
   } else if constexpr (std::is_same_v<OpTy, mlir::omp::ExitDataOp>) {
     directiveName =
-        Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetExitData;
+        Fortran::common::OmpIfClauseDirectiveNameModifier::TargetExitData;
     directive = llvm::omp::Directive::OMPD_target_exit_data;
   } else {
     return nullptr;
@@ -2406,7 +2400,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
+               Fortran::common::OmpIfClauseDirectiveNameModifier::Target,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
@@ -2449,7 +2443,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
+               Fortran::common::OmpIfClauseDirectiveNameModifier::Teams,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2656,7 +2650,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     mlir::Value ifClauseOperand;
     mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
     cp.processIf(stmtCtx,
-                 Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+                 Fortran::common::OmpIfClauseDirectiveNameModifier::Simd,
                  ifClauseOperand);
     cp.processSimdlen(simdlenClauseOperand);
     cp.processSafelen(safelenClauseOperand);
@@ -3721,16 +3715,15 @@ void Fortran::lower::genOpenMPReduction(
       if (const auto *reductionOp =
               std::get_if<Fortran::parser::DefinedOperator>(&redOperator.u)) {
         const auto &intrinsicOp{
-            std::get<Fortran::parser::DefinedOperator::IntrinsicOperator>(
-                reductionOp->u)};
+            std::get<Fortran::common::IntrinsicOperator>(reductionOp->u)};
 
         switch (intrinsicOp) {
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
-        case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+        case Fortran::common::IntrinsicOperator::Add:
+        case Fortran::common::IntrinsicOperator::Multiply:
+        case Fortran::common::IntrinsicOperator::AND:
+        case Fortran::common::IntrinsicOperator::EQV:
+        case Fortran::common::IntrinsicOperator::OR:
+        case Fortran::common::IntrinsicOperator::NEQV:
           break;
         default:
           continue;
