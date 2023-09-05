@@ -432,7 +432,7 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
-  EXPECT_TRUE(zeroStringValue.getValue().empty());
+  EXPECT_TRUE(zeroStringValue.empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
