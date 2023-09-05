@@ -680,6 +680,12 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   else if (IsThinLTO && IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine("-bdbg:thinlto")));
 
+  // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
+  // LowerMatrixIntrinsicsPass, which is transitively called by
+  // buildThinLTODefaultPipeline under EnableMatrix.
+  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
