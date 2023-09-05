@@ -866,6 +866,25 @@ bool GIMatchTableExecutor::executeMatchTable(
       }
       break;
     }
+    case GIM_CheckCanReplaceReg: {
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      int64_t OldOpIdx = MatchTable[CurrentIdx++];
+      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      int64_t NewOpIdx = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckCanReplaceReg(MIs["
+                             << OldInsnID << "][" << OldOpIdx << "] = MIs["
+                             << NewInsnID << "][" << NewOpIdx << "])\n");
+
+      Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
+      Register New = State.MIs[NewInsnID]->getOperand(NewOpIdx).getReg();
+      if (!canReplaceReg(Old, New, MRI)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_Reject:
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_Reject\n");
@@ -1237,7 +1256,45 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << "] = GIR_MakeTempReg(" << TypeID << ")\n");
       break;
     }
+    case GIR_ReplaceReg: {
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      int64_t OldOpIdx = MatchTable[CurrentIdx++];
+      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      int64_t NewOpIdx = MatchTable[CurrentIdx++];
 
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_ReplaceReg(MIs["
+                             << OldInsnID << "][" << OldOpIdx << "] = MIs["
+                             << NewInsnID << "][" << NewOpIdx << "])\n");
+
+      Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
+      Register New = State.MIs[NewInsnID]->getOperand(NewOpIdx).getReg();
+      if (Observer)
+        Observer->changingAllUsesOfReg(MRI, Old);
+      MRI.replaceRegWith(Old, New);
+      if (Observer)
+        Observer->finishedChangingAllUsesOfReg();
+      break;
+    }
+    case GIR_ReplaceRegWithTempReg: {
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      int64_t OldOpIdx = MatchTable[CurrentIdx++];
+      int64_t TempRegID = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_ReplaceRegWithTempReg(MIs["
+                             << OldInsnID << "][" << OldOpIdx << "] = TempRegs["
+                             << TempRegID << "])\n");
+
+      Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
+      Register New = State.TempRegisters[TempRegID];
+      if (Observer)
+        Observer->changingAllUsesOfReg(MRI, Old);
+      MRI.replaceRegWith(Old, New);
+      if (Observer)
+        Observer->finishedChangingAllUsesOfReg();
+      break;
+    }
     case GIR_Coverage: {
       int64_t RuleID = MatchTable[CurrentIdx++];
       assert(CoverageInfo);

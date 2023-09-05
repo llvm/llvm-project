@@ -229,6 +229,16 @@ static Register compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   return CondReg;
 }
 
+// Replace all registers From with To.
+// Also handles From and To MachineOperands having sub registers.
+// Note: MRI->replaceRegWith doesn't handle sub registers since it is
+// register based and subreg is carried on the operand.
+static void replaceRegIncSubReg(const MachineRegisterInfo *MRI, const TargetRegisterInfo *TRI,
+                                const MachineOperand *From, const MachineOperand *To) {
+  for (auto &O : make_early_inc_range(MRI->reg_operands(From->getReg())))
+    O.substVirtReg(To->getReg(), To->getSubReg(), *TRI);
+}
+
 class SIInsertWaterfall : public MachineFunctionPass {
 private:
   struct WaterfallWorkitem {
@@ -245,7 +255,7 @@ private:
 
     // List of corresponding init, newdst and phi registers used in loop for
     // end pseudos
-    std::vector<std::pair<Register, Register>> EndRegs;
+    std::vector<std::pair<MachineOperand*, MachineOperand*>> EndRegs;
     std::vector<Register> RFLRegs;
 
     WaterfallWorkitem() = default;
@@ -463,14 +473,14 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
     // picked up later by e.g. use before def errors
     LLVM_DEBUG(dbgs() << "detected case for waterfall loop removal - already all uniform\n");
     for (auto EndMI : Item.EndList) {
-      auto EndDstReg = TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst)->getReg();
-      auto EndSrcReg = TII->getNamedOperand(*EndMI, AMDGPU::OpName::src)->getReg();
-      MRI->replaceRegWith(EndDstReg, EndSrcReg);
+      auto EndDstOp = TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst);
+      auto EndSrcOp = TII->getNamedOperand(*EndMI, AMDGPU::OpName::src);
+      replaceRegIncSubReg(MRI, RI, EndDstOp, EndSrcOp);
     }
     for (auto LUMI : Item.LastUseList) {
-      auto LUDstReg = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst)->getReg();
-      auto LUSrcReg = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src)->getReg();
-      MRI->replaceRegWith(LUDstReg, LUSrcReg);
+      auto LUDstOp = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst);
+      auto LUSrcOp = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src);
+      replaceRegIncSubReg(MRI, RI, LUDstOp, LUSrcOp);
     }
     // If all the begins were removed, we have to replace the RFL with actual
     // RFL, these will show up in the NewRLFList
@@ -584,19 +594,13 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     // Initialize the register we accumulate the result into, which is the
     // target of any SI_WATERFALL_END instruction
-    for (auto EndMI : Item.EndList) {
-      Register EndDst =
-          TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst)->getReg();
-      Register EndSrc =
-          TII->getNamedOperand(*EndMI, AMDGPU::OpName::src)->getReg();
-      Item.EndRegs.emplace_back(EndDst, EndSrc);
-    }
+    for (auto EndMI : Item.EndList)
+      Item.EndRegs.emplace_back(TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst),
+                                TII->getNamedOperand(*EndMI, AMDGPU::OpName::src));
     for (auto LUMI : Item.LastUseList) {
-      Register LUSrc =
-          TII->getNamedOperand(*LUMI, AMDGPU::OpName::src)->getReg();
-      Register LUDst =
-          TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst)->getReg();
-      MRI->replaceRegWith(LUDst, LUSrc);
+      auto LUSrc = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src);
+      auto LUDst = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst);
+      replaceRegIncSubReg(MRI, RI, LUDst, LUSrc);
     }
 
     // EXEC mask handling
@@ -708,10 +712,12 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // TODO: Conditional branch here to loop header as potential optimization?
 
     // Copy the just read value into the destination
+    // Handle cases where sub registers are involved
     for (auto EndReg : Item.EndRegs) {
       MachineBasicBlock::iterator EndInsert(Item.Final);
-      BuildMI(LoopBB, EndInsert, DL, TII->get(AMDGPU::COPY), EndReg.first)
-          .addReg(EndReg.second);
+      auto NewMI = BuildMI(LoopBB, EndInsert, DL, TII->get(AMDGPU::COPY))
+        .addReg(EndReg.first->getReg(), RegState::Define, EndReg.first->getSubReg())
+        .addReg(EndReg.second->getReg(), 0, EndReg.second->getSubReg());
     }
 
     MRI->setSimpleHint(NewExec, CondReg);
