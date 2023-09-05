@@ -4170,7 +4170,9 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       !TE.isAltShuffle())
     return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
-    auto PHICompare = [](llvm::Value *V1, llvm::Value *V2) {
+    auto PHICompare = [&](unsigned I1, unsigned I2) {
+      Value *V1 = TE.Scalars[I1];
+      Value *V2 = TE.Scalars[I2];
       if (V1 == V2)
         return false;
       if (!V1->hasOneUse() || !V2->hasOneUse())
@@ -4209,14 +4211,13 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     };
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
-    DenseMap<Value *, unsigned> PhiToId;
-    SmallVector<Value *, 4> Phis;
+    DenseMap<unsigned, unsigned> PhiToId;
+    SmallVector<unsigned> Phis(TE.Scalars.size());
+    std::iota(Phis.begin(), Phis.end(), 0);
     OrdersType ResOrder(TE.Scalars.size());
-    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id) {
-      PhiToId[TE.Scalars[Id]] = Id;
-      Phis.push_back(TE.Scalars[Id]);
-    }
-    llvm::stable_sort(Phis, PHICompare);
+    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id)
+      PhiToId[Id] = Id;
+    stable_sort(Phis, PHICompare);
     for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
       ResOrder[Id] = PhiToId[Phis[Id]];
     if (IsIdentityOrder(ResOrder))
