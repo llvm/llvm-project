@@ -8,6 +8,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
 
+#include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/macros/config.h"
 
 namespace __llvm_libc::cpp {
@@ -15,6 +16,8 @@ namespace __llvm_libc::cpp {
 // remove_all_extents
 #if LIBC_HAS_BUILTIN(__remove_all_extents)
 template <typename T> using remove_all_extents_t = __remove_all_extents(T);
+template <typename T>
+struct remove_all_extents : bool_constant<remove_all_extents_t<T>> {};
 #else
 template <typename T> struct remove_all_extents {
   using type = T;
@@ -25,9 +28,9 @@ template <typename T> struct remove_all_extents<T[]> {
 template <typename T, size_t _Np> struct remove_all_extents<T[_Np]> {
   using type = typename remove_all_extents<T>::type;
 };
-#endif
 template <typename T>
 using remove_all_extents_t = typename remove_all_extents<T>::type;
+#endif
 
 } // namespace __llvm_libc::cpp
 
