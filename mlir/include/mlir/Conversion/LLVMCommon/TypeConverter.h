@@ -199,7 +199,7 @@ private:
   /// Convert a memref type into a list of LLVM IR types that will form the
   /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
   /// arrays in the descriptors are unpacked to individual index-typed elements,
-  /// else they are are kept as rank-sized arrays of index type. In particular,
+  /// else they are kept as rank-sized arrays of index type. In particular,
   /// the list will contain:
   /// - two pointers to the memref element type, followed by
   /// - an index-typed offset, followed by
