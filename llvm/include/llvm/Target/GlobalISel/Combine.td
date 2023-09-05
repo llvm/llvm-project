@@ -855,6 +855,28 @@ def funnel_shift_to_rotate : GICombineRule<
   (apply [{ Helper.applyFunnelShiftToRotate(*${root}); }])
 >;
 
+// Fold fshr x, y, 0 -> y
+def funnel_shift_right_zero: GICombineRule<
+  (defs root:$root),
+  (match (G_FSHR $x, $y, $z, 0):$root),
+  (apply (COPY $x, $z))
+>;
+
+// Fold fshl x, y, 0 -> x
+def funnel_shift_left_zero: GICombineRule<
+  (defs root:$root),
+  (match (G_FSHL $x, $y, $z, 0):$root),
+  (apply (COPY $x, $y))
+>;
+
+// Fold fsh(l/r) x, y, C -> fsh(l/r) x, y, C % bw
+def funnel_shift_overshift: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FSHL, G_FSHR):$root,
+    [{ return Helper.matchConstantLargerBitWidth(*${root}, 3); }]),
+  (apply [{ Helper.applyFunnelShiftConstantModulo(*${root}); }])
+>;
+
 def rotate_out_of_range : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ROTR, G_ROTL):$root,
@@ -893,7 +915,10 @@ def bitfield_extract_from_and : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
 def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
-                                            funnel_shift_to_rotate]>;
+                                            funnel_shift_to_rotate,
+                                            funnel_shift_right_zero,
+                                            funnel_shift_left_zero,
+                                            funnel_shift_overshift]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
