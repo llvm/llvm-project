@@ -202,5 +202,48 @@ def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
       "affine::AffineDialect", "memref::MemRefDialect"
   ];
 }
+
+def ExpandRealloc : Pass<"expand-realloc"> {
+  let summary = "Expand memref.realloc operations into its components";
+  let description = [{
+    The `memref.realloc` operation performs a conditional allocation and copy to
+    increase the size of a buffer if necessary. This pass converts a `realloc`
+    operation into this sequence of simpler operations such that other passes
+    at a later stage in the compilation pipeline do not have to consider the
+    `realloc` operation anymore (e.g., the buffer deallocation pass and the
+    conversion pass to LLVM).
+
+    Example of an expansion:
+    ```mlir
+    %realloc = memref.realloc %alloc (%size) : memref<?xf32> to memref<?xf32>
+    ```
+    is expanded to
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %dim = memref.dim %alloc, %c0 : memref<?xf32>
+    %is_old_smaller = arith.cmpi ult, %dim, %arg1
+    %realloc = scf.if %is_old_smaller -> (memref<?xf32>) {
+      %new_alloc = memref.alloc(%size) : memref<?xf32>
+      %subview = memref.subview %new_alloc[0] [%dim] [1]
+      memref.copy %alloc, %subview
+      memref.dealloc %alloc
+      scf.yield %alloc_0 : memref<?xf32>
+    } else {
+      %reinterpret_cast = memref.reinterpret_cast %alloc to
+        offset: [0], sizes: [%size], strides: [1]
+      scf.yield %reinterpret_cast : memref<?xf32>
+    }
+    ```
+  }];
+  let options = [
+    Option<"emitDeallocs", "emit-deallocs", "bool", /*default=*/"true",
+           "Emit deallocation operations for the original MemRef">,
+  ];
+  let constructor = "mlir::memref::createExpandReallocPass()";
+  let dependentDialects = [
+      "arith::ArithDialect", "scf::SCFDialect", "memref::MemRefDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
 
