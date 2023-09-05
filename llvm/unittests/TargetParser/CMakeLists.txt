@@ -6,7 +6,8 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(TargetParserTests
   CSKYTargetParserTest.cpp
   Host.cpp
-  TargetParserTest.cpp
+  ArmTargetParserTest.cpp
+  AArch64TargetParserTest.cpp
   TripleTest.cpp
   )
 
