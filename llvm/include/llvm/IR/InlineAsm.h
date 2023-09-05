@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -196,23 +197,6 @@ public:
     return V->getValueID() == Value::InlineAsmVal;
   }
 
-  // These are helper methods for dealing with flags in the INLINEASM SDNode
-  // in the backend.
-  //
-  // The encoding of the flag word is currently:
-  //   Bits 2-0 - A Kind::* value indicating the kind of the operand.
-  //   Bits 15-3 - The number of SDNode operands associated with this inline
-  //               assembly operand.
-  //   If bit 31 is set:
-  //     Bit 30-16 - The operand number that this operand must match.
-  //                 When bits 2-0 are Kind::Mem, the Constraint_* value must be
-  //                 obtained from the flags for this operand number.
-  //   Else if bits 2-0 are Kind::Mem:
-  //     Bit 30-16 - A Constraint_* value indicating the original constraint
-  //                 code.
-  //   Else:
-  //     Bit 30-16 - The register class ID to use for the operand.
-
   enum : uint32_t {
     // Fixed operands on an INLINEASM SDNode.
     Op_InputChain = 0,
@@ -241,6 +225,7 @@ public:
     // Addresses are included here as they need to be treated the same by the
     // backend, the only difference is that they are not used to actaully
     // access memory by the instruction.
+    // TODO: convert to enum?
     Constraint_Unknown = 0,
     Constraint_es,
     Constraint_i,
@@ -274,15 +259,12 @@ public:
     Constraint_ZT,
 
     Constraints_Max = Constraint_ZT,
-    Constraints_ShiftAmount = 16,
-
-    Flag_MatchingOperand = 0x80000000
   };
 
   // Inline asm operands map to multiple SDNode / MachineInstr operands.
   // The first operand is an immediate describing the asm operand, the low
   // bits is the kind:
-  enum class Kind {
+  enum class Kind : uint8_t {
     RegUse = 1,             // Input register, "r".
     RegDef = 2,             // Output register, "=r".
     RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
@@ -292,101 +274,152 @@ public:
     Func = 7,               // Address operand of function call
   };
 
-  static unsigned getFlagWord(Kind Kind, unsigned NumOps) {
-    assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
-    return static_cast<unsigned>(Kind) | (NumOps << 3);
-  }
+  // These are helper methods for dealing with flags in the INLINEASM SDNode
+  // in the backend.
+  //
+  // The encoding of Flag is currently:
+  //   Bits 2-0 - A Kind::* value indicating the kind of the operand.
+  //   Bits 15-3 - The number of SDNode operands associated with this inline
+  //               assembly operand.
+  //   If bit 31 is set:
+  //     Bit 30-16 - The operand number that this operand must match.
+  //                 When bits 2-0 are Kind::Mem, the Constraint_* value must be
+  //                 obtained from the flags for this operand number.
+  //   Else if bits 2-0 are Kind::Mem:
+  //     Bit 30-16 - A Constraint_* value indicating the original constraint
+  //                 code.
+  //   Else:
+  //     Bit 30-16 - The register class ID to use for the operand.
+  class Flag {
+    // union {
+    //   unsigned MatchingOpNo : 15;
+    //   unsigned OriginalConstraintCode : 15;
+    //   unsigned RegisterClassID : 15;
+    // } GrabBag;
+    Kind Kind : 3;
+    unsigned NumOperands : 13;
+    unsigned GrabBag : 15;
+    unsigned IsMatched : 1;
 
-  static bool isRegDefKind(unsigned Flag) {
-    return getKind(Flag) == Kind::RegDef;
-  }
-  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind::Imm; }
-  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind::Mem; }
-  static bool isFuncKind(unsigned Flag) { return getKind(Flag) == Kind::Func; }
-  static bool isRegDefEarlyClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind::RegDefEarlyClobber;
-  }
-  static bool isClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind::Clobber;
-  }
+    bool isMatched() const { return IsMatched; }
+  public:
+    explicit Flag (uint32_t F) {
+      // TODO: some kind of assertion failure if enum Kind becomes bigger than 3b?
+      static_assert(sizeof(Flag) == sizeof(F), "Expected sizeof Flag to be 4B");
+      // Look away children. May god forgive me of my sins.
+      *reinterpret_cast<uint32_t*>(this) = sys::IsBigEndianHost ? sys::getSwappedBytes(F) : F;
+    }
+    Flag (enum Kind K, unsigned NumOps) : Kind(K), NumOperands(NumOps), GrabBag(0), IsMatched(0) {
+      assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
+    }
+    // TODO: this enables implicit conversion. Should we make this explicit?
+    operator uint32_t () {
+      auto R = *reinterpret_cast<uint32_t*>(this);
+      return sys::IsBigEndianHost ? sys::getSwappedBytes(R) : R;
+    }
+    enum Kind getKind() const { return Kind; }
+    bool isRegUseKind() const { return getKind() == Kind::RegUse; }
+    bool isRegDefKind() const { return getKind() == Kind::RegDef; }
+    bool isRegDefEarlyClobberKind() const { return getKind() == Kind::RegDefEarlyClobber; }
+    bool isClobberKind() const { return getKind() == Kind::Clobber; }
+    bool isImmKind() const { return getKind() == Kind::Imm; }
+    bool isMemKind() const { return getKind() == Kind::Mem; }
+    bool isFuncKind() const { return getKind() == Kind::Func; }
+    StringRef getKindName() const {
+      switch (Kind) {
+        case Kind::RegUse:
+          return "reguse";
+        case Kind::RegDef:
+          return "regdef";
+        case Kind::RegDefEarlyClobber:
+          return "regdef-ec";
+        case Kind::Clobber:
+          return "clobber";
+        case Kind::Imm:
+          return "imm";
+        case Kind::Mem:
+        case Kind::Func:
+          return "mem";
+      }
+    }
 
-  /// getFlagWordForMatchingOp - Augment an existing flag word returned by
-  /// getFlagWord with information indicating that this input operand is tied
-  /// to a previous output operand.
-  static unsigned getFlagWordForMatchingOp(unsigned InputFlag,
-                                           unsigned MatchedOperandNo) {
-    assert(MatchedOperandNo <= 0x7fff && "Too big matched operand");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | Flag_MatchingOperand | (MatchedOperandNo << 16);
-  }
+    /// getNumOperandRegisters - Extract the number of registers field from the
+    /// inline asm operand flag.
+    unsigned getNumOperandRegisters() const { return NumOperands; }
 
-  /// getFlagWordForRegClass - Augment an existing flag word returned by
-  /// getFlagWord with the required register class for the following register
-  /// operands.
-  /// A tied use operand cannot have a register class, use the register class
-  /// from the def operand instead.
-  static unsigned getFlagWordForRegClass(unsigned InputFlag, unsigned RC) {
-    // Store RC + 1, reserve the value 0 to mean 'no register class'.
-    ++RC;
-    assert(!isImmKind(InputFlag) && "Immediates cannot have a register class");
-    assert(!isMemKind(InputFlag) && "Memory operand cannot have a register class");
-    assert(RC <= 0x7fff && "Too large register class ID");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | (RC << 16);
-  }
+    /// isUseOperandTiedToDef - Return true if the flag of the inline asm
+    /// operand indicates it is an use operand that's matched to a def operand.
+    bool isUseOperandTiedToDef(unsigned &Idx) const {
+      if (!isMatched())
+        return false;
+      Idx = GrabBag;
+      return true;
+    }
 
-  /// Augment an existing flag word returned by getFlagWord with the constraint
-  /// code for a memory constraint.
-  static unsigned getFlagWordForMem(unsigned InputFlag, unsigned Constraint) {
-    assert((isMemKind(InputFlag) || isFuncKind(InputFlag)) &&
-           "InputFlag is not a memory (include function) constraint!");
-    assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
-    assert(Constraint <= Constraints_Max && "Unknown constraint ID");
-    assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
-    return InputFlag | (Constraint << Constraints_ShiftAmount);
-  }
+    /// hasRegClassConstraint - Returns true if the flag contains a register
+    /// class constraint.  Sets RC to the register class ID.
+    bool hasRegClassConstraint(unsigned &RC) const {
+      if (isMatched())
+        return false;
+      // setRegClass() uses 0 to mean no register class, and otherwise stores
+      // RC + 1.
+      if (!GrabBag)
+        return false;
+      RC = GrabBag - 1;
+      return true;
+    }
 
-  static unsigned convertMemFlagWordToMatchingFlagWord(unsigned InputFlag) {
-    assert(isMemKind(InputFlag));
-    return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
-  }
+    // TODO: convert to enum?
+    unsigned getMemoryConstraintID() const {
+      assert((isMemKind() || isFuncKind()) &&
+             "Not expected mem or function flag!");
+      return GrabBag;
+    }
 
-  static Kind getKind(unsigned Flags) { return static_cast<Kind>(Flags & 7); }
+    /// setMatchingOp - Augment an existing flag with information indicating
+    /// that this input operand is tied to a previous output operand.
+    void setMatchingOp(unsigned MatchedOperandNo) {
+      assert(MatchedOperandNo <= 0x7fff && "Too big matched operand");
+      assert(GrabBag == 0 && "Matching operand already set");
+      GrabBag = MatchedOperandNo;
+      IsMatched = true;
+    }
 
-  static unsigned getMemoryConstraintID(unsigned Flag) {
-    assert((isMemKind(Flag) || isFuncKind(Flag)) &&
-           "Not expected mem or function flang!");
-    return (Flag >> Constraints_ShiftAmount) & 0x7fff;
-  }
+    /// setRegClass - Augment an existing flag with the required register class
+    /// for the following register operands. A tied use operand cannot have a
+    /// register class, use the register class from the def operand instead.
+    void setRegClass(unsigned RC) {
+      // Store RC + 1, reserve the value 0 to mean 'no register class'.
+      ++RC;
+      assert(!isImmKind() && "Immediates cannot have a register class");
+      assert(!isMemKind() && "Memory operand cannot have a register class");
+      assert(RC <= 0x7fff && "Too large register class ID");
+      assert(GrabBag == 0 && "Register class already set");
+      GrabBag = RC;
+    }
 
-  /// getNumOperandRegisters - Extract the number of registers field from the
-  /// inline asm operand flag.
-  static unsigned getNumOperandRegisters(unsigned Flag) {
-    return (Flag & 0xffff) >> 3;
-  }
+    /// Augment an existing flag with the constraint code for a memory
+    /// constraint.
+    void setMemConstraint(unsigned Constraint) {
+      assert((isMemKind() || isFuncKind()) &&
+             "InputFlag is not a memory or function constraint!");
+      assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
+      assert(Constraint <= Constraints_Max && "Unknown constraint ID");
+      assert(GrabBag == 0 && "Mem constraint already set");
+      GrabBag = Constraint;
+    }
 
-  /// isUseOperandTiedToDef - Return true if the flag of the inline asm
-  /// operand indicates it is an use operand that's matched to a def operand.
-  static bool isUseOperandTiedToDef(unsigned Flag, unsigned &Idx) {
-    if ((Flag & Flag_MatchingOperand) == 0)
-      return false;
-    Idx = (Flag & ~Flag_MatchingOperand) >> 16;
-    return true;
-  }
-
-  /// hasRegClassConstraint - Returns true if the flag contains a register
-  /// class constraint.  Sets RC to the register class ID.
-  static bool hasRegClassConstraint(unsigned Flag, unsigned &RC) {
-    if (Flag & Flag_MatchingOperand)
-      return false;
-    unsigned High = Flag >> 16;
-    // getFlagWordForRegClass() uses 0 to mean no register class, and otherwise
-    // stores RC + 1.
-    if (!High)
-      return false;
-    RC = High - 1;
-    return true;
-  }
+    // TODO: do we even need this? WTF is it doing?
+    // IIUC, It was masking off the bottom 22b.
+    // ~(0x7fff << 16) == 0x3FFFFF
+    void convertMemFlagWordToMatchingFlagWord() {
+      assert(isMemKind());
+      GrabBag = 0;
+      // GrabBag &= 0x3F;
+      // GrabBag = GrabBag << Constraints_ShiftAmount; // TODO: is this even correct?
+      // return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
+    }
+  };
 
   static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
     std::vector<StringRef> Result;
@@ -410,25 +443,6 @@ public:
       Result.push_back("inteldialect");
 
     return Result;
-  }
-
-  static StringRef getKindName(Kind Kind) {
-    switch (Kind) {
-    case Kind::RegUse:
-      return "reguse";
-    case Kind::RegDef:
-      return "regdef";
-    case Kind::RegDefEarlyClobber:
-      return "regdef-ec";
-    case Kind::Clobber:
-      return "clobber";
-    case Kind::Imm:
-      return "imm";
-    case Kind::Mem:
-    case Kind::Func:
-      return "mem";
-    }
-    llvm_unreachable("Unknown operand kind");
   }
 
   static StringRef getMemConstraintName(unsigned Constraint) {
