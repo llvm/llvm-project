@@ -171,6 +171,11 @@ public:
     TOCType_EHBlock
   };
 
+  // Controls whether or not to emit a .ref reference to __tls_get_addr.
+  // This is currently used for TLS models that do not generate calls to
+  // TLS functions, such as for the local-exec model on AIX 64-bit.
+  bool HasRefGetTLSAddr = false;
+
   MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
                                    MCSymbolRefExpr::VariantKind Kind =
                                        MCSymbolRefExpr::VariantKind::VK_None);
@@ -615,12 +620,17 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
 /// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
 /// create the csect and use the qual-name symbol instead of creating just the
 /// external symbol.
-static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc) {
-  StringRef SymName =
-      MIOpc == PPC::GETtlsTpointer32AIX ? ".__get_tpointer" : ".__tls_get_addr";
+static MCSymbol *
+createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc,
+                            XCOFF::StorageMappingClass SMC = XCOFF::XMC_PR) {
+  StringRef SymName;
+  if (MIOpc == PPC::GETtlsTpointer32AIX)
+    SymName = ".__get_tpointer";
+  else
+    SymName = (SMC == XCOFF::XMC_DS) ? "__tls_get_addr" : ".__tls_get_addr";
   return Ctx
       .getXCOFFSection(SymName, SectionKind::getText(),
-                       XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
+                       XCOFF::CsectProperties(SMC, XCOFF::XTY_ER))
       ->getQualNameSymbol();
 }
 
@@ -832,8 +842,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
-      if (Model == TLSModel::LocalExec)
+      if (Model == TLSModel::LocalExec) {
+        if (IsPPC64)
+          HasRefGetTLSAddr = true;
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
+      }
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
@@ -2861,6 +2874,22 @@ bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   if (!MAI->usesDwarfFileAndLocDirectives() && MMI->hasDebugInfo())
     OutStreamer->doFinalizationAtSectionEnd(
         OutStreamer->getContext().getObjectFileInfo()->getTextSection());
+
+  // Add a single .ref reference to __tls_get_addr[DS] for the local-exec TLS
+  // model on AIX 64-bit. For TLS models that do not generate calls to TLS
+  // functions, this reference to __tls_get_addr helps generate a linker error
+  // to an undefined symbol to __tls_get_addr, which indicates to the user that
+  // compiling with -pthread is required for programs that use TLS variables.
+  if (HasRefGetTLSAddr) {
+    // Specifically for 64-bit AIX, a load from the TOC is generated to load
+    // the variable offset needed for local-exec accesses.
+    MCSymbol *TlsGetAddrDescriptor =
+        createMCSymbolForTlsGetAddr(OutContext, PPC::GETtlsADDR64AIX,
+                                    XCOFF::XMC_DS);
+
+    ExtSymSDNodeSymbols.insert(TlsGetAddrDescriptor);
+    OutStreamer->emitXCOFFRefDirective(TlsGetAddrDescriptor);
+  }
 
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
