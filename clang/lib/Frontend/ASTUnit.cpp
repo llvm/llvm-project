@@ -1799,7 +1799,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
     CI->getHeaderSearchOpts().ModuleFormat = std::string(*ModuleFormat);
 
   if (ForSerialization)
-    CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;
+    CI->getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
 
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;

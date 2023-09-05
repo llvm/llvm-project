@@ -5038,7 +5038,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   //  -Werror: consider all warnings into the hash
   //  -Werror=something: consider only the specified into the hash
   //  -pedantic-error
-  if (getLangOpts()->ModulesHashErrorDiags) {
+  if (getLangOpts().ModulesHashErrorDiags) {
     bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
     HBuilder.add(isExtHandlingFromDiagsError(Diags));
     for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
