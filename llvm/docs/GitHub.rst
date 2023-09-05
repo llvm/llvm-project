@@ -246,8 +246,8 @@ Once you've cloned your forked repository,
   # fork and upstream to llvm/llvm-project
   git push origin my_change
 
-Now back on the GitHub web interface, navigate to your fork and create a pull
-request from your branch to llvm::main.
+Navigate to the URL printed to the console from the git push command in the last step.
+Create a pull request from your branch to llvm::main.
 
 ::
 
@@ -258,6 +258,12 @@ request from your branch to llvm::main.
 
   # Commit your changes
   git commit file.cpp -m "Code Review adjustments"
+
+  # Format changes
+  git clang-format HEAD~
+
+  # Recommit if any formatting changes
+  git commit -a --amend
 
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
