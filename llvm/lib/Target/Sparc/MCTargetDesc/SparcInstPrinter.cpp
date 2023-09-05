@@ -255,5 +255,9 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
 void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(opNum).getImm();
-  O << Imm;
+  auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
+  if (isV9(STI) && ASITag)
+    O << '#' << ASITag->Name;
+  else
+    O << Imm;
 }
