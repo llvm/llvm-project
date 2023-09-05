@@ -3180,6 +3180,7 @@ def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
 def : Pat<(int_ppc_readflm), (MFFS)>;
+def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
 // Hi and Lo for Darwin Global Addresses.
 def : Pat<(PPChi tglobaladdr:$in, 0), (LIS tglobaladdr:$in)>;
