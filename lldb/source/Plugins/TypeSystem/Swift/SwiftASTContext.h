@@ -802,7 +802,7 @@ public:
   uint32_t GetNumPointeeChildren(lldb::opaque_compiler_type_t type);
 
   bool IsImportedType(lldb::opaque_compiler_type_t type,
-                      CompilerType *original_type) override;
+                      CompilerType *original_type = nullptr) override;
 
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetStaticSelfType(lldb::opaque_compiler_type_t type) override;

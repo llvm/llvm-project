@@ -18,6 +18,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
+#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ProcessStructReader.h"
@@ -495,7 +496,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
             "[GetMemberVariableOffset] asked to resolve offset for member %s",
             member_name.str().c_str());
 
-  // Using the module context for RemoteAST is cheaper bit only safe
+  // Using the module context for RemoteAST is cheaper but only safe
   // when there is no dynamic type resolution involved.
   // If this is already in the expression context, ask RemoteAST.
   if (instance_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
@@ -908,9 +909,12 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   if (!ts)
     return {};
 
+  lldb::addr_t pointer = LLDB_INVALID_ADDRESS;
   ExecutionContext exe_ctx;
-  if (valobj)
+  if (valobj) {
     exe_ctx = valobj->GetExecutionContextRef();
+    pointer = valobj->GetPointerValue();
+  }
 
   // Deal with the LLDB-only SILPackType variant.
   if (auto pack_element_type = ts->GetSILPackElementAtIndex(type, idx)) {
@@ -933,6 +937,12 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       [&](const swift::reflection::FieldInfo &field,
           llvm::Optional<TypeSystemSwift::TupleElement> tuple,
           bool hide_existentials) -> CompilerType {
+    bool is_indirect_enum =
+        !field.Offset && field.TR &&
+        llvm::isa<swift::reflection::BuiltinTypeRef>(field.TR) &&
+        llvm::isa<swift::reflection::ReferenceTypeInfo>(field.TI) &&
+        llvm::cast<swift::reflection::ReferenceTypeInfo>(field.TI)
+                .getReferenceKind() == swift::reflection::ReferenceKind::Strong;
     child_name = tuple ? tuple->element_name.GetStringRef().str() : field.Name;
     child_byte_size = field.TI.getSize();
     child_byte_offset = field.Offset;
@@ -941,13 +951,36 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     child_is_base_class = false;
     child_is_deref_of_parent = false;
     language_flags = 0;
+    if (is_indirect_enum)
+      language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
     // SwiftASTContext hardcodes the members of protocols as raw
     // pointers. Remote Mirrors reports them as UnknownObject instead.
     if (hide_existentials && ts->IsExistentialType(type.GetOpaqueQualType()))
       return ts->GetRawPointerType();
-    CompilerType result =
-        tuple ? tuple->element_type : GetTypeFromTypeRef(*ts, field.TR);
-    // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
+    CompilerType result;
+    if (tuple)
+      result = tuple->element_type;
+    else if (is_indirect_enum) {
+      ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+      if (!reflection_ctx)
+        return {};
+      // The indirect enum field should point to a closure context.
+      LLDBTypeInfoProvider tip(*this, *ts);
+      lldb::addr_t instance = MaskMaybeBridgedPointer(m_process, pointer);
+      auto *ti = reflection_ctx->GetTypeInfoFromInstance(instance, &tip);
+      if (!ti)
+        return {};
+      auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti);
+      if (rti->getFields().size() < 1)
+        return {};
+      auto &field = rti->getFields()[0];
+      auto *type_ref = field.TR;
+      result = GetTypeFromTypeRef(*ts, type_ref);
+      child_byte_offset = field.Offset;
+    } else
+      result = GetTypeFromTypeRef(*ts, field.TR);
+    // Bug-for-bug compatibility. See comment in
+    // SwiftASTContext::GetBitSize().
     if (result.IsFunctionType())
       child_byte_size = ts->GetPointerByteSize();
     return result;
@@ -999,7 +1032,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         child_is_base_class = false;
         child_is_deref_of_parent = false;
         language_flags = 0;
-          return ts->GetRawPointerType();
+        return ts->GetRawPointerType();
       }
     }
     return get_from_field_info(fields[idx], tuple, true);
@@ -1011,20 +1044,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
       // Skip non-payload cases.
       if (!enum_case.TR)
         continue;
-      if (i++ == idx) {
-        auto is_indirect = [](const swift::reflection::FieldInfo &field) {
-          // FIXME: This is by observation. What's the correct condition?
-          if (auto *tr =
-                  llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeRef>(
-                      field.TR))
-            return llvm::StringRef(tr->getMangledName()).equals("Bo");
-          return false;
-        };
-        auto result = get_from_field_info(enum_case, {}, true);
-        if (is_indirect(enum_case))
-          language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
-        return result;
-      }
+      if (i++ == idx)
+        return get_from_field_info(enum_case, {}, true);
     }
     LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
               eti->getNumPayloadCases());
@@ -1053,10 +1074,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     if (!instance_ts)
       return {};
 
-    // LLDBTypeInfoProvider needs to kept alive until as long as supers gets accessed.
+    // LLDBTypeInfoProvider needs to be kept alive while supers gets accessed.
     llvm::SmallVector<SuperClassType, 2> supers;
     LLDBTypeInfoProvider tip(*this, *instance_ts);
-    lldb::addr_t pointer = valobj->GetPointerValue();
     reflection_ctx->ForEachSuperClassType(
         &tip, pointer, [&](SuperClassType sc) -> bool {
           if (!found_start) {
@@ -1982,95 +2002,38 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
     Value::ValueType &value_type) {
-  static ConstString g_offset("offset");
-
-  DataExtractor data;
   Status error;
-  if (!(in_value.GetParent() && in_value.GetParent()->GetData(data, error) &&
-        error.Success()))
-    return false;
+  CompilerType child_type = in_value.GetCompilerType();
+  class_type_or_name.SetCompilerType(child_type);
 
-  bool has_payload;
-  bool is_indirect;
-  CompilerType payload_type;
-  if (!SwiftASTContext::GetSelectedEnumCase(
-          in_value.GetParent()->GetCompilerType(), data, nullptr, &has_payload,
-          &payload_type, &is_indirect))
-    return false;
-
-  if (has_payload && is_indirect && payload_type)
-    class_type_or_name.SetCompilerType(payload_type);
-
-  lldb::addr_t box_addr = in_value.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  auto *enum_obj = in_value.GetParent();
+  lldb::addr_t box_addr = enum_obj->GetPointerValue();
   if (box_addr == LLDB_INVALID_ADDRESS)
     return false;
 
-  box_addr = MaskMaybeBridgedPointer(m_process, box_addr);
+  box_addr =
+    MaskMaybeBridgedPointer(m_process, box_addr);
   lldb::addr_t box_location = m_process.ReadPointerFromMemory(box_addr, error);
   if (box_location == LLDB_INVALID_ADDRESS)
     return false;
-
+ 
   box_location = MaskMaybeBridgedPointer(m_process, box_location);
-  ProcessStructReader reader(&m_process, box_location, GetBoxMetadataType());
-  uint32_t offset = reader.GetField<uint32_t>(g_offset);
-  lldb::addr_t box_value = box_addr + offset;
-
-  // try to read one byte at the box value
-  m_process.ReadUnsignedIntegerFromMemory(box_value, 1, 0, error);
-  if (error.Fail()) // and if that fails, then we're off in no man's land
-    return false;
-
-  Flags type_info(payload_type.GetTypeInfo());
-  if (type_info.AllSet(eTypeIsSwift | eTypeIsClass)) {
-    lldb::addr_t old_box_value = box_value;
-    box_value = m_process.ReadPointerFromMemory(box_value, error);
-    if (box_value == LLDB_INVALID_ADDRESS)
-      return false;
-
-    DataExtractor data(&box_value, m_process.GetAddressByteSize(),
-                       m_process.GetByteOrder(),
-                       m_process.GetAddressByteSize());
-    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-        "_", data, m_process, payload_type));
+  lldb::addr_t box_value = box_addr + in_value.GetByteOffset();
+  Flags type_info(child_type.GetTypeInfo());
+  if (type_info.AllSet(eTypeIsSwift) &&
+      type_info.AnySet(eTypeIsClass | eTypeIsProtocol)) {
+    ExecutionContext exe_ctx = in_value.GetExecutionContextRef();
+    ValueObjectSP valobj_sp = ValueObjectMemory::Create(
+        exe_ctx.GetBestExecutionContextScope(), "_", box_value, child_type);
     if (!valobj_sp)
       return false;
 
-    if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                  address, value_type))
-      return false;
-
-    address.SetRawAddress(old_box_value);
-    return true;
-  } else if (type_info.AllSet(eTypeIsSwift | eTypeIsProtocol)) {
-    SwiftASTContext::ProtocolInfo protocol_info;
-    if (!SwiftASTContext::GetProtocolTypeInfo(payload_type, protocol_info))
-      return false;
-    auto ptr_size = m_process.GetAddressByteSize();
-    std::vector<uint8_t> buffer(ptr_size * protocol_info.m_num_storage_words,
-                                0);
-    for (uint32_t idx = 0; idx < protocol_info.m_num_storage_words; idx++) {
-      lldb::addr_t word = m_process.ReadUnsignedIntegerFromMemory(
-          box_value + idx * ptr_size, ptr_size, 0, error);
-      if (error.Fail())
-        return false;
-      memcpy(&buffer[idx * ptr_size], &word, ptr_size);
-    }
-    DataExtractor data(&buffer[0], buffer.size(), m_process.GetByteOrder(),
-                       m_process.GetAddressByteSize());
-    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-        "_", data, m_process, payload_type));
-    if (!valobj_sp)
-      return false;
-
-    if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                  address, value_type))
-      return false;
-
-    address.SetRawAddress(box_value);
-    return true;
+    return GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
+                                    address, value_type);
   } else {
     // This is most likely a statically known type.
     address.SetLoadAddress(box_value, &m_process.GetTarget());
+    value_type = Value::GetValueTypeFromAddressType(eAddressTypeLoad);
     return true;
   }
 }
@@ -2271,8 +2234,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
 
 static bool IsIndirectEnumCase(ValueObject &valobj) {
   return (valobj.GetLanguageFlags() &
-          SwiftASTContext::LanguageFlags::eIsIndirectEnumCase) ==
-         SwiftASTContext::LanguageFlags::eIsIndirectEnumCase;
+          TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase) ==
+         TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
 }
 
 static bool CouldHaveDynamicValue(ValueObject &in_value) {

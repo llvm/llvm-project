@@ -39,9 +39,6 @@
 #include <mutex>
 
 #include "swift/AST/ImportCache.h"
-#include "swift/AST/Module.h"
-#include "swift/AST/Type.h"
-#include "swift/AST/Types.h"
 #include "swift/Basic/InitializeSwiftModules.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/Support/ConvertUTF.h"

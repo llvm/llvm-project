@@ -38,8 +38,6 @@ class TestIndirectEnumVariables(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def get_variable(self, name):
         x = self.frame().FindVariable(name)
@@ -56,13 +54,15 @@ class TestIndirectEnumVariables(TestBase):
             child_value=None,
             child_summary=None):
         if value:
-            self.assertTrue(
-                enum.GetValue() == value, "%s.GetValue() == %s" %
-                (enum.GetName(), value))
+            self.assertEqual(
+                enum.GetValue(), value,
+                "%s.GetValue() == %s" % (enum.GetName(), value),
+            )
         if summary:
-            self.assertTrue(
-                enum.GetSummary() == summary, "%s.GetSummary() == %s" %
-                (enum.GetName(), summary))
+            self.assertEqual(
+                enum.GetSummary(), summary,
+                "%s.GetSummary() == %s" % (enum.GetName(), summary),
+            )
 
         if child_path:
             child = enum
@@ -75,38 +75,23 @@ class TestIndirectEnumVariables(TestBase):
                 "child at path %s valid" %
                 (child_path))
             if child_value:
-                self.assertTrue(
-                    child.GetValue() == child_value, "%s.GetValue() == %s" %
-                    (child.GetName(), child_value))
+                self.assertEqual(
+                    child.GetValue(), child_value,
+                    "%s.GetValue() == %s" % (child.GetName(), child_value),
+                )
             if child_summary:
-                self.assertTrue(
-                    child.GetSummary() == child_summary, "%s.GetSummary() == %s" %
-                    (child.GetName(), child_summary))
+                self.assertEqual(
+                    child.GetSummary(), child_summary,
+                    "%s.GetSummary() == %s" % (child.GetName(), child_summary),
+                )
 
     def do_test(self, break_pattern):
         """Tests that indirect Enum variables display correctly"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            break_pattern, self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self,
+            break_pattern,
+            lldb.SBFileSpec("main.swift"),
+        )
 
         GP_StructType = self.get_variable("GP_StructType")
         GP_TupleType = self.get_variable("GP_TupleType")
