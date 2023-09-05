@@ -3067,3 +3067,72 @@ define i64 @imm64_same_lo_hi_optsize() nounwind optsize {
 ; RV64IXTHEADBB-NEXT:    ret
   ret i64 1157442765409226768 ; 0x0101010101010101
 }
+
+; Hi and lo are the same and also negative.
+define i64 @imm64_same_lo_hi_negative() nounwind {
+; RV32I-LABEL: imm64_same_lo_hi_negative:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 526344
+; RV32I-NEXT:    addi a0, a0, 128
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64-NOPOOL-LABEL: imm64_same_lo_hi_negative:
+; RV64-NOPOOL:       # %bb.0:
+; RV64-NOPOOL-NEXT:    lui a0, 983297
+; RV64-NOPOOL-NEXT:    slli a0, a0, 4
+; RV64-NOPOOL-NEXT:    addi a0, a0, 257
+; RV64-NOPOOL-NEXT:    slli a0, a0, 16
+; RV64-NOPOOL-NEXT:    addi a0, a0, 257
+; RV64-NOPOOL-NEXT:    slli a0, a0, 15
+; RV64-NOPOOL-NEXT:    addi a0, a0, 128
+; RV64-NOPOOL-NEXT:    ret
+;
+; RV64I-POOL-LABEL: imm64_same_lo_hi_negative:
+; RV64I-POOL:       # %bb.0:
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI65_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
+; RV64I-POOL-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm64_same_lo_hi_negative:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a0, 526344
+; RV64IZBA-NEXT:    addiw a0, a0, 128
+; RV64IZBA-NEXT:    slli a1, a0, 32
+; RV64IZBA-NEXT:    add.uw a0, a0, a1
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm64_same_lo_hi_negative:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a0, 983297
+; RV64IZBB-NEXT:    slli a0, a0, 4
+; RV64IZBB-NEXT:    addi a0, a0, 257
+; RV64IZBB-NEXT:    slli a0, a0, 16
+; RV64IZBB-NEXT:    addi a0, a0, 257
+; RV64IZBB-NEXT:    slli a0, a0, 15
+; RV64IZBB-NEXT:    addi a0, a0, 128
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm64_same_lo_hi_negative:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    lui a0, 983297
+; RV64IZBS-NEXT:    slli a0, a0, 4
+; RV64IZBS-NEXT:    addi a0, a0, 257
+; RV64IZBS-NEXT:    slli a0, a0, 16
+; RV64IZBS-NEXT:    addi a0, a0, 257
+; RV64IZBS-NEXT:    slli a0, a0, 15
+; RV64IZBS-NEXT:    addi a0, a0, 128
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm64_same_lo_hi_negative:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    lui a0, 983297
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 4
+; RV64IXTHEADBB-NEXT:    addi a0, a0, 257
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 16
+; RV64IXTHEADBB-NEXT:    addi a0, a0, 257
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 15
+; RV64IXTHEADBB-NEXT:    addi a0, a0, 128
+; RV64IXTHEADBB-NEXT:    ret
+  ret i64 9259542123273814144 ; 0x8080808080808080
+}
