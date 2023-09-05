@@ -87,11 +87,8 @@ rpc_status_t rpc_handle_server(uint32_t device_id);
 rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
                                    rpc_opcode_callback_ty callback, void *data);
 
-/// Obtain a pointer to the memory buffer used to run the RPC client and server.
-void *rpc_get_buffer(uint32_t device_id);
-
 /// Obtain a pointer to a local client buffer that can be copied directly to the
-/// other process.
+/// other process using the address stored at the rpc client symbol name.
 const void *rpc_get_client_buffer(uint32_t device_id);
 
 /// Returns the size of the client in bytes to be used for a memory copy.

@@ -33,13 +33,8 @@ alignas(64) char buffer[alloc_size] = {0};
 
 TEST(LlvmLibcRPCSmoke, SanityCheck) {
 
-  ProcAType ProcA;
-  ProcBType ProcB;
-
-  ProcA.reset(port_count, buffer);
-  ProcB.reset(port_count, buffer);
-
-  EXPECT_EQ(ProcA.get_buffer_start(), ProcB.get_buffer_start());
+  ProcAType ProcA(port_count, buffer);
+  ProcBType ProcB(port_count, buffer);
 
   uint64_t index = 0; // any < port_count
   uint64_t lane_mask = 1;
