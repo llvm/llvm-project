@@ -3,12 +3,16 @@ on:
 - pull_request_target
 
 jobs:
-  triage:
+  automate-prs-labels:
     permissions:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
     - uses: actions/labeler@v4
       configuration-path: .github/workflows/new-prs-labeler.yml
       sync-labels: false
+      with:
+        configuration-path: .github/workflows/new-prs-labeler.yml
+        sync-labels: false
