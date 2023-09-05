@@ -3132,9 +3132,8 @@ define double @v_rsq_f64__afn_fdiv(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64__afn_fdiv:
@@ -3203,9 +3202,8 @@ define double @v_rsq_f64__afn_fdiv(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn double 1.0, %sqrt
@@ -3279,9 +3277,8 @@ define double @v_rsq_f64__afn(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64__afn:
@@ -3350,9 +3347,8 @@ define double @v_rsq_f64__afn(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn double 1.0, %sqrt
@@ -3427,7 +3423,7 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], -1.0, v[2:3]
+; SI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -3499,7 +3495,7 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], -1.0, v[2:3]
+; VI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -3575,9 +3571,8 @@ define double @v_rsq_f64__afn_ninf(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64__afn_ninf:
@@ -3646,9 +3641,8 @@ define double @v_rsq_f64__afn_ninf(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn ninf double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn ninf double 1.0, %sqrt
@@ -3722,9 +3716,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64__afn_nnan:
@@ -3793,9 +3786,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn nnan double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn nnan double 1.0, %sqrt
@@ -3869,9 +3861,8 @@ define double @v_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64__afn_nnan_ninf:
@@ -3940,9 +3931,8 @@ define double @v_rsq_f64__afn_nnan_ninf(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn nnan ninf double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn nnan ninf double 1.0, %sqrt
@@ -4017,7 +4007,7 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], -1.0, v[2:3]
+; SI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -4089,7 +4079,7 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], -1.0, v[2:3]
+; VI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -4383,12 +4373,10 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[10:11], -v[2:3], v[6:7], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[4:5]
 ; SI-GISEL-NEXT:    v_fma_f64 v[6:7], v[10:11], v[6:7], v[6:7]
-; SI-GISEL-NEXT:    v_mul_f64 v[8:9], 1.0, v[4:5]
-; SI-GISEL-NEXT:    v_mul_f64 v[10:11], 1.0, v[6:7]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
-; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[10:11]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[6:7]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_v2f64__afn_nnan_ninf:
@@ -4506,12 +4494,10 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[10:11], -v[2:3], v[6:7], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[4:5]
 ; VI-GISEL-NEXT:    v_fma_f64 v[6:7], v[10:11], v[6:7], v[6:7]
-; VI-GISEL-NEXT:    v_mul_f64 v[8:9], 1.0, v[4:5]
-; VI-GISEL-NEXT:    v_mul_f64 v[10:11], 1.0, v[6:7]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
-; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[10:11]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[6:7]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn nnan ninf <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
   %rsq = fdiv contract afn nnan ninf <2 x double> <double 1.0, double 1.0>, %sqrt
@@ -4587,9 +4573,8 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-NEXT:    ; return to shader part epilog
@@ -4662,9 +4647,8 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-NEXT:    ; return to shader part epilog
@@ -4747,9 +4731,8 @@ define double @v_rsq_f64_unsafe(double %x) #0 {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_rsq_f64_unsafe:
@@ -4818,9 +4801,8 @@ define double @v_rsq_f64_unsafe(double %x) #0 {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], 1.0, v[2:3]
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], 1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call double @llvm.sqrt.f64(double %x)
   %rsq = fdiv double 1.0, %sqrt

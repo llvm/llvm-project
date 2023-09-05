@@ -51,6 +51,23 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyAllocToAllocaOp : Op<Transform_Dialect,
+    "apply_patterns.memref.alloc_to_alloca",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface, ["populatePatternsWithState"]>]> {
+  let description = [{
+    Collects patterns to rewrite scoped dynamic allocation (`alloc`/`dealloc`
+    pairs) into automatic allocation (`alloca`) in the same scope, for memrefs
+    of static shape.
+
+    The `size_limit` attribute controls the maximum allocated memory (in bytes,
+    subject to data layout) for which the pattern applies.
+  }];
+
+  let arguments = (ins
+    OptionalAttr<I64Attr>:$size_limit);
+  let assemblyFormat = "(`size_limit` `(` $size_limit^ `)`)? attr-dict";
+}
+
 def ApplyExpandOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.memref.expand_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

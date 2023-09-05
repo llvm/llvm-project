@@ -2566,9 +2566,8 @@ define float @v_log2_f32_undef() {
 ; GFX689-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GFX689-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4f800000
 ; GFX689-GISEL-NEXT:    v_mul_f32_e32 v1, s4, v1
-; GFX689-GISEL-NEXT:    v_mul_f32_e64 v2, s4, 1.0
 ; GFX689-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; GFX689-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX689-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX689-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX689-GISEL-NEXT:    v_mov_b32_e32 v1, 0x42000000
 ; GFX689-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
@@ -2585,10 +2584,9 @@ define float @v_log2_f32_undef() {
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_mul_f32_e64 v0, 0x4f800000, s0
-; GFX1100-GISEL-NEXT:    v_mul_f32_e64 v1, s0, 1.0
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x800000, s0
 ; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1100-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1100-GISEL-NEXT:    v_cndmask_b32_e32 v0, s0, v0, vcc_lo
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, vcc_lo
 ; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0

@@ -719,7 +719,7 @@ void PrecompiledPreamble::AddImplicitPreamble(
 void PrecompiledPreamble::OverridePreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *MainFileBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *MainFileBuffer, 0);
   configurePreamble(Bounds, CI, VFS, MainFileBuffer);
 }
 

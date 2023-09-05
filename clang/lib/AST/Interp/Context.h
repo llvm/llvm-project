@@ -72,6 +72,9 @@ public:
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
+
+  const Function *getOrCreateFunction(const FunctionDecl *FD);
+
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.
   static bool shouldBeGloballyIndexed(const ValueDecl *VD) {

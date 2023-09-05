@@ -79,6 +79,9 @@
 # mlir-neon
 /mlir/**/ArmNeon/ @llvm/pr-subscribers-mlir-neon
 
+# mlir-presburger
+/mlir/**/*Presburger @llvm/pr-subscribers-mlir-presburger
+
 # mlir-sme
 /mlir/**/ArmSME/ @llvm/pr-subscribers-mlir-sme
 
@@ -240,6 +243,8 @@
 /llvm/docs/CommandGuide/lit.rst @llvm/pr-subscribers-testing-tools
 /llvm/docs/TestingGuide.rst @llvm/pr-subscribers-testing-tools
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
+/llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
+/llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
 
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
@@ -386,8 +391,7 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
 # globalisel
 /llvm/**/GlobalISel/ @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
+/llvm/utils/TableGen/GlobalISel* @llvm/pr-subscribers-globalisel
 
 # selection-dag
 /llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
@@ -398,6 +402,29 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/lib/CodeGen/SelectionDAG/ @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/CodeGenDAG* @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/DAGISel* @llvm/pr-subscribers-selectiondag
+
+# register allocation
+/llvm/**/*RegAlloc @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/Register* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveReg* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveInterval* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveVariables* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveRange* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SlotIndexes.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/VirtRegMap.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/PHIElimination* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SplitKit* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InlineSpiller* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/ProcessImplicitDefs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RenameIndependentSubregs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InterferenceCache* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/CalcSpillWeights* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RegUsage* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/MachineCopyPropagation* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SpillPlacement* @llvm/pr-subscribers-regalloc
+/llvm/include/PBQP/ @llvm/pr-subscribers-regalloc
+/llvm/include/PBQPRAConstraint.h @llvm/pr-subscribers-regalloc
+/llvm/include/llvm/CodeGen/Spiller.h @llvm/pr-subscribers-regalloc
 
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
@@ -561,4 +588,3 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/test/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
 /llvm/unittests/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
-
