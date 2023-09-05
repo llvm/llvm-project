@@ -49,14 +49,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test0(S("abcdefghij"), "", S("abcdefghij"));
     test0(S("abcdefghij"), "12345", S("abcdefghij12345"));
     test0(S("abcdefghij"), "1234567890", S("abcdefghij1234567890"));
-    test0(S("abcdefghij"), "12345678901234567890",
-          S("abcdefghij12345678901234567890"));
+    test0(S("abcdefghij"), "12345678901234567890", S("abcdefghij12345678901234567890"));
     test0(S("abcdefghijklmnopqrst"), "", S("abcdefghijklmnopqrst"));
     test0(S("abcdefghijklmnopqrst"), "12345", S("abcdefghijklmnopqrst12345"));
-    test0(S("abcdefghijklmnopqrst"), "1234567890",
-          S("abcdefghijklmnopqrst1234567890"));
-    test0(S("abcdefghijklmnopqrst"), "12345678901234567890",
-          S("abcdefghijklmnopqrst12345678901234567890"));
+    test0(S("abcdefghijklmnopqrst"), "1234567890", S("abcdefghijklmnopqrst1234567890"));
+    test0(S("abcdefghijklmnopqrst"), "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
   }
 #if TEST_STD_VER >= 11
   {
@@ -72,19 +69,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test1(S("abcdefghij"), "", S("abcdefghij"));
     test1(S("abcdefghij"), "12345", S("abcdefghij12345"));
     test1(S("abcdefghij"), "1234567890", S("abcdefghij1234567890"));
-    test1(S("abcdefghij"), "12345678901234567890",
-          S("abcdefghij12345678901234567890"));
+    test1(S("abcdefghij"), "12345678901234567890", S("abcdefghij12345678901234567890"));
     test1(S("abcdefghijklmnopqrst"), "", S("abcdefghijklmnopqrst"));
     test1(S("abcdefghijklmnopqrst"), "12345", S("abcdefghijklmnopqrst12345"));
-    test1(S("abcdefghijklmnopqrst"), "1234567890",
-          S("abcdefghijklmnopqrst1234567890"));
-    test1(S("abcdefghijklmnopqrst"), "12345678901234567890",
-          S("abcdefghijklmnopqrst12345678901234567890"));
+    test1(S("abcdefghijklmnopqrst"), "1234567890", S("abcdefghijklmnopqrst1234567890"));
+    test1(S("abcdefghijklmnopqrst"), "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
   }
   {
-    typedef std::basic_string<char, std::char_traits<char>,
-                              min_allocator<char> >
-        S;
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
     test0(S(""), "", S(""));
     test0(S(""), "12345", S("12345"));
     test0(S(""), "1234567890", S("1234567890"));
@@ -96,14 +88,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test0(S("abcdefghij"), "", S("abcdefghij"));
     test0(S("abcdefghij"), "12345", S("abcdefghij12345"));
     test0(S("abcdefghij"), "1234567890", S("abcdefghij1234567890"));
-    test0(S("abcdefghij"), "12345678901234567890",
-          S("abcdefghij12345678901234567890"));
+    test0(S("abcdefghij"), "12345678901234567890", S("abcdefghij12345678901234567890"));
     test0(S("abcdefghijklmnopqrst"), "", S("abcdefghijklmnopqrst"));
     test0(S("abcdefghijklmnopqrst"), "12345", S("abcdefghijklmnopqrst12345"));
-    test0(S("abcdefghijklmnopqrst"), "1234567890",
-          S("abcdefghijklmnopqrst1234567890"));
-    test0(S("abcdefghijklmnopqrst"), "12345678901234567890",
-          S("abcdefghijklmnopqrst12345678901234567890"));
+    test0(S("abcdefghijklmnopqrst"), "1234567890", S("abcdefghijklmnopqrst1234567890"));
+    test0(S("abcdefghijklmnopqrst"), "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
 
     test1(S(""), "", S(""));
     test1(S(""), "12345", S("12345"));
@@ -116,14 +105,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test1(S("abcdefghij"), "", S("abcdefghij"));
     test1(S("abcdefghij"), "12345", S("abcdefghij12345"));
     test1(S("abcdefghij"), "1234567890", S("abcdefghij1234567890"));
-    test1(S("abcdefghij"), "12345678901234567890",
-          S("abcdefghij12345678901234567890"));
+    test1(S("abcdefghij"), "12345678901234567890", S("abcdefghij12345678901234567890"));
     test1(S("abcdefghijklmnopqrst"), "", S("abcdefghijklmnopqrst"));
     test1(S("abcdefghijklmnopqrst"), "12345", S("abcdefghijklmnopqrst12345"));
-    test1(S("abcdefghijklmnopqrst"), "1234567890",
-          S("abcdefghijklmnopqrst1234567890"));
-    test1(S("abcdefghijklmnopqrst"), "12345678901234567890",
-          S("abcdefghijklmnopqrst12345678901234567890"));
+    test1(S("abcdefghijklmnopqrst"), "1234567890", S("abcdefghijklmnopqrst1234567890"));
+    test1(S("abcdefghijklmnopqrst"), "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
   }
 #endif
 
