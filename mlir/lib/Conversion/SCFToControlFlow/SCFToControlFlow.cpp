@@ -303,6 +303,9 @@ struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
                                            PatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
+  if (forOp->getParentOp()->hasTrait<OpTrait::SingleBlock>())
+    return forOp->emitError(
+        "cannot lower op inside parent that expects a single block");
 
   // Start by splitting the block containing the 'scf.for' into two parts.
   // The part before will get the init code, the part after will be the end
@@ -370,6 +373,9 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
+  if (ifOp->getParentOp()->hasTrait<OpTrait::SingleBlock>())
+    return ifOp->emitError(
+        "cannot lower op inside parent that expects a single block");
 
   // Start by splitting the block containing the 'scf.if' into two parts.
   // The part before will contain the condition, the part after will be the
@@ -427,6 +433,9 @@ LogicalResult
 ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
                                        PatternRewriter &rewriter) const {
   auto loc = op.getLoc();
+  if (op->getParentOp()->hasTrait<OpTrait::SingleBlock>())
+    return op->emitError(
+        "cannot lower op inside parent that expects a single block");
 
   auto *condBlock = rewriter.getInsertionBlock();
   auto opPosition = rewriter.getInsertionPoint();
@@ -535,6 +544,9 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
                                              PatternRewriter &rewriter) const {
   OpBuilder::InsertionGuard guard(rewriter);
   Location loc = whileOp.getLoc();
+  if (whileOp->getParentOp()->hasTrait<OpTrait::SingleBlock>())
+    return whileOp->emitError(
+        "cannot lower op inside parent that expects a single block");
 
   // Split the current block before the WhileOp to create the inlining point.
   Block *currentBlock = rewriter.getInsertionBlock();
@@ -618,6 +630,10 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
 LogicalResult
 IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
                                      PatternRewriter &rewriter) const {
+  if (op->getParentOp()->hasTrait<OpTrait::SingleBlock>())
+    return op->emitError(
+        "cannot lower op inside parent that expects a single block");
+
   // Split the block at the op.
   Block *condBlock = rewriter.getInsertionBlock();
   Block *continueBlock = rewriter.splitBlock(condBlock, Block::iterator(op));

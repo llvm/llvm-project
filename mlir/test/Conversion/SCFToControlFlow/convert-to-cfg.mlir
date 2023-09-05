@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -verify-diagnostics -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -17,6 +17,8 @@ func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @simple_std_2_for_loops(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:    cf.br ^bb1(%{{.*}} : index)
@@ -48,6 +50,8 @@ func.func @simple_std_2_for_loops(%arg0 : index, %arg1 : index, %arg2 : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @simple_std_if(%{{.*}}: i1) {
 //  CHECK-NEXT:   cf.cond_br %{{.*}}, ^bb1, ^bb2
 //  CHECK-NEXT:   ^bb1:   // pred: ^bb0
@@ -61,6 +65,8 @@ func.func @simple_std_if(%arg0: i1) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @simple_std_if_else(%{{.*}}: i1) {
 //  CHECK-NEXT:   cf.cond_br %{{.*}}, ^bb1, ^bb2
@@ -80,6 +86,8 @@ func.func @simple_std_if_else(%arg0: i1) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @simple_std_2_ifs(%{{.*}}: i1) {
 //  CHECK-NEXT:   cf.cond_br %{{.*}}, ^bb1, ^bb5
@@ -107,6 +115,8 @@ func.func @simple_std_2_ifs(%arg0: i1) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @simple_std_for_loop_with_2_ifs(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: i1) {
 //  CHECK-NEXT:   cf.br ^bb1(%{{.*}} : index)
@@ -148,6 +158,8 @@ func.func @simple_std_for_loop_with_2_ifs(%arg0 : index, %arg1 : index, %arg2 : 
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @simple_if_yield
 func.func @simple_if_yield(%arg0: i1) -> (i1, i1) {
 // CHECK:   cf.cond_br %{{.*}}, ^[[then:.*]], ^[[else:.*]]
@@ -174,6 +186,8 @@ func.func @simple_if_yield(%arg0: i1) -> (i1, i1) {
 // CHECK:   return %[[arg1]], %[[arg2]]
   return %0#0, %0#1 : i1, i1
 }
+
+// -----
 
 // CHECK-LABEL: func @nested_if_yield
 func.func @nested_if_yield(%arg0: i1) -> (index) {
@@ -225,6 +239,8 @@ func.func @nested_if_yield(%arg0: i1) -> (index) {
   return %1 : index
 }
 
+// -----
+
 // CHECK-LABEL:   func @parallel_loop(
 // CHECK-SAME:                        [[VAL_0:%.*]]: index, [[VAL_1:%.*]]: index, [[VAL_2:%.*]]: index, [[VAL_3:%.*]]: index, [[VAL_4:%.*]]: index) {
 // CHECK:           [[VAL_5:%.*]] = arith.constant 1 : index
@@ -258,6 +274,8 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
+// -----
+
 // CHECK-LABEL: @for_yield
 // CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
 // CHECK:        %[[INIT0:.*]] = arith.constant 0
@@ -284,6 +302,8 @@ func.func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) 
   }
   return %result#0, %result#1 : f32, f32
 }
+
+// -----
 
 // CHECK-LABEL: @nested_for_yield
 // CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
@@ -314,7 +334,7 @@ func.func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 
   return %r : f32
 }
 
-func.func private @generate() -> i64
+// -----
 
 // CHECK-LABEL: @simple_parallel_reduce_loop
 // CHECK-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[INIT:.*]]: f32
@@ -355,6 +375,10 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   }
   return %0 : f32
 }
+
+// -----
+
+func.func private @generate() -> i64
 
 // CHECK-LABEL: parallel_reduce_loop
 // CHECK-SAME: %[[INIT1:[0-9A-Za-z_]*]]: f32)
@@ -399,6 +423,8 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   return %0#0, %0#1 : f32, i64
 }
 
+// -----
+
 // Check that the conversion is not overly conservative wrt unknown ops, i.e.
 // that the presence of unknown ops does not prevent the conversion from being
 // applied.
@@ -412,6 +438,8 @@ func.func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: @minimal_while
 func.func @minimal_while() {
@@ -434,6 +462,8 @@ func.func @minimal_while() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @do_while
 func.func @do_while(%arg0: f32) {
   // CHECK:   cf.br ^[[BEFORE:.*]]({{.*}}: f32)
@@ -452,6 +482,8 @@ func.func @do_while(%arg0: f32) {
   // CHECK:   return
   return
 }
+
+// -----
 
 // CHECK-LABEL: @while_values
 // CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: f32)
@@ -481,6 +513,8 @@ func.func @while_values(%arg0: i32, %arg1: f32) {
   // CHECK:     return
   return
 }
+
+// -----
 
 // CHECK-LABEL: @nested_while_ops
 func.func @nested_while_ops(%arg0: f32) -> i64 {
@@ -546,6 +580,8 @@ func.func @nested_while_ops(%arg0: f32) -> i64 {
   return %0 : i64
 }
 
+// -----
+
 // CHECK-LABEL: @ifs_in_parallel
 // CHECK: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: i1, %[[ARG4:.*]]: i1)
 func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5: i1) {
@@ -588,6 +624,8 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @func_execute_region_elim_multi_yield
 func.func @func_execute_region_elim_multi_yield() {
     "test.foo"() : () -> ()
@@ -621,6 +659,8 @@ func.func @func_execute_region_elim_multi_yield() {
 // CHECK:     "test.bar"(%[[z]])
 // CHECK:     return
 
+// -----
+
 // CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
@@ -647,4 +687,17 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: ^[[bb4]](%[[V:.*]]: i32
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
+}
+
+// -----
+
+func.func @parent_has_single_block(%c: i1) {
+  test.single_no_terminator_custom_asm_op {
+    // expected-error @below{{cannot lower op inside parent that expects a single block}}
+    // expected-error @below{{failed to legalize operation 'scf.if' that was explicitly marked illegal}}
+    scf.if %c {
+      "test.foo"() : () -> ()
+    }
+  }
+  return
 }
