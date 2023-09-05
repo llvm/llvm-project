@@ -438,7 +438,7 @@ void *__kmp_itt_barrier_object(int gtid, int bt, int set_name,
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= bs_last_barrier);
     // This condition is a must (we would have zero divide otherwise).
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= 2 * bs_last_barrier);
-    // More strong condition: make sure we have room at least for for two
+    // More strong condition: make sure we have room at least for two
     // different ids (for each barrier type).
     object = reinterpret_cast<void *>(
         (kmp_uintptr_t)(team) +
