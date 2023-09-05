@@ -2479,7 +2479,7 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verification for LLVM::ConstantOp.
+// ConstantOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult LLVM::ConstantOp::verify() {
@@ -2537,6 +2537,25 @@ LogicalResult LLVM::ConstantOp::verify() {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
   return success();
+}
+
+bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
+  // The value's type must be the same as the provided type.
+  auto typedAttr = llvm::dyn_cast<TypedAttr>(value);
+  if (!typedAttr || typedAttr.getType() != type || !isCompatibleType(type))
+    return false;
+  // The value's type must be an LLVM compatible type.
+  if (!isCompatibleType(type))
+    return false;
+  // TODO: Add support for additional attributes kinds once needed.
+  return llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
+}
+
+ConstantOp LLVM::ConstantOp::materialize(OpBuilder &builder, Attribute value,
+                                         Type type, Location loc) {
+  if (isBuildableWith(value, type))
+    return builder.create<LLVM::ConstantOp>(loc, cast<TypedAttr>(value));
+  return nullptr;
 }
 
 // Constant op constant-folds to its value.
@@ -3133,11 +3152,7 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
-  // TODO: Accept more possible attributes. So far, only IntegerAttr may come
-  // up.
-  if (!isa<IntegerAttr>(value))
-    return nullptr;
-  return builder.create<LLVM::ConstantOp>(loc, type, value);
+  return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 
 //===----------------------------------------------------------------------===//

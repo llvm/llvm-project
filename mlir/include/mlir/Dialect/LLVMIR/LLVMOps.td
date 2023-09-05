@@ -1562,6 +1562,17 @@ def LLVM_ConstantOp
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    /// Whether the constant op can be constructed with a particular value and
+    /// type.
+    static bool isBuildableWith(Attribute value, Type type);
+
+    /// Build the constant op with `value` and `type` if possible, otherwise
+    /// returns null.
+    static ConstantOp materialize(OpBuilder &builder, Attribute value,
+                                  Type type, Location loc);
+  }];
+
   let hasFolder = 1;
   let hasVerifier = 1;
 }

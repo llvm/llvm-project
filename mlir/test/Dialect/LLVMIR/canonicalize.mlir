@@ -9,11 +9,11 @@ llvm.func @fold_icmp_eq(%arg0 : i32) -> i1 {
 }
 
 // CHECK-LABEL: @fold_icmp_ne
-llvm.func @fold_icmp_ne(%arg0 : i32) -> i1 {
-  // CHECK: %[[C0:.*]] = llvm.mlir.constant(false) : i1
-  %0 = llvm.icmp "ne" %arg0, %arg0 : i32
+llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(dense<false> : vector<2xi1>) : vector<2xi1>
+  %0 = llvm.icmp "ne" %arg0, %arg0 : vector<2xi32>
   // CHECK: llvm.return %[[C0]]
-  llvm.return %0 : i1
+  llvm.return %0 : vector<2xi1>
 }
 
 // CHECK-LABEL: @fold_icmp_alloca
