@@ -494,6 +494,10 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
 /clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
 
+# AMDGPU
+**/*AMDGPU* @llvm/pr-subscribers-amdgpu
+**/*amdgpu* @llvm/pr-subscribers-amdgpu
+
 # DirectX
 /llvm/include/llvm/IR/IntrinsicsDirectX.td @llvm/pr-subscribers-DirectX
 /llvm/lib/Target/DirectX/ @llvm/pr-subscribers-DirectX
