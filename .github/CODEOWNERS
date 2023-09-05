@@ -400,6 +400,29 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/utils/TableGen/CodeGenDAG* @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/DAGISel* @llvm/pr-subscribers-selectiondag
 
+# register allocation
+/llvm/**/*RegAlloc @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/Register* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveReg* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveInterval* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveVariables* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveRange* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SlotIndexes.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/VirtRegMap.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/PHIElimination* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SplitKit* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InlineSpiller* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/ProcessImplicitDefs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RenameIndependentSubregs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InterferenceCache* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/CalcSpillWeights* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RegUsage* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/MachineCopyPropagation* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SpillPlacement* @llvm/pr-subscribers-regalloc
+/llvm/include/PBQP/ @llvm/pr-subscribers-regalloc
+/llvm/include/PBQPRAConstraint.h @llvm/pr-subscribers-regalloc
+/llvm/include/llvm/CodeGen/Spiller.h @llvm/pr-subscribers-regalloc
+
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
 /llvm/lib/Transforms/Utils/SCCPSolver.cpp @llvm/pr-subscribers-function-specialization
