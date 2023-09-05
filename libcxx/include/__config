@@ -452,6 +452,7 @@
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
