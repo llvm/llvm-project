@@ -178,7 +178,7 @@ ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
 /// Returns a scalar or vector boolean attribute of the given type.
 static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
   auto boolAttr = BoolAttr::get(ctx, value);
-  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  ShapedType shapedType = dyn_cast<ShapedType>(type);
   if (!shapedType)
     return boolAttr;
   return DenseElementsAttr::get(shapedType, boolAttr);
@@ -2541,14 +2541,14 @@ LogicalResult LLVM::ConstantOp::verify() {
 
 bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
   // The value's type must be the same as the provided type.
-  auto typedAttr = llvm::dyn_cast<TypedAttr>(value);
+  auto typedAttr = dyn_cast<TypedAttr>(value);
   if (!typedAttr || typedAttr.getType() != type || !isCompatibleType(type))
     return false;
   // The value's type must be an LLVM compatible type.
   if (!isCompatibleType(type))
     return false;
   // TODO: Add support for additional attributes kinds once needed.
-  return llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
+  return isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
 }
 
 ConstantOp LLVM::ConstantOp::materialize(OpBuilder &builder, Attribute value,
