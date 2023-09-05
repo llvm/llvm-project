@@ -308,6 +308,10 @@ fun:gettimeofday=custom
 fun:sprintf=custom
 fun:snprintf=custom
 
+# scanf-like
+fun:sscanf=custom
+fun:__isoc99_sscanf=custom
+
 # TODO: custom
 fun:asprintf=discard
 fun:qsort=discard

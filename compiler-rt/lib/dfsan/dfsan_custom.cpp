@@ -2240,8 +2240,13 @@ typedef int dfsan_label_va;
 // '%.3f').
 struct Formatter {
   Formatter(char *str_, const char *fmt_, size_t size_)
-      : str(str_), str_off(0), size(size_), fmt_start(fmt_), fmt_cur(fmt_),
-        width(-1) {}
+      : str(str_),
+        str_off(0),
+        size(size_),
+        fmt_start(fmt_),
+        fmt_cur(fmt_),
+        width(-1),
+        num_scanned(-1) {}
 
   int format() {
     char *tmp_fmt = build_format_string();
@@ -2266,12 +2271,50 @@ struct Formatter {
     return retval;
   }
 
-  char *build_format_string() {
+  int scan() {
+    char *tmp_fmt = build_format_string(true);
+    int read_count = 0;
+    int retval = sscanf(str + str_off, tmp_fmt, &read_count);
+    if (retval > 0) {
+      if (-1 == num_scanned)
+        num_scanned = 0;
+      num_scanned += retval;
+    }
+    free(tmp_fmt);
+    return read_count;
+  }
+
+  template <typename T>
+  int scan(T arg) {
+    char *tmp_fmt = build_format_string(true);
+    int read_count = 0;
+    int retval = sscanf(str + str_off, tmp_fmt, arg, &read_count);
+    if (retval > 0) {
+      if (-1 == num_scanned)
+        num_scanned = 0;
+      num_scanned += retval;
+    }
+    free(tmp_fmt);
+    return read_count;
+  }
+
+  // with_n -> toggles adding %n on/off; off by default
+  char *build_format_string(bool with_n = false) {
     size_t fmt_size = fmt_cur - fmt_start + 1;
-    char *new_fmt = (char *)malloc(fmt_size + 1);
+    size_t add_size = 0;
+    if (with_n)
+      add_size = 2;
+    char *new_fmt = (char *)malloc(fmt_size + 1 + add_size);
     assert(new_fmt);
     internal_memcpy(new_fmt, fmt_start, fmt_size);
-    new_fmt[fmt_size] = '\0';
+    if (!with_n) {
+      new_fmt[fmt_size] = '\0';
+    } else {
+      new_fmt[fmt_size] = '%';
+      new_fmt[fmt_size + 1] = 'n';
+      new_fmt[fmt_size + 2] = '\0';
+    }
+
     return new_fmt;
   }
 
@@ -2303,6 +2346,7 @@ struct Formatter {
   const char *fmt_start;
   const char *fmt_cur;
   int width;
+  int num_scanned;
 };
 
 // Formats the input and propagates the input labels to the output. The output
@@ -2495,6 +2539,229 @@ static int format_buffer(char *str, size_t size, const char *fmt,
   return formatter.str_off;
 }
 
+// This function is an inverse of format_buffer: we take the input buffer,
+// scan it in search for format strings and store the results in the varargs.
+// The labels are propagated from the input buffer to the varargs.
+static int scan_buffer(char *str, size_t size, const char *fmt,
+                       dfsan_label *va_labels, dfsan_label *ret_label,
+                       dfsan_origin *str_origin, dfsan_origin *ret_origin,
+                       va_list ap) {
+  Formatter formatter(str, fmt, size);
+  while (*formatter.fmt_cur) {
+    formatter.fmt_start = formatter.fmt_cur;
+    formatter.width = -1;
+    int retval = 0;
+    dfsan_label l = 0;
+    void *dst_ptr = 0;
+    size_t write_size = 0;
+    if (*formatter.fmt_cur != '%') {
+      // Ordinary character. Consume all the characters until a '%' or the end
+      // of the string.
+      for (; *(formatter.fmt_cur + 1) && *(formatter.fmt_cur + 1) != '%';
+           ++formatter.fmt_cur) {
+      }
+      retval = formatter.scan();
+      dfsan_set_label(0, formatter.str_cur(),
+                      formatter.num_written_bytes(retval));
+    } else {
+      // Conversion directive. Consume all the characters until a conversion
+      // specifier or the end of the string.
+      bool end_fmt = false;
+      for (; *formatter.fmt_cur && !end_fmt;) {
+        switch (*++formatter.fmt_cur) {
+        case 'd':
+        case 'i':
+        case 'o':
+        case 'u':
+        case 'x':
+        case 'X':
+          switch (*(formatter.fmt_cur - 1)) {
+            case 'h':
+            // Also covers the 'hh' case (since the size of the arg is still
+            // an int).
+            dst_ptr = va_arg(ap, int *);
+            retval = formatter.scan((int *)dst_ptr);
+            write_size = sizeof(int);
+            break;
+            case 'l':
+            if (formatter.fmt_cur - formatter.fmt_start >= 2 &&
+                *(formatter.fmt_cur - 2) == 'l') {
+              dst_ptr = va_arg(ap, long long int *);
+              retval = formatter.scan((long long int *)dst_ptr);
+              write_size = sizeof(long long int);
+            } else {
+              dst_ptr = va_arg(ap, long int *);
+              retval = formatter.scan((long int *)dst_ptr);
+              write_size = sizeof(long int);
+            }
+            break;
+            case 'q':
+            dst_ptr = va_arg(ap, long long int *);
+            retval = formatter.scan((long long int *)dst_ptr);
+            write_size = sizeof(long long int);
+            break;
+            case 'j':
+            dst_ptr = va_arg(ap, intmax_t *);
+            retval = formatter.scan((intmax_t *)dst_ptr);
+            write_size = sizeof(intmax_t);
+            break;
+            case 'z':
+            case 't':
+            dst_ptr = va_arg(ap, size_t *);
+            retval = formatter.scan((size_t *)dst_ptr);
+            write_size = sizeof(size_t);
+            break;
+            default:
+            dst_ptr = va_arg(ap, int *);
+            retval = formatter.scan((int *)dst_ptr);
+            write_size = sizeof(int);
+          }
+          // get the label associated with the string at the corresponding
+          // place
+          l = dfsan_read_label(formatter.str_cur(),
+                               formatter.num_written_bytes(retval));
+          if (str_origin == nullptr)
+            dfsan_set_label(l, dst_ptr, write_size);
+          else {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+          }
+          end_fmt = true;
+
+          break;
+
+        case 'a':
+        case 'A':
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'G':
+          if (*(formatter.fmt_cur - 1) == 'L') {
+            dst_ptr = va_arg(ap, long double *);
+            retval = formatter.scan((long double *)dst_ptr);
+            write_size = sizeof(long double);
+          } else if (*(formatter.fmt_cur - 1) == 'l') {
+            dst_ptr = va_arg(ap, double *);
+            retval = formatter.scan((double *)dst_ptr);
+            write_size = sizeof(double);
+          } else {
+            dst_ptr = va_arg(ap, float *);
+            retval = formatter.scan((float *)dst_ptr);
+            write_size = sizeof(float);
+          }
+          l = dfsan_read_label(formatter.str_cur(),
+                               formatter.num_written_bytes(retval));
+          if (str_origin == nullptr)
+            dfsan_set_label(l, dst_ptr, write_size);
+          else {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+          }
+          end_fmt = true;
+          break;
+
+        case 'c':
+          dst_ptr = va_arg(ap, char *);
+          retval = formatter.scan((char *)dst_ptr);
+          write_size = sizeof(char);
+          l = dfsan_read_label(formatter.str_cur(),
+                               formatter.num_written_bytes(retval));
+          if (str_origin == nullptr)
+            dfsan_set_label(l, dst_ptr, write_size);
+          else {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+          }
+          end_fmt = true;
+          break;
+
+        case 's': {
+          dst_ptr = va_arg(ap, char *);
+          retval = formatter.scan((char *)dst_ptr);
+          if (1 == retval) {
+            // special case: we have parsed a single string and we need to
+            // update retval with the string size
+            retval = strlen((char *)dst_ptr);
+          }
+          if (str_origin)
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(),
+                                      formatter.num_written_bytes(retval));
+          va_labels++;
+          dfsan_mem_shadow_transfer(dst_ptr, formatter.str_cur(),
+                                    formatter.num_written_bytes(retval));
+          end_fmt = true;
+          break;
+        }
+
+        case 'p':
+          dst_ptr = va_arg(ap, void *);
+          retval =
+              formatter.scan((int *)dst_ptr);  // note: changing void* to int*
+                                               // since we need to call sizeof
+          write_size = sizeof(int);
+
+          l = dfsan_read_label(formatter.str_cur(),
+                               formatter.num_written_bytes(retval));
+          if (str_origin == nullptr)
+            dfsan_set_label(l, dst_ptr, write_size);
+          else {
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+          }
+          end_fmt = true;
+          break;
+
+        case 'n': {
+          int *ptr = va_arg(ap, int *);
+          *ptr = (int)formatter.str_off;
+          va_labels++;
+          dfsan_set_label(0, ptr, sizeof(*ptr));
+          end_fmt = true;
+          break;
+        }
+
+        case '%':
+          retval = formatter.scan();
+          end_fmt = true;
+          break;
+
+        case '*':
+          formatter.width = va_arg(ap, int);
+          va_labels++;
+          break;
+
+        default:
+          break;
+        }
+      }
+    }
+
+    if (retval < 0) {
+      return retval;
+    }
+
+    formatter.fmt_cur++;
+    formatter.str_off += retval;
+  }
+
+  *ret_label = 0;
+  if (ret_origin)
+    *ret_origin = 0;
+
+  // Number of items scanned in total.
+  return formatter.num_scanned;
+}
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
@@ -2502,6 +2769,7 @@ int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
                    dfsan_label *ret_label, ...) {
   va_list ap;
   va_start(ap, ret_label);
+
   int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
                           nullptr, ap);
   va_end(ap);
@@ -2546,6 +2814,58 @@ int __dfso_snprintf(char *str, size_t size, const char *format,
   va_start(ap, ret_origin);
   int ret = format_buffer(str, size, format, va_labels, ret_label, va_origins,
                           ret_origin, ap);
+  va_end(ap);
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_sscanf(char *str, const char *format, dfsan_label str_label,
+                  dfsan_label format_label, dfsan_label *va_labels,
+                  dfsan_label *ret_label, ...) {
+  va_list ap;
+  va_start(ap, ret_label);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+                        nullptr, ap);
+  va_end(ap);
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_sscanf(char *str, const char *format, dfsan_label str_label,
+                  dfsan_label format_label, dfsan_label *va_labels,
+                  dfsan_label *ret_label, dfsan_origin str_origin,
+                  dfsan_origin format_origin, dfsan_origin *va_origins,
+                  dfsan_origin *ret_origin, ...) {
+  va_list ap;
+  va_start(ap, ret_origin);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, &str_origin,
+                        ret_origin, ap);
+  va_end(ap);
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw___isoc99_sscanf(char *str, const char *format, dfsan_label str_label,
+                           dfsan_label format_label, dfsan_label *va_labels,
+                           dfsan_label *ret_label, ...) {
+  va_list ap;
+  va_start(ap, ret_label);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+                        nullptr, ap);
+  va_end(ap);
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso___isoc99_sscanf(char *str, const char *format, dfsan_label str_label,
+                           dfsan_label format_label, dfsan_label *va_labels,
+                           dfsan_label *ret_label, dfsan_origin str_origin,
+                           dfsan_origin format_origin, dfsan_origin *va_origins,
+                           dfsan_origin *ret_origin, ...) {
+  va_list ap;
+  va_start(ap, ret_origin);
+  int ret = scan_buffer(str, ~0ul, format, va_labels, ret_label, &str_origin,
+                        ret_origin, ap);
   va_end(ap);
   return ret;
 }
