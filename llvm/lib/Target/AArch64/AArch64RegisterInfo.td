@@ -51,6 +51,8 @@ let Namespace = "AArch64" in {
   def zasubd1 : SubRegIndex<256>;  // (16 x 16)/8 bytes  = 256 bits
   def zasubq0 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
   def zasubq1 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
+
+  def psub : SubRegIndex<16>;
 }
 
 let Namespace = "AArch64" in {
@@ -763,23 +765,43 @@ def GPR64x8 : RegisterOperand<GPR64x8Class, "printGPR64x8"> {
 
 //===----- END: v8.7a accelerator extension register operands -------------===//
 
+// SVE predicate-as-counter registers
+  def PN0    : AArch64Reg<0,   "pn0">, DwarfRegNum<[48]>;
+  def PN1    : AArch64Reg<1,   "pn1">, DwarfRegNum<[49]>;
+  def PN2    : AArch64Reg<2,   "pn2">, DwarfRegNum<[50]>;
+  def PN3    : AArch64Reg<3,   "pn3">, DwarfRegNum<[51]>;
+  def PN4    : AArch64Reg<4,   "pn4">, DwarfRegNum<[52]>;
+  def PN5    : AArch64Reg<5,   "pn5">, DwarfRegNum<[53]>;
+  def PN6    : AArch64Reg<6,   "pn6">, DwarfRegNum<[54]>;
+  def PN7    : AArch64Reg<7,   "pn7">, DwarfRegNum<[55]>;
+  def PN8    : AArch64Reg<8,   "pn8">, DwarfRegNum<[56]>;
+  def PN9    : AArch64Reg<9,   "pn9">, DwarfRegNum<[57]>;
+  def PN10   : AArch64Reg<10, "pn10">, DwarfRegNum<[58]>;
+  def PN11   : AArch64Reg<11, "pn11">, DwarfRegNum<[59]>;
+  def PN12   : AArch64Reg<12, "pn12">, DwarfRegNum<[60]>;
+  def PN13   : AArch64Reg<13, "pn13">, DwarfRegNum<[61]>;
+  def PN14   : AArch64Reg<14, "pn14">, DwarfRegNum<[62]>;
+  def PN15   : AArch64Reg<15, "pn15">, DwarfRegNum<[63]>;
+
 // SVE predicate registers
-def P0    : AArch64Reg<0,   "p0">, DwarfRegNum<[48]>;
-def P1    : AArch64Reg<1,   "p1">, DwarfRegNum<[49]>;
-def P2    : AArch64Reg<2,   "p2">, DwarfRegNum<[50]>;
-def P3    : AArch64Reg<3,   "p3">, DwarfRegNum<[51]>;
-def P4    : AArch64Reg<4,   "p4">, DwarfRegNum<[52]>;
-def P5    : AArch64Reg<5,   "p5">, DwarfRegNum<[53]>;
-def P6    : AArch64Reg<6,   "p6">, DwarfRegNum<[54]>;
-def P7    : AArch64Reg<7,   "p7">, DwarfRegNum<[55]>;
-def P8    : AArch64Reg<8,   "p8">, DwarfRegNum<[56]>;
-def P9    : AArch64Reg<9,   "p9">, DwarfRegNum<[57]>;
-def P10   : AArch64Reg<10, "p10">, DwarfRegNum<[58]>;
-def P11   : AArch64Reg<11, "p11">, DwarfRegNum<[59]>;
-def P12   : AArch64Reg<12, "p12">, DwarfRegNum<[60]>;
-def P13   : AArch64Reg<13, "p13">, DwarfRegNum<[61]>;
-def P14   : AArch64Reg<14, "p14">, DwarfRegNum<[62]>;
-def P15   : AArch64Reg<15, "p15">, DwarfRegNum<[63]>;
+let SubRegIndices = [psub] in {
+  def P0    : AArch64Reg<0,   "p0", [PN0]>, DwarfRegAlias<PN0>;
+  def P1    : AArch64Reg<1,   "p1", [PN1]>, DwarfRegAlias<PN1>;
+  def P2    : AArch64Reg<2,   "p2", [PN2]>, DwarfRegAlias<PN2>;
+  def P3    : AArch64Reg<3,   "p3", [PN3]>, DwarfRegAlias<PN3>;
+  def P4    : AArch64Reg<4,   "p4", [PN4]>, DwarfRegAlias<PN4>;
+  def P5    : AArch64Reg<5,   "p5", [PN5]>, DwarfRegAlias<PN5>;
+  def P6    : AArch64Reg<6,   "p6", [PN6]>, DwarfRegAlias<PN6>;
+  def P7    : AArch64Reg<7,   "p7", [PN7]>, DwarfRegAlias<PN7>;
+  def P8    : AArch64Reg<8,   "p8", [PN8]>, DwarfRegAlias<PN8>;
+  def P9    : AArch64Reg<9,   "p9", [PN9]>, DwarfRegAlias<PN9>;
+  def P10   : AArch64Reg<10, "p10", [PN10]>, DwarfRegAlias<PN10>;
+  def P11   : AArch64Reg<11, "p11", [PN11]>, DwarfRegAlias<PN11>;
+  def P12   : AArch64Reg<12, "p12", [PN12]>, DwarfRegAlias<PN12>;
+  def P13   : AArch64Reg<13, "p13", [PN13]>, DwarfRegAlias<PN13>;
+  def P14   : AArch64Reg<14, "p14", [PN14]>, DwarfRegAlias<PN14>;
+  def P15   : AArch64Reg<15, "p15", [PN15]>, DwarfRegAlias<PN15>;
+}
 
 // SVE variable-size vector registers
 let SubRegIndices = [zsub] in {
@@ -842,8 +864,6 @@ class SVERegOp <string Suffix, AsmOperandClass C,
   let ParserMatchClass = C;
 }
 
-class PPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
-                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
 class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
                 RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
 
@@ -852,7 +872,7 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 // SVE predicate register classes.
 class PPRClass<int firstreg, int lastreg> : RegisterClass<
                                   "AArch64",
-                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", firstreg, lastreg)> {
   let Size = 16;
 }
@@ -870,69 +890,89 @@ class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let ParserMethod = "tryParseSVEPredicateVector<RegKind::SVEPredicateVector>";
 }
 
-def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", "PPR",  0>;
-def PPRAsmOp8   : PPRAsmOperand<"PredicateB",   "PPR",  8>;
-def PPRAsmOp16  : PPRAsmOperand<"PredicateH",   "PPR", 16>;
-def PPRAsmOp32  : PPRAsmOperand<"PredicateS",   "PPR", 32>;
-def PPRAsmOp64  : PPRAsmOperand<"PredicateD",   "PPR", 64>;
-
-def PPRAny : PPRRegOp<"",  PPRAsmOpAny, ElementSizeNone, PPR>;
-def PPR8   : PPRRegOp<"b", PPRAsmOp8,   ElementSizeB,  PPR>;
-def PPR16  : PPRRegOp<"h", PPRAsmOp16,  ElementSizeH,  PPR>;
-def PPR32  : PPRRegOp<"s", PPRAsmOp32,  ElementSizeS,  PPR>;
-def PPR64  : PPRRegOp<"d", PPRAsmOp64,  ElementSizeD,  PPR>;
-
+def PPRAsmOpAny   : PPRAsmOperand<"PredicateAny",   "PPR",     0>;
+def PPRAsmOp8     : PPRAsmOperand<"PredicateB",     "PPR",     8>;
+def PPRAsmOp16    : PPRAsmOperand<"PredicateH",     "PPR",    16>;
+def PPRAsmOp32    : PPRAsmOperand<"PredicateS",     "PPR",    32>;
+def PPRAsmOp64    : PPRAsmOperand<"PredicateD",     "PPR",    64>;
 def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b",  0>;
 
+class PPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
+                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
+
+def PPRAny   : PPRRegOp<"",  PPRAsmOpAny,   ElementSizeNone, PPR>;
+def PPR8     : PPRRegOp<"b", PPRAsmOp8,     ElementSizeB,    PPR>;
+def PPR16    : PPRRegOp<"h", PPRAsmOp16,    ElementSizeH,    PPR>;
+def PPR32    : PPRRegOp<"s", PPRAsmOp32,    ElementSizeS,    PPR>;
+def PPR64    : PPRRegOp<"d", PPRAsmOp64,    ElementSizeD,    PPR>;
 def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, ElementSizeNone, PPR_3b>;
 
+class PNRClass<int firstreg, int lastreg> : RegisterClass<
+                                  "AArch64",
+                                  [ aarch64svcount ], 16,
+                                  (sequence "PN%u", firstreg, lastreg)> {
+  let Size = 16;
+}
+
+def PNR        : PNRClass<0, 15>;
+def PNR_p8to15 : PNRClass<8, 15>;
 
 // SVE predicate-as-counter operand
-class PNRAsmOperand<string name, string RegClass, int Width>
-    : PPRAsmOperand<name, RegClass, Width> {
+class PNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
   let PredicateMethod = "isSVEPredicateAsCounterRegOfWidth<"
                             # Width # ", " # "AArch64::"
                             # RegClass # "RegClassID>";
   let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addRegOperands";
   let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
 
-class PNRRegOp<string Suffix, AsmOperandClass C, int EltSize, RegisterClass RC>
-    : PPRRegOp<Suffix, C, ElementSizeNone, RC> {
-  let PrintMethod = "printPredicateAsCounter<" # EltSize # ">";
+let RenderMethod = "addPNRasPPRRegOperands" in {
+  def PNRasPPROpAny : PNRAsmOperand<"PNRasPPRPredicateAny", "PNR",  0>;
+  def PNRasPPROp8   : PNRAsmOperand<"PNRasPPRPredicateB",   "PNR",  8>;
 }
 
-def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PPR", 0>;
-def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB", "PPR", 8>;
-def PNRAsmOp16 : PNRAsmOperand<"PNPredicateH", "PPR", 16>;
-def PNRAsmOp32 : PNRAsmOperand<"PNPredicateS", "PPR", 32>;
-def PNRAsmOp64 : PNRAsmOperand<"PNPredicateD", "PPR", 64>;
+class PNRasPPRRegOp<string Suffix, AsmOperandClass C, ElementSizeEnum Size,
+                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
 
-def PNRAny : PNRRegOp<"", PNRAsmOpAny, 0,  PPR>;
-def PNR8   : PNRRegOp<"b", PNRAsmOp8,  8,  PPR>;
-def PNR16  : PNRRegOp<"h", PNRAsmOp16, 16, PPR>;
-def PNR32  : PNRRegOp<"s", PNRAsmOp32, 32, PPR>;
-def PNR64  : PNRRegOp<"d", PNRAsmOp64, 64, PPR>;
+def PNRasPPRAny : PNRasPPRRegOp<"",  PNRasPPROpAny, ElementSizeNone, PPR>;
+def PNRasPPR8   : PNRasPPRRegOp<"b", PNRasPPROp8,   ElementSizeB,    PPR>;
 
-class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int EltSize, RegisterClass RC>
-    : PPRRegOp<Suffix, C, ElementSizeNone, RC> {
-  let PrintMethod   = "printPredicateAsCounter<" # EltSize # ">";
-  let EncoderMethod = "EncodePPR_p8to15";
-  let DecoderMethod = "DecodePPR_p8to15RegisterClass";
+def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PNR", 0>;
+def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB",   "PNR", 8>;
+def PNRAsmOp16 : PNRAsmOperand<"PNPredicateH",   "PNR", 16>;
+def PNRAsmOp32 : PNRAsmOperand<"PNPredicateS",   "PNR", 32>;
+def PNRAsmOp64 : PNRAsmOperand<"PNPredicateD",   "PNR", 64>;
+
+class PNRRegOp<string Suffix, AsmOperandClass C, int Size, RegisterClass RC>
+    : SVERegOp<Suffix, C, ElementSizeNone, RC> {
+  let PrintMethod = "printPredicateAsCounter<" # Size # ">";
+}
+def PNRAny : PNRRegOp<"",  PNRAsmOpAny, 0,  PNR>;
+def PNR8   : PNRRegOp<"b", PNRAsmOp8,   8,  PNR>;
+def PNR16  : PNRRegOp<"h", PNRAsmOp16,  16, PNR>;
+def PNR32  : PNRRegOp<"s", PNRAsmOp32,  32, PNR>;
+def PNR64  : PNRRegOp<"d", PNRAsmOp64,  64, PNR>;
+
+def PNRAsmAny_p8to15  : PNRAsmOperand<"PNPredicateAny_p8to15", "PNR_p8to15", 0>;
+def PNRAsmOp8_p8to15  : PNRAsmOperand<"PNPredicateB_p8to15",   "PNR_p8to15", 8>;
+def PNRAsmOp16_p8to15 : PNRAsmOperand<"PNPredicateH_p8to15",   "PNR_p8to15", 16>;
+def PNRAsmOp32_p8to15 : PNRAsmOperand<"PNPredicateS_p8to15",   "PNR_p8to15", 32>;
+def PNRAsmOp64_p8to15 : PNRAsmOperand<"PNPredicateD_p8to15",   "PNR_p8to15", 64>;
+
+class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int Width, RegisterClass RC>
+    : SVERegOp<Suffix, C, ElementSizeNone, RC> {
+  let PrintMethod   = "printPredicateAsCounter<" # Width # ">";
+  let EncoderMethod = "EncodePNR_p8to15";
+  let DecoderMethod = "DecodePNR_p8to15RegisterClass";
 }
 
-def PNRAsmAny_p8to15  : PNRAsmOperand<"PNPredicateAny_p8to15", "PPR_p8to15", 0>;
-def PNRAsmOp8_p8to15  : PNRAsmOperand<"PNPredicateB_p8to15",   "PPR_p8to15", 8>;
-def PNRAsmOp16_p8to15 : PNRAsmOperand<"PNPredicateH_p8to15",   "PPR_p8to15", 16>;
-def PNRAsmOp32_p8to15 : PNRAsmOperand<"PNPredicateS_p8to15",   "PPR_p8to15", 32>;
-def PNRAsmOp64_p8to15 : PNRAsmOperand<"PNPredicateD_p8to15",   "PPR_p8to15", 64>;
-
-def PNRAny_p8to15 : PNRP8to15RegOp<"",  PNRAsmAny_p8to15,  0,  PPR_p8to15>;
-def PNR8_p8to15   : PNRP8to15RegOp<"b", PNRAsmOp8_p8to15,  8,  PPR_p8to15>;
-def PNR16_p8to15  : PNRP8to15RegOp<"h", PNRAsmOp16_p8to15, 16, PPR_p8to15>;
-def PNR32_p8to15  : PNRP8to15RegOp<"s", PNRAsmOp32_p8to15, 32, PPR_p8to15>;
-def PNR64_p8to15  : PNRP8to15RegOp<"d", PNRAsmOp64_p8to15, 64, PPR_p8to15>;
-
+def PNRAny_p8to15 : PNRP8to15RegOp<"",  PNRAsmAny_p8to15,  0,  PNR_p8to15>;
+def PNR8_p8to15   : PNRP8to15RegOp<"b", PNRAsmOp8_p8to15,  8,  PNR_p8to15>;
+def PNR16_p8to15  : PNRP8to15RegOp<"h", PNRAsmOp16_p8to15, 16, PNR_p8to15>;
+def PNR32_p8to15  : PNRP8to15RegOp<"s", PNRAsmOp32_p8to15, 32, PNR_p8to15>;
+def PNR64_p8to15  : PNRP8to15RegOp<"d", PNRAsmOp64_p8to15, 64, PNR_p8to15>;
 
 let Namespace = "AArch64" in {
   def psub0 : SubRegIndex<16, -1>;
