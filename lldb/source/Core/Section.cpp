@@ -151,11 +151,8 @@ const char *Section::GetTypeAsCString() const {
     return "ctf";
   case eSectionTypeOther:
     return "regular";
-
-  // BEGIN SWIFT
   case eSectionTypeSwiftModules:
-    break;
-  // END SWIFT
+    return "swift-modules";
   }
   return "unknown";
 }
@@ -435,9 +432,6 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDebug:
     return false;
 
-#ifdef LLDB_ENABLE_SWIFT
-  case eSectionTypeSwiftModules:
-#endif
   case eSectionTypeDWARFDebugAbbrev:
   case eSectionTypeDWARFDebugAbbrevDwo:
   case eSectionTypeDWARFDebugAddr:
@@ -473,6 +467,9 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFAppleObjC:
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
+#ifdef LLDB_ENABLE_SWIFT
+  case eSectionTypeSwiftModules:
+#endif
     return true;
   }
   return false;
