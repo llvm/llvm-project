@@ -4221,7 +4221,7 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
   unsigned ShiftLeft = NumElems - SubVecNumElems;
   unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
 
-  // Do an optimization for the the most frequently used types.
+  // Do an optimization for the most frequently used types.
   if (WideOpVT != MVT::v64i1 || Subtarget.is64Bit()) {
     APInt Mask0 = APInt::getBitsSet(NumElems, IdxVal, IdxVal + SubVecNumElems);
     Mask0.flipAllBits();
