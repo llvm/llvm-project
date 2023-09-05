@@ -26,7 +26,7 @@ def CImmInstTest1 : GICombineRule<
   (match (G_CONSTANT $a, (i32 0))),
   (apply (G_CONSTANT $a, (i32 42)))>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest0,
   InstTest1,
   CImmInstTest1

@@ -92,8 +92,20 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    return this->emitDerivedToBaseCasts(getRecordTy(SubExpr->getType()),
-                                        getRecordTy(CE->getType()), CE);
+    unsigned DerivedOffset = collectBaseOffset(getRecordTy(CE->getType()),
+                                               getRecordTy(SubExpr->getType()));
+
+    return this->emitGetPtrBasePop(DerivedOffset, CE);
+  }
+
+  case CK_BaseToDerived: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    unsigned DerivedOffset = collectBaseOffset(getRecordTy(SubExpr->getType()),
+                                               getRecordTy(CE->getType()));
+
+    return this->emitGetPtrDerivedPop(DerivedOffset, CE);
   }
 
   case CK_FloatingCast: {
@@ -1290,7 +1302,15 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   assert(!classify(T));
 
   if (T->isRecordType()) {
-    const Function *Func = getFunction(E->getConstructor());
+    const CXXConstructorDecl *Ctor = E->getConstructor();
+
+    // Trivial zero initialization.
+    if (E->requiresZeroInitialization() && Ctor->isTrivial()) {
+      const Record *R = getRecord(E->getType());
+      return this->visitZeroRecordInitializer(R, E);
+    }
+
+    const Function *Func = getFunction(Ctor);
 
     if (!Func)
       return false;
@@ -1465,6 +1485,77 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
   }
   }
   llvm_unreachable("unknown primitive type");
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
+                                                          const Expr *E) {
+  assert(E);
+  assert(R);
+  // Fields
+  for (const Record::Field &Field : R->fields()) {
+    const Descriptor *D = Field.Desc;
+    if (D->isPrimitive()) {
+      QualType QT = D->getType();
+      PrimType T = classifyPrim(D->getType());
+      if (!this->visitZeroInitializer(QT, E))
+        return false;
+      if (!this->emitInitField(T, Field.Offset, E))
+        return false;
+      continue;
+    }
+
+    // TODO: Add GetPtrFieldPop and get rid of this dup.
+    if (!this->emitDupPtr(E))
+      return false;
+    if (!this->emitGetPtrField(Field.Offset, E))
+      return false;
+
+    if (D->isPrimitiveArray()) {
+      QualType ET = D->getElemQualType();
+      PrimType T = classifyPrim(ET);
+      for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
+        if (!this->visitZeroInitializer(ET, E))
+          return false;
+        if (!this->emitInitElem(T, I, E))
+          return false;
+      }
+    } else if (D->isCompositeArray()) {
+      const Record *ElemRecord = D->ElemDesc->ElemRecord;
+      assert(D->ElemDesc->ElemRecord);
+      for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
+        if (!this->emitConstUint32(I, E))
+          return false;
+        if (!this->emitArrayElemPtr(PT_Uint32, E))
+          return false;
+        if (!this->visitZeroRecordInitializer(ElemRecord, E))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    } else if (D->isRecord()) {
+      if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
+        return false;
+    } else {
+      assert(false);
+    }
+
+    if (!this->emitPopPtr(E))
+      return false;
+  }
+
+  for (const Record::Base &B : R->bases()) {
+    if (!this->emitGetPtrBase(B.Offset, E))
+      return false;
+    if (!this->visitZeroRecordInitializer(B.R, E))
+      return false;
+    if (!this->emitPopPtr(E))
+      return false;
+  }
+
+  // FIXME: Virtual bases.
+
+  return true;
 }
 
 template <class Emitter>
@@ -2262,13 +2353,15 @@ void ByteCodeExprGen<Emitter>::emitCleanup() {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitDerivedToBaseCasts(
-    const RecordType *DerivedType, const RecordType *BaseType, const Expr *E) {
-  // Pointer of derived type is already on the stack.
+unsigned
+ByteCodeExprGen<Emitter>::collectBaseOffset(const RecordType *BaseType,
+                                            const RecordType *DerivedType) {
   const auto *FinalDecl = cast<CXXRecordDecl>(BaseType->getDecl());
   const RecordDecl *CurDecl = DerivedType->getDecl();
   const Record *CurRecord = getRecord(CurDecl);
   assert(CurDecl && FinalDecl);
+
+  unsigned OffsetSum = 0;
   for (;;) {
     assert(CurRecord->getNumBases() > 0);
     // One level up
@@ -2276,21 +2369,18 @@ bool ByteCodeExprGen<Emitter>::emitDerivedToBaseCasts(
       const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
 
       if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
-        // This decl will lead us to the final decl, so emit a base cast.
-        if (!this->emitGetPtrBasePop(B.Offset, E))
-          return false;
-
+        OffsetSum += B.Offset;
         CurRecord = B.R;
         CurDecl = BaseDecl;
         break;
       }
     }
     if (CurDecl == FinalDecl)
-      return true;
+      break;
   }
 
-  llvm_unreachable("Couldn't find the base class?");
-  return false;
+  assert(OffsetSum > 0);
+  return OffsetSum;
 }
 
 /// When calling this, we have a pointer of the local-to-destroy
