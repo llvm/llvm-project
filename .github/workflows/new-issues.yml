@@ -16,7 +16,7 @@ jobs:
       - uses: github/issue-labeler@v3.2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          configuration-path: .github/workflows/new-issues-labeler.yml
+          configuration-path: .github/new-issues-labeler.yml
           include-title: 1
           include-body: 0
           sync-labels: 0
