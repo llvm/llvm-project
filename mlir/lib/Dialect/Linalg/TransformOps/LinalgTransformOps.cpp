@@ -1147,6 +1147,9 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
       if (iface == transform::MatchInterfaceEnum::TilingInterface &&
           isa<TilingInterface>(op))
         return;
+      if (iface == transform::MatchInterfaceEnum::LoopLikeInterface &&
+          !isa<LoopLikeOpInterface>(op))
+        return;
     }
 
     // Check if all specified attributes match.

@@ -148,8 +148,8 @@ define void @extract_v2i32_nxv16i32_0(<vscale x 16 x i32> %x, ptr %y) {
   ret void
 }
 
-define void @extract_v2i32_nxv16i32_8(<vscale x 16 x i32> %x, ptr %y) {
-; CHECK-LABEL: extract_v2i32_nxv16i32_8:
+define void @extract_v2i32_nxv16i32_6(<vscale x 16 x i32> %x, ptr %y) {
+; CHECK-LABEL: extract_v2i32_nxv16i32_6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6
