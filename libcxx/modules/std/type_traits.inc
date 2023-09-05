@@ -53,7 +53,9 @@ export namespace std {
   using std::is_volatile;
 
   using std::is_bounded_array;
+#if _LIBCPP_STD_VER >= 23
   using std::is_scoped_enum;
+#endif
   using std::is_signed;
   using std::is_unbounded_array;
   using std::is_unsigned;
@@ -255,7 +257,9 @@ export namespace std {
   using std::is_nothrow_swappable_v;
   using std::is_nothrow_swappable_with_v;
   using std::is_polymorphic_v;
+#if _LIBCPP_STD_VER >= 23
   using std::is_scoped_enum_v;
+#endif
   using std::is_signed_v;
   using std::is_standard_layout_v;
   using std::is_swappable_v;
