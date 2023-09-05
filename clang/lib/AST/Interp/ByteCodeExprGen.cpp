@@ -2081,9 +2081,12 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
 
     if (T == PT_Ptr) {
-      this->emitLoadPtr(E);
-      this->emitConstUint8(1, E);
-      this->emitAddOffsetUint8(E);
+      if (!this->emitLoadPtr(E))
+        return false;
+      if (!this->emitConstUint8(1, E))
+        return false;
+      if (!this->emitAddOffsetUint8(E))
+        return false;
       return DiscardResult ? this->emitStorePopPtr(E) : this->emitStorePtr(E);
     }
 
@@ -2096,14 +2099,20 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
     if (T == PT_Float) {
       const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
-      this->emitLoadFloat(E);
-      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
-      this->emitAddf(getRoundingMode(E), E);
+      if (!this->emitLoadFloat(E))
+        return false;
+      if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
+        return false;
+      if (!this->emitAddf(getRoundingMode(E), E))
+        return false;
       return this->emitStoreFloat(E);
     }
-    this->emitLoad(*T, E);
-    this->emitConst(1, E);
-    this->emitAdd(*T, E);
+    if (!this->emitLoad(*T, E))
+      return false;
+    if (!this->emitConst(1, E))
+      return false;
+    if (!this->emitAdd(*T, E))
+      return false;
     return this->emitStore(*T, E);
   }
   case UO_PreDec: { // --x
@@ -2111,9 +2120,12 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
 
     if (T == PT_Ptr) {
-      this->emitLoadPtr(E);
-      this->emitConstUint8(1, E);
-      this->emitSubOffsetUint8(E);
+      if (!this->emitLoadPtr(E))
+        return false;
+      if (!this->emitConstUint8(1, E))
+        return false;
+      if (!this->emitSubOffsetUint8(E))
+        return false;
       return DiscardResult ? this->emitStorePopPtr(E) : this->emitStorePtr(E);
     }
 
@@ -2126,14 +2138,20 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
     if (T == PT_Float) {
       const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
-      this->emitLoadFloat(E);
-      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
-      this->emitSubf(getRoundingMode(E), E);
+      if (!this->emitLoadFloat(E))
+        return false;
+      if (!this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E))
+        return false;
+      if (!this->emitSubf(getRoundingMode(E), E))
+        return false;
       return this->emitStoreFloat(E);
     }
-    this->emitLoad(*T, E);
-    this->emitConst(1, E);
-    this->emitSub(*T, E);
+    if (!this->emitLoad(*T, E))
+      return false;
+    if (!this->emitConst(1, E))
+      return false;
+    if (!this->emitSub(*T, E))
+      return false;
     return this->emitStore(*T, E);
   }
   case UO_LNot: // !x
