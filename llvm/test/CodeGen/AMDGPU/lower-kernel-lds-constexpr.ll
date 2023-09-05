@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@lds.1 = internal unnamed_addr addrspace(3) global [2 x i8] undef, align 1
+@lds.1 = internal unnamed_addr addrspace(3) global [2 x i8] poison, align 1
 
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [2 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [2 x i8] }
@@ -14,13 +14,13 @@
 
 ; Use constant from different kernels
 ;.
-; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t undef, align 2
-; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t undef, align 2
-; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t undef, align 4
-; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t undef, align 16
-; CHECK: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t undef, align 2
-; CHECK: @llvm.amdgcn.kernel.k5.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k5.lds.t undef, align 16
-; CHECK: @llvm.amdgcn.kernel.k6.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k6.lds.t undef, align 16
+; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 2
+; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 2
+; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t poison, align 4
+; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 16
+; CHECK: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 2
+; CHECK: @llvm.amdgcn.kernel.k5.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k5.lds.t poison, align 16
+; CHECK: @llvm.amdgcn.kernel.k6.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k6.lds.t poison, align 16
 ;.
 define amdgpu_kernel void @k0(i64 %x) {
 ; CHECK-LABEL: @k0(
@@ -46,7 +46,7 @@ define amdgpu_kernel void @k1(i64 %x) {
   ret void
 }
 
-@lds.2 = internal unnamed_addr addrspace(3) global i32 undef, align 4
+@lds.2 = internal unnamed_addr addrspace(3) global i32 poison, align 4
 
 ; Use constant twice from the same kernel
 define amdgpu_kernel void @k2(i64 %x) {
@@ -60,7 +60,7 @@ define amdgpu_kernel void @k2(i64 %x) {
   ret void
 }
 
-@lds.3 = internal unnamed_addr addrspace(3) global [32 x i8] undef, align 1
+@lds.3 = internal unnamed_addr addrspace(3) global [32 x i8] poison, align 1
 
 ; Use constant twice from the same kernel but a different other constant.
 define amdgpu_kernel void @k3(i64 %x) {
@@ -93,20 +93,20 @@ define amdgpu_kernel void @k4(i64 %x) {
   ret void
 }
 
-@lds.4 = internal unnamed_addr addrspace(3) global [505 x i32] undef, align 4
+@lds.4 = internal unnamed_addr addrspace(3) global [505 x i32] poison, align 4
 
 ; Multiple constexpr use in a same instruction.
 define amdgpu_kernel void @k5() {
 ; CHECK-LABEL: @k5(
 ; CHECK-NEXT:  %1 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.k5.lds to ptr
 ; CHECK-NEXT:  %2 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.k5.lds to ptr
-; CHECK-NEXT:  call void undef(ptr %1, ptr %2)
+; CHECK-NEXT:  call void poison(ptr %1, ptr %2)
 ;
-  call void undef(ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr), ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr))
+  call void poison(ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr), ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr))
   ret void
 }
 
-@lds.5 = internal addrspace(3) global [4 x i32] undef, align 4
+@lds.5 = internal addrspace(3) global [4 x i32] poison, align 4
 
 ; Both the *value* and *pointer* operands of store instruction are constant expressions, and
 ; both of these constant expression paths use same lds - @lds.5. Hence both of these constant
