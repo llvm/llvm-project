@@ -598,9 +598,6 @@ public:
   /// The input buffer for the API notes data.
   llvm::MemoryBuffer *InputBuffer;
 
-  /// Whether we own the input buffer.
-  bool OwnsInputBuffer;
-
   /// The Swift version to use for filtering.
   VersionTuple SwiftVersion;
 
@@ -1634,7 +1631,6 @@ bool APINotesReader::Implementation::readTypedefBlock(
 }
 
 APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer, 
-                               bool ownsInputBuffer,
                                VersionTuple swiftVersion,
                                bool &failed) 
   : Impl(*new Implementation)
@@ -1643,7 +1639,6 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
 
   // Initialize the input buffer.
   Impl.InputBuffer = inputBuffer;
-  Impl.OwnsInputBuffer = ownsInputBuffer;
   Impl.SwiftVersion = swiftVersion;
   llvm::BitstreamCursor cursor(*Impl.InputBuffer);
 
@@ -1794,9 +1789,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
 }
 
 APINotesReader::~APINotesReader() {
-  if (Impl.OwnsInputBuffer)
-    delete Impl.InputBuffer;
-
+  delete Impl.InputBuffer;
   delete &Impl;
 }
 
@@ -1805,21 +1798,7 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
                     VersionTuple swiftVersion) {
   bool failed = false;
   std::unique_ptr<APINotesReader> 
-    reader(new APINotesReader(inputBuffer.release(), /*ownsInputBuffer=*/true,
-                              swiftVersion, failed));
-  if (failed)
-    return nullptr;
-
-  return reader;
-}
-
-std::unique_ptr<APINotesReader> 
-APINotesReader::getUnmanaged(llvm::MemoryBuffer *inputBuffer,
-                             VersionTuple swiftVersion) {
-  bool failed = false;
-  std::unique_ptr<APINotesReader> 
-    reader(new APINotesReader(inputBuffer, /*ownsInputBuffer=*/false,
-                              swiftVersion, failed));
+    reader(new APINotesReader(inputBuffer.release(), swiftVersion, failed));
   if (failed)
     return nullptr;
 
