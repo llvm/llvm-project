@@ -362,6 +362,13 @@ struct LinalgPromotionOptions {
     alignment = align;
     return *this;
   }
+  /// Memory space of promoted buffer. If `std::nullopt` do not specify memory
+  /// space.
+  std::optional<Attribute> memorySpace;
+  LinalgPromotionOptions &setMemorySpace(Attribute memorySpc) {
+    memorySpace = memorySpc;
+    return *this;
+  }
   /// Use alloca with the default allocation scheme.
   bool useAlloca = false;
   LinalgPromotionOptions &setUseAlloca(bool use) {
