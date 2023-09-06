@@ -549,6 +549,16 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
       {
           R"cpp(
             namespace std {
+             template<class ExecutionPolicy, class ForwardIt1, class ForwardIt2>
+             ForwardIt2 move(ExecutionPolicy&& policy,
+                 ForwardIt1 first, ForwardIt1 last, ForwardIt2 d_first);
+            })cpp",
+          "move",
+          "<algorithm>",
+      },
+      {
+          R"cpp(
+            namespace std {
               template<typename T> constexpr T move(T&& t) noexcept;
             })cpp",
           "move",
