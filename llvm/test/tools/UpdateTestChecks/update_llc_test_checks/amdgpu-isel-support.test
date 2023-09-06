@@ -1,7 +1,3 @@
-# # XFAIL: *
-#
-# TODO: Fails in amd-mi400 merge, to be fixed
-#
 # REQUIRES: asserts
 # REQUIRES: amdgpu-registered-target
 ## Basic test checking that update_llc_test_checks.py can update a file with isel debug output
