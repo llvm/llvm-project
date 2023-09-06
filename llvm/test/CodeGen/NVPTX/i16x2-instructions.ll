@@ -69,11 +69,11 @@ define i16 @test_extract_i(<2 x i16> %a, i64 %idx) #0 {
 ;
 ; I16x2-NEXT:  add.s16x2   [[R:%r[0-9]+]], [[A]], [[B]];
 ;
-;	NO-I16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
-;	NO-I16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	NO-I16x2-DAG: add.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
-;	NO-I16x2-DAG: add.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
-;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
+; NO-I16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
+; NO-I16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
+; NO-I16x2-DAG: add.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+; NO-I16x2-DAG: add.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
+; NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; COMMON-NEXT: ret;
