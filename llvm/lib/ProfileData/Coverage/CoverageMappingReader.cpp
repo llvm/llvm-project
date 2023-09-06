@@ -68,7 +68,8 @@ Error RawCoverageReader::readULEB128(uint64_t &Result) {
   unsigned N = 0;
   Result = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the size of ULEB128 is too big");
   Data = Data.substr(N);
   return Error::success();
 }
@@ -77,7 +78,9 @@ Error RawCoverageReader::readIntMax(uint64_t &Result, uint64_t MaxPlus1) {
   if (auto Err = readULEB128(Result))
     return Err;
   if (Result >= MaxPlus1)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the value of ULEB128 is greater than or equal to MaxPlus1");
   return Error::success();
 }
 
@@ -85,7 +88,8 @@ Error RawCoverageReader::readSize(uint64_t &Result) {
   if (auto Err = readULEB128(Result))
     return Err;
   if (Result > Data.size())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the value of ULEB128 is too big");
   return Error::success();
 }
 
@@ -103,7 +107,8 @@ Error RawCoverageFilenamesReader::read(CovMapVersion Version) {
   if (auto Err = readSize(NumFilenames))
     return Err;
   if (!NumFilenames)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "number of filenames is zero");
 
   if (Version < CovMapVersion::Version4)
     return readUncompressed(Version, NumFilenames);
@@ -201,13 +206,15 @@ Error RawCoverageMappingReader::decodeCounter(unsigned Value, Counter &C) {
   case CounterExpression::Add: {
     auto ID = Value >> Counter::EncodingTagBits;
     if (ID >= Expressions.size())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "counter expression is invalid");
     Expressions[ID].Kind = CounterExpression::ExprKind(Tag);
     C = Counter::getExpression(ID);
     break;
   }
   default:
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "counter expression kind is invalid");
   }
   return Error::success();
 }
@@ -268,7 +275,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
         ExpandedFileID = EncodedCounterAndRegion >>
                          Counter::EncodingCounterTagAndExpansionRegionTagBits;
         if (ExpandedFileID >= NumFileIDs)
-          return make_error<CoverageMapError>(coveragemap_error::malformed);
+          return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                              "ExpandedFileID is invalid");
       } else {
         switch (EncodedCounterAndRegion >>
                 Counter::EncodingCounterTagAndExpansionRegionTagBits) {
@@ -287,7 +295,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           break;
         default:
-          return make_error<CoverageMapError>(coveragemap_error::malformed);
+          return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                              "region kind is incorrect");
         }
       }
     }
@@ -300,7 +309,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     if (auto Err = readULEB128(ColumnStart))
       return Err;
     if (ColumnStart > std::numeric_limits<unsigned>::max())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "start column is too big");
     if (auto Err = readIntMax(NumLines, std::numeric_limits<unsigned>::max()))
       return Err;
     if (auto Err = readIntMax(ColumnEnd, std::numeric_limits<unsigned>::max()))
@@ -341,7 +351,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
                                     LineStart, ColumnStart,
                                     LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "counter mapping region locations are incorrect");
     MappingRegions.push_back(CMR);
   }
   return Error::success();
@@ -613,7 +625,9 @@ public:
     using namespace support;
 
     if (CovBuf + sizeof(CovMapHeader) > CovBufEnd)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "coverage mapping header section is larger than buffer size");
     auto CovHeader = reinterpret_cast<const CovMapHeader *>(CovBuf);
     uint32_t NRecords = CovHeader->getNRecords<Endian>();
     uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
@@ -634,7 +648,9 @@ public:
 
     // Get the filenames.
     if (CovBuf + FilenamesSize > CovBufEnd)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "filenames section is larger than buffer size");
     size_t FilenamesBegin = Filenames.size();
     StringRef FilenameRegion(CovBuf, FilenamesSize);
     RawCoverageFilenamesReader Reader(FilenameRegion, Filenames,
@@ -673,12 +689,15 @@ public:
     // coverage header).
     const char *MappingBuf = CovBuf;
     if (Version >= CovMapVersion::Version4 && CoverageSize != 0)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "coverage mapping size is not zero");
     CovBuf += CoverageSize;
     const char *MappingEnd = CovBuf;
 
     if (CovBuf > CovBufEnd)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "function records section is larger than buffer size");
 
     if (Version < CovMapVersion::Version4) {
       // Read each function record.
@@ -707,7 +726,9 @@ public:
           CFR->template advanceByOne<Endian>(OutOfLineMappingBuf);
       if (Version < CovMapVersion::Version4)
         if (NextMappingBuf > OutOfLineMappingBufEnd)
-          return make_error<CoverageMapError>(coveragemap_error::malformed);
+          return make_error<CoverageMapError>(
+              coveragemap_error::malformed,
+              "next mapping buffer is larger than buffer size");
 
       // Look up the set of filenames associated with this function record.
       std::optional<FilenameRange> FileRange;
@@ -717,7 +738,10 @@ public:
         uint64_t FilenamesRef = CFR->template getFilenamesRef<Endian>();
         auto It = FileRangeMap.find(FilenamesRef);
         if (It == FileRangeMap.end())
-          return make_error<CoverageMapError>(coveragemap_error::malformed);
+          return make_error<CoverageMapError>(
+              coveragemap_error::malformed,
+              "no filename found for function with hash=0x" +
+                  Twine::utohexstr(FilenamesRef));
         else
           FileRange = It->getSecond();
       }
@@ -728,7 +752,9 @@ public:
             CFR->template getCoverageMapping<Endian>(OutOfLineMappingBuf);
         if (Version >= CovMapVersion::Version4 &&
             Mapping.data() + Mapping.size() > FuncRecBufEnd)
-          return make_error<CoverageMapError>(coveragemap_error::malformed);
+          return make_error<CoverageMapError>(
+              coveragemap_error::malformed,
+              "coverage mapping data is larger than buffer size");
         if (Error Err = insertFunctionRecordIfNeeded(CFR, Mapping, *FileRange))
           return Err;
       }
@@ -854,7 +880,9 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
             Reader->MappingRecords, CompilationDir, Reader->Filenames))
       return std::move(E);
   } else
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "not supported endianness or bytes in address");
   return std::move(Reader);
 }
 
@@ -866,7 +894,8 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   // Read the magic and version.
   Data = Data.substr(sizeof(TestingFormatMagic));
   if (Data.size() < sizeof(uint64_t))
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the size of data is too small");
   auto TestingVersion =
       support::endian::byte_swap<uint64_t, support::endianness::little>(
           *reinterpret_cast<const uint64_t *>(Data.data()));
@@ -878,17 +907,21 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   unsigned N = 0;
   uint64_t ProfileNamesSize = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the size of TestingFormatMagic is too big");
   Data = Data.substr(N);
   if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   N = 0;
   uint64_t Address = decodeULEB128(Data.bytes_begin(), &N);
   if (N > Data.size())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the size of ULEB128 is too big");
   Data = Data.substr(N);
   if (Data.size() < ProfileNamesSize)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the size of ProfileNames is too big");
   InstrProfSymtab ProfileNames;
   if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
@@ -900,10 +933,13 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     N = 0;
     CoverageMappingSize = decodeULEB128(Data.bytes_begin(), &N);
     if (N > Data.size())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "the size of ULEB128 is too big");
     Data = Data.substr(N);
     if (CoverageMappingSize < sizeof(CovMapHeader))
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "the size of CoverageMapping is teoo small");
   } else if (TestingVersion != uint64_t(TestingFormatVersion::Version1)) {
     return make_error<CoverageMapError>(coveragemap_error::unsupported_version);
   }
@@ -911,10 +947,13 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   // Skip the padding bytes because coverage map data has an alignment of 8.
   auto Pad = offsetToAlignedAddr(Data.data(), Align(8));
   if (Data.size() < Pad)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "insufficient padding");
   Data = Data.substr(Pad);
   if (Data.size() < sizeof(CovMapHeader))
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "coverage mapping header section is larger than data size");
   auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
       Data.substr(0, sizeof(CovMapHeader)).data());
   auto Version =
@@ -937,13 +976,15 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   // Read the CoverageRecords data.
   if (Version < CovMapVersion::Version4) {
     if (!Data.empty())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "data is not empty");
   } else {
     // Skip the padding bytes because coverage records data has an alignment
     // of 8.
     Pad = offsetToAlignedAddr(Data.data(), Align(8));
     if (Data.size() < Pad)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "insufficient padding");
     Data = Data.substr(Pad);
   }
   BinaryCoverageReader::FuncRecordsStorage CoverageRecords =
@@ -1000,7 +1041,8 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       return errorCodeToError(object_error::arch_not_found);
   } else
     // We can only handle object files.
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "binary is not an object file");
 
   // The coverage uses native pointer sizes for the object it's written in.
   uint8_t BytesInAddress = OF->getBytesInAddress();
@@ -1022,7 +1064,8 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     return std::move(E);
   std::vector<SectionRef> CoverageSectionRefs = *CoverageSection;
   if (CoverageSectionRefs.size() != 1)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "the size of name section is not one");
   auto CoverageMappingOrErr = CoverageSectionRefs.back().getContents();
   if (!CoverageMappingOrErr)
     return CoverageMappingOrErr.takeError();
@@ -1031,7 +1074,9 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   InstrProfSymtab ProfileNames;
   std::vector<SectionRef> NamesSectionRefs = *NamesSection;
   if (NamesSectionRefs.size() != 1)
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the size of coverage mapping section is not one");
   if (Error E = ProfileNames.create(NamesSectionRefs.back()))
     return std::move(E);
 
