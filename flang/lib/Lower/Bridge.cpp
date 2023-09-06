@@ -383,6 +383,19 @@ public:
       declareFunction(f);
   }
 
+  /// Get the scope that is defining or using \p sym. The returned scope is not
+  /// the ultimate scope, since this helper does not traverse use association.
+  /// This allows capturing module variables that are referenced in an internal
+  /// procedure but whose use statement is inside the host program.
+  const Fortran::semantics::Scope &
+  getSymbolHostScope(const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol *hostSymbol = &sym;
+    while (const auto *details =
+               hostSymbol->detailsIf<Fortran::semantics::HostAssocDetails>())
+      hostSymbol = &details->symbol();
+    return hostSymbol->owner();
+  }
+
   /// Collects the canonical list of all host associated symbols. These bindings
   /// must be aggregated into a tuple which can then be added to each of the
   /// internal procedure declarations and passed at each call site.
@@ -399,12 +412,12 @@ public:
       if (ultimate.has<Fortran::semantics::ObjectEntityDetails>() ||
           Fortran::semantics::IsProcedurePointer(ultimate) ||
           Fortran::semantics::IsDummy(sym) || namelistDetails) {
-        const Fortran::semantics::Scope &ultimateScope = ultimate.owner();
-        if (ultimateScope.kind() ==
+        const Fortran::semantics::Scope &symbolScope = getSymbolHostScope(sym);
+        if (symbolScope.kind() ==
                 Fortran::semantics::Scope::Kind::MainProgram ||
-            ultimateScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
-          if (ultimateScope != *internalScope &&
-              ultimateScope.Contains(*internalScope)) {
+            symbolScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
+          if (symbolScope != *internalScope &&
+              symbolScope.Contains(*internalScope)) {
             if (namelistDetails) {
               // So far, namelist symbols are processed on the fly in IO and
               // the related namelist data structure is not added to the symbol

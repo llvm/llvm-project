@@ -94,7 +94,7 @@ subroutine host5()
   implicit none
   call internal_proc_a()
 contains
-! CHECK-LABEL: func @_QFhost5Pinternal_proc_a() {
+! CHECK-LABEL: func @_QFhost5Pinternal_proc_a() attributes {fir.internal_proc} {
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
