@@ -2427,12 +2427,11 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   SmallVector<SDValue> VecElements;
   for (int I = 0, E = Op.getValueType().getVectorNumElements(); I < E; I++) {
     SmallVector<SDValue> ScalarArgs;
-    for (int J = 0, NumOp = Op.getNumOperands(); J < NumOp; J++) {
-      SDValue Ext =
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Op->getOperand(J),
-                      DAG.getIntPtrConstant(I, DL));
-      ScalarArgs.push_back(Ext);
-    }
+    llvm::transform(Op->ops(), std::back_inserter(ScalarArgs),
+                    [&](const SDUse &O) {
+                      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT,
+                                         O.get(), DAG.getIntPtrConstant(I, DL));
+                    });
     VecElements.push_back(DAG.getNode(Op.getOpcode(), DL, EltVT, ScalarArgs));
   }
   SDValue V =

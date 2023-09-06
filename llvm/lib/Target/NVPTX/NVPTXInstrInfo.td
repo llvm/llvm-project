@@ -3305,24 +3305,16 @@ def : Pat<(i32 (trunc (srl Int64Regs:$s, (i32 32)))),
 def : Pat<(i32 (trunc (sra Int64Regs:$s, (i32 32)))),
           (I64toI32H Int64Regs:$s)>;
 
-def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 0)),
+foreach vt = [v2f16, v2bf16, v2i16] in {
+def : Pat<(extractelt (vt Int32Regs:$src), 0),
           (I32toI16L Int32Regs:$src)>;
-def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 1)),
+def : Pat<(extractelt (vt Int32Regs:$src), 1),
           (I32toI16H Int32Regs:$src)>;
+}
 def : Pat<(v2f16 (build_vector (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
-
-def : Pat<(bf16 (extractelt (v2bf16 Int32Regs:$src), 0)),
-          (I32toI16L Int32Regs:$src)>;
-def : Pat<(bf16 (extractelt (v2bf16 Int32Regs:$src), 1)),
-          (I32toI16H Int32Regs:$src)>;
 def : Pat<(v2bf16 (build_vector (bf16 Int16Regs:$a), (bf16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
-
-def : Pat<(i16 (extractelt (v2i16 Int32Regs:$src), 0)),
-          (I32toI16L Int32Regs:$src)>;
-def : Pat<(i16 (extractelt (v2i16 Int32Regs:$src), 1)),
-          (I32toI16H Int32Regs:$src)>;
 def : Pat<(v2i16 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 
