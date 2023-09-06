@@ -120,6 +120,7 @@
 
 # mlir-llvm
 /mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVMIR/ @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
 /mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
