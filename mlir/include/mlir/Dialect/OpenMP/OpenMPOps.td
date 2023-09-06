@@ -20,6 +20,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 
@@ -1366,7 +1367,8 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
 // value of the clause) here decomposes handling of this construct into a
 // two-step process.
 
-def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
+def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
+                                            AtomicReadOpInterface]> {
 
   let summary = "performs an atomic read";
 
@@ -1412,17 +1414,17 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
   }];
 }
 
-def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+def AtomicWriteOp : OpenMP_Op<"atomic.write", [AtomicWriteOpInterface]> {
 
   let summary = "performs an atomic write";
 
   let description = [{
     This operation performs an atomic write.
 
-    The operand `address` is the address to where the `value` is atomically
-    written w.r.t. multiple threads. The evaluation of `value` need not be
-    atomic w.r.t. the write to address. In general, the type(address) must
-    dereference to type(value).
+    The operand `x` is the address to where the `expr` is atomically
+    written w.r.t. multiple threads. The evaluation of `expr` need not be
+    atomic w.r.t. the write to address. In general, the type(x) must
+    dereference to type(expr).
 
     `hint` is the value of hint (as specified in the hint clause). It is a
     compile time constant. As the name suggests, this is just a hint for
@@ -1432,37 +1434,38 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
     can be one of `seq_cst`, `release` or `relaxed`.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$address,
-                       AnyType:$value,
+  let arguments = (ins OpenMP_PointerLikeType:$x,
+                       AnyType:$expr,
                        DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
-    $address `=` $value
+    $x `=` $expr
     oilist( `hint` `(` custom<SynchronizationHint>($hint_val) `)`
           | `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`)
-    `:` type($address) `,` type($value)
+    `:` type($x) `,` type($expr)
     attr-dict
   }];
   let hasVerifier = 1;
   let extraClassDeclaration = [{
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
-      assert(getAddress() && "expected address operand");
-      assert(getValue() && "expected value operand");
+      assert(getX() && "expected address operand");
+      assert(getExpr() && "expected value operand");
       return 2;
     }
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
       assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getAddress() : getValue();
+      return i == 0 ? getX() : getExpr();
     }
   }];
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
                                [SingleBlockImplicitTerminator<"YieldOp">,
-                                RecursiveMemoryEffects]> {
+                                RecursiveMemoryEffects,
+                                AtomicUpdateOpInterface]> {
 
   let summary = "performs an atomic update";
 
@@ -1510,18 +1513,6 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   let hasRegionVerifier = 1;
   let hasCanonicalizeMethod = 1;
   let extraClassDeclaration = [{
-    Operation* getFirstOp() {
-      return &getRegion().front().getOperations().front();
-    }
-
-    /// Returns true if the new value is same as old value and the operation is
-    /// a no-op, false otherwise.
-    bool isNoOp();
-
-    /// Returns the new value if the operation is equivalent to just a write
-    /// operation. Otherwise, returns nullptr.
-    Value getWriteOpVal();
-
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
       assert(getX() && "expected 'x' operand");
@@ -1537,7 +1528,8 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
 }
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
-    [SingleBlockImplicitTerminator<"TerminatorOp">]> {
+    [SingleBlockImplicitTerminator<"TerminatorOp">,
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
   let summary = "performs an atomic capture";
   let description = [{
     This operation performs an atomic capture.
@@ -1583,12 +1575,6 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
   let hasRegionVerifier = 1;
   let hasVerifier = 1;
   let extraClassDeclaration = [{
-    /// Returns the first operation in atomic capture region
-    Operation* getFirstOp();
-
-    /// Returns the second operation in atomic capture region
-    Operation* getSecondOp();
-
     /// Returns the `atomic.read` operation inside the region, if any.
     /// Otherwise, it returns nullptr.
     AtomicReadOp getAtomicReadOp();

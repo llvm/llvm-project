@@ -40,6 +40,7 @@ Getting Started with libc++
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   ImplementationDefinedBehavior
    Modules
    Hardening
    ReleaseProcedure
@@ -193,6 +194,7 @@ Design Documents
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/UnspecifiedBehaviorRandomization
    DesignDocs/VisibilityMacros
+   DesignDocs/TimeZone
 
 
 Build Bots and Test Coverage

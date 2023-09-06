@@ -226,6 +226,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert 
+  same include header multiple times.
+
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).

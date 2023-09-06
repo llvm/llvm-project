@@ -692,6 +692,7 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.IndirectCallTable =
       reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
   DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
+  DeviceEnvironment.HardwareParallelism = getHardwareParallelism();
 
   // Create the metainfo of the device environment global.
   GlobalTy DevEnvGlobal("__omp_rtl_device_environment",

@@ -1750,15 +1750,21 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
   return true;
 }
 
-bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr) {
-  const char *UnicodePtr = CurPtr;
+bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result) {
   llvm::UTF32 CodePoint;
-  llvm::ConversionResult Result =
-      llvm::convertUTF8Sequence((const llvm::UTF8 **)&UnicodePtr,
-                                (const llvm::UTF8 *)BufferEnd,
-                                &CodePoint,
-                                llvm::strictConversion);
-  if (Result != llvm::conversionOK)
+
+  // If a UTF-8 codepoint appears immediately after an escaped new line,
+  // CurPtr may point to the splicing \ on the preceding line,
+  // so we need to skip it.
+  unsigned FirstCodeUnitSize;
+  getCharAndSize(CurPtr, FirstCodeUnitSize);
+  const char *CharStart = CurPtr + FirstCodeUnitSize - 1;
+  const char *UnicodePtr = CharStart;
+
+  llvm::ConversionResult ConvResult = llvm::convertUTF8Sequence(
+      (const llvm::UTF8 **)&UnicodePtr, (const llvm::UTF8 *)BufferEnd,
+      &CodePoint, llvm::strictConversion);
+  if (ConvResult != llvm::conversionOK)
     return false;
 
   bool IsExtension = false;
@@ -1771,21 +1777,26 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr) {
         !PP->isPreprocessedOutput())
       diagnoseInvalidUnicodeCodepointInIdentifier(
           PP->getDiagnostics(), LangOpts, CodePoint,
-          makeCharRange(*this, CurPtr, UnicodePtr), /*IsFirst=*/false);
+          makeCharRange(*this, CharStart, UnicodePtr), /*IsFirst=*/false);
     // We got a unicode codepoint that is neither a space nor a
     // a valid identifier part. Carry on as if the codepoint was
     // valid for recovery purposes.
   } else if (!isLexingRawMode()) {
     if (IsExtension)
-      diagnoseExtensionInIdentifier(PP->getDiagnostics(), CodePoint,
-                                    makeCharRange(*this, CurPtr, UnicodePtr));
+      diagnoseExtensionInIdentifier(
+          PP->getDiagnostics(), CodePoint,
+          makeCharRange(*this, CharStart, UnicodePtr));
     maybeDiagnoseIDCharCompat(PP->getDiagnostics(), CodePoint,
-                              makeCharRange(*this, CurPtr, UnicodePtr),
+                              makeCharRange(*this, CharStart, UnicodePtr),
                               /*IsFirst=*/false);
     maybeDiagnoseUTF8Homoglyph(PP->getDiagnostics(), CodePoint,
-                               makeCharRange(*this, CurPtr, UnicodePtr));
+                               makeCharRange(*this, CharStart, UnicodePtr));
   }
 
+  // Once we sucessfully parsed some UTF-8,
+  // calling ConsumeChar ensures the NeedsCleaning flag is set on the token
+  // being lexed, and that warnings about trailing spaces are emitted.
+  ConsumeChar(CurPtr, FirstCodeUnitSize, Result);
   CurPtr = UnicodePtr;
   return true;
 }
@@ -1865,7 +1876,7 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
     }
     if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
       continue;
-    if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr))
+    if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
       continue;
     // Neither an expected Unicode codepoint nor a UCN.
     break;
@@ -1985,7 +1996,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   // If we have a UCN or UTF-8 character (perhaps in a ud-suffix), continue.
   if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
     return LexNumericConstant(Result, CurPtr);
-  if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr))
+  if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
     return LexNumericConstant(Result, CurPtr);
 
   // Update the location of token as well as BufferPtr.
@@ -2009,7 +2020,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   if (!isAsciiIdentifierStart(C)) {
     if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
       Consumed = true;
-    else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr))
+    else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
       Consumed = true;
     else
       return CurPtr;
@@ -2079,7 +2090,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
     if (isAsciiIdentifierContinue(C)) {
       CurPtr = ConsumeChar(CurPtr, Size, Result);
     } else if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result)) {
-    } else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr)) {
+    } else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result)) {
     } else
       break;
   }
