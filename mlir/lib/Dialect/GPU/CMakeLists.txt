@@ -58,6 +58,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SerializeToBlob.cpp
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
+  Transforms/SerializeToSPIRV.cpp
   Transforms/ShuffleRewriter.cpp
   Transforms/ROCDLAttachTarget.cpp
 

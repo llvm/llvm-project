@@ -187,4 +187,8 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
   ];
 }
 
+def GpuSerializeToSPIRVPass : Pass<"gpu-serialize-to-spirv", "ModuleOp"> {
+  let summary = "Serialize spirv dialect to spirv binary";
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES
