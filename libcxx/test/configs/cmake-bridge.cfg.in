@@ -31,3 +31,4 @@ config.substitutions.append(('%{lib-dir}', '@LIBCXX_TESTING_INSTALL_PREFIX@/@LIB
 config.substitutions.append(('%{module-dir}', '@LIBCXX_TESTING_INSTALL_PREFIX@/@LIBCXX_INSTALL_MODULES_DIR@'))
 config.substitutions.append(('%{test-tools-dir}', '@LIBCXX_TEST_TOOLS_PATH@'))
 config.substitutions.append(('%{benchmark_flags}', '-I @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/include -L @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/lib -L @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/lib64 -l benchmark'))
+config.substitutions.append(('%{check-output}', os.path.join('@LIBCXX_BINARY_DIR@', 'bin/check_output') + " %s"))

@@ -36,8 +36,6 @@ private:
         clang::CharSourceRange::getTokenRange(condition_range),
         preprocessor_.getSourceManager(),
         preprocessor_.getLangOpts());
-    if (preprocessor_.getSourceManager().isInMainFile(location))
-      return;
 
     if (condition == "__cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)")
       return;
