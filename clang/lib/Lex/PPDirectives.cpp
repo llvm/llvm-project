@@ -491,7 +491,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   llvm::SaveAndRestore SARSkipping(SkippingExcludedConditionalBlock, true);
 
   ++NumSkipped;
-  assert(!CurTokenLexer && CurPPLexer && "Lexing a macro, not a file?");
+  assert(!CurTokenLexer && "Conditional PP block cannot appear in a macro!");
+  assert(CurPPLexer && "Conditional PP block must be in a file!");
+  assert(CurLexer && "Conditional PP block but no current lexer set!");
 
   if (PreambleConditionalStack.reachedEOFWhileSkipping())
     PreambleConditionalStack.clearSkipInfo();

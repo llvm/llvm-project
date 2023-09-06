@@ -101,8 +101,8 @@ public:
   CompilerInvocationRefBase &operator=(CompilerInvocationRefBase &&X);
   ~CompilerInvocationRefBase();
 
-  LangOptions *getLangOpts() { return LangOpts.get(); }
-  const LangOptions *getLangOpts() const { return LangOpts.get(); }
+  LangOptions &getLangOpts() { return *LangOpts; }
+  const LangOptions &getLangOpts() const { return *LangOpts; }
 
   TargetOptions &getTargetOpts() { return *TargetOpts.get(); }
   const TargetOptions &getTargetOpts() const { return *TargetOpts.get(); }
@@ -129,7 +129,8 @@ public:
     return *PreprocessorOpts;
   }
 
-  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
+  AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
+  const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
 };
 
 /// The base class of CompilerInvocation with value semantics.

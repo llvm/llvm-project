@@ -1145,7 +1145,10 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
           !isa<LinalgOp>(op))
         return;
       if (iface == transform::MatchInterfaceEnum::TilingInterface &&
-          isa<TilingInterface>(op))
+          !isa<TilingInterface>(op))
+        return;
+      if (iface == transform::MatchInterfaceEnum::LoopLikeInterface &&
+          !isa<LoopLikeOpInterface>(op))
         return;
     }
 

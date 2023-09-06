@@ -520,6 +520,12 @@ in their code base.
 In C++26 formatting pointers gained a type ``P`` and allows to use
 zero-padding. These options have been retroactively applied to C++20.
 
+Extensions to the C++23 modules ``std`` and ``std.compat``
+----------------------------------------------------------
+
+Like other major implementations, libc++ provides C++23 modules ``std`` and
+``std.compat`` in C++20 as an extension"
+
 .. _turning-off-asan:
 
 Turning off ASan annotation in containers

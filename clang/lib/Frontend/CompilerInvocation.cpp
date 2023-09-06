@@ -135,12 +135,12 @@ CompilerInvocationRefBase::CompilerInvocationRefBase()
 
 CompilerInvocationRefBase::CompilerInvocationRefBase(
     const CompilerInvocationRefBase &X)
-    : LangOpts(new LangOptions(*X.getLangOpts())),
+    : LangOpts(new LangOptions(X.getLangOpts())),
       TargetOpts(new TargetOptions(X.getTargetOpts())),
       DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
       HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
       PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())),
-      AnalyzerOpts(new AnalyzerOptions(*X.getAnalyzerOpts())) {}
+      AnalyzerOpts(new AnalyzerOptions(X.getAnalyzerOpts())) {}
 
 CompilerInvocationRefBase::CompilerInvocationRefBase(
     CompilerInvocationRefBase &&X) = default;
@@ -461,7 +461,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
                             InputKind IK) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  LangOptions &LangOpts = *Invocation.getLangOpts();
+  LangOptions &LangOpts = Invocation.getLangOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -4365,7 +4365,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
                                      MissingArgCount, VisibilityMask);
-  LangOptions &LangOpts = *Res.getLangOpts();
+  LangOptions &LangOpts = Res.getLangOpts();
 
   // Check for missing argument error.
   if (MissingArgCount)
@@ -4385,7 +4385,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
-  ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
@@ -4446,7 +4446,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
-      !Res.getLangOpts()->Sanitize.empty()) {
+      !Res.getLangOpts().Sanitize.empty()) {
     Res.getCodeGenOpts().FineGrainedBitfieldAccesses = false;
     Diags.Report(diag::warn_drv_fine_grained_bitfield_accesses_ignored);
   }
@@ -4617,12 +4617,12 @@ std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
 }
 
 void CompilerInvocation::resetNonModularOptions() {
-  getLangOpts()->resetNonModularOptions();
+  getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {
-  getLangOpts()->ImplicitModules = false;
+  getLangOpts().ImplicitModules = false;
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;

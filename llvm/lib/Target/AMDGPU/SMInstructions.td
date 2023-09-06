@@ -829,12 +829,12 @@ class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ ret
 }
 
 def smrd_load : SMRDLoadPat<load>;
-def smrd_extloadi8 : SMRDLoadPat<extloadi8_constant>;
-def smrd_zextloadi8 : SMRDLoadPat<zextloadi8_constant>;
-def smrd_sextloadi8 : SMRDLoadPat<sextloadi8_constant>;
-def smrd_extloadi16 : SMRDLoadPat<extloadi16_constant>;
-def smrd_zextloadi16 : SMRDLoadPat<zextloadi16_constant>;
-def smrd_sextloadi16 : SMRDLoadPat<sextloadi16_constant>;
+def smrd_extloadi8 : SMRDLoadPat<extloadi8>;
+def smrd_zextloadi8 : SMRDLoadPat<zextloadi8>;
+def smrd_sextloadi8 : SMRDLoadPat<sextloadi8>;
+def smrd_extloadi16 : SMRDLoadPat<extloadi16>;
+def smrd_zextloadi16 : SMRDLoadPat<zextloadi16>;
+def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),

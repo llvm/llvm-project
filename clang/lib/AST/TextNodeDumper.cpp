@@ -16,6 +16,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
@@ -792,11 +793,11 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " '" << NNS->getAsIdentifier()->getName() << "'";
       break;
     case NestedNameSpecifier::Namespace:
-      OS << " Namespace";
+      OS << " "; // "Namespace" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespace());
       break;
     case NestedNameSpecifier::NamespaceAlias:
-      OS << " NamespaceAlias";
+      OS << " "; // "NamespaceAlias" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespaceAlias());
       break;
     case NestedNameSpecifier::TypeSpec:

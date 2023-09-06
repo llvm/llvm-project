@@ -709,13 +709,18 @@ class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
   /// Each VPRecipe belongs to a single VPBasicBlock.
   VPBasicBlock *Parent = nullptr;
 
+  /// The debug location for the recipe.
+  DebugLoc DL;
+
 public:
-  VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands)
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe) {}
+  VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
+               DebugLoc DL = {})
+      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
 
   template <typename IterT>
-  VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands)
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe) {}
+  VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands,
+               DebugLoc DL = {})
+      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
   virtual ~VPRecipeBase() = default;
 
   /// \return the VPBasicBlock which this VPRecipe belongs to.
@@ -792,6 +797,9 @@ public:
   bool mayReadOrWriteMemory() const {
     return mayReadFromMemory() || mayWriteToMemory();
   }
+
+  /// Returns the debug location of the recipe.
+  DebugLoc getDebugLoc() const { return DL; }
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -862,15 +870,15 @@ private:
 
 public:
   template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands)
-      : VPRecipeBase(SC, Operands) {
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL) {
     OpType = OperationType::Other;
     AllFlags = 0;
   }
 
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, Instruction &I)
-      : VPRecipeWithIRFlags(SC, Operands) {
+      : VPRecipeWithIRFlags(SC, Operands, I.getDebugLoc()) {
     if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
@@ -891,20 +899,20 @@ public:
 
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      CmpInst::Predicate Pred)
-      : VPRecipeBase(SC, Operands), OpType(OperationType::Cmp),
+                      CmpInst::Predicate Pred, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), OpType(OperationType::Cmp),
         CmpPredicate(Pred) {}
 
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      WrapFlagsTy WrapFlags)
-      : VPRecipeBase(SC, Operands), OpType(OperationType::OverflowingBinOp),
+                      WrapFlagsTy WrapFlags, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), OpType(OperationType::OverflowingBinOp),
         WrapFlags(WrapFlags) {}
 
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
-                      FastMathFlags FMFs)
-      : VPRecipeBase(SC, Operands), OpType(OperationType::FPMathOp),
+                      FastMathFlags FMFs, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -1030,7 +1038,6 @@ public:
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
-  DebugLoc DL;
 
   /// An optional name that can be used for the generated IR instruction.
   const std::string Name;
@@ -1053,8 +1060,8 @@ protected:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands), VPValue(this),
-        Opcode(Opcode), DL(DL), Name(Name.str()) {}
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
+        VPValue(this), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 DebugLoc DL = {}, const Twine &Name = "")
@@ -1065,8 +1072,8 @@ public:
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags),
-        VPValue(this), Opcode(Opcode), DL(DL), Name(Name.str()) {}
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
+        VPValue(this), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
@@ -1238,7 +1245,8 @@ public:
 struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenSelectSC, Operands), VPValue(this, &I) {}
+      : VPRecipeBase(VPDef::VPWidenSelectSC, Operands, I.getDebugLoc()),
+        VPValue(this, &I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -1324,8 +1332,8 @@ public:
 class VPHeaderPHIRecipe : public VPRecipeBase, public VPValue {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start = nullptr)
-      : VPRecipeBase(VPDefID, {}), VPValue(this, UnderlyingInstr) {
+                    VPValue *Start = nullptr, DebugLoc DL = {})
+      : VPRecipeBase(VPDefID, {}, DL), VPValue(this, UnderlyingInstr) {
     if (Start)
       addOperand(Start);
   }
@@ -1607,14 +1615,13 @@ public:
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
 class VPBlendRecipe : public VPRecipeBase, public VPValue {
-  PHINode *Phi;
-
 public:
   /// The blend operation is a User of the incoming values and of their
   /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
   /// might be incoming with a full mask for which there is no VPValue.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
-      : VPRecipeBase(VPDef::VPBlendSC, Operands), VPValue(this, Phi), Phi(Phi) {
+      : VPRecipeBase(VPDef::VPBlendSC, Operands, Phi->getDebugLoc()),
+        VPValue(this, Phi) {
     assert(Operands.size() > 0 &&
            ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
            "Expected either a single incoming value or a positive even number "
@@ -2047,11 +2054,9 @@ public:
 /// loop). VPWidenCanonicalIVRecipe represents the vector version of the
 /// canonical induction variable.
 class VPCanonicalIVPHIRecipe : public VPHeaderPHIRecipe {
-  DebugLoc DL;
-
 public:
   VPCanonicalIVPHIRecipe(VPValue *StartV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPCanonicalIVPHISC, nullptr, StartV), DL(DL) {}
+      : VPHeaderPHIRecipe(VPDef::VPCanonicalIVPHISC, nullptr, StartV, DL) {}
 
   ~VPCanonicalIVPHIRecipe() override = default;
 
@@ -2094,12 +2099,10 @@ public:
 /// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
 /// remove VPActiveLaneMaskPHIRecipe.
 class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
-  DebugLoc DL;
-
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPActiveLaneMaskPHISC, nullptr, StartMask),
-        DL(DL) {}
+      : VPHeaderPHIRecipe(VPDef::VPActiveLaneMaskPHISC, nullptr, StartMask,
+                          DL) {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 

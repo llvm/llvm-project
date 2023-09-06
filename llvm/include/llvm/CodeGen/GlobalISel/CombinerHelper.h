@@ -453,9 +453,13 @@ public:
   /// equivalent instructions.
   bool matchEqualDefs(const MachineOperand &MOP1, const MachineOperand &MOP2);
 
-  /// Return true if \p MOP is defined by a G_CONSTANT with a value equal to
+  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value equal to
   /// \p C.
   bool matchConstantOp(const MachineOperand &MOP, int64_t C);
+
+  /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
+  /// equal to \p C.
+  bool matchConstantFPOp(const MachineOperand &MOP, double C);
 
   /// Optimize (cond ? x : x) -> x
   bool matchSelectSameVal(MachineInstr &MI);
@@ -786,6 +790,12 @@ public:
 
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
+
+  /// Match constant LHS FP ops that should be commuted.
+  bool matchCommuteFPConstantToRHS(MachineInstr &MI);
+
+  // Given a binop \p MI, commute operands 1 and 2.
+  void applyCommuteBinOpOperands(MachineInstr &MI);
 
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that

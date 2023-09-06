@@ -1185,11 +1185,11 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                  });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
-  Invocation->getLangOpts()->ModuleName =
-      ImportingInstance.getInvocation().getLangOpts()->ModuleName;
+  Invocation->getLangOpts().ModuleName =
+      ImportingInstance.getInvocation().getLangOpts().ModuleName;
 
   // Note the name of the module we're building.
-  Invocation->getLangOpts()->CurrentModule = std::string(ModuleName);
+  Invocation->getLangOpts().CurrentModule = std::string(ModuleName);
 
   // Make sure that the failed-module structure has been allocated in
   // the importing instance, and propagate the pointer to the newly-created
@@ -2175,7 +2175,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   FrontendInputFile Input(
       ModuleMapFileName,
-      InputKind(getLanguageFromOptions(*Invocation->getLangOpts()),
+      InputKind(getLanguageFromOptions(Invocation->getLangOpts()),
                 InputKind::ModuleMap, /*Preprocessed*/true));
 
   std::string NullTerminatedSource(Source.str());

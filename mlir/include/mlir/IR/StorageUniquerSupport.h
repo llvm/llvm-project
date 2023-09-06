@@ -163,7 +163,8 @@ public:
 
     // Handle the case where the models resolve a promised interface.
     (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
-         abstract->getDialect(), IfaceModels::Interface::getInterfaceID()),
+         abstract->getDialect(), abstract->getTypeID(),
+         IfaceModels::Interface::getInterfaceID()),
      ...);
 
     (checkInterfaceTarget<IfaceModels>(), ...);

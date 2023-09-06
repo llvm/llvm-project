@@ -10,7 +10,9 @@
 export namespace std {
   // [func.invoke], invoke
   using std::invoke;
+#if _LIBCPP_STD_VER >= 23
   using std::invoke_r;
+#endif
 
   // [refwrap], reference_wrapper
   using std::reference_wrapper;

@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -3516,6 +3517,51 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
 
+  // Cap the cost at a value linear to the number of elements in the vector.
+  // The default lowering is to use the stack.  The vector store + scalar loads
+  // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
+  // being (at least) linear in LMUL.  As a result, using the vslidedown
+  // lowering for every element ends up being VL*LMUL..
+  // TODO: Should we be directly costing the stack alternative?  Doing so might
+  // give us a more accurate upper bound.
+  InstructionCost LinearBudget = VT.getVectorNumElements() * 2;
+
+  // TODO: unify with TTI getSlideCost.
+  InstructionCost PerSlideCost = 1;
+  switch (RISCVTargetLowering::getLMUL(ContainerVT)) {
+  default: break;
+  case RISCVII::VLMUL::LMUL_2:
+    PerSlideCost = 2;
+    break;
+  case RISCVII::VLMUL::LMUL_4:
+    PerSlideCost = 4;
+    break;
+  case RISCVII::VLMUL::LMUL_8:
+    PerSlideCost = 8;
+    break;
+  }
+
+  // TODO: Should we be using the build instseq then cost + evaluate scheme
+  // we use for integer constants here?
+  unsigned UndefCount = 0;
+  for (const SDValue &V : Op->ops()) {
+    if (V.isUndef()) {
+      UndefCount++;
+      continue;
+    }
+    if (UndefCount) {
+      LinearBudget -= PerSlideCost;
+      UndefCount = 0;
+    }
+    LinearBudget -= PerSlideCost;
+  }
+  if (UndefCount) {
+    LinearBudget -= PerSlideCost;
+  }
+
+  if (LinearBudget < 0)
+    return SDValue();
+
   assert((!VT.isFloatingPoint() ||
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
          "Illegal type which will result in reserved encoding");
@@ -3523,7 +3569,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   const unsigned Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
 
   SDValue Vec = DAG.getUNDEF(ContainerVT);
-  unsigned UndefCount = 0;
+  UndefCount = 0;
   for (const SDValue &V : Op->ops()) {
     if (V.isUndef()) {
       UndefCount++;
