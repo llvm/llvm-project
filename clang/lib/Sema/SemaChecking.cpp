@@ -13710,13 +13710,9 @@ static bool IsSameFloatAfterCast(const APValue &value,
           IsSameFloatAfterCast(value.getComplexFloatImag(), Src, Tgt));
 }
 
-static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
-                                       bool IsListInit = false);
-
 static bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
-  if (const DeclRefExpr *DR =
-      dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+  if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
     if (isa<EnumConstantDecl>(DR->getDecl()))
       return true;
 
@@ -14043,28 +14039,61 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   return true;
 }
 
+namespace {
+struct AnalyzeImplicitConversionsWorkItem {
+  Expr *E;
+  SourceLocation CC;
+  unsigned IsListInit : 1;
+  unsigned IsTopLevelExpr : 1;
+};
+
+class ImplicitConversionChecker {
+  Sema &S;
+  Expr *TopLevelExpr;
+
+  void AnalyzeCompoundAssignment(BinaryOperator *E);
+  void AnalyzeImplicitConversions(
+      AnalyzeImplicitConversionsWorkItem Item,
+      llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList);
+  void AnalyzeImpConvsInComparison(BinaryOperator *E);
+  void AnalyzeComparison(BinaryOperator *E);
+  void AnalyzeAssignment(BinaryOperator *E);
+  void CheckConditionalOperand(Expr *E, QualType T, SourceLocation CC,
+                               bool &ICContext);
+  void CheckConditionalOperator(AbstractConditionalOperator *E,
+                                SourceLocation CC, QualType T);
+
+public:
+  ImplicitConversionChecker(Sema &S) : S(S), TopLevelExpr(nullptr) {}
+
+  void AnalyzeImplicitConversions(Expr *E, SourceLocation CC,
+                                  bool IsInitList = false,
+                                  bool IsTopLevelExpr = false);
+};
+} // namespace
+
 /// Analyze the operands of the given comparison.  Implements the
 /// fallback case from AnalyzeComparison.
-static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E) {
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+void ImplicitConversionChecker::AnalyzeImpConvsInComparison(BinaryOperator *E) {
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, false);
+  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(), false, false);
 }
 
 /// Implements -Wsign-compare.
 ///
 /// \param E the binary operator to check for warnings
-static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
+void ImplicitConversionChecker::AnalyzeComparison(BinaryOperator *E) {
   // The type the comparison is being performed in.
   QualType T = E->getLHS()->getType();
 
   // Only analyze comparison operators where both sides have been converted to
   // the same type.
   if (!S.Context.hasSameUnqualifiedType(T, E->getRHS()->getType()))
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(E);
 
   // Don't analyze value-dependent comparisons directly.
   if (E->isValueDependent())
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(E);
 
   Expr *LHS = E->getLHS();
   Expr *RHS = E->getRHS();
@@ -14077,7 +14106,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
     // We don't care about expressions whose result is a constant.
     if (RHSValue && LHSValue)
-      return AnalyzeImpConvsInComparison(S, E);
+      return AnalyzeImpConvsInComparison(E);
 
     // We only care about expressions where just one side is literal
     if ((bool)RHSValue ^ (bool)LHSValue) {
@@ -14090,7 +14119,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
       // Check whether an integer constant comparison results in a value
       // of 'true' or 'false'.
       if (CheckTautologicalComparison(S, E, Const, Other, Value, RhsConstant))
-        return AnalyzeImpConvsInComparison(S, E);
+        return AnalyzeImpConvsInComparison(E);
     }
   }
 
@@ -14098,7 +14127,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     // We don't do anything special if this isn't an unsigned integral
     // comparison:  we're only interested in integral comparisons, and
     // signed comparisons only happen in cases we don't care to warn about.
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(E);
   }
 
   LHS = LHS->IgnoreParenImpCasts();
@@ -14126,7 +14155,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     signedOperand = RHS;
     unsignedOperand = LHS;
   } else {
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(E);
   }
 
   // Otherwise, calculate the effective range of the signed operand.
@@ -14135,8 +14164,8 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
-  AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc());
+  AnalyzeImplicitConversions(LHS, E->getOperatorLoc(), false, false);
+  AnalyzeImplicitConversions(RHS, E->getOperatorLoc(), false, false);
 
   // If the signed range is non-negative, -Wsign-compare won't fire.
   if (signedRange.NonNegative)
@@ -14160,10 +14189,55 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
       return;
   }
 
-  S.DiagRuntimeBehavior(E->getOperatorLoc(), E,
-                        S.PDiag(diag::warn_mixed_sign_comparison)
-                            << LHS->getType() << RHS->getType()
-                            << LHS->getSourceRange() << RHS->getSourceRange());
+  // For `S < U`, propose something like `S < 0 || (typeof(U))S < U`.
+  // The whole operation needs to have no side effects, since the signed
+  // operand will be duplicated, and the unsigned operand might not execute
+  // anymore.
+  auto MixedSignDiag = S.PDiag(diag::warn_mixed_sign_comparison)
+                       << (signedOperand == RHS) << signedOperand->getType()
+                       << T << signedOperand->getSourceRange();
+  if (!E->HasSideEffects(S.Context)) {
+    bool ParenthesizeCheck =
+        !TopLevelExpr || E != TopLevelExpr->IgnoreImplicit();
+    std::string Prefix;
+    llvm::raw_string_ostream PrefixS(Prefix);
+    if (ParenthesizeCheck)
+      PrefixS << '(';
+    auto TokRange =
+        CharSourceRange::getTokenRange(signedOperand->getSourceRange());
+    bool Invalid;
+    PrefixS << Lexer::getSourceText(TokRange, S.SourceMgr, S.getLangOpts(),
+                                    &Invalid);
+    if (!Invalid) {
+      bool ParenthesizeForCast = isa<BinaryOperator>(signedOperand) ||
+                                 isa<ConditionalOperator>(signedOperand);
+      bool IsSignedLHS = signedOperand == LHS;
+      bool IsLTOrLE = E->getOpcode() == BO_LT || E->getOpcode() == BO_LE;
+      bool IsGTOrGE = E->getOpcode() == BO_GT || E->getOpcode() == BO_GE;
+      if ((IsSignedLHS && IsLTOrLE) || (!IsSignedLHS && IsGTOrGE)) {
+        PrefixS << " < 0 || (";
+      } else {
+        PrefixS << " >= 0 && (";
+      }
+      PrefixS << T.getAsString(S.getLangOpts());
+      PrefixS << ")";
+      if (ParenthesizeForCast)
+        PrefixS << "(";
+      PrefixS.flush();
+      MixedSignDiag << FixItHint::CreateInsertion(LHS->getBeginLoc(), Prefix);
+      if (ParenthesizeForCast) {
+        SourceLocation EndLoc = S.getLocForEndOfToken(LHS->getEndLoc());
+        MixedSignDiag << FixItHint::CreateInsertion(EndLoc, ")");
+      }
+      if (ParenthesizeCheck) {
+        SourceLocation EndLoc = S.getLocForEndOfToken(RHS->getEndLoc());
+        MixedSignDiag << FixItHint::CreateInsertion(EndLoc, ")");
+      }
+    }
+  }
+  S.DiagRuntimeBehavior(E->getOperatorLoc(), E, MixedSignDiag);
+  S.DiagRuntimeBehavior(LHS->getBeginLoc(), E,
+                        S.PDiag(diag::note_treat_negative_as_smaller));
 }
 
 /// Analyzes an attempt to assign the given value to a bitfield.
@@ -14308,9 +14382,9 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 
 /// Analyze the given simple or compound assignment for warning-worthy
 /// operations.
-static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
+void ImplicitConversionChecker::AnalyzeAssignment(BinaryOperator *E) {
   // Just recurse on the LHS.
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, true);
 
   // We want to recurse on the RHS as normal unless we're assigning to
   // a bitfield.
@@ -14318,12 +14392,12 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
     if (AnalyzeBitFieldAssignment(S, Bitfield, E->getRHS(),
                                   E->getOperatorLoc())) {
       // Recurse, ignoring any implicit conversions on the RHS.
-      return AnalyzeImplicitConversions(S, E->getRHS()->IgnoreParenImpCasts(),
-                                        E->getOperatorLoc());
+      return AnalyzeImplicitConversions(E->getRHS()->IgnoreParenImpCasts(),
+                                        E->getOperatorLoc(), false, true);
     }
   }
 
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(), false, true);
 
   // Diagnose implicitly sequentially-consistent atomic assignment.
   if (E->getLHS()->getType()->isAtomicType())
@@ -14490,12 +14564,12 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
 
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
-static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
+void ImplicitConversionChecker::AnalyzeCompoundAssignment(BinaryOperator *E) {
   assert(isa<CompoundAssignOperator>(E) &&
          "Must be compound assignment operation");
   // Recurse on the LHS and RHS in here
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, true);
+  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(), false, true);
 
   if (E->getLHS()->getType()->isAtomicType())
     S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
@@ -15277,35 +15351,33 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       }
 }
 
-static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T);
-
-static void CheckConditionalOperand(Sema &S, Expr *E, QualType T,
-                                    SourceLocation CC, bool &ICContext) {
+void ImplicitConversionChecker::CheckConditionalOperand(Expr *E, QualType T,
+                                                        SourceLocation CC,
+                                                        bool &ICContext) {
   E = E->IgnoreParenImpCasts();
   // Diagnose incomplete type for second or third operand in C.
   if (!S.getLangOpts().CPlusPlus && E->getType()->isRecordType())
     S.RequireCompleteExprType(E, diag::err_incomplete_type);
 
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
-    return CheckConditionalOperator(S, CO, CC, T);
+    return CheckConditionalOperator(CO, CC, T);
 
-  AnalyzeImplicitConversions(S, E, CC);
+  AnalyzeImplicitConversions(E, CC, false, true);
   if (E->getType() != T)
     return CheckImplicitConversion(S, E, T, CC, &ICContext);
 }
 
-static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T) {
-  AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc());
+void ImplicitConversionChecker::CheckConditionalOperator(
+    AbstractConditionalOperator *E, SourceLocation CC, QualType T) {
+  AnalyzeImplicitConversions(E->getCond(), E->getQuestionLoc(), false, true);
 
   Expr *TrueExpr = E->getTrueExpr();
   if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
     TrueExpr = BCO->getCommon();
 
   bool Suspicious = false;
-  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious);
-  CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
+  CheckConditionalOperand(TrueExpr, T, CC, Suspicious);
+  CheckConditionalOperand(E->getFalseExpr(), T, CC, Suspicious);
 
   if (T->isBooleanType())
     DiagnoseIntInBoolContext(S, E);
@@ -15340,21 +15412,15 @@ static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
   CheckImplicitConversion(S, E->IgnoreParenImpCasts(), S.Context.BoolTy, CC);
 }
 
-namespace {
-struct AnalyzeImplicitConversionsWorkItem {
-  Expr *E;
-  SourceLocation CC;
-  bool IsListInit;
-};
-}
-
 /// Data recursive variant of AnalyzeImplicitConversions. Subexpressions
 /// that should be visited are added to WorkList.
-static void AnalyzeImplicitConversions(
-    Sema &S, AnalyzeImplicitConversionsWorkItem Item,
+void ImplicitConversionChecker::AnalyzeImplicitConversions(
+    AnalyzeImplicitConversionsWorkItem Item,
     llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
   Expr *OrigE = Item.E;
   SourceLocation CC = Item.CC;
+  Expr *TopLevel = Item.IsTopLevelExpr ? OrigE : TopLevelExpr;
+  llvm::SaveAndRestore TLE(TopLevelExpr, TopLevel);
 
   QualType T = OrigE->getType();
   Expr *E = OrigE->IgnoreParenImpCasts();
@@ -15401,7 +15467,7 @@ static void AnalyzeImplicitConversions(
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(SourceExpr)) {
-    CheckConditionalOperator(S, CO, CC, T);
+    CheckConditionalOperator(CO, CC, T);
     return;
   }
 
@@ -15423,7 +15489,7 @@ static void AnalyzeImplicitConversions(
     // FIXME: Use a more uniform representation for this.
     for (auto *SE : POE->semantics())
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
-        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit});
+        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit, false});
   }
 
   // Skip past explicit casts.
@@ -15431,21 +15497,21 @@ static void AnalyzeImplicitConversions(
     E = CE->getSubExpr()->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
-    WorkList.push_back({E, CC, IsListInit});
+    WorkList.push_back({E, CC, IsListInit, false});
     return;
   }
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     // Do a somewhat different check with comparison operators.
     if (BO->isComparisonOp())
-      return AnalyzeComparison(S, BO);
+      return AnalyzeComparison(BO);
 
     // And with simple assignments.
     if (BO->getOpcode() == BO_Assign)
-      return AnalyzeAssignment(S, BO);
+      return AnalyzeAssignment(BO);
     // And with compound assignments.
     if (BO->isAssignmentOp())
-      return AnalyzeCompoundAssignment(S, BO);
+      return AnalyzeCompoundAssignment(BO);
   }
 
   // These break the otherwise-useful invariant below.  Fortunately,
@@ -15478,7 +15544,7 @@ static void AnalyzeImplicitConversions(
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
-    WorkList.push_back({ChildExpr, CC, IsListInit});
+    WorkList.push_back({ChildExpr, CC, IsListInit, false});
   }
 
   if (BO && BO->isLogicalOp()) {
@@ -15505,12 +15571,13 @@ static void AnalyzeImplicitConversions(
 /// AnalyzeImplicitConversions - Find and report any interesting
 /// implicit conversions in the given expression.  There are a couple
 /// of competing diagnostics here, -Wconversion and -Wsign-compare.
-static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
-                                       bool IsListInit/*= false*/) {
+void ImplicitConversionChecker::AnalyzeImplicitConversions(
+    Expr *OrigE, SourceLocation CC, bool IsListInit /*= false*/,
+    bool IsTopLevelExpr /*= false */) {
   llvm::SmallVector<AnalyzeImplicitConversionsWorkItem, 16> WorkList;
-  WorkList.push_back({OrigE, CC, IsListInit});
+  WorkList.push_back({OrigE, CC, IsListInit, IsTopLevelExpr});
   while (!WorkList.empty())
-    AnalyzeImplicitConversions(S, WorkList.pop_back_val(), WorkList);
+    AnalyzeImplicitConversions(WorkList.pop_back_val(), WorkList);
 }
 
 /// Diagnose integer type and any valid implicit conversion to it.
@@ -15789,7 +15856,8 @@ void Sema::CheckImplicitConversions(Expr *E, SourceLocation CC) {
   CheckArrayAccess(E);
 
   // This is not the right CC for (e.g.) a variable initialization.
-  AnalyzeImplicitConversions(*this, E, CC);
+  ImplicitConversionChecker(*this).AnalyzeImplicitConversions(E, CC, false,
+                                                              true);
 }
 
 /// CheckBoolLikeConversion - Check conversion of given expression to boolean.
