@@ -55,7 +55,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate("var2", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
-        self.assertEvaluate("struct1", "my_struct @ 0x.*")
+        self.assertEvaluate("struct1", "{foo:15}")
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
@@ -85,7 +85,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate(
             "non_static_int", "10"
         )  # different variable with the same name
-        self.assertEvaluate("struct1", "my_struct @ 0x.*")
+        self.assertEvaluate("struct1", "{foo:15}")
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
