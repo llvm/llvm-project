@@ -1202,6 +1202,10 @@ struct ForallOpInterface
     }
     return false;
   }
+
+  bool isParallelRegion(Operation *op, unsigned index) const {
+    return isRepetitiveRegion(op, index);
+  }
 };
 
 /// Nothing to do for InParallelOp.

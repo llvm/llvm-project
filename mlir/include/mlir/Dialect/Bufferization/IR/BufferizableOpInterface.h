@@ -684,6 +684,14 @@ Operation *getOwnerOfValue(Value value);
 Region *getNextEnclosingRepetitiveRegion(Region *region,
                                          const BufferizationOptions &options);
 
+/// If `region` is a parallel region, return `region`. Otherwise, find the first
+/// enclosing parallel region of `region`. If there is no such region, return
+/// "nullptr".
+///
+/// Note: Whether a region is parallel or sequential is queried from the
+/// `BufferizableOpInterface`.
+Region *getParallelRegion(Region *region, const BufferizationOptions &options);
+
 namespace detail {
 /// This is the default implementation of
 /// BufferizableOpInterface::getAliasingOpOperands. Should not be called from
