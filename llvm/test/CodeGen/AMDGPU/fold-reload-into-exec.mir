@@ -12,9 +12,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_lo
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def $exec_lo
+    ; CHECK: S_NOP 0, implicit-def $exec_lo
     ; CHECK-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
     ; CHECK-NEXT: S_NOP 0, implicit-def dead renamable $sgpr1, implicit-def dead renamable $sgpr0, implicit killed renamable $sgpr0
@@ -37,9 +37,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_hi
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def $exec_hi
+    ; CHECK: S_NOP 0, implicit-def $exec_hi
     ; CHECK-NEXT: $sgpr0 = S_MOV_B32 $exec_hi
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
     ; CHECK-NEXT: S_NOP 0, implicit-def dead renamable $sgpr1, implicit-def dead renamable $sgpr0, implicit killed renamable $sgpr0
@@ -62,9 +62,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def $exec
+    ; CHECK: S_NOP 0, implicit-def $exec
     ; CHECK-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr1, 1, killed $vgpr0, implicit $sgpr0_sgpr1
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr0_sgpr1
@@ -93,8 +93,8 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_lo
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_lo
+    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_lo
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def dead renamable $sgpr0
@@ -116,8 +116,8 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_hi
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_hi
+    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_hi
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def dead renamable $sgpr0
@@ -139,8 +139,8 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec
-    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0_sgpr1, implicit-def dead renamable $sgpr2_sgpr3, implicit-def $exec
+    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0_sgpr1, implicit-def dead renamable $sgpr2_sgpr3, implicit-def $exec
+    ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, killed $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
     ; CHECK-NEXT: renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr1, 1, killed $vgpr0, implicit $sgpr0_sgpr1
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr0_sgpr1

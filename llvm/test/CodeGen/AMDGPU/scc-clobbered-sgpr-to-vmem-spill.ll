@@ -8,7 +8,6 @@
 define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-LABEL: kernel0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; implicit-def: $vgpr23 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -22,46 +21,47 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s2, 0
+; CHECK-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
-; CHECK-NEXT:    v_writelane_b32 v23, s3, 1
+; CHECK-NEXT:    v_writelane_b32 v0, s2, 0
+; CHECK-NEXT:    v_writelane_b32 v0, s3, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 2
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 3
-; CHECK-NEXT:    v_writelane_b32 v23, s6, 4
-; CHECK-NEXT:    v_writelane_b32 v23, s7, 5
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 2
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 3
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 4
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:11]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 6
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 7
-; CHECK-NEXT:    v_writelane_b32 v23, s6, 8
-; CHECK-NEXT:    v_writelane_b32 v23, s7, 9
-; CHECK-NEXT:    v_writelane_b32 v23, s8, 10
-; CHECK-NEXT:    v_writelane_b32 v23, s9, 11
-; CHECK-NEXT:    v_writelane_b32 v23, s10, 12
-; CHECK-NEXT:    v_writelane_b32 v23, s11, 13
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 6
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 7
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 8
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 9
+; CHECK-NEXT:    v_writelane_b32 v0, s8, 10
+; CHECK-NEXT:    v_writelane_b32 v0, s9, 11
+; CHECK-NEXT:    v_writelane_b32 v0, s10, 12
+; CHECK-NEXT:    v_writelane_b32 v0, s11, 13
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:19]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 14
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 15
-; CHECK-NEXT:    v_writelane_b32 v23, s6, 16
-; CHECK-NEXT:    v_writelane_b32 v23, s7, 17
-; CHECK-NEXT:    v_writelane_b32 v23, s8, 18
-; CHECK-NEXT:    v_writelane_b32 v23, s9, 19
-; CHECK-NEXT:    v_writelane_b32 v23, s10, 20
-; CHECK-NEXT:    v_writelane_b32 v23, s11, 21
-; CHECK-NEXT:    v_writelane_b32 v23, s12, 22
-; CHECK-NEXT:    v_writelane_b32 v23, s13, 23
-; CHECK-NEXT:    v_writelane_b32 v23, s14, 24
-; CHECK-NEXT:    v_writelane_b32 v23, s15, 25
-; CHECK-NEXT:    v_writelane_b32 v23, s16, 26
-; CHECK-NEXT:    v_writelane_b32 v23, s17, 27
-; CHECK-NEXT:    v_writelane_b32 v23, s18, 28
-; CHECK-NEXT:    v_writelane_b32 v23, s19, 29
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 14
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 15
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 16
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 17
+; CHECK-NEXT:    v_writelane_b32 v0, s8, 18
+; CHECK-NEXT:    v_writelane_b32 v0, s9, 19
+; CHECK-NEXT:    v_writelane_b32 v0, s10, 20
+; CHECK-NEXT:    v_writelane_b32 v0, s11, 21
+; CHECK-NEXT:    v_writelane_b32 v0, s12, 22
+; CHECK-NEXT:    v_writelane_b32 v0, s13, 23
+; CHECK-NEXT:    v_writelane_b32 v0, s14, 24
+; CHECK-NEXT:    v_writelane_b32 v0, s15, 25
+; CHECK-NEXT:    v_writelane_b32 v0, s16, 26
+; CHECK-NEXT:    v_writelane_b32 v0, s17, 27
+; CHECK-NEXT:    v_writelane_b32 v0, s18, 28
+; CHECK-NEXT:    v_writelane_b32 v0, s19, 29
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[42:43]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -71,14 +71,14 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:11]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 30
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 31
-; CHECK-NEXT:    v_writelane_b32 v23, s6, 32
-; CHECK-NEXT:    v_writelane_b32 v23, s7, 33
-; CHECK-NEXT:    v_writelane_b32 v23, s8, 34
-; CHECK-NEXT:    v_writelane_b32 v23, s9, 35
-; CHECK-NEXT:    v_writelane_b32 v23, s10, 36
-; CHECK-NEXT:    v_writelane_b32 v23, s11, 37
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 30
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 31
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 32
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 33
+; CHECK-NEXT:    v_writelane_b32 v0, s8, 34
+; CHECK-NEXT:    v_writelane_b32 v0, s9, 35
+; CHECK-NEXT:    v_writelane_b32 v0, s10, 36
+; CHECK-NEXT:    v_writelane_b32 v0, s11, 37
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -96,161 +96,159 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s0, 38
-; CHECK-NEXT:    v_writelane_b32 v23, s1, 39
-; CHECK-NEXT:    v_writelane_b32 v23, s2, 40
-; CHECK-NEXT:    v_writelane_b32 v23, s3, 41
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 42
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 43
-; CHECK-NEXT:    v_writelane_b32 v23, s6, 44
-; CHECK-NEXT:    v_writelane_b32 v23, s7, 45
-; CHECK-NEXT:    v_writelane_b32 v23, s8, 46
-; CHECK-NEXT:    v_writelane_b32 v23, s9, 47
-; CHECK-NEXT:    v_writelane_b32 v23, s10, 48
-; CHECK-NEXT:    v_writelane_b32 v23, s11, 49
-; CHECK-NEXT:    v_writelane_b32 v23, s12, 50
-; CHECK-NEXT:    v_writelane_b32 v23, s13, 51
-; CHECK-NEXT:    v_writelane_b32 v23, s14, 52
-; CHECK-NEXT:    v_writelane_b32 v23, s15, 53
+; CHECK-NEXT:    v_writelane_b32 v0, s0, 38
+; CHECK-NEXT:    v_writelane_b32 v0, s1, 39
+; CHECK-NEXT:    v_writelane_b32 v0, s2, 40
+; CHECK-NEXT:    v_writelane_b32 v0, s3, 41
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 42
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 43
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 44
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 45
+; CHECK-NEXT:    v_writelane_b32 v0, s8, 46
+; CHECK-NEXT:    v_writelane_b32 v0, s9, 47
+; CHECK-NEXT:    v_writelane_b32 v0, s10, 48
+; CHECK-NEXT:    v_writelane_b32 v0, s11, 49
+; CHECK-NEXT:    v_writelane_b32 v0, s12, 50
+; CHECK-NEXT:    v_writelane_b32 v0, s13, 51
+; CHECK-NEXT:    v_writelane_b32 v0, s14, 52
+; CHECK-NEXT:    v_writelane_b32 v0, s15, 53
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[34:35]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s0, 54
-; CHECK-NEXT:    v_writelane_b32 v23, s1, 55
-; CHECK-NEXT:    v_writelane_b32 v23, s2, 56
-; CHECK-NEXT:    v_writelane_b32 v23, s3, 57
+; CHECK-NEXT:    v_writelane_b32 v0, s0, 54
+; CHECK-NEXT:    v_writelane_b32 v0, s1, 55
+; CHECK-NEXT:    v_writelane_b32 v0, s2, 56
+; CHECK-NEXT:    v_writelane_b32 v0, s3, 57
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v23, s0, 58
-; CHECK-NEXT:    v_writelane_b32 v23, s1, 59
-; CHECK-NEXT:    v_writelane_b32 v23, s2, 60
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    v_writelane_b32 v23, s3, 61
-; CHECK-NEXT:    v_writelane_b32 v23, s4, 62
-; CHECK-NEXT:    v_writelane_b32 v0, s6, 0
-; CHECK-NEXT:    v_writelane_b32 v23, s5, 63
-; CHECK-NEXT:    v_writelane_b32 v0, s7, 1
+; CHECK-NEXT:    v_writelane_b32 v0, s0, 58
+; CHECK-NEXT:    v_writelane_b32 v0, s1, 59
+; CHECK-NEXT:    v_writelane_b32 v0, s2, 60
+; CHECK-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; CHECK-NEXT:    v_writelane_b32 v0, s3, 61
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 62
+; CHECK-NEXT:    v_writelane_b32 v1, s6, 0
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 63
+; CHECK-NEXT:    v_writelane_b32 v1, s7, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v0, s0, 2
-; CHECK-NEXT:    v_writelane_b32 v0, s1, 3
-; CHECK-NEXT:    v_writelane_b32 v0, s2, 4
-; CHECK-NEXT:    v_writelane_b32 v0, s3, 5
-; CHECK-NEXT:    v_writelane_b32 v0, s4, 6
-; CHECK-NEXT:    v_writelane_b32 v0, s5, 7
-; CHECK-NEXT:    v_writelane_b32 v0, s6, 8
-; CHECK-NEXT:    v_writelane_b32 v0, s7, 9
-; CHECK-NEXT:    v_writelane_b32 v0, s8, 10
-; CHECK-NEXT:    v_writelane_b32 v0, s9, 11
-; CHECK-NEXT:    v_writelane_b32 v0, s10, 12
-; CHECK-NEXT:    v_writelane_b32 v0, s11, 13
-; CHECK-NEXT:    v_writelane_b32 v0, s12, 14
-; CHECK-NEXT:    v_writelane_b32 v0, s13, 15
-; CHECK-NEXT:    v_writelane_b32 v0, s14, 16
-; CHECK-NEXT:    v_writelane_b32 v0, s15, 17
+; CHECK-NEXT:    v_writelane_b32 v1, s0, 2
+; CHECK-NEXT:    v_writelane_b32 v1, s1, 3
+; CHECK-NEXT:    v_writelane_b32 v1, s2, 4
+; CHECK-NEXT:    v_writelane_b32 v1, s3, 5
+; CHECK-NEXT:    v_writelane_b32 v1, s4, 6
+; CHECK-NEXT:    v_writelane_b32 v1, s5, 7
+; CHECK-NEXT:    v_writelane_b32 v1, s6, 8
+; CHECK-NEXT:    v_writelane_b32 v1, s7, 9
+; CHECK-NEXT:    v_writelane_b32 v1, s8, 10
+; CHECK-NEXT:    v_writelane_b32 v1, s9, 11
+; CHECK-NEXT:    v_writelane_b32 v1, s10, 12
+; CHECK-NEXT:    v_writelane_b32 v1, s11, 13
+; CHECK-NEXT:    v_writelane_b32 v1, s12, 14
+; CHECK-NEXT:    v_writelane_b32 v1, s13, 15
+; CHECK-NEXT:    v_writelane_b32 v1, s14, 16
+; CHECK-NEXT:    v_writelane_b32 v1, s15, 17
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v0, s0, 18
-; CHECK-NEXT:    v_writelane_b32 v0, s1, 19
+; CHECK-NEXT:    v_writelane_b32 v1, s0, 18
+; CHECK-NEXT:    v_writelane_b32 v1, s1, 19
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v0, s0, 20
-; CHECK-NEXT:    v_writelane_b32 v0, s1, 21
-; CHECK-NEXT:    v_writelane_b32 v0, s2, 22
-; CHECK-NEXT:    v_writelane_b32 v0, s3, 23
+; CHECK-NEXT:    v_writelane_b32 v1, s0, 20
+; CHECK-NEXT:    v_writelane_b32 v1, s1, 21
+; CHECK-NEXT:    v_writelane_b32 v1, s2, 22
+; CHECK-NEXT:    v_writelane_b32 v1, s3, 23
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v0, s0, 24
-; CHECK-NEXT:    v_writelane_b32 v0, s1, 25
-; CHECK-NEXT:    v_writelane_b32 v0, s2, 26
-; CHECK-NEXT:    v_writelane_b32 v0, s3, 27
-; CHECK-NEXT:    v_writelane_b32 v0, s4, 28
-; CHECK-NEXT:    v_writelane_b32 v0, s5, 29
-; CHECK-NEXT:    v_writelane_b32 v0, s6, 30
-; CHECK-NEXT:    v_writelane_b32 v0, s7, 31
+; CHECK-NEXT:    v_writelane_b32 v1, s0, 24
+; CHECK-NEXT:    v_writelane_b32 v1, s1, 25
+; CHECK-NEXT:    v_writelane_b32 v1, s2, 26
+; CHECK-NEXT:    v_writelane_b32 v1, s3, 27
+; CHECK-NEXT:    v_writelane_b32 v1, s4, 28
+; CHECK-NEXT:    v_writelane_b32 v1, s5, 29
+; CHECK-NEXT:    v_writelane_b32 v1, s6, 30
+; CHECK-NEXT:    v_writelane_b32 v1, s7, 31
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_writelane_b32 v0, s0, 32
-; CHECK-NEXT:    v_writelane_b32 v0, s1, 33
-; CHECK-NEXT:    v_writelane_b32 v0, s2, 34
-; CHECK-NEXT:    v_writelane_b32 v0, s3, 35
-; CHECK-NEXT:    v_writelane_b32 v0, s4, 36
-; CHECK-NEXT:    v_writelane_b32 v0, s5, 37
-; CHECK-NEXT:    v_writelane_b32 v0, s6, 38
-; CHECK-NEXT:    v_writelane_b32 v0, s7, 39
-; CHECK-NEXT:    v_writelane_b32 v0, s8, 40
-; CHECK-NEXT:    v_writelane_b32 v0, s9, 41
-; CHECK-NEXT:    v_writelane_b32 v0, s10, 42
-; CHECK-NEXT:    v_writelane_b32 v0, s11, 43
-; CHECK-NEXT:    v_writelane_b32 v0, s12, 44
-; CHECK-NEXT:    v_writelane_b32 v0, s13, 45
-; CHECK-NEXT:    v_writelane_b32 v0, s14, 46
-; CHECK-NEXT:    v_writelane_b32 v0, s15, 47
+; CHECK-NEXT:    v_writelane_b32 v1, s0, 32
+; CHECK-NEXT:    v_writelane_b32 v1, s1, 33
+; CHECK-NEXT:    v_writelane_b32 v1, s2, 34
+; CHECK-NEXT:    v_writelane_b32 v1, s3, 35
+; CHECK-NEXT:    v_writelane_b32 v1, s4, 36
+; CHECK-NEXT:    v_writelane_b32 v1, s5, 37
+; CHECK-NEXT:    v_writelane_b32 v1, s6, 38
+; CHECK-NEXT:    v_writelane_b32 v1, s7, 39
+; CHECK-NEXT:    v_writelane_b32 v1, s8, 40
+; CHECK-NEXT:    v_writelane_b32 v1, s9, 41
+; CHECK-NEXT:    v_writelane_b32 v1, s10, 42
+; CHECK-NEXT:    v_writelane_b32 v1, s11, 43
+; CHECK-NEXT:    v_writelane_b32 v1, s12, 44
+; CHECK-NEXT:    v_writelane_b32 v1, s13, 45
+; CHECK-NEXT:    v_writelane_b32 v1, s14, 46
+; CHECK-NEXT:    v_writelane_b32 v1, s15, 47
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %ret
-; CHECK-NEXT:    ; kill: killed $vgpr23
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_2: ; %bb0
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 0
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 1
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 0
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 2
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 3
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 4
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 5
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 2
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 3
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 4
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 6
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 7
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 8
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 9
-; CHECK-NEXT:    v_readlane_b32 s4, v23, 10
-; CHECK-NEXT:    v_readlane_b32 s5, v23, 11
-; CHECK-NEXT:    v_readlane_b32 s6, v23, 12
-; CHECK-NEXT:    v_readlane_b32 s7, v23, 13
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 6
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 7
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 8
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 9
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 10
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 11
+; CHECK-NEXT:    v_readlane_b32 s6, v0, 12
+; CHECK-NEXT:    v_readlane_b32 s7, v0, 13
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 14
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 15
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 16
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 17
-; CHECK-NEXT:    v_readlane_b32 s4, v23, 18
-; CHECK-NEXT:    v_readlane_b32 s5, v23, 19
-; CHECK-NEXT:    v_readlane_b32 s6, v23, 20
-; CHECK-NEXT:    v_readlane_b32 s7, v23, 21
-; CHECK-NEXT:    v_readlane_b32 s8, v23, 22
-; CHECK-NEXT:    v_readlane_b32 s9, v23, 23
-; CHECK-NEXT:    v_readlane_b32 s10, v23, 24
-; CHECK-NEXT:    v_readlane_b32 s11, v23, 25
-; CHECK-NEXT:    v_readlane_b32 s12, v23, 26
-; CHECK-NEXT:    v_readlane_b32 s13, v23, 27
-; CHECK-NEXT:    v_readlane_b32 s14, v23, 28
-; CHECK-NEXT:    v_readlane_b32 s15, v23, 29
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 14
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 15
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 16
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 17
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 18
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 19
+; CHECK-NEXT:    v_readlane_b32 s6, v0, 20
+; CHECK-NEXT:    v_readlane_b32 s7, v0, 21
+; CHECK-NEXT:    v_readlane_b32 s8, v0, 22
+; CHECK-NEXT:    v_readlane_b32 s9, v0, 23
+; CHECK-NEXT:    v_readlane_b32 s10, v0, 24
+; CHECK-NEXT:    v_readlane_b32 s11, v0, 25
+; CHECK-NEXT:    v_readlane_b32 s12, v0, 26
+; CHECK-NEXT:    v_readlane_b32 s13, v0, 27
+; CHECK-NEXT:    v_readlane_b32 s14, v0, 28
+; CHECK-NEXT:    v_readlane_b32 s15, v0, 29
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 30
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 31
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 32
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 33
-; CHECK-NEXT:    v_readlane_b32 s4, v23, 34
-; CHECK-NEXT:    v_readlane_b32 s5, v23, 35
-; CHECK-NEXT:    v_readlane_b32 s6, v23, 36
-; CHECK-NEXT:    v_readlane_b32 s7, v23, 37
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 30
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 31
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 32
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 33
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 34
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 35
+; CHECK-NEXT:    v_readlane_b32 s6, v0, 36
+; CHECK-NEXT:    v_readlane_b32 s7, v0, 37
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[42:43]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -260,10 +258,10 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 38
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 39
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 40
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 41
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 38
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 39
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 40
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 41
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[16:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -276,105 +274,103 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[44:51]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s4, v23, 42
-; CHECK-NEXT:    v_readlane_b32 s5, v23, 43
-; CHECK-NEXT:    v_readlane_b32 s6, v23, 44
-; CHECK-NEXT:    v_readlane_b32 s7, v23, 45
-; CHECK-NEXT:    v_readlane_b32 s8, v23, 46
-; CHECK-NEXT:    v_readlane_b32 s9, v23, 47
-; CHECK-NEXT:    v_readlane_b32 s10, v23, 48
-; CHECK-NEXT:    v_readlane_b32 s11, v23, 49
-; CHECK-NEXT:    v_readlane_b32 s12, v23, 50
-; CHECK-NEXT:    v_readlane_b32 s13, v23, 51
-; CHECK-NEXT:    v_readlane_b32 s14, v23, 52
-; CHECK-NEXT:    v_readlane_b32 s15, v23, 53
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 42
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 43
+; CHECK-NEXT:    v_readlane_b32 s6, v0, 44
+; CHECK-NEXT:    v_readlane_b32 s7, v0, 45
+; CHECK-NEXT:    v_readlane_b32 s8, v0, 46
+; CHECK-NEXT:    v_readlane_b32 s9, v0, 47
+; CHECK-NEXT:    v_readlane_b32 s10, v0, 48
+; CHECK-NEXT:    v_readlane_b32 s11, v0, 49
+; CHECK-NEXT:    v_readlane_b32 s12, v0, 50
+; CHECK-NEXT:    v_readlane_b32 s13, v0, 51
+; CHECK-NEXT:    v_readlane_b32 s14, v0, 52
+; CHECK-NEXT:    v_readlane_b32 s15, v0, 53
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 54
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 55
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 56
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 57
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 54
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 55
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 56
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 57
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[34:35]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v23, 58
-; CHECK-NEXT:    v_readlane_b32 s1, v23, 59
-; CHECK-NEXT:    v_readlane_b32 s2, v23, 60
-; CHECK-NEXT:    v_readlane_b32 s3, v23, 61
-; CHECK-NEXT:    v_readlane_b32 s4, v23, 62
-; CHECK-NEXT:    v_readlane_b32 s5, v23, 63
-; CHECK-NEXT:    v_readlane_b32 s6, v0, 0
-; CHECK-NEXT:    v_readlane_b32 s7, v0, 1
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 58
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 59
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 60
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 61
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 62
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 63
+; CHECK-NEXT:    v_readlane_b32 s6, v1, 0
+; CHECK-NEXT:    v_readlane_b32 s7, v1, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v0, 2
-; CHECK-NEXT:    v_readlane_b32 s1, v0, 3
-; CHECK-NEXT:    v_readlane_b32 s2, v0, 4
-; CHECK-NEXT:    v_readlane_b32 s3, v0, 5
-; CHECK-NEXT:    v_readlane_b32 s4, v0, 6
-; CHECK-NEXT:    v_readlane_b32 s5, v0, 7
-; CHECK-NEXT:    v_readlane_b32 s6, v0, 8
-; CHECK-NEXT:    v_readlane_b32 s7, v0, 9
-; CHECK-NEXT:    v_readlane_b32 s8, v0, 10
-; CHECK-NEXT:    v_readlane_b32 s9, v0, 11
-; CHECK-NEXT:    v_readlane_b32 s10, v0, 12
-; CHECK-NEXT:    v_readlane_b32 s11, v0, 13
-; CHECK-NEXT:    v_readlane_b32 s12, v0, 14
-; CHECK-NEXT:    v_readlane_b32 s13, v0, 15
-; CHECK-NEXT:    v_readlane_b32 s14, v0, 16
-; CHECK-NEXT:    v_readlane_b32 s15, v0, 17
+; CHECK-NEXT:    v_readlane_b32 s0, v1, 2
+; CHECK-NEXT:    v_readlane_b32 s1, v1, 3
+; CHECK-NEXT:    v_readlane_b32 s2, v1, 4
+; CHECK-NEXT:    v_readlane_b32 s3, v1, 5
+; CHECK-NEXT:    v_readlane_b32 s4, v1, 6
+; CHECK-NEXT:    v_readlane_b32 s5, v1, 7
+; CHECK-NEXT:    v_readlane_b32 s6, v1, 8
+; CHECK-NEXT:    v_readlane_b32 s7, v1, 9
+; CHECK-NEXT:    v_readlane_b32 s8, v1, 10
+; CHECK-NEXT:    v_readlane_b32 s9, v1, 11
+; CHECK-NEXT:    v_readlane_b32 s10, v1, 12
+; CHECK-NEXT:    v_readlane_b32 s11, v1, 13
+; CHECK-NEXT:    v_readlane_b32 s12, v1, 14
+; CHECK-NEXT:    v_readlane_b32 s13, v1, 15
+; CHECK-NEXT:    v_readlane_b32 s14, v1, 16
+; CHECK-NEXT:    v_readlane_b32 s15, v1, 17
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v0, 18
-; CHECK-NEXT:    v_readlane_b32 s1, v0, 19
+; CHECK-NEXT:    v_readlane_b32 s0, v1, 18
+; CHECK-NEXT:    v_readlane_b32 s1, v1, 19
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v0, 20
-; CHECK-NEXT:    v_readlane_b32 s1, v0, 21
-; CHECK-NEXT:    v_readlane_b32 s2, v0, 22
-; CHECK-NEXT:    v_readlane_b32 s3, v0, 23
+; CHECK-NEXT:    v_readlane_b32 s0, v1, 20
+; CHECK-NEXT:    v_readlane_b32 s1, v1, 21
+; CHECK-NEXT:    v_readlane_b32 s2, v1, 22
+; CHECK-NEXT:    v_readlane_b32 s3, v1, 23
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v0, 24
-; CHECK-NEXT:    v_readlane_b32 s1, v0, 25
-; CHECK-NEXT:    v_readlane_b32 s2, v0, 26
-; CHECK-NEXT:    v_readlane_b32 s3, v0, 27
-; CHECK-NEXT:    v_readlane_b32 s4, v0, 28
-; CHECK-NEXT:    v_readlane_b32 s5, v0, 29
-; CHECK-NEXT:    v_readlane_b32 s6, v0, 30
-; CHECK-NEXT:    v_readlane_b32 s7, v0, 31
+; CHECK-NEXT:    v_readlane_b32 s0, v1, 24
+; CHECK-NEXT:    v_readlane_b32 s1, v1, 25
+; CHECK-NEXT:    v_readlane_b32 s2, v1, 26
+; CHECK-NEXT:    v_readlane_b32 s3, v1, 27
+; CHECK-NEXT:    v_readlane_b32 s4, v1, 28
+; CHECK-NEXT:    v_readlane_b32 s5, v1, 29
+; CHECK-NEXT:    v_readlane_b32 s6, v1, 30
+; CHECK-NEXT:    v_readlane_b32 s7, v1, 31
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s0, v0, 32
-; CHECK-NEXT:    v_readlane_b32 s1, v0, 33
-; CHECK-NEXT:    v_readlane_b32 s2, v0, 34
-; CHECK-NEXT:    v_readlane_b32 s3, v0, 35
-; CHECK-NEXT:    v_readlane_b32 s4, v0, 36
-; CHECK-NEXT:    v_readlane_b32 s5, v0, 37
-; CHECK-NEXT:    v_readlane_b32 s6, v0, 38
-; CHECK-NEXT:    v_readlane_b32 s7, v0, 39
-; CHECK-NEXT:    v_readlane_b32 s8, v0, 40
-; CHECK-NEXT:    v_readlane_b32 s9, v0, 41
-; CHECK-NEXT:    v_readlane_b32 s10, v0, 42
-; CHECK-NEXT:    v_readlane_b32 s11, v0, 43
-; CHECK-NEXT:    v_readlane_b32 s12, v0, 44
-; CHECK-NEXT:    v_readlane_b32 s13, v0, 45
-; CHECK-NEXT:    v_readlane_b32 s14, v0, 46
-; CHECK-NEXT:    v_readlane_b32 s15, v0, 47
+; CHECK-NEXT:    v_readlane_b32 s0, v1, 32
+; CHECK-NEXT:    v_readlane_b32 s1, v1, 33
+; CHECK-NEXT:    v_readlane_b32 s2, v1, 34
+; CHECK-NEXT:    v_readlane_b32 s3, v1, 35
+; CHECK-NEXT:    v_readlane_b32 s4, v1, 36
+; CHECK-NEXT:    v_readlane_b32 s5, v1, 37
+; CHECK-NEXT:    v_readlane_b32 s6, v1, 38
+; CHECK-NEXT:    v_readlane_b32 s7, v1, 39
+; CHECK-NEXT:    v_readlane_b32 s8, v1, 40
+; CHECK-NEXT:    v_readlane_b32 s9, v1, 41
+; CHECK-NEXT:    v_readlane_b32 s10, v1, 42
+; CHECK-NEXT:    v_readlane_b32 s11, v1, 43
+; CHECK-NEXT:    v_readlane_b32 s12, v1, 44
+; CHECK-NEXT:    v_readlane_b32 s13, v1, 45
+; CHECK-NEXT:    v_readlane_b32 s14, v1, 46
+; CHECK-NEXT:    v_readlane_b32 s15, v1, 47
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; kill: killed $vgpr23
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

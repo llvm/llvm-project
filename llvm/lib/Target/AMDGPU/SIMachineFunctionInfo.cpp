@@ -346,7 +346,7 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LaneVGPR;
   if (!LaneIndex) {
-    LaneVGPR = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    LaneVGPR = MRI.createVirtualRegister(&AMDGPU::WWM_VGPR_32RegClass);
     SpillVGPRs.push_back(LaneVGPR);
   } else {
     LaneVGPR = SpillVGPRs.back();

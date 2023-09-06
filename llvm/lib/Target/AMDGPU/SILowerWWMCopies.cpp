@@ -55,7 +55,7 @@ private:
   SlotIndexes *Indexes;
   VirtRegMap *VRM;
   const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
 };
 
@@ -108,9 +108,6 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  if (!MFI->hasVRegFlags())
-    return false;
-
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -137,5 +134,8 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  // Disable the synthetic regclass WWM_VGPR_32. VGPR allocation is done and we
+  // no longer needed it.
+  MRI->changeSyntheticInfoForRC(&AMDGPU::WWM_VGPR_32RegClass, /*Value=*/true);
   return Changed;
 }

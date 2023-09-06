@@ -717,19 +717,15 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    buffer_store_dword v251, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v252, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v253, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[8:9]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s4
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_writelane_b32 v0, s4, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
@@ -745,10 +741,6 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    ; use s4
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB3_2: ; %ret
-; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[8:9]
-; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    buffer_load_dword v253, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v252, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v251, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload

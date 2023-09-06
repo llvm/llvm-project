@@ -632,6 +632,16 @@ def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
   let Size = 32;
   let Weight = 1;
 }
+
+// Identical to VGPR_32 but can only be used for wwm-registers. This synthetic
+// class is disabled by default and will be enabled during regalloc pipeline.
+def WWM_VGPR_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32)> {
+  let AllocationPriority = VGPR_32.AllocationPriority;
+  let Size = VGPR_32.Size;
+  let Weight = VGPR_32.Weight;
+  let BaseClassOrder = VGPR_32.BaseClassOrder;
+  let Synthetic = 1;
+}
 } // End HasVGPR = 1
 
 // VGPR 64-bit registers

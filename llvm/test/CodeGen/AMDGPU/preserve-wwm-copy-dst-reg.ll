@@ -19,7 +19,7 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
 ; GFX906-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX906-NEXT:    ; implicit-def: $vgpr2
+; GFX906-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX906-NEXT:    s_mov_b32 s21, s15
 ; GFX906-NEXT:    v_writelane_b32 v2, s6, 0
 ; GFX906-NEXT:    v_writelane_b32 v2, s7, 1
@@ -300,8 +300,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    v_readlane_b32 s14, v40, 3
 ; GFX906-NEXT:    v_readlane_b32 s15, v40, 2
 ; GFX906-NEXT:    v_readlane_b32 s17, v40, 23
-; GFX906-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GFX906-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX906-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
@@ -339,7 +337,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:140 ; 4-byte Folded Reload
 ; GFX906-NEXT:    v_readlane_b32 s31, v41, 1
 ; GFX906-NEXT:    v_readlane_b32 s30, v41, 0
-; GFX906-NEXT:    ; kill: killed $vgpr40
 ; GFX906-NEXT:    v_readlane_b32 s34, v41, 2
 ; GFX906-NEXT:    v_readlane_b32 s35, v41, 3
 ; GFX906-NEXT:    v_readlane_b32 s4, v41, 4
@@ -406,7 +403,7 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:172
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 exec, s[16:17]
-; GFX908-NEXT:    ; implicit-def: $vgpr2
+; GFX908-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX908-NEXT:    s_mov_b32 s21, s15
 ; GFX908-NEXT:    v_writelane_b32 v2, s6, 0
 ; GFX908-NEXT:    v_writelane_b32 v2, s7, 1
@@ -681,8 +678,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    v_readlane_b32 s14, v40, 3
 ; GFX908-NEXT:    v_readlane_b32 s15, v40, 2
 ; GFX908-NEXT:    v_readlane_b32 s17, v40, 23
-; GFX908-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GFX908-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
@@ -754,7 +749,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX908-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:160 ; 4-byte Folded Reload
-; GFX908-NEXT:    ; kill: killed $vgpr40
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s34, v0
 ; GFX908-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:164 ; 4-byte Folded Reload

@@ -15,49 +15,43 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
-; CHECK-NEXT:    ; implicit-def: $vgpr8 : SGPR spill to VGPR lane
-; CHECK-NEXT:    v_mov_b32_e32 v8, v0
-; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b32 exec_lo, s21
-; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v15, v1
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v14, v2
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v13, v3
-; CHECK-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v12, v4
-; CHECK-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v11, v5
-; CHECK-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v10, v6
-; CHECK-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v9, v7
-; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; CHECK-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 killed $exec
-; CHECK-NEXT:    v_mov_b32_e32 v2, v15
-; CHECK-NEXT:    v_mov_b32_e32 v3, v14
-; CHECK-NEXT:    v_mov_b32_e32 v4, v13
-; CHECK-NEXT:    v_mov_b32_e32 v5, v12
-; CHECK-NEXT:    v_mov_b32_e32 v6, v11
-; CHECK-NEXT:    v_mov_b32_e32 v7, v10
-; CHECK-NEXT:    v_mov_b32_e32 v8, v9
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v14, v1
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v13, v2
+; CHECK-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v12, v3
+; CHECK-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v11, v4
+; CHECK-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v10, v5
+; CHECK-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v9, v6
+; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v1, v14
+; CHECK-NEXT:    v_mov_b32_e32 v2, v13
+; CHECK-NEXT:    v_mov_b32_e32 v3, v12
+; CHECK-NEXT:    v_mov_b32_e32 v4, v11
+; CHECK-NEXT:    v_mov_b32_e32 v5, v10
+; CHECK-NEXT:    v_mov_b32_e32 v6, v9
+; CHECK-NEXT:    v_mov_b32_e32 v7, v8
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s4, s8
 ; CHECK-NEXT:    s_mov_b32 s5, s8
 ; CHECK-NEXT:    s_mov_b32 s6, s8
 ; CHECK-NEXT:    s_mov_b32 s7, s8
+; CHECK-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v0, s4, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s5, 1
 ; CHECK-NEXT:    v_writelane_b32 v0, s6, 2
@@ -177,15 +171,11 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_readlane_b32 s4, v0, 4
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:  ; %bb.4:
-; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b32 exec_lo, s21
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s4
-; CHECK-NEXT:    ; kill: killed $vgpr4
 ; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
