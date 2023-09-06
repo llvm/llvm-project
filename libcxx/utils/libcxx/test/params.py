@@ -111,6 +111,18 @@ DEFAULT_PARAMETERS = [
         ),
     ),
     Parameter(
+        name="target_flags",
+        type=str,
+        default=None,
+        help="Additional compile flags (e.g. -mabi=/-march=) to use when "
+        "compiling the test suite. This must be compatible with the target "
+        "that the tests will be run on.",
+        actions=lambda target_flags: [] if not target_flags else [
+            AddFlag(target_flags),
+            AddSubstitution("%{target_flags}", target_flags),
+        ],
+    ),
+    Parameter(
         name="std",
         choices=_allStandards,
         type=str,

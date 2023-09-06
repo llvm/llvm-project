@@ -32,6 +32,10 @@ else()
   serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
+if (LIBUNWIND_TEST_TARGET_FLAGS)
+  serialize_lit_param(target_flags "\"${LIBUNWIND_TEST_TARGET_FLAGS}\"")
+endif()
+
 foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
   string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
   string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")

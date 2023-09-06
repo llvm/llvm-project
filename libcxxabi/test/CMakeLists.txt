@@ -49,6 +49,10 @@ else()
   serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
+if (LIBCXXABI_TEST_TARGET_FLAGS)
+  serialize_lit_param(target_flags "\"${LIBCXXABI_TEST_TARGET_FLAGS}\"")
+endif()
+
 foreach(param IN LISTS LIBCXXABI_TEST_PARAMS)
   string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
   string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")

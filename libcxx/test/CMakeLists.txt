@@ -32,6 +32,10 @@ else()
   serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
+if (LIBCXX_TEST_TARGET_FLAGS)
+  serialize_lit_param(target_flags "\"${LIBCXX_TEST_TARGET_FLAGS}\"")
+endif()
+
 if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
