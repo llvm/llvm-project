@@ -92,12 +92,10 @@ entry:
 define zeroext i1 @test5(i64 %a) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    addis 3, 3, -32768
-; CHECK-NEXT:    rldic 4, 4, 32, 0
-; CHECK-NEXT:    subc 4, 3, 4
-; CHECK-NEXT:    subfe 3, 3, 3
-; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    extsw 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    addic 4, 3, -1
+; CHECK-NEXT:    subfe 3, 4, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = add i64 %a, -2147483648
@@ -108,11 +106,10 @@ entry:
 define zeroext i1 @test6(i64 %a) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 3, 3, -32768
-; CHECK-NEXT:    lis 4, -1
-; CHECK-NEXT:    subc 4, 3, 4
-; CHECK-NEXT:    subfe 3, 3, 3
-; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    extsh 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    addic 4, 3, -1
+; CHECK-NEXT:    subfe 3, 4, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = add i64 %a, -32768
@@ -123,11 +120,10 @@ entry:
 define zeroext i1 @test7(i64 %a) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 3, 3, -128
-; CHECK-NEXT:    li 4, -256
-; CHECK-NEXT:    subc 4, 3, 4
-; CHECK-NEXT:    subfe 3, 3, 3
-; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    extsb 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    addic 4, 3, -1
+; CHECK-NEXT:    subfe 3, 4, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = add i64 %a, -128
@@ -138,12 +134,11 @@ entry:
 define zeroext i1 @test8(i32 %a) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 3, 3, -32768
-; CHECK-NEXT:    lis 4, -1
-; CHECK-NEXT:    rlwinm 3, 3, 16, 16, 31
-; CHECK-NEXT:    ori 4, 4, 1
-; CHECK-NEXT:    add 3, 3, 4
-; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    extsh 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = add i32 %a, -32768
@@ -154,13 +149,11 @@ entry:
 define zeroext i1 @test9(i32 %a) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lis 4, -256
-; CHECK-NEXT:    addi 3, 3, -128
-; CHECK-NEXT:    ori 4, 4, 1
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    rldic 4, 4, 8, 0
-; CHECK-NEXT:    add 3, 3, 4
-; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    extsb 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = add i32 %a, -128
