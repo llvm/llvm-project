@@ -114,6 +114,7 @@ private:
 
 protected:
   bool isUnsafeMath(const FPMathOperator *FPOp) const;
+  bool isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const;
 
   bool canIncreasePrecisionOfConstantFold(const FPMathOperator *FPOp) const;
 
@@ -403,6 +404,11 @@ bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
 
 bool AMDGPULibCalls::isUnsafeMath(const FPMathOperator *FPOp) const {
   return UnsafeFPMath || FPOp->isFast();
+}
+
+bool AMDGPULibCalls::isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const {
+  return UnsafeFPMath ||
+         (FPOp->hasApproxFunc() && FPOp->hasNoNaNs() && FPOp->hasNoInfs());
 }
 
 bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
@@ -819,10 +825,6 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     CINT = CDV ? dyn_cast_or_null<ConstantInt>(CDV->getSplatValue()) : nullptr;
   }
 
-  // No unsafe math , no constant argument, do nothing
-  if (!isUnsafeMath(FPOp) && !CF && !CINT && !CZero)
-    return false;
-
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
@@ -878,7 +880,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     }
   }
 
-  if (!isUnsafeMath(FPOp))
+  if (!isUnsafeFiniteOnlyMath(FPOp))
     return false;
 
   // Unsafe Math optimization
