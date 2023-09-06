@@ -148,7 +148,7 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
-   resources/debugging-lldb
+   resources/debugging
    resources/fuzzing
    resources/sbapi
    resources/extensions

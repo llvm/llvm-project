@@ -1,5 +1,5 @@
-Debugging LLDB
-==============
+Debugging
+=========
 
 This page details various ways to debug LLDB itself and other LLDB tools. If
 you want to know how to use LLDB in general, please refer to
@@ -21,12 +21,17 @@ configuration:
 ::
 
   -DCMAKE_BUILD_TYPE=Debug \
-  -DLLDB_EXPORT_ALL_SYMBOLS=1
+  -DLLDB_EXPORT_ALL_SYMBOLS=ON
 
 Note that the ``lldb`` you will use to do the debugging does not itself need to
 have debug information.
 
-Then build as you normally would.
+Then build as you normally would according to :doc:`/resources/build`.
+
+If you are going to debug in a way that doesn't need debug info (printf, strace,
+etc.) we recommend adding ``LLVM_ENABLE_ASSERTIONS=ON`` to Release build
+configurations. This will make LLDB fail earlier instead of continuing with
+invalid state (assertions are enabled by default for Debug builds).
 
 Debugging ``lldb``
 ------------------
@@ -84,7 +89,7 @@ it's thinking overhead, and for interrupt based events you simply may not be
 able to know.
 
 Here are some better approaches. First, you could use another debugger like GDB
-to debug LLDB. Perhaps an IDE like XCode or Visual Studio Code. Something which
+to debug LLDB. Perhaps an IDE like Xcode or Visual Studio Code. Something which
 runs LLDB under the hood so you don't have to type in commands to the debugger
 yourself.
 
@@ -252,3 +257,4 @@ You would use ``lldb A`` to place a breakpoint in the code you're interested in,
 then ``lldb B`` to trigger ``lldb-server B`` to go into that code and hit the
 breakpoint. ``lldb-server A`` is only here to let us debug ``lldb-server B``
 remotely.
+
