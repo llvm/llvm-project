@@ -119,6 +119,7 @@ cxx_sources = [
   "chrono.cpp",
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
+  "error_category.cpp",
   "exception.cpp",
   "functional.cpp",
   "future.cpp",
