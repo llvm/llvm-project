@@ -244,7 +244,9 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-latomic");
       addAsNeededOption(getToolChain(), Args, CmdArgs, false);
     }
+    addAsNeededOption(getToolChain(), Args, CmdArgs, true);
     CmdArgs.push_back("-lgcc_s");
+    addAsNeededOption(getToolChain(), Args, CmdArgs, false);
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
