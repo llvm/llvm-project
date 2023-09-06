@@ -300,7 +300,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
     return false;
   }
   auto FileEntry =
-      SourceManager.getFileEntryRefForID(SourceManager.getFileID(ExpansionLoc));
+      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry) {
     return false;
   }
