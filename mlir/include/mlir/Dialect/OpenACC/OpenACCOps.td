@@ -22,6 +22,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
 include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
 
 // AccCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenACC/AccCommon.td"
@@ -1191,13 +1192,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
-    ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp, ReductionRecipeOp, SerialOp"]>]> {
+    ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp,"
+                 "ReductionRecipeOp, SerialOp, AtomicUpdateOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
     `acc.yield` is a special terminator operation for block inside regions in
-    acc ops (parallel and loop). It returns values to the immediately enclosing
-    acc op.
+    various acc ops (including parallel, loop, atomic.update). It returns values
+    to the immediately enclosing acc op.
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -1205,6 +1207,153 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.12 atomic construct
+//===----------------------------------------------------------------------===//
+
+def AtomicReadOp : OpenACC_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
+                                              AtomicReadOpInterface]> {
+
+  let summary = "performs an atomic read";
+
+  let description = [{
+    This operation performs an atomic read.
+
+    The operand `x` is the address from where the value is atomically read.
+    The operand `v` is the address where the value is stored after reading.
+  }];
+
+  let arguments = (ins OpenACC_PointerLikeType:$x,
+                       OpenACC_PointerLikeType:$v,
+                       TypeAttr:$element_type);
+  let assemblyFormat = [{
+    $v `=` $x
+    `:` type($x) `,` $element_type attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
+
+  let summary = "performs an atomic write";
+
+  let description = [{
+    This operation performs an atomic write.
+
+    The operand `x` is the address to where the `expr` is atomically
+    written w.r.t. multiple threads. The evaluation of `expr` need not be
+    atomic w.r.t. the write to address. In general, the type(x) must
+    dereference to type(expr).
+  }];
+
+  let arguments = (ins OpenACC_PointerLikeType:$x,
+                       AnyType:$expr);
+  let assemblyFormat = [{
+    $x `=` $expr
+    `:` type($x) `,` type($expr)
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def AtomicUpdateOp : OpenACC_Op<"atomic.update",
+                               [SingleBlockImplicitTerminator<"YieldOp">,
+                                RecursiveMemoryEffects,
+                                AtomicUpdateOpInterface]> {
+
+  let summary = "performs an atomic update";
+
+  let description = [{
+    This operation performs an atomic update.
+
+    The operand `x` is exactly the same as the operand `x` in the OpenACC
+    Standard (OpenACC 3.3, section 2.12). It is the address of the variable
+    that is being updated. `x` is atomically read/written.
+
+    The region describes how to update the value of `x`. It takes the value at
+    `x` as an input and must yield the updated value. Only the update to `x` is
+    atomic. Generally the region must have only one instruction, but can
+    potentially have more than one instructions too. The update is sematically
+    similar to a compare-exchange loop based atomic update.
+
+    The syntax of atomic update operation is different from atomic read and
+    atomic write operations. This is because only the host dialect knows how to
+    appropriately update a value. For example, while generating LLVM IR, if
+    there are no special `atomicrmw` instructions for the operation-type
+    combination in atomic update, a compare-exchange loop is generated, where
+    the core update operation is directly translated like regular operations by
+    the host dialect. The front-end must handle semantic checks for allowed
+    operations.
+  }];
+
+  let arguments = (ins Arg<OpenACC_PointerLikeType,
+                           "Address of variable to be updated",
+                           [MemRead, MemWrite]>:$x);
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+    $x `:` type($x) $region attr-dict
+  }];
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+  let hasCanonicalizeMethod = 1;
+  let extraClassDeclaration = [{
+    Operation* getFirstOp() {
+      return &getRegion().front().getOperations().front();
+    }
+  }];
+}
+
+def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
+    [SingleBlockImplicitTerminator<"TerminatorOp">,
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
+  let summary = "performs an atomic capture";
+  let description = [{
+    This operation performs an atomic capture.
+
+    The region has the following allowed forms:
+
+    ```
+      acc.atomic.capture {
+        acc.atomic.update ...
+        acc.atomic.read ...
+        acc.terminator
+      }
+
+      acc.atomic.capture {
+        acc.atomic.read ...
+        acc.atomic.update ...
+        acc.terminator
+      }
+
+      acc.atomic.capture {
+        acc.atomic.read ...
+        acc.atomic.write ...
+        acc.terminator
+      }
+    ```
+
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+    $region attr-dict
+  }];
+  let hasRegionVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Returns the `atomic.read` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicReadOp getAtomicReadOp();
+
+    /// Returns the `atomic.write` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicWriteOp getAtomicWriteOp();
+
+    /// Returns the `atomic.update` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicUpdateOp getAtomicUpdateOp();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
