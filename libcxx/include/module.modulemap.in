@@ -448,10 +448,6 @@ module std_inttypes_h [system] {
   export *
 }
 // <iso646.h> provided by compiler.
-module std_limits_h [system] {
-  header "limits.h"
-  export *
-}
 module std_locale_h [system] {
   header "locale.h"
   export *

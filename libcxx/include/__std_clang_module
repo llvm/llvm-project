@@ -135,7 +135,6 @@
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <latch>
 #endif
-#include <limits.h>
 #include <limits>
 #include <list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
