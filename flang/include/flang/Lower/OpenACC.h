@@ -36,6 +36,7 @@ class FirOpBuilder;
 namespace Fortran {
 namespace parser {
 struct OpenACCConstruct;
+struct OpenACCCacheConstruct;
 struct OpenACCDeclarativeConstruct;
 } // namespace parser
 
@@ -65,7 +66,8 @@ static constexpr llvm::StringRef declarePostDeallocSuffix =
 
 void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
-                         pft::Evaluation &, const parser::OpenACCConstruct &);
+                         pft::Evaluation &, const parser::OpenACCConstruct &,
+                         llvm::SmallVector<const Fortran::parser::OpenACCCacheConstruct*>&);
 void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     Fortran::semantics::SemanticsContext &,
                                     StatementContext &, pft::Evaluation &,
