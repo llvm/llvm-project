@@ -9,13 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
 
-#include "src/__support/CPP/type_traits/enable_if.h"
-#include "src/__support/CPP/type_traits/is_convertible.h"
-#include "src/__support/CPP/type_traits/is_same.h"
-#include "src/__support/CPP/type_traits/is_void.h"
-#include "src/__support/CPP/type_traits/remove_cvref.h"
-#include "src/__support/CPP/type_traits/remove_reference.h"
-#include "src/__support/CPP/utility/forward.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h"
 
 #include <stdint.h>
@@ -35,7 +30,7 @@ template <typename Ret, typename... Params> class function<Ret(Params...)> {
   template <typename Callable>
   LIBC_INLINE static Ret callback_fn(intptr_t callable, Params... params) {
     return (*reinterpret_cast<Callable *>(callable))(
-        cpp::forward<Params>(params)...);
+        forward<Params>(params)...);
   }
 
 public:
@@ -47,18 +42,18 @@ public:
   LIBC_INLINE function(
       Callable &&callable,
       // This is not the copy-constructor.
-      enable_if_t<!cpp::is_same_v<remove_cvref_t<Callable>, function>> * =
+      enable_if_t<!is_same<remove_cvref_t<Callable>, function>::value> * =
           nullptr,
       // Functor must be callable and return a suitable type.
-      enable_if_t<cpp::is_void_v<Ret> ||
-                  cpp::is_convertible_v<
+      enable_if_t<is_void_v<Ret> ||
+                  is_convertible_v<
                       decltype(declval<Callable>()(declval<Params>()...)), Ret>>
           * = nullptr)
-      : callback(callback_fn<cpp::remove_reference_t<Callable>>),
+      : callback(callback_fn<remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
   LIBC_INLINE Ret operator()(Params... params) const {
-    return callback(callable, cpp::forward<Params>(params)...);
+    return callback(callable, forward<Params>(params)...);
   }
 
   LIBC_INLINE explicit operator bool() const { return callback; }
