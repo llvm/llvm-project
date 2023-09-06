@@ -298,6 +298,18 @@ struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
   LogicalResult matchAndRewrite(IndexSwitchOp op,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Lower an `scf.forall` operation to an `scf.parallel` op, assuming that it
+/// has no shared outputs. Ops with shared outputs should be bufferized first.
+/// Specialized lowerings for `scf.forall` (e.g., for GPUs) exist in other
+/// dialects/passes.
+struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
+  using OpRewritePattern<mlir::scf::ForallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(mlir::scf::ForallOp forallOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -677,10 +689,41 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   return success();
 }
 
+LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
+                                              PatternRewriter &rewriter) const {
+  Location loc = forallOp.getLoc();
+  if (!forallOp.getOutputs().empty())
+    return rewriter.notifyMatchFailure(
+        forallOp,
+        "only fully bufferized scf.forall ops can be lowered to scf.parallel");
+
+  // Convert mixed bounds and steps to SSA values.
+  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
+      rewriter, loc, forallOp.getMixedLowerBound());
+  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
+      rewriter, loc, forallOp.getMixedUpperBound());
+  SmallVector<Value> steps =
+      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
+
+  // Create empty scf.parallel op.
+  auto parallelOp = rewriter.create<ParallelOp>(loc, lbs, ubs, steps);
+  rewriter.eraseBlock(&parallelOp.getRegion().front());
+  rewriter.inlineRegionBefore(forallOp.getRegion(), parallelOp.getRegion(),
+                              parallelOp.getRegion().begin());
+  // Replace the terminator.
+  rewriter.setInsertionPointToEnd(&parallelOp.getRegion().front());
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(
+      parallelOp.getRegion().front().getTerminator());
+
+  // Erase the scf.forall op.
+  rewriter.replaceOp(forallOp, parallelOp);
+  return success();
+}
+
 void mlir::populateSCFToControlFlowConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering,
-               ExecuteRegionLowering, IndexSwitchLowering>(
+  patterns.add<ForallLowering, ForLowering, IfLowering, ParallelLowering,
+               WhileLowering, ExecuteRegionLowering, IndexSwitchLowering>(
       patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
@@ -691,7 +734,7 @@ void SCFToControlFlowPass::runOnOperation() {
 
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
-  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
+  target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
                       scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
