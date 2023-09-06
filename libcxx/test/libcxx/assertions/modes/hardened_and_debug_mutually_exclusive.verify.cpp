@@ -9,7 +9,7 @@
 // This test verifies that `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE` are mutually exclusive.
 
 // Modules build produces a different error ("Could not build module 'std'").
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=1 -D_LIBCPP_ENABLE_DEBUG_MODE=1
 
 #include <cassert>

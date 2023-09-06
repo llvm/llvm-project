@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // Having a customization point outside the module doesn't work, so this test is inherintly module-hostile.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Make sure that the customization points get called properly when overloaded
 

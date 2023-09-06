@@ -29,8 +29,8 @@
 // CHECK: 3| 1|int main() {
 
 // FOO-ONLY: 1| 1|void foo(void) {}
-// MISSING-BINARY-ID: error: Failed to load coverage: '[[FILENAME]]': Missing binary ID: abcd1234
-// NODATA: error: Failed to load coverage: '': No coverage data found
+// MISSING-BINARY-ID: error: failed to load coverage: '[[FILENAME]]': Missing binary ID: abcd1234
+// NODATA: error: failed to load coverage: '': no coverage data found
 
 //--- foo.c
 void foo(void) {}
