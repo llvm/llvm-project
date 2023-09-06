@@ -50,12 +50,12 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 
   constexpr time_t time_min =
       (sizeof(time_t) == 4)
-          ? static_cast<time_t>(0x80000000)
+          ? INT_MIN
           : INT_MIN * static_cast<int64_t>(
                           TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   constexpr time_t time_max =
       (sizeof(time_t) == 4)
-          ? static_cast<time_t>(0x7FFFFFFF)
+          ? INT_MAX
           : INT_MAX * static_cast<int64_t>(
                           TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
