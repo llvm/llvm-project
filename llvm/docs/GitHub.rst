@@ -268,7 +268,7 @@ Create a pull request from your branch to llvm::main.
   git commit -a --amend
 
   # Re-run tests and make sure nothing broke.
-  ninja check-llvm
+  ninja check
 
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
