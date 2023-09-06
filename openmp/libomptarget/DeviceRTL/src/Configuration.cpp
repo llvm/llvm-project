@@ -55,6 +55,10 @@ void *config::getIndirectCallTablePtr() {
       __omp_rtl_device_environment.IndirectCallTable);
 }
 
+uint64_t config::getHardwareParallelism() {
+  return __omp_rtl_device_environment.HardwareParallelism;
+}
+
 uint64_t config::getIndirectCallTableSize() {
   return __omp_rtl_device_environment.IndirectCallTableSize;
 }

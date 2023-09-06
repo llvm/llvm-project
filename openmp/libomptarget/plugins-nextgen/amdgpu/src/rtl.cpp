@@ -1942,16 +1942,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// AMDGPU devices do not have the concept of contexts.
   Error setContext() override { return Plugin::success(); }
 
+  /// AMDGPU returns the product of the number of compute units and the waves
+  /// per compute unit.
+  uint64_t getHardwareParallelism() const override {
+    return HardwareParallelism;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
   }
 
-  /// AMDGPU returns the product of the number of compute units and the waves
-  /// per compute unit.
-  uint64_t requestedRPCPortCount() const override  {
-    return HardwareParallelism;
+  /// The RPC interface should have enough space for all availible parallelism.
+  uint64_t requestedRPCPortCount() const override {
+    return getHardwareParallelism();
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
