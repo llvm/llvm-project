@@ -22,6 +22,8 @@
 #define SHARED_LOCKS_REQUIRED(...) \
   __attribute__ ((shared_locks_required(__VA_ARGS__)))
 #define NO_THREAD_SAFETY_ANALYSIS  __attribute__ ((no_thread_safety_analysis))
+#define CLEANUP(A) __attribute__ ((cleanup(A)))
+
 
 // Define the mutex struct.
 // Simplified only for test purpose.
@@ -70,6 +72,17 @@ void set_value(int *a, int value) EXCLUSIVE_LOCKS_REQUIRED(foo_.mu_) {
 
 int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
   return *p;
+}
+
+void cleanup_int(int *unused) __attribute__((release_capability(mu1))) {
+  (void)unused;
+  mutex_exclusive_unlock(&mu1);
+}
+
+void broken_cleanup_int(int *unused) __attribute__((release_capability(mu1))) {
+  (void)unused;
+  mutex_exclusive_unlock(&mu1);
+  Bar_fun1(6); // expected-warning {{calling function 'Bar_fun1' requires holding mutex 'mu1' exclusively}}
 }
 
 int main(void) {
@@ -126,6 +139,21 @@ int main(void) {
   mutex_exclusive_unlock(&mu1); // expected-warning {{releasing mutex 'mu1' using exclusive access, expected shared access}}
                                 // expected-note@-1{{mutex released here}}
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
+
+  /// Cleanup functions
+  {
+    mutex_exclusive_lock(&mu1);
+    int CLEANUP(cleanup_int) i;
+
+    Bar_fun1(3);
+  }
+  Bar_fun1(4); // expected-warning {{calling function 'Bar_fun1' requires holding mutex 'mu1' exclusively}}
+
+
+  {
+    mutex_exclusive_lock(&mu1);
+    int CLEANUP(broken_cleanup_int) i2;
+  }
 
   return 0;
 }
