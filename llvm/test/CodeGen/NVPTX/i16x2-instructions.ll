@@ -9,13 +9,11 @@
 ; RUN: %}
 ; ## No support for i16x2 instructions
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
-; RUN:           -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOI16x2 %s
 ; RUN: %if ptxas %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math   \
-; RUN:           -verify-machineinstrs                                        \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
 ; RUN: %}
 
@@ -148,10 +146,8 @@ define <2 x i16> @test_sub(<2 x i16> %a, <2 x i16> %b) #0 {
 ;
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	CHECK-NOI16x2-DAG:	setp.gt.s16 	[[P0:%p[0-9]+]], [[RS0]], [[RS2]];
-;	CHECK-NOI16x2-DAG:	setp.gt.s16 	[[P1:%p[0-9]+]], [[RS1]], [[RS3]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]], [[P0]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]], [[P1]];
+;	CHECK-NOI16x2-DAG: max.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+;	CHECK-NOI16x2-DAG: max.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
@@ -170,10 +166,8 @@ define <2 x i16> @test_smax(<2 x i16> %a, <2 x i16> %b) #0 {
 ;
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	CHECK-NOI16x2-DAG:	setp.gt.u16 	[[P0:%p[0-9]+]], [[RS0]], [[RS2]];
-;	CHECK-NOI16x2-DAG:	setp.gt.u16 	[[P1:%p[0-9]+]], [[RS1]], [[RS3]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]], [[P0]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]], [[P1]];
+;	CHECK-NOI16x2-DAG: max.u16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+;	CHECK-NOI16x2-DAG: max.u16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
@@ -192,10 +186,8 @@ define <2 x i16> @test_umax(<2 x i16> %a, <2 x i16> %b) #0 {
 ;
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	CHECK-NOI16x2-DAG:	setp.le.s16 	[[P0:%p[0-9]+]], [[RS0]], [[RS2]];
-;	CHECK-NOI16x2-DAG:	setp.le.s16 	[[P1:%p[0-9]+]], [[RS1]], [[RS3]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]], [[P0]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]], [[P1]];
+;	CHECK-NOI16x2-DAG: min.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+;	CHECK-NOI16x2-DAG: min.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
@@ -214,10 +206,8 @@ define <2 x i16> @test_smin(<2 x i16> %a, <2 x i16> %b) #0 {
 ;
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	CHECK-NOI16x2-DAG:	setp.le.u16 	[[P0:%p[0-9]+]], [[RS0]], [[RS2]];
-;	CHECK-NOI16x2-DAG:	setp.le.u16 	[[P1:%p[0-9]+]], [[RS1]], [[RS3]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]], [[P0]];
-;	CHECK-NOI16x2-DAG:	selp.b16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]], [[P1]];
+;	CHECK-NOI16x2-DAG: min.u16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+;	CHECK-NOI16x2-DAG: min.u16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	CHECK-NOI16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];

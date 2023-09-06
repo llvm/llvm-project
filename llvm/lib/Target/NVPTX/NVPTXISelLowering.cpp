@@ -621,21 +621,21 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::CTLZ, Ty, Legal);
   }
 
-  setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::SMAX, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::UMIN, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::UMAX, MVT::v2i16, Legal, Expand);
+  setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::SMAX, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::UMIN, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::UMAX, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::CTPOP, MVT::v2i16, Legal, Expand);
   setI16x2OperationAction(ISD::CTLZ, MVT::v2i16, Legal, Expand);
 
-  setI16x2OperationAction(ISD::ADD, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::SUB, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::AND, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::MUL, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::SHL, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::SREM, MVT::v2i16, Legal, Expand);
-  setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Expand);
+  setI16x2OperationAction(ISD::ADD, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::SUB, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::AND, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::MUL, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::SHL, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::SREM, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Custom);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
   setOperationAction(ISD::ADDE, MVT::i32, Legal);
@@ -2418,7 +2418,26 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
   return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
 }
 
-
+static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  if (Op.getValueType() != MVT::v2i16)
+    return Op;
+  EVT EltVT = Op.getValueType().getVectorElementType();
+  SmallVector<SDValue> VecElements;
+  for (int I = 0, E = Op.getValueType().getVectorNumElements(); I < E; I++) {
+    SmallVector<SDValue> ScalarArgs;
+    for (int J = 0, NumOp = Op.getNumOperands(); J < NumOp; J++) {
+      SDValue Ext =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Op->getOperand(J),
+                      DAG.getIntPtrConstant(I, DL));
+      ScalarArgs.push_back(Ext);
+    }
+    VecElements.push_back(DAG.getNode(Op.getOpcode(), DL, EltVT, ScalarArgs));
+  }
+  SDValue V =
+      DAG.getNode(ISD::BUILD_VECTOR, DL, Op.getValueType(), VecElements);
+  return V;
+}
 
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -2456,6 +2475,19 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
+  case ISD::ABS:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::MUL:
+  case ISD::SHL:
+  case ISD::SREM:
+  case ISD::UREM:
+    return LowerVectorArith(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
