@@ -747,19 +747,10 @@ defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
 // def v2f16imm : Operand<v2f16>;
 // defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Int32Regs, v2f16imm, imm>;
 
-def SELP_f16x2rr :
-    NVPTXInst<(outs Int32Regs:$dst),
-              (ins Int32Regs:$a, Int32Regs:$b, Int1Regs:$p),
-              "selp.b32 \t$dst, $a, $b, $p;",
-              [(set Int32Regs:$dst,
-                    (select Int1Regs:$p, (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>;
-
-def SELP_i16x2rr :
-    NVPTXInst<(outs Int32Regs:$dst),
-              (ins Int32Regs:$a, Int32Regs:$b, Int1Regs:$p),
-              "selp.b32 \t$dst, $a, $b, $p;",
-              [(set Int32Regs:$dst,
-                    (select Int1Regs:$p, (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)))]>;
+def : Pat<(v2f16 (select Int1Regs:$p, (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b))),
+          (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
+def : Pat<(v2i16 (select Int1Regs:$p, (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b))),
+          (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
 
 //-----------------------------------
 // Test Instructions
