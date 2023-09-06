@@ -31,7 +31,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
   }
   Loc = SM.getExpansionLoc(Loc);
   const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
-  OptionalFileEntryRef FE = SM.getFileEntryRefForID(Decomposed.first);
+  const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
   if (FE) {
     OS << llvm::sys::path::filename(FE->getName());
   } else {

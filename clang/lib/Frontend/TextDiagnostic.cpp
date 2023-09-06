@@ -779,7 +779,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   if (PLoc.isInvalid()) {
     // At least print the file name if available:
     if (FileID FID = Loc.getFileID(); FID.isValid()) {
-      if (OptionalFileEntryRef FE = Loc.getFileEntryRef()) {
+      if (const FileEntry *FE = Loc.getFileEntry()) {
         emitFilename(FE->getName(), Loc.getManager());
         OS << ": ";
       }

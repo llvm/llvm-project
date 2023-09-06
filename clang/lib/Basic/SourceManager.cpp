@@ -1018,7 +1018,7 @@ SourceLocation SourceManager::getImmediateSpellingLoc(SourceLocation Loc) const{
 
 /// Return the filename of the file containing a SourceLocation.
 StringRef SourceManager::getFilename(SourceLocation SpellingLoc) const {
-  if (OptionalFileEntryRef F = getFileEntryRefForID(getFileID(SpellingLoc)))
+  if (const FileEntry *F = getFileEntryForID(getFileID(SpellingLoc)))
     return F->getName();
   return StringRef();
 }

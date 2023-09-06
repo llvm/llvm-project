@@ -891,7 +891,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       unsigned FileOffset = LocInfo.second;
 
       if (FID.isValid()) {
-        if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID)) {
+        if (const FileEntry *FE = SM.getFileEntryForID(FID)) {
           Result << " file=\"";
           appendToResultWithXMLEscaping(FE->getName());
           Result << "\"";

@@ -72,7 +72,7 @@ void arcmt::writeARCDiagsToPlist(const std::string &outPath,
        " <array>\n";
 
   for (FileID FID : Fids)
-    EmitString(o << "  ", SM.getFileEntryRefForID(FID)->getName()) << '\n';
+    EmitString(o << "  ", SM.getFileEntryForID(FID)->getName()) << '\n';
 
   o << " </array>\n"
        " <key>diagnostics</key>\n"

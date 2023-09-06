@@ -666,7 +666,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     } else {
       auto &OldSM = AST->getSourceManager();
       FileID ID = OldSM.getMainFileID();
-      if (auto File = OldSM.getFileEntryRefForID(ID))
+      if (auto *File = OldSM.getFileEntryForID(ID))
         Input = FrontendInputFile(File->getName(), Kind);
       else
         Input = FrontendInputFile(OldSM.getBufferOrFake(ID), Kind);
@@ -844,7 +844,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         return false;
       }
       // We now have the filename...
-      FileName = FE->getName();
+      FileName = FE->getFileEntry().getName();
       // ... still a header unit, but now use the path as written.
       Kind = Input.getKind().withHeaderUnit(InputKind::HeaderUnit_Abs);
       Input = FrontendInputFile(FileName, Kind, Input.isSystem());

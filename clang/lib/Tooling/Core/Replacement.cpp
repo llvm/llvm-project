@@ -122,8 +122,7 @@ void Replacement::setFromSourceLocation(const SourceManager &Sources,
                                         StringRef ReplacementText) {
   const std::pair<FileID, unsigned> DecomposedLocation =
       Sources.getDecomposedLoc(Start);
-  OptionalFileEntryRef Entry =
-      Sources.getFileEntryRefForID(DecomposedLocation.first);
+  const FileEntry *Entry = Sources.getFileEntryForID(DecomposedLocation.first);
   this->FilePath = std::string(Entry ? Entry->getName() : InvalidLocation);
   this->ReplacementRange = Range(DecomposedLocation.second, Length);
   this->ReplacementText = std::string(ReplacementText);

@@ -868,8 +868,8 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
       OS << "\n  (frontend)";
     else {
       OS << "\n ";
-      if (OptionalFileEntryRef File =
-              SourceMgr->getFileEntryRefForID(SourceMgr->getFileID(I->first)))
+      if (const FileEntry *File = SourceMgr->getFileEntryForID(
+                                                SourceMgr->getFileID(I->first)))
         OS << " File " << File->getName();
       OS << " Line " << SourceMgr->getPresumedLineNumber(I->first);
     }

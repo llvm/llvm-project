@@ -70,7 +70,7 @@ SarifResult SARIFDiagnostic::addLocationToResult(
     // At least add the file name if available:
     FileID FID = Loc.getFileID();
     if (FID.isValid()) {
-      if (OptionalFileEntryRef FE = Loc.getFileEntryRef()) {
+      if (const FileEntry *FE = Loc.getFileEntry()) {
         emitFilename(FE->getName(), Loc.getManager());
         // FIXME(llvm-project/issues/57366): File-only locations
       }
