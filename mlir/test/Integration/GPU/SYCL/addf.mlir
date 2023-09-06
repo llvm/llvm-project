@@ -6,8 +6,7 @@
 // RUN: | FileCheck %s
 
 module @add attributes {
-  gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Float16Buffer, Int64, Int16, Int8, Kernel, Linkage, Vector16, GenericPointer, Groups, Float16, Float64, AtomicFloat32AddEXT, ExpectAssumeKHR], [SPV_KHR_expect_assume]>, api=OpenCL, #spirv.resource_limits<>>
+  gpu.container_module
 } {
   memref.global "private" constant @__constant_9xf32_0 : memref<9xf32> = dense<[1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]>
   memref.global "private" constant @__constant_9xf32 : memref<9xf32> = dense<[2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2]>
@@ -16,10 +15,10 @@ module @add attributes {
     %1 = memref.get_global @__constant_9xf32_0 : memref<9xf32>
     %2 = call @test(%0, %1) : (memref<9xf32>, memref<9xf32>) -> memref<9xf32>
     %cast = memref.cast %2 : memref<9xf32> to memref<*xf32>
-    call @printMemrefI64(%cast) : (memref<*xf32>) -> ()
+    call @printMemrefF32(%cast) : (memref<*xf32>) -> ()
     return
   }
-  func.func private @printMemrefI64(memref<*xf32>)
+  func.func private @printMemrefF32(memref<*xf32>)
   func.func @test(%arg0: memref<9xf32>, %arg1: memref<9xf32>) -> memref<9xf32> {
   %c9 = arith.constant 9 : index
   %c1 = arith.constant 1 : index
@@ -44,7 +43,9 @@ module @add attributes {
   gpu.wait [%7]
   return %alloc : memref<9xf32>
   }
-  gpu.module @test_kernel {
+  gpu.module @test_kernel attributes {
+    spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Float16Buffer, Int64, Int16, Int8, Kernel, Linkage, Vector16, GenericPointer, Groups, Float16, Float64, AtomicFloat32AddEXT, ExpectAssumeKHR], [SPV_KHR_expect_assume]>, api=OpenCL, #spirv.resource_limits<>>
+  }{
     gpu.func @test_kernel(%arg0: memref<9xf32>, %arg1: memref<9xf32>, %arg2: memref<9xf32>) kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 9, 1, 1>, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
       //%0 = gpu.block_id  x
       //%2 = memref.load %arg0[%0] : memref<9xf32>

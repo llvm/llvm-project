@@ -76,9 +76,14 @@ static sycl::device getDefaultDevice() {
   throw std::runtime_error("getDefaultDevice failed");
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+
 // Create global device and context
 sycl::device syclDevice = getDefaultDevice();
 sycl::context syclContext = sycl::context(syclDevice);
+
+#pragma clang diagnostic pop
 
 struct QUEUE {
   sycl::queue syclQueue_;

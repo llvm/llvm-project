@@ -52,4 +52,7 @@ module @add attributes {gpu.container_module} {
       gpu.return
     }
   }
+  // CHECK: [2,   4100,   6],
+  // CHECK: [16777224,   10,   4294971404],
+  // CHECK: [16777230,   1103806595088,   1099511627794]
 }
