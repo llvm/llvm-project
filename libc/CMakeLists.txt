@@ -44,9 +44,22 @@ if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR
 endif()
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
-       "Log details warnings and notifications during CMake configuration." OFF)
+  "Log details warnings and notifications during CMake configuration." OFF)
+
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
+
+# Defining a global namespace to enclose all libc functions.
+set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
+  CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
+)
+
+if(NOT LIBC_NAMESPACE MATCHES "^__llvm_libc")
+  message(FATAL_ERROR "Invalid LIBC_NAMESPACE. Must start with '__llvm_libc' was '${LIBC_NAMESPACE}'")
+endif()
+
+message(STATUS "Setting LIBC_NAMESPACE namespace to '${LIBC_NAMESPACE}'")
+add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
@@ -181,7 +194,8 @@ if(LLVM_LIBC_ENABLE_LINTING)
                       OUTPUT_VARIABLE CLANG_TIDY_OUTPUT)
       string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
       string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
-             "${CMAKE_CXX_COMPILER_VERSION}")
+        "${CMAKE_CXX_COMPILER_VERSION}")
+
       if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
         set(LLVM_LIBC_ENABLE_LINTING OFF)
         message(WARNING "
