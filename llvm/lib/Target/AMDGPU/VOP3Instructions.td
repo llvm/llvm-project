@@ -31,13 +31,9 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
-  let OutsVOP3DPP = Outs64;
-  let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
-  let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
-  let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
-  let HasExt64BitDPP = 1;
+def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
@@ -46,6 +42,15 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let IsSingle = 1;
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
+}
+
+let HasExt64BitDPP = 1 in {
+def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
+  let OutsVOP3DPP = Outs64;
+  let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
+  let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
+  let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
 }
 
 def VOP3b_I64_I1_I32_I32_I64_DPP : VOPProfile<[i64, i32, i32, i64]> {
@@ -58,40 +63,21 @@ def VOP3b_I64_I1_I32_I32_I64_DPP : VOPProfile<[i64, i32, i32, i64]> {
   let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
   let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
-  let HasExt64BitDPP = 1;
 }
 
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
-  let HasExt64BitDPP = 1;
 }
 
-def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
-  let HasExtVOP3DPP = 0;
-  let HasExtDPP = 0;
-}
-
-def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
-  let HasExt64BitDPP = 1;
-}
-
-def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64> {
-  let HasExt64BitDPP = 1;
-}
-
-def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
-  let HasExt64BitDPP = 1;
-}
-
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64> {
-  let HasExt64BitDPP = 1;
-}
-
+def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
+def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
+def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32>;
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
 def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
   let HasClamp = 1;
-  let HasExt64BitDPP = 1;
 }
+} // End HasExt64BitDPP = 1;
 
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
