@@ -1589,10 +1589,13 @@ void DwarfDebug::collectVariableInfoFromMFTable(
                       << "\n");
 
     if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (DbgVar->hasFrameIndexExprs())
+      if (DbgVar->hasFrameIndexExprs() && RegVar->hasFrameIndexExprs())
         DbgVar->addMMIEntry(*RegVar);
-      else
+      else if (VI.inEntryValueRegister())
         DbgVar->getEntryValue()->addExpr(VI.getEntryValueRegister(), *VI.Expr);
+      else
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << VI.Var->getName()
+                          << ", conflicting fragment types\n");
     } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
       MFVars.insert({Var, RegVar.get()});
       ConcreteEntities.push_back(std::move(RegVar));
