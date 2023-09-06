@@ -52,8 +52,9 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.ptr<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
-! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.ptr<f32>
+! CHECK:         %[[VAL_20:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK:         %[[VAL_21:.*]] = arith.addf %[[VAL_19]], %[[VAL_20]] {{.*}}: f32
+! CHECK:         fir.store %[[VAL_21]] to %[[VAL_3]] : !fir.ptr<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:
 ! CHECK:         return
@@ -77,8 +78,9 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.heap<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
-! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.heap<f32>
+! CHECK:         %[[VAL_20:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK:         %[[VAL_21:.*]] = arith.addf %[[VAL_19]], %[[VAL_20]] {{.*}}: f32
+! CHECK:         fir.store %[[VAL_21]] to %[[VAL_3]] : !fir.heap<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:
 ! CHECK:         return
@@ -103,8 +105,9 @@ contains
 ! CHECK:       ^bb3:
 ! CHECK:         br ^bb5
 ! CHECK:       ^bb4:
-! CHECK:         %[[VAL_21:.*]] = fir.load %[[VAL_3]] : !fir.ptr<i32>
-! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_21]], %[[VAL_6]] : i32
+! CHECK:         %[[VAL_20:.*]] = fir.load %[[VAL_3]] : !fir.ptr<i32>
+! CHECK:         %[[VAL_21:.*]] = arith.constant 1 : i32
+! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : i32
 ! CHECK:         fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb5:
