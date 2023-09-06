@@ -1627,7 +1627,7 @@ static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, unsigned Reg,
                                   const TargetRegisterInfo *TRI) {
   LiveRegUnits LiveInRegUnits(*TRI);
   LiveInRegUnits.addLiveIns(MBB);
-  return !LiveInRegUnits.available(Reg);
+  return LiveInRegUnits.contains(Reg);
 }
 
 static MachineBasicBlock *
@@ -1680,7 +1680,7 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
   for (auto U : UsedOpsInCopy) {
     MachineOperand &MO = MI->getOperand(U);
     Register SrcReg = MO.getReg();
-    if (!UsedRegUnits.available(SrcReg)) {
+    if (UsedRegUnits.contains(SrcReg)) {
       MachineBasicBlock::iterator NI = std::next(MI->getIterator());
       for (MachineInstr &UI : make_range(NI, CurBB.end())) {
         if (UI.killsRegister(SrcReg, TRI)) {
@@ -1725,7 +1725,7 @@ static bool hasRegisterDependency(MachineInstr *MI,
     if (!Reg)
       continue;
     if (MO.isDef()) {
-      if (!ModifiedRegUnits.available(Reg) || !UsedRegUnits.available(Reg)) {
+      if (ModifiedRegUnits.contains(Reg) || UsedRegUnits.contains(Reg)) {
         HasRegDependency = true;
         break;
       }
@@ -1736,7 +1736,7 @@ static bool hasRegisterDependency(MachineInstr *MI,
       // it's not perfectly clear if skipping the internal read is safe in all
       // other targets.
     } else if (MO.isUse()) {
-      if (!ModifiedRegUnits.available(Reg)) {
+      if (ModifiedRegUnits.contains(Reg)) {
         HasRegDependency = true;
         break;
       }

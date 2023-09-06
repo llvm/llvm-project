@@ -41,6 +41,12 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
   }
 }
 
+bool LiveRegUnits::available(const MachineRegisterInfo &MRI,
+                            MCPhysReg Reg) const {
+  bool isPhysRegReserved = MRI.isReserved(Reg);
+  return !isPhysRegReserved && !contains(Reg);
+}
+
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
