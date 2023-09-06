@@ -2476,6 +2476,16 @@ bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
 template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
 template <class T> constexpr T *to_address(T *P) { return P; }
 
+// Detect incomplete types, relying on the fact that their size is unknown.
+namespace detail {
+template <typename T> using has_sizeof = decltype(sizeof(T));
+} // namespace detail
+
+/// Detects when type `T` is incomplete. This is true for forward declarations
+/// and false for types with a full definition.
+template <typename T>
+constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
+
 } // end namespace llvm
 
 namespace std {

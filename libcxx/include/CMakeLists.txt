@@ -283,6 +283,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/tzdb.h
+  __chrono/tzdb_list.h
   __chrono/weekday.h
   __chrono/year.h
   __chrono/year_month.h
