@@ -1322,6 +1322,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
           !(STI->getTargetTriple().isPPC() && Target == Index))
         Labels[Target] = ("L" + Twine(LabelCount++)).str();
       MIA->updateState(Inst, Index);
+    } else if (!Disassembled && MIA) {
+      MIA->resetState();
     }
     Index += Size;
   }
@@ -2194,6 +2196,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             }
 
             DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+          } else if (!Disassembled && DT->InstrAnalysis) {
+            DT->InstrAnalysis->resetState();
           }
         }
 
