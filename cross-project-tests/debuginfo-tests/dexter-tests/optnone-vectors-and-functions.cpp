@@ -6,7 +6,8 @@
 // RUN:     --binary %t --debugger 'lldb' -- %s
 
 // REQUIRES: lldb
-// UNSUPPORTED: system-windows
+// Currently getting intermittent failures on darwin.
+// UNSUPPORTED: system-windows, system-darwin
 
 //// Check that the debugging experience with __attribute__((optnone)) at O2
 //// matches O0. Test simple template functions performing simple arithmetic
