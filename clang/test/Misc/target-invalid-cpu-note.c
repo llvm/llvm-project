@@ -93,4 +93,4 @@
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, generic, rocket, sifive-7-series, veyron-v1{{$}}
