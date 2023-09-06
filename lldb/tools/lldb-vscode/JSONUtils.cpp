@@ -1133,7 +1133,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     const auto num_children = v.GetNumChildren();
     if (is_array) {
       object.try_emplace("indexedVariables", num_children);
-    } else {
+    } else if (num_children > 0) {
       // If a type has a synthetic child provider, then the SBType of "v" won't
       // tell us anything about what might be displayed. So we can check if the
       // first child's name is "[0]" and then we can say it is indexed.
