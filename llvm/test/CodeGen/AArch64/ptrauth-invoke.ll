@@ -96,6 +96,90 @@ continuebb:
   ret i32 %tmp0
 }
 
+; DARWIN-LABEL: _test_invoke_ia_0_direct:
+; DARWIN-NEXT: [[FNBEGIN:L.*]]:
+; DARWIN-NEXT:  .cfi_startproc
+; DARWIN-NEXT:  .cfi_personality 155, ___gxx_personality_v0
+; DARWIN-NEXT:  .cfi_lsda 16, [[EXCEPT:Lexception[0-9]+]]
+; DARWIN-NEXT: ; %bb.0:
+; DARWIN-NEXT:  stp x20, x19, [sp, #-32]!
+; DARWIN-NEXT:  stp x29, x30, [sp, #16]
+; DARWIN-NEXT:  .cfi_def_cfa_offset 32
+; DARWIN-NEXT:  .cfi_offset w30, -8
+; DARWIN-NEXT:  .cfi_offset w29, -16
+; DARWIN-NEXT:  .cfi_offset w19, -24
+; DARWIN-NEXT:  .cfi_offset w20, -32
+; DARWIN-NEXT: [[PRECALL:L.*]]:
+; DARWIN-NEXT:  bl _baz
+
+; DARWIN-SDAG-NEXT: [[POSTCALL:L.*]]:
+; DARWIN-SDAG-NEXT: ; %bb.1:
+; DARWIN-SDAG-NEXT:  mov x19, x0
+
+; DARWIN-GISEL-NEXT:  mov x19, x0
+; DARWIN-GISEL-NEXT: [[POSTCALL:L.*]]:
+
+; DARWIN-NEXT: [[CALLBB:L.*]]:
+; DARWIN-NEXT:  bl _foo
+; DARWIN-NEXT:  mov x0, x19
+; DARWIN-NEXT:  ldp x29, x30, [sp, #16]
+; DARWIN-NEXT:  ldp x20, x19, [sp], #32
+; DARWIN-NEXT:  ret
+; DARWIN-NEXT: [[LPADBB:LBB[0-9_]+]]:
+; DARWIN-NEXT: [[LPAD:L.*]]:
+; DARWIN-NEXT:  mov w19, #-1
+; DARWIN-NEXT:  b [[CALLBB]]
+
+; ELF-LABEL: test_invoke_ia_0_direct:
+; ELF-NEXT: [[FNBEGIN:.L.*]]:
+; ELF-NEXT:  .cfi_startproc
+; ELF-NEXT:  .cfi_personality 156, DW.ref.__gxx_personality_v0
+; ELF-NEXT:  .cfi_lsda 28, [[EXCEPT:.Lexception[0-9]+]]
+; ELF-NEXT: // %bb.0:
+; ELF-NEXT:  stp x30, x19, [sp, #-16]!
+; ELF-NEXT:  .cfi_def_cfa_offset 16
+; ELF-NEXT:  .cfi_offset w19, -8
+; ELF-NEXT:  .cfi_offset w30, -16
+; ELF-NEXT: [[PRECALL:.L.*]]:
+; ELF-NEXT:  bl baz
+
+; ELF-SDAG-NEXT: [[POSTCALL:.L.*]]:
+; ELF-SDAG-NEXT: // %bb.1:
+; ELF-SDAG-NEXT:  mov w19, w0
+
+; ELF-GISEL-NEXT:  mov w19, w0
+; ELF-GISEL-NEXT: [[POSTCALL:.L.*]]:
+
+; ELF-NEXT: [[CALLBB:.L.*]]:
+; ELF-NEXT:  bl foo
+; ELF-NEXT:  mov w0, w19
+; ELF-NEXT:  ldp x30, x19, [sp], #16
+; ELF-NEXT:  ret
+; ELF-NEXT: [[LPADBB:.LBB[0-9_]+]]:
+; ELF-NEXT: [[LPAD:.L.*]]:
+; ELF-NEXT:  mov w19, #-1
+; ELF-NEXT:  b [[CALLBB]]
+
+; CHECK-LABEL: GCC_except_table{{.*}}:
+; CHECK-NEXT: [[EXCEPT]]:
+; CHECK:       .uleb128 [[POSTCALL]]-[[PRECALL]] {{.*}} Call between [[PRECALL]] and [[POSTCALL]]
+; CHECK-NEXT:  .uleb128 [[LPAD]]-[[FNBEGIN]]     {{.*}}   jumps to [[LPAD]]
+; CHECK-NEXT:  .byte 0                           {{.*}} On action: cleanup
+
+define i32 @test_invoke_ia_0_direct() #0 personality ptr @__gxx_personality_v0 {
+  %tmp0 = invoke i32 ptrauth (ptr @baz, i32 0)() [ "ptrauth"(i32 0, i64 0) ] to label %continuebb
+            unwind label %unwindbb
+
+unwindbb:
+  %tmp1 = landingpad { ptr, i32 } cleanup
+  call void @foo()
+  ret i32 -1
+
+continuebb:
+  call void @foo()
+  ret i32 %tmp0
+}
+
 @_ZTIPKc = external constant ptr
 @hello_str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
@@ -265,6 +349,7 @@ continuebb:
 
 declare void @foo()
 declare void @bar(ptr)
+declare i32 @baz()
 
 declare i32 @__gxx_personality_v0(...)
 declare ptr @__cxa_allocate_exception(i64)
