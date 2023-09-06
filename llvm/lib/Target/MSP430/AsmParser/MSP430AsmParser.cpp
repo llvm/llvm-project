@@ -45,10 +45,9 @@ class MSP430AsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -290,30 +289,28 @@ bool MSP430AsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
 static unsigned MatchRegisterName(StringRef Name);
 static unsigned MatchRegisterAltName(StringRef Name);
 
-bool MSP430AsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool MSP430AsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                     SMLoc &EndLoc) {
-  switch (tryParseRegister(RegNo, StartLoc, EndLoc)) {
-  case MatchOperand_ParseFail:
+  ParseStatus Res = tryParseRegister(Reg, StartLoc, EndLoc);
+  if (Res.isFailure())
     return Error(StartLoc, "invalid register name");
-  case MatchOperand_Success:
+  if (Res.isSuccess())
     return false;
-  case MatchOperand_NoMatch:
+  if (Res.isNoMatch())
     return true;
-  }
 
-  llvm_unreachable("unknown match result type");
+  llvm_unreachable("unknown parse status");
 }
 
-OperandMatchResultTy MSP430AsmParser::tryParseRegister(MCRegister &RegNo,
-                                                       SMLoc &StartLoc,
-                                                       SMLoc &EndLoc) {
+ParseStatus MSP430AsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                              SMLoc &EndLoc) {
   if (getLexer().getKind() == AsmToken::Identifier) {
     auto Name = getLexer().getTok().getIdentifier().lower();
-    RegNo = MatchRegisterName(Name);
-    if (RegNo == MSP430::NoRegister) {
-      RegNo = MatchRegisterAltName(Name);
-      if (RegNo == MSP430::NoRegister)
-        return MatchOperand_NoMatch;
+    Reg = MatchRegisterName(Name);
+    if (Reg == MSP430::NoRegister) {
+      Reg = MatchRegisterAltName(Name);
+      if (Reg == MSP430::NoRegister)
+        return ParseStatus::NoMatch;
     }
 
     AsmToken const &T = getParser().getTok();
@@ -321,10 +318,10 @@ OperandMatchResultTy MSP430AsmParser::tryParseRegister(MCRegister &RegNo,
     EndLoc = T.getEndLoc();
     getLexer().Lex(); // eat register token
 
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
-  return MatchOperand_ParseFail;
+  return ParseStatus::Failure;
 }
 
 bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,
