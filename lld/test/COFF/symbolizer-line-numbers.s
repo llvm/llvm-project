@@ -62,16 +62,16 @@
 # CHECK:      f1
 # CHECK-NEXT: t.cpp:2:0
 # CHECK-NEXT: f2(int)
-# CHECK-NEXT: t.cpp:6:3
+# CHECK-NEXT: t.cpp:6:10
 	.cv_inline_site_id 2 within 1 inlined_at 1 6 10
 	.cv_loc	2 1 2 13                        # t.cpp:2:13
                                         # kill: def $ecx killed $ecx def $rcx
 	leal	1(%rcx), %eax
 .Ltmp1:
-	.cv_loc	1 1 6 3                         # t.cpp:6:3
-	retq
 # CHECK:      f2(int)
 # CHECK-NEXT: t.cpp:6:3
+	.cv_loc	1 1 6 3                         # t.cpp:6:3
+	retq
 .Ltmp2:
 .Lfunc_end1:
                                         # -- End function
