@@ -8835,6 +8835,44 @@ cc_binary(
     ],
 )
 
+## OpenMP / OpenACC common
+
+td_library(
+    name = "AtomicInterfacesTdFiles",
+    srcs = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AtomicInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
+    deps = [":AtomicInterfacesTdFiles"],
+)
+
+cc_library(
+    name = "AtomicInterfaces",
+    srcs = ["lib/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":AtomicInterfacesIncGen",
+        "//llvm:Support",
+    ],
+)
+
 ## OpenACC dialect
 
 # TODO(gcmn): This is sticking td files in a cc_library
@@ -8863,9 +8901,13 @@ td_library(
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
         "include/mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
     ],
     includes = ["include"],
-    deps = [":OpBaseTdFiles"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":AtomicInterfacesTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -8978,11 +9020,21 @@ cc_library(
             "lib/Dialect/OpenACC/IR/*.h",
         ],
     ),
-    hdrs = glob([
-        "include/mlir/Dialect/OpenACC/*.h",
-    ]),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/OpenACC/*.h",
+        ],
+        exclude =
+            [
+                "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+            ],
+    ),
     includes = ["include"],
+    textual_hdrs = [
+        "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+    ],
     deps = [
+        ":AtomicInterfaces",
         ":ControlFlowInterfaces",
         ":IR",
         ":LLVMDialect",
@@ -9025,12 +9077,16 @@ td_library(
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
     ],
     deps = [
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
+        ":AtomicInterfacesTdFiles",
     ],
 )
+
+
 
 gentbl_cc_library(
     name = "OpenMPOpsIncGen",
@@ -9135,13 +9191,19 @@ cc_library(
         [
             "include/mlir/Dialect/OpenMP/*.h",
         ],
-        exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
+        exclude =
+            [
+                "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
+                "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+            ],
     ),
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
+        "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":AtomicInterfaces",
         ":ControlFlowInterfaces",
         ":FuncDialect",
         ":IR",
