@@ -412,7 +412,7 @@ bool Rewriter::overwriteChangedFiles() {
   unsigned OverwriteFailure = Diag.getCustomDiagID(
       DiagnosticsEngine::Error, "unable to overwrite file %0: %1");
   for (buffer_iterator I = buffer_begin(), E = buffer_end(); I != E; ++I) {
-    const FileEntry *Entry = getSourceMgr().getFileEntryForID(I->first);
+    OptionalFileEntryRef Entry = getSourceMgr().getFileEntryRefForID(I->first);
     if (auto Error =
             llvm::writeToOutput(Entry->getName(), [&](llvm::raw_ostream &OS) {
               I->second.write(OS);
