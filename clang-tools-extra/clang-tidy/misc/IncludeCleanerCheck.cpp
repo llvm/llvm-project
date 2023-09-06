@@ -200,8 +200,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
 
   tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
                                          FileStyle->IncludeStyle);
-  // `tooling::HeaderIncludes::insert` will not modify `ExistingIncludes`. We
-  // should handle repeat include here
+  // Deduplicate insertions when running in bulk fix mode.
   llvm::StringSet<> InsertedHeaders{};
   for (const auto &Inc : Missing) {
     std::string Spelling = include_cleaner::spellHeader(
@@ -219,10 +218,11 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
                "no header providing \"%0\" is directly included")
           << Inc.SymRef.Target.name();
       if (areDiagsSelfContained() ||
-          InsertedHeaders.insert(Replacement->getReplacementText()).second)
+          InsertedHeaders.insert(Replacement->getReplacementText()).second) {
         DB << FixItHint::CreateInsertion(
             SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
             Replacement->getReplacementText());
+      }
     }
   }
 }
