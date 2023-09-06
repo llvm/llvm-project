@@ -5846,9 +5846,9 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
-def mno_gather : Flag<["-"], "mno-gather">, Group<m_x86_Features_Group>,
+def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
                  HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
-def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_x86_Features_Group>,
+def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 } // let Flags = [TargetSpecific]
 
