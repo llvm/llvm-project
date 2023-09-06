@@ -169,59 +169,45 @@ define dso_local void @memsetTailV1B8(ptr nocapture noundef writeonly %p) local_
 ; P8-BE-LABEL: memsetTailV1B8:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    vspltisb 2, 15
-; P8-BE-NEXT:    lis 4, 3855
-; P8-BE-NEXT:    ori 4, 4, 3855
-; P8-BE-NEXT:    rldimi 4, 4, 32, 0
+; P8-BE-NEXT:    li 4, 16
+; P8-BE-NEXT:    stxsdx 34, 3, 4
 ; P8-BE-NEXT:    stxvw4x 34, 0, 3
-; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memsetTailV1B8:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, 3855
 ; P9-BE-NEXT:    xxspltib 0, 15
-; P9-BE-NEXT:    ori 4, 4, 3855
 ; P9-BE-NEXT:    stxv 0, 0(3)
-; P9-BE-NEXT:    rldimi 4, 4, 32, 0
-; P9-BE-NEXT:    std 4, 16(3)
+; P9-BE-NEXT:    stfd 0, 16(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memsetTailV1B8:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 252645135
-; P10-BE-NEXT:    rldimi 4, 4, 32, 0
-; P10-BE-NEXT:    std 4, 16(3)
 ; P10-BE-NEXT:    xxspltib 0, 15
 ; P10-BE-NEXT:    stxv 0, 0(3)
+; P10-BE-NEXT:    stfd 0, 16(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memsetTailV1B8:
 ; P8-LE:       # %bb.0: # %entry
-; P8-LE-NEXT:    lis 4, 3855
 ; P8-LE-NEXT:    vspltisb 2, 15
-; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    rldimi 4, 4, 32, 0
-; P8-LE-NEXT:    std 4, 16(3)
+; P8-LE-NEXT:    li 4, 16
+; P8-LE-NEXT:    stxsdx 34, 3, 4
 ; P8-LE-NEXT:    stxvd2x 34, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memsetTailV1B8:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, 3855
 ; P9-LE-NEXT:    xxspltib 0, 15
-; P9-LE-NEXT:    ori 4, 4, 3855
 ; P9-LE-NEXT:    stxv 0, 0(3)
-; P9-LE-NEXT:    rldimi 4, 4, 32, 0
-; P9-LE-NEXT:    std 4, 16(3)
+; P9-LE-NEXT:    stfd 0, 16(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memsetTailV1B8:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 252645135
-; P10-LE-NEXT:    rldimi 4, 4, 32, 0
-; P10-LE-NEXT:    std 4, 16(3)
 ; P10-LE-NEXT:    xxspltib 0, 15
 ; P10-LE-NEXT:    stxv 0, 0(3)
+; P10-LE-NEXT:    stfd 0, 16(3)
 ; P10-LE-NEXT:    blr
 entry:
   tail call void @llvm.memset.p0.i64(ptr %p, i8 15, i64 24, i1 false)
@@ -231,63 +217,45 @@ entry:
 define dso_local void @memsetTailV1B7(ptr nocapture noundef writeonly %p) local_unnamed_addr {
 ; P8-BE-LABEL: memsetTailV1B7:
 ; P8-BE:       # %bb.0: # %entry
-; P8-BE-NEXT:    lis 4, 3855
 ; P8-BE-NEXT:    vspltisb 2, 15
-; P8-BE-NEXT:    li 5, 15
-; P8-BE-NEXT:    ori 4, 4, 3855
-; P8-BE-NEXT:    rldimi 4, 4, 32, 0
-; P8-BE-NEXT:    stdx 4, 3, 5
+; P8-BE-NEXT:    li 4, 15
+; P8-BE-NEXT:    stxsdx 34, 3, 4
 ; P8-BE-NEXT:    stxvw4x 34, 0, 3
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memsetTailV1B7:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, 3855
-; P9-BE-NEXT:    li 5, 15
-; P9-BE-NEXT:    ori 4, 4, 3855
-; P9-BE-NEXT:    rldimi 4, 4, 32, 0
-; P9-BE-NEXT:    stdx 4, 3, 5
 ; P9-BE-NEXT:    xxspltib 0, 15
+; P9-BE-NEXT:    stfd 0, 15(3)
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memsetTailV1B7:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 252645135
-; P10-BE-NEXT:    rldimi 4, 4, 32, 0
-; P10-BE-NEXT:    pstd 4, 15(3), 0
 ; P10-BE-NEXT:    xxspltib 0, 15
+; P10-BE-NEXT:    stfd 0, 15(3)
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memsetTailV1B7:
 ; P8-LE:       # %bb.0: # %entry
-; P8-LE-NEXT:    lis 4, 3855
 ; P8-LE-NEXT:    vspltisb 2, 15
-; P8-LE-NEXT:    li 5, 15
-; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    rldimi 4, 4, 32, 0
-; P8-LE-NEXT:    stdx 4, 3, 5
+; P8-LE-NEXT:    li 4, 15
+; P8-LE-NEXT:    stxsdx 34, 3, 4
 ; P8-LE-NEXT:    stxvd2x 34, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memsetTailV1B7:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, 3855
-; P9-LE-NEXT:    li 5, 15
-; P9-LE-NEXT:    ori 4, 4, 3855
-; P9-LE-NEXT:    rldimi 4, 4, 32, 0
-; P9-LE-NEXT:    stdx 4, 3, 5
 ; P9-LE-NEXT:    xxspltib 0, 15
+; P9-LE-NEXT:    stfd 0, 15(3)
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memsetTailV1B7:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 252645135
-; P10-LE-NEXT:    rldimi 4, 4, 32, 0
-; P10-LE-NEXT:    pstd 4, 15(3), 0
 ; P10-LE-NEXT:    xxspltib 0, 15
+; P10-LE-NEXT:    stfd 0, 15(3)
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:
@@ -299,52 +267,48 @@ define dso_local void @memsetTailV1B4(ptr nocapture noundef writeonly %p) local_
 ; P8-BE-LABEL: memsetTailV1B4:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    vspltisb 2, 15
-; P8-BE-NEXT:    lis 4, 3855
-; P8-BE-NEXT:    ori 4, 4, 3855
-; P8-BE-NEXT:    stw 4, 16(3)
+; P8-BE-NEXT:    li 4, 16
+; P8-BE-NEXT:    stxsiwx 34, 3, 4
 ; P8-BE-NEXT:    stxvw4x 34, 0, 3
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memsetTailV1B4:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, 3855
-; P9-BE-NEXT:    ori 4, 4, 3855
-; P9-BE-NEXT:    stw 4, 16(3)
 ; P9-BE-NEXT:    xxspltib 0, 15
+; P9-BE-NEXT:    li 4, 16
+; P9-BE-NEXT:    stfiwx 0, 3, 4
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memsetTailV1B4:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 252645135
-; P10-BE-NEXT:    stw 4, 16(3)
 ; P10-BE-NEXT:    xxspltib 0, 15
+; P10-BE-NEXT:    li 4, 16
+; P10-BE-NEXT:    stfiwx 0, 3, 4
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memsetTailV1B4:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    vspltisb 2, 15
-; P8-LE-NEXT:    lis 4, 3855
-; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    li 4, 16
+; P8-LE-NEXT:    stxsiwx 34, 3, 4
 ; P8-LE-NEXT:    stxvd2x 34, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memsetTailV1B4:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, 3855
-; P9-LE-NEXT:    ori 4, 4, 3855
-; P9-LE-NEXT:    stw 4, 16(3)
 ; P9-LE-NEXT:    xxspltib 0, 15
+; P9-LE-NEXT:    li 4, 16
+; P9-LE-NEXT:    stfiwx 0, 3, 4
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memsetTailV1B4:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 252645135
-; P10-LE-NEXT:    stw 4, 16(3)
 ; P10-LE-NEXT:    xxspltib 0, 15
+; P10-LE-NEXT:    li 4, 16
+; P10-LE-NEXT:    stfiwx 0, 3, 4
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:
@@ -356,52 +320,48 @@ define dso_local void @memsetTailV1B3(ptr nocapture noundef writeonly %p) local_
 ; P8-BE-LABEL: memsetTailV1B3:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    vspltisb 2, 15
-; P8-BE-NEXT:    lis 4, 3855
-; P8-BE-NEXT:    ori 4, 4, 3855
+; P8-BE-NEXT:    li 4, 15
+; P8-BE-NEXT:    stxsiwx 34, 3, 4
 ; P8-BE-NEXT:    stxvw4x 34, 0, 3
-; P8-BE-NEXT:    stw 4, 15(3)
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memsetTailV1B3:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, 3855
-; P9-BE-NEXT:    ori 4, 4, 3855
-; P9-BE-NEXT:    stw 4, 15(3)
 ; P9-BE-NEXT:    xxspltib 0, 15
+; P9-BE-NEXT:    li 4, 15
+; P9-BE-NEXT:    stfiwx 0, 3, 4
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memsetTailV1B3:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 252645135
-; P10-BE-NEXT:    stw 4, 15(3)
 ; P10-BE-NEXT:    xxspltib 0, 15
+; P10-BE-NEXT:    li 4, 15
+; P10-BE-NEXT:    stfiwx 0, 3, 4
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memsetTailV1B3:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    vspltisb 2, 15
-; P8-LE-NEXT:    lis 4, 3855
-; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    stw 4, 15(3)
+; P8-LE-NEXT:    li 4, 15
+; P8-LE-NEXT:    stxsiwx 34, 3, 4
 ; P8-LE-NEXT:    stxvd2x 34, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memsetTailV1B3:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, 3855
-; P9-LE-NEXT:    ori 4, 4, 3855
-; P9-LE-NEXT:    stw 4, 15(3)
 ; P9-LE-NEXT:    xxspltib 0, 15
+; P9-LE-NEXT:    li 4, 15
+; P9-LE-NEXT:    stfiwx 0, 3, 4
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memsetTailV1B3:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 252645135
-; P10-LE-NEXT:    stw 4, 15(3)
 ; P10-LE-NEXT:    xxspltib 0, 15
+; P10-LE-NEXT:    li 4, 15
+; P10-LE-NEXT:    stfiwx 0, 3, 4
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:
@@ -682,30 +642,22 @@ define dso_local void @memset2TailV1B8(ptr nocapture noundef writeonly %p) local
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C3(2) # %const.0
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    lis 4, -23131
-; P8-BE-NEXT:    ori 4, 4, 42405
-; P8-BE-NEXT:    rldimi 4, 4, 32, 0
+; P8-BE-NEXT:    stfd 0, 16(3)
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
-; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memset2TailV1B8:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, -23131
 ; P9-BE-NEXT:    xxspltib 0, 165
-; P9-BE-NEXT:    ori 4, 4, 42405
 ; P9-BE-NEXT:    stxv 0, 0(3)
-; P9-BE-NEXT:    rldimi 4, 4, 32, 0
-; P9-BE-NEXT:    std 4, 16(3)
+; P9-BE-NEXT:    stfd 0, 16(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memset2TailV1B8:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 2779096485
-; P10-BE-NEXT:    rldimi 4, 4, 32, 0
-; P10-BE-NEXT:    std 4, 16(3)
 ; P10-BE-NEXT:    xxspltib 0, 165
 ; P10-BE-NEXT:    stxv 0, 0(3)
+; P10-BE-NEXT:    stfd 0, 16(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memset2TailV1B8:
@@ -713,30 +665,22 @@ define dso_local void @memset2TailV1B8(ptr nocapture noundef writeonly %p) local
 ; P8-LE-NEXT:    addis 4, 2, .LCPI12_0@toc@ha
 ; P8-LE-NEXT:    addi 4, 4, .LCPI12_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    lis 4, -23131
-; P8-LE-NEXT:    ori 4, 4, 42405
-; P8-LE-NEXT:    rldimi 4, 4, 32, 0
-; P8-LE-NEXT:    std 4, 16(3)
+; P8-LE-NEXT:    stfd 0, 16(3)
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memset2TailV1B8:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, -23131
 ; P9-LE-NEXT:    xxspltib 0, 165
-; P9-LE-NEXT:    ori 4, 4, 42405
 ; P9-LE-NEXT:    stxv 0, 0(3)
-; P9-LE-NEXT:    rldimi 4, 4, 32, 0
-; P9-LE-NEXT:    std 4, 16(3)
+; P9-LE-NEXT:    stfd 0, 16(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memset2TailV1B8:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 2779096485
-; P10-LE-NEXT:    rldimi 4, 4, 32, 0
-; P10-LE-NEXT:    std 4, 16(3)
 ; P10-LE-NEXT:    xxspltib 0, 165
 ; P10-LE-NEXT:    stxv 0, 0(3)
+; P10-LE-NEXT:    stfd 0, 16(3)
 ; P10-LE-NEXT:    blr
 entry:
   tail call void @llvm.memset.p0.i64(ptr %p, i8 165, i64 24, i1 false)
@@ -747,65 +691,45 @@ define dso_local void @memset2TailV1B7(ptr nocapture noundef writeonly %p) local
 ; P8-BE-LABEL: memset2TailV1B7:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C4(2) # %const.0
-; P8-BE-NEXT:    lis 5, -23131
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    ori 4, 5, 42405
-; P8-BE-NEXT:    li 5, 15
-; P8-BE-NEXT:    rldimi 4, 4, 32, 0
-; P8-BE-NEXT:    stdx 4, 3, 5
+; P8-BE-NEXT:    stfd 0, 15(3)
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memset2TailV1B7:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, -23131
-; P9-BE-NEXT:    li 5, 15
-; P9-BE-NEXT:    ori 4, 4, 42405
-; P9-BE-NEXT:    rldimi 4, 4, 32, 0
-; P9-BE-NEXT:    stdx 4, 3, 5
 ; P9-BE-NEXT:    xxspltib 0, 165
+; P9-BE-NEXT:    stfd 0, 15(3)
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memset2TailV1B7:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, 2779096485
-; P10-BE-NEXT:    rldimi 4, 4, 32, 0
-; P10-BE-NEXT:    pstd 4, 15(3), 0
 ; P10-BE-NEXT:    xxspltib 0, 165
+; P10-BE-NEXT:    stfd 0, 15(3)
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
 ; P8-LE-LABEL: memset2TailV1B7:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI13_0@toc@ha
-; P8-LE-NEXT:    lis 5, -23131
 ; P8-LE-NEXT:    addi 4, 4, .LCPI13_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    ori 4, 5, 42405
-; P8-LE-NEXT:    li 5, 15
-; P8-LE-NEXT:    rldimi 4, 4, 32, 0
-; P8-LE-NEXT:    stdx 4, 3, 5
+; P8-LE-NEXT:    stfd 0, 15(3)
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memset2TailV1B7:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, -23131
-; P9-LE-NEXT:    li 5, 15
-; P9-LE-NEXT:    ori 4, 4, 42405
-; P9-LE-NEXT:    rldimi 4, 4, 32, 0
-; P9-LE-NEXT:    stdx 4, 3, 5
 ; P9-LE-NEXT:    xxspltib 0, 165
+; P9-LE-NEXT:    stfd 0, 15(3)
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memset2TailV1B7:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, 2779096485
-; P10-LE-NEXT:    rldimi 4, 4, 32, 0
-; P10-LE-NEXT:    pstd 4, 15(3), 0
 ; P10-LE-NEXT:    xxspltib 0, 165
+; P10-LE-NEXT:    stfd 0, 15(3)
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:
@@ -818,26 +742,24 @@ define dso_local void @memset2TailV1B4(ptr nocapture noundef writeonly %p) local
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C5(2) # %const.0
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    lis 4, -23131
-; P8-BE-NEXT:    ori 4, 4, 42405
-; P8-BE-NEXT:    stw 4, 16(3)
+; P8-BE-NEXT:    li 4, 16
+; P8-BE-NEXT:    stfiwx 0, 3, 4
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memset2TailV1B4:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, -23131
-; P9-BE-NEXT:    ori 4, 4, 42405
-; P9-BE-NEXT:    stw 4, 16(3)
 ; P9-BE-NEXT:    xxspltib 0, 165
+; P9-BE-NEXT:    li 4, 16
+; P9-BE-NEXT:    stfiwx 0, 3, 4
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memset2TailV1B4:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, -1515870811
-; P10-BE-NEXT:    stw 4, 16(3)
 ; P10-BE-NEXT:    xxspltib 0, 165
+; P10-BE-NEXT:    li 4, 16
+; P10-BE-NEXT:    stfiwx 0, 3, 4
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
@@ -846,26 +768,24 @@ define dso_local void @memset2TailV1B4(ptr nocapture noundef writeonly %p) local
 ; P8-LE-NEXT:    addis 4, 2, .LCPI14_0@toc@ha
 ; P8-LE-NEXT:    addi 4, 4, .LCPI14_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    lis 4, -23131
-; P8-LE-NEXT:    ori 4, 4, 42405
-; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    li 4, 16
+; P8-LE-NEXT:    stfiwx 0, 3, 4
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memset2TailV1B4:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, -23131
-; P9-LE-NEXT:    ori 4, 4, 42405
-; P9-LE-NEXT:    stw 4, 16(3)
 ; P9-LE-NEXT:    xxspltib 0, 165
+; P9-LE-NEXT:    li 4, 16
+; P9-LE-NEXT:    stfiwx 0, 3, 4
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memset2TailV1B4:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, -1515870811
-; P10-LE-NEXT:    stw 4, 16(3)
 ; P10-LE-NEXT:    xxspltib 0, 165
+; P10-LE-NEXT:    li 4, 16
+; P10-LE-NEXT:    stfiwx 0, 3, 4
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:
@@ -878,26 +798,24 @@ define dso_local void @memset2TailV1B3(ptr nocapture noundef writeonly %p) local
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C6(2) # %const.0
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    lis 4, -23131
-; P8-BE-NEXT:    ori 4, 4, 42405
-; P8-BE-NEXT:    stw 4, 15(3)
+; P8-BE-NEXT:    li 4, 15
+; P8-BE-NEXT:    stfiwx 0, 3, 4
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    blr
 ;
 ; P9-BE-LABEL: memset2TailV1B3:
 ; P9-BE:       # %bb.0: # %entry
-; P9-BE-NEXT:    lis 4, -23131
-; P9-BE-NEXT:    ori 4, 4, 42405
-; P9-BE-NEXT:    stw 4, 15(3)
 ; P9-BE-NEXT:    xxspltib 0, 165
+; P9-BE-NEXT:    li 4, 15
+; P9-BE-NEXT:    stfiwx 0, 3, 4
 ; P9-BE-NEXT:    stxv 0, 0(3)
 ; P9-BE-NEXT:    blr
 ;
 ; P10-BE-LABEL: memset2TailV1B3:
 ; P10-BE:       # %bb.0: # %entry
-; P10-BE-NEXT:    pli 4, -1515870811
-; P10-BE-NEXT:    stw 4, 15(3)
 ; P10-BE-NEXT:    xxspltib 0, 165
+; P10-BE-NEXT:    li 4, 15
+; P10-BE-NEXT:    stfiwx 0, 3, 4
 ; P10-BE-NEXT:    stxv 0, 0(3)
 ; P10-BE-NEXT:    blr
 ;
@@ -906,26 +824,24 @@ define dso_local void @memset2TailV1B3(ptr nocapture noundef writeonly %p) local
 ; P8-LE-NEXT:    addis 4, 2, .LCPI15_0@toc@ha
 ; P8-LE-NEXT:    addi 4, 4, .LCPI15_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    lis 4, -23131
-; P8-LE-NEXT:    ori 4, 4, 42405
-; P8-LE-NEXT:    stw 4, 15(3)
+; P8-LE-NEXT:    li 4, 15
+; P8-LE-NEXT:    stfiwx 0, 3, 4
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: memset2TailV1B3:
 ; P9-LE:       # %bb.0: # %entry
-; P9-LE-NEXT:    lis 4, -23131
-; P9-LE-NEXT:    ori 4, 4, 42405
-; P9-LE-NEXT:    stw 4, 15(3)
 ; P9-LE-NEXT:    xxspltib 0, 165
+; P9-LE-NEXT:    li 4, 15
+; P9-LE-NEXT:    stfiwx 0, 3, 4
 ; P9-LE-NEXT:    stxv 0, 0(3)
 ; P9-LE-NEXT:    blr
 ;
 ; P10-LE-LABEL: memset2TailV1B3:
 ; P10-LE:       # %bb.0: # %entry
-; P10-LE-NEXT:    pli 4, -1515870811
-; P10-LE-NEXT:    stw 4, 15(3)
 ; P10-LE-NEXT:    xxspltib 0, 165
+; P10-LE-NEXT:    li 4, 15
+; P10-LE-NEXT:    stfiwx 0, 3, 4
 ; P10-LE-NEXT:    stxv 0, 0(3)
 ; P10-LE-NEXT:    blr
 entry:

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated

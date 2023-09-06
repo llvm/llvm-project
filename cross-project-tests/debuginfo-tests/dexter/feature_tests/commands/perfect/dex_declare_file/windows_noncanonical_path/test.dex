@@ -3,7 +3,7 @@
 #
 # REQUIRES: system-windows
 #
-# RUN: %clang "%S/source/test file.cpp" -O0 -g -o %t
+# RUN: %dexter_regression_test_build "%S/source/test file.cpp" -o %t
 # RUN: %dexter_regression_base --binary %t %s | FileCheck %s
 # CHECK: test.dex
 #

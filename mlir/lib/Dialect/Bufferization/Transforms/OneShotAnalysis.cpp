@@ -545,6 +545,43 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                               OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
+  // Before going through the main RaW analysis, find cases where a buffer must
+  // be privatized due to parallelism. If the result of a write is never read,
+  // privatization is not necessary (and large parts of the IR are likely dead).
+  if (!usesRead.empty()) {
+    for (OpOperand *uConflictingWrite : usesWrite) {
+      // Find the allocation point or last write (definition) of the buffer.
+      // Note: In contrast to `findDefinitions`, this also returns results of
+      // ops that do not bufferize to memory write when no other definition
+      // could be found. E.g., "bufferization.alloc_tensor" would be included,
+      // even though that op just bufferizes to an allocation but does define
+      // the contents of the buffer.
+      SetVector<Value> definitionsOrLeaves =
+          state.findValueInReverseUseDefChain(
+              uConflictingWrite->get(),
+              [&](Value v) { return state.bufferizesToMemoryWrite(v); });
+      assert(!definitionsOrLeaves.empty() &&
+             "expected at least one definition or leaf");
+
+      // The writing op must bufferize out-of-place if the definition is in a
+      // different parallel region than this write.
+      for (Value def : definitionsOrLeaves) {
+        if (getParallelRegion(def.getParentRegion(), options) !=
+            getParallelRegion(uConflictingWrite->getOwner()->getParentRegion(),
+                              options)) {
+          LLVM_DEBUG(
+              llvm::dbgs()
+              << "\n- bufferizes out-of-place due to parallel region:\n");
+          LLVM_DEBUG(llvm::dbgs()
+                     << "  unConflictingWrite = operand "
+                     << uConflictingWrite->getOperandNumber() << " of "
+                     << *uConflictingWrite->getOwner() << "\n");
+          return true;
+        }
+      }
+    }
+  }
+
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
     LLVM_DEBUG(llvm::dbgs() << "\n- check conflict:\n");

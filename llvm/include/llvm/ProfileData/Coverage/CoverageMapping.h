@@ -75,7 +75,8 @@ inline std::error_code make_error_code(coveragemap_error E) {
 
 class CoverageMapError : public ErrorInfo<CoverageMapError> {
 public:
-  CoverageMapError(coveragemap_error Err) : Err(Err) {
+  CoverageMapError(coveragemap_error Err, const Twine &ErrStr = Twine())
+      : Err(Err), Msg(ErrStr.str()) {
     assert(Err != coveragemap_error::success && "Not an error");
   }
 
@@ -88,11 +89,13 @@ public:
   }
 
   coveragemap_error get() const { return Err; }
+  const std::string &getMessage() const { return Msg; }
 
   static char ID;
 
 private:
   coveragemap_error Err;
+  std::string Msg;
 };
 
 /// A Counter is an abstract value that describes how to compute the
@@ -864,7 +867,8 @@ struct CovMapFunctionRecordV1 {
     uint32_t NameS = support::endian::byte_swap<uint32_t, Endian>(NameSize);
     FuncName = ProfileNames.getFuncName(NameRef, NameS);
     if (NameS && FuncName.empty())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "function name is empty");
     return Error::success();
   }
 

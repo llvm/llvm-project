@@ -15,12 +15,12 @@
 #define LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Sema/DelayedDiagnostic.h"
+#include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
-  class ParsedAttributes;
-
   // TODO: move ParsingClassDefinition here.
   // TODO: move TentativeParsingAction here.
 

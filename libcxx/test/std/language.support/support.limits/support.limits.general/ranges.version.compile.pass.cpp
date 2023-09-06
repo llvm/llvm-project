@@ -214,17 +214,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -309,17 +303,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
