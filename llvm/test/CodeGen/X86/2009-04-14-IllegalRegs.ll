@@ -47,6 +47,7 @@ define i32 @z() nounwind ssp {
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.2: ## %SP_return
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
+; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $148, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

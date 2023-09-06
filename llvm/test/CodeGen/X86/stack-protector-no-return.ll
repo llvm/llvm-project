@@ -22,6 +22,7 @@ define void @_Z7catchesv() #0 personality ptr null {
 ; CHECK-NEXT:    cmpq (%rsp), %rax
 ; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  # %bb.2: # %SP_return
+; CHECK-NEXT:    movq $0, (%rsp)
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
@@ -34,6 +35,7 @@ define void @_Z7catchesv() #0 personality ptr null {
 ; CHECK-NEXT:    cmpq (%rsp), %rax
 ; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  # %bb.5: # %SP_return3
+; CHECK-NEXT:    movq $0, (%rsp)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -67,6 +69,7 @@ define void @_Z7catchesv() #0 personality ptr null {
 ; DISNOTET-NEXT:    cmpq (%rsp), %rax
 ; DISNOTET-NEXT:    jne .LBB0_5
 ; DISNOTET-NEXT:  # %bb.4: # %SP_return
+; DISNOTET-NEXT:    movq $0, (%rsp)
 ; DISNOTET-NEXT:    popq %rax
 ; DISNOTET-NEXT:    .cfi_def_cfa_offset 8
 ; DISNOTET-NEXT:    retq

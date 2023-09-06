@@ -565,6 +565,7 @@ bool StackProtector::InsertStackProtectors() {
       //     br i1 %3, label %CallStackCheckFailBlk, label %SP_return
       //
       //   SP_return:
+      //     store StackGuardSlot, i64 0
       //     ret ...
       //
       //   CallStackCheckFailBlk:
@@ -601,6 +602,11 @@ bool StackProtector::InsertStackProtectors() {
 
       Cmp->setPredicate(Cmp->getInversePredicate());
       BI->swapSuccessors();
+
+      // Clear the stack guard value from registers before returning.
+      B.SetInsertPoint(NewBB, NewBB->begin());
+      B.CreateStore(ConstantInt::get(B.getIntPtrTy(M->getDataLayout()), 0), AI,
+                    true);
     }
   }
 

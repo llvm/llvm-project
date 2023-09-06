@@ -21,6 +21,7 @@ define void @store_captures() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[STACKGUARD1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SP_RETURN:%.*]], label [[CALLSTACKCHECKFAILBLK:%.*]], !prof !0
 ; CHECK:       SP_return:
+; CHECK-NEXT:    store volatile i64 0, ptr [[STACKGUARDSLOT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       CallStackCheckFailBlk:
 ; CHECK-NEXT:    call void @__stack_chk_fail()
@@ -74,6 +75,7 @@ define void @store_addrspacecast_captures() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[STACKGUARD1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SP_RETURN:%.*]], label [[CALLSTACKCHECKFAILBLK:%.*]], !prof !0
 ; CHECK:       SP_return:
+; CHECK-NEXT:    store volatile i64 0, ptr [[STACKGUARDSLOT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       CallStackCheckFailBlk:
 ; CHECK-NEXT:    call void @__stack_chk_fail()
@@ -111,6 +113,7 @@ define void @cmpxchg_captures() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[STACKGUARD1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[SP_RETURN:%.*]], label [[CALLSTACKCHECKFAILBLK:%.*]], !prof !0
 ; CHECK:       SP_return:
+; CHECK-NEXT:    store volatile i64 0, ptr [[STACKGUARDSLOT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       CallStackCheckFailBlk:
 ; CHECK-NEXT:    call void @__stack_chk_fail()
@@ -145,6 +148,7 @@ define void @memset_captures(i64 %c) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[STACKGUARD1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[SP_RETURN:%.*]], label [[CALLSTACKCHECKFAILBLK:%.*]], !prof !0
 ; CHECK:       SP_return:
+; CHECK-NEXT:    store volatile i64 0, ptr [[STACKGUARDSLOT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       CallStackCheckFailBlk:
 ; CHECK-NEXT:    call void @__stack_chk_fail()
@@ -204,6 +208,7 @@ entry:
 ; CHECK-NEXT:   %2 = icmp eq ptr %StackGuard1, %1
 ; CHECK-NEXT:   br i1 %2, label %SP_return, label %CallStackCheckFailBlk
 ; CHECK:      SP_return:                                        ; preds = %if.then
+; CHECK-NEXT:   store volatile i64 0, ptr [[STACKGUARDSLOT]], align 8
 ; CHECK-NEXT:   %call = call i32 @foo_no_return(i32 1)
 ; CHECK-NEXT:   br label %return
 ; CHECK:      if.end:                                           ; preds = %entry

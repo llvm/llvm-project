@@ -17,6 +17,7 @@ define void @func() sspreq nounwind {
 ; FUCHSIA-RISCV64-NEXT:    ld a1, 16(sp)
 ; FUCHSIA-RISCV64-NEXT:    bne a0, a1, .LBB0_2
 ; FUCHSIA-RISCV64-NEXT:  # %bb.1: # %SP_return
+; FUCHSIA-RISCV64-NEXT:    sd zero, 16(sp)
 ; FUCHSIA-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; FUCHSIA-RISCV64-NEXT:    addi sp, sp, 32
 ; FUCHSIA-RISCV64-NEXT:    ret

@@ -12,6 +12,7 @@ define dso_local void @__stack_chk_fail() local_unnamed_addr #0 {
 ; CHECK-NEXT:    cmpq (%rsp), %rax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %SP_return
+; CHECK-NEXT:    movq $0, (%rsp)
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
 ; CHECK-NEXT:    callq __stack_chk_fail
