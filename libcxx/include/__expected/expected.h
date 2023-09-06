@@ -651,11 +651,11 @@ public:
     requires is_constructible_v<_Err, _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
+    static_assert(__is_std_expected<_Up>::value, "The result of f(**this) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
-                  "The result of f(value()) must have the same error_type as this expected");
+                  "The result of f(**this) must have the same error_type as this expected");
     if (has_value()) {
-      return std::invoke(std::forward<_Func>(__f), value());
+      return std::invoke(std::forward<_Func>(__f), __union_.__val_);
     }
     return _Up(unexpect, error());
   }
@@ -664,11 +664,11 @@ public:
     requires is_constructible_v<_Err, const _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
+    static_assert(__is_std_expected<_Up>::value, "The result of f(**this) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
-                  "The result of f(value()) must have the same error_type as this expected");
+                  "The result of f(**this) must have the same error_type as this expected");
     if (has_value()) {
-      return std::invoke(std::forward<_Func>(__f), value());
+      return std::invoke(std::forward<_Func>(__f), __union_.__val_);
     }
     return _Up(unexpect, error());
   }
@@ -678,11 +678,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&&>>;
     static_assert(
-        __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
+        __is_std_expected<_Up>::value, "The result of f(std::move(**this)) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
-                  "The result of f(std::move(value())) must have the same error_type as this expected");
+                  "The result of f(std::move(**this)) must have the same error_type as this expected");
     if (has_value()) {
-      return std::invoke(std::forward<_Func>(__f), std::move(value()));
+      return std::invoke(std::forward<_Func>(__f), std::move(__union_.__val_));
     }
     return _Up(unexpect, std::move(error()));
   }
@@ -692,11 +692,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&&>>;
     static_assert(
-        __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
+        __is_std_expected<_Up>::value, "The result of f(std::move(**this)) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
-                  "The result of f(std::move(value())) must have the same error_type as this expected");
+                  "The result of f(std::move(**this)) must have the same error_type as this expected");
     if (has_value()) {
-      return std::invoke(std::forward<_Func>(__f), std::move(value()));
+      return std::invoke(std::forward<_Func>(__f), std::move(__union_.__val_));
     }
     return _Up(unexpect, std::move(error()));
   }
@@ -709,7 +709,7 @@ public:
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
-      return _Gp(in_place, value());
+      return _Gp(in_place, __union_.__val_);
     }
     return std::invoke(std::forward<_Func>(__f), error());
   }
@@ -722,7 +722,7 @@ public:
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
-      return _Gp(in_place, value());
+      return _Gp(in_place, __union_.__val_);
     }
     return std::invoke(std::forward<_Func>(__f), error());
   }
@@ -736,7 +736,7 @@ public:
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
-      return _Gp(in_place, std::move(value()));
+      return _Gp(in_place, std::move(__union_.__val_));
     }
     return std::invoke(std::forward<_Func>(__f), std::move(error()));
   }
@@ -750,7 +750,7 @@ public:
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
-      return _Gp(in_place, std::move(value()));
+      return _Gp(in_place, std::move(__union_.__val_));
     }
     return std::invoke(std::forward<_Func>(__f), std::move(error()));
   }
@@ -763,9 +763,9 @@ public:
       return expected<_Up, _Err>(unexpect, error());
     }
     if constexpr (!is_void_v<_Up>) {
-      return expected<_Up, _Err>(__expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), value());
+      return expected<_Up, _Err>(__expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), __union_.__val_);
     } else {
-      std::invoke(std::forward<_Func>(__f), value());
+      std::invoke(std::forward<_Func>(__f), __union_.__val_);
       return expected<_Up, _Err>();
     }
   }
@@ -778,9 +778,9 @@ public:
       return expected<_Up, _Err>(unexpect, error());
     }
     if constexpr (!is_void_v<_Up>) {
-      return expected<_Up, _Err>(__expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), value());
+      return expected<_Up, _Err>(__expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), __union_.__val_);
     } else {
-      std::invoke(std::forward<_Func>(__f), value());
+      std::invoke(std::forward<_Func>(__f), __union_.__val_);
       return expected<_Up, _Err>();
     }
   }
@@ -794,9 +794,9 @@ public:
     }
     if constexpr (!is_void_v<_Up>) {
       return expected<_Up, _Err>(
-          __expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), std::move(value()));
+          __expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), std::move(__union_.__val_));
     } else {
-      std::invoke(std::forward<_Func>(__f), std::move(value()));
+      std::invoke(std::forward<_Func>(__f), std::move(__union_.__val_));
       return expected<_Up, _Err>();
     }
   }
@@ -810,9 +810,9 @@ public:
     }
     if constexpr (!is_void_v<_Up>) {
       return expected<_Up, _Err>(
-          __expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), std::move(value()));
+          __expected_construct_in_place_from_invoke_tag{}, std::forward<_Func>(__f), std::move(__union_.__val_));
     } else {
-      std::invoke(std::forward<_Func>(__f), std::move(value()));
+      std::invoke(std::forward<_Func>(__f), std::move(__union_.__val_));
       return expected<_Up, _Err>();
     }
   }
@@ -824,7 +824,7 @@ public:
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
     if (has_value()) {
-      return expected<_Tp, _Gp>(in_place, value());
+      return expected<_Tp, _Gp>(in_place, __union_.__val_);
     }
     return expected<_Tp, _Gp>(__expected_construct_unexpected_from_invoke_tag{}, std::forward<_Func>(__f), error());
   }
@@ -836,7 +836,7 @@ public:
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
     if (has_value()) {
-      return expected<_Tp, _Gp>(in_place, value());
+      return expected<_Tp, _Gp>(in_place, __union_.__val_);
     }
     return expected<_Tp, _Gp>(__expected_construct_unexpected_from_invoke_tag{}, std::forward<_Func>(__f), error());
   }
@@ -848,7 +848,7 @@ public:
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");
     if (has_value()) {
-      return expected<_Tp, _Gp>(in_place, std::move(value()));
+      return expected<_Tp, _Gp>(in_place, std::move(__union_.__val_));
     }
     return expected<_Tp, _Gp>(
         __expected_construct_unexpected_from_invoke_tag{}, std::forward<_Func>(__f), std::move(error()));
@@ -861,7 +861,7 @@ public:
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");
     if (has_value()) {
-      return expected<_Tp, _Gp>(in_place, std::move(value()));
+      return expected<_Tp, _Gp>(in_place, std::move(__union_.__val_));
     }
     return expected<_Tp, _Gp>(
         __expected_construct_unexpected_from_invoke_tag{}, std::forward<_Func>(__f), std::move(error()));
