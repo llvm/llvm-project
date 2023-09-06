@@ -2500,28 +2500,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     return false;
   }
 
+  case ISD::OR:
+  case ISD::XOR:
+    // See if we can treat the OR/XOR node as an ADD node.
+    if (!CurDAG->isADDLike(N))
+      break;
+    [[fallthrough]];
   case ISD::ADD:
     if (!matchAdd(N, AM, Depth))
-      return false;
-    break;
-
-  case ISD::OR:
-    // We want to look through a transform in InstCombine and DAGCombiner that
-    // turns 'add' into 'or', so we can treat this 'or' exactly like an 'add'.
-    // Example: (or (and x, 1), (shl y, 3)) --> (add (and x, 1), (shl y, 3))
-    // An 'lea' can then be used to match the shift (multiply) and add:
-    // and $1, %esi
-    // lea (%rsi, %rdi, 8), %rax
-    if (CurDAG->haveNoCommonBitsSet(N.getOperand(0), N.getOperand(1)) &&
-        !matchAdd(N, AM, Depth))
-      return false;
-    break;
-
-  case ISD::XOR:
-    // We want to look through a transform in InstCombine that
-    // turns 'add' with min_signed_val into 'xor', so we can treat this 'xor'
-    // exactly like an 'add'.
-    if (isMinSignedConstant(N.getOperand(1)) && !matchAdd(N, AM, Depth))
       return false;
     break;
 
