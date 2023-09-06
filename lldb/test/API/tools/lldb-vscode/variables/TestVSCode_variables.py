@@ -2,12 +2,13 @@
 Test lldb-vscode setBreakpoints request
 """
 
+import os
+
+import lldbvscode_testcase
 import vscode
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbvscode_testcase
-import os
 
 
 def make_buffer_verify_dict(start_idx, count, offset=0):
@@ -218,12 +219,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             },
             "pt": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "PointType @ 0x"},
+                "startswith": {"result": "{x:11, y:22}"},
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
                 "equals": {"type": "int[32]"},
-                "startswith": {"result": "int[32] @ 0x"},
+                "startswith": {"result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"},
                 "hasVariablesReference": True,
             },
             "argv": {
@@ -409,7 +410,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "name": "pt",
             "response": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "PointType @ 0x"},
+                "startswith": {"result": "{x:11, y:22}"},
                 "missing": ["indexedVariables"],
                 "hasVariablesReference": True,
             },
