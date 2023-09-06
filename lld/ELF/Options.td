@@ -673,8 +673,6 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
-def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
-  HelpText<"Use opaque pointers in IR during LTO (default)">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;

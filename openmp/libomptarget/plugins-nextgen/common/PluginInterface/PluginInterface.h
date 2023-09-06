@@ -836,6 +836,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
 
+  /// Get the total amount of hardware parallelism supported by the target
+  /// device. This is the total amount of warps or wavefronts that can be
+  /// resident on the device simultaneously.
+  virtual uint64_t getHardwareParallelism() const { return 0; }
+
   /// Get the RPC server running on this device.
   RPCHandleTy *getRPCHandle() const { return RPCHandle; }
 
