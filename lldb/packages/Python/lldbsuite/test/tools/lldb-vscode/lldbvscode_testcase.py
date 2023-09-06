@@ -1,7 +1,8 @@
-from lldbsuite.test.lldbtest import *
 import os
-import vscode
 import time
+
+import vscode
+from lldbsuite.test.lldbtest import *
 
 
 class VSCodeTestCaseBase(TestBase):
@@ -267,7 +268,7 @@ class VSCodeTestCaseBase(TestBase):
 
         if memoryReference not in self.vscode.disassembled_instructions:
             self.vscode.request_disassemble(memoryReference=memoryReference)
-        
+
         return self.vscode.disassembled_instructions[memoryReference]
 
     def attach(
