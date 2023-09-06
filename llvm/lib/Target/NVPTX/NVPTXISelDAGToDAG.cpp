@@ -612,10 +612,10 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about f16x2 as it's the only real vector type we
+  // We only care about 16x2 as it's the only real vector type we
   // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!(VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16))
+  if (!Isv2x16VT(VT))
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
@@ -910,9 +910,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Vector Setting
   unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert((LoadedVT == MVT::v2f16 || LoadedVT == MVT::v2bf16 ||
-            LoadedVT == MVT::v2i16) &&
-           "Unexpected vector type");
+    assert(Isv2x16VT(LoadedVT) && "Unexpected vector type");
     // v2f16/v2bf16/v2i16 is loaded using ld.b32
     fromTypeWidth = 32;
   }
@@ -1063,10 +1061,10 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   EVT EltVT = N->getValueType(0);
 
-  // v8f16 is a special case. PTX doesn't have ld.v8.f16
-  // instruction. Instead, we split the vector into v2f16 chunks and
+  // v8x16 is a special case. PTX doesn't have ld.v8.16
+  // instruction. Instead, we split the vector into v2x16 chunks and
   // load them with ld.v4.b32.
-  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16 || EltVT == MVT::v2i16) {
+  if (Isv2x16VT(EltVT)) {
     assert(N->getOpcode() == NVPTXISD::LoadV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
@@ -1846,10 +1844,10 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  // v8f16 is a special case. PTX doesn't have st.v8.f16
-  // instruction. Instead, we split the vector into v2f16 chunks and
+  // v8x16 is a special case. PTX doesn't have st.v8.x16
+  // instruction. Instead, we split the vector into v2x16 chunks and
   // store them with st.v4.b32.
-  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16 || EltVT == MVT::v2i16) {
+  if (Isv2x16VT(EltVT)) {
     assert(N->getOpcode() == NVPTXISD::StoreV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
