@@ -1883,6 +1883,8 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
         llvm::to_vector(getUseFullTileBuffers().getAsValueRange<BoolAttr>()));
   if (getAlignment().has_value())
     promotionOptions = promotionOptions.setAlignment(*getAlignment());
+  if (getMemorySpace().has_value())
+    promotionOptions = promotionOptions.setMemorySpace(*getMemorySpace());
 
   if (getMapping().has_value()) {
     // The mapping should only contain an element
