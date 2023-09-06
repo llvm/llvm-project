@@ -2109,6 +2109,12 @@ public:
                               bool ConsiderFlags = true,
                               unsigned Depth = 0) const;
 
+  /// Return true if the specified operand is an ISD::OR or ISD::XOR node
+  /// that can be treated as an ISD::ADD node.
+  /// or(x,y) == add(x,y) iff haveNoCommonBitsSet(x,y)
+  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y)
+  bool isADDLike(SDValue Op) const;
+
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that
   /// is guaranteed to have the same semantics as an ADD. This handles the

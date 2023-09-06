@@ -5007,6 +5007,15 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   return true;
 }
 
+bool SelectionDAG::isADDLike(SDValue Op) const {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::OR)
+    return haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
+  if (Opcode == ISD::XOR)
+    return isMinSignedConstant(Op.getOperand(1));
+  return false;
+}
+
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))
