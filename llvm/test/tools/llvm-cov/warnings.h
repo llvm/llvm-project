@@ -13,4 +13,4 @@
 // FAKE-FUNC-STDERR: Could not read coverage for '{{.*}}'.
 
 // RUN: not llvm-cov report %S/Inputs/malformedRegions.covmapping -instr-profile %S/Inputs/elf_binary_comdat.profdata 2>&1 | FileCheck %s -check-prefix=MALFORMED-REGION
-// MALFORMED-REGION: Failed to load coverage: '{{.*}}malformedRegions.covmapping': Malformed coverage data
+// MALFORMED-REGION: failed to load coverage: '{{.*}}malformedRegions.covmapping': malformed coverage data
