@@ -576,6 +576,8 @@ bool isX18ReservedByDefault(const Triple &TT);
 // themselves, they are sequential (0, 1, 2, 3, ...).
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
+void PrintSupportedExtensions();
+
 } // namespace AArch64
 } // namespace llvm
 
