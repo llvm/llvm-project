@@ -556,6 +556,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
               ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given region of this op is parallel, i.e.,
+          multiple instances of the region may be executing at the same time.
+          If a region is parallel, it must also be marked as "repetitive".
+
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          parallel regions: Buffer may have to be privatized.
+
+          By default, regions are assumed to be sequential.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isParallelRegion",
+        /*args=*/(ins "unsigned":$index),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
       StaticInterfaceMethod<
         /*desc=*/[{
           Return `true` if the op and this interface implementation supports
