@@ -229,7 +229,7 @@ template <typename T> SmallVector<T, 8> Matrix<T>::preMultiplyWithRow(ArrayRef<T
   SmallVector<T, 8> result(getNumColumns(), T(0));
   for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
     for (unsigned i = 0, e = getNumRows(); i < e; ++i)
-      result[col] = result[col] + rowVec[i] * at(i, col);
+      result[col] += rowVec[i] * at(i, col);
   return result;
 }
 
@@ -241,7 +241,7 @@ Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
   SmallVector<T, 8> result(getNumRows(), T(0));
   for (unsigned row = 0, e = getNumRows(); row < e; row++)
     for (unsigned i = 0, e = getNumColumns(); i < e; i++)
-      result[row] = result[row] + at(row, i) * colVec[i];
+      result[row] += at(row, i) * colVec[i];
   return result;
 }
 
