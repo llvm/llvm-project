@@ -2860,11 +2860,11 @@ TEST(TransferTest, AggregateInitialization) {
 
           // Check that fields initialized in an initializer list are always
           // modeled in other instances of the same type.
-          const auto &OtherBVal =
-              getValueForDecl<RecordValue>(ASTCtx, Env, "OtherB");
-          EXPECT_THAT(OtherBVal.getChild(*BarDecl), NotNull());
-          EXPECT_THAT(OtherBVal.getChild(*BazDecl), NotNull());
-          EXPECT_THAT(OtherBVal.getChild(*QuxDecl), NotNull());
+          const auto &OtherBLoc =
+              getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "OtherB");
+          EXPECT_THAT(OtherBLoc.getChild(*BarDecl), NotNull());
+          EXPECT_THAT(OtherBLoc.getChild(*BazDecl), NotNull());
+          EXPECT_THAT(OtherBLoc.getChild(*QuxDecl), NotNull());
         });
   }
 }
