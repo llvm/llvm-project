@@ -118,7 +118,6 @@ class PseudoToVInst<string PseudoInst> {
                         ["FPR64", "F"],
                         ["FPR32", "F"],
                         ["FPR16", "F"],
-                        ["_TU", ""],
                         ["_TIED", ""],
                         ["_MASK", ""],
                         ["_B64", ""],
