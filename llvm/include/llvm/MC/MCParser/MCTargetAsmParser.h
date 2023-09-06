@@ -154,10 +154,12 @@ public:
   constexpr bool isNoMatch() const { return Status == StatusTy::NoMatch; }
 
   // Allow implicit conversions to / from OperandMatchResultTy.
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
   constexpr ParseStatus(OperandMatchResultTy R)
       : Status(R == MatchOperand_Success     ? Success
                : R == MatchOperand_ParseFail ? Failure
                                              : NoMatch) {}
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
   constexpr operator OperandMatchResultTy() const {
     return isSuccess()   ? MatchOperand_Success
            : isFailure() ? MatchOperand_ParseFail
@@ -421,8 +423,8 @@ public:
   /// Check whether a register specification can be parsed at the current
   /// location, without failing the entire parse if it can't. Must not consume
   /// tokens if the parse fails.
-  virtual OperandMatchResultTy
-  tryParseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
+  virtual ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                       SMLoc &EndLoc) = 0;
 
   /// ParseInstruction - Parse one assembly instruction.
   ///
