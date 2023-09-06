@@ -901,7 +901,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   // archive, regardless of whether there are any symbols in it.
   if (HasObject && SymNames.tell() == 0 && !isCOFFArchive(Kind))
     SymNames << '\0' << '\0' << '\0';
-  return Ret;
+  return std::move(Ret);
 }
 
 namespace llvm {
