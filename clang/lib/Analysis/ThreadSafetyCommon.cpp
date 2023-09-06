@@ -110,7 +110,8 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
 /// \param D       The declaration to which the attribute is attached.
 /// \param DeclExp An expression involving the Decl to which the attribute
 ///                is attached.  E.g. the call to a function.
-/// \param Self    S-expression to substitute for a \ref CXXThisExpr.
+/// \param Self    S-expression to substitute for a \ref CXXThisExpr in a call,
+///                or argument to a cleanup function.
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                const NamedDecl *D,
                                                const Expr *DeclExp,
@@ -144,7 +145,11 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
-    Ctx.SelfArg = Self;
+    assert(isa<FunctionDecl>(D) && "Self argument requires function");
+    if (isa<CXXMethodDecl>(D))
+      Ctx.SelfArg = Self;
+    else
+      Ctx.FunArgs = Self;
 
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
@@ -312,8 +317,14 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               ? (cast<FunctionDecl>(D)->getCanonicalDecl() == Canonical)
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
-        assert(I < Ctx->NumArgs);
-        return translate(Ctx->FunArgs[I], Ctx->Prev);
+        if (const Expr *const *FunArgs =
+                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+          assert(I < Ctx->NumArgs);
+          return translate(FunArgs[I], Ctx->Prev);
+        }
+
+        assert(I == 0);
+        return Ctx->FunArgs.get<til::SExpr *>();
       }
     }
     // Map the param back to the param of the original function declaration
