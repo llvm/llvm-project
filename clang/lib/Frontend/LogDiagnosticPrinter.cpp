@@ -118,7 +118,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
     const SourceManager &SM = Info.getSourceManager();
     FileID FID = SM.getMainFileID();
     if (FID.isValid()) {
-      if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID))
+      if (const FileEntry *FE = SM.getFileEntryForID(FID))
         MainFilename = std::string(FE->getName());
     }
   }
@@ -147,7 +147,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
       // At least print the file name if available:
       FileID FID = SM.getFileID(Info.getLocation());
       if (FID.isValid()) {
-        if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID))
+        if (const FileEntry *FE = SM.getFileEntryForID(FID))
           DE.Filename = std::string(FE->getName());
       }
     } else {

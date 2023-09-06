@@ -62,7 +62,7 @@ void HTMLPrinter::HandleTranslationUnit(ASTContext &Ctx) {
 
   // Format the file.
   FileID FID = R.getSourceMgr().getMainFileID();
-  OptionalFileEntryRef Entry = R.getSourceMgr().getFileEntryRefForID(FID);
+  const FileEntry* Entry = R.getSourceMgr().getFileEntryForID(FID);
   StringRef Name;
   // In some cases, in particular the case where the input is from stdin,
   // there is no entry.  Fall back to the memory buffer for a name in those
