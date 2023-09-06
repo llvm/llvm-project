@@ -202,7 +202,7 @@ template <typename T> void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec,
   if (scale == 0)
     return;
   for (unsigned col = 0; col < nColumns; ++col)
-    at(row, col) = at(row, col) + scale * rowVec[col];
+    at(row, col) += scale * rowVec[col];
 }
 
 template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
@@ -210,7 +210,7 @@ template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigne
   if (scale == 0)
     return;
   for (unsigned row = 0, e = getNumRows(); row < e; ++row)
-    at(row, targetColumn) = at(row, targetColumn) + scale * at(row, sourceColumn);
+    at(row, targetColumn) += scale * at(row, sourceColumn);
 }
 
 template <typename T> void Matrix<T>::negateColumn(unsigned column) {
