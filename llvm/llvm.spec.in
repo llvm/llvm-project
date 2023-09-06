@@ -5,21 +5,20 @@ Summary: LLVM (An Optimizing Compiler Infrastructure)
 License: Apache-2.0 with LLVM exception
 Vendor: None (open source)
 Group: Development/Compilers
-URL: http://llvm..org/
-Source: http://llvm.org/releases/@PACKAGE_VERSION@/@PACKAGE_NAME@-@PACKAGE_VERSION@.tar.gz
+URL: https://llvm.org/
+Source: https://llvm.org/releases/@PACKAGE_VERSION@/@PACKAGE_NAME@-@PACKAGE_VERSION@.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 Requires: /sbin/ldconfig
-BuildRequires: gcc >= 3.4
+BuildRequires: gcc >= 7.4
 
 %description
 LLVM is a compiler infrastructure designed for compile-time, link-time, runtime,
 and idle-time optimization of programs from arbitrary programming languages.
 LLVM is written in C++ and has been developed since 2000 at the University of
-Illinois and Apple. It currently supports compilation of C and C++ programs,
-using front-ends derived from GCC 4.0.1. A new front-end for the C family of
-languages is in development. The compiler infrastructure
-includes mirror sets of programming tools as well as libraries with equivalent
-functionality.
+Illinois and Apple. C-like languages use the Clang front end. This component
+compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode – and
+from there into object files, using LLVM. Other components include: the libc++
+C++ standard library, the LLD linker, and more.
 
 %prep
 %setup -q -n @PACKAGE_NAME@-@PACKAGE_VERSION@
@@ -32,7 +31,7 @@ functionality.
 --includedir=%{_includedir} \
 --libdir=%{_libdir} \
 --enable-optimized \
---enable-assertions 
+--enable-assertions
 make tools-only
 
 %install
@@ -64,5 +63,3 @@ rm -rf %{buildroot}
 - Minor adjustments for the 1.5 release
 * Mon Feb 09 2003 Brian R. Gaeke
 - Initial working version of RPM spec file.
-
-
