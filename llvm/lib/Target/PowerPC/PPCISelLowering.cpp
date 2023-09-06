@@ -1635,6 +1635,27 @@ bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
 }
 
+bool PPCTargetLowering::shallExtractConstSplatVectorElementToStore(
+    Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
+  if (!Subtarget.isPPC64() || !Subtarget.hasVSX())
+    return false;
+
+  if (auto *VTy = dyn_cast<VectorType>(VectorTy)) {
+    if (VTy->getScalarType()->isIntegerTy()) {
+      // ElemSizeInBits 8/16 can fit in immediate field, not needed here.
+      if (ElemSizeInBits == 32) {
+        Index = Subtarget.isLittleEndian() ? 2 : 1;
+        return true;
+      }
+      if (ElemSizeInBits == 64) {
+        Index = Subtarget.isLittleEndian() ? 1 : 0;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((PPCISD::NodeType)Opcode) {
   case PPCISD::FIRST_NUMBER:    break;
@@ -17086,10 +17107,20 @@ EVT PPCTargetLowering::getOptimalMemOpType(
   if (getTargetMachine().getOptLevel() != CodeGenOpt::None) {
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.
-    if (Subtarget.hasAltivec() && Op.size() >= 16 &&
-        (Op.isAligned(Align(16)) ||
-         ((Op.isMemset() && Subtarget.hasVSX()) || Subtarget.hasP8Vector())))
-      return MVT::v4i32;
+    if (Subtarget.hasAltivec() && Op.size() >= 16) {
+      if (Op.isMemset() && Subtarget.hasVSX()) {
+        uint64_t TailSize = Op.size() % 16;
+        // For memset lowering, EXTRACT_VECTOR_ELT tries to return constant
+        // element if vector element type matches tail store. For tail size
+        // 3/4, the tail store is i32, v4i32 cannot be used, need a legal one.
+        if (TailSize > 2 && TailSize <= 4) {
+          return MVT::v8i16;
+        }
+        return MVT::v4i32;
+      }
+      if (Op.isAligned(Align(16)) || Subtarget.hasP8Vector())
+        return MVT::v4i32;
+    }
   }
 
   if (Subtarget.isPPC64()) {

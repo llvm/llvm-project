@@ -2031,7 +2031,14 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
             (v8i16 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VSRC))>;
   def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 ForceXForm:$src)))),
             (v16i8 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VSRC))>;
+  def : Pat<(store (i64 (extractelt v2i64:$A, 1)), ForceXForm:$src),
+            (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ForceXForm:$src)>;
  }
+
+let Predicates = [IsISA3_1, IsBigEndian] in {
+  def : Pat<(store (i64 (extractelt v2i64:$A, 0)), ForceXForm:$src),
+            (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ForceXForm:$src)>;
+}
 
 // FIXME: The swap is overkill when the shift amount is a constant.
 // We should just fix the constant in the DAG.

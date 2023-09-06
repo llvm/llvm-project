@@ -791,6 +791,11 @@ namespace llvm {
       return true;
     }
 
+    bool
+    shallExtractConstSplatVectorElementToStore(Type *VectorTy,
+                                               unsigned ElemSizeInBits,
+                                               unsigned &Index) const override;
+
     bool isCtlzFast() const override {
       return true;
     }
