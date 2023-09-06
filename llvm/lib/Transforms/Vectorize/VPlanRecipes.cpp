@@ -123,6 +123,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::VectorPtr:
+    case VPInstruction::VectorPtrReverse:
       return false;
     default:
       return true;
@@ -401,6 +403,50 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     return CondBr;
   }
+  case VPInstruction::VectorPtr:
+  case VPInstruction::VectorPtrReverse: {
+    // Calculate the pointer for the specific unroll-part.
+    Value *PartPtr = nullptr;
+    bool IsReverse = getOpcode() == VPInstruction::VectorPtrReverse;
+    auto *MemR = cast<VPWidenMemoryInstructionRecipe>(*user_begin());
+    Type *ScalarDataTy =
+        MemR->isStore() ? cast<StoreInst>(&MemR->getIngredient())
+                              ->getValueOperand()
+                              ->getType()
+                        : cast<LoadInst>(&MemR->getIngredient())->getType();
+    // Use i32 for the gep index type when the value is constant,
+    // or query DataLayout for a more suitable index type otherwise.
+    const DataLayout &DL =
+        Builder.GetInsertBlock()->getModule()->getDataLayout();
+    Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
+                        ? DL.getIndexType(ScalarDataTy->getPointerTo())
+                        : Builder.getInt32Ty();
+    Value *Ptr = State.get(getOperand(0), VPIteration(0, 0));
+    bool InBounds = false;
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
+      InBounds = GEP->isInBounds();
+    if (IsReverse) {
+      // If the address is consecutive but reversed, then the
+      // wide store needs to start at the last vector element.
+      // RunTimeVF =  VScale * VF.getKnownMinValue()
+      // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
+      Value *RunTimeVF = getRuntimeVF(Builder, IndexTy, State.VF);
+      // NumElt = -Part * RunTimeVF
+      Value *NumElt = Builder.CreateMul(
+          ConstantInt::get(IndexTy, -(int64_t)Part), RunTimeVF);
+      // LastLane = 1 - RunTimeVF
+      Value *LastLane =
+          Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+      PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, NumElt, "", InBounds);
+      PartPtr =
+          Builder.CreateGEP(ScalarDataTy, PartPtr, LastLane, "", InBounds);
+    } else {
+      Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
+      PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, Increment, "", InBounds);
+    }
+
+    return PartPtr;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -476,6 +522,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
+    break;
+  case VPInstruction::VectorPtr:
+    O << "vector-pointer";
+    break;
+  case VPInstruction::VectorPtrReverse:
+    O << "vector-pointer-reverse";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
