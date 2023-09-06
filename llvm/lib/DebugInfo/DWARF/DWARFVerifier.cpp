@@ -1351,16 +1351,32 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
   return NumErrors;
 }
 
-static SmallVector<StringRef, 3> getNames(const DWARFDie &DIE,
-                                          bool IncludeStrippedTemplateNames,
-                                          bool IncludeLinkageName = true) {
-  SmallVector<StringRef, 3> Result;
+static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
+                                            bool IncludeStrippedTemplateNames,
+                                            bool IncludeObjCNames = true,
+                                            bool IncludeLinkageName = true) {
+  SmallVector<std::string, 3> Result;
   if (const char *Str = DIE.getShortName()) {
-    Result.emplace_back(Str);
+    StringRef Name(Str);
+    Result.emplace_back(Name);
     if (IncludeStrippedTemplateNames) {
       if (std::optional<StringRef> StrippedName =
               StripTemplateParameters(Result.back()))
-        Result.push_back(*StrippedName);
+        // Convert to std::string and push; emplacing the StringRef may trigger
+        // a vector resize which may destroy the StringRef memory.
+        Result.push_back(StrippedName->str());
+    }
+
+    if (IncludeObjCNames) {
+      if (std::optional<ObjCSelectorNames> ObjCNames =
+              getObjCNamesIfSelector(Name)) {
+        Result.emplace_back(ObjCNames->ClassName);
+        Result.emplace_back(ObjCNames->Selector);
+        if (ObjCNames->ClassNameNoCategory)
+          Result.emplace_back(*ObjCNames->ClassNameNoCategory);
+        if (ObjCNames->MethodNameNoCategory)
+          Result.push_back(std::move(*ObjCNames->MethodNameNoCategory));
+      }
     }
   } else if (DIE.getTag() == dwarf::DW_TAG_namespace)
     Result.emplace_back("(anonymous namespace)");
@@ -1507,11 +1523,12 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // the linkage name."
   auto IncludeLinkageName = Die.getTag() == DW_TAG_subprogram ||
                             Die.getTag() == DW_TAG_inlined_subroutine;
-  // We *allow* stripped template names as an extra entry into the template,
-  // but we don't *require* them to pass the completeness test.
+  // We *allow* stripped template names / ObjectiveC names as extra entries into
+  // the table, but we don't *require* them to pass the completeness test.
   auto IncludeStrippedTemplateNames = false;
-  auto EntryNames =
-      getNames(Die, IncludeStrippedTemplateNames, IncludeLinkageName);
+  auto IncludeObjCNames = false;
+  auto EntryNames = getNames(Die, IncludeStrippedTemplateNames,
+                             IncludeObjCNames, IncludeLinkageName);
   if (EntryNames.empty())
     return 0;
 
