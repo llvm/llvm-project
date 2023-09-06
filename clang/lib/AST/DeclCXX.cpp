@@ -2492,7 +2492,8 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-  return C.getPointerType(ObjectTy);
+  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                              : C.getPointerType(ObjectTy);
 }
 
 QualType CXXMethodDecl::getThisObjectType(const FunctionProtoType *FPT,

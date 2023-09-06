@@ -70,6 +70,16 @@ void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
+void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
+  auto in = gen(st.range(0));
+  benchmark::DoNotOptimize(&in);
+  while (st.KeepRunning()) {
+    Container c(std::from_range, in);
+    DoNotOptimizeData(c);
+  }
+}
+
+template <class Container, class GenInputs>
 void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
   auto in        = gen(st.range(0));
   const auto end = in.end();

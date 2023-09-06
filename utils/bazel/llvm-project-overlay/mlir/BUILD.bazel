@@ -11612,6 +11612,7 @@ cc_library(
         ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
+        ":SCFDialect",
         ":Support",
         ":TensorDialect",
         ":Transforms",
@@ -11658,6 +11659,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":Analysis",
         ":ArithDialect",
         ":IR",
         ":LLVMCommonConversion",

@@ -396,19 +396,24 @@ def select_to_logical : GICombineRule<
 // Fold (C op x) -> (x op C)
 // TODO: handle more isCommutable opcodes
 // TODO: handle compares (currently not marked as isCommutable)
-def commute_constant_to_rhs : GICombineRule<
+def commute_int_constant_to_rhs : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root,
     [{ return Helper.matchCommuteConstantToRHS(*${root}); }]),
-  (apply [{
-    Observer.changingInstr(*${root});
-    Register LHSReg = ${root}->getOperand(1).getReg();
-    Register RHSReg = ${root}->getOperand(2).getReg();
-    ${root}->getOperand(1).setReg(RHSReg);
-    ${root}->getOperand(2).setReg(LHSReg);
-    Observer.changedInstr(*${root});
-  }])
+  (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
+
+def commute_fp_constant_to_rhs : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FADD, G_FMUL):$root,
+    [{ return Helper.matchCommuteFPConstantToRHS(*${root}); }]),
+  (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
+>;
+
+def commute_constant_to_rhs : GICombineGroup<[
+  commute_int_constant_to_rhs,
+  commute_fp_constant_to_rhs
+]>;
 
 // Fold x op 0 -> x
 def right_identity_zero_frags : GICombinePatFrag<
@@ -424,11 +429,20 @@ def right_identity_zero: GICombineRule<
 >;
 
 // Fold x op 1 -> x
-def right_identity_one: GICombineRule<
+def right_identity_one_int: GICombineRule<
   (defs root:$dst),
   (match (G_MUL $dst, $x, 1)),
   (apply (GIReplaceReg $dst, $x))
 >;
+
+def right_identity_one_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FMUL $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, 1.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;
 
 // Fold (x op x) - > x
 def binop_same_val_frags : GICombinePatFrag<
@@ -524,12 +538,25 @@ def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
 
+// Fold constant zero int to fp conversions.
+class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
+  (defs root:$dst),
+  (match (opcode $dst, 0)),
+  // Can't use COPY $dst, 0 here because the 0 operand may be a smaller type
+  // than the destination for itofp.
+  (apply [{ Helper.replaceInstWithFConstant(*${dst}.getParent(), 0.0); }])
+>;
+def itof_const_zero_fold_si : itof_const_zero_fold_rule<G_SITOFP>;
+def itof_const_zero_fold_ui : itof_const_zero_fold_rule<G_UITOFP>;
+
 def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fneg,
   constant_fold_fabs,
   constant_fold_fsqrt,
   constant_fold_flog2,
-  constant_fold_fptrunc
+  constant_fold_fptrunc,
+  itof_const_zero_fold_si,
+  itof_const_zero_fold_ui
 ]>;
 
 // Fold int2ptr(ptr2int(x)) -> x

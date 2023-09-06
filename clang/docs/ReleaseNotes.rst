@@ -220,6 +220,7 @@ Improvements to Clang's diagnostics
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier.
+- Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
 
 Bug Fixes in This Version
 -------------------------
@@ -260,8 +261,8 @@ Bug Fixes in This Version
 - Clang's ``-Wunused-private-field`` no longer warns on fields whose type is
   declared with ``[[maybe_unused]]``.
   (`#61334 <https://github.com/llvm/llvm-project/issues/61334>`_)
-- For function multi-versioning using the ``target`` or ``target_clones``
-  attributes, remove comdat for internal linkage functions.
+- For function multi-versioning using the ``target``, ``target_clones``, or
+  ``target_version`` attributes, remove comdat for internal linkage functions.
   (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
 - Clang now reports ``-Wformat`` for bool value and char specifier confusion
   in scanf. Fixes

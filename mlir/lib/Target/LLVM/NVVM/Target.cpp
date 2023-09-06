@@ -122,7 +122,7 @@ ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
 // Try to append `libdevice` from a CUDA toolkit installation.
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
   StringRef pathRef = getToolkitPath();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     SmallVector<char, 256> path;
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     pathRef = StringRef(path.data(), path.size());

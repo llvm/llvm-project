@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCINSTPRINTER_H
 #define LLVM_MC_MCINSTPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include <cstdint>
 
@@ -97,8 +98,8 @@ public:
 
   class WithMarkup {
   public:
-    WithMarkup(raw_ostream &OS, Markup M, bool EnableMarkup,
-                             bool EnableColor);
+    LLVM_CTOR_NODISCARD WithMarkup(raw_ostream &OS, Markup M, bool EnableMarkup,
+                                   bool EnableColor);
     ~WithMarkup();
 
     template <typename T> WithMarkup &operator<<(T &O) {

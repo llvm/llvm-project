@@ -84,7 +84,7 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
 }
 
 llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
-  if (!stringAttr || stringAttr.getValue().empty())
+  if (!stringAttr || stringAttr.empty())
     return nullptr;
   return llvm::MDString::get(llvmCtx, stringAttr);
 }

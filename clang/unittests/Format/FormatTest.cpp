@@ -4180,6 +4180,16 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "void foo() {}\n"
                "} // namespace ns",
                Style);
+
+  FormatStyle LLVMWithCompactInnerNamespace = getLLVMStyle();
+  LLVMWithCompactInnerNamespace.CompactNamespaces = true;
+  LLVMWithCompactInnerNamespace.NamespaceIndentation = FormatStyle::NI_Inner;
+  verifyFormat("namespace ns1 { namespace ns2 { namespace ns3 {\n"
+               "// block for debug mode\n"
+               "#ifndef NDEBUG\n"
+               "#endif\n"
+               "}}} // namespace ns1::ns2::ns3",
+               LLVMWithCompactInnerNamespace);
 }
 
 TEST_F(FormatTest, NamespaceMacros) {

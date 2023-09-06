@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -63,6 +64,42 @@ StringRef transform::MemrefToLLVMTypeConverterOp::getTypeConverterType() {
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
+
+namespace {
+class AllocToAllocaPattern : public OpRewritePattern<memref::AllocOp> {
+public:
+  explicit AllocToAllocaPattern(Operation *analysisRoot, int64_t maxSize = 0)
+      : OpRewritePattern<memref::AllocOp>(analysisRoot->getContext()),
+        dataLayoutAnalysis(analysisRoot), maxSize(maxSize) {}
+
+  LogicalResult matchAndRewrite(memref::AllocOp op,
+                                PatternRewriter &rewriter) const override {
+    return success(memref::allocToAlloca(
+        rewriter, op, [this](memref::AllocOp alloc, memref::DeallocOp dealloc) {
+          MemRefType type = alloc.getMemref().getType();
+          if (!type.hasStaticShape())
+            return false;
+
+          const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(alloc);
+          int64_t elementSize = dataLayout.getTypeSize(type.getElementType());
+          return maxSize == 0 || type.getNumElements() * elementSize < maxSize;
+        }));
+  }
+
+private:
+  DataLayoutAnalysis dataLayoutAnalysis;
+  int64_t maxSize;
+};
+} // namespace
+
+void transform::ApplyAllocToAllocaOp::populatePatterns(
+    RewritePatternSet &patterns) {}
+
+void transform::ApplyAllocToAllocaOp::populatePatternsWithState(
+    RewritePatternSet &patterns, transform::TransformState &state) {
+  patterns.insert<AllocToAllocaPattern>(
+      state.getTopLevel(), static_cast<int64_t>(getSizeLimit().value_or(0)));
+}
 
 void transform::ApplyExpandOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {

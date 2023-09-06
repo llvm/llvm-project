@@ -42,8 +42,10 @@ export namespace std {
   // [format.formatter], formatter
   using std::formatter;
 
+#if _LIBCPP_STD_VER >= 23
   // [format.formattable], concept formattable
   using std::formattable;
+#endif
 
   // [format.parse.ctx], class template basic_format_parse_context
   using std::basic_format_parse_context;
@@ -52,6 +54,7 @@ export namespace std {
   using std::wformat_parse_context;
 #endif
 
+#if _LIBCPP_STD_VER >= 23
   // [format.range], formatting of ranges
   // [format.range.fmtkind], variable template format_kind
   using std::format_kind;
@@ -59,6 +62,7 @@ export namespace std {
 
   // [format.range.formatter], class template range_formatter
   using std::range_formatter;
+#endif // _LIBCPP_STD_VER >= 23
 
   // [format.arg], class template basic_format_arg
   using std::basic_format_arg;
