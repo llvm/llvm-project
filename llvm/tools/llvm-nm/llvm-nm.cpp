@@ -1822,7 +1822,7 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
 
       if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
         const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
-        if (WasmSym.isTypeData())
+        if (WasmSym.isTypeData() && !WasmSym.isUndefined())
           S.Size = WasmSym.Info.DataRef.Size;
       }
 
