@@ -574,9 +574,12 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
-  // Add cap for SPV_INTEL_optnone.
-  // FIXME: this should be added only if the target has the extension.
-  addAvailableCaps({Capability::OptNoneINTEL});
+  // Add capabilities enabled by extensions.
+  for (auto Extension : ST.getAllAvailableExtensions()) {
+    CapabilityList EnabledCapabilities =
+        getCapabilitiesEnabledByExtension(Extension);
+    addAvailableCaps(EnabledCapabilities);
+  }
 
   // TODO: add OpenCL extensions.
 }
