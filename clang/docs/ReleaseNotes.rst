@@ -269,7 +269,7 @@ Bug Fixes to C++ Support
 - Fix crash when the trailing return type of a generic and dependent
   lambda refers to an init-capture.
   (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
-   `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
