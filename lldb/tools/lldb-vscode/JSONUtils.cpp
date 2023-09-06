@@ -132,6 +132,84 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+/// Create a short summary for a container that contains the summary of its
+/// first children, so that the user can get a glimpse of its contents at a
+/// glance.
+static std::optional<std::string>
+GetSyntheticSummaryForContainer(lldb::SBValue &v) {
+  if (v.TypeIsPointerType() || !v.MightHaveChildren())
+    return std::nullopt;
+  /// As this operation can be potentially slow, we limit the total time spent
+  /// fetching children to a few ms.
+  const auto max_evaluation_time = std::chrono::milliseconds(10);
+  /// We don't want to generate a extremely long summary string, so we limit its
+  /// length.
+  const size_t max_length = 32;
+
+  auto start = std::chrono::steady_clock::now();
+  std::string summary;
+  llvm::raw_string_ostream os(summary);
+  os << "{";
+
+  llvm::StringRef separator = "";
+
+  for (size_t i = 0, e = v.GetNumChildren(); i < e; ++i) {
+    // If we reached the time limit or exceeded the number of characters, we
+    // dump `...` to signal that there are more elements in the collection.
+    if (summary.size() > max_length ||
+        (std::chrono::steady_clock::now() - start) > max_evaluation_time) {
+      os << separator << "...";
+      break;
+    }
+    lldb::SBValue child = v.GetChildAtIndex(i);
+
+    if (llvm::StringRef name = child.GetName(); !name.empty()) {
+      llvm::StringRef value;
+      if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
+        value = summary;
+      else
+        value = child.GetValue();
+
+      if (!value.empty()) {
+        // If the child is an indexed entry, we don't show its index to save
+        // characters.
+        if (name.starts_with("["))
+          os << separator << value;
+        else
+          os << separator << name << ":" << value;
+        separator = ", ";
+      }
+    }
+  }
+  os << "}";
+
+  if (summary == "{...}" || summary == "{}")
+    return std::nullopt;
+  return summary;
+}
+
+/// Return whether we should dereference an SBValue in order to generate a more
+/// meaningful summary string.
+static bool ShouldBeDereferencedForSummary(lldb::SBValue &v) {
+  if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType())
+    return false;
+
+  // If it's a pointer to a pointer, we don't dereference to avoid confusing
+  // the user with the addresses that could shown in the summary.
+  if (v.GetType().IsPointerType() &&
+      v.GetType().GetDereferencedType().IsPointerType())
+    return false;
+
+  // If it's synthetic or a pointer to a basic type that provides a summary, we
+  // don't dereference.
+  if ((v.IsSynthetic() || v.GetType().GetPointeeType().GetBasicType() !=
+                              lldb::eBasicTypeInvalid) &&
+      !llvm::StringRef(v.GetSummary()).empty()) {
+    return false;
+  }
+  return true;
+}
+
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
   std::string result;
@@ -141,23 +219,45 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
   if (!error.Success()) {
     strm << "<error: " << error.GetCString() << ">";
   } else {
-    llvm::StringRef value = v.GetValue();
-    llvm::StringRef summary = v.GetSummary();
-    llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
-    if (!value.empty()) {
-      strm << value;
-      if (!summary.empty())
+    auto tryDumpSummaryAndValue = [&strm](lldb::SBValue value) {
+      llvm::StringRef val = value.GetValue();
+      llvm::StringRef summary = value.GetSummary();
+      if (!val.empty()) {
+        strm << val;
+        if (!summary.empty())
+          strm << ' ' << summary;
+        return true;
+      }
+      if (!summary.empty()) {
         strm << ' ' << summary;
-    } else if (!summary.empty()) {
-      strm << ' ' << summary;
-    } else if (!type_name.empty()) {
-      strm << type_name;
-      lldb::addr_t address = v.GetLoadAddress();
-      if (address != LLDB_INVALID_ADDRESS)
-        strm << " @ " << llvm::format_hex(address, 0);
+        return true;
+      }
+      if (auto container_summary = GetSyntheticSummaryForContainer(value)) {
+        strm << *container_summary;
+        return true;
+      }
+      return false;
+    };
+
+    // We first try to get the summary from its dereferenced value.
+    bool done = ShouldBeDereferencedForSummary(v) &&
+                tryDumpSummaryAndValue(v.Dereference());
+
+    // We then try to get it from the current value itself.
+    if (!done)
+      done = tryDumpSummaryAndValue(v);
+
+    // As last resort, we print its type and address if available.
+    if (!done) {
+      if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+          !type_name.empty()) {
+        strm << type_name;
+        lldb::addr_t address = v.GetLoadAddress();
+        if (address != LLDB_INVALID_ADDRESS)
+          strm << " @ " << llvm::format_hex(address, 0);
+      }
     }
   }
-  strm.flush();
   EmplaceSafeString(object, key, result);
 }
 
