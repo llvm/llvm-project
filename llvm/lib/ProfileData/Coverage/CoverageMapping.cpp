@@ -237,7 +237,8 @@ Error CoverageMapping::loadFunctionRecord(
     IndexedInstrProfReader &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "record function name is empty");
 
   if (Record.Filenames.empty())
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
@@ -342,7 +343,7 @@ static Error handleMaybeNoDataFoundError(Error E) {
       std::move(E), [](const CoverageMapError &CME) {
         if (CME.get() == coveragemap_error::no_data_found)
           return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get());
+        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
       });
 }
 
@@ -925,26 +926,45 @@ LineCoverageIterator &LineCoverageIterator::operator++() {
   return *this;
 }
 
-static std::string getCoverageMapErrString(coveragemap_error Err) {
+static std::string getCoverageMapErrString(coveragemap_error Err,
+                                           const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
   switch (Err) {
   case coveragemap_error::success:
-    return "Success";
+    OS << "success";
+    break;
   case coveragemap_error::eof:
-    return "End of File";
+    OS << "end of File";
+    break;
   case coveragemap_error::no_data_found:
-    return "No coverage data found";
+    OS << "no coverage data found";
+    break;
   case coveragemap_error::unsupported_version:
-    return "Unsupported coverage format version";
+    OS << "unsupported coverage format version";
+    break;
   case coveragemap_error::truncated:
-    return "Truncated coverage data";
+    OS << "truncated coverage data";
+    break;
   case coveragemap_error::malformed:
-    return "Malformed coverage data";
+    OS << "malformed coverage data";
+    break;
   case coveragemap_error::decompression_failed:
-    return "Failed to decompress coverage data (zlib)";
+    OS << "failed to decompress coverage data (zlib)";
+    break;
   case coveragemap_error::invalid_or_missing_arch_specifier:
-    return "`-arch` specifier is invalid or missing for universal binary";
+    OS << "`-arch` specifier is invalid or missing for universal binary";
+    break;
+  default:
+    llvm_unreachable("invalid coverage mapping error.");
   }
-  llvm_unreachable("A value of coveragemap_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return Msg;
 }
 
 namespace {
@@ -962,7 +982,7 @@ class CoverageMappingErrorCategoryType : public std::error_category {
 } // end anonymous namespace
 
 std::string CoverageMapError::message() const {
-  return getCoverageMapErrString(Err);
+  return getCoverageMapErrString(Err, Msg);
 }
 
 const std::error_category &llvm::coverage::coveragemap_category() {
