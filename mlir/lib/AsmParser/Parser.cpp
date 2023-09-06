@@ -2617,10 +2617,10 @@ ParseResult TopLevelOperationParser::parseAliasBlockDef() {
 
   auto parseAttributeAlias = [&](StringRef aliasName,
                                  const UnparsedData &unparsedData) {
-    llvm::SaveAndRestore<SetVector<const void *>> cyclicStack(
+    llvm::SaveAndRestore<SetVector<PointerUnion<Attribute, Type>>> cyclicStack(
         getState().cyclicParsingStack, {});
     auto exit = saveAndResetToken(unparsedData.text.data());
-    Attribute attribute = parseAttribute();
+    Attribute attribute = parseAttribute(Type(), aliasName);
     if (!attribute)
       return attribute;
 
@@ -2634,10 +2634,10 @@ ParseResult TopLevelOperationParser::parseAliasBlockDef() {
 
   auto parseTypeAlias = [&](StringRef aliasName,
                             const UnparsedData &unparsedData) {
-    llvm::SaveAndRestore<SetVector<const void *>> cyclicStack(
+    llvm::SaveAndRestore<SetVector<PointerUnion<Attribute, Type>>> cyclicStack(
         getState().cyclicParsingStack, {});
     auto exit = saveAndResetToken(unparsedData.text.data());
-    Type type = parseType();
+    Type type = parseType(aliasName);
     if (!type)
       return type;
 

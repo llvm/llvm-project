@@ -49,7 +49,7 @@ using namespace mlir::detail;
 ///                    | distinct-attribute
 ///                    | extended-attribute
 ///
-Attribute Parser::parseAttribute(Type type) {
+Attribute Parser::parseAttribute(Type type, StringRef aliasDefName) {
   switch (getToken().getKind()) {
   // Parse an AffineMap or IntegerSet attribute.
   case Token::kw_affine_map: {
@@ -117,7 +117,7 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an extended attribute, i.e. alias or dialect attribute.
   case Token::hash_identifier:
-    return parseExtendedAttr(type);
+    return parseExtendedAttr(type, aliasDefName);
 
   // Parse floating point and integer attributes.
   case Token::floatliteral:

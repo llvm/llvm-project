@@ -29,18 +29,37 @@ namespace {
 /// hooking into the main MLIR parsing logic.
 class CustomDialectAsmParser : public AsmParserImpl<DialectAsmParser> {
 public:
-  CustomDialectAsmParser(StringRef fullSpec, Parser &parser)
+  CustomDialectAsmParser(StringRef fullSpec, Parser &parser,
+                         StringRef aliasDefName)
       : AsmParserImpl<DialectAsmParser>(parser.getToken().getLoc(), parser),
-        fullSpec(fullSpec) {}
+        fullSpec(fullSpec), aliasDefName(aliasDefName) {}
   ~CustomDialectAsmParser() override = default;
 
   /// Returns the full specification of the symbol being parsed. This allows
   /// for using a separate parser if necessary.
   StringRef getFullSymbolSpec() const override { return fullSpec; }
 
+  LogicalResult
+  pushCyclicParsing(PointerUnion<Attribute, Type> attrOrType) override {
+    // If this is an alias definition, register the mutable attribute or type.
+    if (!aliasDefName.empty()) {
+      if (auto attr = dyn_cast<Attribute>(attrOrType))
+        parser.getState().symbols.attributeAliasDefinitions[aliasDefName] =
+            attr;
+      else
+        parser.getState().symbols.typeAliasDefinitions[aliasDefName] =
+            cast<Type>(attrOrType);
+    }
+    return AsmParserImpl::pushCyclicParsing(attrOrType);
+  }
+
 private:
   /// The full symbol specification.
   StringRef fullSpec;
+
+  /// If this parser is used to parse an alias definition, the name of the alias
+  /// definition. Empty otherwise.
+  StringRef aliasDefName;
 };
 } // namespace
 
@@ -260,7 +279,7 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
 ///                        | `#` alias-name pretty-dialect-sym-body? (`:` type)?
 ///   attribute-alias    ::= `#` alias-name
 ///
-Attribute Parser::parseExtendedAttr(Type type) {
+Attribute Parser::parseExtendedAttr(Type type, StringRef aliasDefName) {
   MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
       *this, state.asmState, state.symbols.attributeAliasDefinitions,
@@ -282,7 +301,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
           resetToken(symbolData.data());
 
           // Parse the attribute.
-          CustomDialectAsmParser customParser(symbolData, *this);
+          CustomDialectAsmParser customParser(symbolData, *this, aliasDefName);
           Attribute attr = dialect->parseAttribute(customParser, attrType);
           resetToken(curLexerPos);
           return attr;
@@ -311,7 +330,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
 ///   dialect-type  ::= `!` alias-name pretty-dialect-attribute-body?
 ///   type-alias    ::= `!` alias-name
 ///
-Type Parser::parseExtendedType() {
+Type Parser::parseExtendedType(StringRef aliasDefName) {
   MLIRContext *ctx = getContext();
   return parseExtendedSymbol<Type>(
       *this, state.asmState, state.symbols.typeAliasDefinitions,
@@ -327,7 +346,7 @@ Type Parser::parseExtendedType() {
           resetToken(symbolData.data());
 
           // Parse the type.
-          CustomDialectAsmParser customParser(symbolData, *this);
+          CustomDialectAsmParser customParser(symbolData, *this, aliasDefName);
           Type type = dialect->parseType(customParser);
           resetToken(curLexerPos);
           return type;

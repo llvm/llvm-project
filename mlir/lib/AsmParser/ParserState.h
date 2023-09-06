@@ -82,7 +82,7 @@ struct ParserState {
 
   /// Stack of potentially cyclic mutable attributes or type currently being
   /// parsed.
-  SetVector<const void *> cyclicParsingStack;
+  SetVector<PointerUnion<Attribute, Type>> cyclicParsingStack;
 
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.

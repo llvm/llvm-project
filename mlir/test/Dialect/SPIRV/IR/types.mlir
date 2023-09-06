@@ -425,6 +425,11 @@ func.func private @id_struct_redefinition(!spirv.struct<a8, (!spirv.ptr<!spirv.s
 // CHECK: func private @id_struct_recursive(!spirv.struct<a9, (!spirv.ptr<!spirv.struct<b9, (!spirv.ptr<!spirv.struct<a9>, Uniform>)>, Uniform>)>)
 func.func private @id_struct_recursive(!spirv.struct<a9, (!spirv.ptr<!spirv.struct<b9, (!spirv.ptr<!spirv.struct<a9>, Uniform>)>, Uniform>)>) -> ()
 
+!a = !spirv.struct<a9, (!spirv.ptr<!b, Uniform>)>
+!b = !spirv.struct<b9, (!spirv.ptr<!a, Uniform>)>
+// CHECK: func private @id_struct_recursive2(!spirv.struct<a9, (!spirv.ptr<!spirv.struct<b9, (!spirv.ptr<!spirv.struct<a9>, Uniform>)>, Uniform>)>)
+func.func private @id_struct_recursive2(!a) -> ()
+
 // -----
 
 // Equivalent to:
@@ -432,6 +437,11 @@ func.func private @id_struct_recursive(!spirv.struct<a9, (!spirv.ptr<!spirv.stru
 //   struct b { struct a *aPtr, struct b *bPtr; };
 // CHECK: func private @id_struct_recursive(!spirv.struct<a10, (!spirv.ptr<!spirv.struct<b10, (!spirv.ptr<!spirv.struct<a10>, Uniform>, !spirv.ptr<!spirv.struct<b10>, Uniform>)>, Uniform>)>)
 func.func private @id_struct_recursive(!spirv.struct<a10, (!spirv.ptr<!spirv.struct<b10, (!spirv.ptr<!spirv.struct<a10>, Uniform>, !spirv.ptr<!spirv.struct<b10>, Uniform>)>, Uniform>)>) -> ()
+
+!a = !spirv.struct<a10, (!spirv.ptr<!b, Uniform>)>
+!b = !spirv.struct<b10, (!spirv.ptr<!a, Uniform>, !spirv.ptr<!b, Uniform>)>
+// CHECK: func private @id_struct_recursive2(!spirv.struct<a10, (!spirv.ptr<!spirv.struct<b10, (!spirv.ptr<!spirv.struct<a10>, Uniform>, !spirv.ptr<!spirv.struct<b10>, Uniform>)>, Uniform>)>)
+func.func private @id_struct_recursive2(!a) -> ()
 
 // -----
 

@@ -58,10 +58,10 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
 ///   type ::= function-type
 ///          | non-function-type
 ///
-Type Parser::parseType() {
+Type Parser::parseType(StringRef aliasDefName) {
   if (getToken().is(Token::l_paren))
     return parseFunctionType();
-  return parseNonFunctionType();
+  return parseNonFunctionType(aliasDefName);
 }
 
 /// Parse a function result type.
@@ -273,7 +273,7 @@ Type Parser::parseMemRefType() {
 ///   float-type ::= `f16` | `bf16` | `f32` | `f64` | `f80` | `f128`
 ///   none-type ::= `none`
 ///
-Type Parser::parseNonFunctionType() {
+Type Parser::parseNonFunctionType(StringRef aliasDefName) {
   switch (getToken().getKind()) {
   default:
     return (emitWrongTokenError("expected non-function type"), nullptr);
@@ -356,7 +356,7 @@ Type Parser::parseNonFunctionType() {
 
   // extended type
   case Token::exclamation_identifier:
-    return parseExtendedType();
+    return parseExtendedType(aliasDefName);
 
   // Handle completion of a dialect type.
   case Token::code_complete:

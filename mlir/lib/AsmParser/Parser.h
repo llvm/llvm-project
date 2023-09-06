@@ -202,13 +202,13 @@ public:
   OptionalParseResult parseOptionalType(Type &type);
 
   /// Parse an arbitrary type.
-  Type parseType();
+  Type parseType(StringRef aliasDefName = "");
 
   /// Parse a complex type.
   Type parseComplexType();
 
   /// Parse an extended type.
-  Type parseExtendedType();
+  Type parseExtendedType(StringRef aliasDefName = "");
 
   /// Parse a function type.
   Type parseFunctionType();
@@ -217,7 +217,7 @@ public:
   Type parseMemRefType();
 
   /// Parse a non function type.
-  Type parseNonFunctionType();
+  Type parseNonFunctionType(StringRef aliasDefName = "");
 
   /// Parse a tensor type.
   Type parseTensorType();
@@ -240,7 +240,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse an arbitrary attribute with an optional type.
-  Attribute parseAttribute(Type type = {});
+  Attribute parseAttribute(Type type = {}, StringRef aliasDefName = "");
 
   /// Parse an optional attribute with the provided type.
   OptionalParseResult parseOptionalAttribute(Attribute &attribute,
@@ -271,7 +271,7 @@ public:
   Attribute parseDistinctAttr(Type type);
 
   /// Parse an extended attribute.
-  Attribute parseExtendedAttr(Type type);
+  Attribute parseExtendedAttr(Type type, StringRef aliasDefName = "");
 
   /// Parse a float attribute.
   Attribute parseFloatAttr(Type type, bool isNegative);

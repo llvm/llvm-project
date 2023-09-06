@@ -169,6 +169,11 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto recAliasAttr = dyn_cast<TestRecursiveAliasAttr>(attr)) {
+      os << recAliasAttr.getName();
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
