@@ -1260,7 +1260,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
-    // vectors of f16 are loaded/stored as multiples of v2f16 elements.
+    // vectors of 16bits type are loaded/stored as multiples of v2x16 elements.
     if ((EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) ||
         (EltVT == MVT::bf16 && N->getValueType(0) == MVT::v2bf16) ||
         (EltVT == MVT::i16 && N->getValueType(0) == MVT::v2i16)) {
