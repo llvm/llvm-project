@@ -25,7 +25,7 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
     int ret = __llvm_libc::gettimeofday(&tv, tz);
     ASSERT_EQ(ret, 0);
 
-    int sleep_time = -sleep_times[i];
+    int sleep_time = sleep_times[i];
     // Sleep for {sleep_time} microsceconds.
     struct timespec tim = {0, sleep_time * 1000};
     struct timespec tim2 = {0, 0};
