@@ -49,6 +49,9 @@ bool NonZeroEnumToBoolConversionCheck::isLanguageVersionSupported(
 }
 
 void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
+  auto ExcludedOperators = binaryOperation(hasAnyOperatorName(
+      "|", "&", "^", "<<", ">>", "~", "|=", "&=", "^=", "<<=", ">>="));
+
   Finder->addMatcher(
       castExpr(hasCastKind(CK_IntegralToBoolean),
                unless(isExpansionInSystemHeader()), hasType(booleanType()),
@@ -58,7 +61,8 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                                      unless(matchers::matchesAnyListedName(
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
-                        unless(declRefExpr(to(enumConstantDecl()))))),
+                        unless(declRefExpr(to(enumConstantDecl()))),
+                        unless(ignoringImplicit(ExcludedOperators)))),
                unless(hasAncestor(staticAssertDecl())))
           .bind("cast"),
       this);

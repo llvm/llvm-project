@@ -183,6 +183,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
 
+- Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
+  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
+  eliminating false positives resulting from direct usage of bitwise operators.
+
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
@@ -227,7 +231,7 @@ Changes in existing checks
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
 - Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert 
+  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert
   same include header multiple times.
 
 - Improved :doc:`misc-redundant-expression
