@@ -72,8 +72,7 @@ class CSKYAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -84,8 +83,8 @@ class CSKYAsmParser : public MCTargetAsmParser {
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, OperandVector &Operands,
                           MCStreamer &Out);
@@ -1001,24 +1000,24 @@ bool CSKYAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 // Attempts to match Name as a register (either using the default name or
 // alternative ABI names), setting RegNo to the matching register. Upon
 // failure, returns true and sets RegNo to 0.
-static bool matchRegisterNameHelper(const MCSubtargetInfo &STI,
-                                    MCRegister &RegNo, StringRef Name) {
-  RegNo = MatchRegisterName(Name);
+static bool matchRegisterNameHelper(const MCSubtargetInfo &STI, MCRegister &Reg,
+                                    StringRef Name) {
+  Reg = MatchRegisterName(Name);
 
-  if (RegNo == CSKY::NoRegister)
-    RegNo = MatchRegisterAltName(Name);
+  if (Reg == CSKY::NoRegister)
+    Reg = MatchRegisterAltName(Name);
 
-  return RegNo == CSKY::NoRegister;
+  return Reg == CSKY::NoRegister;
 }
 
-bool CSKYAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool CSKYAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (!matchRegisterNameHelper(getSTI(), (MCRegister &)RegNo, Name)) {
+  if (!matchRegisterNameHelper(getSTI(), Reg, Name)) {
     getParser().Lex(); // Eat identifier token.
     return false;
   }
@@ -1035,13 +1034,13 @@ ParseStatus CSKYAsmParser::parseRegister(OperandVector &Operands) {
     return ParseStatus::NoMatch;
   case AsmToken::Identifier: {
     StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
+    MCRegister Reg;
 
-    if (matchRegisterNameHelper(getSTI(), (MCRegister &)RegNo, Name))
+    if (matchRegisterNameHelper(getSTI(), Reg, Name))
       return ParseStatus::NoMatch;
 
     getLexer().Lex();
-    Operands.push_back(CSKYOperand::createReg(RegNo, S, E));
+    Operands.push_back(CSKYOperand::createReg(Reg, S, E));
 
     return ParseStatus::Success;
   }
@@ -1514,20 +1513,19 @@ bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-OperandMatchResultTy CSKYAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                     SMLoc &StartLoc,
-                                                     SMLoc &EndLoc) {
+ParseStatus CSKYAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                            SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
 
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(getSTI(), (MCRegister &)RegNo, Name))
-    return MatchOperand_NoMatch;
+  if (matchRegisterNameHelper(getSTI(), Reg, Name))
+    return ParseStatus::NoMatch;
 
   getParser().Lex(); // Eat identifier token.
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 ParseStatus CSKYAsmParser::parseDirective(AsmToken DirectiveID) {
