@@ -70,6 +70,16 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
   return cast<BoolValue>(Env.getValue(D))->formula();
 }
 
+TEST(TransferTest, CNotSupported) {
+  std::string Code = R"(
+    void target() {}
+  )";
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(
+                        Code, [](const auto &, auto &) {}, {BuiltinOptions{}},
+                        LangStandard::lang_c89),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
 TEST(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
   std::string Code = R"(
     void target() {
