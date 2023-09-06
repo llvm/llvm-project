@@ -5,11 +5,11 @@ Summary: LLVM (An Optimizing Compiler Infrastructure)
 License: Apache-2.0 with LLVM exception
 Vendor: None (open source)
 Group: Development/Compilers
-URL: https://llvm.org/
+URL: https://llvm.org
 Source: https://llvm.org/releases/@PACKAGE_VERSION@/@PACKAGE_NAME@-@PACKAGE_VERSION@.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 Requires: /sbin/ldconfig
-BuildRequires: gcc >= 7.4
+BuildRequires: gcc >= @GCC_MIN@
 
 %description
 LLVM is a compiler infrastructure designed for compile-time, link-time, runtime,
