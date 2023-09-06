@@ -14812,7 +14812,7 @@ using a less accurate calculation.
 .. _int_exp10:
 
 '``llvm.exp10.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
