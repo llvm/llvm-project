@@ -206,12 +206,19 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
       // us as an array of v2f16/v2bf16 elements. We must match this so we
       // stay in sync with Ins/Outs.
       if ((Is16bitsType(EltVT.getSimpleVT())) && NumElts % 2 == 0) {
-        if (EltVT == MVT::f16)
+        switch (EltVT.getSimpleVT().SimpleTy) {
+        case MVT::f16:
           EltVT = MVT::v2f16;
-        else if (EltVT == MVT::bf16)
+          break;
+        case MVT::bf16:
           EltVT = MVT::v2bf16;
-        else if (EltVT == MVT::i16)
+          break;
+        case MVT::i16:
           EltVT = MVT::v2i16;
+          break;
+        default:
+          llvm_unreachable("Unexpected type");
+        }
         NumElts /= 2;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
@@ -627,7 +634,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setI16x2OperationAction(ISD::ADD, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SUB, MVT::v2i16, Legal, Custom);
-  setI16x2OperationAction(ISD::AND, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::MUL, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SHL, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SREM, MVT::v2i16, Legal, Custom);
@@ -2477,7 +2483,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UMAX:
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND:
   case ISD::MUL:
   case ISD::SHL:
   case ISD::SREM:
@@ -5353,12 +5358,19 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     Load16x2 = true;
     Opcode = NVPTXISD::LoadV4;
     EVT VVT;
-    if (EltVT == MVT::f16)
+    switch (EltVT.getSimpleVT().SimpleTy) {
+    case MVT::f16:
       VVT = MVT::v2f16;
-    else if (EltVT == MVT::bf16)
+      break;
+    case MVT::bf16:
       VVT = MVT::v2bf16;
-    else if (EltVT == MVT::i16)
+      break;
+    case MVT::i16:
       VVT = MVT::v2i16;
+      break;
+    default:
+      llvm_unreachable("Unsupported v8 vector type.");
+    }
     EVT ListVTs[] = {VVT, VVT, VVT, VVT, MVT::Other};
     LdResVTs = DAG.getVTList(ListVTs);
     break;
