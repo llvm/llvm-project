@@ -135,6 +135,10 @@ if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
 endif()
 
+if(MLIR_ENABLE_SYCL_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
 
 if(LLVM_BUILD_EXAMPLES)

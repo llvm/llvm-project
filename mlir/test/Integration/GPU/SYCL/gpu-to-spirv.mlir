@@ -1,3 +1,10 @@
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(convert-gpu-to-spirv{use-64bit-index=true},spirv.module(spirv-lower-abi-attrs,spirv-update-vce),func.func(llvm-request-c-wrappers),gpu-serialize-to-spirv,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
+// RUN: | mlir-cpu-runner \
+// RUN:   --shared-libs=%mlir_sycl_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
+
 module @add attributes {gpu.container_module} {
   memref.global "private" constant @__constant_3x3xi64_0 : memref<3x3xi64> = dense<[[1, 4098, 3], [16777220, 5, 4294967302], [7, 1099511627784, 9]]>
   memref.global "private" constant @__constant_3x3xi64 : memref<3x3xi64> = dense<[[1, 2, 3], [4, 5, 4102], [16777223, 4294967304, 1099511627785]]>
@@ -34,7 +41,7 @@ module @add attributes {gpu.container_module} {
   gpu.wait [%7]
   return %alloc : memref<3x3xi64>
   }
-  gpu.module @test_kernel attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Float16Buffer, Int64, Int16, Int8, Bfloat16ConversionINTEL, Kernel, Linkage, Vector16, GenericPointer, Groups, Float16, Float64, AtomicFloat32AddEXT, ExpectAssumeKHR], [SPV_INTEL_bfloat16_conversion, SPV_EXT_shader_atomic_float_add, SPV_KHR_expect_assume]>, api=OpenCL, #spirv.resource_limits<>>} {
+  gpu.module @test_kernel attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Float16Buffer, Int64, Int16, Int8, Kernel, Linkage, Vector16, GenericPointer, Groups, Float16, Float64, AtomicFloat32AddEXT, ExpectAssumeKHR], [SPV_KHR_expect_assume]>, api=OpenCL, #spirv.resource_limits<>>} {
     gpu.func @test_kernel(%arg0: memref<3x3xi64>, %arg1: memref<3x3xi64>, %arg2: memref<3x3xi64>) kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 3, 3, 1>, spirv.entry_point_abi = #spirv.entry_point_abi<>} {
       %0 = gpu.block_id  x
       %1 = gpu.block_id  y
