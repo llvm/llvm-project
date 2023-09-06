@@ -1556,6 +1556,10 @@ defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x25>;
 defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x26>;
 defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 
+defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+
 //===----------------------------------------------------------------------===//
 // GFX11
 //===----------------------------------------------------------------------===//

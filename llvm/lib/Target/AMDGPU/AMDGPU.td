@@ -1506,6 +1506,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDPALU_DPP,
+   FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureWavefrontSize32,
