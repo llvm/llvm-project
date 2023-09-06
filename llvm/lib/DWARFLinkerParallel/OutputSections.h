@@ -288,17 +288,10 @@ public:
   OutputSections(LinkingGlobalData &GlobalData) : GlobalData(GlobalData) {}
 
   /// Sets output format for all keeping sections.
-  void setOutputFormat(DWARFUnit &OriginalUnit) {
-    setOutputFormat(OriginalUnit.getFormParams(),
-                    OriginalUnit.isLittleEndian() ? support::endianness::little
-                                                  : support::endianness::big);
-  }
-
-  /// Sets output format for all keeping sections.
   void setOutputFormat(dwarf::FormParams Format,
-                       support::endianness Endianess) {
+                       support::endianness Endianness) {
     this->Format = Format;
-    this->Endianess = Endianess;
+    this->Endianness = Endianness;
   }
 
   /// Returns descriptor for the specified section of \p SectionKind.
@@ -328,7 +321,7 @@ public:
   SectionDescriptor &
   getOrCreateSectionDescriptor(DebugSectionKind SectionKind) {
     return SectionDescriptors
-        .try_emplace(SectionKind, SectionKind, GlobalData, Format, Endianess)
+        .try_emplace(SectionKind, SectionKind, GlobalData, Format, Endianness)
         .first->second;
   }
 
@@ -363,7 +356,7 @@ public:
                     StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings);
 
   /// Endiannes for the sections.
-  support::endianness getEndianness() const { return Endianess; }
+  support::endianness getEndianness() const { return Endianness; }
 
   /// Return DWARF version.
   uint16_t getVersion() const { return Format.Version; }
@@ -395,7 +388,7 @@ protected:
   dwarf::FormParams Format = {4, 4, dwarf::DWARF32};
 
   /// Endiannes for sections.
-  support::endianness Endianess = support::endianness::little;
+  support::endianness Endianness = support::endian::system_endianness();
 
   /// All keeping sections.
   using SectionsSetTy = std::map<DebugSectionKind, SectionDescriptor>;
