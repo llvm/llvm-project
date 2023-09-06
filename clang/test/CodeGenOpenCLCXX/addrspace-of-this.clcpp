@@ -150,7 +150,7 @@ TEST(__local)
 // Test the address space of 'this' when invoking copy-constructor.
 // COMMON: [[C1GEN:%[.a-z0-9]+]] = addrspacecast ptr %c1 to ptr addrspace(4)
 // EXPL: call spir_func void @_ZNU3AS41CC1ERU3AS4KS_(ptr addrspace(4) {{[^,]*}} [[C1GEN]], ptr addrspace(4) noundef align 4 dereferenceable(4) addrspacecast (ptr addrspace(3) @_ZZ11test__localE1c to ptr addrspace(4)))
-// IMPL:  call void @llvm.memcpy.p0.p4.i32(ptr {{.*}}%c1, ptr addrspace(4) {{.*}}addrspacecast (ptr addrspace(3) @_ZZ11test__localE1c to ptr addrspace(4)), i32 4, i1 false)
+// IMPL:  call void @llvm.memcpy.p0.p4.i32(ptr {{.*}}%c1, ptr addrspace(4) {{.*}}addrspacecast (ptr addrspace(3) @_ZZ11test__localE1c to ptr addrspace(4)), i32 4, i8 0)
 
 // Test the address space of 'this' when invoking a constructor.
 // EXPL: [[C2GEN:%[.a-z0-9]+]] = addrspacecast ptr %c2 to ptr addrspace(4)

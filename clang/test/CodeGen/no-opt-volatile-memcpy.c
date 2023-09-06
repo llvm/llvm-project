@@ -15,9 +15,9 @@ void foo (void) {
 }
 // CHECK-LABEL: define{{.*}} void @foo()
 // CHECK: %[[LS:.*]] = alloca %struct.s, align 4
-// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 %[[LS]], ptr align 4 %[[LS]], i64 132, i1 true)
-// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 @gs, ptr align 4 @gs, i64 132, i1 true)
-// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 %[[LS]], ptr align 4 @gs, i64 132, i1 true)
+// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 %[[LS]], ptr align 4 %[[LS]], i64 132, i8 3)
+// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 @gs, ptr align 4 @gs, i64 132, i8 3)
+// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 %[[LS]], ptr align 4 @gs, i64 132, i8 3)
 
 
 struct s1 {
@@ -31,6 +31,6 @@ void fee (void) {
   s.y = gs;
 }
 // CHECK-LABEL: define{{.*}} void @fee()
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr align 4 @s, ptr align 4 @s, i64 132, i1 true)
-// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 @s, ptr align 4 @gs, i64 132, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr align 4 @s, ptr align 4 @s, i64 132, i8 3)
+// CHECK-NEXT: call void @llvm.memcpy.{{.*}}(ptr align 4 @s, ptr align 4 @gs, i64 132, i8 3)
 

@@ -76,14 +76,14 @@ struct PS {
 struct PS ps;
 void test8(int *arg) {
   // CHECK: @test8
-  // CHECK: call void @llvm.memcpy{{.*}} align 4 {{.*}} align 1 {{.*}} 16, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}} align 4 {{.*}} align 1 {{.*}} 16, i8 0)
   __builtin_memcpy(arg, ps.modes, sizeof(struct PS));
 }
 
 __attribute((aligned(16))) int x[4], y[4];
 void test9(void) {
   // CHECK: @test9
-  // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i8 0)
   __builtin_memcpy(x, y, sizeof(y));
 }
 

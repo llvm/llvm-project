@@ -108,7 +108,7 @@ namespace PR18097 {
     Y y = { X(4), 5 };
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: tail call void @llvm.memcpy.p0.p0.i32(ptr{{.*}} @_ZN7PR180978constant2y2E, ptr{{.*}} @_ZN7PR180978constantL1xE, i32 3, i1 false)
+    // CHECK: tail call void @llvm.memcpy.p0.p0.i32(ptr{{.*}} @_ZN7PR180978constant2y2E, ptr{{.*}} @_ZN7PR180978constantL1xE, i32 3, i8 0)
     // CHECK: %0 = load i32, ptr @_ZN7PR180978constant1zE
     // CHECK: store i32 %0, ptr getelementptr inbounds (%"struct.PR18097::constant::Y", ptr @_ZN7PR180978constant2y2E, i32 0, i32 1)
     int z;

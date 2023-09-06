@@ -253,7 +253,7 @@ namespace PR11124 {
   struct C2 : B2 { C2(); };      
   C2::C2() : A(3), B2() {}
   // CHECK-LABEL: define{{.*}} void @_ZN7PR111242C2C1Ev
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 {{.*}}, i64 16, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 {{.*}}, i64 16, i8 0)
   // CHECK-NEXT: call void @_ZN7PR111242B2C2Ev
 }
 

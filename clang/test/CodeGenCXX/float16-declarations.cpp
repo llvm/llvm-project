@@ -103,7 +103,7 @@ int main(void) {
 
   S1<_Float16> s1 = { 132.f16 };
 // CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
-// CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %{{.*}}, ptr align 2 @__const.main.s1, i64 2, i1 false)
+// CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %{{.*}}, ptr align 2 @__const.main.s1, i64 2, i8 0)
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
     func1t(f1l) + s1.mem2 - f1n + f2n;

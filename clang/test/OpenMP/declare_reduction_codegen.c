@@ -173,7 +173,7 @@ int in;
 void bar(void) {
   // CHECK: [[SS_PRIV:%.+]] = alloca %struct.SSS,
   // CHECK: [[IN_PRIV:%.+]] = alloca i32,
-  // CHECK: call void @llvm.memcpy.p0.p0.i{{64|32}}(ptr {{.*}}[[SS_PRIV]], ptr {{.*}}[[SSS_INIT]], i{{64|32}} 4, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i{{64|32}}(ptr {{.*}}[[SS_PRIV]], ptr {{.*}}[[SSS_INIT]], i{{64|32}} 4, i8 0)
   // CHECK: [[IN_VAL:%.+]] = load i32, ptr [[INT_INIT]],
   // CHECK: store i32 [[IN_VAL]], ptr [[IN_PRIV]],
   // CHECK: call void @__kmpc_for_static_init_4(

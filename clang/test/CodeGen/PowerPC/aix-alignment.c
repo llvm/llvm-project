@@ -24,8 +24,8 @@ double retDouble(double x) { return x; }
 
 // AIX32: define void @bar(ptr noalias sret(%struct.StructDouble) align 4 %agg.result, ptr noundef byval(%struct.StructDouble) align 4 %x)
 // AIX64: define void @bar(ptr noalias sret(%struct.StructDouble) align 4 %agg.result, ptr noundef byval(%struct.StructDouble) align 8 %x)
-// AIX32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %x, i32 16, i1 false)
-// AIX64:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.result, ptr align 8 %x, i64 16, i1 false)
+// AIX32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %x, i32 16, i8 0)
+// AIX64:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.result, ptr align 8 %x, i64 16, i8 0)
 StructDouble bar(StructDouble x) { return x; }
 
 // AIX:   define void @foo(ptr noundef %out, ptr noundef %in)

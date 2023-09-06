@@ -46,7 +46,7 @@ void testva (int n, ...)
 // CHECK-PPC:[[CONT]]
 // CHECK-PPC-NEXT:  [[VAARG_ADDR:%[a-z.0-9]+]] = phi ptr [ [[RAW_REGADDR]], %[[USING_REGS]] ], [ %argp.cur.aligned, %[[USING_OVERFLOW]] ]
 // CHECK-PPC-NEXT:  [[AGGR:%[a-z0-9]+]] = load ptr, ptr [[VAARG_ADDR]]
-// CHECK-PPC-NEXT:  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %t, ptr align 8 [[AGGR]], i32 16, i1 false)
+// CHECK-PPC-NEXT:  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %t, ptr align 8 [[AGGR]], i32 16, i8 0)
 
   int v = va_arg (ap, int);
 

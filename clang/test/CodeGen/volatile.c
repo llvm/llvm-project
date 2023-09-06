@@ -203,16 +203,16 @@ int main(void) {
 // CHECK: store volatile i32 {{.*}}, ptr @vtS
   (void)vF2;
   // From vF2 to a temporary
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*}} @vF2, {{.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*}} @vF2, {{.*}}, i8 3)
   vF2 = vF2;
   // vF2 to itself
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
   vF2 = vF2 = vF2;
   // vF2 to itself twice
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
   vF2 = (vF2, vF2);
   // vF2 to a temporary, then vF2 to itself
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*@vF2.*}}, i1 true)
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*@vF2.*}}, i8 3)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
 }

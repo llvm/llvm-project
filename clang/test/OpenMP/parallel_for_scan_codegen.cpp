@@ -29,7 +29,7 @@ void baz(int n) {
   // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(
   // CHECK: [[LAST:%.+]] = mul nsw i64 9, %
   // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[LAST]]
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @_ZZ3baziE1a, ptr align 4 [[LAST_REF]], i64 %{{.+}}, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @_ZZ3baziE1a, ptr align 4 [[LAST_REF]], i64 %{{.+}}, i8 0)
   // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 9
   // CHECK: [[LAST_VAL:%.+]] = load double, ptr [[LAST_REF_B]],
   // CHECK: store double [[LAST_VAL]], ptr @_ZZ3baziE1b,
@@ -61,7 +61,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF:%.+]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i8 0)
 
     // b_buffer[i] = b_priv;
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
@@ -154,7 +154,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i8 0)
 
     // b_priv = b_buffer[i];
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX]]
@@ -191,7 +191,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF:%.+]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i8 0)
 
     // b_buffer[i] = b_priv;
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
@@ -292,7 +292,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i8 0)
 
     // b_priv = b_buffer[i];
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX_SUB_1]]

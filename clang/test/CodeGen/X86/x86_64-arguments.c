@@ -415,7 +415,7 @@ void test51(struct test51_s *s, __builtin_va_list argList) {
 // CHECK: [[REG_SAVE_AREA_PTR:%.*]] = getelementptr inbounds {{.*}}, i32 0, i32 3
 // CHECK-NEXT: [[REG_SAVE_AREA:%.*]] = load ptr, ptr [[REG_SAVE_AREA_PTR]]
 // CHECK-NEXT: [[VALUE_ADDR:%.*]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i32 {{.*}}
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP_ADDR]], ptr align 8 [[VALUE_ADDR]], i64 16, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP_ADDR]], ptr align 8 [[VALUE_ADDR]], i64 16, i8 0)
 // CHECK-NEXT: add i32 {{.*}}, 16
 // CHECK-NEXT: store i32 {{.*}}, ptr {{.*}}
 // CHECK-NEXT: br label

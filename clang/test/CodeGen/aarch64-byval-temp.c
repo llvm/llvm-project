@@ -27,11 +27,11 @@ void example(void) {
 // First, memset `l` to 0.
 // CHECK-O0-NEXT: call void @llvm.memset.p0.i64(ptr align 8 %[[l]], i8 0, i64 64, i1 false)
 // Then, memcpy `l` to the temporary stack space.
-// CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i1 false)
+// CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i8 0)
 // Finally, call using a pointer to the temporary stack space.
 // CHECK-O0-NEXT: call void @pass_large(ptr noundef %[[byvaltemp]])
 // Now, do the same for the second call, using the second temporary alloca.
-// CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i1 false)
+// CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i8 0)
 // CHECK-O0-NEXT: call void @pass_large(ptr noundef %[[byvaltemp1]])
 // CHECK-O0-NEXT: ret void
 //
@@ -55,7 +55,7 @@ void example(void) {
 // CHECK-O3-NEXT: call void @llvm.lifetime.start.p0(i64 64, ptr %[[byvaltemp]])
 //
 // Then, memcpy `l` to the temporary stack space.
-// CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i1 false)
+// CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i8 0)
 // Finally, call using a pointer to the temporary stack space.
 // CHECK-O3-NEXT: call void @pass_large(ptr noundef %[[byvaltemp]])
 //
@@ -64,7 +64,7 @@ void example(void) {
 //
 // Now, do the same for the second call, using the second temporary alloca.
 // CHECK-O3-NEXT: call void @llvm.lifetime.start.p0(i64 64, ptr %[[byvaltemp1]])
-// CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i1 false)
+// CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i8 0)
 // CHECK-O3-NEXT: call void @pass_large(ptr noundef %[[byvaltemp1]])
 // CHECK-O3-NEXT: call void @llvm.lifetime.end.p0(i64 64, ptr %[[byvaltemp1]])
 //

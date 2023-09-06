@@ -440,7 +440,7 @@ void fn2(FnPtr1 a, SmallWithDtor b) { fn1(a, b); };
 // WIN32:   %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty:<{ ptr, %struct.SmallWithDtor }>]], ptr %{{.*}}, i32 0, i32 0
 // WIN32:   %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty:<{ ptr, %struct.SmallWithDtor }>]]
 // WIN32:   %[[gep1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
-// WIN32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[gep1]], ptr align 4 {{.*}}, i32 4, i1 false)
+// WIN32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[gep1]], ptr align 4 {{.*}}, i32 4, i8 0)
 // WIN32:   %[[a2:[^ ]*]] = load ptr, ptr %[[a]], align 4
 // WIN32:   %[[gep2:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // WIN32:   store ptr %[[a2]], ptr %[[gep2]], align 4

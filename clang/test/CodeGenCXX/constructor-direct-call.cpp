@@ -10,8 +10,8 @@ void f1() {
   Test1 var;
   var.Test1::Test1();
 
-  // CHECK32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i32 4, i1 false)
-  // CHECK64:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 4, i1 false)
+  // CHECK32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i32 4, i8 0)
+  // CHECK64:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 4, i8 0)
   var.Test1::Test1(var);
 }
 
@@ -32,8 +32,8 @@ void f2() {
   // CHECK64-NEXT:  %call1 = call noundef ptr @"??0Test2@@QEAA@XZ"(ptr {{[^,]*}} %var)
   var.Test2::Test2();
 
-  // CHECK32:  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i32 8, i1 false)
-  // CHECK64:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 8, i1 false)
+  // CHECK32:  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i32 8, i8 0)
+  // CHECK64:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 8, i8 0)
   var.Test2::Test2(var);
 }
 

@@ -11,8 +11,8 @@ void test1() {
 
 // CHECK-LABEL:     define{{.*}} void @_Z5test1v()
 // CHECK:       [[EXNOBJ:%.*]] = call ptr @__cxa_allocate_exception(i64 8)
-// UNALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[EXNOBJ]], ptr align 8 @d1, i64 8, i1 false)
-// ALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[EXNOBJ]], ptr align 8 @d1, i64 8, i1 false)
+// UNALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[EXNOBJ]], ptr align 8 @d1, i64 8, i8 0)
+// ALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[EXNOBJ]], ptr align 8 @d1, i64 8, i8 0)
 // CHECK-NEXT:  call void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTI7test1_D, ptr null) [[NR:#[0-9]+]]
 // CHECK-NEXT:  unreachable
 

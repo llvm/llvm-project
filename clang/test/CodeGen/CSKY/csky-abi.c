@@ -293,15 +293,15 @@ double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR4]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT5]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS]], ptr align 4 [[ARGP_CUR4]], i32 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS]], ptr align 4 [[ARGP_CUR4]], i32 4, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR6]], i32 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT7]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SS]], ptr align 4 [[ARGP_CUR6]], i32 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SS]], ptr align 4 [[ARGP_CUR6]], i32 8, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR8:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT9:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR8]], i32 16
 // CHECK-NEXT:    store ptr [[ARGP_NEXT9]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[ARGP_CUR8]], i32 16, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[ARGP_CUR8]], i32 16, i8 0)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 int f_va_4(char *fmt, ...) {
   __builtin_va_list va;

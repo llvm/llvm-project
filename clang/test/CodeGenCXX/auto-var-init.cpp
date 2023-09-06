@@ -826,7 +826,7 @@ TEST_CUSTOM(paddedpackedarray, paddedpackedarray, { {{ 42, 13371337 }, { 43, 133
 
 TEST_UNINIT(unpackedinpacked, unpackedinpacked);
 // PATTERN-LABEL: @test_unpackedinpacked_uninit()
-// PATTERN-O0: call void @llvm.memcpy{{.*}} 9, i1 false), !annotation [[AUTO_INIT]]
+// PATTERN-O0: call void @llvm.memcpy{{.*}} 9, i8 0), !annotation [[AUTO_INIT]]
 
 TEST_UNINIT(paddednested, paddednested);
 // CHECK-LABEL: @test_paddednested_uninit()

@@ -189,7 +189,7 @@ namespace test1 {
     // CHECK: [[RESULT:%.*]] = alloca [[ARRAY:%.*]], align 64
     // CHECK: [[A_P:%.*]] = load ptr, ptr
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[A_P]], i32 0, i32 0
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i8 0)
     AlignedArray result = a.aArray;
   }
 
@@ -202,7 +202,7 @@ namespace test1 {
     // CHECK: [[OFFSET:%.*]] = load i64, ptr [[T0]], align 8
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, ptr [[B_P]], i64 [[OFFSET]]
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], ptr [[T1]], i32 0, i32 0
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i8 0)
     AlignedArray result = b.aArray;
   }
 
@@ -211,7 +211,7 @@ namespace test1 {
     // CHECK: [[RESULT:%.*]] = alloca [[ARRAY]], align 64
     // CHECK: [[B_P:%.*]] = load ptr, ptr
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[B_P]], i32 0, i32 2
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i8 0)
     AlignedArray result = b.bArray;
   }
 
@@ -220,7 +220,7 @@ namespace test1 {
     // CHECK: [[RESULT:%.*]] = alloca [[ARRAY]], align 64
     // CHECK: [[B_P:%.*]] = load ptr, ptr
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[B_P]], i32 0, i32 2
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i8 0)
     AlignedArray result = b->bArray;
   }
 
@@ -229,7 +229,7 @@ namespace test1 {
     // CHECK: [[B_P:%.*]] = alloca [[B:%.*]], align 16
     // CHECK: [[RESULT:%.*]] = alloca [[ARRAY]], align 64
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[B_P]], i32 0, i32 2
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i8 0)
     B b;
     AlignedArray result = b.bArray;
   }
@@ -244,7 +244,7 @@ namespace test1 {
     // CHECK: [[OFFSET:%.*]] = load i64, ptr [[T0]], align 8
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, ptr [[D_P]], i64 [[OFFSET]]
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], ptr [[T1]], i32 0, i32 0
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i8 0)
     D d;
     AlignedArray result = d.aArray;
   }
@@ -255,7 +255,7 @@ namespace test1 {
     // CHECK: [[RESULT:%.*]] = alloca [[ARRAY]], align 64
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, ptr [[D_P]], i64 24
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[T1]], i32 0, i32 2
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 8 [[ARRAY_P]], i64 16, i8 0)
     D d;
     AlignedArray result = d.bArray;
   }
@@ -266,7 +266,7 @@ namespace test1 {
     // CHECK: [[B_P:%.*]] = load ptr, ptr
     // CHECK: [[ELEMENT_P:%.*]] = getelementptr inbounds [0 x [[B]]], ptr [[B_P]], i64 0
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], ptr [[ELEMENT_P]], i32 0, i32 2
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[RESULT]], ptr align 16 [[ARRAY_P]], i64 16, i8 0)
     AlignedArray result = (*b)->bArray;
   }
 }

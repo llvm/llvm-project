@@ -42,7 +42,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i8 0)
 
     // b_buffer[i] = b_priv;
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX]]
@@ -135,7 +135,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i8 0)
 
     // b_priv = b_buffer[i];
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX]]
@@ -182,7 +182,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i8 0)
 
     // b_buffer[i] = b_priv;
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX]]
@@ -283,7 +283,7 @@ void baz(int n) {
     // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
-    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i8 0)
 
     // b_priv = b_buffer[i];
     // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX_SUB_1]]

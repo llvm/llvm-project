@@ -129,7 +129,7 @@ constexpr int arr5[2](2);
 // CHECK: define dso_local { i8, double } @{{.*foo1.*}}
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A1]], i64 16, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A1]], i64 16, i8 0)
 // CHECK-NEXT: [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
 // CHECK-NEXT: ret { i8, double } [[TMP_0]]
 A foo1() {
@@ -138,7 +138,7 @@ A foo1() {
 
 // CHECK: define dso_local void @{{.*foo2.*}}(ptr noalias sret([[STRUCT_B]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[B1]], i64 24, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[B1]], i64 24, i8 0)
 // CHECK-NEXT: ret void
 B foo2() {
   return b1;
@@ -146,7 +146,7 @@ B foo2() {
 
 // CHECK: define dso_local void @{{.*foo3.*}}(ptr noalias sret([[STRUCT_C]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[C1]], i64 48, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[C1]], i64 48, i8 0)
 // CHECK-NEXT: ret void
 C foo3() {
   return c1;
@@ -164,13 +164,13 @@ C foo3() {
 // CHECK-NEXT: store double 1.000000e+00, ptr [[J]], align 8
 // CHECK-NEXT: [[B:%.*]] = getelementptr inbounds [[STRUCT_B]], ptr [[REF_TMP]], i32 0, i32 1
 // CHECK-NEXT: store i32 1, ptr [[B]], align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C2]], ptr align 8 [[REF_TMP]], i64 24, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C2]], ptr align 8 [[REF_TMP]], i64 24, i8 0)
 // CHECK-NEXT: [[TMP_0:%.*]] = getelementptr inbounds i8, ptr [[C2]], i64 24
 // CHECK-NEXT: [[I2:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[REF_TMP_1]], i32 0, i32 0
 // CHECK-NEXT: store i8 97, ptr [[I2]], align 8
 // CHECK-NEXT: [[J3:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[REF_TMP_1]], i32 0, i32 1
 // CHECK-NEXT: store double 0.000000e+00, ptr [[J3]], align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP_0]], ptr align 8 [[REF_TMP_1]], i64 16, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP_0]], ptr align 8 [[REF_TMP_1]], i64 16, i8 0)
 // CHECK-NEXT: [[C:%.*]] = getelementptr inbounds %struct.C, ptr %c2, i32 0, i32 2
 // CHECK-NEXT: store i32 2, ptr %c, align 8
 // CHECK-NEXT: ret void
@@ -181,7 +181,7 @@ void foo4() {
 // CHECK: define dso_local { i64, double } @{{.*foo5.*}}
 // CHECK-NEXT: entry:
 // CHECK-NEXT [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
-// CHECK-NEXT call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i1 false)
+// CHECK-NEXT call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i8 0)
 // CHECK-NEXT [[COERCE_DIVE:%.*]] = getelementptr inbounds [[UNION_U]], ptr %retval, i32 0, i32 0
 // CHECK-NEXT [[TMP_0:%.*]] = load { i64, double }, ptr [[COERCE_DIVE]], align 8
 // CHECK-NEXT ret { i64, double } [[TMP_0]]
@@ -198,7 +198,7 @@ U foo5() {
 // CHECK-NEXT:   store i8 [[A_COERCE_0]], ptr [[TMP_0]], align 8
 // CHECK-NEXT:   [[TMP_1:%.*]] = getelementptr inbounds { i8, double }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:   store double [[A_COERCE_1]], ptr [[TMP_1]], align 8
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A]], i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A]], i64 16, i8 0)
 // CHECK-NEXT:   [[COERCE_DIVE:%.*]] = getelementptr inbounds [[UNION_U]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-NEXT:   [[TMP_2:%.*]] = load { i64, double }, ptr [[COERCE_DIVE:%.*]], align 8
 // CHECK-NEXT:   ret { i64, double } [[TMP_2]]
@@ -231,7 +231,7 @@ void foo7() {
 
 // CHECK: dso_local void @{{.*foo8.*}}(ptr noalias sret([[STRUCT_D]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[D1]], i64 56, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[D1]], i64 56, i8 0)
 // CHECK-NEXT: ret void
 D foo8() {
   return d1;
@@ -311,7 +311,7 @@ void foo12(int a, int b) {
 // CHECK: define dso_local { i8, double } @{{.*foo13.*}}
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A2]], i64 16, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A2]], i64 16, i8 0)
 // CHECK-NEXT: [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
 // CHECK-NEXT: ret { i8, double } [[TMP_0]]
 A foo13() {

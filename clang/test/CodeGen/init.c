@@ -249,7 +249,7 @@ struct S14 { int a[16]; };
 
 void test14(struct S14 *s14) {
   // CHECK-LABEL: @test14(
-  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 {{.*}}, ptr align 4 [[INIT14]], i32 64, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 {{.*}}, ptr align 4 [[INIT14]], i32 64, i8 0)
   // CHECK-NOT: store
   // CHECK: ret void
   *s14 = (struct S14) { { [5 ... 11] = 17 } };

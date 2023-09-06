@@ -105,7 +105,7 @@ void call_fp8(void) { global_f8 = func_f8(global_f8); }
 // CHECK-LABEL: @call_fp9
 // CHECK: %[[TMP1:[^ ]+]] = alloca %struct.fp9, align 16
 // CHECK: call void @func_f9(ptr sret(%struct.fp9) align 16 %[[TMP2:[^ ]+]], ptr noundef byval(%struct.fp9) align 16 @global_f9
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @global_f9, ptr align 16 %[[TMP2]], i64 144, i1 false
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @global_f9, ptr align 16 %[[TMP2]], i64 144, i8 0)
 // CHECK: ret void
 struct fp9 global_f9;
 void call_fp9(void) { global_f9 = func_f9(global_f9); }
