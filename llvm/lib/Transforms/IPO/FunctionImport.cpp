@@ -371,14 +371,14 @@ public:
 };
 
 /// Determine the list of imports and exports for each module.
-class ModuleImportsScheduler final {
+class ModuleImportsManager final {
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
   const ModuleSummaryIndex &Index;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
 public:
-  ModuleImportsScheduler(
+  ModuleImportsManager(
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           IsPrevailing,
       const ModuleSummaryIndex &Index,
@@ -590,7 +590,7 @@ static void computeImportForFunction(
   }
 }
 
-void ModuleImportsScheduler::computeImportForModule(
+void ModuleImportsManager::computeImportForModule(
     const GVSummaryMapTy &DefinedGVSummaries, StringRef ModName,
     FunctionImporter::ImportMapTy &ImportList) {
   // Worklist contains the list of function imported in this module, for which
@@ -733,7 +733,7 @@ void llvm::ComputeCrossModuleImport(
         isPrevailing,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
-  ModuleImportsScheduler MIS(isPrevailing, Index, &ExportLists);
+  ModuleImportsManager MIS(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
     auto &ImportList = ImportLists[DefinedGVSummaries.first];
@@ -856,7 +856,7 @@ static void ComputeCrossModuleImportForModuleForTest(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ModuleImportsScheduler MIS(isPrevailing, Index);
+  ModuleImportsManager MIS(isPrevailing, Index);
   MIS.computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
 
 #ifndef NDEBUG
