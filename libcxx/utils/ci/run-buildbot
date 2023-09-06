@@ -459,6 +459,11 @@ generic-no-wide-characters)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-wide-characters.cmake"
     check-runtimes
 ;;
+generic-no-tzdb)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-tzdb.cmake"
+    check-runtimes
+;;
 generic-no-experimental)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-experimental.cmake"
