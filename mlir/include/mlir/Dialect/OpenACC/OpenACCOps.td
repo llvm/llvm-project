@@ -1307,7 +1307,7 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
 
 def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
     [SingleBlockImplicitTerminator<"TerminatorOp">,
-     AtomicCaptureOpInterface]> {
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
   let summary = "performs an atomic capture";
   let description = [{
     This operation performs an atomic capture.

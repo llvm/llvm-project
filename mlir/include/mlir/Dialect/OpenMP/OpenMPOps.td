@@ -1529,7 +1529,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
     [SingleBlockImplicitTerminator<"TerminatorOp">,
-     AtomicCaptureOpInterface]> {
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
   let summary = "performs an atomic capture";
   let description = [{
     This operation performs an atomic capture.

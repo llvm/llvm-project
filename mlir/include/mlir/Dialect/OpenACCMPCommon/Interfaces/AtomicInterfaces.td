@@ -126,7 +126,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
     The region describes how to update the value of `x`. It takes the value at
     `x` as an input and must yield the updated value. Only the update to `x` is
     atomic. Generally the region must have only one instruction, but can
-    potentially have more than one instructions too. The update is sematically
+    potentially have more than one instructions too. The update is semantically
     similar to a compare-exchange loop based atomic update.
   }];
   let cppNamespace = "::mlir::accomp";
@@ -141,8 +141,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*args=*/(ins)
     >,
     InterfaceMethod<[{
-        Returns true if the new value is same as old value and the operation is
-        a no-op, false otherwise.
+        Returns the first operation in atomic update region.
       }],
       /*retTy=*/"::mlir::Operation *",
       /*methodName=*/"getFirstOp",
