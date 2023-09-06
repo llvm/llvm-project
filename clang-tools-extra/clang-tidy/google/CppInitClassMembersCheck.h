@@ -18,12 +18,13 @@ namespace clang::tidy::google {
 /// initialized. The goal of this checker is to eliminate UUM (Use of
 /// Uninitialized Memory) bugs caused by uninitialized class members.
 ///
+/// This checker is under active development: the checker authors made a few
+/// commits and are actively working on more commits. Users who want a mature
+/// and stable checker should not use this checker yet.
+///
 /// This checker is different from ProTypeMemberInitCheck in that this checker
 /// attempts to eliminate UUMs as a bug class, at the expense of false
 /// positives.
-///
-/// This checker is WIP. We are incrementally adding features and increasing
-/// coverage until we get to a shape that is acceptable.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/google/cpp-init-class-members.html

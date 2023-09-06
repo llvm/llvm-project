@@ -8,12 +8,14 @@ explicitly). Reports constructors or classes where class members are not
 initialized. The goal of this checker is to eliminate UUM (Use of
 Uninitialized Memory) bugs caused by uninitialized class members.
 
+This checker is under active development: the checker authors made a few commits
+and are actively working on more commits. Users who want a mature and stable
+checker should not use this checker yet.
+
 This checker is different from ProTypeMemberInitCheck in that this checker
 attempts to eliminate UUMs as a bug class, at the expense of false
-positives.
-
-This checker is WIP. We are incrementally adding features and increasing
-coverage until we get to a shape that is acceptable.
+positives. The authors of this checker will add more documentation about the
+differences with ProTypeMemberInitCheck as the checker evolves.
 
 For now, this checker reports `X` in the following two patterns:
 
