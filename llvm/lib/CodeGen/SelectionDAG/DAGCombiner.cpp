@@ -2678,15 +2678,6 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
-  unsigned Opcode = V.getOpcode();
-  if (Opcode == ISD::OR)
-    return DAG.haveNoCommonBitsSet(V.getOperand(0), V.getOperand(1));
-  if (Opcode == ISD::XOR)
-    return isMinSignedConstant(V.getOperand(1));
-  return false;
-}
-
 static bool
 areBitwiseNotOfEachother(SDValue Op0, SDValue Op1) {
   return (isBitwiseNot(Op0) && Op0.getOperand(0) == Op1) ||
@@ -2768,7 +2759,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   // iff (or x, c0) is equivalent to (add x, c0).
   // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1))
   // iff (xor x, c0) is equivalent to (add x, c0).
-  if (isADDLike(N0, DAG)) {
+  if (DAG.isADDLike(N0)) {
     SDValue N01 = N0.getOperand(1);
     if (SDValue Add = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N1, N01}))
       return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add);
@@ -2789,7 +2780,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     // Do this optimization only when adding c does not introduce instructions
     // for adding carries.
     auto ReassociateAddOr = [&](SDValue N0, SDValue N1) {
-      if (isADDLike(N0, DAG) && N0.hasOneUse() &&
+      if (DAG.isADDLike(N0) && N0.hasOneUse() &&
           isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
         // If N0's type does not split or is a sign mask, it does not introduce
         // add carry.
@@ -10006,6 +9997,27 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       SDValue Shl0 = DAG.getNode(ISD::SHL, SDLoc(N0), VT, N0.getOperand(0), N1);
       AddToWorklist(Shl0.getNode());
       return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Shl0, Shl1);
+    }
+  }
+
+  // fold (shl (sext (add_nsw x, c1)), c2) -> (add (shl (sext x), c2), c1 << c2)
+  // TODO: Add zext/add_nuw variant with suitable test coverage
+  // TODO: Should we limit this with isLegalAddImmediate?
+  if (N0.getOpcode() == ISD::SIGN_EXTEND &&
+      N0.getOperand(0).getOpcode() == ISD::ADD &&
+      N0.getOperand(0)->getFlags().hasNoSignedWrap() && N0->hasOneUse() &&
+      N0.getOperand(0)->hasOneUse() &&
+      TLI.isDesirableToCommuteWithShift(N, Level)) {
+    SDValue Add = N0.getOperand(0);
+    SDLoc DL(N0);
+    if (SDValue ExtC = DAG.FoldConstantArithmetic(N0.getOpcode(), DL, VT,
+                                                  {Add.getOperand(1)})) {
+      if (SDValue ShlC =
+              DAG.FoldConstantArithmetic(ISD::SHL, DL, VT, {ExtC, N1})) {
+        SDValue ExtX = DAG.getNode(N0.getOpcode(), DL, VT, Add.getOperand(0));
+        SDValue ShlX = DAG.getNode(ISD::SHL, DL, VT, ExtX, N1);
+        return DAG.getNode(ISD::ADD, DL, VT, ShlX, ShlC);
+      }
     }
   }
 

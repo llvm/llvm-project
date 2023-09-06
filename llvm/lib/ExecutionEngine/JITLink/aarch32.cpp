@@ -175,7 +175,7 @@ bool checkRegister(const ThumbRelocation &R, HalfWords Reg) {
 template <EdgeKind_aarch32 Kind>
 void writeRegister(WritableThumbRelocation &R, HalfWords Reg) {
   static constexpr HalfWords Mask = FixupInfo<Kind>::RegMask;
-  assert((Mask.Hi & Reg.Hi) == Reg.Hi && (Mask.Hi & Reg.Hi) == Reg.Hi &&
+  assert((Mask.Hi & Reg.Hi) == Reg.Hi && (Mask.Lo & Reg.Lo) == Reg.Lo &&
          "Value bits exceed bit range of given mask");
   R.Hi = (R.Hi & ~Mask.Hi) | Reg.Hi;
   R.Lo = (R.Lo & ~Mask.Lo) | Reg.Lo;
@@ -184,7 +184,7 @@ void writeRegister(WritableThumbRelocation &R, HalfWords Reg) {
 template <EdgeKind_aarch32 Kind>
 void writeImmediate(WritableThumbRelocation &R, HalfWords Imm) {
   static constexpr HalfWords Mask = FixupInfo<Kind>::ImmMask;
-  assert((Mask.Hi & Imm.Hi) == Imm.Hi && (Mask.Hi & Imm.Hi) == Imm.Hi &&
+  assert((Mask.Hi & Imm.Hi) == Imm.Hi && (Mask.Lo & Imm.Lo) == Imm.Lo &&
          "Value bits exceed bit range of given mask");
   R.Hi = (R.Hi & ~Mask.Hi) | Imm.Hi;
   R.Lo = (R.Lo & ~Mask.Lo) | Imm.Lo;
@@ -242,10 +242,6 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
   case Thumb_Jump24:
     if (!checkOpcode<Thumb_Jump24>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
-    if (R.Lo & FixupInfo<Thumb_Jump24>::LoBitConditional)
-      return make_error<JITLinkError>("Relocation expects an unconditional "
-                                      "B.W branch instruction: " +
-                                      StringRef(G.getEdgeKindName(Kind)));
     return LLVM_LIKELY(ArmCfg.J1J2BranchEncoding)
                   ? decodeImmBT4BlT1BlxT2_J1J2(R.Hi, R.Lo)
                   : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
@@ -352,10 +348,6 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   case Thumb_Jump24: {
     if (!checkOpcode<Thumb_Jump24>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
-    if (R.Lo & FixupInfo<Thumb_Jump24>::LoBitConditional)
-      return make_error<JITLinkError>("Relocation expects an unconditional "
-                                      "B.W branch instruction: " +
-                                      StringRef(G.getEdgeKindName(Kind)));
     if (!(TargetSymbol.hasTargetFlags(ThumbSymbol)))
       return make_error<JITLinkError>("Branch relocation needs interworking "
                                       "stub when bridging to ARM: " +
@@ -471,6 +463,7 @@ const char *getEdgeKindName(Edge::Kind K) {
 
   switch (K) {
     KIND_NAME_CASE(Data_Delta32)
+    KIND_NAME_CASE(Data_Pointer32)
     KIND_NAME_CASE(Arm_Call)
     KIND_NAME_CASE(Thumb_Call)
     KIND_NAME_CASE(Thumb_Jump24)

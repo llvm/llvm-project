@@ -3,8 +3,8 @@
 //
 // REQUIRES: system-windows
 //
-// RUN: %dexter --fail-lt 1.0 -w --builder 'clang-cl_vs2015' \
-// RUN:      --debugger 'dbgeng' --cflags '/Z7 /Zi' --ldflags '/Z7 /Zi' -- %s
+// RUN: %clang_cl /Z7 /Zi %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
 
 struct string {
   string() {}

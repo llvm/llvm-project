@@ -1278,7 +1278,8 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
 
 // We would like to split the SP adjustment to reduce prologue/epilogue
 // as following instructions. In this way, the offset of the callee saved
-// register could fit in a single store.
+// register could fit in a single store. Supposed that the first sp adjust
+// amount is 2032.
 //   add     sp,sp,-2032
 //   sw      ra,2028(sp)
 //   sw      s0,2024(sp)
@@ -1315,6 +1316,7 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
     // offset that stack compression instructions accept when target supports
     // compression instructions.
     if (STI.hasStdExtCOrZca()) {
+      // The compression extensions may support the following instructions:
       // riscv32: c.lwsp rd, offset[7:2] => 2^(6 + 2)
       //          c.swsp rs2, offset[7:2] => 2^(6 + 2)
       //          c.flwsp rd, offset[7:2] => 2^(6 + 2)
@@ -1330,10 +1332,22 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
       // StackSize meets the condition (StackSize <= 2048 + RVCompressLen),
       // case1: Amount is 2048 - StackAlign: use addi + addi to adjust sp.
       // case2: Amount is RVCompressLen: use addi + addi to adjust sp.
-      if (StackSize <= 2047 + RVCompressLen ||
-          (StackSize > 2048 * 2 - StackAlign &&
-           StackSize <= 2047 * 2 + RVCompressLen) ||
-          StackSize > 2048 * 3 - StackAlign)
+      auto CanCompress = [&](uint64_t CompressLen) -> bool {
+        if (StackSize <= 2047 + CompressLen ||
+            (StackSize > 2048 * 2 - StackAlign &&
+             StackSize <= 2047 * 2 + CompressLen) ||
+            StackSize > 2048 * 3 - StackAlign)
+          return true;
+
+        return false;
+      };
+      // In the epilogue, addi sp, sp, 496 is used to recover the sp and it
+      // can be compressed(C.ADDI16SP, offset can be [-512, 496]), but
+      // addi sp, sp, 512 can not be compressed. So try to use 496 first.
+      const uint64_t ADDI16SPCompressLen = 496;
+      if (STI.is64Bit() && CanCompress(ADDI16SPCompressLen))
+        return ADDI16SPCompressLen;
+      if (CanCompress(RVCompressLen))
         return RVCompressLen;
     }
     return 2048 - StackAlign;

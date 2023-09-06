@@ -12,7 +12,6 @@ import csv
 import pickle
 import shutil
 
-from dex.builder import run_external_build_script
 from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
@@ -24,7 +23,6 @@ from dex.utils.Exceptions import DebuggerException
 from dex.utils.Exceptions import BuildScriptException, HeuristicException
 from dex.utils.PrettyOutputBase import Stream
 from dex.utils.ReturnCode import ReturnCode
-from dex.dextIR import BuilderIR
 
 
 class TestCase(object):
@@ -109,36 +107,6 @@ class Tool(TestToolBase):
         )
         super(Tool, self).add_tool_arguments(parser, defaults)
 
-    def _build_test_case(self):
-        """Build an executable from the test source with the given --builder
-        script and flags (--cflags, --ldflags) in the working directory.
-        Or, if the --binary option has been given, copy the executable provided
-        into the working directory and rename it to match the --builder output
-        or skip if --vs-solution was passed on the command line.
-        """
-
-        if self.context.options.vs_solution:
-            return
-
-        options = self.context.options
-        if options.binary:
-            # Copy user's binary into the tmp working directory
-            shutil.copy(options.binary, options.executable)
-            builderIR = BuilderIR(name="binary", cflags=[options.binary], ldflags="")
-        else:
-            options = self.context.options
-            compiler_options = [options.cflags for _ in options.source_files]
-            linker_options = options.ldflags
-            _, _, builderIR = run_external_build_script(
-                self.context,
-                script_path=self.build_script,
-                source_files=options.source_files,
-                compiler_options=compiler_options,
-                linker_options=linker_options,
-                executable_file=options.executable,
-            )
-        return builderIR
-
     def _init_debugger_controller(self):
         step_collection = DextIR(
             executable_path=self.context.options.executable,
@@ -159,14 +127,13 @@ class Tool(TestToolBase):
 
         return debugger_controller
 
-    def _get_steps(self, builderIR):
+    def _get_steps(self):
         """Generate a list of debugger steps from a test case."""
         debugger_controller = self._init_debugger_controller()
         debugger_controller = run_debugger_subprocess(
             debugger_controller, self.context.working_directory.path
         )
         steps = debugger_controller.step_collection
-        steps.builder = builderIR
         return steps
 
     def _get_results_basename(self, test_name):
@@ -249,8 +216,12 @@ class Tool(TestToolBase):
         result internally in self._test_cases.
         """
         try:
-            builderIR = self._build_test_case()
-            steps = self._get_steps(builderIR)
+            if self.context.options.binary:
+                # Copy user's binary into the tmp working directory.
+                shutil.copy(
+                    self.context.options.binary, self.context.options.executable
+                )
+            steps = self._get_steps()
             self._record_steps(test_name, steps)
             heuristic_score = Heuristic(self.context, steps)
             self._record_score(test_name, heuristic_score)

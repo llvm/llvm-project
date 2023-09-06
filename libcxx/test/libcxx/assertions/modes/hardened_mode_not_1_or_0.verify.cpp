@@ -11,7 +11,7 @@
 // Debug mode would additionally trigger the error that hardened and debug modes are mutually exclusive.
 // UNSUPPORTED: libcpp-hardening-mode=debug
 // Modules build produces a different error ("Could not build module 'std'").
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=2
 
 #include <cassert>

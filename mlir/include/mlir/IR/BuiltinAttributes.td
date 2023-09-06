@@ -1064,6 +1064,9 @@ def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
     /// Return the number of bytes in this string.
     size_t size() const { return getValue().size(); }
 
+    /// Return whether the string is empty.
+    bool empty() const { return getValue().empty(); }
+
     /// Iterate over the underlying string data.
     StringRef::iterator begin() const { return getValue().begin(); }
     StringRef::iterator end() const { return getValue().end(); }
