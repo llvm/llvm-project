@@ -18,8 +18,8 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
-# We prefer the lit internal shell which provide a better user experience on failures
-# Unless the user explicitly disable it with LIT_USE_INTERNAL_SHELL=0 env var.
+# We prefer the lit internal shell which provides a better user experience on failures
+# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
 use_lit_shell = True
 lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
