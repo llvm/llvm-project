@@ -149,7 +149,6 @@ template <> struct FixupInfo<Thumb_Jump24> {
   static constexpr HalfWords Opcode{0xf000, 0x8000};
   static constexpr HalfWords OpcodeMask{0xf800, 0x8000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
-  static constexpr uint16_t LoBitConditional = 0x1000;
 };
 
 template <> struct FixupInfo<Thumb_Call> {
