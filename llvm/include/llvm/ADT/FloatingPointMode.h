@@ -222,7 +222,7 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
   DenormalMode Mode;
   Mode.Output = parseDenormalFPAttributeComponent(OutputStr);
 
-  // Maintain compatability with old form of the attribute which only specified
+  // Maintain compatibility with old form of the attribute which only specified
   // one component.
   Mode.Input = InputStr.empty() ? Mode.Output  :
                parseDenormalFPAttributeComponent(InputStr);
