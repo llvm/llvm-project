@@ -150,10 +150,6 @@ static bool IsPTXVectorType(MVT VT) {
   }
 }
 
-static bool Isv2f16Orv2bf16Orv2i16Type(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
-}
-
 static bool Is16bitsType(MVT VT) {
   return (VT.SimpleTy == MVT::f16 || VT.SimpleTy == MVT::bf16 ||
           VT.SimpleTy == MVT::i16);
@@ -1372,7 +1368,7 @@ NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
       VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
-  if (Isv2f16Orv2bf16Orv2i16Type(VT))
+  if (Isv2x16VT(VT))
     return TypeLegal;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
@@ -2153,7 +2149,7 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op->getValueType(0);
-  if (!(Isv2f16Orv2bf16Orv2i16Type(VT)))
+  if (!(Isv2x16VT(VT)))
     return Op;
   APInt E0;
   APInt E1;
@@ -2192,8 +2188,7 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   // Extract individual elements and select one of them.
   SDValue Vector = Op->getOperand(0);
   EVT VectorVT = Vector.getValueType();
-  assert((VectorVT == MVT::v2f16 || VectorVT == MVT::v2i16) &&
-         "Unexpected vector type.");
+  assert(Isv2x16VT(VectorVT) && "Unexpected vector type.");
   EVT EltVT = VectorVT.getVectorElementType();
 
   SDLoc dl(Op.getNode());
@@ -2571,9 +2566,9 @@ SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1)
     return LowerLOADi1(Op, DAG);
 
-  // v2f16 is legal, so we can't rely on legalizer to handle unaligned
-  // loads and have to handle it here.
-  if (Isv2f16Orv2bf16Orv2i16Type(Op.getValueType())) {
+  // v2f16/v2bf16/v2i16 are legal, so we can't rely on legalizer to handle
+  // unaligned loads and have to handle it here.
+  if (Isv2x16VT(Op.getValueType())) {
     LoadSDNode *Load = cast<LoadSDNode>(Op);
     EVT MemVT = Load->getMemoryVT();
     if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -2618,13 +2613,13 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   // v2f16 is legal, so we can't rely on legalizer to handle unaligned
   // stores and have to handle it here.
-  if (Isv2f16Orv2bf16Orv2i16Type(VT) &&
+  if (Isv2x16VT(VT) &&
       !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
   // v2f16, v2bf16 and v2i16 don't need special handling.
-  if (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16)
+  if (Isv2x16VT(VT))
     return SDValue();
 
   if (VT.isVector())
@@ -2896,7 +2891,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           EVT LoadVT = EltVT;
           if (EltVT == MVT::i1)
             LoadVT = MVT::i8;
-          else if (Isv2f16Orv2bf16Orv2i16Type(EltVT))
+          else if (Isv2x16VT(EltVT))
             // getLoad needs a vector type, but it can't handle
             // vectors which contain v2f16 or v2bf16 elements. So we must load
             // using i32 here and then bitcast back.
@@ -2922,7 +2917,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             if (EltVT == MVT::i1)
               Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Elt);
             // v2f16 was loaded as an i32. Now we must bitcast it back.
-            else if (Isv2f16Orv2bf16Orv2i16Type(EltVT))
+            else if (Isv2x16VT(EltVT))
               Elt = DAG.getNode(ISD::BITCAST, dl, EltVT, Elt);
 
             // If a promoted integer type is used, truncate down to the original
@@ -5335,7 +5330,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   unsigned Opcode = 0;
   SDVTList LdResVTs;
-  bool LoadF16x2 = false;
+  bool Load16x2 = false;
 
   switch (NumElts) {
   default:
@@ -5355,7 +5350,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     // instruction. Instead, we split the vector into v2f16 chunks and
     // load them with ld.v4.b32.
     assert(Is16bitsType(EltVT.getSimpleVT()) && "Unsupported v8 vector type.");
-    LoadF16x2 = true;
+    Load16x2 = true;
     Opcode = NVPTXISD::LoadV4;
     EVT VVT;
     if (EltVT == MVT::f16)
@@ -5382,7 +5377,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                                           LD->getMemOperand());
 
   SmallVector<SDValue, 8> ScalarRes;
-  if (LoadF16x2) {
+  if (Load16x2) {
     // Split v2f16 subvectors back into individual elements.
     NumElts /= 2;
     for (unsigned i = 0; i < NumElts; ++i) {

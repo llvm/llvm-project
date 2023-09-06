@@ -1681,10 +1681,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT ScalarVT = SimpleVT.getScalarType();
   unsigned toTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    assert((StoreVT == MVT::v2f16 || StoreVT == MVT::v2bf16 ||
-            StoreVT == MVT::v2i16) &&
-           "Unexpected vector type");
-    // v2f16 is stored using st.b32
+    assert(Isv2x16VT(StoreVT) && "Unexpected vector type");
+    // v2x16 is stored using st.b32
     toTypeWidth = 32;
   }
 
