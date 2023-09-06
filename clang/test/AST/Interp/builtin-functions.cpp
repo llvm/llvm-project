@@ -221,3 +221,31 @@ namespace fpclassify {
 namespace fabs {
   static_assert(__builtin_fabs(-14.0) == 14.0, "");
 }
+
+namespace std {
+struct source_location {
+  struct __impl {
+    unsigned int _M_line;
+    const char *_M_file_name;
+    signed char _M_column;
+    const char *_M_function_name;
+  };
+  using BuiltinT = decltype(__builtin_source_location()); // OK.
+};
+}
+
+namespace SourceLocation {
+  constexpr auto A = __builtin_source_location();
+  static_assert(A->_M_line == __LINE__ -1, "");
+  static_assert(A->_M_column == 22, "");
+  static_assert(__builtin_strcmp(A->_M_function_name, "") == 0, "");
+  static_assert(__builtin_strcmp(A->_M_file_name, __FILE__) == 0, "");
+
+  static_assert(__builtin_LINE() == __LINE__, "");
+
+  struct Foo {
+    int a = __builtin_LINE();
+  };
+
+  static_assert(Foo{}.a == __LINE__, "");
+}
