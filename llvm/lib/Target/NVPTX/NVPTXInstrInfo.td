@@ -747,12 +747,10 @@ defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
 // def v2f16imm : Operand<v2f16>;
 // defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Int32Regs, v2f16imm, imm>;
 
-def : Pat<(v2f16 (select Int1Regs:$p, (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b))),
+foreach vt = [v2f16, v2bf16, v2i16] in {
+def : Pat<(vt (select Int1Regs:$p, (vt Int32Regs:$a), (vt Int32Regs:$b))),
           (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
-def : Pat<(v2bf16 (select Int1Regs:$p, (v2bf16 Int32Regs:$a), (v2bf16 Int32Regs:$b))),
-          (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
-def : Pat<(v2i16 (select Int1Regs:$p, (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b))),
-          (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
+}
 
 //-----------------------------------
 // Test Instructions
