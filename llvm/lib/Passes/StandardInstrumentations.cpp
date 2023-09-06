@@ -968,7 +968,8 @@ DumpIRInstrumentation::fetchCurrentInstrumentationDumpFile(StringRef Suffix) {
   SmallString<16> OutputPath;
   sys::path::append(OutputPath, fetchInstrumentationDumpDirectory());
   assert(CurrentModule);
-  sys::path::append(OutputPath, CurrentModule->getName());
+  sys::path::append(OutputPath,
+                    sys::path::relative_path(CurrentModule->getName()));
   auto *StateStackIt = PipelineStateStack.begin();
   // Skip over the first frame in the stack which represents the module being
   // processed
