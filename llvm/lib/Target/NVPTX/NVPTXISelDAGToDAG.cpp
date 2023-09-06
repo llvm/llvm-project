@@ -615,7 +615,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   // We only care about f16x2 as it's the only real vector type we
   // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!(VT == MVT::v2f16 || VT == MVT::v2bf16))
+  if (!(VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16))
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
@@ -828,6 +828,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, unsigned Opcode_i8,
     return Opcode_i16;
   case MVT::v2f16:
   case MVT::v2bf16:
+  case MVT::v2i16:
     return Opcode_i32;
   case MVT::f32:
     return Opcode_f32;
@@ -909,9 +910,10 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Vector Setting
   unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert((LoadedVT == MVT::v2f16 || LoadedVT == MVT::v2bf16) &&
+    assert((LoadedVT == MVT::v2f16 || LoadedVT == MVT::v2bf16 ||
+            LoadedVT == MVT::v2i16) &&
            "Unexpected vector type");
-    // v2f16/v2bf16 is loaded using ld.b32
+    // v2f16/v2bf16/v2i16 is loaded using ld.b32
     fromTypeWidth = 32;
   }
 
@@ -1064,7 +1066,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   // v8f16 is a special case. PTX doesn't have ld.v8.f16
   // instruction. Instead, we split the vector into v2f16 chunks and
   // load them with ld.v4.b32.
-  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16) {
+  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16 || EltVT == MVT::v2i16) {
     assert(N->getOpcode() == NVPTXISD::LoadV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
@@ -1262,10 +1264,11 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     EltVT = EltVT.getVectorElementType();
     // vectors of f16 are loaded/stored as multiples of v2f16 elements.
     if ((EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) ||
-        (EltVT == MVT::bf16 && N->getValueType(0) == MVT::v2bf16)) {
-          assert(NumElts % 2 == 0 && "Vector must have even number of elements");
-          EltVT = N->getValueType(0);
-          NumElts /= 2;
+        (EltVT == MVT::bf16 && N->getValueType(0) == MVT::v2bf16) ||
+        (EltVT == MVT::i16 && N->getValueType(0) == MVT::v2i16)) {
+      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+      EltVT = N->getValueType(0);
+      NumElts /= 2;
     }
   }
 
@@ -1678,7 +1681,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT ScalarVT = SimpleVT.getScalarType();
   unsigned toTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    assert((StoreVT == MVT::v2f16 || StoreVT == MVT::v2bf16) &&
+    assert((StoreVT == MVT::v2f16 || StoreVT == MVT::v2bf16 ||
+            StoreVT == MVT::v2i16) &&
            "Unexpected vector type");
     // v2f16 is stored using st.b32
     toTypeWidth = 32;
@@ -1847,7 +1851,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   // v8f16 is a special case. PTX doesn't have st.v8.f16
   // instruction. Instead, we split the vector into v2f16 chunks and
   // store them with st.v4.b32.
-  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16) {
+  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16 || EltVT == MVT::v2i16) {
     assert(N->getOpcode() == NVPTXISD::StoreV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
