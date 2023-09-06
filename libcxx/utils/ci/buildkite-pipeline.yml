@@ -1119,8 +1119,8 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang15"
-          CXX: "clang++15"
+          CC: "clang16"
+          CXX: "clang++16"
           ENABLE_STD_MODULES: "Off"
       agents:
         queue: "libcxx-builders"
