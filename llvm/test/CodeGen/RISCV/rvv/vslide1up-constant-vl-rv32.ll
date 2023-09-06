@@ -3,12 +3,12 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-128-65536
 
-; RUN: llc -mtriple=riscv32 -riscv-v-vector-bits-min=512 -riscv-v-vector-bits-max=512 \
-; RUN:   -mattr=+v -verify-machineinstrs \
+; RUN: llc -mtriple=riscv32 -riscv-v-vector-bits-max=512 \
+; RUN:   -mattr=+v,+zvl512b -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-512
 
-; RUN: llc -mtriple=riscv32 -riscv-v-vector-bits-min=64 -riscv-v-vector-bits-max=64 \
-; RUN:   -mattr=+zve64x -verify-machineinstrs \
+; RUN: llc -mtriple=riscv32 -riscv-v-vector-bits-max=64 \
+; RUN:   -mattr=+zve64x,+zvl64b -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-64
 
 declare <vscale x 1 x i64> @llvm.riscv.vslide1up.nxv1i64.i64(

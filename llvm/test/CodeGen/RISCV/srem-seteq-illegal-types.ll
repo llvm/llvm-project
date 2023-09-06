@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --check-prefixes=RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m < %s | FileCheck %s --check-prefixes=RV32M
 ; RUN: llc -mtriple=riscv64 -mattr=+m < %s | FileCheck %s --check-prefixes=RV64M
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV32MV
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV64MV
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v < %s | FileCheck %s --check-prefixes=RV32MV
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v < %s | FileCheck %s --check-prefixes=RV64MV
 
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV32-LABEL: test_srem_odd:
