@@ -227,9 +227,6 @@ Once you've cloned your forked repository,
   # Switch to the forked repo
   cd llvm-project
 
-  # Add upstream as a remote
-  git remote add upstream https://github.com/llvm/llvm-project.git
-
   # Create a new branch
   git switch -c my_change
 
@@ -283,6 +280,9 @@ Before merging the PR, it is recommended that you rebase locally and re-run test
 checks:
 
 ::
+
+  # Add upstream as a remote
+  git remote add upstream https://github.com/llvm/llvm-project.git
 
   # Make sure you have all the latest changes
   git fetch upstream && git rebase -i upstream/main
