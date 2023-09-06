@@ -612,7 +612,7 @@ def I64SmallVectorArrayAttr :
   let convertFromStorage = [{
     llvm::to_vector<4>(
       llvm::map_range($_self.getAsRange<mlir::IntegerAttr>(),
-      [](IntegerAttr attr) { return attr.getInt(); }));
+      [](mlir::IntegerAttr attr) { return attr.getInt(); }));
   }];
   let constBuilderCall = "$_builder.getI64ArrayAttr($0)";
 }

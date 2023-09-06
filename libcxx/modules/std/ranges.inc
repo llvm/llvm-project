@@ -311,12 +311,14 @@ export namespace std {
     }
 #endif
 
+#if _LIBCPP_STD_VER >= 23
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
 
     namespace views {
       using std::ranges::views::chunk_by;
     }
+#endif // _LIBCPP_STD_VER >= 23
 
 #if 0
     // [range.stride], stride view
