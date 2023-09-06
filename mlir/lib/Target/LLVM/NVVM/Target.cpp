@@ -180,7 +180,8 @@ private:
   // Create a temp file.
   std::optional<TmpFile> createTemp(StringRef name, StringRef suffix);
 
-  // Find the PTXAS compiler. The search order is:
+  // Find the `tool` path, where `tool` is the name of the binary to search,
+  // i.e. `ptxas` or `fatbinary`. The search order is:
   // 1. The toolkit path in `targetOptions`.
   // 2. In the system PATH.
   // 3. The path from `getCUDAToolkitPath()`.
@@ -214,7 +215,7 @@ gpu::GPUModuleOp NVPTXSerializer::getOperation() {
 }
 
 std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
-  // Find the `ptxas` compiler.
+  // Find the `tool` path.
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
@@ -251,12 +252,19 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
 // with this mechanism and let another stage take care of it.
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
-  // Find the `ptxas` & `fatbinary`.
-  std::optional<std::string> ptxasCompiler = findTool("ptxas");
-  std::optional<std::string> fatbinaryTool = findTool("fatbinary");
-  if (!ptxasCompiler || !fatbinaryTool)
-    return std::nullopt;
+  // Determine if the serializer should create a fatbinary with the PTX embeded
+  // or a simple CUBIN binary.
+  const bool createFatbin =
+      (targetOptions.getCompilationTarget() & gpu::TargetOptions::fatbinary) ==
+      gpu::TargetOptions::fatbinary;
 
+  // Find the `ptxas` & `fatbinary` tools.
+  std::optional<std::string> ptxasCompiler = findTool("ptxas");
+  if (!ptxasCompiler)
+    return std::nullopt;
+  std::optional<std::string> fatbinaryTool = findTool("fatbinary");
+  if (createFatbin && !fatbinaryTool)
+    return std::nullopt;
   Location loc = getOperation().getLoc();
 
   // Base name for all temp files: mlir-<module name>-<target triple>-<chip>.
@@ -271,11 +279,16 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   std::optional<TmpFile> logFile = createTemp(basename, "log");
   if (!logFile)
     return std::nullopt;
-  std::optional<TmpFile> fatbinFile = createTemp(basename, "fatbin");
-  if (!fatbinFile)
+  std::optional<TmpFile> binaryFile = createTemp(basename, "bin");
+  if (!binaryFile)
     return std::nullopt;
-  Twine cubinFilename = ptxFile->first + ".cubin";
-  TmpFile cubinFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+  TmpFile cubinFile;
+  if (createFatbin) {
+    Twine cubinFilename = ptxFile->first + ".cubin";
+    cubinFile = TmpFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+  } else {
+    cubinFile.first = binaryFile->first;
+  }
 
   std::error_code ec;
   // Dump the PTX to a temp file.
@@ -338,7 +351,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
           .str();
   SmallVector<StringRef, 6> fatbinArgs({StringRef("fatbinary"),
                                         useFatbin32 ? "-32" : "-64", cubinArg,
-                                        ptxArg, "--create", fatbinFile->first});
+                                        ptxArg, "--create", binaryFile->first});
 
   // Dump tool invocation commands.
 #define DEBUG_TYPE "serialize-to-binary"
@@ -347,8 +360,10 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
                  << getOperation().getNameAttr() << "\n";
     llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
     llvm::dbgs() << "\n";
-    llvm::interleave(fatbinArgs, llvm::dbgs(), " ");
-    llvm::dbgs() << "\n";
+    if (createFatbin) {
+      llvm::interleave(fatbinArgs, llvm::dbgs(), " ");
+      llvm::dbgs() << "\n";
+    }
   });
 #undef DEBUG_TYPE
 
@@ -382,12 +397,12 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
 
   // Invoke `fatbin`.
   message.clear();
-  if (llvm::sys::ExecuteAndWait(*fatbinaryTool, fatbinArgs,
-                                /*Env=*/std::nullopt,
-                                /*Redirects=*/redirects,
-                                /*SecondsToWait=*/0,
-                                /*MemoryLimit=*/0,
-                                /*ErrMsg=*/&message))
+  if (createFatbin && llvm::sys::ExecuteAndWait(*fatbinaryTool, fatbinArgs,
+                                                /*Env=*/std::nullopt,
+                                                /*Redirects=*/redirects,
+                                                /*SecondsToWait=*/0,
+                                                /*MemoryLimit=*/0,
+                                                /*ErrMsg=*/&message))
     return emitLogError("`fatbinary`");
 
 // Dump the output of the tools, helpful if the verbose flag was passed.
@@ -403,14 +418,14 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
 #undef DEBUG_TYPE
 
   // Read the fatbin.
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fatbinBuffer =
-      llvm::MemoryBuffer::getFile(fatbinFile->first);
-  if (!fatbinBuffer) {
-    emitError(loc) << "Couldn't open the file: `" << fatbinFile->first
-                   << "`, error message: " << fatbinBuffer.getError().message();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryBuffer =
+      llvm::MemoryBuffer::getFile(binaryFile->first);
+  if (!binaryBuffer) {
+    emitError(loc) << "Couldn't open the file: `" << binaryFile->first
+                   << "`, error message: " << binaryBuffer.getError().message();
     return std::nullopt;
   }
-  StringRef fatbin = (*fatbinBuffer)->getBuffer();
+  StringRef fatbin = (*binaryBuffer)->getBuffer();
   return SmallVector<char, 0>(fatbin.begin(), fatbin.end());
 }
 
