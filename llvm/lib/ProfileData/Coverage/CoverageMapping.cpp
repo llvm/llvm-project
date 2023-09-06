@@ -931,29 +931,29 @@ static std::string getCoverageMapErrString(coveragemap_error Err,
   std::string Msg;
   raw_string_ostream OS(Msg);
 
-  switch (Err) {
-  case coveragemap_error::success:
+  switch ((uint32_t)Err) {
+  case (uint32_t)coveragemap_error::success:
     OS << "success";
     break;
-  case coveragemap_error::eof:
+  case (uint32_t)coveragemap_error::eof:
     OS << "end of File";
     break;
-  case coveragemap_error::no_data_found:
+  case (uint32_t)coveragemap_error::no_data_found:
     OS << "no coverage data found";
     break;
-  case coveragemap_error::unsupported_version:
+  case (uint32_t)coveragemap_error::unsupported_version:
     OS << "unsupported coverage format version";
     break;
-  case coveragemap_error::truncated:
+  case (uint32_t)coveragemap_error::truncated:
     OS << "truncated coverage data";
     break;
-  case coveragemap_error::malformed:
+  case (uint32_t)coveragemap_error::malformed:
     OS << "malformed coverage data";
     break;
-  case coveragemap_error::decompression_failed:
+  case (uint32_t)coveragemap_error::decompression_failed:
     OS << "failed to decompress coverage data (zlib)";
     break;
-  case coveragemap_error::invalid_or_missing_arch_specifier:
+  case (uint32_t)coveragemap_error::invalid_or_missing_arch_specifier:
     OS << "`-arch` specifier is invalid or missing for universal binary";
     break;
   default:
