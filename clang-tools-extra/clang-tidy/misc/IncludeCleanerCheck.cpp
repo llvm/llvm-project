@@ -33,6 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -201,7 +202,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
                                          FileStyle->IncludeStyle);
   // `tooling::HeaderIncludes::insert` will not modify `ExistingIncludes`. We
   // should handle repeat include here
-  std::set<const std::string> InsertedHeader{};
+  llvm::StringSet<> InsertedHeaders{};
   for (const auto &Inc : Missing) {
     std::string Spelling = include_cleaner::spellHeader(
         {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
@@ -217,7 +218,8 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
           diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
                "no header providing \"%0\" is directly included")
           << Inc.SymRef.Target.name();
-      if (InsertedHeader.insert(Replacement->getReplacementText().str()).second)
+      if (areDiagsSelfContained() ||
+          InsertedHeaders.insert(Replacement->getReplacementText()).second)
         DB << FixItHint::CreateInsertion(
             SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
             Replacement->getReplacementText());
