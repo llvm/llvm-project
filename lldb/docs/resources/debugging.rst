@@ -9,8 +9,8 @@ As LLDB is generally split into 2 tools, ``lldb`` and ``lldb-server``
 (``debugserver`` on Mac OS), the techniques shown here will not always apply to
 both. With some knowledge of them all, you can mix and match as needed.
 
-In this document we refer to the initial ``lldb`` as the debugger and the
-program being debugged as the debugee.
+In this document we refer to the initial ``lldb`` as the "debugger" and the
+program being debugged as the "inferior".
 
 Building For Debugging
 ----------------------
@@ -63,11 +63,11 @@ makes it very confusing which one is which:
   Process 1741640 launched: '<...>/bin/lldb' (aarch64)
   Process 1741640 stopped and restarted: thread 1 received signal: SIGCHLD
 
-  (the debugee)
+  (the inferior)
   (lldb) target create "/tmp/test.o"
   Current executable set to '/tmp/test.o' (aarch64).
 
-Another issue is that when you resume the debugee, it will not print the
+Another issue is that when you resume the inferior, it will not print the
 ``(lldb)`` prompt because as far as it knows it hasn't changed state. A quick
 way around that is to type something that is clearly not a command and hit
 enter.
@@ -84,30 +84,30 @@ enter.
   error: 'notacommand' is not a valid command.
   (lldb)
 
-You could just remember whether you are in the debugger or the debugee but
-it's thinking overhead, and for interrupt based events you simply may not be
-able to know.
+You could just remember whether you are in the debugger or the inferior but
+it's more for you to remember, and for interrupt based events you simply may not
+be able to know.
 
 Here are some better approaches. First, you could use another debugger like GDB
 to debug LLDB. Perhaps an IDE like Xcode or Visual Studio Code. Something which
 runs LLDB under the hood so you don't have to type in commands to the debugger
 yourself.
 
-Or you could change the prompt text for the debugger and/or debugee.
+Or you could change the prompt text for the debugger and/or inferior.
 
 ::
 
   $ ./bin/lldb -o "settings set prompt \"(lldb debugger) \"" -- \
-    ./bin/lldb -o "settings set prompt \"(lldb debuggee) \"" /tmp/test.o
+    ./bin/lldb -o "settings set prompt \"(lldb inferior) \"" /tmp/test.o
   <...>
   (lldb) settings set prompt "(lldb debugger) "
   (lldb debugger) run
   <...>
-  (lldb) settings set prompt "(lldb debuggee) "
-  (lldb debuggee)
+  (lldb) settings set prompt "(lldb inferior) "
+  (lldb inferior)
 
-If you want spacial separation you can run the debugee in one terminal then
-attach to it in another. Remember that while paused in the debugger, the debugee
+If you want spacial separation you can run the inferior in one terminal then
+attach to it in another. Remember that while paused in the debugger, the inferior
 will not respond to input so you will have to ``continue`` in the debugger
 first.
 
@@ -122,14 +122,14 @@ first.
 Placing Breakpoints
 *******************
 
-Generally you will want to hit some breakpoint in the debugee ``lldb``. To place
-that breakpoint you must first stop the debugee.
+Generally you will want to hit some breakpoint in the inferior ``lldb``. To place
+that breakpoint you must first stop the inferior.
 
 If you're debugging from another window this is done with ``process interrupt``.
-The debugee will stop, you place the breakpoint and then ``continue``. Go back
-to the debugee and input the command that should trigger the breakpoint.
+The inferior will stop, you place the breakpoint and then ``continue``. Go back
+to the inferior and input the command that should trigger the breakpoint.
 
-If you are running debugger and debugee in the same window, input ``ctrl+c``
+If you are running debugger and inferior in the same window, input ``ctrl+c``
 instead of ``process interrupt`` and then folllow the rest of the steps.
 
 If you are doing this with ``lldb-server`` and find your breakpoint is never
@@ -224,7 +224,7 @@ In the example below we're debugging an ``lldb-server`` ``gdbserver`` mode
 command running on a remote machine.
 
 For simplicity we'll use the same ``lldb-server`` as the debug server
-and the debugee, but it doesn't need to be that way. You can use ``gdbserver``
+and the inferior, but it doesn't need to be that way. You can use ``gdbserver``
 (as in, GDB's debug server program) or a system installed ``lldb-server`` if you
 suspect your local copy is not stable. As is the case in many of these
 scenarios.
