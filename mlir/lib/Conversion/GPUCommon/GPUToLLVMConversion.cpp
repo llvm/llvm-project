@@ -169,7 +169,8 @@ protected:
       "mgpuMemAlloc",
       llvmPointerType /* void * */,
       {llvmIntPtrType /* intptr_t sizeBytes */,
-       llvmPointerType /* void *stream */}};
+       llvmPointerType /* void *stream */,
+       llvmInt64Type /* size_t isHostShared */}};
   FunctionCallBuilder deallocCallBuilder = {
       "mgpuMemFree",
       llvmVoidType,
@@ -801,6 +802,8 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   auto loc = allocOp.getLoc();
 
+  bool isShared = allocOp.getHostShared();
+
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
   SmallVector<Value, 4> shape;
@@ -813,8 +816,13 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
   auto stream = adaptor.getAsyncDependencies().front();
+
+  auto isHostShared = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, llvmInt64Type, rewriter.getI64IntegerAttr(isShared));
+
   Value allocatedPtr =
-      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult();
+      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
+          .getResult();
   if (!getTypeConverter()->useOpaquePointers())
     allocatedPtr =
         rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
