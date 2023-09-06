@@ -527,11 +527,17 @@ class RISCVVPseudo {
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
+  bit IsNeeded = !cond(
+    !ne(!find(NAME, "PseudoVMCLR"), -1): 0,
+    !ne(!find(NAME, "PseudoVMSET"), -1): 0,
+    true: 1
+  );
 }
 
 // The actual table.
 def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
+  let FilterClassField = "IsNeeded";
   let CppTypeName = "PseudoInfo";
   let Fields = [ "Pseudo", "BaseInstr" ];
   let PrimaryKey = [ "Pseudo" ];
