@@ -5614,14 +5614,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                                           !isConstant(V);
                                                  })) ||
           !llvm::has_single_bit<uint32_t>(NumUniqueScalarValues)) {
-        SmallVector<Value *> IgnoredVals;
-        if (UserIgnoreList)
-          IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
         if (DoNotFail && UniquePositions.size() > 1 &&
             NumUniqueScalarValues > 1 && S.MainOp->isSafeToRemove() &&
             all_of(UniqueValues, [=](Value *V) {
               return isa<ExtractElementInst>(V) ||
-                     areAllUsersVectorized(cast<Instruction>(V), IgnoredVals);
+                     areAllUsersVectorized(cast<Instruction>(V),
+                                           UserIgnoreList);
             })) {
           unsigned PWSz = PowerOf2Ceil(UniqueValues.size());
           if (PWSz == VL.size()) {
