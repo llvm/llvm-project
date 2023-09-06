@@ -266,12 +266,12 @@ Bug Fixes to C++ Support
   (`#64723 <https://github.com/llvm/llvm-project/issues/64723>`_).
 
 - Fix crash when parsing the requires clause of some generic lambdas.
-  (`#64689 <https://github.com/llvm/llvm-project/issues/64689>`_`)
+  (`#64689 <https://github.com/llvm/llvm-project/issues/64689>`_)
 
 - Fix crash when the trailing return type of a generic and dependent
   lambda refers to an init-capture.
-  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
-  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_) and
+  (`#63675 <https://github.com/llvm/llvm-project/issues/63675>`_).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
