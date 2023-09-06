@@ -46,7 +46,7 @@ quality.
 Stay Informed
 -------------
 
-Developers should stay informed by reading the `LLVM Discourse forums`_. 
+Developers should stay informed by reading the `LLVM Discourse forums`_.
 If you are doing anything more than just casual work on LLVM, it is suggested that you also
 subscribe to the "commits" mailing list for the subproject you're interested in,
 such as `llvm-commits
@@ -84,11 +84,8 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be unified diffs with "infinite context" (i.e. using something
-   like `git diff -U999999 main`).
-
 #. Once you have created your patch, create a
-   `Phabricator review <Phabricator.html#phabricator-request-review-web>`_ for
+   :ref:`GitHub Pull Request <github-reviews>` for
    it (or commit it directly if applicable).
 
 When submitting patches, please do not add confidentiality or non-disclosure
@@ -115,6 +112,12 @@ to be removed in the future, removing an already-deprecated feature, upgrading a
 diagnostic from a warning to an error, switching important default behavior, or
 any other potentially disruptive situation thought to be worth raising
 awareness of. For such changes, the following should be done:
+
+.. warning::
+
+  Phabricator is deprecated and will be switched to read-only mode in October
+  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
   "vendors" group to the review for their awareness. The purpose of these
