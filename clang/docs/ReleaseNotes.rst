@@ -1008,7 +1008,7 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
-- Enabled ThinLTO support. Minimum OS requirement is AIX 7.2 TL5 SP6 or
+- Enabled ThinLTO support. Minimum OS requirement is AIX 7.2 TL5 SP7 or
   the upcoming AIX 7.3 TL2.
 
 - Enabled integrated assembler (``-f[no-]integrated-as``) for LTO. LTO now
