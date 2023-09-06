@@ -224,7 +224,8 @@ Changes in existing checks
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
-  `DeduplicateFindings` to output one finding per symbol occurrence.
+  `DeduplicateFindings` to output one finding per symbol occurrence 
+  and avoid fixes insert same include header multiple times.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore

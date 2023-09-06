@@ -199,6 +199,9 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
 
   tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
                                          FileStyle->IncludeStyle);
+  // `tooling::HeaderIncludes::insert` will not modify `ExistingIncludes`. We
+  // should handle repeat include here
+  std::set<const std::string> InsertedHeader{};
   for (const auto &Inc : Missing) {
     std::string Spelling = include_cleaner::spellHeader(
         {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
@@ -209,14 +212,16 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     // main file.
     if (auto Replacement =
             HeaderIncludes.insert(llvm::StringRef{Spelling}.trim("\"<>"),
-                                  Angled, tooling::IncludeDirective::Include))
-      diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
-           "no header providing \"%0\" is directly included")
-          << Inc.SymRef.Target.name()
-          << FixItHint::CreateInsertion(
-                 SM->getComposedLoc(SM->getMainFileID(),
-                                    Replacement->getOffset()),
-                 Replacement->getReplacementText());
+                                  Angled, tooling::IncludeDirective::Include)) {
+      DiagnosticBuilder DB =
+          diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
+               "no header providing \"%0\" is directly included")
+          << Inc.SymRef.Target.name();
+      if (InsertedHeader.insert(Replacement->getReplacementText().str()).second)
+        DB << FixItHint::CreateInsertion(
+            SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
+            Replacement->getReplacementText());
+    }
   }
 }
 
