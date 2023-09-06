@@ -103,8 +103,7 @@ void Sema::HandleStartOfHeaderUnit() {
 
   StringRef HUName = getLangOpts().CurrentModule;
   if (HUName.empty()) {
-    HUName =
-        SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID())->getName();
+    HUName = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())->getName();
     const_cast<LangOptions &>(getLangOpts()).CurrentModule = HUName.str();
   }
 
