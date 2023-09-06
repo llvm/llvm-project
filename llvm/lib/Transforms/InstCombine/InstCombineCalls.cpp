@@ -2988,7 +2988,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto *DstTy = dyn_cast<FixedVectorType>(ReturnType);
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
 
-    // Only canonicalize if the the destination vector and Vec are fixed
+    // Only canonicalize if the destination vector and Vec are fixed
     // vectors.
     if (DstTy && VecTy) {
       unsigned DstNumElts = DstTy->getNumElements();

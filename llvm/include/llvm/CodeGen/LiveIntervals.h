@@ -322,7 +322,7 @@ class VirtRegMap;
     /// OrigRegs is a vector of registers that were originally used by the
     /// instructions in the range between the two iterators.
     ///
-    /// Currently, the only only changes that are supported are simple removal
+    /// Currently, the only changes that are supported are simple removal
     /// and addition of uses.
     void repairIntervalsInRange(MachineBasicBlock *MBB,
                                 MachineBasicBlock::iterator Begin,
