@@ -165,9 +165,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 //===----------------------------------------------------------------------===//
 
 def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
-    [FunctionalStyleTransformOpTrait, 
+    [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
-     TransformOpInterface, 
+     TransformOpInterface,
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -414,8 +414,8 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
                       [DenseArrayNonNegative<DenseI64ArrayAttr>]>:$iterator_interchange);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = [{ 
-    $target 
+  let assemblyFormat = [{
+    $target
     (`iterator_interchange` `=` $iterator_interchange^)? attr-dict
     `:` custom<SemiFunctionType>(type($target), type($transformed))
   }];
@@ -479,7 +479,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                          TransformOpInterface,
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Lower a tensor.unpack into empty + linalg.transpose + tensor.collapse_shape + 
+    Lower a tensor.unpack into empty + linalg.transpose + tensor.collapse_shape +
     tensor.extract_slice.
 
     #### Return modes
@@ -497,7 +497,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
                       Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op);
-  let assemblyFormat = [{ 
+  let assemblyFormat = [{
     $target attr-dict `:` functional-type(operands, results)
   }];
 
@@ -665,7 +665,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
   let description = [{
     Pack a LinalgOp by applying a data tiling transformation on the op and
     packing the operands according to the `packed_sizes` specification.
-    
+
     Iterator dimensions are tiled in their canonical order in the op spec.
     Operands are packed according to the same canonical order of the op iterator
     dimensions.
@@ -700,7 +700,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
       // affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
       //                                          M   N   m   n
       // affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d3, d4)>
-      %0 = linalg.generic_representing_some_higher_d_matmul  
+      %0 = linalg.generic_representing_some_higher_d_matmul
             ins(%A, %B: tensor<?x?x2x4xf32>, tensor<?x?x4x3xf32>)
            outs(    %C: tensor<?x?x2x3xf32>)
     ```
@@ -727,7 +727,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes);
   let results = (outs TransformHandleTypeInterface:$packed_op);
   let assemblyFormat = [{
-    $target 
+    $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
                                                 $static_packed_sizes,
                                                 type($packed_sizes))
@@ -756,27 +756,27 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
     Target a Linalg op and rewrite it into packed LinalgOp form by trying to
     infer whether a known suboperation is embedded
 
-    Different packing strategies are applied in order, when one applies 
+    Different packing strategies are applied in order, when one applies
     successfully, the transform returns:
       1. Matmul packing: Try to infer a matmul operation embedded in the target op.
          Specifically, this looks for 2 parallel dimensions that participate in
          an outer-product and 1 reduction dimension.
          These dimensions are referred as (m, n, k) to match canonical matmul
          terminology.
-         
+
          The packed sizes for (m, n, k) are specified by `matmul_packed_sizes`
          and the optional `matmul_padded_sizes_next_multiple_of`.
-         When an entry `matmul_packed_sizes[i]` is non-0, the corresponding 
+         When an entry `matmul_packed_sizes[i]` is non-0, the corresponding
          dimension is packed by `matmul_packed_sizes[i]`.
          Otherwise, the dimension is merely padded to the next multiple of
          `matmul_padded_sizes_next_multiple_of[i]`.
 
          `matmul_padded_sizes_next_multiple_of` is optional and is expected to
          either be empty or of size `3`, matching the size of `matmul_packed_sizes`.
-         For each individual element of `matmul_packed_sizes` and 
+         For each individual element of `matmul_packed_sizes` and
          `matmul_padded_sizes_next_multiple_of`, only one of them is allowed to
          be non-zero.
-         
+
          The ordering of the packed dimensions (mm, nn, kk) is specified by the
          `matmul_inner_dims_order` attribute.
 
@@ -787,7 +787,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
          the most minor indexing dimensions of the linalg.generic. The most minor
          dimensions are themselves ordered according to `inner_dims_order`.
       4. An elementwise traversal of `matmul_packed_sizes` and
-         `matmul_padded_sizes_next_multiple_of` is performed and for each 
+         `matmul_padded_sizes_next_multiple_of` is performed and for each
          dimension `d`, either pack to `matmul_packed_sizes[d]` or pad to the
          `matmul_padded_sizes_next_multiple_of[d]`.
       5. Packing/padding is performed by the amounts determined in step 4. and
@@ -815,7 +815,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
                                  [DenseArrayCount<3>]>:$static_matmul_packed_sizes,
                    ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
                                  [Attr<
-                                    Or<[DenseArrayCount<0>.predicate, 
+                                    Or<[DenseArrayCount<0>.predicate,
                                         DenseArrayCount<3>.predicate]>,
                                         "with 0 or 3 elements"
                                       >]>
@@ -837,7 +837,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
       `matmul_packed_sizes` `=` custom<DynamicIndexList>($matmul_packed_sizes,
                                                          $static_matmul_packed_sizes,
                                                          type($matmul_packed_sizes))
-      (`matmul_padded_sizes_next_multiple_of` `=` 
+      (`matmul_padded_sizes_next_multiple_of` `=`
         $matmul_padded_sizes_next_multiple_of^)?
       `matmul_inner_dims_order` `=` $matmul_inner_dims_order
     )
@@ -862,7 +862,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
                          DeclareOpInterfaceMethods<TransformOpInterface>,
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Apply a transposition to a single `tensor.pack` (resp. `tensor.unpack`) and 
+    Apply a transposition to a single `tensor.pack` (resp. `tensor.unpack`) and
     update the `linalg.generic` op that consumes (resp. produces) the operation.
 
     This transform allows composing a simple `structured.pack` with additional
@@ -874,7 +874,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
     the specified `tensor.pack` or `tensor.unpack` op.
 
     If the `target` of this op is a `tensor.pack` then a new `tensor.empty` will
-    be created along with transposed versions of the `tensor.pack` and the 
+    be created along with transposed versions of the `tensor.pack` and the
     consuming `linalg.generic`, which is expected to be the sole consumer.
 
     If the `target` of this op is a `tensor.unpack` then the whole pack / compute
@@ -894,7 +894,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
 
     This operation returns 3 handles, one to the transformed LinalgOp, one to
     the transformed `tensor.pack` and one to the transformed `tensor.unpack`.
-    The last handle for `tensor.unpack` is empty if `target_pack_or_unpack_op` 
+    The last handle for `tensor.unpack` is empty if `target_pack_or_unpack_op`
     was not itself a `tensor.unpack`.
   }];
 
@@ -971,7 +971,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let builders = [
     // Builder for a transform::PadOp with automatic inference of padding
     // value. Warning: this will set the value 0 for the inferred elemental
-    // type without taking the op into account and thus only work for the 
+    // type without taking the op into account and thus only work for the
     // add/mul ring at the moment.
     // TODO: support other operations (e.g. min, max etc).
     OpBuilder<(ins "Value":$target,
@@ -1048,7 +1048,7 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
     Hoist the tensor.pad target operation by at most the given number of loops.
     Optionally apply the transpose attribute to the inner dimensions.
 
-    TODO: In the future, we should consider rewriting as a tensor.pack after 
+    TODO: In the future, we should consider rewriting as a tensor.pack after
     hoisting since this abstraction is now available.
     TODO: Maybe also return the linalg.generic transpose created at some point.
 
@@ -1060,7 +1060,7 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
     If all the operations referred to by the `target` handle padproperly, the
     transform succeeds. Otherwise the transform silently fails.
 
-    The return handle points to only the subset of successfully hoisted 
+    The return handle points to only the subset of successfully hoisted
     tensor.pad operations, which can be empty.
   }];
 
@@ -1073,9 +1073,9 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = [{
-    $target 
-    `by` $num_loops `loops` 
-    (`,` `transpose` `by` $transpose^)? 
+    $target
+    `by` $num_loops `loops`
+    (`,` `transpose` `by` $transpose^)?
     attr-dict
     `:` functional-type(operands, results)
   }];
@@ -1122,6 +1122,7 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        DefaultValuedAttr<BoolArrayAttr, "{}">:$use_full_tile_buffers,
                        UnitAttr:$use_full_tiles_by_default,
                        UnitAttr:$use_alloca,
+                       OptionalAttr<AnyAttr>:$memory_space,
                        OptionalAttr<DeviceMappingArrayAttr>:$mapping,
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -1202,7 +1203,7 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat = 
+  let assemblyFormat =
     "$target attr-dict `:`"
     "custom<SemiFunctionType>(type($target), type($result))";
 
@@ -1248,9 +1249,9 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
 
 def RewriteInDestinationPassingStyleOp : Op<
     Transform_Dialect, "structured.rewrite_in_destination_passing_style",
-    [FunctionalStyleTransformOpTrait, 
+    [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
-     TransformOpInterface, 
+     TransformOpInterface,
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -1260,7 +1261,7 @@ def RewriteInDestinationPassingStyleOp : Op<
       - tensor.pad
       - tensor.generate
       - tensor.from_elements
-    This dichotomy hints at a future interface, for now the implementation just 
+    This dichotomy hints at a future interface, for now the implementation just
     switches between different implementation.
 
     #### Return modes
@@ -1271,7 +1272,7 @@ def RewriteInDestinationPassingStyleOp : Op<
     The return handle points to a subset of successfully produced operations:
       - `tensor.pad` case, the returned handle points to the tensor.insert_slice.
       - `tensor.generate` case, the returned handle points to the linalg.generic.
-      - `tensor.from_elements` case, the returned handle points to the last 
+      - `tensor.from_elements` case, the returned handle points to the last
         `tensor.insert`.
   }];
 
@@ -1483,7 +1484,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
                       TransformHandleTypeInterface:$split_linalg_op,
                       TransformHandleTypeInterface:$combining_linalg_op);
 
-  let assemblyFormat = 
+  let assemblyFormat =
       "$target attr-dict `:`"
       "functional-type(operands, results)";
 
@@ -1990,7 +1991,7 @@ def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
-  
+
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
@@ -2057,7 +2058,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = 
+  let assemblyFormat =
       "$target attr-dict `:`"
       "functional-type(operands, results)";
 
@@ -2279,16 +2280,16 @@ def HoistRedundantTensorSubsetsOp :
      TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Hoists supported tensor subset extract/insert operation pairs out of 
+    Hoists supported tensor subset extract/insert operation pairs out of
     immediately enclosing loop iteratively, if the following conditions
     are true:
        1. The 2 ops access the same tensor subset.
        2. All operands are invariant under the enclosing loop.
-    
+
     The supported subset extract/insert operation pairs currently comprise:
        - tensor.extract_slice / tensor.insert_slice
        - vector.transfer_read / vector.transfer_write on tensors
-    
+
     Only scf.for loops are currently supported.
 
     When applied to:
@@ -2304,8 +2305,8 @@ def HoistRedundantTensorSubsetsOp :
   let results = (outs);
 
   let assemblyFormat = [{
-    $target 
-    attr-dict 
+    $target
+    attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -2328,7 +2329,7 @@ def InsertSliceToCopyOp :
      TransformEachOpTrait, TransformOpInterface]> {
   let description = [{
     Targeted rewrite of an tensor.insert_slice to linalg.copy.
-    This is useful to materialize copies explicitly before bufferization and 
+    This is useful to materialize copies explicitly before bufferization and
     transform them, avoiding the need to rediscover them after bufferization.
 
     If the insert_slice source is already a linalg.copy, only return the source
@@ -2336,7 +2337,7 @@ def InsertSliceToCopyOp :
 
     #### Return modes:
 
-    The operation always succeeds and returns a handle to the relevant 
+    The operation always succeeds and returns a handle to the relevant
     linalg.copy op.
   }];
 
