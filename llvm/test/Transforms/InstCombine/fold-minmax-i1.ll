@@ -8,7 +8,7 @@
 define i1 @umin_scalar(i1 %0, i1 %1) {
 ; CHECK-LABEL: define i1 @umin_scalar
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.umin.i1(i1 [[TMP0]], i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %3 = call i1 @llvm.umin.i1(i1 %0, i1 %1)
@@ -18,7 +18,7 @@ define i1 @umin_scalar(i1 %0, i1 %1) {
 define i1 @smin_scalar(i1 %0, i1 %1) {
 ; CHECK-LABEL: define i1 @smin_scalar
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.smin.i1(i1 [[TMP0]], i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %3 = call i1 @llvm.smin.i1(i1 %0, i1 %1)
@@ -28,7 +28,7 @@ define i1 @smin_scalar(i1 %0, i1 %1) {
 define i1 @umax_scalar(i1 %0, i1 %1) {
 ; CHECK-LABEL: define i1 @umax_scalar
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.umax.i1(i1 [[TMP0]], i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %3 = call i1 @llvm.umax.i1(i1 %0, i1 %1)
@@ -38,7 +38,7 @@ define i1 @umax_scalar(i1 %0, i1 %1) {
 define i1 @smax_scalar(i1 %0, i1 %1) {
 ; CHECK-LABEL: define i1 @smax_scalar
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.smax.i1(i1 [[TMP0]], i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %3 = call i1 @llvm.smax.i1(i1 %0, i1 %1)
@@ -52,7 +52,7 @@ define i1 @smax_scalar(i1 %0, i1 %1) {
 define <4 x i1> @umin_vector(<4 x i1> %0, <4 x i1> %1) {
 ; CHECK-LABEL: define <4 x i1> @umin_vector
 ; CHECK-SAME: (<4 x i1> [[TMP0:%.*]], <4 x i1> [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.umin.v4i1(<4 x i1> [[TMP0]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i1> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP3]]
 ;
   %3 = call <4 x i1> @llvm.umin.v4i1(<4 x i1> %0, <4 x i1> %1)
@@ -62,7 +62,7 @@ define <4 x i1> @umin_vector(<4 x i1> %0, <4 x i1> %1) {
 define <4 x i1> @smin_vector(<4 x i1> %0, <4 x i1> %1) {
 ; CHECK-LABEL: define <4 x i1> @smin_vector
 ; CHECK-SAME: (<4 x i1> [[TMP0:%.*]], <4 x i1> [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.smin.v4i1(<4 x i1> [[TMP0]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP3]]
 ;
   %3 = call <4 x i1> @llvm.smin.v4i1(<4 x i1> %0, <4 x i1> %1)
@@ -72,7 +72,7 @@ define <4 x i1> @smin_vector(<4 x i1> %0, <4 x i1> %1) {
 define <4 x i1> @umax_vector(<4 x i1> %0, <4 x i1> %1) {
 ; CHECK-LABEL: define <4 x i1> @umax_vector
 ; CHECK-SAME: (<4 x i1> [[TMP0:%.*]], <4 x i1> [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.umax.v4i1(<4 x i1> [[TMP0]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP3]]
 ;
   %3 = call <4 x i1> @llvm.umax.v4i1(<4 x i1> %0, <4 x i1> %1)
@@ -82,7 +82,7 @@ define <4 x i1> @umax_vector(<4 x i1> %0, <4 x i1> %1) {
 define <4 x i1> @smax_vector(<4 x i1> %0, <4 x i1> %1) {
 ; CHECK-LABEL: define <4 x i1> @smax_vector
 ; CHECK-SAME: (<4 x i1> [[TMP0:%.*]], <4 x i1> [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.smax.v4i1(<4 x i1> [[TMP0]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i1> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP3]]
 ;
   %3 = call <4 x i1> @llvm.smax.v4i1(<4 x i1> %0, <4 x i1> %1)
