@@ -53470,6 +53470,7 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   SDValue Op = N->getOperand(0);
   EVT VT = Op.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // If we have a constant logical shift that's only used in a comparison
   // against zero turn it into an equivalent AND. This allows turning it into
@@ -53493,12 +53494,41 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // If we're extracting from a avx512 bool vector and comparing against zero,
+  // then try to just bitcast the vector to an integer to use TEST/BT directly.
+  // (and (extract_elt (kshiftr vXi1, C), 0), 1) -> (and (bc vXi1), 1<<C)
+  if (Op.getOpcode() == ISD::AND && isOneConstant(Op.getOperand(1)) &&
+      Op.hasOneUse() && onlyZeroFlagUsed(SDValue(N, 0))) {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(1)) &&
+        Src.getOperand(0).getValueType().getScalarType() == MVT::i1) {
+      SDValue BoolVec = Src.getOperand(0);
+      unsigned ShAmt = 0;
+      if (BoolVec.getOpcode() == X86ISD::KSHIFTR) {
+        ShAmt = BoolVec.getConstantOperandVal(1);
+        BoolVec = BoolVec.getOperand(0);
+      }
+      BoolVec = widenMaskVector(BoolVec, false, Subtarget, DAG, dl);
+      EVT VecVT = BoolVec.getValueType();
+      unsigned BitWidth = VecVT.getVectorNumElements();
+      EVT BCVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
+      if (TLI.isTypeLegal(VecVT) && TLI.isTypeLegal(BCVT)) {
+        APInt Mask = APInt::getOneBitSet(BitWidth, ShAmt);
+        Op = DAG.getBitcast(BCVT, BoolVec);
+        Op = DAG.getNode(ISD::AND, dl, BCVT, Op,
+                         DAG.getConstant(Mask, dl, BCVT));
+        return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
+                           DAG.getConstant(0, dl, VT));
+      }
+    }
+  }
+
   // Peek through any zero-extend if we're only testing for a zero result.
   if (Op.getOpcode() == ISD::ZERO_EXTEND && onlyZeroFlagUsed(SDValue(N, 0))) {
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
-    if (SrcVT.getScalarSizeInBits() >= 8 &&
-        DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+    if (SrcVT.getScalarSizeInBits() >= 8 && TLI.isTypeLegal(SrcVT))
       return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Src,
                          DAG.getConstant(0, dl, SrcVT));
   }
