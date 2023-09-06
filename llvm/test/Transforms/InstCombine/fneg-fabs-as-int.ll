@@ -28,8 +28,9 @@ define <2 x i32> @fneg_fabs_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimpli
 define float @fneg_fabs_fabs_as_int_f32_and_or(float %val) {
 ; CHECK-LABEL: define float @fneg_fabs_fabs_as_int_f32_and_or
 ; CHECK-SAME: (float [[VAL:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[BITCAST]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[VAL]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast float [[TMP1]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], -2147483648
 ; CHECK-NEXT:    [[FNEG_FABS:%.*]] = bitcast i32 [[OR]] to float
 ; CHECK-NEXT:    ret float [[FNEG_FABS]]
 ;
