@@ -842,7 +842,7 @@ public:
   std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
   std::shared_ptr<MCContext> Context;
   std::unique_ptr<MCDisassembler> DisAsm;
-  std::shared_ptr<const MCInstrAnalysis> InstrAnalysis;
+  std::shared_ptr<MCInstrAnalysis> InstrAnalysis;
   std::shared_ptr<MCInstPrinter> InstPrinter;
   PrettyPrinter *Printer;
 
@@ -1265,13 +1265,18 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   }
 }
 
-static void collectLocalBranchTargets(
-    ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
-    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
-    uint64_t Start, uint64_t End, std::unordered_map<uint64_t, std::string> &Labels) {
+static void
+collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
+                          MCDisassembler *DisAsm, MCInstPrinter *IP,
+                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
+                          uint64_t Start, uint64_t End,
+                          std::unordered_map<uint64_t, std::string> &Labels) {
   // So far only supports PowerPC and X86.
   if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
     return;
+
+  if (MIA)
+    MIA->resetState();
 
   Labels.clear();
   unsigned LabelCount = 0;
@@ -1298,6 +1303,7 @@ static void collectLocalBranchTargets(
           !Labels.count(Target) &&
           !(STI->getTargetTriple().isPPC() && Target == Index))
         Labels[Target] = ("L" + Twine(LabelCount++)).str();
+      MIA->updateState(Inst, Index);
     }
     Index += Size;
   }
@@ -1939,6 +1945,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                BBAddrMapLabels);
       }
 
+      if (DT->InstrAnalysis)
+        DT->InstrAnalysis->resetState();
+
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to understand what
@@ -2155,6 +2164,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               if (TargetOS == &CommentStream)
                 *TargetOS << "\n";
             }
+
+            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
           }
         }
 
