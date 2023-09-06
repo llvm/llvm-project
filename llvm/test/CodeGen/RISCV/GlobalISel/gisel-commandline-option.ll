@@ -1,16 +1,17 @@
 ; RUN: llc -mtriple=riscv64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
-; RUN:   -O0 -global-isel \
+; RUN:   -verify-machineinstrs=0 -O0 -global-isel \
 ; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK
 
 ; RUN: llc -mtriple=riscv64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
-; RUN:   -global-isel \
+; RUN:   -verify-machineinstrs=0 -global-isel \
 ; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK  --check-prefix ENABLED-O1
 
 ; RUN: llc -mtriple=riscv64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
-; RUN:   -global-isel -global-isel-abort=2 \
+; RUN:   -verify-machineinstrs=0 -global-isel -global-isel-abort=2 \
 ; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix FALLBACK --check-prefix ENABLED-O1
 
 ; RUN: llc -mtriple=riscv64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
+; RUN:   -verify-machineinstrs=0 \
 ; RUN:   | FileCheck %s --check-prefix DISABLED
 
 ; ENABLED:       IRTranslator
