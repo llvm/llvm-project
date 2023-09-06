@@ -56,10 +56,9 @@ class AVRAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -590,25 +589,24 @@ ParseStatus AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-bool AVRAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool AVRAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/false);
+  Reg = parseRegister(/*RestoreOnFailure=*/false);
   EndLoc = Parser.getTok().getLoc();
 
-  return (RegNo == AVR::NoRegister);
+  return Reg == AVR::NoRegister;
 }
 
-OperandMatchResultTy AVRAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
+ParseStatus AVRAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/true);
+  Reg = parseRegister(/*RestoreOnFailure=*/true);
   EndLoc = Parser.getTok().getLoc();
 
-  if (RegNo == AVR::NoRegister)
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+  if (Reg == AVR::NoRegister)
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 void AVRAsmParser::eatComma() {

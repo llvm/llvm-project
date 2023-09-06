@@ -73,6 +73,7 @@ chrono compare
 chrono cstddef
 chrono cstdint
 chrono ctime
+chrono forward_list
 chrono initializer_list
 chrono limits
 chrono locale
@@ -499,6 +500,7 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
+ranges new
 ranges optional
 ranges span
 ranges tuple

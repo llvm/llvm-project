@@ -326,6 +326,13 @@ if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
     )
 endif()
 
+if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
+  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
+    tz.cpp
+    tzdb_list.cpp
+    )
+endif()
+
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
 target_link_libraries(cxx_experimental PUBLIC cxx-headers)
 if (LIBCXX_ENABLE_SHARED)

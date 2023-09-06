@@ -5007,6 +5007,15 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   return true;
 }
 
+bool SelectionDAG::isADDLike(SDValue Op) const {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::OR)
+    return haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
+  if (Opcode == ISD::XOR)
+    return isMinSignedConstant(Op.getOperand(1));
+  return false;
+}
+
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))
@@ -7757,13 +7766,28 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     }
 
     // If this store is smaller than the largest store see whether we can get
-    // the smaller value for free with a truncate.
+    // the smaller value for free with a truncate or extract vector element and
+    // then store.
     SDValue Value = MemSetValue;
     if (VT.bitsLT(LargestVT)) {
+      unsigned Index;
+      unsigned NElts = LargestVT.getSizeInBits() / VT.getSizeInBits();
+      EVT SVT = EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), NElts);
       if (!LargestVT.isVector() && !VT.isVector() &&
           TLI.isTruncateFree(LargestVT, VT))
         Value = DAG.getNode(ISD::TRUNCATE, dl, VT, MemSetValue);
-      else
+      else if (LargestVT.isVector() && !VT.isVector() &&
+               TLI.shallExtractConstSplatVectorElementToStore(
+                   LargestVT.getTypeForEVT(*DAG.getContext()),
+                   VT.getSizeInBits(), Index) &&
+               TLI.isTypeLegal(SVT) &&
+               LargestVT.getSizeInBits() == SVT.getSizeInBits()) {
+        // Target which can combine store(extractelement VectorTy, Idx) can get
+        // the smaller value for free.
+        SDValue TailValue = DAG.getNode(ISD::BITCAST, dl, SVT, MemSetValue);
+        Value = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, TailValue,
+                            DAG.getVectorIdxConstant(Index, dl));
+      } else
         Value = getMemsetValue(Src, VT, DAG, dl);
     }
     assert(Value.getValueType() == VT && "Value with wrong type.");

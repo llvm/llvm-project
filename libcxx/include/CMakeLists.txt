@@ -283,6 +283,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/tzdb.h
+  __chrono/tzdb_list.h
   __chrono/weekday.h
   __chrono/year.h
   __chrono/year_month.h
@@ -602,6 +604,7 @@ set(files
   __ranges/access.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
+  __ranges/chunk_by_view.h
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
