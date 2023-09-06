@@ -82,7 +82,7 @@ public:
     return ProtectedGetPropertyAtIndex(idx);
   }
 
-  // Property can be be a property path like
+  // Property can be a property path like
   // "target.process.extra-startup-command"
   virtual const Property *
   GetPropertyAtPath(const ExecutionContext *exe_ctx,
