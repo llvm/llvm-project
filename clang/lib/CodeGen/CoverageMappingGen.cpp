@@ -322,12 +322,12 @@ public:
     for (const auto &FL : FileLocs) {
       SourceLocation Loc = FL.first;
       FileID SpellingFile = SM.getDecomposedSpellingLoc(Loc).first;
-      auto Entry = SM.getFileEntryForID(SpellingFile);
+      auto Entry = SM.getFileEntryRefForID(SpellingFile);
       if (!Entry)
         continue;
 
       FileIDMapping[SM.getFileID(Loc)] = std::make_pair(Mapping.size(), Loc);
-      Mapping.push_back(CVM.getFileID(Entry));
+      Mapping.push_back(CVM.getFileID(*Entry));
     }
   }
 
@@ -1740,7 +1740,7 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
     FilenameStrs[0] = normalizeFilename(getCurrentDirname());
     for (const auto &Entry : FileEntries) {
       auto I = Entry.second;
-      FilenameStrs[I] = normalizeFilename(Entry.first->getName());
+      FilenameStrs[I] = normalizeFilename(Entry.first.getName());
     }
     ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(FilenameStrs);
     RawCoverageMappingReader Reader(CoverageMapping, FilenameRefs, Filenames,
@@ -1764,7 +1764,7 @@ void CoverageMappingModuleGen::emit() {
   FilenameStrs[0] = normalizeFilename(getCurrentDirname());
   for (const auto &Entry : FileEntries) {
     auto I = Entry.second;
-    FilenameStrs[I] = normalizeFilename(Entry.first->getName());
+    FilenameStrs[I] = normalizeFilename(Entry.first.getName());
   }
 
   std::string Filenames;
@@ -1823,7 +1823,7 @@ void CoverageMappingModuleGen::emit() {
   }
 }
 
-unsigned CoverageMappingModuleGen::getFileID(const FileEntry *File) {
+unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
   auto It = FileEntries.find(File);
   if (It != FileEntries.end())
     return It->second;
