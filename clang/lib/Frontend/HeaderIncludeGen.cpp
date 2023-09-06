@@ -259,7 +259,7 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
 }
 
 void HeaderIncludesJSONCallback::EndOfMainFile() {
-  OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID());
+  const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID());
   SmallString<256> MainFile(FE->getName());
   SM.getFileManager().makeAbsolutePath(MainFile);
 

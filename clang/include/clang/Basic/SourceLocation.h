@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_BASIC_SOURCELOCATION_H
 #define LLVM_CLANG_BASIC_SOURCELOCATION_H
 
-#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
@@ -357,6 +356,8 @@ public:
   }
 };
 
+class FileEntry;
+
 /// A SourceLocation and its associated SourceManager.
 ///
 /// This is useful for argument passing to functions that expect both objects.
@@ -412,7 +413,6 @@ public:
   unsigned getColumnNumber(bool *Invalid = nullptr) const;
 
   const FileEntry *getFileEntry() const;
-  OptionalFileEntryRef getFileEntryRef() const;
 
   /// Return a StringRef to the source buffer data for the
   /// specified FileID.

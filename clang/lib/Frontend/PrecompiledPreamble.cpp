@@ -550,19 +550,19 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   SourceManager &SourceMgr = Clang->getSourceManager();
   for (auto &Filename : PreambleDepCollector->getDependencies()) {
-    auto MaybeFile = Clang->getFileManager().getOptionalFileRef(Filename);
-    if (!MaybeFile ||
-        MaybeFile == SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID()))
+    auto FileOrErr = Clang->getFileManager().getFile(Filename);
+    if (!FileOrErr ||
+        *FileOrErr == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
       continue;
-    auto File = *MaybeFile;
-    if (time_t ModTime = File.getModificationTime()) {
-      FilesInPreamble[File.getName()] =
-          PrecompiledPreamble::PreambleFileHash::createForFile(File.getSize(),
+    auto File = *FileOrErr;
+    if (time_t ModTime = File->getModificationTime()) {
+      FilesInPreamble[File->getName()] =
+          PrecompiledPreamble::PreambleFileHash::createForFile(File->getSize(),
                                                                ModTime);
     } else {
       llvm::MemoryBufferRef Buffer =
           SourceMgr.getMemoryBufferForFileOrFake(File);
-      FilesInPreamble[File.getName()] =
+      FilesInPreamble[File->getName()] =
           PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(Buffer);
     }
   }
