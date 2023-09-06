@@ -5492,42 +5492,14 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     //
     //   STRXui %xzr, %stack.0
     //
-    if (IsSpill && DstMO.isUndef() && SrcReg.isPhysical()) {
+    if (IsSpill && DstMO.isUndef() && SrcReg == AArch64::WZR &&
+        TRI.getRegSizeInBits(*getRegClass(DstReg)) == 64) {
       assert(SrcMO.getSubReg() == 0 &&
              "Unexpected subreg on physical register");
-      const TargetRegisterClass *SpillRC;
-      unsigned SpillSubreg;
-      switch (DstMO.getSubReg()) {
-      default:
-        SpillRC = nullptr;
-        break;
-      case AArch64::sub_32:
-      case AArch64::ssub:
-        if (AArch64::GPR32RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::GPR64RegClass;
-          SpillSubreg = AArch64::sub_32;
-        } else if (AArch64::FPR32RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::FPR64RegClass;
-          SpillSubreg = AArch64::ssub;
-        } else
-          SpillRC = nullptr;
-        break;
-      case AArch64::dsub:
-        if (AArch64::FPR64RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::FPR128RegClass;
-          SpillSubreg = AArch64::dsub;
-        } else
-          SpillRC = nullptr;
-        break;
-      }
-
-      if (SpillRC)
-        if (unsigned WidenedSrcReg =
-                TRI.getMatchingSuperReg(SrcReg, SpillSubreg, SpillRC)) {
-          storeRegToStackSlot(MBB, InsertPt, WidenedSrcReg, SrcMO.isKill(),
-                              FrameIndex, SpillRC, &TRI, Register());
-          return &*--InsertPt;
-        }
+      storeRegToStackSlot(MBB, InsertPt, AArch64::XZR, SrcMO.isKill(),
+                          FrameIndex, &AArch64::GPR64RegClass, &TRI,
+                          Register());
+      return &*--InsertPt;
     }
 
     // Handle cases like filling use of:
