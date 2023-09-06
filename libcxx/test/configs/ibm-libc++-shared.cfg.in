@@ -6,10 +6,10 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', '-pthread'))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include} -I %{libcxx}/test/support'
+    '@CMAKE_CXX_FLAGS_INIT@ -nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
+    '@CMAKE_EXE_LINKER_FLAGS_INIT@ -nostdlib++ -L %{lib} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env LIBPATH=%{lib} -- '

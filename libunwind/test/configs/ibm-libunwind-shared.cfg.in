@@ -5,10 +5,10 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include}'
+    '@CMAKE_CXX_FLAGS_INIT@ -nostdinc++ -I %{include}'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lunwind -ldl -Wl,-bbigtoc'
+    '@CMAKE_EXE_LINKER_FLAGS_INIT@ -nostdlib++ -L %{lib} -lunwind -ldl -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env LIBPATH=%{lib} -- '

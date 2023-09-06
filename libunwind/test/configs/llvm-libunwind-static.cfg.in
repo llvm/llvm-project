@@ -28,10 +28,10 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format(local_sysroot) if local_sysroot else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
+    '@CMAKE_CXX_FLAGS_INIT@ -nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
 ))
 config.substitutions.append(('%{link_flags}',
-    '%{{lib}}/libunwind.a {}'.format(' '.join(link_flags))
+    '@CMAKE_EXE_LINKER_FLAGS_INIT@ %{{lib}}/libunwind.a {}'.format(' '.join(link_flags))
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '

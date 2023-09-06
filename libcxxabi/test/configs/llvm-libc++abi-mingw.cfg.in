@@ -5,10 +5,10 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
+    '@CMAKE_CXX_FLAGS_INIT@ -nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++'
+    '@CMAKE_EXE_LINKER_FLAGS_INIT@ -nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '
