@@ -32,15 +32,13 @@ using namespace taint;
 namespace {
 class ArrayBoundCheckerV2 :
     public Checker<check::Location> {
-  mutable std::unique_ptr<BugType> BT;
-  mutable std::unique_ptr<BugType> TaintBT;
+  BugType BT{this, "Out-of-bound access"};
+  BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
-  enum OOB_Kind { OOB_Precedes, OOB_Excedes };
+  enum OOB_Kind { OOB_Precedes, OOB_Exceeds, OOB_Taint };
 
-  void reportOOB(CheckerContext &C, ProgramStateRef errorState,
-                 OOB_Kind kind) const;
-  void reportTaintOOB(CheckerContext &C, ProgramStateRef errorState,
-                      SVal TaintedSVal) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, OOB_Kind Kind,
+                 SVal TaintedSVal = UnknownVal()) const;
 
   static bool isFromCtypeMacro(const Stmt *S, ASTContext &AC);
 
@@ -48,26 +46,58 @@ public:
   void checkLocation(SVal l, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
 };
+} // anonymous namespace
 
-// FIXME: Eventually replace RegionRawOffset with this class.
-class RegionRawOffsetV2 {
-private:
-  const SubRegion *baseRegion;
-  NonLoc byteOffset;
+/// For a given Location that can be represented as a symbolic expression
+/// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
+/// Arr and the distance of Location from the beginning of Arr (expressed in a
+/// NonLoc that specifies the number of CharUnits). Returns nullopt when these
+/// cannot be determined.
+std::optional<std::pair<const SubRegion *, NonLoc>>
+computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
+  QualType T = SVB.getArrayIndexType();
+  auto Calc = [&SVB, State, T](BinaryOperatorKind Op, NonLoc LHS, NonLoc RHS) {
+    // We will use this utility to add and multiply values.
+    return SVB.evalBinOpNN(State, Op, LHS, RHS, T).getAs<NonLoc>();
+  };
 
-public:
-  RegionRawOffsetV2(const SubRegion *base, NonLoc offset)
-      : baseRegion(base), byteOffset(offset) { assert(base); }
+  const auto *Region = dyn_cast_or_null<SubRegion>(Location.getAsRegion());
+  std::optional<NonLoc> Offset = std::nullopt;
 
-  NonLoc getByteOffset() const { return byteOffset; }
-  const SubRegion *getRegion() const { return baseRegion; }
+  while (const auto *ERegion = dyn_cast_or_null<ElementRegion>(Region)) {
+    const auto Index = ERegion->getIndex().getAs<NonLoc>();
+    if (!Index)
+      return std::nullopt;
 
-  static std::optional<RegionRawOffsetV2>
-  computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location);
+    QualType ElemType = ERegion->getElementType();
+    // If the element is an incomplete type, go no further.
+    if (ElemType->isIncompleteType())
+      return std::nullopt;
 
-  void dump() const;
-  void dumpToStream(raw_ostream &os) const;
-};
+    // Calculate Delta = Index * sizeof(ElemType).
+    NonLoc Size = SVB.makeArrayIndex(
+        SVB.getContext().getTypeSizeInChars(ElemType).getQuantity());
+    auto Delta = Calc(BO_Mul, *Index, Size);
+    if (!Delta)
+      return std::nullopt;
+
+    // Perform Offset += Delta, handling the initial nullopt as 0.
+    if (!Offset) {
+      Offset = Delta;
+    } else {
+      Offset = Calc(BO_Add, *Offset, *Delta);
+      if (!Offset)
+        return std::nullopt;
+    }
+
+    // Continute the offset calculations with the SuperRegion.
+    Region = ERegion->getSuperRegion()->getAs<SubRegion>();
+  }
+
+  if (Region && Offset)
+    return std::make_pair(Region, *Offset);
+
+  return std::nullopt;
 }
 
 // TODO: once the constraint manager is smart enough to handle non simplified
@@ -86,8 +116,8 @@ getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
           APSIntType(extent.getValue()).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
-        // The constant should never be 0 here, since it the result of scaling
-        // based on the size of a type which is never 0.
+        // The constant should never be 0 here, becasue multiplication by zero
+        // is simplified by the engine.
         if ((extent.getValue() % constant) != 0)
           return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
         else
@@ -163,16 +193,15 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     return;
 
   ProgramStateRef state = checkerContext.getState();
-
   SValBuilder &svalBuilder = checkerContext.getSValBuilder();
-  const std::optional<RegionRawOffsetV2> &RawOffset =
-      RegionRawOffsetV2::computeOffset(state, svalBuilder, location);
+
+  const std::optional<std::pair<const SubRegion *, NonLoc>> &RawOffset =
+      computeOffset(state, svalBuilder, location);
 
   if (!RawOffset)
     return;
 
-  NonLoc ByteOffset = RawOffset->getByteOffset();
-  const SubRegion *Reg = RawOffset->getRegion();
+  auto [Reg, ByteOffset] = *RawOffset;
 
   // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace();
@@ -207,12 +236,13 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     if (state_exceedsUpperBound) {
       if (!state_withinUpperBound) {
         // We know that the index definitely exceeds the upper bound.
-        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Excedes);
+        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Exceeds);
         return;
       }
       if (isTainted(state, ByteOffset)) {
         // Both cases are possible, but the index is tainted, so report.
-        reportTaintOOB(checkerContext, state_exceedsUpperBound, ByteOffset);
+        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Taint,
+                  ByteOffset);
         return;
       }
     }
@@ -224,58 +254,40 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   checkerContext.addTransition(state);
 }
 
-void ArrayBoundCheckerV2::reportTaintOOB(CheckerContext &checkerContext,
-                                         ProgramStateRef errorState,
-                                         SVal TaintedSVal) const {
-  ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
-  if (!errorNode)
+void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
+                                    ProgramStateRef ErrorState, OOB_Kind Kind,
+                                    SVal TaintedSVal) const {
+
+  ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
+  if (!ErrorNode)
     return;
 
-  if (!TaintBT)
-    TaintBT.reset(
-        new BugType(this, "Out-of-bound access", categories::TaintedData));
+  // FIXME: These diagnostics are preliminary, and they'll be replaced soon by
+  // a follow-up commit.
 
-  SmallString<256> buf;
-  llvm::raw_svector_ostream os(buf);
-  os << "Out of bound memory access (index is tainted)";
-  auto BR =
-      std::make_unique<PathSensitiveBugReport>(*TaintBT, os.str(), errorNode);
+  SmallString<128> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+  Out << "Out of bound memory access ";
 
-  // Track back the propagation of taintedness.
-  for (SymbolRef Sym : getTaintedSymbols(errorState, TaintedSVal)) {
+  switch (Kind) {
+  case OOB_Precedes:
+    Out << "(accessed memory precedes memory block)";
+    break;
+  case OOB_Exceeds:
+    Out << "(access exceeds upper limit of memory block)";
+    break;
+  case OOB_Taint:
+    Out << "(index is tainted)";
+    break;
+  }
+  auto BR = std::make_unique<PathSensitiveBugReport>(
+      Kind == OOB_Taint ? TaintBT : BT, Out.str(), ErrorNode);
+  // Track back the propagation of taintedness, or do nothing if TaintedSVal is
+  // the default UnknownVal().
+  for (SymbolRef Sym : getTaintedSymbols(ErrorState, TaintedSVal)) {
     BR->markInteresting(Sym);
   }
-
-  checkerContext.emitReport(std::move(BR));
-}
-
-void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
-                                    ProgramStateRef errorState,
-                                    OOB_Kind kind) const {
-
-  ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
-  if (!errorNode)
-    return;
-
-  if (!BT)
-    BT.reset(new BugType(this, "Out-of-bound access"));
-
-  // FIXME: This diagnostics are preliminary.  We should get far better
-  // diagnostics for explaining buffer overruns.
-
-  SmallString<256> buf;
-  llvm::raw_svector_ostream os(buf);
-  os << "Out of bound memory access ";
-  switch (kind) {
-  case OOB_Precedes:
-    os << "(accessed memory precedes memory block)";
-    break;
-  case OOB_Excedes:
-    os << "(access exceeds upper limit of memory block)";
-    break;
-  }
-  auto BR = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), errorNode);
-  checkerContext.emitReport(std::move(BR));
+  C.emitReport(std::move(BR));
 }
 
 bool ArrayBoundCheckerV2::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
@@ -295,67 +307,6 @@ bool ArrayBoundCheckerV2::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
           (MacroName == "isnctrl") || (MacroName == "isprint") ||
           (MacroName == "ispunct") || (MacroName == "isspace") ||
           (MacroName == "isupper") || (MacroName == "isxdigit"));
-}
-
-#ifndef NDEBUG
-LLVM_DUMP_METHOD void RegionRawOffsetV2::dump() const {
-  dumpToStream(llvm::errs());
-}
-
-void RegionRawOffsetV2::dumpToStream(raw_ostream &os) const {
-  os << "raw_offset_v2{" << getRegion() << ',' << getByteOffset() << '}';
-}
-#endif
-
-/// For a given Location that can be represented as a symbolic expression
-/// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
-/// Arr and the distance of Location from the beginning of Arr (expressed in a
-/// NonLoc that specifies the number of CharUnits). Returns nullopt when these
-/// cannot be determined.
-std::optional<RegionRawOffsetV2>
-RegionRawOffsetV2::computeOffset(ProgramStateRef State, SValBuilder &SVB,
-                                 SVal Location) {
-  QualType T = SVB.getArrayIndexType();
-  auto Calc = [&SVB, State, T](BinaryOperatorKind Op, NonLoc LHS, NonLoc RHS) {
-    // We will use this utility to add and multiply values.
-    return SVB.evalBinOpNN(State, Op, LHS, RHS, T).getAs<NonLoc>();
-  };
-
-  const MemRegion *Region = Location.getAsRegion();
-  NonLoc Offset = SVB.makeZeroArrayIndex();
-
-  while (Region) {
-    if (const auto *ERegion = dyn_cast<ElementRegion>(Region)) {
-      if (const auto Index = ERegion->getIndex().getAs<NonLoc>()) {
-        QualType ElemType = ERegion->getElementType();
-        // If the element is an incomplete type, go no further.
-        if (ElemType->isIncompleteType())
-          return std::nullopt;
-
-        // Perform Offset += Index * sizeof(ElemType); then continue the offset
-        // calculations with SuperRegion:
-        NonLoc Size = SVB.makeArrayIndex(
-            SVB.getContext().getTypeSizeInChars(ElemType).getQuantity());
-        if (auto Delta = Calc(BO_Mul, *Index, Size)) {
-          if (auto NewOffset = Calc(BO_Add, Offset, *Delta)) {
-            Offset = *NewOffset;
-            Region = ERegion->getSuperRegion();
-            continue;
-          }
-        }
-      }
-    } else if (const auto *SRegion = dyn_cast<SubRegion>(Region)) {
-      // NOTE: The dyn_cast<>() is expected to succeed, it'd be very surprising
-      // to see a MemSpaceRegion at this point.
-      // FIXME: We may return with {<Region>, 0} even if we didn't handle any
-      // ElementRegion layers. I think that this behavior was introduced
-      // accidentally by 8a4c760c204546aba566e302f299f7ed2e00e287 in 2011, so
-      // it may be useful to review it in the future.
-      return RegionRawOffsetV2(SRegion, Offset);
-    }
-    return std::nullopt;
-  }
-  return std::nullopt;
 }
 
 void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
