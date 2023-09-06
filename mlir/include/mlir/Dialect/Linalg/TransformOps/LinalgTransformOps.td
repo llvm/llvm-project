@@ -2079,8 +2079,20 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Vectorize the target ops, which must be Linalg ops, with masked vectors
-    of the specified size.
+    Vectorize the target ops, which must be Linalg ops. 
+
+    Use the optional vector sizes to specify exactly what configuration the
+    vectorizer should use. It will then use masked vectors of the specified
+    size to enforce this configuration ("masked vectorization"). If no vector
+    sizes are specified, the vectorizer will infer the shapes to use from the
+    target Linalg ops ("regular vectorization"). More specifically:
+
+    ```mlir
+    # Masked vectorization - vector sizes are specified explicitly
+    transform.structured.masked_vectorize %target vector_sizes [1, 4] : !transform.any_op
+    # Regular vectorization - vector sizes are inferred from the target Op
+    transform.structured.masked_vectorize %target : !transform.any_op
+    ```
 
     The vector sizes can be either static or dynamic (SSA values). In case of
     SSA values, the handle must be mapped to exactly one payload op with
@@ -2090,14 +2102,14 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
     counterpart iteration space sizes.
 
     Typically this operator should be applied to linalg operations that have
-    already be tiled to the appropriate sizes.
+    already been tiled to the appropriate sizes.
 
     #### Return modes:
 
-    This operation produces a definite failure if the dynamic vector sizes (SSA
-    values) do not satisfy the constraints mentioned above. It produces a
-    silenceable failure if at least one target op is not a Linalg op or fails to
-    vectorize.
+    This operation produces a silenceable failure if at least one target op is
+    not a Linalg op or fails to vectorize. It produces a definite failure if
+    the dynamic vector sizes (SSA values) do not satisfy the constraints
+    mentioned above. 
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -2110,11 +2122,12 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let results = (outs);
   let assemblyFormat = [{
-      $target
+      $target oilist(
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
                                               type($vector_sizes),
                                               $scalable_sizes)
+      )
       attr-dict
       `:` type($target)
   }];
