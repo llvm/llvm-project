@@ -296,6 +296,12 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
 
+///
+/// Runtime methods using CUDA 12.0+ driver
+///
+
+#if (CUDA_VERSION >= 12000)
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
     CUtensorMap *tensorMap,             // Tensor map object
     CUtensorMapDataType tensorDataType, // Tensor data type
@@ -378,6 +384,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
                                 sizeof(CUtensorMap)));
   return reinterpret_cast<void *>(dTensorMap);
 }
+#endif
 
 #ifdef MLIR_ENABLE_CUDA_CUSPARSE
 
