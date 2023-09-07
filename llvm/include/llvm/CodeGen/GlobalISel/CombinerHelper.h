@@ -787,6 +787,12 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Match constant LHS FP ops that should be commuted.
+  bool matchCommuteFPConstantToRHS(MachineInstr &MI);
+
+  // Given a binop \p MI, commute operands 1 and 2.
+  void applyCommuteBinOpOperands(MachineInstr &MI);
+
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
