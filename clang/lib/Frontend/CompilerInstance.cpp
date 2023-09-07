@@ -1717,7 +1717,8 @@ void CompilerInstance::createASTReader() {
     Listener->attachToASTReader(*TheASTReader);
 }
 
-bool CompilerInstance::loadModuleFile(StringRef FileName) {
+bool CompilerInstance::loadModuleFile(
+    StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
   if (FrontendTimerGroup)
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
@@ -1743,7 +1744,8 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   // Try to load the module file.
   switch (TheASTReader->ReadAST(
       FileName, serialization::MK_ExplicitModule, SourceLocation(),
-      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
+      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0,
+      &LoadedModuleFile)) {
   case ASTReader::Success:
     // We successfully loaded the module file; remember the set of provided
     // modules so that we don't try to load implicit modules for them.
