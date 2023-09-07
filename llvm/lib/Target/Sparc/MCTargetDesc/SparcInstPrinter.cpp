@@ -39,12 +39,12 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
 }
 
 void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
-  OS << '%' << StringRef(getRegisterName(Reg)).lower();
+  OS << '%' << getRegisterName(Reg);
 }
 
 void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
                                     unsigned AltIdx) const {
-  OS << '%' << StringRef(getRegisterName(Reg, AltIdx)).lower();
+  OS << '%' << getRegisterName(Reg, AltIdx);
 }
 
 void SparcInstPrinter::printInst(const MCInst *MI, uint64_t Address,
