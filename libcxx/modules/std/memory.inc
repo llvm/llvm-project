@@ -41,9 +41,11 @@ export namespace std {
   // [allocator.traits], allocator traits
   using std::allocator_traits;
 
+#if _LIBCPP_STD_VER >= 23
   using std::allocation_result;
 
   using std::allocate_at_least;
+#endif
 
   // [default.allocator], the default allocator
   using std::allocator;
