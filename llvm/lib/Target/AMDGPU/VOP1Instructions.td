@@ -1173,7 +1173,7 @@ defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
 
 defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 
-let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0] in {
+let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0], Size = V_MOV_B32_e32.Size in {
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,

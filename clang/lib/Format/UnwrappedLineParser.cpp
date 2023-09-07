@@ -1193,26 +1193,22 @@ static bool tokenCanStartNewLine(const FormatToken &Tok) {
   // Semicolon can be a null-statement, l_square can be a start of a macro or
   // a C++11 attribute, but this doesn't seem to be common.
   assert(Tok.isNot(TT_AttributeSquare));
-  return Tok.isNot(tok::semi) && Tok.isNot(tok::l_brace) &&
-         // Tokens that can only be used as binary operators and a part of
-         // overloaded operator names.
-         Tok.isNot(tok::period) && Tok.isNot(tok::periodstar) &&
-         Tok.isNot(tok::arrow) && Tok.isNot(tok::arrowstar) &&
-         Tok.isNot(tok::less) && Tok.isNot(tok::greater) &&
-         Tok.isNot(tok::slash) && Tok.isNot(tok::percent) &&
-         Tok.isNot(tok::lessless) && Tok.isNot(tok::greatergreater) &&
-         Tok.isNot(tok::equal) && Tok.isNot(tok::plusequal) &&
-         Tok.isNot(tok::minusequal) && Tok.isNot(tok::starequal) &&
-         Tok.isNot(tok::slashequal) && Tok.isNot(tok::percentequal) &&
-         Tok.isNot(tok::ampequal) && Tok.isNot(tok::pipeequal) &&
-         Tok.isNot(tok::caretequal) && Tok.isNot(tok::greatergreaterequal) &&
-         Tok.isNot(tok::lesslessequal) &&
-         // Colon is used in labels, base class lists, initializer lists,
-         // range-based for loops, ternary operator, but should never be the
-         // first token in an unwrapped line.
-         Tok.isNot(tok::colon) &&
-         // 'noexcept' is a trailing annotation.
-         Tok.isNot(tok::kw_noexcept);
+  return !Tok.isOneOf(tok::semi, tok::l_brace,
+                      // Tokens that can only be used as binary operators and a
+                      // part of overloaded operator names.
+                      tok::period, tok::periodstar, tok::arrow, tok::arrowstar,
+                      tok::less, tok::greater, tok::slash, tok::percent,
+                      tok::lessless, tok::greatergreater, tok::equal,
+                      tok::plusequal, tok::minusequal, tok::starequal,
+                      tok::slashequal, tok::percentequal, tok::ampequal,
+                      tok::pipeequal, tok::caretequal, tok::greatergreaterequal,
+                      tok::lesslessequal,
+                      // Colon is used in labels, base class lists, initializer
+                      // lists, range-based for loops, ternary operator, but
+                      // should never be the first token in an unwrapped line.
+                      tok::colon,
+                      // 'noexcept' is a trailing annotation.
+                      tok::kw_noexcept);
 }
 
 static bool mustBeJSIdent(const AdditionalKeywords &Keywords,

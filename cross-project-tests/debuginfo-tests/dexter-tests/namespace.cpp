@@ -5,9 +5,9 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 
+// RUN: %clang -g -O0 %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-g -O0" -v -- %s
+// RUN:     --binary %t --debugger 'lldb' -v -- %s
 
 #include <stdio.h>
 

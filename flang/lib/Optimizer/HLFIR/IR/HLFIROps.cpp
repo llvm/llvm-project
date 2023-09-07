@@ -24,8 +24,42 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
+#include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <optional>
 #include <tuple>
+
+/// generic implementation of the memory side effects interface for hlfir
+/// transformational intrinsic operations
+static void
+getIntrinsicEffects(mlir::Operation *self,
+                    llvm::SmallVectorImpl<mlir::SideEffects::EffectInstance<
+                        mlir::MemoryEffects::Effect>> &effects) {
+  // allocation effect if we return an expr
+  assert(self->getNumResults() == 1 &&
+         "hlfir intrinsic ops only produce 1 result");
+  if (mlir::isa<hlfir::ExprType>(self->getResult(0).getType()))
+    effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                         self->getResult(0),
+                         mlir::SideEffects::DefaultResource::get());
+
+  // read effect if we read from a pointer or refference type
+  // or a box who'se pointer is read from inside of the intrinsic so that
+  // loop conflicts can be detected in code like
+  // hlfir.region_assign {
+  //   %2 = hlfir.transpose %0#0 : (!fir.box<!fir.array<?x?xf32>>) ->
+  //   !hlfir.expr<?x?xf32> hlfir.yield %2 : !hlfir.expr<?x?xf32> cleanup {
+  //     hlfir.destroy %2 : !hlfir.expr<?x?xf32>
+  //   }
+  // } to {
+  //   hlfir.yield %0#0 : !fir.box<!fir.array<?x?xf32>>
+  // }
+  for (mlir::Value operand : self->getOperands()) {
+    mlir::Type opTy = operand.getType();
+    if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), operand,
+                           mlir::SideEffects::DefaultResource::get());
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // DeclareOp
@@ -501,12 +535,26 @@ mlir::LogicalResult hlfir::AllOp::verify() {
   return verifyLogicalReductionOp<hlfir::AllOp *>(this);
 }
 
+void hlfir::AllOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // AnyOp
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult hlfir::AnyOp::verify() {
   return verifyLogicalReductionOp<hlfir::AnyOp *>(this);
+}
+
+void hlfir::AnyOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -544,6 +592,13 @@ mlir::LogicalResult hlfir::CountOp::verify() {
   }
 
   return mlir::success();
+}
+
+void hlfir::CountOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -591,6 +646,13 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
       fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
       false);
   build(builder, result, resultType, strings, len);
+}
+
+void hlfir::ConcatOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -680,6 +742,13 @@ mlir::LogicalResult hlfir::ProductOp::verify() {
   return verifyNumericalReductionOp<hlfir::ProductOp *>(this);
 }
 
+void hlfir::ProductOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // SetLengthOp
 //===----------------------------------------------------------------------===//
@@ -698,12 +767,26 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
   build(builder, result, resultType, string, len);
 }
 
+void hlfir::SetLengthOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // SumOp
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult hlfir::SumOp::verify() {
   return verifyNumericalReductionOp<hlfir::SumOp *>(this);
+}
+
+void hlfir::SumOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -753,6 +836,13 @@ mlir::LogicalResult hlfir::DotProductOp::verify() {
         "the result must be of scalar numerical or logical type");
 
   return mlir::success();
+}
+
+void hlfir::DotProductOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -873,6 +963,13 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
   return mlir::failure();
 }
 
+void hlfir::MatmulOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -904,6 +1001,13 @@ mlir::LogicalResult hlfir::TransposeOp::verify() {
         "input and output arrays should have the same element type");
 
   return mlir::success();
+}
+
+void hlfir::TransposeOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -971,6 +1075,13 @@ mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
   return mlir::success();
 }
 
+void hlfir::MatmulTransposeOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
@@ -1027,6 +1138,17 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
                                          isPolymorphic);
   return build(builder, result, resultType, var, mustFree);
+}
+
+void hlfir::AsExprOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  // this isn't a transformational intrinsic but follows the same pattern: it
+  // creates a hlfir.expr and so needs to have an allocation effect, plus it
+  // might have a pointer-like argument, in which case it has a read effect
+  // upon those
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1523,6 +1645,13 @@ void hlfir::CharExtremumOp::build(mlir::OpBuilder &builder,
       false);
 
   build(builder, result, resultType, predicate, strings);
+}
+
+void hlfir::CharExtremumOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//

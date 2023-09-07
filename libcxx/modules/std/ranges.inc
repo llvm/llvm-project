@@ -204,11 +204,13 @@ export namespace std {
       using std::ranges::views::drop_while;
     } // namespace views
 
+#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::ranges::join_view;
 
     namespace views {
       using std::ranges::views::join;
     } // namespace views
+#endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #if 0
     using std::ranges::join_with_view;
 
@@ -311,12 +313,14 @@ export namespace std {
     }
 #endif
 
+#if _LIBCPP_STD_VER >= 23
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
 
     namespace views {
       using std::ranges::views::chunk_by;
     }
+#endif // _LIBCPP_STD_VER >= 23
 
 #if 0
     // [range.stride], stride view

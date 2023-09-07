@@ -1,5 +1,5 @@
-RUN: dsymutil -f -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o - \
-RUN:   | llvm-dwarfdump -apple-types -apple-objc - | FileCheck %s
+RUN: dsymutil --verify-dwarf=output -f -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.d4
+RUN: llvm-dwarfdump -apple-types -apple-objc %t.d4 | FileCheck %s
 
 CHECK: .apple_types contents:
 CHECK: String: 0x00000066 "A"
