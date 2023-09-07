@@ -75,22 +75,19 @@ define dso_local i64 @rotatemask64(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX64-LABEL: rotatemask64:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    cntlzd r4, r3
-; AIX64-NEXT:    rotld r3, r3, r4
-; AIX64-NEXT:    clrldi r3, r3, 1
+; AIX64-NEXT:    rldcl r3, r3, r4, 1
 ; AIX64-NEXT:    blr
 ;
 ; LINUX64BE-LABEL: rotatemask64:
 ; LINUX64BE:       # %bb.0: # %entry
 ; LINUX64BE-NEXT:    cntlzd r4, r3
-; LINUX64BE-NEXT:    rotld r3, r3, r4
-; LINUX64BE-NEXT:    clrldi r3, r3, 1
+; LINUX64BE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64BE-NEXT:    blr
 ;
 ; LINUX64LE-LABEL: rotatemask64:
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    cntlzd r4, r3
-; LINUX64LE-NEXT:    rotld r3, r3, r4
-; LINUX64LE-NEXT:    clrldi r3, r3, 1
+; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
@@ -126,22 +123,19 @@ define dso_local i64 @rotatemask64_2(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX64-LABEL: rotatemask64_2:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    cntlzd r4, r3
-; AIX64-NEXT:    rotld r3, r3, r4
-; AIX64-NEXT:    clrldi r3, r3, 1
+; AIX64-NEXT:    rldcl r3, r3, r4, 1
 ; AIX64-NEXT:    blr
 ;
 ; LINUX64BE-LABEL: rotatemask64_2:
 ; LINUX64BE:       # %bb.0: # %entry
 ; LINUX64BE-NEXT:    cntlzd r4, r3
-; LINUX64BE-NEXT:    rotld r3, r3, r4
-; LINUX64BE-NEXT:    clrldi r3, r3, 1
+; LINUX64BE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64BE-NEXT:    blr
 ;
 ; LINUX64LE-LABEL: rotatemask64_2:
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    cntlzd r4, r3
-; LINUX64LE-NEXT:    rotld r3, r3, r4
-; LINUX64LE-NEXT:    clrldi r3, r3, 1
+; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.ctlz.i64(i64 %word, i1 false)
@@ -222,20 +216,17 @@ define dso_local i64 @rotatemask64_nocount(i64 noundef %word, i64 noundef %clz) 
 ;
 ; AIX64-LABEL: rotatemask64_nocount:
 ; AIX64:       # %bb.0: # %entry
-; AIX64-NEXT:    rotld r3, r3, r4
-; AIX64-NEXT:    clrldi r3, r3, 8
+; AIX64-NEXT:    rldcl r3, r3, r4, 8
 ; AIX64-NEXT:    blr
 ;
 ; LINUX64BE-LABEL: rotatemask64_nocount:
 ; LINUX64BE:       # %bb.0: # %entry
-; LINUX64BE-NEXT:    rotld r3, r3, r4
-; LINUX64BE-NEXT:    clrldi r3, r3, 8
+; LINUX64BE-NEXT:    rldcl r3, r3, r4, 8
 ; LINUX64BE-NEXT:    blr
 ;
 ; LINUX64LE-LABEL: rotatemask64_nocount:
 ; LINUX64LE:       # %bb.0: # %entry
-; LINUX64LE-NEXT:    rotld r3, r3, r4
-; LINUX64LE-NEXT:    clrldi r3, r3, 8
+; LINUX64LE-NEXT:    rldcl r3, r3, r4, 8
 ; LINUX64LE-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %clz)
@@ -262,20 +253,17 @@ define dso_local i64 @builtincheck(i64 noundef %word, i64 noundef %shift) local_
 ;
 ; AIX64-LABEL: builtincheck:
 ; AIX64:       # %bb.0: # %entry
-; AIX64-NEXT:    rotld r3, r3, r4
-; AIX64-NEXT:    clrldi r3, r3, 1
+; AIX64-NEXT:    rldcl r3, r3, r4, 1
 ; AIX64-NEXT:    blr
 ;
 ; LINUX64BE-LABEL: builtincheck:
 ; LINUX64BE:       # %bb.0: # %entry
-; LINUX64BE-NEXT:    rotld r3, r3, r4
-; LINUX64BE-NEXT:    clrldi r3, r3, 1
+; LINUX64BE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64BE-NEXT:    blr
 ;
 ; LINUX64LE-LABEL: builtincheck:
 ; LINUX64LE:       # %bb.0: # %entry
-; LINUX64LE-NEXT:    rotld r3, r3, r4
-; LINUX64LE-NEXT:    clrldi r3, r3, 1
+; LINUX64LE-NEXT:    rldcl r3, r3, r4, 1
 ; LINUX64LE-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 %shift)
@@ -352,9 +340,9 @@ define dso_local i64 @twomasks(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -112(r1)
 ; AIX64-NEXT:    cntlzd r4, r3
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    rotld r4, r3, r4
-; AIX64-NEXT:    clrldi r3, r4, 1
-; AIX64-NEXT:    clrldi r4, r4, 16
+; AIX64-NEXT:    rldcl r5, r3, r4, 1
+; AIX64-NEXT:    rldcl r4, r3, r4, 16
+; AIX64-NEXT:    mr r3, r5
 ; AIX64-NEXT:    bl .callee[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 112
@@ -368,9 +356,9 @@ define dso_local i64 @twomasks(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    stdu r1, -112(r1)
 ; LINUX64BE-NEXT:    cntlzd r4, r3
 ; LINUX64BE-NEXT:    std r0, 128(r1)
-; LINUX64BE-NEXT:    rotld r4, r3, r4
-; LINUX64BE-NEXT:    clrldi r3, r4, 1
-; LINUX64BE-NEXT:    clrldi r4, r4, 16
+; LINUX64BE-NEXT:    rldcl r5, r3, r4, 1
+; LINUX64BE-NEXT:    rldcl r4, r3, r4, 16
+; LINUX64BE-NEXT:    mr r3, r5
 ; LINUX64BE-NEXT:    bl callee
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addi r1, r1, 112
@@ -384,9 +372,9 @@ define dso_local i64 @twomasks(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    stdu r1, -32(r1)
 ; LINUX64LE-NEXT:    cntlzd r4, r3
 ; LINUX64LE-NEXT:    std r0, 48(r1)
-; LINUX64LE-NEXT:    rotld r4, r3, r4
-; LINUX64LE-NEXT:    clrldi r3, r4, 1
-; LINUX64LE-NEXT:    clrldi r4, r4, 16
+; LINUX64LE-NEXT:    rldcl r5, r3, r4, 1
+; LINUX64LE-NEXT:    rldcl r4, r3, r4, 16
+; LINUX64LE-NEXT:    mr r3, r5
 ; LINUX64LE-NEXT:    bl callee
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 32
@@ -445,8 +433,7 @@ define dso_local i64 @tworotates(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -112(r1)
 ; AIX64-NEXT:    cntlzd r4, r3
 ; AIX64-NEXT:    std r0, 128(r1)
-; AIX64-NEXT:    rotld r4, r3, r4
-; AIX64-NEXT:    clrldi r5, r4, 1
+; AIX64-NEXT:    rldcl r5, r3, r4, 1
 ; AIX64-NEXT:    rldicl r4, r3, 23, 1
 ; AIX64-NEXT:    mr r3, r5
 ; AIX64-NEXT:    bl .callee[PR]
@@ -462,8 +449,7 @@ define dso_local i64 @tworotates(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    stdu r1, -112(r1)
 ; LINUX64BE-NEXT:    cntlzd r4, r3
 ; LINUX64BE-NEXT:    std r0, 128(r1)
-; LINUX64BE-NEXT:    rotld r4, r3, r4
-; LINUX64BE-NEXT:    clrldi r5, r4, 1
+; LINUX64BE-NEXT:    rldcl r5, r3, r4, 1
 ; LINUX64BE-NEXT:    rldicl r4, r3, 23, 1
 ; LINUX64BE-NEXT:    mr r3, r5
 ; LINUX64BE-NEXT:    bl callee
@@ -479,8 +465,7 @@ define dso_local i64 @tworotates(i64 noundef %word) local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    stdu r1, -32(r1)
 ; LINUX64LE-NEXT:    cntlzd r4, r3
 ; LINUX64LE-NEXT:    std r0, 48(r1)
-; LINUX64LE-NEXT:    rotld r4, r3, r4
-; LINUX64LE-NEXT:    clrldi r5, r4, 1
+; LINUX64LE-NEXT:    rldcl r5, r3, r4, 1
 ; LINUX64LE-NEXT:    rldicl r4, r3, 23, 1
 ; LINUX64LE-NEXT:    mr r3, r5
 ; LINUX64LE-NEXT:    bl callee
