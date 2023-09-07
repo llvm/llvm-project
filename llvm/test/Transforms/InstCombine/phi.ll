@@ -2304,27 +2304,24 @@ define i1 @icmp_fold_into_phi_beyondBB(ptr noundef %val1, ptr noundef readonly %
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[TEST_0_I]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP1_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[TEST_0_I]], [[VAL1]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[TMP1]], [[WHILE_END_I]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT20:%.*]], label [[WHILE_COND_I11:%.*]]
 ; CHECK:       while.cond.i11:
 ; CHECK-NEXT:    [[TEST_0_I12:%.*]] = phi ptr [ [[INCDEC_PTR_I14:%.*]], [[WHILE_COND_I11]] ], [ [[VAL2]], [[_Z3FOOPKC_EXIT]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
-; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    [[INCDEC_PTR_I14]] = getelementptr inbounds i8, ptr [[TEST_0_I12]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP1_NOT_I13]], label [[WHILE_END_I15:%.*]], label [[WHILE_COND_I11]]
 ; CHECK:       while.end.i15:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I12]], [[VAL2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TEST_0_I12]], [[VAL2]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT20]]
 ; CHECK:       _Z3fooPKc.exit20:
-; CHECK-NEXT:    [[RETVAL_0_I19:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I15]] ], [ false, [[_Z3FOOPKC_EXIT]] ]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
-; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[TOBOOL]], [[RETVAL_0_I19]]
+; CHECK-NEXT:    [[RETVAL_0_I19:%.*]] = phi i1 [ [[TMP3]], [[WHILE_END_I15]] ], [ false, [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[RETVAL_0_I]], [[RETVAL_0_I19]]
 ; CHECK-NEXT:    ret i1 [[AND9]]
 ;
 entry:
