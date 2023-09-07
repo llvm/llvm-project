@@ -137,14 +137,33 @@ public:
   /// the basic block that MovePos lives in, right before MovePos.
   void moveBefore(Instruction *MovePos);
 
+  /// Perform a \ref moveBefore operation, while signalling that the caller
+  /// intends to preserve the original ordering of instructions. This implicitly
+  /// means that any adjacent debug-info should move with this instruction.
+  /// This method is currently a no-op placeholder, but it will become meaningful
+  /// when the "RemoveDIs" project is enabled.
+  void moveBeforePreserving(Instruction *MovePos) {
+    moveBefore(MovePos);
+  }
+
   /// Unlink this instruction and insert into BB before I.
   ///
   /// \pre I is a valid iterator into BB.
   void moveBefore(BasicBlock &BB, SymbolTableList<Instruction>::iterator I);
 
+  /// (See other overload for moveBeforePreserving).
+  void moveBeforePreserving(BasicBlock &BB, SymbolTableList<Instruction>::iterator I) {
+    moveBefore(BB, I);
+  }
+
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right after MovePos.
   void moveAfter(Instruction *MovePos);
+
+  /// See \ref moveBeforePreserving .
+  void moveAfterPreserving(Instruction *MovePos) {
+    moveAfter(MovePos);
+  }
 
   /// Given an instruction Other in the same basic block as this instruction,
   /// return true if this instruction comes before Other. In this worst case,
