@@ -1837,6 +1837,64 @@ def AwaitOp : CIR_Op<"await",
 }
 
 //===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+def TryOp : CIR_Op<"try",
+       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+        RecursivelySpeculatable, NoRegionArguments]> {
+  let summary = "";
+  let description = [{
+    ```mlir
+    cir.scope  {
+      // Selector and exception control related allocas
+      // C++ `try {}` local variable declarations
+      %except_info = cir.try {
+        %res0, %exh = cir.call @return_something()
+        %if %exh
+          cir.yield %exh
+
+        %exh2 = cir.call @return_void()
+        %if %exh2
+          cir.yield %exh
+        cir.yield #zero : !except_type
+      }
+      ...
+      cir.br ^cleanup
+      ^cleanup:
+        // Run dtors
+        ...
+        // Catch based %except_info
+        cir.catch(%except_info, [
+          /*catch A*/ {},
+          /*catch B*/ {},
+          ...
+          all {}
+        ])
+      cir.yield
+    }
+    ```
+
+    Note that variables declared inside a `try {}` in C++ will
+    have their allocas places in the surrounding scope.
+  }];
+
+  let regions = (region SizedRegion<1>:$body);
+  // FIXME: should be exception type.
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    `{`
+      $body
+    `}` `:` functional-type(operands, results) attr-dict
+  }];
+
+  // Everything already covered elswhere.
+  let hasVerifier = 0;
+}
+
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

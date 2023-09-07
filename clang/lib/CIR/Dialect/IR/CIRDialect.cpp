@@ -669,6 +669,22 @@ void ScopeOp::build(OpBuilder &builder, OperationState &result,
 LogicalResult ScopeOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+void TryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                SmallVectorImpl<RegionSuccessor> &regions) {
+  // The only region always branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(this->getODSResults(0)));
+    return;
+  }
+
+  // If the condition isn't constant, both regions may be executed.
+  regions.push_back(RegionSuccessor(&getBody()));
+}
+
+//===----------------------------------------------------------------------===//
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
