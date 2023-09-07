@@ -8,7 +8,7 @@
 #
 # RUN: env LIT_OPTS=-a \
 # RUN: %{lit} -s %{inputs}/lit-opts \
-# RUN: | FileCheck -check-prefix=SHOW-ALL -DVAR=default %s
+# RUN: | FileCheck -check-prefix=SHOW-ALL -DVAR= %s
 
 # Check that LIT_OPTS understands multiple options with arbitrary spacing.
 #
@@ -28,6 +28,6 @@
 
 # SHOW-ALL:     Testing: 1 tests
 # SHOW-ALL:     PASS: lit-opts :: test.txt (1 of 1)
-# SHOW-ALL:     echo [[VAR]]
+# SHOW-ALL:     {{^}}[[VAR]]
 # SHOW-ALL-NOT: PASS
 # SHOW-ALL:     Passed: 1

@@ -136,15 +136,15 @@
 # RUN: %{lit} -va %{my-inputs}/shared-substs-*.txt 2>&1 |                      \
 # RUN:   FileCheck -check-prefix=SHARED-SUBSTS -match-full-lines %s
 #
-# SHARED-SUBSTS:# | shared-substs-0.txt
-# SHARED-SUBSTS:# | GLOBAL: World
-# SHARED-SUBSTS:# | LOCAL0: LOCAL0:Hello LOCAL0:World
-# SHARED-SUBSTS:# | LOCAL0: subst
+# SHARED-SUBSTS: shared-substs-0.txt
+# SHARED-SUBSTS: GLOBAL: World
+# SHARED-SUBSTS: LOCAL0: LOCAL0:Hello LOCAL0:World
+# SHARED-SUBSTS: LOCAL0: subst
 #
-# SHARED-SUBSTS:# | shared-substs-1.txt
-# SHARED-SUBSTS:# | GLOBAL: World
-# SHARED-SUBSTS:# | LOCAL1: LOCAL1:Hello LOCAL1:World
-# SHARED-SUBSTS:# | LOCAL1: subst
+# SHARED-SUBSTS: shared-substs-1.txt
+# SHARED-SUBSTS: GLOBAL: World
+# SHARED-SUBSTS: LOCAL1: LOCAL1:Hello LOCAL1:World
+# SHARED-SUBSTS: LOCAL1: subst
 #
 # REDEFINE: %{test} = shared-substs-0.txt
 # RUN: %{record-test}

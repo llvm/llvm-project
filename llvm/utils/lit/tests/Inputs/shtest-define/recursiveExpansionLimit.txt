@@ -6,7 +6,7 @@
 
 # RUN: echo '%{outer}'
 
-# CHECK-NON-RECUR:# | %{inner}
-# CHECK-RECUR:# | expanded
+# CHECK-NON-RECUR:%{inner}
+# CHECK-RECUR:expanded
 
 # CHECK: Passed: 1

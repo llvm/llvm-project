@@ -1,4 +1,3 @@
 # RUN: true
 # RUN: echo hi
-# RUN: not not wc missing-file &> %t.out || true
-# RUN: not %{python} %S/write-a-lot.py &> %t.out
+# RUN: not not wc missing-file &> %t.out
