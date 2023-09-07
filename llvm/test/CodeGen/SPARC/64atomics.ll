@@ -18,7 +18,7 @@ entry:
 
 ; CHECK-LABEL: test_cmpxchg_i64
 ; CHECK:       mov 123, [[R:%[gilo][0-7]]]
-; CHECK:       casxa [%o1] #ASI_P, %o0, [[R]]
+; CHECK:       casx [%o1], %o0, [[R]]
 
 define i64 @test_cmpxchg_i64(i64 %a, i64* %ptr) {
 entry:
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_swap_i64
-; CHECK:       casxa [%o1] #ASI_P,
+; CHECK:       casx [%o1],
 
 define i64 @test_swap_i64(i64 %a, i64* %ptr) {
 entry:
@@ -39,7 +39,7 @@ entry:
 ; CHECK-LABEL: test_load_sub_64
 ; CHECK: membar
 ; CHECK: sub
-; CHECK: casxa [%o0] #ASI_P
+; CHECK: casx [%o0]
 ; CHECK: membar
 define zeroext i64 @test_load_sub_64(i64* %p, i64 zeroext %v) {
 entry:
@@ -51,7 +51,7 @@ entry:
 ; CHECK: membar
 ; CHECK: cmp
 ; CHECK: movg %xcc
-; CHECK: casxa [%o0] #ASI_P
+; CHECK: casx [%o0]
 ; CHECK: membar
 define zeroext i64 @test_load_max_64(i64* %p, i64 zeroext %v) {
 entry:
