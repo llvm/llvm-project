@@ -618,5 +618,11 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/test/Sema/*wasm* @llvm/pr-subscribers-webassembly
 /clang/test/SemaCXX/*wasm* @llvm/pr-subscribers-webassembly
 
+/lld/**/COFF/ @llvm/pr-subscribers-lld-coff
+/lld/**/ELF/ @llvm/pr-subscribers-lld-elf
+/lld/**/MachO/ @llvm/pr-subscribers-lld-macho
+/lld/**/wasm/ @llvm/pr-subscribers-lld-wasm
+/lld/Common/ @llvm/pr-subscribers-lld-coff @llvm/pr-subscribers-lld-elf @llvm/pr-subscribers-lld-macho @llvm/pr-subscribers-lld-wasm
+
 # lldb
 /lldb/** @llvm/pr-subscribers-lldb

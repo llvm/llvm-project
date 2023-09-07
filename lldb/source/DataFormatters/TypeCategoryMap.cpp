@@ -24,7 +24,7 @@ TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
   Enable(default_cs, First);
 }
 
-void TypeCategoryMap::Add(KeyType name, const ValueSP &entry) {
+void TypeCategoryMap::Add(KeyType name, const TypeCategoryImplSP &entry) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   m_map[name] = entry;
   if (listener)
@@ -45,7 +45,7 @@ bool TypeCategoryMap::Delete(KeyType name) {
 
 bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  ValueSP category;
+  TypeCategoryImplSP category;
   if (!Get(category_name, category))
     return false;
   return Enable(category, pos);
@@ -53,13 +53,13 @@ bool TypeCategoryMap::Enable(KeyType category_name, Position pos) {
 
 bool TypeCategoryMap::Disable(KeyType category_name) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  ValueSP category;
+  TypeCategoryImplSP category;
   if (!Get(category_name, category))
     return false;
   return Disable(category);
 }
 
-bool TypeCategoryMap::Enable(ValueSP category, Position pos) {
+bool TypeCategoryMap::Enable(TypeCategoryImplSP category, Position pos) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   if (category.get()) {
     Position pos_w = pos;
@@ -81,7 +81,7 @@ bool TypeCategoryMap::Enable(ValueSP category, Position pos) {
   return false;
 }
 
-bool TypeCategoryMap::Disable(ValueSP category) {
+bool TypeCategoryMap::Disable(TypeCategoryImplSP category) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   if (category.get()) {
     m_active_categories.remove_if(delete_matching_categories(category));
@@ -93,7 +93,7 @@ bool TypeCategoryMap::Disable(ValueSP category) {
 
 void TypeCategoryMap::EnableAllCategories() {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  std::vector<ValueSP> sorted_categories(m_map.size(), ValueSP());
+  std::vector<TypeCategoryImplSP> sorted_categories(m_map.size(), TypeCategoryImplSP());
   MapType::iterator iter = m_map.begin(), end = m_map.end();
   for (; iter != end; ++iter) {
     if (iter->second->IsEnabled())
@@ -102,7 +102,7 @@ void TypeCategoryMap::EnableAllCategories() {
     if (pos >= sorted_categories.size()) {
       auto iter = std::find_if(
           sorted_categories.begin(), sorted_categories.end(),
-          [](const ValueSP &sp) -> bool { return sp.get() == nullptr; });
+          [](const TypeCategoryImplSP &sp) -> bool { return sp.get() == nullptr; });
       pos = std::distance(sorted_categories.begin(), iter);
     }
     sorted_categories.at(pos) = iter->second;
@@ -130,7 +130,7 @@ void TypeCategoryMap::Clear() {
     listener->Changed();
 }
 
-bool TypeCategoryMap::Get(KeyType name, ValueSP &entry) {
+bool TypeCategoryMap::Get(KeyType name, TypeCategoryImplSP &entry) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
   MapIterator iter = m_map.find(name);
   if (iter == m_map.end())

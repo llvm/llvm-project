@@ -18,6 +18,8 @@ namespace __llvm_libc::cpp {
 using nullptr_t = decltype(nullptr);
 template <class T>
 struct is_null_pointer : cpp::is_same<cpp::nullptr_t, cpp::remove_cv_t<T>> {};
+template <class T>
+LIBC_INLINE_VAR constexpr bool is_null_pointer_v = is_null_pointer<T>::value;
 
 } // namespace __llvm_libc::cpp
 

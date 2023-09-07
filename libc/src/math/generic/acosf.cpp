@@ -73,8 +73,13 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
     return static_cast<float>(fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd));
   }
 
-  // |x| > 1, return NaNs.
-  if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
+  // |x| >= 1, return 0, 2pi, or NaNs.
+  if (LIBC_UNLIKELY(x_abs >= 0x3f80'0000U)) {
+    if (x_abs == 0x3f80'0000U)
+      return x_sign ? /* x == -1.0f */ fputil::round_result_slightly_down(
+                          0x1.921fb6p+1f)
+                    : /* x == 1.0f */ 0.0f;
+
     if (x_abs <= 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
@@ -82,7 +87,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
     return x + FPBits::build_quiet_nan(0);
   }
 
-  // When 0.5 < |x| <= 1, we perform range reduction as follow:
+  // When 0.5 < |x| < 1, we perform range reduction as follow:
   //
   // Assume further that 0.5 < x <= 1, and let:
   //   y = acos(x)
@@ -100,7 +105,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   // |x| <= 0.5:
   //   acos(x) ~ 2 * sqrt(u) * P(u).
   //
-  // When -1 <= x <= -0.5, we use the identity:
+  // When -1 < x <= -0.5, we use the identity:
   //   acos(x) = pi - acos(-x)
   // which is reduced to the postive case.
 

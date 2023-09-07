@@ -85,7 +85,7 @@ transform.sequence failures(propagate) {
 
   // Assign shared memory buffer to padding.
   %buffer, %new_ops = transform.structured.bufferize_to_allocation
-      %pad_forall_op {memory_space = 3, bufferize_destination_only}
+      %pad_forall_op {memory_space = 3, bufferize_destination_only, emit_dealloc}
       : !transform.any_op
 
   // Bufferize.
@@ -197,7 +197,7 @@ transform.sequence failures(propagate) {
 
   // Assign shared memory buffer to padding.
   %buffer, %new_ops = transform.structured.bufferize_to_allocation
-      %pad_forall_op {memory_space = 3, bufferize_destination_only}
+      %pad_forall_op {memory_space = 3, bufferize_destination_only, emit_dealloc}
       : !transform.any_op
 
   // Bufferize.
