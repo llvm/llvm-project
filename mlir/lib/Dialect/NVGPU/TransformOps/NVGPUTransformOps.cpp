@@ -65,6 +65,11 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
         getMBarrierMemrefType(type.getContext(), type));
   });
   llvmTypeConverter.addConversion(
+      [&](nvgpu::WarpgroupMatrixDescriptorType type) -> Type {
+        return llvmTypeConverter.convertType(
+            IntegerType::get(type.getContext(), 64));
+      });
+  llvmTypeConverter.addConversion(
       [&](nvgpu::TensorMapDescriptorType type) -> Type {
         return llvmTypeConverter.getPointerType(
             type.getTensor().getElementType());
