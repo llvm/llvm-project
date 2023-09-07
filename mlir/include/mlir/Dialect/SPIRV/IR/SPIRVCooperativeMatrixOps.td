@@ -203,6 +203,112 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   let results = (outs);
 }
 
+// -----
+
+def SPIRV_KHRCooperativeMatrixMulAddOp : SPIRV_KhrVendorOp<"CooperativeMatrixMulAdd",
+  [Pure, AllTypesMatch<["c", "result"]>]> {
+  let summary = "Returns the result of `(A x B) + C` of matrices A, B, and C";
+
+  let description = [{
+    Linear-algebraic matrix multiply of A by B and then component-wise add C.
+    The order of the operations is implementation-dependent. The internal
+    precision of floating-point operations is defined by the client API. Integer
+    operations used in the multiplication of A by B are performed at the
+    precision of the Result Type and the resulting value will equal the
+    low-order N bits of the correct result R, where N is the result width and R
+    is computed with enough precision to avoid overflow and underflow if the
+    SaturatingAccumulation Cooperative Matrix Operand is not present. If the
+    SaturatingAccumulation Cooperative Matrix Operand is present and overflow or
+    underflow occurs as part of calculating that intermediate result, the result
+    of the instruction is undefined. Integer additions of the elements of that
+    intermediate result with those of C are performed at the precision of Result
+    Type, are exact, and are saturating if the SaturatingAccumulation
+    Cooperative Matrix Operand is present, with the signedness of the saturation
+    being that of the components of Result Type. If the SaturatingAccumulation
+    Cooperative Matrix Operand is not present then the resulting value will
+    equal the low-order N bits of the correct result R, where N is the result
+    width and R is computed with enough precision to avoid overflow and
+    underflow.
+
+    Result Type must be a cooperative matrix type with M rows and N columns
+    whose Use must be MatrixAccumulatorKHR.
+
+    A is a cooperative matrix with M rows and K columns whose Use must be
+    MatrixAKHR.
+
+    B is a cooperative matrix with K rows and N columns whose Use must be
+    MatrixBKHR.
+
+    C is a cooperative matrix with M rows and N columns whose Use must be
+    MatrixAccumulatorKHR.
+
+    The values of M, N, and K must be consistent across the result and operands.
+    This is referred to as an MxNxK matrix multiply.
+
+    A, B, C, and Result Type must have the same scope, and this defines the
+    scope of the operation. A, B, C, and Result Type need not necessarily have
+    the same component type, this is defined by the client API.
+
+    If the Component Type of any matrix operand is an integer type, then its
+    components are treated as signed if the Matrix{A,B,C,Result}SignedComponents
+    Cooperative Matrix Operand is present and are treated as unsigned otherwise.
+
+    Cooperative Matrix Operands is an optional Cooperative Matrix Operand
+    literal. If not present, it is the same as specifying the Cooperative Matrix
+    Operand None.
+
+    For a given dynamic instance of this instruction, all invocations in a given
+    scope instance must be active or all must be inactive (where the scope is
+    the scope of the operation).
+
+    ``` {.ebnf}
+    cooperative-matrixmuladd-op ::= ssa-id `=` `spirv.KHR.CooperativeMatrixMulAdd`
+                              ssa-use `,` ssa-use `,` ssa-use
+                              (`<` matrix-operands `>`)? `:`
+                              a-cooperative-matrix-type `,`
+                              b-cooperative-matrix-type `->`
+                                result-cooperative-matrix-type
+    ```
+
+    #### Example:
+
+    ```
+    %0 = spirv.KHR.CooperativeMatrixMulAdd %matA, %matB, %matC :
+      !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>,
+      !spirv.coopmatrix<4x4xf32, Subgroup, MatrixB> ->
+        !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>
+
+    %1 = spirv.KHR.CooperativeMatrixMulAdd %matA, %matB, %matC, <ASigned | AccSat> :
+      !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>,
+      !spirv.coopmatrix<16x4xi32, Subgroup, MatrixB> ->
+        !spirv.coopmatrix<8x4xi32, Subgroup, MatrixAcc>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $a `,` $b `,` $c ( `,` $matrix_operands^ )? attr-dict `:`
+      type($a) `,` type($b) `->` type($c)
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_6>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyCooperativeMatrix:$a,
+    SPIRV_AnyCooperativeMatrix:$b,
+    SPIRV_AnyCooperativeMatrix:$c,
+    OptionalAttr<SPIRV_KHR_CooperativeMatrixOperandsAttr>:$matrix_operands
+  );
+
+  let results = (outs
+    SPIRV_AnyCooperativeMatrix:$result
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // SPV_NV_cooperative_matrix extension ops.
 //===----------------------------------------------------------------------===//
@@ -380,7 +486,7 @@ def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAd
   }];
 
   let assemblyFormat = [{
-    operands attr-dict`:` type($a) `,` type($b) `->` type($c)
+    operands attr-dict `:` type($a) `,` type($b) `->` type($c)
   }];
 
   let availability = [
