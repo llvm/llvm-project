@@ -395,8 +395,6 @@ void Module::setDataLayout(StringRef Desc) {
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
-const DataLayout &Module::getDataLayout() const { return DL; }
-
 DICompileUnit *Module::debug_compile_units_iterator::operator*() const {
   return cast<DICompileUnit>(CUs->getOperand(Idx));
 }
