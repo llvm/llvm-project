@@ -9,11 +9,11 @@
 
 $_f1 = comdat any
 $_f2 = comdat any
-@_f1 = linkonce_odr hidden local_unnamed_addr addrspace(3) global %vec_type undef, comdat, align 1
-@_f2 = linkonce_odr hidden local_unnamed_addr addrspace(3) global %vec_type undef, comdat, align 1
+@_f1 = linkonce_odr hidden local_unnamed_addr addrspace(3) global %vec_type poison, comdat, align 1
+@_f2 = linkonce_odr hidden local_unnamed_addr addrspace(3) global %vec_type poison, comdat, align 1
 
 ;.
-; CHECK: @[[LLVM_AMDGCN_KERNEL_TEST_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]] undef, align 4, !absolute_symbol !0
+; CHECK: @[[LLVM_AMDGCN_KERNEL_TEST_LDS:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]] poison, align 4, !absolute_symbol !0
 ;.
 define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce) local_unnamed_addr #0 {
 ; GCN-LABEL: test:
