@@ -5,19 +5,19 @@ google-cpp-init-class-members
 
 Checks that class members are initialized in constructors (implicitly or
 explicitly). Reports constructors or classes where class members are not
-initialized. The goal of this checker is to eliminate UUM (Use of
+initialized. The goal of this check is to eliminate UUM (Use of
 Uninitialized Memory) bugs caused by uninitialized class members.
 
-This checker is under active development: the checker authors made a few commits
+This check is under active development: the check authors made a few commits
 and are actively working on more commits. Users who want a mature and stable
-checker should not use this checker yet.
+check should not use this check yet.
 
-This checker is different from ProTypeMemberInitCheck in that this checker
+This check is different from ProTypeMemberInitCheck in that this check
 attempts to eliminate UUMs as a bug class, at the expense of false
-positives. The authors of this checker will add more documentation about the
-differences with ProTypeMemberInitCheck as the checker evolves.
+positives. The authors of this check will add more documentation about the
+differences with ProTypeMemberInitCheck as the check evolves.
 
-For now, this checker reports `X` in the following two patterns:
+For now, this check reports `X` in the following two patterns:
 
 .. code-block:: c++
   class SomeClass {

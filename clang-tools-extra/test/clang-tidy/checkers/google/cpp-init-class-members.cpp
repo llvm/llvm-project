@@ -1,5 +1,17 @@
 // RUN: %check_clang_tidy %s google-cpp-init-class-members %t
 
+// TODO: The following issues are not yet handled by the check and are not
+// covered by the tests. We may decide that the check needs to report some of
+// these cases and should not report some the remaining cases. This exact
+// decision is also part of the TODO:
+//  - Deleted constructor
+//  - Inheritance
+//  - Struct with anonymous members
+//  - Struct with anonymous union members
+//  - Unnamed structs
+//  - Nested structs
+//  - etc
+
 class PositiveDefaultedDefaultConstructor {
 public:
   PositiveDefaultedDefaultConstructor() = default;

@@ -152,11 +152,7 @@ New checks
   <clang-tidy/checks/google/cpp-init-class-members>` check.
 
   Checks that class members are initialized in constructors (implicitly or
-  explicitly). This checker aims to completely eliminate UUM (Use of
-  Uninitialized Memory) bugs caused by uninitialized class members. This checker
-  is under active development: the checker authors made a few commits and are
-  actively working on more commits. Users who want a mature and stable checker
-  should not use this checker yet.
+  explicitly).
 
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.

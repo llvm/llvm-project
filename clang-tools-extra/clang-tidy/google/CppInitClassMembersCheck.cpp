@@ -33,7 +33,7 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
 
 // Returns the names of `Fields` in a comma separated string.
 std::string
-toCommaSeparatedString(const SmallVector<const FieldDecl *, 16> &Fields) {
+toCommaSeparatedString(const ArrayRef<const FieldDecl *> &Fields) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   llvm::interleave(
@@ -42,14 +42,14 @@ toCommaSeparatedString(const SmallVector<const FieldDecl *, 16> &Fields) {
   return Buffer;
 }
 
-// Returns `true` for field types that should be reported (if additional
-// conditions are also met). For example, returns `true` for `int` because an
-// uninitialized `int` field can contain uninitialized values.
-bool shouldReportThisFieldType(QualType Ty) {
+// Returns `true` for types that have uninitialized values by default. For
+// example, returns `true` for `int` because an uninitialized `int` field or
+// local variable can contain uninitialized values.
+bool isDefaultValueUninitialized(QualType Ty) {
   if (Ty.isNull())
     return false;
 
-  // FIXME: For now, this checker focuses on several allowlisted types. We will
+  // FIXME: For now, this check focuses on several allowlisted types. We will
   // expand coverage in future.
   return Ty->isIntegerType() || Ty->isBooleanType();
 }
@@ -62,7 +62,8 @@ void CppInitClassMembersCheck::checkMissingMemberInitializer(
   SmallVector<const FieldDecl *, 16> FieldsToReport;
 
   for (const FieldDecl *F : ClassDecl.fields()) {
-    if (shouldReportThisFieldType(F->getType()) && !F->hasInClassInitializer())
+    if (isDefaultValueUninitialized(F->getType()) &&
+        !F->hasInClassInitializer())
       FieldsToReport.push_back(F);
   }
 
@@ -103,3 +104,4 @@ void CppInitClassMembersCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 } // namespace clang::tidy::google
+

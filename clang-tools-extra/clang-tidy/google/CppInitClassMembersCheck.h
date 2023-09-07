@@ -15,14 +15,14 @@ namespace clang::tidy::google {
 
 /// Checks that class members are initialized in constructors (implicitly or
 /// explicitly). Reports constructors or classes where class members are not
-/// initialized. The goal of this checker is to eliminate UUM (Use of
+/// initialized. The goal of this check is to eliminate UUM (Use of
 /// Uninitialized Memory) bugs caused by uninitialized class members.
 ///
-/// This checker is under active development: the checker authors made a few
+/// This check is under active development: the check authors made a few
 /// commits and are actively working on more commits. Users who want a mature
-/// and stable checker should not use this checker yet.
+/// and stable check should not use this check yet.
 ///
-/// This checker is different from ProTypeMemberInitCheck in that this checker
+/// This check is different from ProTypeMemberInitCheck in that this check
 /// attempts to eliminate UUMs as a bug class, at the expense of false
 /// positives.
 ///
@@ -33,7 +33,7 @@ public:
   CppInitClassMembersCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus && !LangOpts.ObjC;
+    return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
