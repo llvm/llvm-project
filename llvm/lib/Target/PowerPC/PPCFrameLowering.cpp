@@ -2740,3 +2740,10 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
     return false;
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
 }
+
+uint64_t PPCFrameLowering::getStackThreshold() const {
+  if (Subtarget.isPPC64())
+    return 1UL << 63;
+
+  return TargetFrameLowering::getStackThreshold();
+}
