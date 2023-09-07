@@ -54,8 +54,7 @@ public:
 // of the psABI spec.
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
-
-#define INTERNAL_CMJT 0xA002
+#define INTERNAL_R_RISCV_TBJAL 258
 
 const uint64_t dtpOffset = 0x800;
 
@@ -336,13 +335,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   switch (rel.type) {
   case R_RISCV_32:
-    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == INTERNAL_CMJT)
-      return;
     write32le(loc, val);
     return;
   case R_RISCV_64:
-    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == INTERNAL_CMJT)
-      return;
     write64le(loc, val);
     return;
 
@@ -477,6 +472,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, insn);
     return;
   }
+
+  case INTERNAL_R_RISCV_TBJAL:
+    return;
 
   case R_RISCV_ADD8:
     *loc += val;
@@ -623,11 +621,8 @@ static bool relaxTableJump(const InputSection &sec, size_t i, uint64_t loc,
   }
 
   if (tblEntryIndex >= 0) {
-    if (config->is64)
-      sec.relaxAux->relocTypes[i] = R_RISCV_64;
-    else
-      sec.relaxAux->relocTypes[i] = R_RISCV_32;
-    sec.relaxAux->writes.push_back(INTERNAL_CMJT |
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_TBJAL;
+    sec.relaxAux->writes.push_back(0xA002 |
                                    (tblEntryIndex << 2)); // cm.jt or cm.jalt
     remove = 6;
     return true;
@@ -878,6 +873,12 @@ void elf::riscvFinalizeRelax(int passes) {
           case INTERNAL_R_RISCV_GPREL_I:
           case INTERNAL_R_RISCV_GPREL_S:
             break;
+          case INTERNAL_R_RISCV_TBJAL:
+            assert(config->riscvTbljal);
+            assert((aux.writes[writesIdx] & 0xfc03) == 0xA002);
+            skip = 2;
+            write16le(p, aux.writes[writesIdx++]);
+            break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
@@ -890,24 +891,13 @@ void elf::riscvFinalizeRelax(int passes) {
             write32le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_64:
-            if (config->riscvTbljal &&
-                (aux.writes[writesIdx] & 0xfc03) == INTERNAL_CMJT) {
-              skip = 2;
-              write16le(p, aux.writes[writesIdx++]);
-            }
             break;
           case R_RISCV_32:
-            if (config->riscvTbljal &&
-                (aux.writes[writesIdx] & 0xfc03) == INTERNAL_CMJT) {
-              skip = 2;
-              write16le(p, aux.writes[writesIdx++]);
-            } else {
-              // Used by relaxTlsLe to write a uint32_t then suppress the
-              // handling in relocateAlloc.
-              skip = 4;
-              write32le(p, aux.writes[writesIdx++]);
-              aux.relocTypes[i] = R_RISCV_NONE;
-            }
+            // Used by relaxTlsLe to write a uint32_t then suppress the
+            // handling in relocateAlloc.
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            aux.relocTypes[i] = R_RISCV_NONE;
             break;
           default:
             llvm_unreachable("unsupported type");
