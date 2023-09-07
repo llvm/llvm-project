@@ -715,7 +715,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // Handle cases where sub registers are involved
     for (auto EndReg : Item.EndRegs) {
       MachineBasicBlock::iterator EndInsert(Item.Final);
-      auto NewMI = BuildMI(LoopBB, EndInsert, DL, TII->get(AMDGPU::COPY))
+      BuildMI(LoopBB, EndInsert, DL, TII->get(AMDGPU::COPY))
         .addReg(EndReg.first->getReg(), RegState::Define, EndReg.first->getSubReg())
         .addReg(EndReg.second->getReg(), 0, EndReg.second->getSubReg());
     }
