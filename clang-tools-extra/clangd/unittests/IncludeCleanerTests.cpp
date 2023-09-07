@@ -574,6 +574,29 @@ TEST(IncludeCleaner, VerbatimEquivalence) {
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
+TEST(IncludeCleaner, ResourceDirIsIgnored) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <amintrin.h>
+    #include <imintrin.h>
+    void baz() {
+      bar();
+    }
+  )cpp");
+  TU.ExtraArgs.push_back("-resource-dir");
+  TU.ExtraArgs.push_back(testPath("resources"));
+  TU.AdditionalFiles["resources/include/amintrin.h"] = guard("");
+  TU.AdditionalFiles["resources/include/imintrin.h"] = guard(R"cpp(
+    #include <emintrin.h>
+  )cpp");
+  TU.AdditionalFiles["resources/include/emintrin.h"] = guard(R"cpp(
+    void bar();
+  )cpp");
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -7,14 +7,14 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load(":tblgen.bzl", "gentbl_cc_library", "td_library")
-load(":linalggen.bzl", "genlinalg")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
     "if_cuda_available",
     "mlir_c_api_cc_library",
 )
+load(":linalggen.bzl", "genlinalg")
+load(":tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -8841,7 +8841,10 @@ td_library(
     name = "AtomicInterfacesTdFiles",
     srcs = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"],
     includes = ["include"],
-    deps = [":OpBaseTdFiles"],
+    deps = [
+        ":ControlFlowInterfacesTdFiles",
+        ":OpBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -8858,7 +8861,9 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
-    deps = [":AtomicInterfacesTdFiles"],
+    deps = [
+        ":AtomicInterfacesTdFiles",
+    ],
 )
 
 cc_library(
@@ -8867,8 +8872,9 @@ cc_library(
     hdrs = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
     includes = ["include"],
     deps = [
-        ":IR",
         ":AtomicInterfacesIncGen",
+        ":ControlFlowInterfaces",
+        ":IR",
         "//llvm:Support",
     ],
 )
@@ -8905,8 +8911,8 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":OpBaseTdFiles",
         ":AtomicInterfacesTdFiles",
+        ":OpBaseTdFiles",
     ],
 )
 
@@ -9026,14 +9032,15 @@ cc_library(
         ],
         exclude =
             [
-                "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+                "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
             ],
     ),
     includes = ["include"],
     textual_hdrs = [
-        "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":AtomicInterfacesIncGen",
         ":AtomicInterfaces",
         ":ControlFlowInterfaces",
         ":IR",
@@ -9073,20 +9080,18 @@ gentbl_cc_library(
 td_library(
     name = "OpenMPOpsTdFiles",
     srcs = [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
-        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
     ],
     deps = [
+        ":AtomicInterfacesTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
-        ":AtomicInterfacesTdFiles",
     ],
 )
-
-
 
 gentbl_cc_library(
     name = "OpenMPOpsIncGen",
@@ -9194,15 +9199,16 @@ cc_library(
         exclude =
             [
                 "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
-                "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+                "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
             ],
     ),
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
-        "include/mlir/Dialect/OpenACCMPCommonInterfaces/AtomicInterfaces.h",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":AtomicInterfacesIncGen",
         ":AtomicInterfaces",
         ":ControlFlowInterfaces",
         ":FuncDialect",
@@ -9878,8 +9884,8 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
-        ":IndexDialect",
         ":IR",
+        ":IndexDialect",
         ":LinalgDialect",
         ":LinalgMatchOpsIncGen",
         ":LinalgTransformEnumsIncGen",

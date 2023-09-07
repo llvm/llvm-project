@@ -8,6 +8,7 @@
 
 #include "Solaris.h"
 #include "CommonArgs.h"
+#include "Gnu.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
@@ -32,20 +33,8 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfoList &Inputs,
                                       const ArgList &Args,
                                       const char *LinkingOutput) const {
-  claimNoWarnArgs(Args);
-  ArgStringList CmdArgs;
-
-  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
-
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  for (const auto &II : Inputs)
-    CmdArgs.push_back(II.getFilename());
-
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs, Output));
+  // Just call the Gnu version, which enforces gas on Solaris.
+  gnutools::Assembler::ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
 }
 
 bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {

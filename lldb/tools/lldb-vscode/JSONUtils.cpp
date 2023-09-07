@@ -1103,10 +1103,13 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 // }
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
-                                 bool is_name_duplicated) {
+                                 bool is_name_duplicated,
+                                 std::optional<std::string> custom_name) {
   llvm::json::Object object;
-  EmplaceSafeString(object, "name",
-                    CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+  EmplaceSafeString(
+      object, "name",
+      custom_name ? *custom_name
+                  : CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
 
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
@@ -1131,15 +1134,19 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const bool is_synthetic = v.IsSynthetic();
   if (is_array || is_synthetic) {
     const auto num_children = v.GetNumChildren();
+    // We create a "[raw]" fake child for each synthetic type, so we have to
+    // account for it when returning indexed variables. We don't need to do this
+    // for non-indexed ones.
+    int actual_num_children = num_children + (is_synthetic ? 1 : 0);
     if (is_array) {
-      object.try_emplace("indexedVariables", num_children);
+      object.try_emplace("indexedVariables", actual_num_children);
     } else if (num_children > 0) {
       // If a type has a synthetic child provider, then the SBType of "v" won't
       // tell us anything about what might be displayed. So we can check if the
       // first child's name is "[0]" and then we can say it is indexed.
       const char *first_child_name = v.GetChildAtIndex(0).GetName();
       if (first_child_name && strcmp(first_child_name, "[0]") == 0)
-        object.try_emplace("indexedVariables", num_children);
+        object.try_emplace("indexedVariables", actual_num_children);
     }
   }
   EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);
