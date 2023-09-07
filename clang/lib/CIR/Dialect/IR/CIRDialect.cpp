@@ -1104,6 +1104,149 @@ void SwitchOp::build(
 }
 
 //===----------------------------------------------------------------------===//
+// CatchOp
+//===----------------------------------------------------------------------===//
+
+ParseResult
+parseCatchOp(OpAsmParser &parser,
+             llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
+             ::mlir::ArrayAttr &catchersAttr) {
+  SmallVector<mlir::Attribute, 4> catchList;
+
+  auto parseAndCheckRegion = [&]() -> ParseResult {
+    // Parse region attached to catch
+    regions.emplace_back(new Region);
+    Region &currRegion = *regions.back().get();
+    auto parserLoc = parser.getCurrentLocation();
+    if (parser.parseRegion(currRegion, /*arguments=*/{}, /*argTypes=*/{})) {
+      regions.clear();
+      return failure();
+    }
+
+    if (currRegion.empty()) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "catch region shall not be empty");
+    }
+
+    if (checkBlockTerminator(parser, parserLoc, std::nullopt, &currRegion,
+                             /*ensureTerm=*/false)
+            .failed())
+      return failure();
+    return success();
+  };
+
+  auto parseCatchEntry = [&]() -> ParseResult {
+    mlir::Type exceptionType;
+    mlir::Attribute exceptionTypeInfo;
+
+    // cir.catch(..., [
+    //   type (!cir.ptr<!u8i>, @type_info_char_star) {
+    //     ...
+    //   },
+    //   all {
+    //     ...
+    //   }
+    // ]
+    ::llvm::StringRef attrStr;
+    if (!parser.parseOptionalKeyword(&attrStr, {"all"})) {
+      if (parser.parseKeyword("type").failed())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected 'type' keyword here");
+
+      if (parser.parseLParen().failed())
+        return parser.emitError(parser.getCurrentLocation(), "expected '('");
+
+      if (parser.parseType(exceptionType).failed())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected valid exception type");
+      if (parser.parseAttribute(exceptionTypeInfo).failed())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected valid RTTI info attribute");
+      if (parser.parseRParen().failed())
+        return parser.emitError(parser.getCurrentLocation(), "expected ')'");
+    }
+    catchList.push_back(mlir::cir::CatchEntryAttr::get(
+        parser.getContext(), exceptionType, exceptionTypeInfo));
+
+    return parseAndCheckRegion();
+  };
+
+  if (parser
+          .parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
+                                   parseCatchEntry, " in catch list")
+          .failed())
+    return failure();
+
+  catchersAttr = parser.getBuilder().getArrayAttr(catchList);
+  return ::mlir::success();
+}
+
+void printCatchOp(OpAsmPrinter &p, CatchOp op,
+                  mlir::MutableArrayRef<::mlir::Region> regions,
+                  mlir::ArrayAttr catchList) {
+
+  int currCatchIdx = 0;
+  p << "[";
+  llvm::interleaveComma(catchList, p, [&](const Attribute &a) {
+    p.printNewline();
+    p.increaseIndent();
+    auto attr = a.cast<CatchEntryAttr>();
+    auto exType = attr.getExceptionType();
+    auto exRtti = attr.getExceptionTypeInfo();
+
+    if (!exType) {
+      p << "all";
+    } else {
+      p << "type (";
+      p.printType(exType);
+      p << ", ";
+      p.printAttribute(exRtti);
+      p << ") ";
+    }
+    p.printNewline();
+    p.increaseIndent();
+    p.printRegion(regions[currCatchIdx], /*printEntryBLockArgs=*/false,
+                  /*printBlockTerminators=*/true);
+    currCatchIdx++;
+    p.decreaseIndent();
+    p.decreaseIndent();
+  });
+  p << "]";
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
+void CatchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // FIXME: optimize, ideas include:
+  // - If we know a target function never throws a specific type, we can
+  //   remove the catch handler.
+  // - ???
+
+  // If the condition isn't constant, all regions may be executed.
+  for (auto &r : this->getRegions())
+    regions.push_back(RegionSuccessor(&r));
+}
+
+void CatchOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
+  assert(catchBuilder && "the builder callback for regions must be present");
+  OpBuilder::InsertionGuard guardCatch(builder);
+  catchBuilder(builder, result.location, result);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 
