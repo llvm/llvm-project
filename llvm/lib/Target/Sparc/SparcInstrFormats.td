@@ -135,6 +135,14 @@ class F3_1_asi<bits<2> opVal, bits<6> op3val, dag outs, dag ins,
   let Inst{4-0}  = rs2;
 }
 
+// CAS instructions does not use an immediate even when i=1
+class F3_1_cas_asi<bits<2> opVal, bits<6> op3val, dag outs, dag ins,
+           string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
+   : F3_1_asi<opVal, op3val, outs, ins, asmstr, pattern, itin> {
+  let asi = 0;
+  let Inst{13}   = 1;     // i field = 1
+}
+
 class F3_1<bits<2> opVal, bits<6> op3val, dag outs, dag ins, string asmstr,
        list<dag> pattern, InstrItinClass itin = IIC_iu_instr>
   : F3_1_asi<opVal, op3val, outs, ins, asmstr, pattern, itin> {
