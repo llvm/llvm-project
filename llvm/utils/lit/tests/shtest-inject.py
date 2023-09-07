@@ -1,26 +1,9 @@
-# Check that we can inject preamble commands at the beginning of a ShTest.
-#
-# For one case, check the execution trace as these preamble commands have
-# "preamble command" instead of the usual "{{RUN}}: at line N".
+# Check that we can inject commands at the beginning of a ShTest.
 
 # RUN: %{lit} %{inputs}/shtest-inject/test-empty.txt --show-all | FileCheck --check-prefix=CHECK-TEST1 %s
 #
-#       CHECK-TEST1: Command Output (stdout):
-#  CHECK-TEST1-NEXT: --
-#  CHECK-TEST1-NEXT: # preamble command line
-#  CHECK-TEST1-NEXT: echo "THIS WAS"
-#  CHECK-TEST1-NEXT: # executed command: echo 'THIS WAS'
-#  CHECK-TEST1-NEXT: # .---command stdout{{-*}}
-#  CHECK-TEST1-NEXT: # | THIS WAS
-#  CHECK-TEST1-NEXT: # `---{{-*}}
-#  CHECK-TEST1-NEXT: # preamble command line
-#  CHECK-TEST1-NEXT: echo "INJECTED"
-#  CHECK-TEST1-NEXT: # executed command: echo INJECTED
-#  CHECK-TEST1-NEXT: # .---command stdout{{-*}}
-#  CHECK-TEST1-NEXT: # | INJECTED
-#  CHECK-TEST1-NEXT: # `---{{-*}}
-# CHECK-TEST1-EMPTY:
-#  CHECK-TEST1-NEXT: --
+# CHECK-TEST1: THIS WAS
+# CHECK-TEST1: INJECTED
 #
 # CHECK-TEST1: Passed: 1
 
