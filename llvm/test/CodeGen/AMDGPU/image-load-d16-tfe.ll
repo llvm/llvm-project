@@ -544,9 +544,8 @@ define amdgpu_ps void @load_1d_v3f16_tfe_dmask7(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX8-UNPACKED-NEXT:    image_load v[1:4], v0, s[4:11] dmask:0x7 unorm tfe d16
-; GFX8-UNPACKED-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_perm_b32 v0, v1, v2, s0
+; GFX8-UNPACKED-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
 ; GFX8-UNPACKED-NEXT:    flat_store_short v[0:1], v3
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-UNPACKED-NEXT:    flat_store_dword v[0:1], v0
@@ -644,10 +643,9 @@ define amdgpu_ps void @load_1d_v4f16_tfe_dmask15(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX8-UNPACKED-NEXT:    image_load v[1:5], v0, s[4:11] dmask:0xf unorm tfe d16
-; GFX8-UNPACKED-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_perm_b32 v3, v3, v4, s0
-; GFX8-UNPACKED-NEXT:    v_perm_b32 v2, v1, v2, s0
+; GFX8-UNPACKED-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
+; GFX8-UNPACKED-NEXT:    v_lshl_or_b32 v2, v2, 16, v1
 ; GFX8-UNPACKED-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-UNPACKED-NEXT:    flat_store_dword v[0:1], v5

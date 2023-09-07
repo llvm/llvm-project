@@ -150,8 +150,7 @@ define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
 ; VI-LABEL: trunc_v2i64_arg_to_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x1000504
-; VI-NEXT:    v_perm_b32 v0, v0, v2, s4
+; VI-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc <2 x i64> %arg0 to <2 x i16>
   ret <2 x i16> %trunc

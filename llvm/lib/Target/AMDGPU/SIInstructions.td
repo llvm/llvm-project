@@ -2670,6 +2670,16 @@ def : GCNPat <
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x02030001)))
 >;
 
+// We do not need an sreg to hold the immediate in LSHL_OR
+def : GCNPat <
+  (i32 (AMDGPUperm_impl i32:$a, i32:$b, (i32 0x01000504))),
+  (i32 (V_LSHL_OR_B32_e64 i32:$b, (i32 16), i32:$a))
+  >;
+
+def : GCNPat <
+  (i32 (AMDGPUperm_impl i32:$a, i32:$b, (i32 0x05040100))),
+  (i32 (V_LSHL_OR_B32_e64 i32:$a, (i32 16), i32:$b))
+  >;
 }
 
 def : GCNPat<

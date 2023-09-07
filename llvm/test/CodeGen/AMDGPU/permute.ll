@@ -392,4 +392,31 @@ bb:
   ret void
 }
 
+declare i32 @llvm.amdgcn.perm(i32, i32, i32) #0
+
+define amdgpu_ps void @v_perm_b32_lshl1(i32 %src1, i32 inreg %src2, ptr addrspace(1) %out) #1 {
+; GCN-LABEL: v_perm_b32_lshl1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
+; GCN-NEXT:    flat_store_dword v[1:2], v0
+; GCN-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.perm(i32 %src1, i32 %src2, i32 16778500) #0
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @v_perm_b32_lshl2(i32 %src1, i32 inreg %src2, ptr addrspace(1) %out) #1 {
+; GCN-LABEL: v_perm_b32_lshl2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
+; GCN-NEXT:    flat_store_dword v[1:2], v0
+; GCN-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.perm(i32 %src1, i32 %src2, i32 84148480) #0
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }

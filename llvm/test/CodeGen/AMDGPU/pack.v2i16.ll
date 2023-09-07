@@ -187,8 +187,7 @@ define amdgpu_kernel void @v_pack_v2i16(ptr addrspace(1) %in0, ptr addrspace(1) 
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    flat_load_dword v1, v[2:3] glc
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
-; GFX803-NEXT:    s_mov_b32 s0, 0x1000504
-; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s0
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX803-NEXT:    ;;#ASMSTART
 ; GFX803-NEXT:    ; use v0
 ; GFX803-NEXT:    ;;#ASMEND
@@ -265,10 +264,9 @@ define amdgpu_kernel void @v_pack_v2i16_user(ptr addrspace(1) %in0, ptr addrspac
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    flat_load_dword v1, v[2:3] glc
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
-; GFX803-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX803-NEXT:    s_mov_b32 s3, 0x1100f000
 ; GFX803-NEXT:    s_mov_b32 s2, -1
-; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s0
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX803-NEXT:    v_add_u32_e32 v0, vcc, 9, v0
 ; GFX803-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
