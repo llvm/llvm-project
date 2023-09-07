@@ -617,3 +617,6 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/test/CodeGen/WebAssembly/ @llvm/pr-subscribers-webassembly
 /clang/test/Sema/*wasm* @llvm/pr-subscribers-webassembly
 /clang/test/SemaCXX/*wasm* @llvm/pr-subscribers-webassembly
+
+# lldb
+/lldb/** @llvm/pr-subscribers-lldb
