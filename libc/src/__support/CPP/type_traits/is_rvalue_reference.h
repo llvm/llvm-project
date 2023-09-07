@@ -25,7 +25,8 @@ template <typename T> struct is_rvalue_reference : public false_type {};
 template <typename T> struct is_rvalue_reference<T &&> : public true_type {};
 #endif
 template <class T>
-using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+LIBC_INLINE_VAR constexpr bool is_rvalue_reference_v =
+    is_rvalue_reference<T>::value;
 
 } // namespace __llvm_libc::cpp
 
