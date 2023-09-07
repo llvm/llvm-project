@@ -1496,7 +1496,7 @@ private:
         map(/*Addr=*/nullptr,
             roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
                     getPageSizeCached()),
-            "AllocatorRingBuffer"));
+            "scudo:ring_buffer"));
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
     RingBuffer->Size = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %
