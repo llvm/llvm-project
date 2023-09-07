@@ -4341,10 +4341,10 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
-                                            ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
                                             SourceLocation ImportLoc,
-                                            unsigned ClientLoadCapabilities) {
+                                            unsigned ClientLoadCapabilities,
+                                            ModuleFile **NewLoadedModuleFile) {
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
@@ -4373,6 +4373,9 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     ModuleMgr.setGlobalIndex(nullptr);
     return ReadResult;
   }
+
+  if (NewLoadedModuleFile && !Loaded.empty())
+    *NewLoadedModuleFile = Loaded.back().Mod;
 
   // Here comes stuff that we only do once the entire chain is loaded. Do *not*
   // remove modules from this point. Various fields are updated during reading
@@ -5769,12 +5772,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
 
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
-
-      // If we're loading a module before we initialize the sema, it implies
-      // we're performing eagerly loading.
-      if (!getSema() && CurrentModule->isModulePurview() &&
-          !getContext().getLangOpts().isCompilingModule())
-        Diag(clang::diag::warn_eagerly_load_for_standard_cplusplus_modules);
 
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 

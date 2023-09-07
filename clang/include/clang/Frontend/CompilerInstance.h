@@ -44,6 +44,11 @@ class TimerGroup;
 namespace clang {
 class ASTContext;
 class ASTReader;
+
+namespace serialization {
+class ModuleFile;
+}
+
 class CodeCompleteConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
@@ -858,7 +863,8 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName);
+  bool loadModuleFile(StringRef FileName,
+                      serialization::ModuleFile *&LoadedModuleFile);
 
 private:
   /// Find a module, potentially compiling it, before reading its AST.  This is
