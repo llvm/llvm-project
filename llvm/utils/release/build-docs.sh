@@ -15,7 +15,7 @@
 #                 ninja-build gcc-c++
 #   * pip install sphinx-markdown-tables
 # * Ubuntu:
-#   * apt-get install doxygen sphinx-common python3-recommonmark \
+#   * apt-get install doxygen sphinx-common python3-myst-parser \
 #             ninja-build graphviz texlive-font-utils
 #   * pip install sphinx-markdown-tables
 #===------------------------------------------------------------------------===#

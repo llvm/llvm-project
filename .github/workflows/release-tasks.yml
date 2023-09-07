@@ -31,7 +31,7 @@ jobs:
               doxygen \
               graphviz \
               python3-github \
-              python3-recommonmark \
+              python3-myst-parser \
               python3-sphinx \
               ninja-build \
               texlive-font-utils
