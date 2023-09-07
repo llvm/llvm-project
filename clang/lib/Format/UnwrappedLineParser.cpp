@@ -618,16 +618,17 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
+    case tok::kw_if:
+      if (PrevTok->is(tok::hash))
+        break;
+      [[fallthrough]];
     case tok::at:
     case tok::semi:
-    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:
     case tok::kw_try:
     case tok::kw___try:
-      if (PrevTok->is(tok::hash))
-        break;
       if (!LBraceStack.empty() && LBraceStack.back().Tok->is(BK_Unknown))
         LBraceStack.back().Tok->setBlockKind(BK_Block);
       break;

@@ -2011,22 +2011,22 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_TOKEN(Tokens[7], tok::period, TT_DesignatedInitializerPeriod);
 
   Tokens = annotate("SomeStruct {\n"
-  "#ifdef FOO\n"
-  "  .a = 1,\n"
-  "#endif\n"
-  "  .b = 2\n"
-  "};");
+                    "#ifdef FOO\n"
+                    "  .a = 1,\n"
+                    "#endif\n"
+                    "  .b = 2\n"
+                    "};");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[5], tok::period, TT_DesignatedInitializerPeriod);
   EXPECT_TOKEN(Tokens[12], tok::period, TT_DesignatedInitializerPeriod);
 
   Tokens = annotate("SomeStruct {\n"
-  "#if defined FOO\n"
-  "  .a = 1,\n"
-  "#endif\n"
-  "  .b = 2\n"
-  "};");
+                    "#if defined FOO\n"
+                    "  .a = 1,\n"
+                    "#endif\n"
+                    "  .b = 2\n"
+                    "};");
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
