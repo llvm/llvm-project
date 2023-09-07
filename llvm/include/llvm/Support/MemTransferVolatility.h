@@ -33,8 +33,13 @@ public:
 
 public:
   // Compatibility layer -- make this type bool-like, but moan at you.
+  LLVM_DEPRECATED("Specify separate Dst & Src volatilities instead",
+                  "MemTransferVolatility(Dst, Src)")
   MemTransferVolatility(bool isVolatile)
       : MemTransferVolatility(isVolatile, isVolatile) {}
+  LLVM_DEPRECATED(
+      "Use isAnyVolatile, isDstVolatile or isSrcVolatile predicates instead",
+      "is(Any|Dst|Src)Volatile()")
   operator bool() const { return isAnyVolatile(); }
 
 public:

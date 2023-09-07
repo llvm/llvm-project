@@ -1188,6 +1188,9 @@ public:
   bool isSrcVolatile() const { return getVolatility().isSrcVolatile(); }
 
   // Compatibility predicate.
+  LLVM_DEPRECATED(
+      "Use isAnyVolatile, isDstVolatile or isSrcVolatile predicates instead",
+      "is(Any|Dst|Src)Volatile()")
   bool isVolatile() const { return isAnyVolatile(); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
