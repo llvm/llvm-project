@@ -2005,6 +2005,13 @@ public:
   /// \param Loc The insert and source location description.
   void createTargetDeinit(const LocationDescription &Loc);
 
+  /// Generator for `#omp teams`
+  ///
+  /// \param Loc The location where the task construct was encountered.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointTy createTeams(const LocationDescription &Loc,
+                            BodyGenCallbackTy BodyGenCB);
+
   ///}
 
 private:
