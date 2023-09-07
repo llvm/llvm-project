@@ -507,12 +507,13 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
         # Verify locals
         locals = self.vscode.get_local_variables()
-        buffer_children = make_buffer_verify_dict(0, 32)
+        # The vector variables will have one additional entry from the fake
+        # "[raw]" child.
         verify_locals = {
             "small_array": {"equals": {"indexedVariables": 5}},
             "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 5}},
-            "large_vector": {"equals": {"indexedVariables": 200}},
+            "small_vector": {"equals": {"indexedVariables": 6}},
+            "large_vector": {"equals": {"indexedVariables": 201}},
             "pt": {"missing": ["indexedVariables"]},
         }
         self.verify_variables(verify_locals, locals)
