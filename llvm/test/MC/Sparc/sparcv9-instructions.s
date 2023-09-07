@@ -495,6 +495,17 @@
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
+        ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
+        stuw %o1, [%o0]
+        ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
+        stsw %o1, [%o0]
+
+        ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
+        stwa %o2, [%i0 + %l6] 131
+        ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
+        stuwa %o2, [%i0 + %l6] 131
+        ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
+        stswa %o2, [%i0 + %l6] 131
 
         !! SPARCv9 provides a new variant of ASI-tagged memory accesses.
         ! V9: ldxa [%g2] %asi, %g0    ! encoding: [0xc0,0xd8,0xa0,0x00]
