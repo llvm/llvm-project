@@ -1,4 +1,4 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV:     %[[#TypeImage:]] = OpTypeImage
 ; CHECK-SPIRV-NOT: OpTypeImage
@@ -9,20 +9,15 @@
 ; CHECK-SPIRV:     %[[#ParamID:]] = OpFunctionParameter %[[#TypeImage]]
 ; CHECK-SPIRV:     %[[#]] = OpFunctionCall %[[#]] %[[#]] %[[#ParamID]]
 
-%opencl.image2d_ro_t = type opaque
-
-define spir_func void @f0(%opencl.image2d_ro_t addrspace(1)* %v2, <2 x float> %v3) {
-entry:
+define spir_func void @f0(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %v2, <2 x float> %v3) {
   ret void
 }
 
-define spir_func void @f1(%opencl.image2d_ro_t addrspace(1)* %v2, <2 x float> %v3) {
-entry:
+define spir_func void @f1(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %v2, <2 x float> %v3) {
   ret void
 }
 
-define spir_kernel void @test(%opencl.image2d_ro_t addrspace(1)* %v1) {
-entry:
-  call spir_func void @f0(%opencl.image2d_ro_t addrspace(1)* %v1, <2 x float> <float 1.000000e+00, float 5.000000e+00>)
+define spir_kernel void @test(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %v1) {
+  call spir_func void @f0(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %v1, <2 x float> <float 1.000000e+00, float 5.000000e+00>)
   ret void
 }
