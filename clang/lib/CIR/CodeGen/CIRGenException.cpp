@@ -252,7 +252,27 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
-  enterCXXTryStmt(S);
+  auto tryLoc = getLoc(S.getBeginLoc());
+  auto numHandlers = S.getNumHandlers();
+
+  // FIXME(cir): create scope, and add catchOp to the lastest possible position
+  // inside the cleanup block.
+
+  // Create the skeleton for the catch statements.
+  auto catchOp = builder.create<mlir::cir::CatchOp>(
+      tryLoc, // FIXME(cir): we can do better source location here.
+      [&](mlir::OpBuilder &b, mlir::Location loc,
+          mlir::OperationState &result) {
+        mlir::OpBuilder::InsertionGuard guard(b);
+        for (int i = 0, e = numHandlers; i != e; ++i) {
+          auto *r = result.addRegion();
+          builder.createBlock(r);
+        }
+      });
+
+  enterCXXTryStmt(S, catchOp);
+  llvm_unreachable("NYI");
+
   if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
     return mlir::failure();
   exitCXXTryStmt(S);
@@ -283,14 +303,16 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
   llvm_unreachable("NYI");
 }
 
-void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
+void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
+                                     mlir::cir::CatchOp catchOp,
+                                     bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
   for (unsigned I = 0; I != NumHandlers; ++I) {
     const CXXCatchStmt *C = S.getHandler(I);
 
     // FIXME: hook the CIR block for the right catch region here.
-    mlir::Block *Handler = nullptr; // createBasicBlock("catch");
+    mlir::Block *Handler = &catchOp.getRegion(I).getBlocks().front();
     if (C->getExceptionDecl()) {
       // FIXME: Dropping the reference type on the type into makes it
       // impossible to correctly implement catch-by-reference
