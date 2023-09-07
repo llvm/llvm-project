@@ -3,22 +3,22 @@
 ! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: cas [%i0], %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
+! V9: casa [%i0] #ASI_P, %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 cas [%i0], %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casl [%i0], %l6, %o2   ! encoding: [0xd5,0xe6,0x11,0x16]
+! V9: casa [%i0] #ASI_P_L, %l6, %o2   ! encoding: [0xd5,0xe6,0x11,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casl [%i0], %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casx [%i0], %l6, %o2  ! encoding: [0xd5,0xf6,0x10,0x16]
+! V9: casxa [%i0] #ASI_P, %l6, %o2  ! encoding: [0xd5,0xf6,0x10,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casx [%i0], %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casxl [%i0], %l6, %o2  ! encoding: [0xd5,0xf6,0x11,0x16]
+! V9: casxa [%i0] #ASI_P_L, %l6, %o2  ! encoding: [0xd5,0xf6,0x11,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casxl [%i0], %l6, %o2
 

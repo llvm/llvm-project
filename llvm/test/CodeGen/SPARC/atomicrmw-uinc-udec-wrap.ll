@@ -27,7 +27,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    sll %o4, %o0, %o4
 ; CHECK-NEXT:    and %o5, %o3, %g2
 ; CHECK-NEXT:    or %g2, %o4, %o4
-; CHECK-NEXT:    cas [%o2], %o5, %o4
+; CHECK-NEXT:    casa [%o2] #ASI_P, %o5, %o4
 ; CHECK-NEXT:    mov %g0, %g2
 ; CHECK-NEXT:    cmp %o4, %o5
 ; CHECK-NEXT:    move %icc, 1, %g2
@@ -70,7 +70,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    sll %o5, %o0, %o5
 ; CHECK-NEXT:    and %g2, %o4, %g3
 ; CHECK-NEXT:    or %g3, %o5, %o5
-; CHECK-NEXT:    cas [%o2], %g2, %o5
+; CHECK-NEXT:    casa [%o2] #ASI_P, %g2, %o5
 ; CHECK-NEXT:    mov %g0, %g3
 ; CHECK-NEXT:    cmp %o5, %g2
 ; CHECK-NEXT:    move %icc, 1, %g3
@@ -98,7 +98,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    add %o2, 1, %o2
 ; CHECK-NEXT:    cmp %o3, %o1
 ; CHECK-NEXT:    movcc %icc, 0, %o2
-; CHECK-NEXT:    cas [%o0], %o3, %o2
+; CHECK-NEXT:    casa [%o0] #ASI_P, %o3, %o2
 ; CHECK-NEXT:    mov %g0, %o4
 ; CHECK-NEXT:    cmp %o2, %o3
 ; CHECK-NEXT:    move %icc, 1, %o4
@@ -186,7 +186,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    sll %o5, %o0, %o5
 ; CHECK-NEXT:    and %g2, %o3, %g3
 ; CHECK-NEXT:    or %g3, %o5, %o5
-; CHECK-NEXT:    cas [%o2], %g2, %o5
+; CHECK-NEXT:    casa [%o2] #ASI_P, %g2, %o5
 ; CHECK-NEXT:    mov %g0, %g3
 ; CHECK-NEXT:    cmp %o5, %g2
 ; CHECK-NEXT:    move %icc, 1, %g3
@@ -231,7 +231,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    sll %g2, %o0, %g2
 ; CHECK-NEXT:    and %g3, %o4, %g4
 ; CHECK-NEXT:    or %g4, %g2, %g2
-; CHECK-NEXT:    cas [%o2], %g3, %g2
+; CHECK-NEXT:    casa [%o2] #ASI_P, %g3, %g2
 ; CHECK-NEXT:    mov %g0, %g4
 ; CHECK-NEXT:    cmp %g2, %g3
 ; CHECK-NEXT:    move %icc, 1, %g4
@@ -261,7 +261,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    movgu %icc, %o1, %o2
 ; CHECK-NEXT:    cmp %o3, 0
 ; CHECK-NEXT:    move %icc, %o1, %o2
-; CHECK-NEXT:    cas [%o0], %o3, %o2
+; CHECK-NEXT:    casa [%o0] #ASI_P, %o3, %o2
 ; CHECK-NEXT:    mov %g0, %o4
 ; CHECK-NEXT:    cmp %o2, %o3
 ; CHECK-NEXT:    move %icc, 1, %o4

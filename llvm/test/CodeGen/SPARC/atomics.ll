@@ -91,7 +91,7 @@ entry:
 ; SPARC:      [[LABEL1:\.L.*]]:
 ; SPARC:       or %o5, %o4, %g2
 ; SPARC:       or %o5, %o0, %g3
-; SPARC:       cas [%o2], %g3, %g2
+; SPARC:       casa [%o2] #ASI_P, %g3, %g2
 ; SPARC:       mov %g0, %g4
 ; SPARC:       cmp %g2, %g3
 ; SPARC:       move %icc, 1, %g4
@@ -122,7 +122,7 @@ entry:
 ; SPARC64:      [[LABEL1:\.L.*]]:
 ; SPARC64:       or %o5, %o4, %g2
 ; SPARC64:       or %o5, %o0, %g3
-; SPARC64:       cas [%o2], %g3, %g2
+; SPARC64:       casa [%o2] #ASI_P, %g3, %g2
 ; SPARC64:       mov %g0, %g4
 ; SPARC64:       cmp %g2, %g3
 ; SPARC64:       move %icc, 1, %g4
@@ -162,7 +162,7 @@ entry:
 ; SPARC:      [[LABEL1:\.L.*]]:
 ; SPARC:       or %o5, %o0, %g2
 ; SPARC:       or %o5, %o4, %g3
-; SPARC:       cas [%o2], %g3, %g2
+; SPARC:       casa [%o2] #ASI_P, %g3, %g2
 ; SPARC:       mov %g0, %g4
 ; SPARC:       cmp %g2, %g3
 ; SPARC:       move %icc, 1, %g4
@@ -193,7 +193,7 @@ entry:
 ; SPARC64:      [[LABEL1:\.L.*]]:
 ; SPARC64:       or %o5, %o0, %g2
 ; SPARC64:       or %o5, %o4, %g3
-; SPARC64:       cas [%o2], %g3, %g2
+; SPARC64:       casa [%o2] #ASI_P, %g3, %g2
 ; SPARC64:       mov %g0, %g4
 ; SPARC64:       cmp %g2, %g3
 ; SPARC64:       move %icc, 1, %g4
@@ -216,10 +216,10 @@ entry:
 
 ; SPARC-LABEL: test_cmpxchg_i32
 ; SPARC:       mov 123, [[R:%[gilo][0-7]]]
-; SPARC:       cas [%o1], %o0, [[R]]
+; SPARC:       casa [%o1] #ASI_P, %o0, [[R]]
 ; SPARC64-LABEL: test_cmpxchg_i32
 ; SPARC64:       mov 123, [[R:%[gilo][0-7]]]
-; SPARC64:       cas [%o1], %o0, [[R]]
+; SPARC64:       casa [%o1] #ASI_P, %o0, [[R]]
 define i32 @test_cmpxchg_i32(i32 %a, i32* %ptr) {
 entry:
   %pair = cmpxchg i32* %ptr, i32 %a, i32 123 monotonic monotonic
@@ -267,13 +267,13 @@ entry:
 ; SPARC: membar
 ; SPARC: .L{{.*}}:
 ; SPARC: sub
-; SPARC: cas [{{%[gilo][0-7]}}]
+; SPARC: casa [{{%[gilo][0-7]}}] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_sub_i8
 ; SPARC64: membar
 ; SPARC64: .L{{.*}}:
 ; SPARC64: sub
-; SPARC64: cas [{{%[gilo][0-7]}}]
+; SPARC64: casa [{{%[gilo][0-7]}}] #ASI_P
 ; SPARC64: membar
 define zeroext i8 @test_load_sub_i8(i8* %p, i8 zeroext %v) {
 entry:
@@ -285,13 +285,13 @@ entry:
 ; SPARC: membar
 ; SPARC: .L{{.*}}:
 ; SPARC: sub
-; SPARC: cas [{{%[gilo][0-7]}}]
+; SPARC: casa [{{%[gilo][0-7]}}] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_sub_i16
 ; SPARC64: membar
 ; SPARC64: .L{{.*}}:
 ; SPARC64: sub
-; SPARC64: cas [{{%[gilo][0-7]}}]
+; SPARC64: casa [{{%[gilo][0-7]}}] #ASI_P
 ; SPARC64: membar
 define zeroext i16 @test_load_sub_i16(i16* %p, i16 zeroext %v) {
 entry:
@@ -303,13 +303,13 @@ entry:
 ; SPARC: membar
 ; SPARC: mov [[U:%[gilo][0-7]]], [[V:%[gilo][0-7]]]
 ; SPARC: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
-; SPARC: cas [%o0], [[V]], [[V2]]
+; SPARC: casa [%o0] #ASI_P, [[V]], [[V2]]
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_add_i32
 ; SPARC64: membar
 ; SPARC64: mov [[U:%[gilo][0-7]]], [[V:%[gilo][0-7]]]
 ; SPARC64: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
-; SPARC64: cas [%o0], [[V]], [[V2]]
+; SPARC64: casa [%o0] #ASI_P, [[V]], [[V2]]
 ; SPARC64: membar
 define zeroext i32 @test_load_add_i32(i32* %p, i32 zeroext %v) {
 entry:
@@ -320,12 +320,12 @@ entry:
 ; SPARC-LABEL: test_load_xor_32
 ; SPARC: membar
 ; SPARC: xor
-; SPARC: cas [%o0]
+; SPARC: casa [%o0] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_xor_32
 ; SPARC64: membar
 ; SPARC64: xor
-; SPARC64: cas [%o0]
+; SPARC64: casa [%o0] #ASI_P
 ; SPARC64: membar
 define zeroext i32 @test_load_xor_32(i32* %p, i32 zeroext %v) {
 entry:
@@ -337,13 +337,13 @@ entry:
 ; SPARC: membar
 ; SPARC: and
 ; SPARC-NOT: xor
-; SPARC: cas [%o0]
+; SPARC: casa [%o0] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_and_32
 ; SPARC64: membar
 ; SPARC64: and
 ; SPARC64-NOT: xor
-; SPARC64: cas [%o0]
+; SPARC64: casa [%o0] #ASI_P
 ; SPARC64: membar
 define zeroext i32 @test_load_and_32(i32* %p, i32 zeroext %v) {
 entry:
@@ -355,13 +355,13 @@ entry:
 ; SPARC: membar
 ; SPARC: and
 ; SPARC: xor
-; SPARC: cas [%o0]
+; SPARC: casa [%o0] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_nand_32
 ; SPARC64: membar
 ; SPARC64: and
 ; SPARC64: xor
-; SPARC64: cas [%o0]
+; SPARC64: casa [%o0] #ASI_P
 ; SPARC64: membar
 define zeroext i32 @test_load_nand_32(i32* %p, i32 zeroext %v) {
 entry:
@@ -373,13 +373,13 @@ entry:
 ; SPARC: membar
 ; SPARC: cmp
 ; SPARC: movleu %icc
-; SPARC: cas [%o0]
+; SPARC: casa [%o0] #ASI_P
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_umin_32
 ; SPARC64: membar
 ; SPARC64: cmp
 ; SPARC64: movleu %icc
-; SPARC64: cas [%o0]
+; SPARC64: casa [%o0] #ASI_P
 ; SPARC64: membar
 define zeroext i32 @test_load_umin_32(i32* %p, i32 zeroext %v) {
 entry:
