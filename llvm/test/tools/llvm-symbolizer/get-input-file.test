@@ -11,7 +11,7 @@ RUN: FileCheck --input-file=%t.2.err --check-prefix=NOADDR %s
 
 # Two items specified, check if the first one is an existing file.
 RUN: llvm-symbolizer "foo 400" 2>%t.3.err | FileCheck %s --check-prefix=NOSOURCE
-RUN: FileCheck --input-file=%t.3.err --check-prefix=NOTFOUND %s
+RUN: FileCheck --input-file=%t.3.err --check-prefix=NOTFOUND -DMSG=%errc_ENOENT %s
 
 # FILE: must be followed by a file name.
 RUN: llvm-symbolizer "FILE:" 2>%t.4.err | FileCheck %s --check-prefix=NOSOURCE
@@ -36,7 +36,7 @@ NOFILE: error: no input filename has been specified
 
 NOADDR: error: 'foo': no module offset has been specified
 
-NOTFOUND:  error: 'foo': {{[nN]}}o such file or directory
+NOTFOUND:  error: 'foo': [[MSG]]
 
 MISSING-FILE: error: 'FILE:': must be followed by an input file
 
