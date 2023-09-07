@@ -100,6 +100,11 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
+static cl::opt<bool> MergeStringPool(
+    "ppc-merge-string-pool",
+    cl::desc("Merge all of the strings in a module into one pool"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
@@ -137,6 +142,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelPass(PR);
+  initializePPCMergeStringPoolPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -484,6 +490,9 @@ void PPCPassConfig::addIRPasses() {
 }
 
 bool PPCPassConfig::addPreISel() {
+  if (MergeStringPool && getOptLevel() != CodeGenOpt::None)
+    addPass(createPPCMergeStringPoolPass());
+
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOpt::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
 
