@@ -53,9 +53,9 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
 
   // Years are ints.  A 32-bit year will fit into a 64-bit time_t.
   // A 64-bit year will not.
-  static_assert(sizeof(int) == 4,
-                "ILP64 is unimplemented.  This implementation requires "
-                "32-bit integers.");
+  static_assert(
+      sizeof(int) == 4,
+      "ILP64 is unimplemented. This implementation requires 32-bit integers.");
 
   // Calculate number of months and years from tm_mon.
   int64_t month = tm_out->tm_mon;
