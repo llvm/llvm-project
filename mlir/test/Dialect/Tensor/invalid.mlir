@@ -553,6 +553,15 @@ func.func @empty_wrong_number_of_operands(%sz : index) {
 
 // -----
 
+func.func @empty_negative_size(%sz : index) {
+  %0 = arith.constant -1 : index
+  // expected-error@+1 {{dynamic size must be non-negative}}
+  %out = tensor.empty(%sz, %0) : tensor<2x?x?x5xf32>
+  return
+}
+
+// -----
+
 func.func @pack_invalid_no_padding_no_full_tiles(%input: tensor<256x128xf32>, %output: tensor<8x8x16x33xf32>) -> tensor<8x8x16x33xf32> {
   // expected-error@+1 {{invalid tile factor provided. Only full tiles are supported when padding_value is not set}}
   %0 = tensor.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 33] into %output : tensor<256x128xf32>  -> tensor<8x8x16x33xf32>

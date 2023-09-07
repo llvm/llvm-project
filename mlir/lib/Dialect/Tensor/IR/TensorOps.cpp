@@ -621,6 +621,18 @@ LogicalResult EmptyOp::verify() {
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
+
+  if (getDynamicSizes().size() > 0) {
+    if (llvm::any_of(getDynamicSizes(), [](Value operand) {
+          APInt constSizeArg;
+          if (!matchPattern(operand, m_ConstantInt(&constSizeArg))) {
+            return false;
+          }
+          return constSizeArg.isNegative();
+        }))
+      return emitOpError("dynamic size must be non-negative");
+  }
+
   return success();
 }
 
@@ -691,6 +703,9 @@ struct ReplaceEmptyTensorStaticShapeDims : OpRewritePattern<EmptyOp> {
         Value dynamicSize = op.getDynamicSizes()[ctr++];
         std::optional<int64_t> cst = getConstantIntValue(dynamicSize);
         if (cst.has_value()) {
+          // dynamic size must be non-negative.
+          if (cst.value() < 0)
+            return failure();
           staticShape[i] = *cst;
           changedType = true;
         } else {
