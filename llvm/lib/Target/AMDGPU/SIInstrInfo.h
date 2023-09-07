@@ -222,6 +222,10 @@ public:
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
+  bool
+  modifiesRegisterImplicitly(Register Reg, const MachineInstr *MoveCandidate,
+                             const MachineInstr *ModifierInstr) const override;
+
   bool areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1, int64_t &Offset0,
                                int64_t &Offset1) const override;
 

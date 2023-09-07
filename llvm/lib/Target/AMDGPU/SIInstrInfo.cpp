@@ -171,6 +171,39 @@ bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
          isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent());
 }
 
+bool SIInstrInfo::modifiesRegisterImplicitly(
+    Register Reg, const MachineInstr *MoveCandidate,
+    const MachineInstr *ModifierInstr) const {
+
+  if (ModifierInstr->getOpcode() == AMDGPU::SI_END_CF && Reg == AMDGPU::EXEC) {
+    const MachineRegisterInfo &MRI = MoveCandidate->getMF()->getRegInfo();
+
+    // Looking if this is a simple case of:
+    //
+    //  %0 = MoveCandidate %1, %2, implicit $exec
+    //  %EndCF:sreg_64 = SI_IF %cond, %bb.B
+    //  S_BRANCH %bb.A
+    //
+    // bb.A
+    //  ...
+    //
+    // bb.B
+    //  SI_END_CF %EndCF, implicit-def dead $exec
+    //  ... MoveCandidate should be moved here
+
+    // MoveCandidate is from block that started divergent control flow via SI_IF
+    // it is a simple SI_IF (no loops) - only user of SI_IF is SI_END_CF
+    // SI_END_CF restores exec mask as it was before SI_IF (unchanged)
+    Register EndCF = ModifierInstr->getOperand(0).getReg();
+    MachineInstr *SIIF = MRI.getVRegDef(EndCF);
+    if (SIIF->getOpcode() == AMDGPU::SI_IF && MRI.hasOneUse(EndCF) &&
+        SIIF->getParent() == MoveCandidate->getParent())
+      return false;
+  }
+
+  return true;
+}
+
 bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
                                           int64_t &Offset0,
                                           int64_t &Offset1) const {

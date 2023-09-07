@@ -2330,7 +2330,6 @@ body:             |
   ; CHECK-NEXT:   [[V_ADDC_U32_e64_10:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_11:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY141]], [[COPY140]], killed [[V_ADD_CO_U32_e64_11]], 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE39:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_10]], %subreg.sub0, [[V_ADDC_U32_e64_10]], %subreg.sub1
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD5:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE39]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.166, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, killed [[GLOBAL_LOAD_DWORD5]], 0, [[PHI20]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_12:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_ADD_U32_e64_4]], [[PHI18]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_6:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[V_ADD_U32_e64_12]], implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE40:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_U32_e64_12]], %subreg.sub0, [[V_ASHRREV_I32_e64_6]], %subreg.sub1
@@ -2344,7 +2343,6 @@ body:             |
   ; CHECK-NEXT:   [[V_ADDC_U32_e64_12:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_13:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY146]], [[COPY145]], killed [[V_ADD_CO_U32_e64_13]], 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE41:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_12]], %subreg.sub0, [[V_ADDC_U32_e64_12]], %subreg.sub1
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD6:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE41]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.172, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, killed [[GLOBAL_LOAD_DWORD6]], 0, [[V_FMAC_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_13:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MUL_LO_U32_e64_4]], [[PHI18]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_7:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[V_ADD_U32_e64_13]], implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE42:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_U32_e64_13]], %subreg.sub0, [[V_ASHRREV_I32_e64_7]], %subreg.sub1
@@ -2358,7 +2356,6 @@ body:             |
   ; CHECK-NEXT:   [[V_ADDC_U32_e64_14:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_15:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY151]], [[COPY150]], killed [[V_ADD_CO_U32_e64_15]], 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE43:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_14]], %subreg.sub0, [[V_ADDC_U32_e64_14]], %subreg.sub1
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD7:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE43]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.178, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_2:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, killed [[GLOBAL_LOAD_DWORD7]], 0, [[V_FMAC_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_14:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MUL_LO_U32_e64_5]], [[PHI18]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_8:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[V_ADD_U32_e64_14]], implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE44:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_U32_e64_14]], %subreg.sub0, [[V_ASHRREV_I32_e64_8]], %subreg.sub1
@@ -2372,7 +2369,6 @@ body:             |
   ; CHECK-NEXT:   [[V_ADDC_U32_e64_16:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_17:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY156]], [[COPY155]], killed [[V_ADD_CO_U32_e64_17]], 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE45:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_16]], %subreg.sub0, [[V_ADDC_U32_e64_16]], %subreg.sub1
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD8:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE45]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.184, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_3:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, killed [[GLOBAL_LOAD_DWORD8]], 0, [[V_FMAC_F32_e64_2]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF4:%[0-9]+]]:sreg_64 = SI_IF [[COPY119]], %bb.20, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.15
   ; CHECK-NEXT: {{  $}}
@@ -2380,13 +2376,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.16(0x40000000), %bb.19(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD9:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE39]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.192, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_4:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, killed [[GLOBAL_LOAD_DWORD9]], 0, [[PHI21]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD10:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE41]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.196, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_5:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, killed [[GLOBAL_LOAD_DWORD10]], 0, [[V_FMAC_F32_e64_4]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD11:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE43]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.200, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_6:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, killed [[GLOBAL_LOAD_DWORD11]], 0, [[V_FMAC_F32_e64_5]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD12:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE45]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.204, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_7:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, killed [[GLOBAL_LOAD_DWORD12]], 0, [[V_FMAC_F32_e64_6]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF5:%[0-9]+]]:sreg_64 = SI_IF [[COPY120]], %bb.19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.16
   ; CHECK-NEXT: {{  $}}
@@ -2394,13 +2386,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.17(0x40000000), %bb.18(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD13:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE39]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.212, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_8:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, killed [[GLOBAL_LOAD_DWORD13]], 0, [[PHI22]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD14:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE41]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.216, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_9:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, killed [[GLOBAL_LOAD_DWORD14]], 0, [[V_FMAC_F32_e64_8]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD15:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE43]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.220, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_10:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, killed [[GLOBAL_LOAD_DWORD15]], 0, [[V_FMAC_F32_e64_9]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD16:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE45]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.224, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_11:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, killed [[GLOBAL_LOAD_DWORD16]], 0, [[V_FMAC_F32_e64_10]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF6:%[0-9]+]]:sreg_64 = SI_IF [[COPY121]], %bb.18, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.17
   ; CHECK-NEXT: {{  $}}
@@ -2408,34 +2396,46 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.18(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD17:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE39]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.232, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_12:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, killed [[GLOBAL_LOAD_DWORD17]], 0, [[PHI23]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, killed [[GLOBAL_LOAD_DWORD17]], 0, [[PHI23]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD18:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE41]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.236, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_13:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, killed [[GLOBAL_LOAD_DWORD18]], 0, [[V_FMAC_F32_e64_12]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, killed [[GLOBAL_LOAD_DWORD18]], 0, [[V_FMAC_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD19:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE43]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.240, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_14:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, killed [[GLOBAL_LOAD_DWORD19]], 0, [[V_FMAC_F32_e64_13]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_2:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, killed [[GLOBAL_LOAD_DWORD19]], 0, [[V_FMAC_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD20:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE45]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.244, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_15:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, killed [[GLOBAL_LOAD_DWORD20]], 0, [[V_FMAC_F32_e64_14]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_3:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, killed [[GLOBAL_LOAD_DWORD20]], 0, [[V_FMAC_F32_e64_2]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.Flow85:
   ; CHECK-NEXT:   successors: %bb.19(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI24:%[0-9]+]]:vgpr_32 = PHI [[PHI23]], %bb.16, [[V_FMAC_F32_e64_15]], %bb.17
+  ; CHECK-NEXT:   [[PHI24:%[0-9]+]]:vgpr_32 = PHI [[PHI23]], %bb.16, [[V_FMAC_F32_e64_3]], %bb.17
   ; CHECK-NEXT:   SI_END_CF [[SI_IF6]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_4:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[GLOBAL_LOAD_DWORD13]], 0, [[PHI22]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_5:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, [[GLOBAL_LOAD_DWORD14]], 0, [[V_FMAC_F32_e64_4]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_6:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, [[GLOBAL_LOAD_DWORD15]], 0, [[V_FMAC_F32_e64_5]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_7:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, [[GLOBAL_LOAD_DWORD16]], 0, [[V_FMAC_F32_e64_6]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.19.Flow86:
   ; CHECK-NEXT:   successors: %bb.20(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI25:%[0-9]+]]:vgpr_32 = PHI [[PHI22]], %bb.15, [[V_FMAC_F32_e64_11]], %bb.18
+  ; CHECK-NEXT:   [[PHI25:%[0-9]+]]:vgpr_32 = PHI [[PHI22]], %bb.15, [[V_FMAC_F32_e64_7]], %bb.18
   ; CHECK-NEXT:   [[PHI26:%[0-9]+]]:vgpr_32 = PHI [[PHI23]], %bb.15, [[PHI24]], %bb.18
   ; CHECK-NEXT:   SI_END_CF [[SI_IF5]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_8:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[GLOBAL_LOAD_DWORD9]], 0, [[PHI21]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_9:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, [[GLOBAL_LOAD_DWORD10]], 0, [[V_FMAC_F32_e64_8]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_10:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, [[GLOBAL_LOAD_DWORD11]], 0, [[V_FMAC_F32_e64_9]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_11:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, [[GLOBAL_LOAD_DWORD12]], 0, [[V_FMAC_F32_e64_10]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.20.Flow87:
   ; CHECK-NEXT:   successors: %bb.21(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI27:%[0-9]+]]:vgpr_32 = PHI [[PHI21]], %bb.14, [[V_FMAC_F32_e64_7]], %bb.19
+  ; CHECK-NEXT:   [[PHI27:%[0-9]+]]:vgpr_32 = PHI [[PHI21]], %bb.14, [[V_FMAC_F32_e64_11]], %bb.19
   ; CHECK-NEXT:   [[PHI28:%[0-9]+]]:vgpr_32 = PHI [[PHI22]], %bb.14, [[PHI25]], %bb.19
   ; CHECK-NEXT:   [[PHI29:%[0-9]+]]:vgpr_32 = PHI [[PHI23]], %bb.14, [[PHI26]], %bb.19
   ; CHECK-NEXT:   SI_END_CF [[SI_IF4]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_12:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[GLOBAL_LOAD_DWORD5]], 0, [[PHI20]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_13:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD2]], 0, [[GLOBAL_LOAD_DWORD6]], 0, [[V_FMAC_F32_e64_12]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_14:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD3]], 0, [[GLOBAL_LOAD_DWORD7]], 0, [[V_FMAC_F32_e64_13]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_15:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD4]], 0, [[GLOBAL_LOAD_DWORD8]], 0, [[V_FMAC_F32_e64_14]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.21 (%ir-block.254):
   ; CHECK-NEXT:   successors: %bb.22(0x04000000), %bb.13(0x7c000000)
@@ -2443,7 +2443,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI30:%[0-9]+]]:vgpr_32 = PHI [[PHI23]], %bb.13, [[PHI29]], %bb.20
   ; CHECK-NEXT:   [[PHI31:%[0-9]+]]:vgpr_32 = PHI [[PHI22]], %bb.13, [[PHI28]], %bb.20
   ; CHECK-NEXT:   [[PHI32:%[0-9]+]]:vgpr_32 = PHI [[PHI21]], %bb.13, [[PHI27]], %bb.20
-  ; CHECK-NEXT:   [[PHI33:%[0-9]+]]:vgpr_32 = PHI [[PHI20]], %bb.13, [[V_FMAC_F32_e64_3]], %bb.20
+  ; CHECK-NEXT:   [[PHI33:%[0-9]+]]:vgpr_32 = PHI [[PHI20]], %bb.13, [[V_FMAC_F32_e64_15]], %bb.20
   ; CHECK-NEXT:   SI_END_CF [[SI_IF3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_15:%[0-9]+]]:vgpr_32 = nuw nsw V_ADD_U32_e64 [[PHI19]], [[S_MOV_B32_24]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_16:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PHI18]], [[S_LSHL_B32_1]], 0, implicit $exec
@@ -2716,7 +2716,6 @@ body:             |
   ; CHECK-NEXT:   [[V_ADDC_U32_e64_34:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_35:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY215]], [[COPY214]], killed [[V_ADD_CO_U32_e64_35]], 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE62:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_34]], %subreg.sub0, [[V_ADDC_U32_e64_34]], %subreg.sub1
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD28:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE62]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.356, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_19:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, killed [[GLOBAL_LOAD_DWORD28]], 0, [[V_FMAC_F32_e64_18]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sreg_32 = S_MOV_B32 64
   ; CHECK-NEXT:   [[V_ADD_U32_e64_21:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 [[V_ADD_U32_e64_]], killed [[S_MOV_B32_42]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_CMP_LT_I32_e64_15:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[V_ADD_U32_e64_21]], [[COPY28]], implicit $exec
@@ -2727,13 +2726,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.37(0x40000000), %bb.40(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD29:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE56]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.366, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_20:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD29]], 0, [[PHI12]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_19:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD29]], 0, [[PHI12]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD30:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE58]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.370, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_21:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD30]], 0, [[V_FMAC_F32_e64_20]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_20:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD30]], 0, [[V_FMAC_F32_e64_19]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD31:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE60]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.374, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_22:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD31]], 0, [[V_FMAC_F32_e64_21]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_21:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD31]], 0, [[V_FMAC_F32_e64_20]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD32:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE62]], 256, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.378, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_23:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, killed [[GLOBAL_LOAD_DWORD32]], 0, [[V_FMAC_F32_e64_22]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sreg_32 = S_MOV_B32 128
   ; CHECK-NEXT:   [[V_ADD_U32_e64_22:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 [[V_ADD_U32_e64_]], killed [[S_MOV_B32_43]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_CMP_LT_I32_e64_16:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[V_ADD_U32_e64_22]], [[COPY28]], implicit $exec
@@ -2744,13 +2742,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.38(0x40000000), %bb.39(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD33:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE56]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.388, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_24:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD33]], 0, [[PHI13]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_22:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD33]], 0, [[PHI13]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD34:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE58]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.392, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_25:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD34]], 0, [[V_FMAC_F32_e64_24]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_23:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD34]], 0, [[V_FMAC_F32_e64_22]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD35:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE60]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.396, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_26:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD35]], 0, [[V_FMAC_F32_e64_25]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_24:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD35]], 0, [[V_FMAC_F32_e64_23]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD36:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE62]], 512, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.400, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_27:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, killed [[GLOBAL_LOAD_DWORD36]], 0, [[V_FMAC_F32_e64_26]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sreg_32 = S_MOV_B32 192
   ; CHECK-NEXT:   [[V_ADD_U32_e64_23:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 [[V_ADD_U32_e64_]], killed [[S_MOV_B32_44]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_CMP_LT_I32_e64_17:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[V_ADD_U32_e64_23]], [[COPY28]], implicit $exec
@@ -2761,39 +2758,42 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.39(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD37:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE56]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.410, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_28:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD37]], 0, [[PHI14]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_25:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI54]], 0, killed [[GLOBAL_LOAD_DWORD37]], 0, [[PHI14]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD38:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE58]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.414, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_29:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD38]], 0, [[V_FMAC_F32_e64_28]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_26:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI53]], 0, killed [[GLOBAL_LOAD_DWORD38]], 0, [[V_FMAC_F32_e64_25]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD39:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE60]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.418, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_30:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD39]], 0, [[V_FMAC_F32_e64_29]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_27:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI52]], 0, killed [[GLOBAL_LOAD_DWORD39]], 0, [[V_FMAC_F32_e64_26]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD40:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG_SEQUENCE62]], 768, 0, implicit $exec :: ("amdgpu-noclobber" load (s32) from %ir.422, !tbaa !13, addrspace 1)
-  ; CHECK-NEXT:   [[V_FMAC_F32_e64_31:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, killed [[GLOBAL_LOAD_DWORD40]], 0, [[V_FMAC_F32_e64_30]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_28:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, killed [[GLOBAL_LOAD_DWORD40]], 0, [[V_FMAC_F32_e64_27]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.39.Flow77:
   ; CHECK-NEXT:   successors: %bb.40(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI55:%[0-9]+]]:vgpr_32 = PHI [[PHI14]], %bb.37, [[V_FMAC_F32_e64_31]], %bb.38
+  ; CHECK-NEXT:   [[PHI55:%[0-9]+]]:vgpr_32 = PHI [[PHI14]], %bb.37, [[V_FMAC_F32_e64_28]], %bb.38
   ; CHECK-NEXT:   SI_END_CF [[SI_IF15]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_29:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, [[GLOBAL_LOAD_DWORD36]], 0, [[V_FMAC_F32_e64_24]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.40.Flow78:
   ; CHECK-NEXT:   successors: %bb.41(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI56:%[0-9]+]]:vgpr_32 = PHI [[PHI13]], %bb.36, [[V_FMAC_F32_e64_27]], %bb.39
+  ; CHECK-NEXT:   [[PHI56:%[0-9]+]]:vgpr_32 = PHI [[PHI13]], %bb.36, [[V_FMAC_F32_e64_29]], %bb.39
   ; CHECK-NEXT:   [[PHI57:%[0-9]+]]:vgpr_32 = PHI [[PHI14]], %bb.36, [[PHI55]], %bb.39
   ; CHECK-NEXT:   SI_END_CF [[SI_IF14]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_30:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, [[GLOBAL_LOAD_DWORD32]], 0, [[V_FMAC_F32_e64_21]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.41.Flow79:
   ; CHECK-NEXT:   successors: %bb.42(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI58:%[0-9]+]]:vgpr_32 = PHI [[PHI12]], %bb.35, [[V_FMAC_F32_e64_23]], %bb.40
+  ; CHECK-NEXT:   [[PHI58:%[0-9]+]]:vgpr_32 = PHI [[PHI12]], %bb.35, [[V_FMAC_F32_e64_30]], %bb.40
   ; CHECK-NEXT:   [[PHI59:%[0-9]+]]:vgpr_32 = PHI [[PHI13]], %bb.35, [[PHI56]], %bb.40
   ; CHECK-NEXT:   [[PHI60:%[0-9]+]]:vgpr_32 = PHI [[PHI14]], %bb.35, [[PHI57]], %bb.40
   ; CHECK-NEXT:   SI_END_CF [[SI_IF13]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[V_FMAC_F32_e64_31:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[PHI51]], 0, [[GLOBAL_LOAD_DWORD28]], 0, [[V_FMAC_F32_e64_18]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.42.Flow80:
   ; CHECK-NEXT:   successors: %bb.33(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI61:%[0-9]+]]:vgpr_32 = PHI [[PHI11]], %bb.34, [[V_FMAC_F32_e64_19]], %bb.41
+  ; CHECK-NEXT:   [[PHI61:%[0-9]+]]:vgpr_32 = PHI [[PHI11]], %bb.34, [[V_FMAC_F32_e64_31]], %bb.41
   ; CHECK-NEXT:   [[PHI62:%[0-9]+]]:vgpr_32 = PHI [[PHI12]], %bb.34, [[PHI58]], %bb.41
   ; CHECK-NEXT:   [[PHI63:%[0-9]+]]:vgpr_32 = PHI [[PHI13]], %bb.34, [[PHI59]], %bb.41
   ; CHECK-NEXT:   [[PHI64:%[0-9]+]]:vgpr_32 = PHI [[PHI14]], %bb.34, [[PHI60]], %bb.41

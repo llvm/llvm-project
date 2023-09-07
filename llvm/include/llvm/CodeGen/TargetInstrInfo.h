@@ -140,6 +140,15 @@ public:
     return false;
   }
 
+  /// Attempting to move \p MoveCandidate after \p ModifierInstr .
+  /// \p MoveCandidate uses \p Reg but \p ModifierInstr redefines \p Reg.
+  /// Let target check it redefines it using same value.
+  virtual bool
+  modifiesRegisterImplicitly(Register Reg, const MachineInstr *MoveCandidate,
+                             const MachineInstr *ModifierInstr) const {
+    return true;
+  }
+
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually

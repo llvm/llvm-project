@@ -290,8 +290,10 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
       if (MO.isUse()) {
         if (Reg.isPhysical() && MRI && MRI->isConstantPhysReg(Reg))
           continue;
-        if (PI->modifiesRegister(Reg, TRI))
+        if (PI->modifiesRegister(Reg, TRI) &&
+            TII->modifiesRegisterImplicitly(Reg, &MI, &*PI)) {
           return true;
+        }
       } else {
         if (PI->readsRegister(Reg, TRI))
           return true;
