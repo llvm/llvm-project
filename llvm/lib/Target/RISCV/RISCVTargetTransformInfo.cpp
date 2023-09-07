@@ -34,7 +34,7 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
-InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
+InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) const {
   // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
   // implementation-defined.
   if (!VT.isVector())
@@ -266,14 +266,14 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
 /// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
 /// is generally quadratic in the number of vreg implied by LMUL.  Note that
 /// operand (index and possibly mask) are handled separately.
-InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) {
+InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) const {
   return getLMULCost(VT) * getLMULCost(VT);
 }
 
 /// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
 /// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) {
+InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) const {
   return getLMULCost(VT);
 }
 
@@ -281,7 +281,7 @@ InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) {
 /// for the type VT.  (This does not cover the vslide1up or vslide1down
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTTIImpl::getVSlideCost(MVT VT) {
+InstructionCost RISCVTTIImpl::getVSlideCost(MVT VT) const {
   return getLMULCost(VT);
 }
 
