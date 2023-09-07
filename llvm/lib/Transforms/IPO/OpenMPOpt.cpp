@@ -2676,17 +2676,19 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!ED.EncounteredAssumes.empty() && !A.isModulePass())
         return;
 
-      // We can remove this barrier, if it is one, or all aligned barriers
-      // reaching the kernel end. In the latter case we can transitively work
-      // our way back until we find a barrier that guards a side-effect if we
-      // are dealing with the kernel end here.
+      // We can remove this barrier, if it is one, or aligned barriers reaching
+      // the kernel end (if CB is nullptr). Aligned barriers reaching the kernel
+      // end may have other successors besides the kernel end (especially if
+      // they're in loops) with non-local side-effects, so those barriers can
+      // only be removed if they also only reach the kernel end. If those
+      // barriers have other barriers reaching them, those can be transitively
+      // removed as well.
       if (CB) {
         DeletedBarriers.insert(CB);
         A.deleteAfterManifest(*CB);
         ++NumBarriersEliminated;
         Changed = ChangeStatus::CHANGED;
       } else if (!ED.AlignedBarriers.empty()) {
-        NumBarriersEliminated += ED.AlignedBarriers.size();
         Changed = ChangeStatus::CHANGED;
         SmallVector<CallBase *> Worklist(ED.AlignedBarriers.begin(),
                                          ED.AlignedBarriers.end());
@@ -2697,7 +2699,11 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
             continue;
           if (LastCB->getFunction() != getAnchorScope())
             continue;
+          const ExecutionDomainTy &PostLastED = CEDMap[{LastCB, POST}];
+          if (!PostLastED.IsReachingAlignedBarrierOnly)
+            continue;
           if (!DeletedBarriers.count(LastCB)) {
+            ++NumBarriersEliminated;
             A.deleteAfterManifest(*LastCB);
             continue;
           }
