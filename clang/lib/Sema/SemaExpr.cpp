@@ -3220,8 +3220,8 @@ Sema::PerformObjectMemberConversion(Expr *From,
     if (Method->isStatic())
       return From;
 
-    DestType = Method->getThisType();
-    DestRecordType = DestType->getPointeeType();
+    DestType = Method->getThisType().getNonReferenceType();
+    DestRecordType = Method->getThisObjectType();
 
     if (FromType->getAs<PointerType>()) {
       FromRecordType = FromType->getPointeeType();
