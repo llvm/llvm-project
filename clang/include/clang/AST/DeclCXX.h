@@ -404,9 +404,6 @@ private:
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber : 31;
 
-    /// The device side name mangling number.
-    unsigned DeviceManglingNumber = 0;
-
     /// The index of this lambda within its context declaration. This is not in
     /// general the same as the mangling number.
     unsigned IndexInContext;
