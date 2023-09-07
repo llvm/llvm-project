@@ -4073,10 +4073,15 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
   Value *Src = LHS;
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
 
+  FPClassTest RHSClass = ConstRHS->classify();
+  if (IsFabs)
+    RHSClass = llvm::fabs(RHSClass);
+
   // Compute the test mask that would return true for the ordered comparisons.
-  FPClassTest Mask;
+  FPClassTest Mask = RHSClass;
 
   if (ConstRHS->isInfinity()) {
+    /// this generalizes for the equality case
     switch (Pred) {
     case FCmpInst::FCMP_OEQ:
     case FCmpInst::FCMP_UNE: {
@@ -4091,7 +4096,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
       //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
       //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
-
+#if 0
       if (ConstRHS->isNegative()) {
         Mask = fcNegInf;
         if (IsFabs)
@@ -4101,7 +4106,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
         if (IsFabs)
           Mask |= fcNegInf;
       }
-
+#endif
       break;
     }
     case FCmpInst::FCMP_ONE:
@@ -4220,18 +4225,19 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        const APFloat &ConstRHS, bool LookThroughSrc) {
+#if 0
   auto [Val, ClassMask] =
       fcmpToClassTest(Pred, F, LHS, &ConstRHS, LookThroughSrc);
   if (Val)
     return {Val, ClassMask, ~ClassMask};
-
+#endif
   FPClassTest RHSClass = ConstRHS.classify();
-  assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal ||
-          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal) &&
-         "should have been recognized as an exact class test");
 
   const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
   const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
+  const bool IsNaN = (RHSClass & ~fcNan) == RHSClass;
+  const bool IsZero = (RHSClass & fcZero) == RHSClass;
+  const bool IsInf = (RHSClass & fcInf) == RHSClass;
 
   assert(IsNegativeRHS == ConstRHS.isNegative());
   assert(IsPositiveRHS == !ConstRHS.isNegative());
@@ -4242,7 +4248,15 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
 
-  if (Pred == FCmpInst::FCMP_OEQ)
+  // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
+  if (Pred == FCmpInst::FCMP_ORD && !IsNaN)
+    return {Src, ~fcNan, fcNan};
+
+  // fcmp uno x, zero|normal|subnormal|inf -> fcNan
+  if (Pred == FCmpInst::FCMP_UNO && !IsNaN)
+    return {Src, fcNan, ~fcNan};
+
+  if (Pred == FCmpInst::FCMP_OEQ) {
     return {Src, RHSClass, fcAllFlags};
 
   if (Pred == FCmpInst::FCMP_UEQ) {
@@ -4255,6 +4269,15 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
   if (Pred == FCmpInst::FCMP_UNE)
     return {Src, fcAllFlags, RHSClass | fcNan};
+
+
+  auto [Val, ClassMask] = fcmpToClassTest(Pred, F, LHS, &ConstRHS, LookThroughSrc);
+  if (Val)
+    return {Val, ClassMask, ~ClassMask};
+
+  assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal ||
+          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal) &&
+         "should have been recognized as an exact class test");
 
   if (IsNegativeRHS) {
     // TODO: Handle fneg(fabs)
