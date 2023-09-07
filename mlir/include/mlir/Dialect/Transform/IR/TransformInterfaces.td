@@ -260,6 +260,18 @@ def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
       /*name=*/"populatePatterns",
       /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns)
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate rewrite patterns into the given pattern set taking into account
+        the transform state.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatternsWithState",
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns,
+                         "::mlir::transform::TransformState &":$state),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ $_op.populatePatterns(patterns); }]
+    >
   ];
 }
 
