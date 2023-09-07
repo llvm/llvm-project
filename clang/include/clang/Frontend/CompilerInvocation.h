@@ -66,16 +66,12 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
-/// The base class of CompilerInvocation with reference semantics.
-///
-/// This class stores option objects behind reference-counted pointers. This is
-/// useful for clients that want to keep some option object around even after
-/// CompilerInvocation gets destroyed, without making a copy.
-///
-/// This is a separate class so that we can implement the copy constructor and
-/// assignment here and leave them defaulted in the rest of CompilerInvocation.
-class CompilerInvocationRefBase {
-public:
+/// The base class of CompilerInvocation. It keeps individual option objects
+/// behind reference-counted pointers, which is useful for clients that want to
+/// keep select option objects alive (even after CompilerInvocation gets
+/// destroyed) without making a copy.
+class CompilerInvocationBase {
+protected:
   /// Options controlling the language variant.
   std::shared_ptr<LangOptions> LangOpts;
 
@@ -86,103 +82,71 @@ public:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
-  std::shared_ptr<HeaderSearchOptions> HeaderSearchOpts;
+  std::shared_ptr<HeaderSearchOptions> HSOpts;
 
   /// Options controlling the preprocessor (aside from \#include handling).
-  std::shared_ptr<PreprocessorOptions> PreprocessorOpts;
+  std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
   AnalyzerOptionsRef AnalyzerOpts;
 
-  CompilerInvocationRefBase();
-  CompilerInvocationRefBase(const CompilerInvocationRefBase &X);
-  CompilerInvocationRefBase(CompilerInvocationRefBase &&X);
-  CompilerInvocationRefBase &operator=(CompilerInvocationRefBase X);
-  CompilerInvocationRefBase &operator=(CompilerInvocationRefBase &&X);
-  ~CompilerInvocationRefBase();
-
-  LangOptions &getLangOpts() { return *LangOpts; }
-  const LangOptions &getLangOpts() const { return *LangOpts; }
-
-  TargetOptions &getTargetOpts() { return *TargetOpts.get(); }
-  const TargetOptions &getTargetOpts() const { return *TargetOpts.get(); }
-
-  DiagnosticOptions &getDiagnosticOpts() const { return *DiagnosticOpts; }
-
-  HeaderSearchOptions &getHeaderSearchOpts() { return *HeaderSearchOpts; }
-
-  const HeaderSearchOptions &getHeaderSearchOpts() const {
-    return *HeaderSearchOpts;
-  }
-
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
-    return HeaderSearchOpts;
-  }
-
-  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
-    return PreprocessorOpts;
-  }
-
-  PreprocessorOptions &getPreprocessorOpts() { return *PreprocessorOpts; }
-
-  const PreprocessorOptions &getPreprocessorOpts() const {
-    return *PreprocessorOpts;
-  }
-
-  AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
-  const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
-};
-
-/// The base class of CompilerInvocation with value semantics.
-class CompilerInvocationValueBase {
-protected:
-  MigratorOptions MigratorOpts;
+  std::shared_ptr<MigratorOptions> MigratorOpts;
 
   /// Options controlling IRgen and the backend.
-  CodeGenOptions CodeGenOpts;
-
-  /// Options controlling dependency output.
-  DependencyOutputOptions DependencyOutputOpts;
+  std::shared_ptr<CodeGenOptions> CodeGenOpts;
 
   /// Options controlling file system operations.
-  FileSystemOptions FileSystemOpts;
+  std::shared_ptr<FileSystemOptions> FSOpts;
 
   /// Options controlling the frontend itself.
-  FrontendOptions FrontendOpts;
+  std::shared_ptr<FrontendOptions> FrontendOpts;
+
+  /// Options controlling dependency output.
+  std::shared_ptr<DependencyOutputOptions> DependencyOutputOpts;
 
   /// Options controlling preprocessed output.
-  PreprocessorOutputOptions PreprocessorOutputOpts;
+  std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
 
 public:
-  MigratorOptions &getMigratorOpts() { return MigratorOpts; }
-  const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
+  CompilerInvocationBase();
+  CompilerInvocationBase(const CompilerInvocationBase &X) { operator=(X); }
+  CompilerInvocationBase(CompilerInvocationBase &&X) = default;
+  CompilerInvocationBase &operator=(const CompilerInvocationBase &X);
+  CompilerInvocationBase &operator=(CompilerInvocationBase &&X) = default;
+  ~CompilerInvocationBase() = default;
 
-  CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
-  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
-
-  DependencyOutputOptions &getDependencyOutputOpts() {
-    return DependencyOutputOpts;
-  }
-
+  const LangOptions &getLangOpts() const { return *LangOpts; }
+  const TargetOptions &getTargetOpts() const { return *TargetOpts; }
+  const DiagnosticOptions &getDiagnosticOpts() const { return *DiagnosticOpts; }
+  const HeaderSearchOptions &getHeaderSearchOpts() const { return *HSOpts; }
+  const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
+  const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
+  const MigratorOptions &getMigratorOpts() const { return *MigratorOpts; }
+  const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
+  const FileSystemOptions &getFileSystemOpts() const { return *FSOpts; }
+  const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
   const DependencyOutputOptions &getDependencyOutputOpts() const {
-    return DependencyOutputOpts;
+    return *DependencyOutputOpts;
   }
-
-  FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
-
-  const FileSystemOptions &getFileSystemOpts() const {
-    return FileSystemOpts;
-  }
-
-  FrontendOptions &getFrontendOpts() { return FrontendOpts; }
-  const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
-
-  PreprocessorOutputOptions &getPreprocessorOutputOpts() {
-    return PreprocessorOutputOpts;
-  }
-
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
-    return PreprocessorOutputOpts;
+    return *PreprocessorOutputOpts;
+  }
+
+  LangOptions &getLangOpts() { return *LangOpts; }
+  TargetOptions &getTargetOpts() { return *TargetOpts; }
+  DiagnosticOptions &getDiagnosticOpts() { return *DiagnosticOpts; }
+  HeaderSearchOptions &getHeaderSearchOpts() { return *HSOpts; }
+  PreprocessorOptions &getPreprocessorOpts() { return *PPOpts; }
+  AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
+  MigratorOptions &getMigratorOpts() { return *MigratorOpts; }
+  CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
+  FileSystemOptions &getFileSystemOpts() { return *FSOpts; }
+  FrontendOptions &getFrontendOpts() { return *FrontendOpts; }
+  DependencyOutputOptions &getDependencyOutputOpts() {
+    return *DependencyOutputOpts;
+  }
+  PreprocessorOutputOptions &getPreprocessorOutputOpts() {
+    return *PreprocessorOutputOpts;
   }
 };
 
@@ -191,9 +155,21 @@ public:
 /// This class is designed to represent an abstract "invocation" of the
 /// compiler, including data such as the include paths, the code generation
 /// options, the warning flags, and so on.
-class CompilerInvocation : public CompilerInvocationRefBase,
-                           public CompilerInvocationValueBase {
+class CompilerInvocation : public CompilerInvocationBase {
 public:
+  /// Base class internals.
+  /// @{
+  using CompilerInvocationBase::LangOpts;
+  using CompilerInvocationBase::TargetOpts;
+  using CompilerInvocationBase::DiagnosticOpts;
+  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
+    return HSOpts;
+  }
+  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
+    return PPOpts;
+  }
+  /// @}
+
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
