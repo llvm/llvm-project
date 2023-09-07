@@ -1,5 +1,34 @@
 // RUN: mlir-opt --pass-pipeline='builtin.module(llvm.func(canonicalize{test-convergence}))' %s -split-input-file | FileCheck %s
 
+// CHECK-LABEL: @fold_icmp_eq
+llvm.func @fold_icmp_eq(%arg0 : i32) -> i1 {
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(true) : i1
+  %0 = llvm.icmp "eq" %arg0, %arg0 : i32
+  // CHECK: llvm.return %[[C0]]
+  llvm.return %0 : i1
+}
+
+// CHECK-LABEL: @fold_icmp_ne
+llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(dense<false> : vector<2xi1>) : vector<2xi1>
+  %0 = llvm.icmp "ne" %arg0, %arg0 : vector<2xi32>
+  // CHECK: llvm.return %[[C0]]
+  llvm.return %0 : vector<2xi1>
+}
+
+// CHECK-LABEL: @fold_icmp_alloca
+llvm.func @fold_icmp_alloca() -> i1 {
+  // CHECK: %[[C0:.*]] = llvm.mlir.constant(true) : i1
+  %c0 = llvm.mlir.null : !llvm.ptr
+  %c1 = arith.constant 1 : i64
+  %0 = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
+  %1 = llvm.icmp "ne" %c0, %0 : !llvm.ptr
+  // CHECK: llvm.return %[[C0]]
+  llvm.return %1 : i1
+}
+
+// -----
+
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
