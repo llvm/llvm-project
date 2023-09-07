@@ -14063,9 +14063,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
       // If the stride is equal to the element size in bytes,  we can use
       // a masked.load.
-      const unsigned ElementSizeInBits = VT.getScalarType().getSizeInBits();
+      const unsigned ElementSize = VT.getScalarStoreSize();
       if (auto *StrideC = dyn_cast<ConstantSDNode>(Stride);
-          StrideC && StrideC->getZExtValue() == ElementSizeInBits/8)
+          StrideC && StrideC->getZExtValue() == ElementSize)
         return DAG.getMaskedLoad(VT, DL, Load->getChain(), Base,
                                  DAG.getUNDEF(XLenVT), Mask, PassThru,
                                  Load->getMemoryVT(), Load->getMemOperand(),
