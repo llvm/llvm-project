@@ -2161,10 +2161,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         SourceLocation SecondPartStart = Tok.getLocation();
         Sema::ConditionKind CK = Sema::ConditionKind::Boolean;
         SecondPart = ParseCXXCondition(
-            nullptr, ForLoc, CK,
+            /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr,
-            /*EnterForConditionScope*/ true);
+            /*EnterForConditionScope=*/true);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
