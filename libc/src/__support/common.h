@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
+#ifndef LIBC_NAMESPACE
+#error "LIBC_NAMESPACE macro is not defined."
+#endif
+
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
