@@ -196,7 +196,7 @@ def NVGPU_WarpgroupResult : NVGPU_Type<"WarpgroupResult", "warpgroup.result", []
   let parameters = (ins "Type":$tensor);
   let assemblyFormat = "`<` struct(params) `>`";
   let description = [{
-    It is fragmented result matrix from `nvgpu.wargroup.mma`.
+    It is fragmented result matrix from `nvgpu.warpgroup.mma`.
     [See the details of register fragment layout for accumulator matrix D](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
   }];
 }
@@ -673,9 +673,9 @@ def NVGPU_GenerateGmmaDescriptorOp : NVGPU_Op<"wgmma.generate.descriptor", []> {
   let hasVerifier = 1;
 }
 
-def NVGPU_WarpgroupMmaOp : NVGPU_Op<"wargroup.mma"> {
+def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
   let description = [{
-    The `nvgpu.wargroup.mma` op performs the warpgroup-level (4 warps) 
+    The `nvgpu.warpgroup.mma` op performs the warpgroup-level (4 warps) 
     matrix-multiply-and-accumulate (mma) operation that results in 
     `nvvm.wgmma.mma_async`. 
     
@@ -692,7 +692,7 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"wargroup.mma"> {
 
     Example:
     ```mlir
-      %res = nvgpu.wargroup.mma %wgmmaDescA, %wgmmaDescB, %acc: 
+      %res = nvgpu.warpgroup.mma %wgmmaDescA, %wgmmaDescB, %acc: 
                     !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
                     !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
                     vector<128x128xf32> -> !nvgpu.warpgroup.result<tensor = ...>

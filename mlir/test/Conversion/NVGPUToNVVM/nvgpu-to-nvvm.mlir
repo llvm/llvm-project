@@ -728,7 +728,7 @@ func.func @warpgroup_mma_128_128_64(
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   %acc = vector.transfer_read %D[%c0, %c0], %f0 {in_bounds = [true, true]} : memref<128x128xf32,3>, vector<128x128xf32>
-  %wgmmaResult, %wgmmaResult2 = nvgpu.wargroup.mma %descA, %descB, %acc, group = 1 {transposeB}: 
+  %wgmmaResult, %wgmmaResult2 = nvgpu.warpgroup.mma %descA, %descB, %acc, group = 1 {transposeB}: 
       !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
       !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
       vector<128x128xf32> -> !nvgpu.warpgroup.result<tensor = !accMatrixStruct>, !nvgpu.warpgroup.result<tensor = !accMatrixStruct>
