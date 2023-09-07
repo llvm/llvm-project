@@ -4,12 +4,12 @@
 ; tests for XCOFF object files.
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false < %s | FileCheck %s
+; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false -ppc-merge-string-pool=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | FileCheck %s
+; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
+; RUN:     -xcoff-traceback-table=false -data-sections=false -ppc-merge-string-pool=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 
 @magic16 = private unnamed_addr constant [4 x i16] [i16 264, i16 272, i16 213, i16 0], align 2
