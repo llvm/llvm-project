@@ -140,7 +140,7 @@ CompilerInvocationRefBase::CompilerInvocationRefBase()
 
 CompilerInvocationRefBase::CompilerInvocationRefBase(
     const CompilerInvocationRefBase &X)
-    : LangOpts(new LangOptions(*X.getLangOpts())),
+    : LangOpts(new LangOptions(X.getLangOpts())),
       TargetOpts(new TargetOptions(X.getTargetOpts())),
       DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
       HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
@@ -490,7 +490,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
                             InputKind IK) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  LangOptions &LangOpts = *Invocation.getLangOpts();
+  LangOptions &LangOpts = Invocation.getLangOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -4786,7 +4786,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
                                      MissingArgCount, VisibilityMask);
-  LangOptions &LangOpts = *Res.getLangOpts();
+  LangOptions &LangOpts = Res.getLangOpts();
 
   // Check for missing argument error.
   if (MissingArgCount)
@@ -4888,7 +4888,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
-      !Res.getLangOpts()->Sanitize.empty()) {
+      !Res.getLangOpts().Sanitize.empty()) {
     Res.getCodeGenOpts().FineGrainedBitfieldAccesses = false;
     Diags.Report(diag::warn_drv_fine_grained_bitfield_accesses_ignored);
   }
@@ -5038,7 +5038,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   //  -Werror: consider all warnings into the hash
   //  -Werror=something: consider only the specified into the hash
   //  -pedantic-error
-  if (getLangOpts()->ModulesHashErrorDiags) {
+  if (getLangOpts().ModulesHashErrorDiags) {
     bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
     HBuilder.add(isExtHandlingFromDiagsError(Diags));
     for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
@@ -5093,12 +5093,12 @@ std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
 }
 
 void CompilerInvocation::resetNonModularOptions() {
-  getLangOpts()->resetNonModularOptions();
+  getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {
-  getLangOpts()->ImplicitModules = false;
+  getLangOpts().ImplicitModules = false;
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;

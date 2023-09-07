@@ -13,6 +13,7 @@
 #include "clang/Tooling/Refactor/IndexerQuery.h"
 #include "clang/Tooling/Refactor/RefactoringOperation.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Optional.h"
 #include <tuple>
 
 namespace clang {

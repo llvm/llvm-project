@@ -413,7 +413,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
-  CI->getLangOpts()->DelayedTemplateParsing = false;
+  CI->getLangOpts().DelayedTemplateParsing = false;
 
   std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
   if (Inputs.FeatureModules) {

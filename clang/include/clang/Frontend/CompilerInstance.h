@@ -326,12 +326,8 @@ public:
     return Invocation->getAPINotesOpts();
   }
 
-  LangOptions &getLangOpts() {
-    return *Invocation->getLangOpts();
-  }
-  const LangOptions &getLangOpts() const {
-    return *Invocation->getLangOpts();
-  }
+  LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
+  const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
