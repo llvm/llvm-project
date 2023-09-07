@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
-#include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +25,19 @@ using namespace llvm::orc;
 static const char *SynthDebugSectionName = "__jitlink_synth_debug_object";
 
 namespace {
+
+struct MachO64LE {
+  using UIntPtr = uint64_t;
+
+  using Header = MachO::mach_header_64;
+  using SegmentLC = MachO::segment_command_64;
+  using Section = MachO::section_64;
+  using NList = MachO::nlist_64;
+
+  static constexpr support::endianness Endianness = support::little;
+  static constexpr const uint32_t Magic = MachO::MH_MAGIC_64;
+  static constexpr const uint32_t SegmentCmd = MachO::LC_SEGMENT_64;
+};
 
 class MachODebugObjectSynthesizerBase
     : public GDBJITDebugInfoRegistrationPlugin::DebugSectionSynthesizer {
@@ -72,7 +84,6 @@ public:
         if (!PreservedBlocks.count(B))
           G.addAnonymousSymbol(*B, 0, 0, false, true);
     }
-
     return Error::success();
   }
 
@@ -83,12 +94,28 @@ protected:
 
 template <typename MachOTraits>
 class MachODebugObjectSynthesizer : public MachODebugObjectSynthesizerBase {
-public:
-  MachODebugObjectSynthesizer(ExecutionSession &ES, LinkGraph &G,
-                              ExecutorAddr RegisterActionAddr)
-      : MachODebugObjectSynthesizerBase(G, RegisterActionAddr),
-        Builder(ES.getPageSize()) {}
+private:
+  class MachOStructWriter {
+  public:
+    MachOStructWriter(MutableArrayRef<char> Buffer) : Buffer(Buffer) {}
 
+    size_t getOffset() const { return Offset; }
+
+    template <typename MachOStruct> void write(MachOStruct S) {
+      assert(Offset + sizeof(S) <= Buffer.size() &&
+             "Container block overflow while constructing debug MachO");
+      if (MachOTraits::Endianness != support::endian::system_endianness())
+        MachO::swapStruct(S);
+      memcpy(Buffer.data() + Offset, &S, sizeof(S));
+      Offset += sizeof(S);
+    }
+
+  private:
+    MutableArrayRef<char> Buffer;
+    size_t Offset = 0;
+  };
+
+public:
   using MachODebugObjectSynthesizerBase::MachODebugObjectSynthesizerBase;
 
   Error startSynthesis() override {
@@ -96,79 +123,164 @@ public:
       dbgs() << "Creating " << SynthDebugSectionName << " for " << G.getName()
              << "\n";
     });
-
     auto &SDOSec = G.createSection(SynthDebugSectionName, MemProt::Read);
 
+    struct DebugSectionInfo {
+      Section *Sec = nullptr;
+      StringRef SegName;
+      StringRef SecName;
+      uint64_t Alignment = 0;
+      orc::ExecutorAddr StartAddr;
+      uint64_t Size = 0;
+    };
+
+    SmallVector<DebugSectionInfo, 12> DebugSecInfos;
+    size_t NumSections = 0;
     for (auto &Sec : G.sections()) {
       if (Sec.blocks().empty())
         continue;
 
-      // Skip sections whose name's don't fit the MachO standard.
-      if (Sec.getName().empty() || Sec.getName().size() > 33 ||
-          Sec.getName().find(',') > 16)
-        continue;
+      ++NumSections;
+      if (isDebugSection(Sec)) {
+        size_t SepPos = Sec.getName().find(',');
+        if (SepPos > 16 || (Sec.getName().size() - (SepPos + 1) > 16)) {
+          LLVM_DEBUG({
+            dbgs() << "Skipping debug object synthesis for graph "
+                   << G.getName()
+                   << ": encountered non-standard DWARF section name \""
+                   << Sec.getName() << "\"\n";
+          });
+          return Error::success();
+        }
+        DebugSecInfos.push_back({&Sec, Sec.getName().substr(0, SepPos),
+                                 Sec.getName().substr(SepPos + 1), 0,
+                                 orc::ExecutorAddr(), 0});
+      } else {
+        NonDebugSections.push_back(&Sec);
 
-      if (isDebugSection(Sec))
-        DebugSections.push_back({&Sec, nullptr});
-      else if (Sec.getMemLifetimePolicy() != MemLifetimePolicy::NoAlloc)
-        NonDebugSections.push_back({&Sec, nullptr});
+        // If the first block in the section has a non-zero alignment offset
+        // then we need to add a padding block, since the section command in
+        // the header doesn't allow for aligment offsets.
+        SectionRange R(Sec);
+        if (!R.empty()) {
+          auto &FB = *R.getFirstBlock();
+          if (FB.getAlignmentOffset() != 0) {
+            auto Padding = G.allocateBuffer(FB.getAlignmentOffset());
+            memset(Padding.data(), 0, Padding.size());
+            G.createContentBlock(Sec, Padding,
+                                 FB.getAddress() - FB.getAlignmentOffset(),
+                                 FB.getAlignment(), 0);
+          }
+        }
+      }
     }
 
+    // Create container block.
+    size_t SectionsCmdSize =
+        sizeof(typename MachOTraits::Section) * NumSections;
+    size_t SegmentLCSize =
+        sizeof(typename MachOTraits::SegmentLC) + SectionsCmdSize;
+    size_t ContainerBlockSize =
+        sizeof(typename MachOTraits::Header) + SegmentLCSize;
+    auto ContainerBlockContent = G.allocateBuffer(ContainerBlockSize);
+    MachOContainerBlock = &G.createMutableContentBlock(
+        SDOSec, ContainerBlockContent, orc::ExecutorAddr(), 8, 0);
+
+    // Copy debug section blocks and symbols.
+    orc::ExecutorAddr NextBlockAddr(MachOContainerBlock->getSize());
+    for (auto &SI : DebugSecInfos) {
+      assert(!SI.Sec->blocks().empty() && "Empty debug info section?");
+
+      // Update addresses in debug section.
+      LLVM_DEBUG({
+        dbgs() << "  Appending " << SI.Sec->getName() << " ("
+               << SI.Sec->blocks_size() << " block(s)) at "
+               << formatv("{0:x8}", NextBlockAddr) << "\n";
+      });
+      for (auto *B : SI.Sec->blocks()) {
+        NextBlockAddr = alignToBlock(NextBlockAddr, *B);
+        B->setAddress(NextBlockAddr);
+        NextBlockAddr += B->getSize();
+      }
+
+      auto &FirstBlock = **SI.Sec->blocks().begin();
+      if (FirstBlock.getAlignmentOffset() != 0)
+        return make_error<StringError>(
+            "First block in " + SI.Sec->getName() +
+                " section has non-zero alignment offset",
+            inconvertibleErrorCode());
+      if (FirstBlock.getAlignment() > std::numeric_limits<uint32_t>::max())
+        return make_error<StringError>("First block in " + SI.Sec->getName() +
+                                           " has alignment >4Gb",
+                                       inconvertibleErrorCode());
+
+      SI.Alignment = FirstBlock.getAlignment();
+      SI.StartAddr = FirstBlock.getAddress();
+      SI.Size = NextBlockAddr - SI.StartAddr;
+      G.mergeSections(SDOSec, *SI.Sec);
+      SI.Sec = nullptr;
+    }
+    size_t DebugSectionsSize =
+        NextBlockAddr - orc::ExecutorAddr(MachOContainerBlock->getSize());
+
     // Write MachO header and debug section load commands.
-    Builder.Header.filetype = MachO::MH_OBJECT;
+    MachOStructWriter Writer(MachOContainerBlock->getAlreadyMutableContent());
+    typename MachOTraits::Header Hdr;
+    memset(&Hdr, 0, sizeof(Hdr));
+    Hdr.magic = MachOTraits::Magic;
     switch (G.getTargetTriple().getArch()) {
     case Triple::x86_64:
-      Builder.Header.cputype = MachO::CPU_TYPE_X86_64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
+      Hdr.cputype = MachO::CPU_TYPE_X86_64;
+      Hdr.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
       break;
     case Triple::aarch64:
-      Builder.Header.cputype = MachO::CPU_TYPE_ARM64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
+      Hdr.cputype = MachO::CPU_TYPE_ARM64;
+      Hdr.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
       break;
     default:
       llvm_unreachable("Unsupported architecture");
     }
+    Hdr.filetype = MachO::MH_OBJECT;
+    Hdr.ncmds = 1;
+    Hdr.sizeofcmds = SegmentLCSize;
+    Hdr.flags = 0;
+    Writer.write(Hdr);
 
-    Seg = &Builder.addSegment("");
+    typename MachOTraits::SegmentLC SegLC;
+    memset(&SegLC, 0, sizeof(SegLC));
+    SegLC.cmd = MachOTraits::SegmentCmd;
+    SegLC.cmdsize = SegmentLCSize;
+    SegLC.vmaddr = ContainerBlockSize;
+    SegLC.vmsize = DebugSectionsSize;
+    SegLC.fileoff = ContainerBlockSize;
+    SegLC.filesize = DebugSectionsSize;
+    SegLC.maxprot =
+        MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+    SegLC.initprot =
+        MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+    SegLC.nsects = NumSections;
+    SegLC.flags = 0;
+    Writer.write(SegLC);
 
-    for (auto &DSec : DebugSections) {
-      auto [SegName, SecName] = DSec.GraphSec->getName().split(',');
-      DSec.BuilderSec = &Seg->addSection(SecName, SegName);
-
-      SectionRange SR(*DSec.GraphSec);
-      DSec.BuilderSec->Content.Size = SR.getSize();
-      if (!SR.empty())
-        DSec.BuilderSec->align = Log2_64(SR.getFirstBlock()->getAlignment());
+    StringSet<> ExistingLongNames;
+    for (auto &SI : DebugSecInfos) {
+      typename MachOTraits::Section Sec;
+      memset(&Sec, 0, sizeof(Sec));
+      memcpy(Sec.sectname, SI.SecName.data(), SI.SecName.size());
+      memcpy(Sec.segname, SI.SegName.data(), SI.SegName.size());
+      Sec.addr = SI.StartAddr.getValue();
+      Sec.size = SI.Size;
+      Sec.offset = SI.StartAddr.getValue();
+      Sec.align = SI.Alignment;
+      Sec.reloff = 0;
+      Sec.nreloc = 0;
+      Sec.flags = MachO::S_ATTR_DEBUG;
+      Writer.write(Sec);
     }
 
-    for (auto &NDSP : NonDebugSections) {
-      auto [SegName, SecName] = NDSP.GraphSec->getName().split(',');
-      NDSP.BuilderSec = &Seg->addSection(SecName, SegName);
-      SectionRange SR(*NDSP.GraphSec);
-      if (!SR.empty())
-        NDSP.BuilderSec->align = Log2_64(SR.getFirstBlock()->getAlignment());
-
-      // Add stabs.
-      for (auto *Sym : NDSP.GraphSec->symbols()) {
-        // Skip anonymous symbols.
-        if (!Sym->hasName())
-          continue;
-
-        uint8_t SymType = Sym->isCallable() ? MachO::N_FUN : MachO::N_GSYM;
-
-        Builder.addSymbol("", MachO::N_BNSYM, 1, 0, 0);
-        StabSymbols.push_back(
-            {*Sym, Builder.addSymbol(Sym->getName(), SymType, 1, 0, 0),
-             Builder.addSymbol(Sym->getName(), SymType, 0, 0, 0)});
-        Builder.addSymbol("", MachO::N_ENSYM, 1, 0, 0);
-      }
-    }
-
-    size_t DebugObjectSize = Builder.layout();
-
-    MachOContainerBlock = &G.createMutableContentBlock(
-        SDOSec, G.allocateBuffer(DebugObjectSize), orc::ExecutorAddr(), 8, 0);
-
+    // Set MachOContainerBlock to indicate success to
+    // completeSynthesisAndRegister.
+    NonDebugSectionsStart = Writer.getOffset();
     return Error::success();
   }
 
@@ -178,45 +290,63 @@ public:
         dbgs() << "Not writing MachO debug object header for " << G.getName()
                << " since createDebugSection failed\n";
       });
-
       return Error::success();
-    }
-    ExecutorAddr MaxAddr;
-    for (auto &NDSec : NonDebugSections) {
-      SectionRange SR(*NDSec.GraphSec);
-      NDSec.BuilderSec->addr = SR.getStart().getValue();
-      NDSec.BuilderSec->size = SR.getSize();
-      NDSec.BuilderSec->offset = SR.getStart().getValue();
-      if (SR.getEnd() > MaxAddr)
-        MaxAddr = SR.getEnd();
-    }
-
-    for (auto &DSec : DebugSections) {
-      if (DSec.GraphSec->blocks_size() != 1)
-        return make_error<StringError>(
-            "Unexpected number of blocks in debug info section",
-            inconvertibleErrorCode());
-
-      if (ExecutorAddr(DSec.BuilderSec->addr) + DSec.BuilderSec->size > MaxAddr)
-        MaxAddr = ExecutorAddr(DSec.BuilderSec->addr) + DSec.BuilderSec->size;
-
-      auto &B = **DSec.GraphSec->blocks().begin();
-      DSec.BuilderSec->Content.Data = B.getContent().data();
-      DSec.BuilderSec->Content.Size = B.getContent().size();
-      DSec.BuilderSec->flags |= MachO::S_ATTR_DEBUG;
     }
 
     LLVM_DEBUG({
       dbgs() << "Writing MachO debug object header for " << G.getName() << "\n";
     });
 
-    // Update stab symbol addresses.
-    for (auto &SS : StabSymbols) {
-      SS.StartStab.nlist().n_value = SS.Sym.getAddress().getValue();
-      SS.EndStab.nlist().n_value = SS.Sym.getSize();
-    }
+    MachOStructWriter Writer(
+        MachOContainerBlock->getAlreadyMutableContent().drop_front(
+            NonDebugSectionsStart));
 
-    Builder.write(MachOContainerBlock->getAlreadyMutableContent());
+    unsigned LongSectionNameIdx = 0;
+    for (auto *Sec : NonDebugSections) {
+      size_t SepPos = Sec->getName().find(',');
+      StringRef SegName, SecName;
+      std::string CustomSecName;
+
+      if ((SepPos == StringRef::npos && Sec->getName().size() <= 16)) {
+        // No embedded segment name, short section name.
+        SegName = "__JITLINK_CUSTOM";
+        SecName = Sec->getName();
+      } else if (SepPos < 16 && (Sec->getName().size() - (SepPos + 1) <= 16)) {
+        // Canonical embedded segment and section name.
+        SegName = Sec->getName().substr(0, SepPos);
+        SecName = Sec->getName().substr(SepPos + 1);
+      } else {
+        // Long section name that needs to be truncated.
+        assert(Sec->getName().size() > 16 &&
+               "Short section name should have been handled above");
+        SegName = "__JITLINK_CUSTOM";
+        auto IdxStr = std::to_string(++LongSectionNameIdx);
+        CustomSecName = Sec->getName().substr(0, 15 - IdxStr.size()).str();
+        CustomSecName += ".";
+        CustomSecName += IdxStr;
+        SecName = StringRef(CustomSecName.data(), 16);
+      }
+
+      SectionRange R(*Sec);
+      if (R.getFirstBlock()->getAlignmentOffset() != 0)
+        return make_error<StringError>(
+            "While building MachO debug object for " + G.getName() +
+                " first block has non-zero alignment offset",
+            inconvertibleErrorCode());
+
+      typename MachOTraits::Section SecCmd;
+      memset(&SecCmd, 0, sizeof(SecCmd));
+      memcpy(SecCmd.sectname, SecName.data(), SecName.size());
+      memcpy(SecCmd.segname, SegName.data(), SegName.size());
+      SecCmd.addr = R.getStart().getValue();
+      SecCmd.size = R.getSize();
+      SecCmd.offset = 0;
+      SecCmd.align = R.getFirstBlock()->getAlignment();
+      SecCmd.reloff = 0;
+      SecCmd.nreloc = 0;
+      SecCmd.flags = 0;
+      Writer.write(SecCmd);
+    }
 
     static constexpr bool AutoRegisterCode = true;
     SectionRange R(MachOContainerBlock->getSection());
@@ -225,34 +355,13 @@ public:
                   shared::SPSArgList<shared::SPSExecutorAddrRange, bool>>(
              RegisterActionAddr, R.getRange(), AutoRegisterCode)),
          {}});
-
     return Error::success();
   }
 
 private:
-  struct SectionPair {
-    Section *GraphSec = nullptr;
-    typename MachOBuilder<MachOTraits>::Section *BuilderSec = nullptr;
-  };
-
-  struct StabSymbolsEntry {
-    using RelocTarget = typename MachOBuilder<MachOTraits>::RelocTarget;
-
-    StabSymbolsEntry(Symbol &Sym, RelocTarget StartStab, RelocTarget EndStab)
-        : Sym(Sym), StartStab(StartStab), EndStab(EndStab) {}
-
-    Symbol &Sym;
-    RelocTarget StartStab, EndStab;
-  };
-
-  using BuilderType = MachOBuilder<MachOTraits>;
-
   Block *MachOContainerBlock = nullptr;
-  MachOBuilder<MachOTraits> Builder;
-  typename MachOBuilder<MachOTraits>::Segment *Seg = nullptr;
-  std::vector<StabSymbolsEntry> StabSymbols;
-  SmallVector<SectionPair, 16> DebugSections;
-  SmallVector<SectionPair, 16> NonDebugSections;
+  SmallVector<Section *, 16> NonDebugSections;
+  size_t NonDebugSectionsStart = 0;
 };
 
 } // end anonymous namespace
@@ -344,12 +453,12 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
     });
 
     auto MDOS = std::make_shared<MachODebugObjectSynthesizer<MachO64LE>>(
-        MR.getTargetJITDylib().getExecutionSession(), LG, RegisterActionAddr);
+        LG, RegisterActionAddr);
     PassConfig.PrePrunePasses.push_back(
         [=](LinkGraph &G) { return MDOS->preserveDebugSections(); });
     PassConfig.PostPrunePasses.push_back(
         [=](LinkGraph &G) { return MDOS->startSynthesis(); });
-    PassConfig.PostFixupPasses.push_back(
+    PassConfig.PreFixupPasses.push_back(
         [=](LinkGraph &G) { return MDOS->completeSynthesisAndRegister(); });
   } else {
     LLVM_DEBUG({
