@@ -578,6 +578,7 @@ libc_support_library(
         ":__support_common",
         ":__support_error_or",
         ":__support_osutil_syscall",
+        ":errno",
     ],
 )
 
