@@ -1477,6 +1477,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       !Fortran::semantics::IsProcedure(sym) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+    bool isCrayPointee =
+        sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
@@ -1492,6 +1494,51 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+
+    if (isCrayPointee) {
+      mlir::Type baseType =
+          hlfir::getFortranElementOrSequenceType(base.getType());
+      if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
+        // The pointer box's sequence type must be with unknown shape.
+        llvm::SmallVector<int64_t> shape(seqType.getDimension(),
+                                         fir::SequenceType::getUnknownExtent());
+        baseType = fir::SequenceType::get(shape, seqType.getEleTy());
+      }
+      fir::BoxType ptrBoxType =
+          fir::BoxType::get(fir::PointerType::get(baseType));
+      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+
+      // Declare a local pointer variable.
+      attributes = fir::FortranVariableFlagsAttr::get(
+          builder.getContext(), fir::FortranVariableFlagsEnum::pointer);
+      auto newBase = builder.create<hlfir::DeclareOp>(
+          loc, boxAlloc, name, /*shape=*/nullptr, lenParams, attributes);
+      mlir::Value nullAddr =
+          builder.createNullConstant(loc, ptrBoxType.getEleTy());
+
+      // If the element type is known-length character, then
+      // EmboxOp does not need the length parameters.
+      if (auto charType = mlir::dyn_cast<fir::CharacterType>(
+              fir::unwrapSequenceType(baseType)))
+        if (!charType.hasDynamicLen())
+          lenParams.clear();
+
+      // Inherit the shape (and maybe length parameters) from the pointee
+      // declaration.
+      mlir::Value initVal =
+          builder.create<fir::EmboxOp>(loc, ptrBoxType, nullAddr, shapeOrShift,
+                                       /*slice=*/nullptr, lenParams);
+      builder.create<fir::StoreOp>(loc, initVal, newBase.getBase());
+
+      // Any reference to the pointee is going to be using the pointer
+      // box from now on. The base_addr of the descriptor must be updated
+      // to hold the value of the Cray pointer at the point of the pointee
+      // access.
+      // Note that the same Cray pointer may be associated with
+      // multiple pointees and each of them has its own descriptor.
+      symMap.addVariableDefinition(sym, newBase, force);
+      return;
+    }
     auto newBase = builder.create<hlfir::DeclareOp>(
         loc, base, name, shapeOrShift, lenParams, attributes);
     symMap.addVariableDefinition(sym, newBase, force);
@@ -2055,4 +2102,17 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
   defineGlobal(converter, var, globalName, linkage);
+}
+
+Fortran::semantics::SymbolRef
+Fortran::lower::getCrayPointer(Fortran::semantics::SymbolRef sym) {
+  assert(!sym->owner().crayPointers().empty() &&
+         "empty Cray pointer/pointee map");
+  for (const auto &[pointee, pointer] : sym->owner().crayPointers()) {
+    if (pointee == sym->name()) {
+      Fortran::semantics::SymbolRef v{pointer.get()};
+      return v;
+    }
+  }
+  llvm_unreachable("corresponding Cray pointer cannot be found");
 }

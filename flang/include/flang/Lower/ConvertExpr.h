@@ -234,7 +234,6 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
           builder.getUnitAttr()};
 }
 
-Fortran::semantics::SymbolRef getPointer(Fortran::semantics::SymbolRef sym);
 mlir::Value addCrayPointerInst(mlir::Location loc, fir::FirOpBuilder &builder,
                                mlir::Value ptrVal, mlir::Type ptrTy,
                                mlir::Type pteTy);
