@@ -691,7 +691,8 @@ This class provides six fields.
 
 * ``string FilterClassField``. This is an optional field of ``FilterClass``
   which should be `bit` type. If specified, only those records with this field
-  being true will have corresponding entries in the table.
+  being true will have corresponding entries in the table. This field won't be
+  included in generated C++ fields if it isn't included in ``Fields`` list.
 
 * ``string CppTypeName``. The name of the C++ struct/class type of the
   table that holds the entries. If unspecified, the ``FilterClass`` name is
@@ -905,6 +906,63 @@ causes the lookup function to change as follows:
 
     struct KeyType {
     ...
+
+We can construct two GenericTables with the same ``FilterClass``, so that they
+select from the same overall set of records, but assign them with different
+``FilterClassField`` values so that they include different subsets of the
+records of that class.
+
+For example, we can create two tables that contain only even or odd records.
+Fields ``IsEven`` and ``IsOdd`` won't be included in generated C++ fields
+because they aren't included in ``Fields`` list.
+
+.. code-block:: text
+
+  class EEntry<bits<8> value> {
+    bits<8> Value = value;
+    bit IsEven = !eq(!and(value, 1), 0);
+    bit IsOdd = !not(IsEven);
+  }
+
+  foreach i = {1-10} in {
+    def : EEntry<i>;
+  }
+
+  def EEntryEvenTable : GenericTable {
+    let FilterClass = "EEntry";
+    let FilterClassField = "IsEven";
+    let Fields = ["Value"];
+    let PrimaryKey = ["Value"];
+    let PrimaryKeyName = "lookupEEntryEvenTableByValue";
+  }
+
+  def EEntryOddTable : GenericTable {
+    let FilterClass = "EEntry";
+    let FilterClassField = "IsOdd";
+    let Fields = ["Value"];
+    let PrimaryKey = ["Value"];
+    let PrimaryKeyName = "lookupEEntryOddTableByValue";
+  }
+
+The generated tables are:
+
+.. code-block:: text
+
+  constexpr EEntry EEntryEvenTable[] = {
+    { 0x2 }, // 0
+    { 0x4 }, // 1
+    { 0x6 }, // 2
+    { 0x8 }, // 3
+    { 0xA }, // 4
+  };
+
+  constexpr EEntry EEntryOddTable[] = {
+    { 0x1 }, // 0
+    { 0x3 }, // 1
+    { 0x5 }, // 2
+    { 0x7 }, // 3
+    { 0x9 }, // 4
+  };
 
 Search Indexes
 ~~~~~~~~~~~~~~
