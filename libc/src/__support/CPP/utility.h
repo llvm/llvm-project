@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/CPP/utility/forward.h"
+#include "src/__support/CPP/utility/in_place.h"
 #include "src/__support/CPP/utility/integer_sequence.h"
 #include "src/__support/CPP/utility/move.h"
 
