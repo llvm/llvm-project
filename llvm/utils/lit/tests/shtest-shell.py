@@ -238,7 +238,7 @@
 # CHECK-NOT: error
 
 #      CHECK: diff -u {{.*}}.foo {{.*}}.bar | FileCheck {{.*}} && false || true
-# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.*}} {{.+}}.bar{{.*}}
+# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.+}} {{.+}}.bar{{.+}}
 # CHECK-NEXT: # note: command had no output on stdout or stderr
 # CHECK-NEXT: # error: command failed with exit status: 1
 # CHECK-NEXT: # executed command: FileCheck
@@ -253,8 +253,8 @@
 # CHECK-NOT: error
 
 #      CHECK: cat {{.*}}.bar | diff -u {{.*}}.foo - && false || true
-# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.*}}
-# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.*}} -
+# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.+}}
+# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.+}} -
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@
 # CHECK-NEXT: # | -foo
@@ -264,8 +264,8 @@
 # CHECK-NEXT: # executed command: true
 
 #      CHECK: cat {{.*}}.bar | diff -u - {{.*}}.foo && false || true
-# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.*}}
-# CHECK-NEXT: # executed command: diff -u - {{.+}}.foo{{.*}}
+# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.+}}
+# CHECK-NEXT: # executed command: diff -u - {{.+}}.foo{{.+}}
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@
 # CHECK-NEXT: # | -bar
@@ -279,8 +279,8 @@
 # CHECK-NOT: error
 
 #      CHECK: cat {{.*}}.bar | diff -u {{.*}}.foo - | FileCheck {{.*}}
-# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.*}}
-# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.*}} -
+# CHECK-NEXT: # executed command: cat {{.+}}.bar{{.+}}
+# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.+}} -
 # CHECK-NEXT: note: command had no output on stdout or stderr
 # CHECK-NEXT: error: command failed with exit status: 1
 # CHECK-NEXT: # executed command: FileCheck
@@ -427,7 +427,7 @@
 # CHECK: *** TEST 'shtest-shell :: diff-unified.txt' FAILED ***
 
 #      CHECK: diff -u {{.*}}.foo {{.*}}.bar && false || true
-# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.*}} {{.+}}.bar{{.*}}
+# CHECK-NEXT: # executed command: diff -u {{.+}}.foo{{.+}} {{.+}}.bar{{.+}}
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@ {{.*}} @@
 # CHECK-NEXT: # | 3
@@ -443,7 +443,7 @@
 # CHECK-NEXT: # executed command: true
 
 #      CHECK: diff -U 2 {{.*}}.foo {{.*}}.bar && false || true
-# CHECK-NEXT: # executed command: diff -U 2 {{.+}}.foo{{.*}} {{.+}}.bar{{.*}}
+# CHECK-NEXT: # executed command: diff -U 2 {{.+}}.foo{{.+}} {{.+}}.bar{{.+}}
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@ {{.*}} @@
 # CHECK-NEXT: # | 4
@@ -457,7 +457,7 @@
 # CHECK-NEXT: # executed command: true
 
 #      CHECK: diff -U4 {{.*}}.foo {{.*}}.bar && false || true
-# CHECK-NEXT: # executed command: diff -U4 {{.+}}.foo{{.*}} {{.+}}.bar{{.*}}
+# CHECK-NEXT: # executed command: diff -U4 {{.+}}.foo{{.+}} {{.+}}.bar{{.+}}
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@ {{.*}} @@
 # CHECK-NEXT: # | 2
