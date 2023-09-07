@@ -8751,6 +8751,39 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
+
+    // The minimum number of elements for a scalable vector type, e.g. nxv1i32
+    // is not legal on Zve32x.
+    const uint64_t MinLegalNumElts =
+        RISCV::RVVBitsPerBlock / Subtarget.getELen();
+    const uint64_t MinVscale =
+        Subtarget.getRealMinVLen() / RISCV::RVVBitsPerBlock;
+
+    // Even if we don't know the exact subregister the subvector is going to
+    // reside in, we know that the subvector is located within the first N bits
+    // of Vec:
+    //
+    // N = (OrigIdx + SubVecVT.getVectorNumElements()) * EltSizeInBits
+    //   = MinVscale * MinEltsNeeded * EltSizeInBits
+    //
+    // From this we can work out the smallest type that contains everything we
+    // need to extract, <vscale x MinEltsNeeded x Elt>
+    uint64_t MinEltsNeeded =
+        (OrigIdx + SubVecVT.getVectorNumElements()) / MinVscale;
+
+    // Round up the number of elements so it's a valid power of 2 scalable
+    // vector type, and make sure it's not less than smallest legal vector type.
+    MinEltsNeeded = std::max(MinLegalNumElts, PowerOf2Ceil(MinEltsNeeded));
+
+    assert(MinEltsNeeded <= ContainerVT.getVectorMinNumElements());
+
+    // Shrink down Vec so we're performing the slidedown on the smallest
+    // possible type.
+    ContainerVT = MVT::getScalableVectorVT(ContainerVT.getVectorElementType(),
+                                           MinEltsNeeded);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. This
