@@ -618,9 +618,12 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
+    case tok::kw_if:
+      if (PrevTok->is(tok::hash))
+        break;
+      [[fallthrough]];
     case tok::at:
     case tok::semi:
-    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:
