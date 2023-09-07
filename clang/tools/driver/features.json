@@ -19,6 +19,9 @@
       "name": "libclang-cache-queries"
     },
     {
+      "name": "Wsystem-headers-in-module"
+    },
+    {
       "name": "deployment-target-environment-variables",
       "value": [
         "MACOSX_DEPLOYMENT_TARGET",
