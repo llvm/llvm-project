@@ -2020,6 +2020,24 @@ public:
     return computeOverflowForSub(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Determine if the result of the signed mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedMul(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForUnsignedMul(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForMul(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedMul(N0, N1)
+                    : computeOverflowForUnsignedMul(N0, N1);
+  }
+
+  /// Determine if the result of the mul of 2 nodes can never overflow.
+  bool willNotOverflowMul(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
+  }
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.
