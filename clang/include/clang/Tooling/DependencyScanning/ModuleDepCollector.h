@@ -241,8 +241,11 @@ private:
   llvm::SetVector<const Module *> DirectModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
-  /// The original Clang invocation passed to dependency scanner.
-  CompilerInvocation OriginalInvocation;
+  /// A Clang invocation that's based on the original TU invocation and that has
+  /// been partially transformed into one that can perform explicit build of
+  /// a discovered modular dependency. Note that this still needs to be adjusted
+  /// for each individual module.
+  CowCompilerInvocation CommonInvocation;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
@@ -262,12 +265,11 @@ private:
   /// Adds \p Path to \c MD.FileDeps, making it absolute if necessary.
   void addFileDep(ModuleDeps &MD, StringRef Path);
 
-  /// Constructs a CompilerInvocation that can be used to build the given
-  /// module, excluding paths to discovered modular dependencies that are yet to
-  /// be built.
-  CompilerInvocation makeInvocationForModuleBuildWithoutOutputs(
+  /// Get a Clang invocation adjusted to build the given modular dependency.
+  /// This excludes paths that are yet-to-be-provided by the build system.
+  CowCompilerInvocation getInvocationAdjustedForModuleBuildWithoutOutputs(
       const ModuleDeps &Deps,
-      llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
+      llvm::function_ref<void(CowCompilerInvocation &)> Optimize) const;
 
   /// Collect module map files for given modules.
   llvm::DenseSet<const FileEntry *>
@@ -279,13 +281,16 @@ private:
   /// Add module files (pcm) to the invocation, if needed.
   void addModuleFiles(CompilerInvocation &CI,
                       ArrayRef<ModuleID> ClangModuleDeps) const;
+  void addModuleFiles(CowCompilerInvocation &CI,
+                      ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add paths that require looking up outputs to the given dependencies.
-  void addOutputPaths(CompilerInvocation &CI, ModuleDeps &Deps);
+  void addOutputPaths(CowCompilerInvocation &CI, ModuleDeps &Deps);
 
   /// Compute the context hash for \p Deps, and create the mapping
   /// \c ModuleDepsByID[Deps.ID] = &Deps.
-  void associateWithContextHash(const CompilerInvocation &CI, ModuleDeps &Deps);
+  void associateWithContextHash(const CowCompilerInvocation &CI,
+                                ModuleDeps &Deps);
 };
 
 } // end namespace dependencies
