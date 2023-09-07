@@ -1217,9 +1217,9 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.getMemoryOrderVal());
-  llvm::Value *expr = moduleTranslation.lookupValue(writeOp.getValue());
-  llvm::Value *dest = moduleTranslation.lookupValue(writeOp.getAddress());
-  llvm::Type *ty = moduleTranslation.convertType(writeOp.getValue().getType());
+  llvm::Value *expr = moduleTranslation.lookupValue(writeOp.getExpr());
+  llvm::Value *dest = moduleTranslation.lookupValue(writeOp.getX());
+  llvm::Type *ty = moduleTranslation.convertType(writeOp.getExpr().getType());
   llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, ty, /*isSigned=*/false,
                                             /*isVolatile=*/false};
   builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
@@ -1330,7 +1330,7 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
 
   if (atomicWriteOp) {
     isPostfixUpdate = true;
-    mlirExpr = atomicWriteOp.getValue();
+    mlirExpr = atomicWriteOp.getExpr();
   } else {
     isPostfixUpdate = atomicCaptureOp.getSecondOp() ==
                       atomicCaptureOp.getAtomicUpdateOp().getOperation();
@@ -1380,7 +1380,7 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
   auto updateFn = [&](llvm::Value *atomicx,
                       llvm::IRBuilder<> &builder) -> llvm::Value * {
     if (atomicWriteOp)
-      return moduleTranslation.lookupValue(atomicWriteOp.getValue());
+      return moduleTranslation.lookupValue(atomicWriteOp.getExpr());
     Block &bb = *atomicUpdateOp.getRegion().begin();
     moduleTranslation.mapValue(*atomicUpdateOp.getRegion().args_begin(),
                                atomicx);
