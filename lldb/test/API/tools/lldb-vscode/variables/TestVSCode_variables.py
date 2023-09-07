@@ -517,6 +517,20 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         }
         self.verify_variables(verify_locals, locals)
 
+        # We also verify that we produce a "[raw]" fake child with the real
+        # SBValue for the synthetic type.
+        verify_children = {
+            "[0]": {"equals": {"type": "int", "value": "0"}},
+            "[1]": {"equals": {"type": "int", "value": "0"}},
+            "[2]": {"equals": {"type": "int", "value": "0"}},
+            "[3]": {"equals": {"type": "int", "value": "0"}},
+            "[4]": {"equals": {"type": "int", "value": "0"}},
+            "[raw]": {"contains": {"type": ["vector"]}},
+        }
+        children = self.vscode.request_variables(locals[2]["variablesReference"])["body"]["variables"]
+        self.verify_variables(verify_children, children)
+
+
     @skipIfWindows
     @skipIfRemote
     def test_registers(self):
