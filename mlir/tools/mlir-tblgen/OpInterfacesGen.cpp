@@ -582,10 +582,12 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   // Emit classof code if necessary.
   if (std::optional<StringRef> extraClassOf = interface.getExtraClassOf()) {
     auto extraClassOfFmt = tblgen::FmtContext();
-    extraClassOfFmt.addSubst(substVar, "base");
+    extraClassOfFmt.addSubst(substVar, "odsInterfaceInstance");
     os << "  static bool classof(" << valueType << " base) {\n"
-       << "    if (!getInterfaceFor(base))\n"
+       << "    auto* concept = getInterfaceFor(base);\n"
+       << "    if (!concept)\n"
           "      return false;\n"
+          "    " << interfaceName << " odsInterfaceInstance(base, concept);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }
