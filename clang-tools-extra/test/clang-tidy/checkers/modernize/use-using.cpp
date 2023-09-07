@@ -319,5 +319,5 @@ typedef void (*ISSUE_65055_1)(int);
 typedef bool (*ISSUE_65055_2)(int);
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using ISSUE_65055_1 = void (*)(int)
-// CHECK-FIXES: using ISSUE_65055_2 = bool (*)(int)
+// CHECK-FIXES: using ISSUE_65055_1 = void (*)(int);
+// CHECK-FIXES: using ISSUE_65055_2 = bool (*)(int);
