@@ -73,6 +73,7 @@ chrono compare
 chrono cstddef
 chrono cstdint
 chrono ctime
+chrono forward_list
 chrono initializer_list
 chrono limits
 chrono locale
