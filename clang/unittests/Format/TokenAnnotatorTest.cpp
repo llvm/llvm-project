@@ -2005,6 +2005,41 @@ TEST_F(TokenAnnotatorTest, UnderstandsNestedBlocks) {
   EXPECT_BRACE_KIND(Tokens[10], BK_Block);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
+  auto Tokens = annotate("SomeStruct { .a = 1 };");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[2], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("SomeStruct { .a = 1, .b = 2 };");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[2], tok::period, TT_DesignatedInitializerPeriod);
+  EXPECT_TOKEN(Tokens[7], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("SomeStruct {\n"
+                    "#ifdef FOO\n"
+                    "  .a = 1,\n"
+                    "#endif\n"
+                    "  .b = 2\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[5], tok::period, TT_DesignatedInitializerPeriod);
+  EXPECT_TOKEN(Tokens[12], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("SomeStruct {\n"
+                    "#if defined FOO\n"
+                    "  .a = 1,\n"
+                    "#endif\n"
+                    "  .b = 2\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
+  EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
