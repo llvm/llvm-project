@@ -299,8 +299,9 @@ bool Module::directlyUses(const Module *Requested) {
     if (Requested->isSubModuleOf(Use))
       return true;
 
-  // Anyone is allowed to use our builtin stddef.h and its accompanying module.
-  if (!Requested->Parent && Requested->Name == "_Builtin_stddef_max_align_t")
+  // Anyone is allowed to use our builtin stdarg.h and stddef.h and their
+  // accompanying modules.
+  if (!Requested->Parent && (Requested->Name == "_Builtin_stdarg" || Requested->Name == "_Builtin_stddef"))
     return true;
 
   if (NoUndeclaredIncludes)
