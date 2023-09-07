@@ -68,7 +68,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/thread.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -2750,7 +2750,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
                   .count();
           FormatIndicatorAndUniqueModId =
               "clangPidTidTime_" + llvm::itostr(sys::Process::getProcessId()) +
-              "_" + llvm::itostr((int64_t)llvm::this_thread::get_id()) + "_" +
+              "_" + llvm::itostr(llvm::get_threadid()) + "_" +
               llvm::itostr(CurTime);
         }
       }
