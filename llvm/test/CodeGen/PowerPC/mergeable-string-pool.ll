@@ -1,11 +1,11 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN:   -ppc-merge-string-pool=true -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX32,AIXDATA
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX32,AIXDATA
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN:   -ppc-merge-string-pool=true -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX64,AIXDATA
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX64,AIXDATA
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux -mcpu=pwr8 \
-; RUN:   -ppc-merge-string-pool=true -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64BE,LINUXDATA
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64BE,LINUXDATA
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux -mcpu=pwr8 \
-; RUN:   -ppc-merge-string-pool=true -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64LE,LINUXDATA
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64LE,LINUXDATA
 
 
 ;; This @GLOBALSTRING is a user of @.str which causes @.str to not get pooled. 
