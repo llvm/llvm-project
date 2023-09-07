@@ -129,9 +129,13 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     "memref.tensor_store" when possible.
 
     "memref.alloc" is used for new buffer allocations. The buffer is deallocated
-    at the end of the block. Custom allocation ops can be specified via
-    `alloc_op`. Currently supported are "memref.alloc" and "memref.alloca". In
-    case of a "memref.alloca", the buffer is not deallocated.
+    at the end of the block if the "emit_dealloc" attribute is present. If this
+    attribute is not present, the allocated memory will be leaked. However,
+    running the `-buffer-deallocation-pipeline` after all bufferization is done
+    will properly insert the corresponding deallocation(s). Custom allocation
+    ops can be specified via `alloc_op`. Currently supported are "memref.alloc"
+    and "memref.alloca". In case of a "memref.alloca", the buffer is not
+    deallocated.
 
     If `bufferize_destination_only` is set, only the destination operands of the
     op are bufferized to a new memory allocation, but not the op itself.
@@ -148,7 +152,8 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                            $memcpy_op,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
                            $alloc_op,
-                       UnitAttr:$bufferize_destination_only);
+                       UnitAttr:$bufferize_destination_only,
+                       UnitAttr:$emit_dealloc);
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
