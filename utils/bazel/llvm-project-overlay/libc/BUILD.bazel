@@ -571,6 +571,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_file_linux_lseekimpl",
+    hdrs = ["src/__support/File/linux/lseekImpl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_named_pair",
     hdrs = ["src/__support/named_pair.h"],
     deps = [":libc_root"],
@@ -2530,13 +2540,10 @@ libc_function(
 libc_function(
     name = "lseek",
     srcs = ["src/unistd/linux/lseek.cpp"],
-    hdrs = [
-        "src/__support/File/linux/lseekImpl.h",
-        "src/unistd/lseek.h",
-    ],
+    hdrs = ["src/unistd/lseek.h"],
     deps = [
         ":__support_common",
-        ":__support_error_or",
+        ":__support_file_linux_lseekimpl",
         ":__support_osutil_syscall",
         ":errno",
     ],
