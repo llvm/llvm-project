@@ -13,4 +13,5 @@ jobs:
     - uses: actions/labeler@v4
       with:
         configuration-path: .github/new-prs-labeler.yml
-        sync-labels: false
+        # workaround for https://github.com/actions/labeler/issues/112
+        sync-labels: ''
