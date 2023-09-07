@@ -3629,7 +3629,7 @@ private:
                     sym->Rank() == 0) {
                   // get the corresponding Cray pointer
 
-                  auto ptrSym = Fortran::lower::getPointer(*sym);
+                  auto ptrSym = Fortran::lower::getCrayPointer(*sym);
                   fir::ExtendedValue ptr =
                       getSymbolExtendedValue(ptrSym, nullptr);
                   mlir::Value ptrVal = fir::getBase(ptr);
