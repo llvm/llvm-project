@@ -533,23 +533,23 @@ public:
     if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
       using Type = parser::OmpMapType::Type;
       const Type &type{std::get<Type>(maptype->t)};
-      switch (type) {
-      case Type::To:
+      switch ((uint32_t)type) { // Avoid -Wcovered-switch-default
+      case (uint32_t)Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case Type::From:
+      case (uint32_t)Type::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case Type::Tofrom:
+      case (uint32_t)Type::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case Type::Alloc:
+      case (uint32_t)Type::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case Type::Release:
+      case (uint32_t)Type::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case Type::Delete:
+      case (uint32_t)Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       default:
