@@ -3666,12 +3666,18 @@ void Fortran::lower::genThreadprivateOp(
         currentLocation, symValue.getType(), symValue);
   } else {
     mlir::Value symValue = converter.getSymbolAddress(sym);
-    mlir::Operation *op = symValue.getDefiningOp();
+
     // The symbol may be use-associated multiple times, and nothing needs to be
     // done after the original symbol is mapped to the threadprivatized value
     // for the first time. Use the threadprivatized value directly.
+    mlir::Operation *op;
+    if (auto declOp = symValue.getDefiningOp<hlfir::DeclareOp>())
+      op = declOp.getMemref().getDefiningOp();
+    else
+      op = symValue.getDefiningOp();
     if (mlir::isa<mlir::omp::ThreadprivateOp>(op))
       return;
+
     symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
         currentLocation, symValue.getType(), symValue);
   }
