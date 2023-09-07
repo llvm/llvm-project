@@ -483,7 +483,7 @@ MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
   // The generated names are intended to look similar to what MSVC generates,
   // which are something like "?A0x01234567@".
   SourceManager &SM = Context.getSourceManager();
-  if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID())) {
+  if (const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID())) {
     // Truncate the hash so we get 8 characters of hexadecimal.
     uint32_t TruncatedHash = uint32_t(xxh3_64bits(FE->getName()));
     AnonymousNamespaceHash = llvm::utohexstr(TruncatedHash);

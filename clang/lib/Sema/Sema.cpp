@@ -152,9 +152,9 @@ public:
       SourceLocation IncludeLoc = SM.getIncludeLoc(SM.getFileID(Loc));
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
-          OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
-          llvm::timeTraceProfilerBegin("Source", FE ? FE->getName()
-                                                    : StringRef("<unknown>"));
+          const FileEntry *FE = SM.getFileEntryForID(SM.getFileID(Loc));
+          llvm::timeTraceProfilerBegin(
+              "Source", FE != nullptr ? FE->getName() : StringRef("<unknown>"));
         }
 
         IncludeStack.push_back(IncludeLoc);

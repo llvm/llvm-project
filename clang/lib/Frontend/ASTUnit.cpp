@@ -1493,8 +1493,8 @@ StringRef ASTUnit::getMainFileName() const {
   }
 
   if (SourceMgr) {
-    if (OptionalFileEntryRef FE =
-            SourceMgr->getFileEntryRefForID(SourceMgr->getMainFileID()))
+    if (const FileEntry *
+          FE = SourceMgr->getFileEntryForID(SourceMgr->getMainFileID()))
       return FE->getName();
   }
 
