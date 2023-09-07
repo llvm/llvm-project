@@ -32,10 +32,11 @@ if(NOT LLVM_LIBGCC_EXPLICIT_OPT_IN)
     "to your CMake invocation and try again.")
 endif()
 
-if(COMPILER_RT_BUILTINS_HIDE_SYMBOLS AND HAVE_COMPILER_RT)
+if(HAVE_COMPILER_RT AND (NOT COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_BUILTINS_HIDE_SYMBOLS))
   message(FATAL_ERROR
-    "llvm-libgcc requires compiler-rt builtins with default symbol visibility, please"
-    "add -DCOMPILER_RT_BUILTINS_HIDE_SYMBOLS=No to your CMake invocation and try again.")
+    "llvm-libgcc requires compiler-rt builtins with default symbol visibility, "
+    "add -DCOMPILER_RT_BUILD_BUILTINS=Yes -DCOMPILER_RT_BUILTINS_HIDE_SYMBOLS=No "
+    "to your CMake invocation and try again.")
 endif()
 
 #===============================================================================
