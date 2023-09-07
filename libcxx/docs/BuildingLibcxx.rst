@@ -255,6 +255,15 @@ libc++ specific options
    support for ``wchar_t``. This is especially useful in embedded settings where
    C Standard Libraries don't always provide all the usual bells and whistles.
 
+.. option:: LIBCXX_ENABLE_TIME_ZONE_DATABASE:BOOL
+
+   **Default**: ``ON``
+
+   Whether to include support for time zones in the library. Disabling
+   time zone support can be useful when porting to platforms that don't
+   ship the IANA time zone database. When time zones are not supported,
+   time zone support in <chrono> will be disabled.
+
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBCXX_LIBDIR_SUFFIX}``
