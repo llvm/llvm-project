@@ -253,6 +253,45 @@ OptionalFileEntryRef ModuleMap::findHeader(
   return NormalHdrFile;
 }
 
+/// Determine whether the given file name is the name of a builtin
+/// header, supplied by Clang to replace, override, or augment existing system
+/// headers.
+static bool isBuiltinHeaderName(StringRef FileName) {
+  return llvm::StringSwitch<bool>(FileName)
+           .Case("float.h", true)
+           .Case("iso646.h", true)
+           .Case("limits.h", true)
+           .Case("stdalign.h", true)
+           .Case("stdarg.h", true)
+           .Case("stdatomic.h", true)
+           .Case("stdbool.h", true)
+           .Case("stddef.h", true)
+           .Case("stdint.h", true)
+           .Case("tgmath.h", true)
+           .Case("unwind.h", true)
+           .Default(false);
+}
+
+/// Determine whether the given module name is the name of a builtin
+/// module that is cyclic with a system module  on some platforms.
+static bool isBuiltInModuleName(StringRef ModuleName) {
+  return llvm::StringSwitch<bool>(ModuleName)
+           .Case("_Builtin_float", true)
+           .Case("_Builtin_inttypes", true)
+           .Case("_Builtin_iso646", true)
+           .Case("_Builtin_limits", true)
+           .Case("_Builtin_stdalign", true)
+           .Case("_Builtin_stdarg", true)
+           .Case("_Builtin_stdatomic", true)
+           .Case("_Builtin_stdbool", true)
+           .Case("_Builtin_stddef", true)
+           .Case("_Builtin_stdint", true)
+           .Case("_Builtin_stdnoreturn", true)
+           .Case("_Builtin_tgmath", true)
+           .Case("_Builtin_unwind", true)
+           .Default(false);
+}
+
 void ModuleMap::resolveHeader(Module *Mod,
                               const Module::UnresolvedHeaderDirective &Header,
                               bool &NeedsFramework) {
@@ -297,7 +336,7 @@ bool ModuleMap::resolveAsBuiltinHeader(
       llvm::sys::path::is_absolute(Header.FileName) ||
       Mod->isPartOfFramework() || !Mod->IsSystem || Header.IsUmbrella ||
       !BuiltinIncludeDir || BuiltinIncludeDir == Mod->Directory ||
-      !isBuiltinHeader(Header.FileName))
+      !LangOpts.BuiltinHeadersInSystemModules || !isBuiltinHeaderName(Header.FileName))
     return false;
 
   // This is a system module with a top-level header. This header
@@ -373,28 +412,9 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
   return Name;
 }
 
-/// Determine whether the given file name is the name of a builtin
-/// header, supplied by Clang to replace, override, or augment existing system
-/// headers.
-bool ModuleMap::isBuiltinHeader(StringRef FileName) {
-  return llvm::StringSwitch<bool>(FileName)
-           .Case("float.h", true)
-           .Case("iso646.h", true)
-           .Case("limits.h", true)
-           .Case("stdalign.h", true)
-           .Case("stdarg.h", true)
-           .Case("stdatomic.h", true)
-           .Case("stdbool.h", true)
-           .Case("stddef.h", true)
-           .Case("stdint.h", true)
-           .Case("tgmath.h", true)
-           .Case("unwind.h", true)
-           .Default(false);
-}
-
 bool ModuleMap::isBuiltinHeader(const FileEntry *File) {
-  return File->getDir() == BuiltinIncludeDir &&
-         ModuleMap::isBuiltinHeader(llvm::sys::path::filename(File->getName()));
+  return File->getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
+         isBuiltinHeaderName(llvm::sys::path::filename(File->getName()));
 }
 
 ModuleMap::HeadersMap::iterator
@@ -2472,7 +2492,10 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   }
 
   bool NeedsFramework = false;
-  Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
+  // Don't add the top level headers to the builtin modules if the builtin headers
+  // belong to the system modules.
+  if (!Map.LangOpts.BuiltinHeadersInSystemModules || ActiveModule->isSubModule() || !isBuiltInModuleName(ActiveModule->Name))
+    Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
 
   if (NeedsFramework)
     Diags.Report(CurrModuleDeclLoc, diag::note_mmap_add_framework_keyword)
