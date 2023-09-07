@@ -2952,4 +2952,10 @@ def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
   let assemblyFormat = "attr-dict";
 }
 
+def TestOpOptionallyImplementingInterface
+    : TEST_Op<"op_optionally_implementing_interface",
+        [TestOptionallyImplementedOpInterface]> {
+  let arguments = (ins BoolAttr:$implementsInterface);
+}
+
 #endif // TEST_OPS
