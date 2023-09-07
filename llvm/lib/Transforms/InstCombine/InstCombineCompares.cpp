@@ -3893,12 +3893,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
           Constant::getNullValue(LHSI->getOperand(0)->getType()));
     break;
   case Instruction::PHI:
-    // Only fold icmp into the PHI if the phi and icmp are in the same
-    // block.  If in the same block, we're encouraging jump threading.  If
-    // not, we are just pessimizing the code by making an i1 phi.
-    if (LHSI->getParent() == I.getParent())
-      if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
-        return NV;
+    if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
+      return NV;
     break;
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
@@ -7576,12 +7572,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
     case Instruction::PHI:
-      // Only fold fcmp into the PHI if the phi and fcmp are in the same
-      // block.  If in the same block, we're encouraging jump threading.  If
-      // not, we are just pessimizing the code by making an i1 phi.
-      if (LHSI->getParent() == I.getParent())
-        if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
-          return NV;
+      if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
+        return NV;
       break;
     case Instruction::SIToFP:
     case Instruction::UIToFP:
