@@ -356,6 +356,8 @@
 #    define __has_declspec_attribute(__x) 0
 #  endif
 
+#  define __has_keyword(__x) !(__is_identifier(__x))
+
 #  ifndef __has_include
 #    define __has_include(...) 0
 #  endif
@@ -1104,7 +1106,7 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
-#  if __has_feature(cxx_atomic) || __has_extension(c_atomic)
+#  if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #    define _LIBCPP_HAS_C_ATOMIC_IMP
 #  elif defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_HAS_GCC_ATOMIC_IMP
