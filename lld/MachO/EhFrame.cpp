@@ -109,15 +109,15 @@ template <bool Invert = false>
 static void createSubtraction(PointerUnion<Symbol *, InputSection *> a,
                               PointerUnion<Symbol *, InputSection *> b,
                               uint64_t off, uint8_t length,
-                              SmallVectorImpl<Reloc> *newRelocs) {
+                              SmallVectorImpl<macho::Reloc> *newRelocs) {
   auto subtrahend = a;
   auto minuend = b;
   if (Invert)
     std::swap(subtrahend, minuend);
   assert(subtrahend.is<Symbol *>());
-  Reloc subtrahendReloc(target->subtractorRelocType, /*pcrel=*/false, length,
+  macho::Reloc subtrahendReloc(target->subtractorRelocType, /*pcrel=*/false, length,
                         off, /*addend=*/0, subtrahend);
-  Reloc minuendReloc(target->unsignedRelocType, /*pcrel=*/false, length, off,
+  macho::Reloc minuendReloc(target->unsignedRelocType, /*pcrel=*/false, length, off,
                      (Invert ? 1 : -1) * off, minuend);
   newRelocs->push_back(subtrahendReloc);
   newRelocs->push_back(minuendReloc);

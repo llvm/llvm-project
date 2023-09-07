@@ -18,10 +18,10 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
+static_assert(sizeof(void *) != 8 || sizeof(macho::Reloc) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
-InputSection *Reloc::getReferentInputSection() const {
+InputSection *macho::Reloc::getReferentInputSection() const {
   if (const auto *sym = referent.dyn_cast<Symbol *>()) {
     if (const auto *d = dyn_cast<Defined>(sym))
       return d->isec;

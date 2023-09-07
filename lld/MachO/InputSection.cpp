@@ -32,7 +32,7 @@ using namespace lld::macho;
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
 static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
+                  sizeof(ConcatInputSection) == sizeof(std::vector<macho::Reloc>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -135,7 +135,7 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
   return {};
 }
 
-const Reloc *InputSection::getRelocAt(uint32_t off) const {
+const macho::Reloc *InputSection::getRelocAt(uint32_t off) const {
   auto it = llvm::find_if(
       relocs, [=](const macho::Reloc &r) { return r.offset == off; });
   if (it == relocs.end())

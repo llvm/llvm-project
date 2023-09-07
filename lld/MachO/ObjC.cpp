@@ -177,7 +177,7 @@ ObjcCategoryChecker::ObjcCategoryChecker()
       methodLayout(target->wordSize) {}
 
 // \p r must point to an offset within a cstring section.
-static StringRef getReferentString(const Reloc &r) {
+static StringRef getReferentString(const macho::Reloc &r) {
   if (auto *isec = r.referent.dyn_cast<InputSection *>())
     return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
   auto *sym = cast<Defined>(r.referent.get<Symbol *>());
@@ -191,7 +191,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                                        MethodContainerKind mcKind,
                                        MethodKind mKind) {
   ObjcClass &klass = classMap[methodContainerSym];
-  for (const Reloc &r : methodsIsec->relocs) {
+  for (const macho::Reloc &r : methodsIsec->relocs) {
     if ((r.offset - listHeaderLayout.totalSize) % methodLayout.totalSize !=
         methodLayout.nameOffset)
       continue;
@@ -219,7 +219,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
 
     // We have a duplicate; generate a warning message.
     const auto &mc = methodMap.lookup(methodName);
-    const Reloc *nameReloc = nullptr;
+    const macho::Reloc *nameReloc = nullptr;
     if (mc.kind == MCK_Category) {
       nameReloc = mc.isec->getRelocAt(catLayout.nameOffset);
     } else {
