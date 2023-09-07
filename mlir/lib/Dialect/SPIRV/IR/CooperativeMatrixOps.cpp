@@ -165,8 +165,6 @@ LogicalResult KHRCooperativeMatrixMulAddOp::verify() {
 
   // Check element types. ODS enforces that `type(c) == type(result)`, so no
   // need to check it here.
-  if (!llvm::all_equal({typeA.getElementType(), typeB.getElementType()}))
-    return emitOpError("matrix A and matrix B element type mismatch");
 
   // Check the 'use' part of the type against the operands and the result.
   if (typeA.getUse() != CooperativeMatrixUseKHR::MatrixA)
