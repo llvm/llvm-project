@@ -206,14 +206,6 @@ def vector_sext_inreg_to_shift : GICombineRule<
   (apply [{ applyVectorSextInReg(*${d}, MRI, B, Observer); }])
 >;
 
-def unmerge_ext_to_unmerge_matchdata : GIDefMatchData<"Register">;
-def unmerge_ext_to_unmerge : GICombineRule<
-  (defs root:$d, unmerge_ext_to_unmerge_matchdata:$matchinfo),
-  (match (wip_match_opcode G_UNMERGE_VALUES):$d,
-          [{ return matchUnmergeExtToUnmerge(*${d}, MRI, ${matchinfo}); }]),
-  (apply [{ applyUnmergeExtToUnmerge(*${d}, MRI, B, Observer, ${matchinfo}); }])
->;
-
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -222,8 +214,7 @@ def AArch64PostLegalizerLowering
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
-                        vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge]> {
+                        vector_sext_inreg_to_shift]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
