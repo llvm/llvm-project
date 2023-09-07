@@ -213,6 +213,7 @@ private:
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(QualType QT, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
   enum class DerefKind {
     /// Value is read and pushed to stack.
