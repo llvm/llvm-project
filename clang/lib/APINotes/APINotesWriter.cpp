@@ -1124,7 +1124,10 @@ public:
 class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
 public:
   unsigned getUnversionedInfoSize(const TagInfo &TI) {
-    return 1 + getCommonTypeInfoSize(TI);
+    return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
+           2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
+           2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
+           1 + getCommonTypeInfoSize(TI);
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
@@ -1141,6 +1144,25 @@ public:
       Flags |= (value.value() << 1 | 1 << 0);
 
     writer.write<uint8_t>(Flags);
+
+    if (auto ImportAs = TI.SwiftImportAs) {
+      writer.write<uint16_t>(ImportAs->size() + 1);
+      OS.write(ImportAs->c_str(), ImportAs->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto RetainOp = TI.SwiftRetainOp) {
+      writer.write<uint16_t>(RetainOp->size() + 1);
+      OS.write(RetainOp->c_str(), RetainOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto ReleaseOp = TI.SwiftReleaseOp) {
+      writer.write<uint16_t>(ReleaseOp->size() + 1);
+      OS.write(ReleaseOp->c_str(), ReleaseOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
 
     emitCommonTypeInfo(OS, TI);
   }

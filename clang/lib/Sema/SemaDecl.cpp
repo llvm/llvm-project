@@ -15380,10 +15380,6 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   LSI->CallOperator = CallOperator;
   LSI->Lambda = LambdaClass;
   LSI->ReturnType = CallOperator->getReturnType();
-  // This function in calls in situation where the context of the call operator
-  // is not entered, so we set AfterParameterList to false, so that
-  // `tryCaptureVariable` finds explicit captures in the appropriate context.
-  LSI->AfterParameterList = false;
   const LambdaCaptureDefault LCD = LambdaClass->getLambdaCaptureDefault();
 
   if (LCD == LCD_None)
