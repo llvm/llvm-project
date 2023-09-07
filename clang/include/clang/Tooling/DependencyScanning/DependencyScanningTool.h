@@ -124,6 +124,15 @@ public:
   getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
                                StringRef CWD, std::string &MakeformatOutput,
                                std::string &MakeformatOutputPath);
+  llvm::Expected<P1689Rule>
+  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
+                               StringRef CWD) {
+    std::string MakeformatOutput;
+    std::string MakeformatOutputPath;
+
+    return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
+                                        MakeformatOutputPath);
+  }
 
   /// Collect dependency tree.
   llvm::Expected<llvm::cas::ObjectProxy>
