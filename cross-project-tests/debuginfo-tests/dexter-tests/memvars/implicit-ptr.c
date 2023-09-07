@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder 'clang-c'  --cflags "-O3 -glldb" -- %s
+// RUN: %clang -O3 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 
 //// Check that 'param' in 'fun' can be read throughout, and that 'pa' and 'pb'
 //// can be dereferenced in the debugger even if we can't provide the pointer
