@@ -352,21 +352,21 @@ endif()
 if (LIBCXX_HAS_EXTERNAL_THREAD_API)
   if (LIBCXX_HAS_PTHREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
-                        "and LIBCXX_HAS_PTHREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_PTHREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
-                        "and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
 endif()
 
 if (LIBCXX_HAS_PTHREAD_API)
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
-                        "and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
 endif()
 
