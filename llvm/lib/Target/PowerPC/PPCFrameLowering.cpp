@@ -2743,7 +2743,7 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 
 uint64_t PPCFrameLowering::getStackThreshold() const {
   if (Subtarget.isPPC64())
-    return 1UL << 63;
+    return LONG_MAX;
 
   return TargetFrameLowering::getStackThreshold();
 }
