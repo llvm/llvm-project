@@ -3456,6 +3456,27 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
 
+  // If the number of signbits allows, see if we can lower as a <N x i8>.
+  // We restrict this to N <= 4 to ensure the resulting narrow vector is
+  // 32 bits of smaller and can thus be materialized cheaply from scalar.
+  // The main motivation for this is the constant index vector required
+  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // TODO: We really should be costing the smaller vector.  There are
+  // profitable cases this misses.
+  const unsigned ScalarSize =
+    Op.getSimpleValueType().getScalarSizeInBits();
+  if (ScalarSize > 8 && NumElts <= 4) {
+    unsigned SignBits = DAG.ComputeNumSignBits(Op);
+    if (ScalarSize - SignBits < 8) {
+      SDValue Source =
+        DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
+      Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
+                                       Source, DAG, Subtarget);
+      SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
+      return convertFromScalableVector(VT, Res, DAG, Subtarget);
+    }
+  }
+
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
   // vector.
