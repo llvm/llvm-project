@@ -5,6 +5,7 @@ Load into LLDB with 'command script import /path/to/mlirDataFormatters.py'
 """
 
 import re
+
 import lldb
 
 
@@ -196,6 +197,7 @@ class AttrTypeSynthProvider:
             valobj, self.abstractVal, internal_dict
         )
         if not self.type:
+            self.impl_type = None
             return
 
         # Grab the ImplTy from the resolved type. This is the 3rd template
