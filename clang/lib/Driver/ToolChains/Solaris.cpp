@@ -87,6 +87,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   const bool IsPIE = getPIE(Args, getToolChain());
   ArgStringList CmdArgs;
   bool LinkerIsGnuLd = isLinkerGnuLd(getToolChain(), Args);
@@ -217,8 +218,11 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    if (getToolChain().ShouldLinkCXXStdlib(Args))
-      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (D.CCCIsCXX()) {
+      if (getToolChain().ShouldLinkCXXStdlib(Args))
+        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     if (Args.hasArg(options::OPT_fstack_protector) ||
         Args.hasArg(options::OPT_fstack_protector_strong) ||
         Args.hasArg(options::OPT_fstack_protector_all)) {
@@ -239,7 +243,6 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
-      CmdArgs.push_back("-lm");
     }
     const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {

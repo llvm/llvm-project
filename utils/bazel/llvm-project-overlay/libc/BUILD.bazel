@@ -344,6 +344,7 @@ libc_support_library(
         "src/__support/CPP/utility.h",
         "src/__support/CPP/utility/declval.h",
         "src/__support/CPP/utility/forward.h",
+        "src/__support/CPP/utility/in_place.h",
         "src/__support/CPP/utility/integer_sequence.h",
         "src/__support/CPP/utility/move.h",
     ],
@@ -577,6 +578,7 @@ libc_support_library(
         ":__support_common",
         ":__support_error_or",
         ":__support_osutil_syscall",
+        ":errno",
     ],
 )
 
