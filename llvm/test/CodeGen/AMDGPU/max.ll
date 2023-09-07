@@ -65,7 +65,7 @@ define amdgpu_kernel void @s_test_imax_sge_imm_i32(ptr addrspace(1) %out, i32 %a
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i8:
 ; SI: buffer_load_sbyte
 ; SI: buffer_load_sbyte
-; GCN: v_max_i32_e32
+; GCN: {{v_max_i32_e32|s_max_i32}}
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_test_imax_sge_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
@@ -174,7 +174,7 @@ define amdgpu_kernel void @s_test_umax_uge_v3i32(ptr addrspace(1) %out, <3 x i32
 ; FUNC-LABEL: {{^}}v_test_umax_uge_i8:
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
-; GCN: v_max_u32_e32
+; GCN: {{[vs]}}_max_u32
 
 ; EG: MAX_UINT
 define amdgpu_kernel void @v_test_umax_uge_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
