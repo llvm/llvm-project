@@ -88,12 +88,17 @@ Besides the usual testing macros like `EXPECT_EQ, ASSERT_TRUE, ...` there are
 testing macros specifically used for floating point values, such as
 `EXPECT_FP_EQ, ASSERT_FP_LE, ...`
 
-- Add unit test to:
+- Add smoke tests (simple cases and zeros / inf / nan inputs or outputs) to:
+```
+  libc/test/src/math/smoke/<func>_test.cpp
+```
+- Add unit test that might require MPFR to:
 ```
   libc/test/src/math/<func>_test.cpp
 ```
-- Add the corresponding entry point to:
+- Add the corresponding entry points to:
 ```
+  libc/test/src/math/smoke/CMakeLists.txt
   libc/test/src/math/CMakeLists.txt
 ```
 
@@ -158,6 +163,16 @@ implementation (which is very often glibc).
 - Run all unit tests:
 ```
   $ ninja check-libc
+```
+
+- Run math smoke tests only:
+```
+  $ ninja libc-math-smoke-tests
+```
+
+- Run math smoke and unit tests:
+```
+  $ ninja libc-math-unittests
 ```
 
 - Build and Run a specific unit test:
