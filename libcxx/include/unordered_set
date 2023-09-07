@@ -1150,7 +1150,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_unique(_VSTD::move(__u.__table_.remove(__i++)->__value_));
+            __table_.__insert_unique(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
@@ -1835,7 +1835,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_multi(_VSTD::move(__u.__table_.remove(__i++)->__value_));
+            __table_.__insert_multi(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
