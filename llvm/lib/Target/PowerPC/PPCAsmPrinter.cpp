@@ -1534,6 +1534,22 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
   }
+  case PPC::ADDI8: {
+    // The faster non-TOC-based local-exec sequence is represented by `addi`
+    // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
+    // does not otherwise arise.
+    const MachineOperand &MO = MI->getOperand(2);
+    if ((MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) {
+      assert(
+          Subtarget->hasAIXSmallLocalExecTLS() &&
+          "addi with thread-pointer only expected with local-exec small TLS");
+      LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+      TmpInst.setOpcode(PPC::LA8);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+    break;
+  }
   }
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
