@@ -229,8 +229,13 @@ function(add_properties_for_swift_modules target reldir)
       set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
       set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
     elseif(CMAKE_SYSTEM_NAME MATCHES Windows)
-      target_link_directories(${target} PRIVATE
-        ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/Windows/x86_64)
+      if(CMAKE_SYSTEM_PROCESSOR MATCHES AMD64|amd64|x86_64)
+        target_link_directories(${target} PRIVATE
+          ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/windows/x86_64)
+      elseif(CMAKE_SYSTEM_PROCESSOR MATCHES ARM64|arm64|aarch64)
+        target_link_directories(${target} PRIVATE
+          ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/windows/aarch64)
+      endif()
     endif()
 
     if (SWIFT_SWIFT_PARSER)
