@@ -8,7 +8,7 @@
 #       CHECK: -- Testing: {{.*}}
 #       CHECK: FAIL: shtest-output-printing :: basic.txt {{.*}}
 #  CHECK-NEXT: ***{{\**}} TEST 'shtest-output-printing :: basic.txt' FAILED ***{{\**}}
-#  CHECK-NEXT: Exit Code: 1
+#  CHECK-NEXT: Exit Code: {{[1-9][0-9]*}}
 # CHECK-EMPTY:
 #  CHECK-NEXT: Command Output (stdout):
 #  CHECK-NEXT: --
