@@ -2754,6 +2754,7 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
     formatter.str_off += retval;
   }
 
+  (void)va_labels; // Silence unused-but-set-parameter warning
   *ret_label = 0;
   if (ret_origin)
     *ret_origin = 0;
