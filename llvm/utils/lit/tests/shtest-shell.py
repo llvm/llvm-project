@@ -475,7 +475,7 @@
 # CHECK-NEXT: # executed command: true
 
 #      CHECK: diff -U0 {{.*}}.foo {{.*}}.bar && false || true
-# CHECK-NEXT: # executed command: diff -U0 {{.+}}.foo{{.*}} {{.+}}.bar{{.*}}
+# CHECK-NEXT: diff -U0 {{.*}}.foo {{.*}}.bar
 # CHECK-NEXT: # .---command stdout{{-*}}
 #      CHECK: # | @@ {{.*}} @@
 # CHECK-NEXT: # | -6 foo
