@@ -9553,12 +9553,8 @@ Value *CodeGenFunction::EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
   Function *F = CGM.getIntrinsic(IntID, VecTy);
   if (TypeFlags.isReadZA()) {
     Ops[1] = EmitSVEPredicateCast(Ops[1], VecTy);
-    Ops[3] = EmitTileslice(Ops[4], Ops[3]);
-    Ops.erase(&Ops[4]);
   } else if (TypeFlags.isWriteZA()) {
-    Ops[1] = EmitTileslice(Ops[2], Ops[1]);
-    Ops[2] = EmitSVEPredicateCast(Ops[3], VecTy);
-    Ops.erase(&Ops[3]);
+    Ops[2] = EmitSVEPredicateCast(Ops[2], VecTy);
   }
   return Builder.CreateCall(F, Ops);
 }
