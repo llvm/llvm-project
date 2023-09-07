@@ -466,6 +466,7 @@ does the same actions. Starting with a skeleton program that forks and debugs
 the inferior process.
 
 The program presented `here <https://eli.thegreenplace.net/2011/01/23/how-debuggers-work-part-1>`_
+(`source <https://github.com/eliben/code-for-blog/blob/master/2011/simple_tracer.c>`_)
 is a great starting point. There is also an AArch64 specific example in
 `the LLDB examples folder <https://github.com/llvm/llvm-project/tree/main/lldb/examples/ptrace_example.c>`_.
 
