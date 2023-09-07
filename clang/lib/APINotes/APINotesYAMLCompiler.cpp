@@ -141,8 +141,6 @@ Each global variable definition is of the following form:
 namespace {
 enum class APIAvailability {
   Available = 0,
-  OSX,
-  IOS,
   None,
   NonSwift,
 };
@@ -152,8 +150,6 @@ namespace llvm {
 namespace yaml {
 template <> struct ScalarEnumerationTraits<APIAvailability> {
   static void enumeration(IO &IO, APIAvailability &AA) {
-    IO.enumCase(AA, "OSX", APIAvailability::OSX);
-    IO.enumCase(AA, "iOS", APIAvailability::IOS);
     IO.enumCase(AA, "none", APIAvailability::None);
     IO.enumCase(AA, "nonswift", APIAvailability::NonSwift);
     IO.enumCase(AA, "available", APIAvailability::Available);
