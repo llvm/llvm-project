@@ -45,7 +45,7 @@ endif()
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
-      "Path where built libgcc libraries should be installed.")
+      "Path where built llvm-libgcc libraries should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LLVM_LIBGCC_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
     string(APPEND LLVM_LIBGCC_INSTALL_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
@@ -57,7 +57,7 @@ else()
     set(LLVM_LIBGCC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBGCC_LIBDIR_SUFFIX})
   endif()
   set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBGCC_LIBDIR_SUFFIX} CACHE PATH
-      "Path where built libgcc libraries should be installed.")
+      "Path where built llvm-libgcc libraries should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
@@ -117,7 +117,7 @@ else()
 endif()
 set(LLVM_LIBGCC_COMPILER_RT ${install_dir_builtins}/libclang_rt.builtins${builtins_suffix}.a)
 
-add_custom_target(libgcc ALL
+add_custom_target(llvm-libgcc ALL
   DEPENDS unwind_shared
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLVM_LIBGCC_COMPILER_RT} libgcc.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink libunwind.a libgcc_eh.a
@@ -129,5 +129,5 @@ add_custom_target(libgcc ALL
 foreach(VAR libgcc.a libgcc_eh.a libgcc_s.so.1.0 libgcc_s.so.1 libgcc_s.so)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${VAR}
     DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR}
-    COMPONENT libgcc)
+    COMPONENT llvm-libgcc)
 endforeach()
