@@ -319,7 +319,8 @@ def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def hlfir_ConcatOp : hlfir_Op<"concat", []> {
+def hlfir_ConcatOp : hlfir_Op<"concat",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "concatenate characters";
   let description = [{
     Concatenate two or more character strings of a same character kind.
@@ -340,7 +341,7 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let hasVerifier = 1;
 }
 
-def hlfir_AllOp : hlfir_Op<"all", []> {
+def hlfir_AllOp : hlfir_Op<"all", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "ALL transformational intrinsic";
   let description = [{
     Takes a logical array MASK as argument, optionally along a particular dimension,
@@ -361,7 +362,7 @@ def hlfir_AllOp : hlfir_Op<"all", []> {
   let hasVerifier = 1;
 }
 
-def hlfir_AnyOp : hlfir_Op<"any", []> {
+def hlfir_AnyOp : hlfir_Op<"any", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "ANY transformational intrinsic";
   let description = [{
     Takes a logical array MASK as argument, optionally along a particular dimension,
@@ -382,7 +383,7 @@ def hlfir_AnyOp : hlfir_Op<"any", []> {
   let hasVerifier = 1;
 }
 
-def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments]> {
+def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "COUNT transformational intrinsic";
   let description = [{
     Takes a logical and counts the number of true values.
@@ -403,9 +404,9 @@ def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
-
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "PRODUCT transformational intrinsic";
   let description = [{
     Multiplies the elements of an array, optionally along a particular dimension,
@@ -429,7 +430,8 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
+def hlfir_SetLengthOp : hlfir_Op<"set_length",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "change the length of a character entity";
   let description = [{
     Change the length of character entity. This trims or pads the
@@ -468,7 +470,8 @@ def hlfir_GetLengthOp : hlfir_Op<"get_length", [Pure]> {
 }
 
 def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "SUM transformational intrinsic";
   let description = [{
     Sums the elements of an array, optionally along a particular dimension,
@@ -493,7 +496,8 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
 }
 
 def hlfir_DotProductOp : hlfir_Op<"dot_product",
-    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "DOT_PRODUCT transformational intrinsic";
   let description = [{
     Dot product of two vectors
@@ -516,7 +520,8 @@ def hlfir_DotProductOp : hlfir_Op<"dot_product",
 }
 
 def hlfir_MatmulOp : hlfir_Op<"matmul",
-    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "MATMUL transformational intrinsic";
   let description = [{
     Matrix multiplication
@@ -541,7 +546,8 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let hasVerifier = 1;
 }
 
-def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
+def hlfir_TransposeOp : hlfir_Op<"transpose",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "TRANSPOSE transformational intrinsic";
   let description = [{
     Transpose a rank 2 array
@@ -559,7 +565,8 @@ def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
 }
 
 def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
-    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Optimized MATMUL(TRANSPOSE(...), ...)";
   let description = [{
     Matrix multiplication where the left hand side is transposed
@@ -581,8 +588,12 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   let hasVerifier = 1;
 }
 
+// An allocation effect is needed because the value produced by the associate
+// is "deallocated" by hlfir.end_associate (the end_associate must not be
+// removed, and there must be only one hlfir.end_associate).
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>,
+    MemoryEffects<[MemAlloc]>]> {
   let summary = "Create a variable from an expression value";
   let description = [{
     Create a variable from an expression value.
@@ -635,7 +646,7 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
   }];
 }
 
-def hlfir_EndAssociateOp : hlfir_Op<"end_associate", []> {
+def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]> {
   let summary = "Mark the end of life of a variable associated to an expression";
 
   let description = [{
@@ -652,7 +663,8 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", []> {
   let builders = [OpBuilder<(ins "hlfir::AssociateOp":$associate)>];
 }
 
-def hlfir_AsExprOp : hlfir_Op<"as_expr", []> {
+def hlfir_AsExprOp : hlfir_Op<"as_expr",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
@@ -934,7 +946,7 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$expr attr-dict `:` qualified(type($expr))";
 }
 
-def hlfir_CopyInOp : hlfir_Op<"copy_in", []> {
+def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
   let summary = "copy a variable into a contiguous temporary if it is not contiguous";
   let description = [{
     Copy a variable into a contiguous temporary if the variable is not
@@ -954,7 +966,7 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", []> {
     is true and, when it is false, the original value will be returned instead.
   }];
 
-  let arguments = (ins fir_BaseBoxType:$var,
+  let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$var,
                    Optional<I1>:$var_is_present);
 
   let results = (outs fir_BaseBoxType, I1);
@@ -981,7 +993,7 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", []> {
   }];
 }
 
-def hlfir_CopyOutOp : hlfir_Op<"copy_out", []> {
+def hlfir_CopyOutOp : hlfir_Op<"copy_out", [MemoryEffects<[MemFree]>]> {
   let summary = "copy out a variable after a copy in";
   let description = [{
     If the variable was copied in a temporary in the related hlfir.copy_in,
@@ -992,9 +1004,9 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", []> {
     The deallocation of $temp is done if $was_copied is true.
   }];
 
-  let arguments = (ins fir_BaseBoxType:$temp,
+  let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$temp,
                        I1:$was_copied,
-                       Optional<fir_BaseBoxType>:$var);
+                       Arg<Optional<fir_BaseBoxType>, "", [MemWrite]>:$var);
 
   let assemblyFormat = [{
     $temp `,` $was_copied (`to` $var^)?
@@ -1546,7 +1558,8 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
   let hasCanonicalizeMethod = 1;
 }
 
-def hlfir_CharExtremumOp : hlfir_Op<"char_extremum", []> {
+def hlfir_CharExtremumOp : hlfir_Op<"char_extremum",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Find max/min from given character strings";
   let description = [{
     Find the lexicographical minimum or maximum of two or more character 
