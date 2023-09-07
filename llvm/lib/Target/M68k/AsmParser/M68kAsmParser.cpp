@@ -66,10 +66,9 @@ public:
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -704,21 +703,19 @@ ParseStatus M68kAsmParser::parseRegister(MCRegister &RegNo) {
   return ParseStatus::Success;
 }
 
-bool M68kAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool M68kAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
-  auto Result = tryParseRegister(RegNo, StartLoc, EndLoc);
-  if (Result != MatchOperand_Success) {
+  ParseStatus Result = tryParseRegister(Reg, StartLoc, EndLoc);
+  if (!Result.isSuccess())
     return Error(StartLoc, "expected register");
-  }
 
   return false;
 }
 
-OperandMatchResultTy M68kAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                     SMLoc &StartLoc,
-                                                     SMLoc &EndLoc) {
+ParseStatus M68kAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                            SMLoc &EndLoc) {
   StartLoc = getLexer().getLoc();
-  ParseStatus Result = parseRegister(RegNo);
+  ParseStatus Result = parseRegister(Reg);
   EndLoc = getLexer().getLoc();
   return Result;
 }
