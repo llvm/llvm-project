@@ -246,6 +246,36 @@
 /llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
 /llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
 
+# llvm-binary-utilities
+/llvm/docs/CommandGuide/llvm-* @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
+
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
 /llvm/lib/DebugInfo/ @llvm/pr-subscribers-debug-info
