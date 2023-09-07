@@ -1893,6 +1893,51 @@ def TryOp : CIR_Op<"try",
   let hasVerifier = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// CatchOp
+//===----------------------------------------------------------------------===//
+
+def CatchEntryAttr : AttrDef<CIR_Dialect, "CatchEntry"> {
+  let parameters = (ins "mlir::Type":$exception_type,
+                        "Attribute":$exception_type_info);
+  let mnemonic = "type";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def CatchArrayAttr :
+  TypedArrayAttrBase<CatchEntryAttr, "cir.catch entry array attribute"> {
+  let constBuilderCall = ?;
+}
+
+def CatchOp : CIR_Op<"catch",
+      [SameVariadicOperandSize,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, NoRegionArguments]> {
+  let summary = "Catch operation";
+  let description = [{
+  }];
+
+  let arguments = (ins AnyType:$exception_info,
+                       OptionalAttr<CatchArrayAttr>:$catchers);
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+
+  // Already verified elsewhere
+  let hasVerifier = 0;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+      "function_ref<void(OpBuilder &, Location, OperationState &)>"
+      :$catchBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    `(`
+      $exception_info `:` type($exception_info) `,`
+      custom<CatchOp>($regions, $catchers)
+    `)` attr-dict
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // CopyOp
