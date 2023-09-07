@@ -6,14 +6,12 @@ define i64 @foo(i64 %idx, ptr %v) {
 ; CHECK-LABEL: define i64 @foo(
 ; CHECK-SAME: i64 [[IDX:%.*]], ptr [[V:%.*]]) {
 ; CHECK-NEXT:    [[Z1:%.*]] = alloca [[ZIP:%.*]], align 8
-; CHECK-NEXT:    [[SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[Z1]], i64 8
+; CHECK-NEXT:    [[SROA_IDX:%.*]] = getelementptr inbounds [[ZIP]], ptr [[Z1]], i64 0, i32 1
 ; CHECK-NEXT:    store i64 32, ptr [[SROA_IDX]], align 8
-; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds [[ZIP]], ptr [[Z1]], i64 0, i32 1
 ; CHECK-NEXT:    [[AF:%.*]] = getelementptr inbounds [[ZIP]], ptr [[Z1]], i64 0, i32 2, i64 [[IDX]]
 ; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[AF]], align 8
 ; CHECK-NEXT:    store i8 [[A]], ptr [[V]], align 8
-; CHECK-NEXT:    [[LEN:%.*]] = load i64, ptr [[OFFSET]], align 8
-; CHECK-NEXT:    ret i64 [[LEN]]
+; CHECK-NEXT:    ret i64 32
 ;
   %z1 = alloca %Zip, align 8
   %sroa_idx = getelementptr inbounds i8, ptr %z1, i64 8

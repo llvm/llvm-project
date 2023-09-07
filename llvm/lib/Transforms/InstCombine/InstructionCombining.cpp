@@ -1975,6 +1975,48 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
+static Type *findElementAtOffset(Type *PtrTy, Type *Ty, int64_t IntOffset,
+                                 SmallVectorImpl<Value *> &NewIndices,
+                                 const DataLayout &DL) {
+  if (!Ty->isSized())
+    return nullptr;
+  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), IntOffset);
+  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(Ty, Offset);
+  if (!Offset.isZero())
+    return nullptr;
+
+  for (const APInt &Index : Indices)
+    NewIndices.push_back(ConstantInt::get(Ty->getContext(), Index));
+  return Ty;
+}
+
+// See if we can simplify:
+//   X = alloc %Type
+//   Y = gep X, <...constant indices...>
+// into a gep of the original struct. This is important for SROA and alias
+// analysis of unions.
+Instruction *InstCombinerImpl::visitGEPOfAlloc(GetElementPtrInst &GEP,
+                                               AllocaInst *AI) {
+  Type *SrcType = AI->getAllocatedType();
+  if (SrcType->isArrayTy() || GEP.getSourceElementType() == SrcType)
+    return nullptr;
+  unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEP.getType());
+  APInt Offset(OffsetBits, 0);
+  if (GEP.accumulateConstantOffset(DL, Offset)) {
+    if (!Offset)
+      return nullptr;
+    // we need to find out if there is a field at Offset in 'A's type.
+    SmallVector<Value *, 8> NewIndices;
+    if (findElementAtOffset(GEP.getType(), SrcType, Offset.getSExtValue(),
+                            NewIndices, DL)) {
+      Value *NGEP = Builder.CreateGEP(SrcType, GEP.getOperand(0), NewIndices,
+                                      "", GEP.isInBounds());
+      return replaceInstUsesWith(GEP, NGEP);
+    }
+  }
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
                                              GEPOperator *Src) {
   // Combine Indices - If the source pointer to this getelementptr instruction
@@ -2333,6 +2375,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;
+
+  if (auto *AI = dyn_cast<AllocaInst>(PtrOp))
+    if (Instruction *I = visitGEPOfAlloc(GEP, AI))
+      return I;
 
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
