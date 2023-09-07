@@ -12,6 +12,12 @@
         ! CHECK: membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore | #Lookaside | #MemIssue | #Sync  ! encoding: [0x81,0x43,0xe0,0x7f]
         membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore | #Lookaside | #MemIssue | #Sync
 
+        ! CHECK: swapa [%i0+6] %asi, %o2   ! encoding: [0xd4,0xfe,0x20,0x06]
+        swapa [%i0+6] %asi, %o2
+
+        ! CHECK: ldstuba [%i0+2] %asi, %g1 ! encoding: [0xc2,0xee,0x20,0x02]
+        ldstuba [%i0+2] %asi, %g1
+
         ! CHECK: cas [%i0], %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
         cas [%i0], %l6, %o2
 
