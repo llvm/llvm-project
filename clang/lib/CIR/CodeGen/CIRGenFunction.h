@@ -992,7 +992,8 @@ public:
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
   mlir::LogicalResult buildCXXTryStmt(const clang::CXXTryStmt &S);
-  void enterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
+  void enterCXXTryStmt(const CXXTryStmt &S, mlir::cir::CatchOp catchOp,
+                       bool IsFnTryBlock = false);
   void exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
   mlir::LogicalResult buildCompoundStmt(const clang::CompoundStmt &S);
