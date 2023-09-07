@@ -26,19 +26,19 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::asinhf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::asinhf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::asinhf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::asinhf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, __llvm_libc::asinhf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::asinhf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::asinhf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::asinhf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, __llvm_libc::asinhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
 

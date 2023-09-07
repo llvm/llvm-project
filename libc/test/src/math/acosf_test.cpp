@@ -26,13 +26,22 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcAcosfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acosf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acosf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acosf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acosf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acosf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acosf(neg_inf));
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::acosf(1.0f));
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acosf(2.0f));
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acosf(-2.0f));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
