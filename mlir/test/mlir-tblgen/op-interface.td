@@ -11,9 +11,11 @@ def ExtraClassOfInterface : OpInterface<"ExtraClassOfInterface"> {
 
 // DECL: class ExtraClassOfInterface
 // DECL:   static bool classof(::mlir::Operation * base) {
-// DECL-NEXT:     if (!getInterfaceFor(base))
+// DECL-NEXT:     auto* concept = getInterfaceFor(base);
+// DECL-NEXT:     if (!concept)
 // DECL-NEXT:       return false;
-// DECL-NEXT:     return base->someOtherMethod();
+// DECL-NEXT:     ExtraClassOfInterface odsInterfaceInstance(base, concept);
+// DECL-NEXT:     return odsInterfaceInstance->someOtherMethod();
 // DECL-NEXT:   }
 
 def ExtraShardDeclsInterface : OpInterface<"ExtraShardDeclsInterface"> {

@@ -61,6 +61,8 @@ void GpuModuleToBinaryPass::runOnOperation() {
                          .Cases("offloading", "llvm", TargetOptions::offload)
                          .Cases("assembly", "isa", TargetOptions::assembly)
                          .Cases("binary", "bin", TargetOptions::binary)
+                         .Cases("fatbinary", "fatbin", TargetOptions::fatbinary)
+                         .Case("binOrFatbin", TargetOptions::binOrFatbin)
                          .Default(-1);
   if (targetFormat == -1)
     getOperation()->emitError() << "Invalid format specified.";
