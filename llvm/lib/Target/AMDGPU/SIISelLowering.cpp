@@ -10762,6 +10762,24 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
                             StartingIndex, Index);
   }
 
+  case AMDGPUISD::PERM: {
+    auto PermMask = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    if (!PermMask)
+      return std::nullopt;
+
+    auto IdxMask =
+        (PermMask->getZExtValue() & (0xFF << (Index * 8))) >> (Index * 8);
+    if (IdxMask > 0x07 && IdxMask != 0x0c)
+      return std::nullopt;
+
+    auto NextOp = Op.getOperand(IdxMask > 0x03 ? 0 : 1);
+    auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
+
+    return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
+                           : ByteProvider<SDValue>(
+                                 ByteProvider<SDValue>::getConstantZero());
+  }
+
   default: {
     return std::nullopt;
   }
