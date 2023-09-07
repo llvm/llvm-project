@@ -19,6 +19,11 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
+# Defining a global namespace to enclose all libc functions.
+set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
+  CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
+)
+
 if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
@@ -48,11 +53,6 @@ option(LIBC_CMAKE_VERBOSE_LOGGING
 
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
-
-# Defining a global namespace to enclose all libc functions.
-set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
-  CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
-)
 
 if(NOT LIBC_NAMESPACE MATCHES "^__llvm_libc")
   message(FATAL_ERROR "Invalid LIBC_NAMESPACE. Must start with '__llvm_libc' was '${LIBC_NAMESPACE}'")
