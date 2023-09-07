@@ -1166,6 +1166,31 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(Shift), getI32Imm(0));
   }
+  // 2-7) Patterns : High word == Low word
+  // This may require 2 to 3 instructions, depending on whether Lo32 can be
+  // materialized in 1 instruction.
+  if (Hi32 == Lo32) {
+    // Handle the first 32 bits.
+    uint64_t ImmHi16 = (Lo32 >> 16) & 0xffff;
+    uint64_t ImmLo16 = Lo32 & 0xffff;
+    if (isInt<16>(Lo32))
+      Result =
+          CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64, getI32Imm(ImmLo16));
+    else if (!ImmLo16)
+      Result =
+          CurDAG->getMachineNode(PPC::LIS8, dl, MVT::i64, getI32Imm(ImmHi16));
+    else {
+      InstCnt = 3;
+      Result =
+          CurDAG->getMachineNode(PPC::LIS8, dl, MVT::i64, getI32Imm(ImmHi16));
+      Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64,
+                                      SDValue(Result, 0), getI32Imm(ImmLo16));
+    }
+    // Use rldimi to insert the Low word into High word.
+    SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
+                     getI32Imm(0)};
+    return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
+  }
 
   // Following patterns use 3 instructions to materialize the Imm.
   InstCnt = 3;
@@ -1216,20 +1241,7 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TO), getI32Imm(LZ));
   }
-  // 3-4) Patterns : High word == Low word
-  if (Hi32 == Lo32) {
-    // Handle the first 32 bits.
-    uint64_t ImmHi16 = (Lo32 >> 16) & 0xffff;
-    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
-    Result = CurDAG->getMachineNode(Opcode, dl, MVT::i64, getI32Imm(ImmHi16));
-    Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64, SDValue(Result, 0),
-                                    getI32Imm(Lo32 & 0xffff));
-    // Use rldimi to insert the Low word into High word.
-    SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
-                     getI32Imm(0)};
-    return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
-  }
-  // 3-5) Patterns : {******}{33 zeros}{******}
+  // 3-4) Patterns : {******}{33 zeros}{******}
   //                 {******}{33 ones}{******}
   // If the Imm contains 33 consecutive zeros/ones, it means that a total of 31
   // bits remain on both sides. Rotate right the Imm to construct an int<32>
