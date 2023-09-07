@@ -3884,6 +3884,7 @@ cc_library(
         ":ShapeOpsIncGen",
         ":SideEffectInterfaces",
         ":TensorDialect",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -6170,6 +6171,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":Transforms",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -9040,8 +9042,8 @@ cc_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
-        ":AtomicInterfacesIncGen",
         ":AtomicInterfaces",
+        ":AtomicInterfacesIncGen",
         ":ControlFlowInterfaces",
         ":IR",
         ":LLVMDialect",
@@ -9208,8 +9210,8 @@ cc_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
-        ":AtomicInterfacesIncGen",
         ":AtomicInterfaces",
+        ":AtomicInterfacesIncGen",
         ":ControlFlowInterfaces",
         ":FuncDialect",
         ":IR",
@@ -11459,6 +11461,7 @@ cc_library(
         ":MathBaseIncGen",
         ":MathOpsIncGen",
         ":SideEffectInterfaces",
+        ":UBDialect",
         ":VectorInterfaces",
         "//llvm:Support",
     ],
