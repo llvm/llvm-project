@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU scalbn function -------------------------===//
+//===-- Implementation of the GPU scalbnf function ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/scalbn.h"
+#include "src/math/scalbnf.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(double, scalbn, (double x, int y)) {
-  return __builtin_scalbn(x, y);
+LLVM_LIBC_FUNCTION(float, scalbnf, (float x, int y)) {
+  return internal::scalbnf(x, y);
 }
 
 } // namespace __llvm_libc

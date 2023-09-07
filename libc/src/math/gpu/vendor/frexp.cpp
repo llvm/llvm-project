@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU scalbnf function ------------------------===//
+//===-- Implementation of the frexp function for GPU ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/scalbnf.h"
+#include "src/math/frexp.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(float, scalbnf, (float x, int y)) {
-  return __builtin_scalbnf(x, y);
+LLVM_LIBC_FUNCTION(double, frexp, (double x, int *p)) {
+  return internal::frexp(x, p);
 }
 
 } // namespace __llvm_libc
