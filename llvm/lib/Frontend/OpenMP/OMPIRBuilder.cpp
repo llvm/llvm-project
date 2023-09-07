@@ -579,7 +579,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         if (I.isTerminator())
           continue;
 
-        I.moveBefore(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
+        I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
 
       OI.EntryBB->moveBefore(&ArtificialEntry);

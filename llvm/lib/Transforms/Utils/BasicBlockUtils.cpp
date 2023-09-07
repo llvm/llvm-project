@@ -300,7 +300,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     PredBB->back().eraseFromParent();
 
     // Move terminator instruction.
-    PredBB->splice(PredBB->end(), BB);
+    BB->back().moveBeforePreserving(*PredBB, PredBB->end());
 
     // Terminator may be a memory accessing instruction too.
     if (MSSAU)
