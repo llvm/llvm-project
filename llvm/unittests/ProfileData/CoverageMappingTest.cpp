@@ -23,14 +23,17 @@ using namespace llvm;
 using namespace coverage;
 
 [[nodiscard]] static ::testing::AssertionResult
-ErrorEquals(coveragemap_error Expected, Error E) {
+ErrorEquals(Error E, coveragemap_error Expected_Err,
+            const std::string &Expected_Msg = std::string()) {
   coveragemap_error Found;
+  std::string Msg;
   std::string FoundMsg;
   handleAllErrors(std::move(E), [&](const CoverageMapError &CME) {
     Found = CME.get();
+    Msg = CME.getMessage();
     FoundMsg = CME.message();
   });
-  if (Expected == Found)
+  if (Expected_Err == Found && Msg == Expected_Msg)
     return ::testing::AssertionSuccess();
   return ::testing::AssertionFailure() << "error: " << FoundMsg << "\n";
 }
@@ -342,7 +345,8 @@ TEST_P(CoverageMappingTest, load_coverage_with_bogus_function_name) {
   ProfileWriter.addRecord({"", 0x1234, {10}}, Err);
   startFunction("", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
-  EXPECT_TRUE(ErrorEquals(coveragemap_error::malformed, loadCoverageMapping()));
+  EXPECT_TRUE(ErrorEquals(loadCoverageMapping(), coveragemap_error::malformed,
+                          "record function name is empty"));
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
