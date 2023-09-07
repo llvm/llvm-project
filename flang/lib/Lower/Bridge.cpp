@@ -2293,8 +2293,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), getEval(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
