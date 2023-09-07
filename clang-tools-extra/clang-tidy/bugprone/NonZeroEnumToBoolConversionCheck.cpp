@@ -49,6 +49,8 @@ bool NonZeroEnumToBoolConversionCheck::isLanguageVersionSupported(
 }
 
 void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
+  // Excluding bitwise operators (binary and overload) to avoid false-positives
+  // in code like this 'if (e & SUCCESS) {'.
   auto ExcludedOperators = binaryOperation(hasAnyOperatorName(
       "|", "&", "^", "<<", ">>", "~", "|=", "&=", "^=", "<<=", ">>="));
 
