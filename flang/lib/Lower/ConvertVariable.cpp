@@ -1506,8 +1506,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       }
       fir::BoxType ptrBoxType =
           fir::BoxType::get(fir::PointerType::get(baseType));
-      mlir::Value boxAlloc =
-          fir::factory::genNullBoxStorage(builder, loc, ptrBoxType);
+      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
 
       // Declare a local pointer variable.
       attributes = fir::FortranVariableFlagsAttr::get(

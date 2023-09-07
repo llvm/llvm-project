@@ -13,11 +13,6 @@ end subroutine test1
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest1Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_8:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
-! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_8]](%[[VAL_10]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:           fir.store %[[VAL_11]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:           %[[VAL_13:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_13]](%[[VAL_7]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
@@ -44,11 +39,6 @@ end subroutine test2
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i64 {bindc_name = "cp", uniq_name = "_QFtest2Ecp"}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest2Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_19:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_20:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
-! CHECK:           %[[VAL_21:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_22:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_23:.*]] = fir.embox %[[VAL_20]](%[[VAL_22]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:           fir.store %[[VAL_23]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:           %[[VAL_25:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_19]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
@@ -77,11 +67,6 @@ end subroutine test3
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_25:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,11>>>
-! CHECK:           %[[VAL_26:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_27:.*]] = fir.shape %[[VAL_26]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_28:.*]] = fir.embox %[[VAL_25]](%[[VAL_27]]) : (!fir.ptr<!fir.array<?x!fir.char<1,11>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>
-! CHECK:           fir.store %[[VAL_28]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>
 ! CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest3Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>, index) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>)
 ! CHECK:           %[[VAL_30:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,11>>>
 ! CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_30]](%[[VAL_24]]) : (!fir.ptr<!fir.array<?x!fir.char<1,11>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>
@@ -110,10 +95,6 @@ end subroutine test4
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[VAL_6]] : i32
 ! CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_5]], %[[VAL_6]] : i32
-! CHECK:           %[[VAL_10:.*]] = fir.zero_bits !fir.ptr<!fir.char<1,?>>
-! CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_10]] typeparams %[[VAL_11]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
-! CHECK:           fir.store %[[VAL_12]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest4Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, i32) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_14]] typeparams %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>, i32) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
@@ -146,11 +127,6 @@ end subroutine test5
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 9 : index
 ! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<9x!fir.type<_QFtest5Tt{r:f32,i:i32}>> {bindc_name = "v", uniq_name = "_QFtest5Ev"}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_9:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>
-! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_9]](%[[VAL_11]]) : (!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>
-! CHECK:           fir.store %[[VAL_12]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest5Ev"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>
 ! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_14]](%[[VAL_8]]) : (!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>
@@ -188,23 +164,12 @@ end subroutine test6
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 20 : index
 
 ! CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_15:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_18:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_15]](%[[VAL_17]]) typeparams %[[VAL_18]] : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
-! CHECK:           fir.store %[[VAL_19]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest6Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>, i32) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>)
 ! CHECK:           %[[VAL_21:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.embox %[[VAL_21]](%[[VAL_14]]) typeparams %[[VAL_11]] : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:           fir.store %[[VAL_22]] to %[[VAL_20]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 
 ! CHECK:           %[[VAL_41:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_42:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
-! CHECK:           %[[VAL_43:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_44:.*]] = fir.shape %[[VAL_43]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_45:.*]] = fir.embox %[[VAL_42]](%[[VAL_44]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:           fir.store %[[VAL_45]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_46:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest6Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:           %[[VAL_47:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_48:.*]] = fir.embox %[[VAL_47]](%[[VAL_41]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
