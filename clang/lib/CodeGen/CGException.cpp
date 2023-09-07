@@ -1149,7 +1149,10 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(handler.Type.Flags == 0 &&
            "landingpads do not support catch handler flags");
     assert(typeValue && "fell into catch-all case!");
-    typeValue = CGF.Builder.CreateBitCast(typeValue, CGF.Int8PtrTy);
+    llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
+    // With opaque ptrs, only the address space can be a mismatch.
+    if (typeValue->getType() != argTy)
+      typeValue = CGF.Builder.CreateAddrSpaceCast(typeValue, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;
