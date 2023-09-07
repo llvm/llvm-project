@@ -4,6 +4,7 @@
 
 ! RUN: %flang -### -target ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
 ! RUN: %flang -### -target aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
+! RUN: %flang -### -target sparc-sun-solaris2.11 %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
 ! RUN: %flang -### -target x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
