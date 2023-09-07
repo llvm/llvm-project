@@ -75,6 +75,11 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (FE->getDir() == AST.getPreprocessor()
+                  .getHeaderSearchInfo()
+                  .getModuleMap()
+                  .getBuiltinDir()) 
+    return false;
   if (PI && PI->shouldKeep(*FE))
     return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
@@ -392,6 +397,10 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
+  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
+                                .getHeaderSearchInfo()
+                                .getModuleMap()
+                                .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
       AST.getPragmaIncludes().get(), AST.getPreprocessor(),
@@ -400,7 +409,8 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         bool Satisfied = false;
         for (const auto &H : Providers) {
           if (H.kind() == include_cleaner::Header::Physical &&
-              (H.physical() == MainFile || H.physical() == PreamblePatch)) {
+              (H.physical() == MainFile || H.physical() == PreamblePatch ||
+               H.physical()->getLastRef().getDir() == ResourceDir)) {
             Satisfied = true;
             continue;
           }
