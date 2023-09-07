@@ -61,6 +61,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1374,6 +1375,77 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
+// Recursively check BB for a preceding alloca. An alive alloca at the callsite
+// essentially makes propagating any memory effects impossible. While scanning
+// for the alloca also collect and callsites we may be able to modify.
+static const std::pair<bool, SmallVector<CallBase *, 4>> &
+GetBBAllocaAndCallsiteInfo(
+    BasicBlock *BB,
+    DenseMap<BasicBlock *, std::pair<bool, SmallVector<CallBase *, 4>>>
+        *FirstAllocaAndCBs,
+    MemoryEffects ME) {
+  auto InsertRes = FirstAllocaAndCBs->insert({BB, {false, {}}});
+  if (!InsertRes.second)
+    return InsertRes.first->second;
+
+  for (BasicBlock *PBB : predecessors(BB)) {
+    auto PBBInfo = GetBBAllocaAndCallsiteInfo(PBB, FirstAllocaAndCBs, ME);
+    if (PBBInfo.first) {
+      auto BBInfo = FirstAllocaAndCBs->find(BB);
+      assert(BBInfo != FirstAllocaAndCBs->end());
+      BBInfo->second.first = true;
+      // We have an alloca in a preceding BB, we can't propagate any memory
+      // effects.
+      return BBInfo->second;
+    }
+  }
+
+  auto BBInfo = FirstAllocaAndCBs->find(BB);
+  assert(BBInfo != FirstAllocaAndCBs->end());
+  for (auto &Ins : *BB) {
+    if (isa<AllocaInst>(&Ins)) {
+      BBInfo->second.first = true;
+      // Dominating alloca in the BB, we can propagate to any callsites prior to
+      // the alloca but none after.
+      return BBInfo->second;
+    }
+    // Add callsite.
+    if (auto *OtherCB = dyn_cast<CallBase>(&Ins))
+      BBInfo->second.second.push_back(OtherCB);
+  }
+  return BBInfo->second;
+}
+
+// Propagate memory effects from the to-be-inlined function to any callsites in
+// the function.
+static void AddFnAccessAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
+  auto *CalledFunction = CB.getCalledFunction();
+  MemoryEffects ME = CB.getMemoryEffects();
+  if (ME == MemoryEffects::unknown())
+    return;
+  DenseMap<BasicBlock *, std::pair<bool, SmallVector<CallBase *, 4>>>
+      FirstAllocaAndCBs;
+
+  for (BasicBlock &BB : *CalledFunction) {
+    auto BBInfo = GetBBAllocaAndCallsiteInfo(&BB, &FirstAllocaAndCBs, ME);
+    // We found no callsites that we can propagate memory effects to.
+    if (BBInfo.second.empty())
+      continue;
+    for (CallBase *OtherCB : BBInfo.second) {
+      assert(OtherCB->getParent() == &BB);
+      if (auto *NewOtherCB = dyn_cast_or_null<CallBase>(VMap.lookup(OtherCB))) {
+        MemoryEffects NewME = NewOtherCB->getMemoryEffects();
+        // ArgMem memory effects don't directly apply.
+        NewME &= ME.getWithLocUnknown(IRMemLocation::ArgMem);
+        // If we have complete coverage of some ModRef then we can apply to
+        // ArgMem as well.
+        NewME &= MemoryEffects(ME.getModRef());
+        NewOtherCB->setMemoryEffects(NewME);
+      }
+    }
+  }
+}
+
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
   AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
   AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
@@ -2337,6 +2409,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
+
+    AddFnAccessAttributes(CB, VMap);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.

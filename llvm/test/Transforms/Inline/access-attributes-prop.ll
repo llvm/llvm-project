@@ -344,7 +344,7 @@ define void @prop_param_deref_or_null_no_update(ptr %p) {
 define void @prop_fn_decl(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_fn_decl
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -356,7 +356,7 @@ define void @prop_fn_decl(ptr %p) {
 define void @prop_cb_def_wr(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_wr
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -400,7 +400,7 @@ define void @prop_fn_decl_partially_okay_alloca(ptr %p) {
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
@@ -416,7 +416,7 @@ define void @prop_cb_def_wr_partially_okay_alloca(ptr %p) {
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
@@ -430,7 +430,7 @@ define void @prop_cb_def_wr_partially_okay_alloca(ptr %p) {
 define void @prop_cb_def_readonly(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_readonly
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @foo1(ptr %p) readonly
@@ -440,7 +440,7 @@ define void @prop_cb_def_readonly(ptr %p) {
 define void @prop_cb_def_readnone(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_readnone
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr [[P]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @foo1(ptr %p) readnone
