@@ -264,8 +264,7 @@ public:
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
-    return hasAVX512() && hasEVEX512() &&
-           (canExtendTo512DQ() || RequiredVectorWidth > 256);
+    return hasAVX512() && (canExtendTo512DQ() || RequiredVectorWidth > 256);
   }
 
   bool useLight256BitInstructions() const {

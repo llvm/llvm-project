@@ -18,8 +18,7 @@ typedef unsigned int __mmask32;
 typedef unsigned long long __mmask64;
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS512 __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,evex512"), __min_vector_width__(512)))
-#define __DEFAULT_FN_ATTRS64 __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,evex512")))
+#define __DEFAULT_FN_ATTRS512 __attribute__((__always_inline__, __nodebug__, __target__("avx512bw"), __min_vector_width__(512)))
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512bw")))
 
 static __inline __mmask32 __DEFAULT_FN_ATTRS
@@ -28,7 +27,7 @@ _knot_mask32(__mmask32 __M)
   return __builtin_ia32_knotsi(__M);
 }
 
-static __inline __mmask64 __DEFAULT_FN_ATTRS64
+static __inline __mmask64 __DEFAULT_FN_ATTRS
 _knot_mask64(__mmask64 __M)
 {
   return __builtin_ia32_knotdi(__M);
@@ -40,7 +39,7 @@ _kand_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_kandsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kand_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kanddi((__mmask64)__A, (__mmask64)__B);
@@ -52,7 +51,7 @@ _kandn_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_kandnsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kandn_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kandndi((__mmask64)__A, (__mmask64)__B);
@@ -64,7 +63,7 @@ _kor_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_korsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kor_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kordi((__mmask64)__A, (__mmask64)__B);
@@ -76,7 +75,7 @@ _kxnor_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_kxnorsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kxnor_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kxnordi((__mmask64)__A, (__mmask64)__B);
@@ -88,7 +87,7 @@ _kxor_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_kxorsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kxor_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kxordi((__mmask64)__A, (__mmask64)__B);
@@ -112,19 +111,19 @@ _kortest_mask32_u8(__mmask32 __A, __mmask32 __B, unsigned char *__C) {
   return (unsigned char)__builtin_ia32_kortestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _kortestc_mask64_u8(__mmask64 __A, __mmask64 __B)
 {
   return (unsigned char)__builtin_ia32_kortestcdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _kortestz_mask64_u8(__mmask64 __A, __mmask64 __B)
 {
   return (unsigned char)__builtin_ia32_kortestzdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _kortest_mask64_u8(__mmask64 __A, __mmask64 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_kortestcdi(__A, __B);
   return (unsigned char)__builtin_ia32_kortestzdi(__A, __B);
@@ -148,19 +147,19 @@ _ktest_mask32_u8(__mmask32 __A, __mmask32 __B, unsigned char *__C) {
   return (unsigned char)__builtin_ia32_ktestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _ktestc_mask64_u8(__mmask64 __A, __mmask64 __B)
 {
   return (unsigned char)__builtin_ia32_ktestcdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _ktestz_mask64_u8(__mmask64 __A, __mmask64 __B)
 {
   return (unsigned char)__builtin_ia32_ktestzdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS64
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _ktest_mask64_u8(__mmask64 __A, __mmask64 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_ktestcdi(__A, __B);
   return (unsigned char)__builtin_ia32_ktestzdi(__A, __B);
@@ -172,7 +171,7 @@ _kadd_mask32(__mmask32 __A, __mmask32 __B)
   return (__mmask32)__builtin_ia32_kaddsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _kadd_mask64(__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64)__builtin_ia32_kadddi((__mmask64)__A, (__mmask64)__B);
@@ -195,7 +194,7 @@ _cvtmask32_u32(__mmask32 __A) {
   return (unsigned int)__builtin_ia32_kmovd((__mmask32)__A);
 }
 
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS64
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _cvtmask64_u64(__mmask64 __A) {
   return (unsigned long long)__builtin_ia32_kmovq((__mmask64)__A);
 }
@@ -205,7 +204,7 @@ _cvtu32_mask32(unsigned int __A) {
   return (__mmask32)__builtin_ia32_kmovd((__mmask32)__A);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _cvtu64_mask64(unsigned long long __A) {
   return (__mmask64)__builtin_ia32_kmovq((__mmask64)__A);
 }
@@ -215,7 +214,7 @@ _load_mask32(__mmask32 *__A) {
   return (__mmask32)__builtin_ia32_kmovd(*(__mmask32 *)__A);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _load_mask64(__mmask64 *__A) {
   return (__mmask64)__builtin_ia32_kmovq(*(__mmask64 *)__A);
 }
@@ -225,7 +224,7 @@ _store_mask32(__mmask32 *__A, __mmask32 __B) {
   *(__mmask32 *)__A = __builtin_ia32_kmovd((__mmask32)__B);
 }
 
-static __inline__ void __DEFAULT_FN_ATTRS64
+static __inline__ void __DEFAULT_FN_ATTRS
 _store_mask64(__mmask64 *__A, __mmask64 __B) {
   *(__mmask64 *)__A = __builtin_ia32_kmovq((__mmask64)__B);
 }
@@ -1715,7 +1714,7 @@ _mm512_maskz_set1_epi8 (__mmask64 __M, char __A)
                                               (__v64qi) _mm512_setzero_si512());
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS64
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _mm512_kunpackd (__mmask64 __A, __mmask64 __B)
 {
   return (__mmask64) __builtin_ia32_kunpckdi ((__mmask64) __A,

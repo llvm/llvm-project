@@ -240,7 +240,6 @@ X86_FEATURE       (SHA512,          "sha512")
 X86_FEATURE       (SM3,             "sm3")
 X86_FEATURE       (SM4,             "sm4")
 X86_FEATURE       (AVXVNNIINT16,    "avxvnniint16")
-X86_FEATURE       (EVEX512,         "evex512")
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")
 X86_FEATURE       (RETPOLINE_INDIRECT_BRANCHES, "retpoline-indirect-branches")
