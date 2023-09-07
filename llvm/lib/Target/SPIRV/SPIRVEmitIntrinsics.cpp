@@ -66,6 +66,7 @@ class SPIRVEmitIntrinsics
   }
   void replaceMemInstrUses(Instruction *Old, Instruction *New);
   void processInstrAfterVisit(Instruction *I);
+  void insertAssignPtrTypeIntrs(Instruction *I);
   void insertAssignTypeIntrs(Instruction *I);
   void processGlobalValue(GlobalVariable &GV);
 
@@ -387,9 +388,21 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV) {
     IRB->CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
+void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
+  if (I->getType()->isVoidTy() || !requireAssignType(I))
+    return;
+
+  setInsertPointSkippingPhis(*IRB, I->getNextNode());
+  if (auto *AI = dyn_cast<AllocaInst>(I)) {
+    Constant *Const = Constant::getNullValue(AI->getAllocatedType());
+    buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()}, Const, I);
+  }
+}
+
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
   Type *Ty = I->getType();
-  if (!Ty->isVoidTy() && requireAssignType(I)) {
+  if (!Ty->isVoidTy() && requireAssignType(I) &&
+      I->getOpcode() != Instruction::Alloca) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -484,8 +497,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
-  for (auto &I : Worklist)
+  for (auto &I : Worklist) {
+    insertAssignPtrTypeIntrs(I);
     insertAssignTypeIntrs(I);
+  }
 
   for (auto *I : Worklist) {
     TrackConstants = true;
