@@ -1380,6 +1380,8 @@ class UpdateDPPPat<ValueType vt> : GCNPat <
 
 def : UpdateDPPPat<i32>;
 def : UpdateDPPPat<f32>;
+def : UpdateDPPPat<v2i16>;
+def : UpdateDPPPat<v2f16>;
 
 } // End OtherPredicates = [isGFX8Plus]
 

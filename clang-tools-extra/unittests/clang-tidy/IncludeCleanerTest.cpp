@@ -184,6 +184,38 @@ int QuxResult = qux();
                            )"}}));
 }
 
+
+TEST(IncludeCleanerCheckTest, MultipleTimeMissingInclude) {
+  const char *PreCode = R"(
+#include "bar.h"
+
+int BarResult = bar();
+int BazResult_0 = baz_0();
+int BazResult_1 = baz_1();
+)";
+  const char *PostCode = R"(
+#include "bar.h"
+#include "baz.h"
+
+int BarResult = bar();
+int BazResult_0 = baz_0();
+int BazResult_1 = baz_1();
+)";
+
+  std::vector<ClangTidyError> Errors;
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<IncludeCleanerCheck>(
+                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                {{"bar.h", R"(#pragma once
+                              #include "baz.h"
+                              int bar();
+                           )"},
+                 {"baz.h", R"(#pragma once
+                              int baz_0();
+                              int baz_1();
+                           )"}}));
+}
+
 TEST(IncludeCleanerCheckTest, SystemMissingIncludes) {
   const char *PreCode = R"(
 #include <vector>

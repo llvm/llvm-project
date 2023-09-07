@@ -3,8 +3,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb \
-// RUN:     --builder 'clang-c'  --cflags "-O3 -glldb" -- %s
+// RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
+// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 
 //// Check that escaped local 'param' in function 'fun' has sensible debug info
 //// after the escaping function 'use' gets arg promotion (int* -> int). Currently

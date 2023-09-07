@@ -654,9 +654,8 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
 
 void VPWidenRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  auto &I = *cast<Instruction>(getUnderlyingValue());
   auto &Builder = State.Builder;
-  switch (I.getOpcode()) {
+  switch (Opcode) {
   case Instruction::Call:
   case Instruction::Br:
   case Instruction::PHI:
@@ -688,14 +687,14 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       for (VPValue *VPOp : operands())
         Ops.push_back(State.get(VPOp, Part));
 
-      Value *V = Builder.CreateNAryOp(I.getOpcode(), Ops);
+      Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
       if (auto *VecOp = dyn_cast<Instruction>(V))
         setFlags(VecOp);
 
       // Use this vector value for all users of the original instruction.
       State.set(this, V, Part);
-      State.addMetadata(V, &I);
+      State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     }
 
     break;
@@ -712,8 +711,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
-    bool FCmp = (I.getOpcode() == Instruction::FCmp);
-    auto *Cmp = cast<CmpInst>(&I);
+    bool FCmp = Opcode == Instruction::FCmp;
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *A = State.get(getOperand(0), Part);
       Value *B = State.get(getOperand(1), Part);
@@ -721,20 +719,22 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       if (FCmp) {
         // Propagate fast math flags.
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-        Builder.setFastMathFlags(Cmp->getFastMathFlags());
-        C = Builder.CreateFCmp(Cmp->getPredicate(), A, B);
+        if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
+          Builder.setFastMathFlags(I->getFastMathFlags());
+        C = Builder.CreateFCmp(getPredicate(), A, B);
       } else {
-        C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
+        C = Builder.CreateICmp(getPredicate(), A, B);
       }
       State.set(this, C, Part);
-      State.addMetadata(C, &I);
+      State.addMetadata(C, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     }
 
     break;
   }
   default:
     // This instruction is not vectorized by simple widening.
-    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
+    LLVM_DEBUG(dbgs() << "LV: Found an unhandled opcode : "
+                      << Instruction::getOpcodeName(Opcode));
     llvm_unreachable("Unhandled instruction!");
   } // end of switch.
 }
@@ -743,8 +743,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
-  const Instruction *UI = getUnderlyingInstr();
-  O << " = " << UI->getOpcodeName();
+  O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
 }
