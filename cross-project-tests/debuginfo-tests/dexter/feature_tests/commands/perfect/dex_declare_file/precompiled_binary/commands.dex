@@ -4,7 +4,7 @@
 #
 # UNSUPPORTED: system-darwin
 #
-# RUN: %dexter_regression_test_build %S/test.cpp -o %t
+# RUN: %clang %S/test.cpp -O0 -g -o %t
 # RUN: %dexter_regression_base --binary %t %s | FileCheck %s
 # CHECK: commands.dex
 #

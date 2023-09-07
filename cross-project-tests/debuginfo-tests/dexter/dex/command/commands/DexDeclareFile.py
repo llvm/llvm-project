@@ -14,6 +14,7 @@ from dex.command.CommandBase import CommandBase
 
 class DexDeclareFile(CommandBase):
     def __init__(self, declared_file):
+
         if not isinstance(declared_file, str):
             raise TypeError("invalid argument type")
 
