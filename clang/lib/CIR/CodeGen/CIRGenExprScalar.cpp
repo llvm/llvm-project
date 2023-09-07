@@ -212,11 +212,8 @@ public:
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value buildLoadOfLValue(const Expr *E) {
     LValue LV = CGF.buildLValue(E);
-    auto load = Builder.create<mlir::cir::LoadOp>(CGF.getLoc(E->getExprLoc()),
-                                                  CGF.getCIRType(E->getType()),
-                                                  LV.getPointer());
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
-    return load;
+    return CGF.buildLoadOfLValue(LV, E->getExprLoc()).getScalarVal();    
   }
 
   mlir::Value buildLoadOfLValue(LValue LV, SourceLocation Loc) {
