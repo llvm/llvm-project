@@ -246,6 +246,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to accurately generate
   fixes for reordering arguments.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to fix function pointer
+  ``typedef`` correctly.
+
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
