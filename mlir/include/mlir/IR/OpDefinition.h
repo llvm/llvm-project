@@ -341,6 +341,7 @@ LogicalResult verifySameOperandsAndResultShape(Operation *op);
 LogicalResult verifySameOperandsElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultType(Operation *op);
+LogicalResult verifySameOperandsAndResultRank(Operation *op);
 LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
 LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
@@ -1111,6 +1112,17 @@ class SameOperandsAndResultType
 public:
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifySameOperandsAndResultType(op);
+  }
+};
+
+/// This class verifies that op has same ranks for all
+/// operands and results types, if known.
+template <typename ConcreteType>
+class SameOperandsAndResultRank
+    : public TraitBase<ConcreteType, SameOperandsAndResultRank> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameOperandsAndResultRank(op);
   }
 };
 
