@@ -221,13 +221,6 @@ public:
   unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 
-  /// Return the cost of LMUL for linear operations.
-  InstructionCost getLMULCost(MVT VT) const;
-
-  InstructionCost getVRGatherVVCost(MVT VT) const;
-  InstructionCost getVRGatherVICost(MVT VT) const;
-  InstructionCost getVSlideCost(MVT VT) const;
-
   bool enableSubRegLiveness() const override;
 
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
