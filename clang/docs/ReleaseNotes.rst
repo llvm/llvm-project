@@ -302,6 +302,9 @@ AMDGPU Support
 X86 Support
 ^^^^^^^^^^^
 
+- Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
+  for AVX512 features.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
