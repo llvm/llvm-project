@@ -77,7 +77,7 @@ def GpuModuleToBinaryPass
            "Extra files to link to.">,
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
-    Option<"compilationTarget", "format", "std::string", [{"bin"}],
+    Option<"compilationTarget", "format", "std::string", [{"binOrFatbin"}],
            "The target representation of the compilation process.">
   ];
 }
