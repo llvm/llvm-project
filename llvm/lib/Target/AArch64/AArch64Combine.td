@@ -239,7 +239,7 @@ def AArch64PostLegalizerCombiner
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, merge_unmerge,
                         select_combines, fold_merge_to_zext,
-                        constant_fold_binop, identity_combines,
+                        constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax]> {
