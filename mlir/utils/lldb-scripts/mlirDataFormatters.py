@@ -5,7 +5,6 @@ Load into LLDB with 'command script import /path/to/mlirDataFormatters.py'
 """
 
 import re
-
 import lldb
 
 
