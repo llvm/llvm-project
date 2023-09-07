@@ -10779,6 +10779,68 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Load;
   }
 
+  if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
+      BuiltinID == AArch64::BI_CopyFloatFromInt32 ||
+      BuiltinID == AArch64::BI_CopyInt32FromFloat ||
+      BuiltinID == AArch64::BI_CopyInt64FromDouble) {
+    return EmitScalarExpr(E->getArg(0));
+  }
+
+  if (BuiltinID == AArch64::BI_CountLeadingOnes ||
+      BuiltinID == AArch64::BI_CountLeadingOnes64 ||
+      BuiltinID == AArch64::BI_CountLeadingZeros ||
+      BuiltinID == AArch64::BI_CountLeadingZeros64) {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = Arg->getType();
+
+    if (BuiltinID == AArch64::BI_CountLeadingOnes ||
+        BuiltinID == AArch64::BI_CountLeadingOnes64)
+      Arg = Builder.CreateXor(Arg, Constant::getAllOnesValue(ArgType));
+
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getInt1(false)});
+
+    if (BuiltinID == AArch64::BI_CountLeadingOnes64 ||
+        BuiltinID == AArch64::BI_CountLeadingZeros64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
+  if (BuiltinID == AArch64::BI_CountLeadingSigns ||
+      BuiltinID == AArch64::BI_CountLeadingSigns64) {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = Arg->getType();
+
+    Function *F;
+    if (BuiltinID == AArch64::BI_CountLeadingSigns) {
+      F = CGM.getIntrinsic(Intrinsic::aarch64_cls);
+      if (ArgType != Builder.getInt32Ty())
+        Arg =
+            Builder.CreateIntCast(Arg, Builder.getInt32Ty(), /*isSigned*/ true);
+    } else {
+      F = CGM.getIntrinsic(Intrinsic::aarch64_cls64);
+      if (ArgType != Builder.getInt64Ty())
+        Arg =
+            Builder.CreateIntCast(Arg, Builder.getInt64Ty(), /*isSigned*/ true);
+    }
+    Value *Result = Builder.CreateCall(F, Arg, "cls");
+    if (BuiltinID == AArch64::BI_CountLeadingSigns64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
+  if (BuiltinID == AArch64::BI_CountOneBits ||
+      BuiltinID == AArch64::BI_CountOneBits64) {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+
+    Value *Result = Builder.CreateCall(F, ArgValue);
+    if (BuiltinID == AArch64::BI_CountOneBits64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId =
