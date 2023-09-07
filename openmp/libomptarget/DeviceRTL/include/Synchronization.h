@@ -94,25 +94,6 @@ ATOMIC_FP_OP(double)
 
 namespace synchronize {
 
-#pragma omp declare target
-
-/// Flags used by master and workers to synchronize in generic state machine.
-extern bool volatile omptarget_workers_done;
-#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
-
-extern bool volatile omptarget_master_ready;
-#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
-
-#pragma omp end declare target
-
-/// Synchronize workers with master at the beginning of a parallel region
-/// in generic mode.
-void workersStartBarrier();
-
-/// Synchronize workers with master at the end of a parallel region
-/// in generic mode.
-void workersDoneBarrier();
-
 /// Initialize the synchronization machinery. Must be called by all threads.
 void init(bool IsSPMD);
 

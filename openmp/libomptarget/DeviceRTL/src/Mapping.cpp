@@ -288,8 +288,13 @@ uint32_t mapping::getWarpSize() { return impl::getWarpSize(); }
 
 uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfThreadsInBlock();
+  if (IsSPMD)
+    return BlockSize;
+  // Trim off the odd lanes in the last warp
+  if (BlockSize % mapping::getWarpSize())
+    return BlockSize - (BlockSize % mapping::getWarpSize());
   // If we are in SPMD mode, remove one warp.
-  return BlockSize - (!IsSPMD * impl::getWarpSize());
+  return BlockSize - impl::getWarpSize();
 }
 uint32_t mapping::getMaxTeamThreads() {
   return mapping::getMaxTeamThreads(mapping::isSPMDMode());

@@ -22,14 +22,7 @@
 #pragma omp begin declare target device_type(nohost)
 
 namespace ompx {
-namespace synchronize {
-bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
-
-bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
-
-} // namespace synchronize
+namespace synchronize {} // namespace synchronize
 } // namespace ompx
 
 using namespace ompx;
@@ -40,8 +33,6 @@ namespace impl {
 ///
 ///{
 /// NOTE: This function needs to be implemented by every target.
-void workersStartBarrier();
-void workersDoneBarrier();
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope);
 
@@ -393,29 +384,6 @@ float unsafeAtomicAdd(float *addr, float value) {
 }
 #endif // if defined(gfx90a) &&
 
-void workersStartBarrier() {
-#ifdef __AMDGCN__
-  synchronize::omptarget_workers_done = true;
-  synchronize::threads(atomic::seq_cst);
-  while (!synchronize::omptarget_master_ready)
-    synchronize::threads(atomic::seq_cst);
-  synchronize::omptarget_workers_done = false;
-#else
-  synchronize::threads(atomic::seq_cst);
-#endif
-}
-
-void workersDoneBarrier() {
-  // This worker termination logic permits full barriers in reductions
-  // by keeping the master thread waiting at another barrier till
-  // all workers are finished.
-#ifdef __AMDGCN__
-  if (mapping::getThreadIdInBlock() == 0)
-    synchronize::omptarget_workers_done = true;
-#endif
-  synchronize::threads(atomic::seq_cst);
-}
-
 void unsetCriticalLock(omp_lock_t *Lock) {
   (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::acq_rel);
 }
@@ -544,10 +512,6 @@ void syncThreads(atomic::OrderingTy Ordering) {
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
-void workersStartBarrier() { syncThreads(atomic::seq_cst); }
-
-void workersDoneBarrier() { syncThreads(atomic::seq_cst); }
-
 constexpr uint32_t OMP_SPIN = 1000;
 
 // TODO: This seems to hide a bug in the declare variant handling. If it is
@@ -602,10 +566,6 @@ void synchronize::threads(atomic::OrderingTy Ordering) {
 void synchronize::threadsAligned(atomic::OrderingTy Ordering) {
   impl::syncThreadsAligned(Ordering);
 }
-
-void synchronize::workersStartBarrier() { impl::workersStartBarrier(); }
-
-void synchronize::workersDoneBarrier() { impl::workersDoneBarrier(); }
 
 void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
 

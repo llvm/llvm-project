@@ -261,22 +261,10 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident,
                                /* ForceTeamState */ true);
 
-#ifdef __AMDGCN__
-    synchronize::omptarget_master_ready = true;
-#endif
     // Master signals work to activate workers.
     synchronize::threads(atomic::seq_cst);
-
     // Master waits for workers to signal.
     synchronize::threads(atomic::seq_cst);
-#ifdef __AMDGCN__
-    while (!synchronize::omptarget_workers_done)
-      synchronize::threads(atomic::seq_cst);
-
-    // Initialize for next parallel region
-    synchronize::omptarget_workers_done = false;
-    synchronize::omptarget_master_ready = false;
-#endif
   }
 
   if (nargs)

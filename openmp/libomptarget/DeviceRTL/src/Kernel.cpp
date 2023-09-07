@@ -42,7 +42,7 @@ static void genericStateMachine(IdentTy *Ident) {
     ParallelRegionFnTy WorkFn = nullptr;
 
     // Wait for the signal that we have a new work function.
-    synchronize::workersStartBarrier();
+    synchronize::threads(atomic::seq_cst);
 
     // Retrieve the work function from the runtime.
     bool IsActive = __kmpc_kernel_parallel(&WorkFn);
@@ -58,7 +58,7 @@ static void genericStateMachine(IdentTy *Ident) {
       __kmpc_kernel_end_parallel();
     }
 
-    synchronize::workersDoneBarrier();
+    synchronize::threads(atomic::seq_cst);
 
   } while (true);
 }
@@ -70,14 +70,6 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
-#ifdef __AMDGCN__
-  if (__kmpc_get_hardware_thread_id_in_block() == 0) {
-    synchronize::omptarget_workers_done = false;
-    synchronize::omptarget_master_ready = false;
-  }
-  synchronize::threadsAligned(atomic::seq_cst);
-#endif
-
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode &
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
@@ -93,6 +85,10 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
 
   if (IsSPMD) {
     state::assumeInitialState(IsSPMD);
+
+    // Synchronize to ensure the assertions above are in an aligned region.
+    // The barrier is eliminated later.
+    synchronize::threadsAligned(atomic::relaxed);
     return -1;
   }
 
@@ -149,7 +145,7 @@ void __kmpc_target_deinit() {
 
   // make sure workers cannot continue before the initial thread
   // has reset the Fn pointer for termination
-  synchronize::omptarget_master_ready = true;
+  synchronize::threads(atomic::seq_cst);
   synchronize::threads(atomic::seq_cst);
 }
 
