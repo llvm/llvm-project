@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx90a -show-mc-encoding  -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx802 -show-mc-encoding  -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn--amdpal --start-after=greedy -mcpu=gfx90a -show-mc-encoding  -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn--amdpal --start-after=greedy -mcpu=gfx802 -show-mc-encoding  -o - %s | FileCheck %s
 
 
 # CHECK: indirect_mov:                           ; @indirect_mov
