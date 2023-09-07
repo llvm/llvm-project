@@ -10,6 +10,7 @@
 #define LLVM_CLANG_APINOTES_TYPES_H
 
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
 #include <optional>
@@ -791,7 +792,7 @@ struct ObjCSelectorRef {
 struct ModuleOptions {
   bool SwiftInferImportAsMember = false;
 };
-}
-}
+} // namespace api_notes
+} // namespace clang
 
 #endif
