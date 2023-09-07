@@ -440,12 +440,17 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 ///     As VSCode doesn't render two of more variables with the same name, we
 ///     apply a suffix to distinguish duplicated variables.
 ///
+/// \param[in] custom_name
+///     A provided custom name that is used instead of the SBValue's when
+///     creating the JSON representation.
+///
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
-                                 bool is_name_duplicated = false);
+                                 bool is_name_duplicated = false,
+                                 std::optional<std::string> custom_name = {});
 
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 
