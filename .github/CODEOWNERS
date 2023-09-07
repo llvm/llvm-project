@@ -530,12 +530,16 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 
 # x86
 /llvm/include/llvm/IR/IntrinsicsX86.td @llvm/pr-subscribers-x86
+/llvm/include/llvm/Support/X86DisassemblerDecoderCommon.h @llvm/pr-subscribers-x86
+/llvm/include/llvm/TargetParser/X86* @llvm/pr-subscribers-x86
 /llvm/lib/Target/X86/ @llvm/pr-subscribers-x86
+/llvm/lib/TargetParser/X86* @llvm/pr-subscribers-x86
 /llvm/test/CodeGen/X86/ @llvm/pr-subscribers-x86
 /llvm/test/MC/X86/ @llvm/pr-subscribers-x86
 /llvm/test/MC/Disassembler/X86/ @llvm/pr-subscribers-x86
 /llvm/test/Analysis/CostModel/X86/ @llvm/pr-subscribers-x86
 /llvm/test/tools/llvm-mca/X86/ @llvm/pr-subscribers-x86
+/llvm/utils/TableGen/X86* @llvm/pr-subscribers-x86
 /clang/lib/Basic/Targets/X86/ @llvm/pr-subscribers-x86
 /clang/lib/Driver/ToolChains/Arch/X86.* @llvm/pr-subscribers-x86
 /clang/lib/CodeGen/Targets/X86.* @llvm/pr-subscribers-x86
