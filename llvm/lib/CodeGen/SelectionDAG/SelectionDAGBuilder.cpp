@@ -9020,10 +9020,9 @@ findMatchingInlineAsmOperand(unsigned OperandNo,
     unsigned OpFlag =
         cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
     const InlineAsm::Flag F(OpFlag);
-    assert((F.isRegDefKind() ||
-            F.isRegDefEarlyClobberKind() ||
-            F.isMemKind()) &&
-           "Skipped past definitions?");
+    assert(
+        (F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isMemKind()) &&
+        "Skipped past definitions?");
     CurOp += F.getNumOperandRegisters() + 1;
   }
   return CurOp;
@@ -9325,9 +9324,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // just use its register.
         auto CurOp = findMatchingInlineAsmOperand(OpInfo.getMatchedOperand(),
                                                   AsmNodeOperands);
-        InlineAsm::Flag Flag(cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue());
-        if (Flag.isRegDefKind() ||
-            Flag.isRegDefEarlyClobberKind()) {
+        InlineAsm::Flag Flag(
+            cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue());
+        if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
             emitInlineAsmError(Call, "inline asm not supported yet: "

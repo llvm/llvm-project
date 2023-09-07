@@ -405,10 +405,10 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Add information to the INLINEASM instruction to know that this
         // register is set.
-        InlineAsm::Flag Flag(
-            OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
-                                  : InlineAsm::Kind::RegDef,
-            OpInfo.Regs.size());
+        InlineAsm::Flag Flag(OpInfo.isEarlyClobber
+                                 ? InlineAsm::Kind::RegDefEarlyClobber
+                                 : InlineAsm::Kind::RegDef,
+                             OpInfo.Regs.size());
         if (OpInfo.Regs.front().isVirtual()) {
           // Put the register class of the virtual registers in the flag word.
           // That way, later passes can recompute register class constraints for
@@ -448,8 +448,7 @@ bool InlineAsmLowering::lowerInlineAsm(
                                "supported. This should be target specific.\n");
           return false;
         }
-        if (!F.isRegDefKind() &&
-            !F.isRegDefEarlyClobberKind()) {
+        if (!F.isRegDefKind() && !F.isRegDefEarlyClobberKind()) {
           LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
           return false;
         }
@@ -502,7 +501,8 @@ bool InlineAsmLowering::lowerInlineAsm(
                "Expected constraint to be lowered to at least one operand");
 
         // Add information to the INLINEASM node to know about this input.
-        const unsigned OpFlags = InlineAsm::Flag(InlineAsm::Kind::Imm, Ops.size());
+        const unsigned OpFlags =
+            InlineAsm::Flag(InlineAsm::Kind::Imm, Ops.size());
         Inst.addImm(OpFlags);
         Inst.add(Ops);
         break;

@@ -3793,7 +3793,8 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
   // Check all operands that may contain the LR.
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    const InlineAsm::Flag Flags(cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    const InlineAsm::Flag Flags(
+        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
     unsigned NumVals = Flags.getNumOperandRegisters();
     ++i; // Skip the ID value.
 

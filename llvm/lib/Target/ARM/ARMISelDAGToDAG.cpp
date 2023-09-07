@@ -5768,7 +5768,8 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
       continue;
     }
 
-    if (!Flag.isRegUseKind() && !Flag.isRegDefKind() && !Flag.isRegDefEarlyClobberKind())
+    if (!Flag.isRegUseKind() && !Flag.isRegDefKind() &&
+        !Flag.isRegDefEarlyClobberKind())
       continue;
 
     unsigned RC;

@@ -302,44 +302,50 @@ public:
     unsigned IsMatched : 1;
 
     bool isMatched() const { return IsMatched; }
+
   public:
-    explicit Flag (uint32_t F) {
-      // TODO: some kind of assertion failure if enum Kind becomes bigger than 3b?
+    explicit Flag(uint32_t F) {
+      // TODO: some kind of assertion failure if enum Kind becomes bigger than
+      // 3b?
       static_assert(sizeof(Flag) == sizeof(F), "Expected sizeof Flag to be 4B");
       // Look away children. May god forgive me of my sins.
-      *reinterpret_cast<uint32_t*>(this) = sys::IsBigEndianHost ? sys::getSwappedBytes(F) : F;
+      *reinterpret_cast<uint32_t *>(this) =
+          sys::IsBigEndianHost ? sys::getSwappedBytes(F) : F;
     }
-    Flag (enum Kind K, unsigned NumOps) : Kind(K), NumOperands(NumOps), GrabBag(0), IsMatched(0) {
+    Flag(enum Kind K, unsigned NumOps)
+        : Kind(K), NumOperands(NumOps), GrabBag(0), IsMatched(0) {
       assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
     }
     // TODO: this enables implicit conversion. Should we make this explicit?
-    operator uint32_t () {
-      auto R = *reinterpret_cast<uint32_t*>(this);
+    operator uint32_t() {
+      auto R = *reinterpret_cast<uint32_t *>(this);
       return sys::IsBigEndianHost ? sys::getSwappedBytes(R) : R;
     }
     enum Kind getKind() const { return Kind; }
     bool isRegUseKind() const { return getKind() == Kind::RegUse; }
     bool isRegDefKind() const { return getKind() == Kind::RegDef; }
-    bool isRegDefEarlyClobberKind() const { return getKind() == Kind::RegDefEarlyClobber; }
+    bool isRegDefEarlyClobberKind() const {
+      return getKind() == Kind::RegDefEarlyClobber;
+    }
     bool isClobberKind() const { return getKind() == Kind::Clobber; }
     bool isImmKind() const { return getKind() == Kind::Imm; }
     bool isMemKind() const { return getKind() == Kind::Mem; }
     bool isFuncKind() const { return getKind() == Kind::Func; }
     StringRef getKindName() const {
       switch (Kind) {
-        case Kind::RegUse:
-          return "reguse";
-        case Kind::RegDef:
-          return "regdef";
-        case Kind::RegDefEarlyClobber:
-          return "regdef-ec";
-        case Kind::Clobber:
-          return "clobber";
-        case Kind::Imm:
-          return "imm";
-        case Kind::Mem:
-        case Kind::Func:
-          return "mem";
+      case Kind::RegUse:
+        return "reguse";
+      case Kind::RegDef:
+        return "regdef";
+      case Kind::RegDefEarlyClobber:
+        return "regdef-ec";
+      case Kind::Clobber:
+        return "clobber";
+      case Kind::Imm:
+        return "imm";
+      case Kind::Mem:
+      case Kind::Func:
+        return "mem";
       }
     }
 
@@ -416,8 +422,8 @@ public:
       assert(isMemKind());
       GrabBag = 0;
       // GrabBag &= 0x3F;
-      // GrabBag = GrabBag << Constraints_ShiftAmount; // TODO: is this even correct?
-      // return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
+      // GrabBag = GrabBag << Constraints_ShiftAmount; // TODO: is this even
+      // correct? return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
     }
   };
 

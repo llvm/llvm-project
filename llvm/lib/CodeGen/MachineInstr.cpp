@@ -925,9 +925,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   const InlineAsm::Flag F(getOperand(FlagIdx).getImm());
   unsigned RCID;
-  if ((F.isRegUseKind() ||
-       F.isRegDefKind() ||
-       F.isRegDefEarlyClobberKind()) &&
+  if ((F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind()) &&
       F.hasRegClassConstraint(RCID))
     return TRI->getRegClass(RCID);
 

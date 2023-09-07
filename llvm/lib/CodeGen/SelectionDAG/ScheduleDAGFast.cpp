@@ -502,8 +502,7 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
         unsigned NumVals = F.getNumOperandRegisters();
 
         ++i; // Skip the ID value.
-        if (F.isRegDefKind() ||
-            F.isRegDefEarlyClobberKind() ||
+        if (F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
             F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
