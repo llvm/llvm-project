@@ -17,6 +17,11 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
+  // x == 0.0
+  if (LIBC_UNLIKELY(x == 0.0f))
+    return x;
+
   FPBits xbits(x);
   bool sign = xbits.get_sign();
   xbits.set_sign(false);
