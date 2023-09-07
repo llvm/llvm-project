@@ -57,6 +57,12 @@ struct BufferizeToAllocationOptions {
   /// a new allocation (and wrapped in "bufferization.to_tensor"), but not the
   /// targeted op itself.
   bool bufferizeDestinationOnly = false;
+
+  /// If set to "true", a `memref.dealloc` operation will be emitted for each
+  /// allocated buffer. Otherwise, the memory is leaked, which is useful if
+  /// the buffer deallocation pipeline should be run after bufferization is
+  /// done.
+  bool emitDealloc = false;
 };
 
 /// Materialize a buffer allocation for the given tensor.pad op and lower the
@@ -360,6 +366,13 @@ struct LinalgPromotionOptions {
   std::optional<unsigned> alignment;
   LinalgPromotionOptions &setAlignment(unsigned align) {
     alignment = align;
+    return *this;
+  }
+  /// Memory space of promoted buffer. If `std::nullopt` do not specify memory
+  /// space.
+  std::optional<Attribute> memorySpace;
+  LinalgPromotionOptions &setMemorySpace(Attribute memorySpc) {
+    memorySpace = memorySpc;
     return *this;
   }
   /// Use alloca with the default allocation scheme.

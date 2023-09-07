@@ -80,7 +80,8 @@ int main(int Argc, char *Argv[]) {
   if (DataI) {
     result = 42;
   }
-
+  
+  fprintf(stderr, "Result is %d\n", result);
   assert(dfsan_get_label(DataJ) == LabelJ);
 
   // CHECK: Label 2 used as condition
@@ -96,11 +97,13 @@ int main(int Argc, char *Argv[]) {
   }
 
   int tainted_cond = ((DataI * DataJ) != 1);
+  fprintf(stderr, "Result is %d\n", result);
   assert(dfsan_get_label(tainted_cond) == LabelIJ);
 
   // CHECK: Label 3 used as condition
   result = tainted_cond ? result + 420000 : 9;
 
+  fprintf(stderr, "Result is %d\n", result);
   assert(result == 424242);
   return 0;
 }
