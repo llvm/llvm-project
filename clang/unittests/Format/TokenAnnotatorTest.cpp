@@ -273,6 +273,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
 
+  Tokens =
+      annotate("auto foo() noexcept(noexcept(bar()) && "
+               "trait<std::decay_t<decltype(bar())>> && noexcept(baz())) {}");
+  EXPECT_EQ(Tokens.size(), 38u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[27], tok::ampamp, TT_BinaryOperator);
+
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
