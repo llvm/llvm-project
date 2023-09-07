@@ -106,7 +106,7 @@
 
 # CHECK: FAIL: shtest-not :: not-calls-env-builtin.txt {{.*}}
 # CHECK: not --crash env -u FOO BAR=3 rm {{.*}}.no-such-file
-# CHECK: # executed command: not --crash env -u FOO BAR=3 rm {{.+}}.no-such-file{{.*}}
+# CHECK: # executed command: not --crash env -u FOO BAR=3 rm {{.+}}.no-such-file{{.+}}
 # CHECK: # | Error: 'env' cannot call 'rm'
 # CHECK: # error: command failed with exit status: {{.*}}
 
