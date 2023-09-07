@@ -44,10 +44,14 @@ defm SVLD1_ZA32 : ZALoad<"za32", "i", "aarch64_sme_ld1w", [ImmCheck<0, ImmCheck0
 defm SVLD1_ZA64 : ZALoad<"za64", "l", "aarch64_sme_ld1d", [ImmCheck<0, ImmCheck0_7>, ImmCheck<2, ImmCheck0_1>]>;
 defm SVLD1_ZA128 : ZALoad<"za128", "q", "aarch64_sme_ld1q", [ImmCheck<0, ImmCheck0_15>, ImmCheck<2, ImmCheck0_0>]>;
 
-def SVLDR_VNUM_ZA : MInst<"svldr_vnum_za", "vmiQ", "",
+def SVLDR_VNUM_ZA : MInst<"svldr_vnum_za", "vmQi", "",
                           [IsOverloadNone, IsStreamingCompatible, IsSharedZA],
                           MemEltTyDefault, "aarch64_sme_ldr",
-                          [ImmCheck<1, ImmCheck0_15>]>;
+                          [ImmCheck<2, ImmCheck0_15>]>;
+
+def SVLDR_ZA : MInst<"svldr_za", "vmQ", "",
+                          [IsOverloadNone, IsStreamingCompatible, IsSharedZA],
+                          MemEltTyDefault, "aarch64_sme_ldr", []>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Stores
@@ -78,10 +82,14 @@ defm SVST1_ZA32 : ZAStore<"za32", "i", "aarch64_sme_st1w", [ImmCheck<0, ImmCheck
 defm SVST1_ZA64 : ZAStore<"za64", "l", "aarch64_sme_st1d", [ImmCheck<0, ImmCheck0_7>, ImmCheck<2, ImmCheck0_1>]>;
 defm SVST1_ZA128 : ZAStore<"za128", "q", "aarch64_sme_st1q", [ImmCheck<0, ImmCheck0_15>, ImmCheck<2, ImmCheck0_0>]>;
 
-def SVSTR_VNUM_ZA : MInst<"svstr_vnum_za", "vmi%", "",
+def SVSTR_VNUM_ZA : MInst<"svstr_vnum_za", "vm%i", "",
                           [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA],
                           MemEltTyDefault, "aarch64_sme_str",
-                          [ImmCheck<1, ImmCheck0_15>]>;
+                          [ImmCheck<2, ImmCheck0_15>]>;
+
+def SVSTR_ZA : MInst<"svstr_za", "vm%", "",
+                      [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA],
+                      MemEltTyDefault, "aarch64_sme_str", []>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Read horizontal/vertical ZA slices
