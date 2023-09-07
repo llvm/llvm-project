@@ -155,6 +155,7 @@ def instruction_steps_matchdata: GIDefMatchData<"InstructionStepsMatchInfo">;
 def register_matchinfo: GIDefMatchData<"Register">;
 def int64_matchinfo: GIDefMatchData<"int64_t">;
 def apint_matchinfo : GIDefMatchData<"APInt">;
+def constantfp_matchinfo : GIDefMatchData<"ConstantFP*">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
@@ -978,6 +979,12 @@ def constant_fold_binop : GICombineRule<
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
+def constant_fold_fp_binop : GICombineRule<
+  (defs root:$d, constantfp_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV):$d,
+   [{ return Helper.matchConstantFoldFPBinOp(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
+
 def constant_fold_cast_op : GICombineRule<
   (defs root:$d, apint_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ZEXT, G_SEXT, G_ANYEXT):$d,
@@ -1229,6 +1236,9 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
   combine_fsub_fneg_fmul_to_fmad_or_fma, combine_fsub_fpext_fmul_to_fmad_or_fma,
   combine_fsub_fpext_fneg_fmul_to_fmad_or_fma]>;
 
+def constant_fold_binops : GICombineGroup<[constant_fold_binop,
+                                           constant_fold_fp_binop]>;
+
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
     combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
@@ -1243,7 +1253,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, commute_shift,
-    form_bitfield_extract, constant_fold_binop, constant_fold_cast_op, fabs_fneg_fold,
+    form_bitfield_extract, constant_fold_binops, constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
