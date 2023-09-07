@@ -1023,7 +1023,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           }
         }
       } else if (is_cxx_method) {
-        // Look at the parent of this DIE and see if is is a class or
+        // Look at the parent of this DIE and see if it is a class or
         // struct and see if this is actually a C++ method
         Type *class_type = dwarf->ResolveType(decl_ctx_die);
         if (class_type) {
@@ -3093,7 +3093,7 @@ void DWARFASTParserClang::ParseSingleMember(
   // in our AST. Clang will re-create those articial members and they would
   // otherwise just overlap in the layout with the FieldDecls we add here.
   // This needs to be done after updating FieldInfo which keeps track of where
-  // field start/end so we don't later try to fill the the space of this
+  // field start/end so we don't later try to fill the space of this
   // artificial member with (unnamed bitfield) padding.
   // FIXME: This check should verify that this is indeed an artificial member
   // we are supposed to ignore.
@@ -3727,7 +3727,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     // Make sure this is a declaration and not a concrete instance by looking
     // for DW_AT_declaration set to 1. Sometimes concrete function instances are
     // placed inside the class definitions and shouldn't be included in the list
-    // of things are are tracking here.
+    // of things that are tracking here.
     if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) != 1)
       return;
 

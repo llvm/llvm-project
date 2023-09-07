@@ -2226,6 +2226,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     return N;
 
   EVT VT = N.getValueType();
+  unsigned Opc = N.getOpcode();
 
   // index: add(x,c) -> index: x, disp + c
   if (CurDAG->isBaseWithConstantOffset(N)) {
@@ -2236,7 +2237,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
   }
 
   // index: add(x,x) -> index: x, scale * 2
-  if (N.getOpcode() == ISD::ADD && N.getOperand(0) == N.getOperand(1)) {
+  if (Opc == ISD::ADD && N.getOperand(0) == N.getOperand(1)) {
     if (AM.Scale <= 4) {
       AM.Scale *= 2;
       return matchIndexRecursively(N.getOperand(0), AM, Depth + 1);
@@ -2244,7 +2245,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
   }
 
   // index: shl(x,i) -> index: x, scale * (1 << i)
-  if (N.getOpcode() == X86ISD::VSHLI) {
+  if (Opc == X86ISD::VSHLI) {
     uint64_t ShiftAmt = N.getConstantOperandVal(1);
     uint64_t ScaleAmt = 1ULL << ShiftAmt;
     if ((AM.Scale * ScaleAmt) <= 8) {
@@ -2255,17 +2256,17 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
   // index: sext(add_nsw(x,c)) -> index: sext(x), disp + sext(c)
   // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
-  if (N.getOpcode() == ISD::SIGN_EXTEND && !VT.isVector()) {
+  if (Opc == ISD::SIGN_EXTEND && !VT.isVector()) {
     SDValue Src = N.getOperand(0);
     if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
         auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        uint64_t Offset = (uint64_t)AddVal->getSExtValue() * AM.Scale;
-        if (!foldOffsetIntoAddress(Offset, AM)) {
+        uint64_t Offset = (uint64_t)AddVal->getSExtValue();
+        if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
-          SDValue ExtSrc = CurDAG->getNode(ISD::SIGN_EXTEND, DL, VT, AddSrc);
-          SDValue ExtVal = CurDAG->getConstant(AddVal->getSExtValue(), DL, VT);
+          SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
+          SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
           insertDAGNode(*CurDAG, N, ExtSrc);
           insertDAGNode(*CurDAG, N, ExtVal);
@@ -2499,28 +2500,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     return false;
   }
 
+  case ISD::OR:
+  case ISD::XOR:
+    // See if we can treat the OR/XOR node as an ADD node.
+    if (!CurDAG->isADDLike(N))
+      break;
+    [[fallthrough]];
   case ISD::ADD:
     if (!matchAdd(N, AM, Depth))
-      return false;
-    break;
-
-  case ISD::OR:
-    // We want to look through a transform in InstCombine and DAGCombiner that
-    // turns 'add' into 'or', so we can treat this 'or' exactly like an 'add'.
-    // Example: (or (and x, 1), (shl y, 3)) --> (add (and x, 1), (shl y, 3))
-    // An 'lea' can then be used to match the shift (multiply) and add:
-    // and $1, %esi
-    // lea (%rsi, %rdi, 8), %rax
-    if (CurDAG->haveNoCommonBitsSet(N.getOperand(0), N.getOperand(1)) &&
-        !matchAdd(N, AM, Depth))
-      return false;
-    break;
-
-  case ISD::XOR:
-    // We want to look through a transform in InstCombine that
-    // turns 'add' with min_signed_val into 'xor', so we can treat this 'xor'
-    // exactly like an 'add'.
-    if (isMinSignedConstant(N.getOperand(1)) && !matchAdd(N, AM, Depth))
       return false;
     break;
 
@@ -3819,7 +3806,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   }
 
   if (Subtarget->hasBMI2()) {
-    // Great, just emit the the BZHI..
+    // Great, just emit the BZHI..
     if (NVT != MVT::i32) {
       // But have to place the bit count into the wide-enough register first.
       NBits = CurDAG->getNode(ISD::ANY_EXTEND, DL, NVT, NBits);

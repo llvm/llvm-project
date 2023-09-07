@@ -334,7 +334,7 @@ PWMAFunction PWMAFunction::unionFunction(
     // defined.
     //
     // `dom` here is guranteed to be disjoint from already added pieces
-    // because because the pieces added before are either:
+    // because the pieces added before are either:
     // - Subsets of the domain of other MAFs in `this`, which are guranteed
     //   to be disjoint from `dom`, or
     // - They are one of the pieces added for `pieceB`, and we have been

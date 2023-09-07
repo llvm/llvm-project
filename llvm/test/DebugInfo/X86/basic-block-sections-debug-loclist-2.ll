@@ -17,7 +17,7 @@
 ; extern bool b;
 ; extern int x;
 ; void test() {
-;     // i's value is 7 for the first call in in the if block.  With basic
+;     // i's value is 7 for the first call in the if block.  With basic
 ;     // block sections, this would split the range across sections and would
 ;     // result in an extra entry than without sections.
 ;     int i = 7;

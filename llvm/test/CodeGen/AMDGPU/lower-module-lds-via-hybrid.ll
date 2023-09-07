@@ -5,18 +5,18 @@
 ; Opt checks from utils/update_test_checks.py, llc checks from utils/update_llc_test_checks.py
 
 ; Define four variables and four non-kernel functions which access exactly one variable each
-@v0 = addrspace(3) global float undef
-@v1 = addrspace(3) global i16 undef, align 16
-@v2 = addrspace(3) global i64 undef
-@v3 = addrspace(3) global i8 undef
-@unused = addrspace(3) global i16 undef
+@v0 = addrspace(3) global float poison
+@v1 = addrspace(3) global i16 poison, align 16
+@v2 = addrspace(3) global i64 poison
+@v3 = addrspace(3) global i8 poison
+@unused = addrspace(3) global i16 poison
 
-; OPT: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 16, !absolute_symbol !0
+; OPT: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 16, !absolute_symbol !0
 ; OPT: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t undef, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t undef, align 4, !absolute_symbol !1
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t undef, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t undef, align 8, !absolute_symbol !2
+; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t poison, align 4, !absolute_symbol !1
+; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t poison, align 8, !absolute_symbol !2
 ; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [2 x [1 x i32]] [[1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32)], [1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32)]]
 
 define void @f0() {

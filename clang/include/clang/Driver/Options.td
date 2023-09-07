@@ -272,12 +272,6 @@ def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_op
 def mmpx : Flag<["-"], "mmpx">, Group<clang_ignored_legacy_options_Group>;
 def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
-// Retired with clang-16.0, to provide a deprecation period; it should
-// be removed in Clang 18 or later.
-def enable_trivial_var_init_zero : Flag<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, CLOption]>,
-  Group<clang_ignored_legacy_options_Group>;
-
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
@@ -5852,9 +5846,9 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
-def mno_gather : Flag<["-"], "mno-gather">, Group<m_x86_Features_Group>,
+def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
                  HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
-def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_x86_Features_Group>,
+def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 } // let Flags = [TargetSpecific]
 

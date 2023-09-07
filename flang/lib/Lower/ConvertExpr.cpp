@@ -863,7 +863,7 @@ public:
                                          addr);
         } else if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
           // get the corresponding Cray pointer
-          auto ptrSym = Fortran::lower::getPointer(sym);
+          auto ptrSym = Fortran::lower::getCrayPointer(sym);
           ExtValue ptr = gen(ptrSym);
           mlir::Value ptrVal = fir::getBase(ptr);
           mlir::Type ptrTy = converter.genType(*ptrSym);
@@ -1571,7 +1571,7 @@ public:
     auto baseSym = getFirstSym(aref);
     if (baseSym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
       // get the corresponding Cray pointer
-      auto ptrSym = Fortran::lower::getPointer(baseSym);
+      auto ptrSym = Fortran::lower::getCrayPointer(baseSym);
 
       fir::ExtendedValue ptr = gen(ptrSym);
       mlir::Value ptrVal = fir::getBase(ptr);
@@ -4564,7 +4564,7 @@ private:
   }
 
   /// If there were temporaries created for this element evaluation, finalize
-  /// and deallocate the resources now. This should be done just prior the the
+  /// and deallocate the resources now. This should be done just prior to the
   /// fir::ResultOp at the end of the innermost loop.
   void finalizeElementCtx() {
     if (elementCtx) {
@@ -6974,7 +6974,7 @@ private:
                             ComponentPath &components) {
     mlir::Value ptrVal = nullptr;
     if (x.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
-      auto ptrSym = Fortran::lower::getPointer(x);
+      auto ptrSym = Fortran::lower::getCrayPointer(x);
       ExtValue ptr = converter.getSymbolExtendedValue(ptrSym);
       ptrVal = fir::getBase(ptr);
     }
@@ -7627,19 +7627,6 @@ void Fortran::lower::createArrayMergeStores(
   esp.outerLoop = std::nullopt;
   esp.resetBindings();
   esp.incrementCounter();
-}
-
-Fortran::semantics::SymbolRef
-Fortran::lower::getPointer(Fortran::semantics::SymbolRef sym) {
-  assert(!sym->owner().crayPointers().empty() &&
-         "empty Cray pointer/pointee map");
-  for (const auto &[pointee, pointer] : sym->owner().crayPointers()) {
-    if (pointee == sym->name()) {
-      Fortran::semantics::SymbolRef v{pointer.get()};
-      return v;
-    }
-  }
-  llvm_unreachable("corresponding Cray pointer cannot be found");
 }
 
 mlir::Value Fortran::lower::addCrayPointerInst(mlir::Location loc,

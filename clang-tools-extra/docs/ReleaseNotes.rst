@@ -226,6 +226,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert 
+  same include header multiple times.
+
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
@@ -234,9 +238,17 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
 
+- Improved :doc:`modernize-use-equals-delete
+  <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
+  false-positives when special member function is actually used or implicit.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to accurately generate
   fixes for reordering arguments.
+
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to fix function pointer
+  ``typedef`` correctly.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
@@ -256,9 +268,11 @@ Changes in existing checks
   ``length()`` method as an alternative to ``size()``.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check to emit proper
-  warnings when a type forward declaration precedes its definition and
-  added support for ``Leading_upper_snake_case`` naming convention.
+  <clang-tidy/checks/readability/identifier-naming>` check to issue accurate
+  warnings when a type's forward declaration precedes its definition.
+  Additionally, it now provides appropriate warnings for ``struct`` and
+  ``union`` in C, while also incorporating support for the
+  ``Leading_upper_snake_case`` naming convention.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take

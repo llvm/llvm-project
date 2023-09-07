@@ -1471,10 +1471,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
     // llvm.type.test and therefore require an llvm.type.test resolution for the
     // type identifier.
 
-    std::for_each(CallBases.begin(), CallBases.end(), [](auto &CBs) {
-      CBs.first->replaceAllUsesWith(CBs.second);
-      CBs.first->eraseFromParent();
-    });
+    for (auto &[Old, New] : CallBases) {
+      Old->replaceAllUsesWith(New);
+      Old->eraseFromParent();
+    }
   };
   Apply(SlotInfo.CSInfo);
   for (auto &P : SlotInfo.ConstCSInfo)

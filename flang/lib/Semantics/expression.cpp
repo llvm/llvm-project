@@ -2742,7 +2742,7 @@ const Symbol *AssumedTypeDummy<parser::Name>(const parser::Name &name) {
 template <typename A>
 static const Symbol *AssumedTypePointerOrAllocatableDummy(const A &object) {
   // It is illegal for allocatable of pointer objects to be TYPE(*), but at that
-  // point it is is not guaranteed that it has been checked the object has
+  // point it is not guaranteed that it has been checked the object has
   // POINTER or ALLOCATABLE attribute, so do not assume nullptr can be directly
   // returned.
   return common::visit(

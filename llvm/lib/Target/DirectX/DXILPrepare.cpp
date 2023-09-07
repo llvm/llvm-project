@@ -154,7 +154,7 @@ public:
           if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
-                    GEP->getResultElementType()))
+                    GEP->getSourceElementType()))
               GEP->setOperand(0, NoOpBitcast);
             continue;
           }

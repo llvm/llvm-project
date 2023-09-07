@@ -95,8 +95,8 @@ define void @insert_vec_v2i32_uaddlv_from_v16i8(ptr %0) {
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    uaddlv.16b h0, v0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
-; CHECK-NEXT:    ucvtf.2s v1, v1
-; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    ucvtf.2s v0, v1
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:

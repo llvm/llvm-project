@@ -3,7 +3,8 @@
 //
 // UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: float_range_zero_match.cpp:
 
 int main() {

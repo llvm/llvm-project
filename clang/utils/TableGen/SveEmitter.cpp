@@ -1284,7 +1284,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         if (ShortForm) {
           OS << "__aio __attribute__((target(\"sve\"))) " << From.Type
              << " svreinterpret_" << From.Suffix;
-          OS << "(" << To.Type << " op) {\n";
+          OS << "(" << To.Type << " op) __arm_streaming_compatible {\n";
           OS << "  return __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(op);\n";
           OS << "}\n\n";

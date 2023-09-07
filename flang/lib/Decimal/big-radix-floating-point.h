@@ -335,7 +335,7 @@ private:
 
   // Adds another number and then divides by two.
   // Assumes same exponent and sign.
-  // Returns true when the the result has effectively been rounded down.
+  // Returns true when the result has effectively been rounded down.
   bool Mean(const BigRadixFloatingPointNumber &);
 
   // Parses a floating-point number; leaves the pointer reference

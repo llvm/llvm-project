@@ -165,7 +165,7 @@ protected:
     uint64_t abort_cause;      // unsigned int
   };
 
-  /// Extract the `__crash_info` annotations from each of of the target's
+  /// Extract the `__crash_info` annotations from each of the target's
   /// modules.
   ///
   /// If the platform have a crashed processes with a `__crash_info` section,

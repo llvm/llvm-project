@@ -307,6 +307,12 @@
 #define LLVM_GSL_POINTER
 #endif
 
+#if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L
+#define LLVM_CTOR_NODISCARD [[nodiscard]]
+#else
+#define LLVM_CTOR_NODISCARD
+#endif
+
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
 /// pedantic diagnostics.
 #ifdef __GNUC__

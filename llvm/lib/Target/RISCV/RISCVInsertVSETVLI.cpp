@@ -212,10 +212,14 @@ struct DemandedFields {
   bool VLZeroness = false;
   // What properties of SEW we need to preserve.
   enum : uint8_t {
-    SEWEqual = 2,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
+    SEWEqual = 3,              // The exact value of SEW needs to be preserved.
+    SEWGreaterThanOrEqual = 2, // SEW can be changed as long as it's greater
                                // than or equal to the original value.
-    SEWNone = 0                // We don't need to preserve SEW at all.
+    SEWGreaterThanOrEqualAndLessThan64 =
+        1,      // SEW can be changed as long as it's greater
+                // than or equal to the original value, but must be less
+                // than 64.
+    SEWNone = 0 // We don't need to preserve SEW at all.
   } SEW = SEWNone;
   bool LMUL = false;
   bool SEWLMULRatio = false;
@@ -267,6 +271,9 @@ struct DemandedFields {
     case SEWGreaterThanOrEqual:
       OS << "SEWGreaterThanOrEqual";
       break;
+    case SEWGreaterThanOrEqualAndLessThan64:
+      OS << "SEWGreaterThanOrEqualAndLessThan64";
+      break;
     case SEWNone:
       OS << "SEWNone";
       break;
@@ -300,6 +307,11 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
   if (Used.SEW == DemandedFields::SEWGreaterThanOrEqual &&
       RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
+    return false;
+
+  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqualAndLessThan64 &&
+      (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
+       RISCVVType::getSEW(NewVType) >= 64))
     return false;
 
   if (Used.LMUL &&
@@ -391,7 +403,9 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedMergeOp(MI, *MRI)) {
-      if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+        Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
+      else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
       Res.TailPolicy = false;
     }
@@ -974,7 +988,9 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
-    if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+      Used.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
+    else
       Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
     Used.TailPolicy = false;
   }

@@ -378,8 +378,8 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   RewritePatternSet patterns(ctx);
   if (!getRegion().empty()) {
     for (Operation &op : getRegion().front()) {
-      cast<transform::PatternDescriptorOpInterface>(&op).populatePatterns(
-          patterns);
+      cast<transform::PatternDescriptorOpInterface>(&op)
+          .populatePatternsWithState(patterns, state);
     }
   }
 
@@ -720,20 +720,23 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
   if (!payloadCheck.succeeded())
     return payloadCheck;
 
-  // Get pass from registry.
-  const PassInfo *passInfo = Pass::lookupPassInfo(getPassName());
-  if (!passInfo) {
-    return emitDefiniteFailure() << "unknown pass: " << getPassName();
-  }
+  // Get pass or pass pipeline from registry.
+  const PassRegistryEntry *info = PassPipelineInfo::lookup(getPassName());
+  if (!info)
+    info = PassInfo::lookup(getPassName());
+  if (!info)
+    return emitDefiniteFailure()
+           << "unknown pass or pass pipeline: " << getPassName();
 
-  // Create pass manager with a single pass and run it.
+  // Create pass manager and run the pass or pass pipeline.
   PassManager pm(getContext());
-  if (failed(passInfo->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
+  if (failed(info->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
         emitError(msg);
         return failure();
       }))) {
     return emitDefiniteFailure()
-           << "failed to add pass to pipeline: " << getPassName();
+           << "failed to add pass or pass pipeline to pipeline: "
+           << getPassName();
   }
   if (failed(pm.run(target))) {
     auto diag = emitSilenceableError() << "pass pipeline failed";

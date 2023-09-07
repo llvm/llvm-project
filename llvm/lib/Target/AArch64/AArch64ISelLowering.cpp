@@ -676,8 +676,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   for (auto Op : {ISD::FREM,        ISD::FPOW,         ISD::FPOWI,
                   ISD::FCOS,        ISD::FSIN,         ISD::FSINCOS,
-                  ISD::FEXP,        ISD::FEXP2,        ISD::FLOG,
-                  ISD::FLOG2,       ISD::FLOG10,       ISD::STRICT_FREM,
+                  ISD::FEXP,        ISD::FEXP2,        ISD::FEXP10,
+                  ISD::FLOG,        ISD::FLOG2,        ISD::FLOG10,
+                  ISD::STRICT_FREM,
                   ISD::STRICT_FPOW, ISD::STRICT_FPOWI, ISD::STRICT_FCOS,
                   ISD::STRICT_FSIN, ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
                   ISD::STRICT_FLOG, ISD::STRICT_FLOG2, ISD::STRICT_FLOG10}) {
@@ -1474,6 +1475,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FEXP10, VT, Expand);
       setOperationAction(ISD::FLOG, VT, Expand);
       setOperationAction(ISD::FLOG2, VT, Expand);
       setOperationAction(ISD::FLOG10, VT, Expand);
@@ -1646,6 +1648,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FLOG10, VT, Expand);
     setOperationAction(ISD::FEXP, VT, Expand);
     setOperationAction(ISD::FEXP2, VT, Expand);
+    setOperationAction(ISD::FEXP10, VT, Expand);
   }
 
   // But we do support custom-lowering for FCOPYSIGN.
@@ -2425,6 +2428,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FCMLTz)
     MAKE_CASE(AArch64ISD::SADDV)
     MAKE_CASE(AArch64ISD::UADDV)
+    MAKE_CASE(AArch64ISD::UADDLV)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
     MAKE_CASE(AArch64ISD::SMINV)
@@ -5320,6 +5324,20 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(), ID,
                        Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::aarch64_neon_uaddlv: {
+    EVT OpVT = Op.getOperand(1).getValueType();
+    EVT ResVT = Op.getValueType();
+    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8)) {
+      // In order to avoid insert_subvector, used v4i32 than v2i32.
+      SDValue UADDLV =
+          DAG.getNode(AArch64ISD::UADDLV, dl, MVT::v4i32, Op.getOperand(1));
+      SDValue EXTRACT_VEC_ELT =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, UADDLV,
+                      DAG.getConstant(0, dl, MVT::i64));
+      return EXTRACT_VEC_ELT;
+    }
+    return SDValue();
+  }
   }
 }
 
@@ -5348,8 +5366,33 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT IndexVT,
 }
 
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
-  return ExtVal.getValueType().isScalableVector() ||
-         Subtarget->useSVEForFixedLengthVectors();
+  EVT ExtVT = ExtVal.getValueType();
+  if (!ExtVT.isScalableVector() && !Subtarget->useSVEForFixedLengthVectors())
+    return false;
+
+  // It may be worth creating extending masked loads if there are multiple
+  // masked loads using the same predicate. That way we'll end up creating
+  // extending masked loads that may then get split by the legaliser. This
+  // results in just one set of predicate unpacks at the start, instead of
+  // multiple sets of vector unpacks after each load.
+  if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal->getOperand(0))) {
+    if (!isLoadExtLegalOrCustom(ISD::ZEXTLOAD, ExtVT, Ld->getValueType(0))) {
+      // Disable extending masked loads for fixed-width for now, since the code
+      // quality doesn't look great.
+      if (!ExtVT.isScalableVector())
+        return false;
+
+      unsigned NumExtMaskedLoads = 0;
+      for (auto *U : Ld->getMask()->uses())
+        if (isa<MaskedLoadSDNode>(U))
+          NumExtMaskedLoads++;
+
+      if (NumExtMaskedLoads <= 1)
+        return false;
+    }
+  }
+
+  return true;
 }
 
 unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
@@ -6977,7 +7020,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   SMEAttrs CallerAttrs(MF.getFunction());
   auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
   if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs))
+      CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.hasStreamingBody())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -8696,9 +8740,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v8i8, Val);
-    SDValue UaddLV = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-        DAG.getConstant(Intrinsic::aarch64_neon_uaddlv, DL, MVT::i32), CtPop);
+    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
+    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
+                         DAG.getConstant(0, DL, MVT::i64));
 
     if (IsParity)
       UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
@@ -8711,9 +8755,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
-    SDValue UaddLV = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-        DAG.getConstant(Intrinsic::aarch64_neon_uaddlv, DL, MVT::i32), CtPop);
+    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
+    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
+                         DAG.getConstant(0, DL, MVT::i64));
 
     if (IsParity)
       UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
@@ -11278,7 +11322,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
     };
 
     // For OP_MOVLANE shuffles, the RHSID represents the lane to move into. We
-    // get the lane to move from from the PFID, which is always from the
+    // get the lane to move from the PFID, which is always from the
     // original vectors (V1 or V2).
     SDValue OpLHS = GeneratePerfectShuffle(
         LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
@@ -16418,7 +16462,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
          return SDValue();
 
   // Multiplication of a power of two plus/minus one can be done more
-  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.

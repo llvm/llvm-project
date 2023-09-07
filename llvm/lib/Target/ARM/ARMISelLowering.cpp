@@ -371,6 +371,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FLOG10, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FEXP10, VT, Expand);
       setOperationAction(ISD::FNEARBYINT, VT, Expand);
     }
   }
@@ -880,6 +881,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP, MVT::v2f64, Expand);
     setOperationAction(ISD::FEXP2, MVT::v2f64, Expand);
+    setOperationAction(ISD::FEXP10, MVT::v2f64, Expand);
     // FIXME: Create unittest for FCEIL, FTRUNC, FRINT, FNEARBYINT, FFLOOR.
     setOperationAction(ISD::FCEIL, MVT::v2f64, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Expand);
@@ -901,6 +903,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::v4f32, Expand);
     setOperationAction(ISD::FEXP, MVT::v4f32, Expand);
     setOperationAction(ISD::FEXP2, MVT::v4f32, Expand);
+    setOperationAction(ISD::FEXP10, MVT::v4f32, Expand);
     setOperationAction(ISD::FCEIL, MVT::v4f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v4f32, Expand);
@@ -917,6 +920,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::v2f32, Expand);
     setOperationAction(ISD::FEXP, MVT::v2f32, Expand);
     setOperationAction(ISD::FEXP2, MVT::v2f32, Expand);
+    setOperationAction(ISD::FEXP10, MVT::v2f32, Expand);
     setOperationAction(ISD::FCEIL, MVT::v2f32, Expand);
     setOperationAction(ISD::FTRUNC, MVT::v2f32, Expand);
     setOperationAction(ISD::FRINT, MVT::v2f32, Expand);
@@ -1058,6 +1062,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10,     MVT::f64, Expand);
     setOperationAction(ISD::FEXP,       MVT::f64, Expand);
     setOperationAction(ISD::FEXP2,      MVT::f64, Expand);
+    setOperationAction(ISD::FEXP10,      MVT::f64, Expand);
     setOperationAction(ISD::FCEIL,      MVT::f64, Expand);
     setOperationAction(ISD::FTRUNC,     MVT::f64, Expand);
     setOperationAction(ISD::FRINT,      MVT::f64, Expand);
@@ -1534,6 +1539,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FPOW, MVT::f16, Promote);
     setOperationAction(ISD::FEXP, MVT::f16, Promote);
     setOperationAction(ISD::FEXP2, MVT::f16, Promote);
+    setOperationAction(ISD::FEXP10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG, MVT::f16, Promote);
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);

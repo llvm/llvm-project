@@ -702,7 +702,7 @@ static Value *isOneOf(const InstructionsState &S, Value *Op) {
   return S.OpValue;
 }
 
-/// \returns true if \p Opcode is allowed as part of of the main/alternate
+/// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///
 /// Example of unsupported opcode is SDIV that can potentially cause UB if the
@@ -1766,7 +1766,7 @@ public:
       auto *IdxLaneI = dyn_cast<Instruction>(IdxLaneV);
       if (!IdxLaneI || !isa<Instruction>(OpIdxLaneV))
         return 0;
-      return R.areAllUsersVectorized(IdxLaneI, std::nullopt)
+      return R.areAllUsersVectorized(IdxLaneI)
                  ? LookAheadHeuristics::ScoreAllUserVectorized
                  : 0;
     }
@@ -2205,7 +2205,7 @@ public:
       for (int Pass = 0; Pass != 2; ++Pass) {
         // Check if no need to reorder operands since they're are perfect or
         // shuffled diamond match.
-        // Need to to do it to avoid extra external use cost counting for
+        // Need to do it to avoid extra external use cost counting for
         // shuffled matches, which may cause regressions.
         if (SkipReordering())
           break;
@@ -2430,8 +2430,9 @@ private:
   }
 
   /// Checks if all users of \p I are the part of the vectorization tree.
-  bool areAllUsersVectorized(Instruction *I,
-                             ArrayRef<Value *> VectorizedVals) const;
+  bool areAllUsersVectorized(
+      Instruction *I,
+      const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
@@ -2523,9 +2524,9 @@ private:
   collectUserStores(const BoUpSLP::TreeEntry *TE) const;
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
-  /// stores in \p StoresVec can form a vector instruction. If so it returns true
-  /// and populates \p ReorderIndices with the shuffle indices of the the stores
-  /// when compared to the sorted vector.
+  /// stores in \p StoresVec can form a vector instruction. If so it returns
+  /// true and populates \p ReorderIndices with the shuffle indices of the
+  /// stores when compared to the sorted vector.
   bool canFormVector(ArrayRef<StoreInst *> StoresVec,
                      OrdersType &ReorderIndices) const;
 
@@ -4170,7 +4171,9 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       !TE.isAltShuffle())
     return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
-    auto PHICompare = [](llvm::Value *V1, llvm::Value *V2) {
+    auto PHICompare = [&](unsigned I1, unsigned I2) {
+      Value *V1 = TE.Scalars[I1];
+      Value *V2 = TE.Scalars[I2];
       if (V1 == V2)
         return false;
       if (!V1->hasOneUse() || !V2->hasOneUse())
@@ -4209,14 +4212,13 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     };
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
-    DenseMap<Value *, unsigned> PhiToId;
-    SmallVector<Value *, 4> Phis;
+    DenseMap<unsigned, unsigned> PhiToId;
+    SmallVector<unsigned> Phis(TE.Scalars.size());
+    std::iota(Phis.begin(), Phis.end(), 0);
     OrdersType ResOrder(TE.Scalars.size());
-    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id) {
-      PhiToId[TE.Scalars[Id]] = Id;
-      Phis.push_back(TE.Scalars[Id]);
-    }
-    llvm::stable_sort(Phis, PHICompare);
+    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id)
+      PhiToId[Id] = Id;
+    stable_sort(Phis, PHICompare);
     for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
       ResOrder[Id] = PhiToId[Phis[Id]];
     if (IsIdentityOrder(ResOrder))
@@ -6241,7 +6243,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                    ReuseShuffleIndicies);
       TE->setOperandsInOrder();
       for (unsigned i = 0, e = CI->arg_size(); i != e; ++i) {
-        // For scalar operands no need to to create an entry since no need to
+        // For scalar operands no need to create an entry since no need to
         // vectorize it.
         if (isVectorIntrinsicWithScalarOpAtArg(ID, i))
           continue;
@@ -6430,9 +6432,9 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
   return ShouldKeepOrder;
 }
 
-bool BoUpSLP::areAllUsersVectorized(Instruction *I,
-                                    ArrayRef<Value *> VectorizedVals) const {
-  return (I->hasOneUse() && is_contained(VectorizedVals, I)) ||
+bool BoUpSLP::areAllUsersVectorized(
+    Instruction *I, const SmallDenseSet<Value *> *VectorizedVals) const {
+  return (I->hasOneUse() && (!VectorizedVals || VectorizedVals->contains(I))) ||
          all_of(I->users(), [this](User *U) {
            return ScalarToTreeEntry.count(U) > 0 ||
                   isVectorLikeInstWithConstOps(U) ||
@@ -6887,7 +6889,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
-  ArrayRef<Value *> VectorizedVals;
+  SmallDenseSet<Value *> VectorizedVals;
   BoUpSLP &R;
   SmallPtrSetImpl<Value *> &CheckedExtracts;
   constexpr static TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -7180,8 +7182,8 @@ public:
   ShuffleCostEstimator(TargetTransformInfo &TTI,
                        ArrayRef<Value *> VectorizedVals, BoUpSLP &R,
                        SmallPtrSetImpl<Value *> &CheckedExtracts)
-      : TTI(TTI), VectorizedVals(VectorizedVals), R(R),
-        CheckedExtracts(CheckedExtracts) {}
+      : TTI(TTI), VectorizedVals(VectorizedVals.begin(), VectorizedVals.end()),
+        R(R), CheckedExtracts(CheckedExtracts) {}
   Value *adjustExtracts(const TreeEntry *E, ArrayRef<int> Mask,
                         TTI::ShuffleKind ShuffleKind) {
     if (Mask.empty())
@@ -7206,7 +7208,7 @@ public:
       // in different graph entries.
       const TreeEntry *VE = R.getTreeEntry(V);
       if (!CheckedExtracts.insert(V).second ||
-          !R.areAllUsersVectorized(cast<Instruction>(V), VectorizedVals) ||
+          !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
           (VE && VE != E))
         continue;
       auto *EE = cast<ExtractElementInst>(V);
@@ -9049,12 +9051,9 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
   // by extractelements processing) or may form vector node in future.
   auto MightBeIgnored = [=](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
-    SmallVector<Value *> IgnoredVals;
-    if (UserIgnoreList)
-      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
     return I && !IsSplatOrUndefs && !ScalarToTreeEntry.count(I) &&
            !isVectorLikeInstWithConstOps(I) &&
-           !areAllUsersVectorized(I, IgnoredVals) && isSimple(I);
+           !areAllUsersVectorized(I, UserIgnoreList) && isSimple(I);
   };
   // Check that the neighbor instruction may form a full vector node with the
   // current instruction V. It is possible, if they have same/alternate opcode
@@ -10074,22 +10073,22 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
       if (It != Scalars.end()) {
         // Replace undefs by the non-poisoned scalars and emit broadcast.
         int Pos = std::distance(Scalars.begin(), It);
-        for_each(UndefPos, [&](int I) {
+        for (int I : UndefPos) {
           // Set the undef position to the non-poisoned scalar.
           ReuseMask[I] = Pos;
           // Replace the undef by the poison, in the mask it is replaced by
           // non-poisoned scalar already.
           if (I != Pos)
             Scalars[I] = PoisonValue::get(ScalarTy);
-        });
+        }
       } else {
         // Replace undefs by the poisons, emit broadcast and then emit
         // freeze.
-        for_each(UndefPos, [&](int I) {
+        for (int I : UndefPos) {
           ReuseMask[I] = PoisonMaskElem;
           if (isa<UndefValue>(Scalars[I]))
             Scalars[I] = PoisonValue::get(ScalarTy);
-        });
+        }
         NeedFreeze = true;
       }
     }
@@ -14181,7 +14180,7 @@ private:
            "A call to the llvm.fmuladd intrinsic is not handled yet");
 
     ++NumVectorInstructions;
-    return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind);
+    return createSimpleTargetReduction(Builder, VectorizedValue, RdxKind);
   }
 
   /// Emits optimized code for unique scalar value reused \p Cnt times.

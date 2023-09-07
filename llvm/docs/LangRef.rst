@@ -7159,7 +7159,7 @@ It is illegal for the list node to be empty since it might be confused
 with an access group.
 
 The access group metadata node must be 'distinct' to avoid collapsing
-multiple access groups by content. A access group metadata node must
+multiple access groups by content. An access group metadata node must
 always be empty which can be used to distinguish an access group
 metadata node from a list of access groups. Being empty avoids the
 situation that the content must be updated which, because metadata is
@@ -10955,15 +10955,17 @@ If the ``inbounds`` keyword is present, the result value of a
 :ref:`poison value <poisonvalues>` if one of the following rules is violated:
 
 *  The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end.
+   means that it points into an allocated object, or to its end. Note that the
+   object does not have to be live anymore; being in-bounds of a deallocated
+   object is sufficient.
 *  If the type of an index is larger than the pointer index type, the
    truncation to the pointer index type preserves the signed value.
 *  The multiplication of an index by the type size does not wrap the pointer
    index type in a signed sense (``nsw``).
-*  The successive addition of offsets (without adding the base address) does
+*  The successive addition of each offset (without adding the base address) does
    not wrap the pointer index type in a signed sense (``nsw``).
 *  The successive addition of the current address, interpreted as an unsigned
-   number, and an offset, interpreted as a signed number, does not wrap the
+   number, and each offset, interpreted as a signed number, does not wrap the
    unsigned address space and remains *in bounds* of the allocated object.
    As a corollary, if the added offset is non-negative, the addition does not
    wrap in an unsigned sense (``nuw``).
@@ -14754,6 +14756,47 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _int_exp10:
+
+'``llvm.exp10.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.exp10`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.exp10.f32(float  %Val)
+      declare double    @llvm.exp10.f64(double %Val)
+      declare x86_fp80  @llvm.exp10.f80(x86_fp80  %Val)
+      declare fp128     @llvm.exp10.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.exp10.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.exp10.*``' intrinsics compute the base-10 exponential of the
+specified value.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``exp10``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 
 '``llvm.ldexp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

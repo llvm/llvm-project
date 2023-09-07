@@ -34,6 +34,7 @@ intermediate LLVM representation.
    Docker
    FatLTO
    ExtendingLLVM
+   GitHub
    GoldPlugin
    GlobalISel/MIRPatterns
    HowToBuildOnARM

@@ -102,6 +102,16 @@ if (APPLE)
   endif ()
 endif ()
 
+if (HAIKU)
+  add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
+
+  add_library_flags_if(LIBUNWIND_HAS_BSD_LIB bsd)
+  add_compile_flags_if(LIBUNWIND_HAS_BSD_LIB -D_LIBUNWIND_USE_HAIKU_BSD_LIB=1)
+
+  add_compile_flags("-D_DEFAULT_SOURCE")
+  add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
+endif ()
+
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_CXX_FLAGS "${LIBUNWIND_CXX_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_C_FLAGS "${LIBUNWIND_C_FLAGS}")

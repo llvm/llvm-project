@@ -168,3 +168,40 @@ void test_static_assert() {
 void test_char_injection(decltype(sizeof('"')), decltype(sizeof("()"))) {
   unused("" __FUNCSIG__); // expected-warning{{expansion of predefined identifier '__FUNCSIG__' to a string literal is a Microsoft extension}}
 }
+
+void test_in_struct_init() {
+  struct {
+    char F[sizeof(__FUNCTION__)];
+  } s1 = { __FUNCTION__ }; // expected-warning{{initializing an array from a '__FUNCTION__' predefined identifier is a Microsoft extension}}
+
+  struct {
+    char F[sizeof("F:" __FUNCTION__)]; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+  } s2 = { "F:" __FUNCTION__ }; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+
+  class C {
+    public:
+      struct {
+        char F[sizeof(__FUNCTION__)];
+      } s;
+  } c1 = { { __FUNCTION__ } }; // expected-warning{{initializing an array from a '__FUNCTION__' predefined identifier is a Microsoft extension}}
+}
+
+void test_in_constexpr_struct_init() {
+  struct {
+    char F[sizeof(__FUNCTION__)];
+  } constexpr s1 = { __FUNCTION__ }; // expected-warning{{initializing an array from a '__FUNCTION__' predefined identifier is a Microsoft extension}}
+  ASSERT_EQ(__FUNCTION__, s1.F);
+
+  struct {
+    char F[sizeof("F:" __FUNCTION__)]; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+  } constexpr s2 = { "F:" __FUNCTION__ }; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+  ASSERT_EQ("F:" __FUNCTION__, s2.F); // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+
+  class C {
+    public:
+      struct {
+        char F[sizeof("F:" __FUNCTION__)]; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+      } s;
+  } constexpr c1 = { { "F:" __FUNCTION__ } }; // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+  ASSERT_EQ("F:" __FUNCTION__, c1.s.F); // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+}

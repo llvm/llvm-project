@@ -529,6 +529,34 @@ public:
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
   void Post(const parser::OmpMapClause &x) {
+    Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
+      using Type = parser::OmpMapType::Type;
+      const Type &type{std::get<Type>(maptype->t)};
+      switch (type) {
+      case Type::To:
+        ompFlag = Symbol::Flag::OmpMapTo;
+        break;
+      case Type::From:
+        ompFlag = Symbol::Flag::OmpMapFrom;
+        break;
+      case Type::Tofrom:
+        ompFlag = Symbol::Flag::OmpMapToFrom;
+        break;
+      case Type::Alloc:
+        ompFlag = Symbol::Flag::OmpMapAlloc;
+        break;
+      case Type::Release:
+        ompFlag = Symbol::Flag::OmpMapRelease;
+        break;
+      case Type::Delete:
+        ompFlag = Symbol::Flag::OmpMapDelete;
+        break;
+      default:
+        assert(false && "Unsupported map-type");
+        break;
+      }
+    }
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
@@ -536,6 +564,10 @@ public:
               [&](const parser::Designator &designator) {
                 if (const auto *name{
                         semantics::getDesignatorNameIfDataRef(designator)}) {
+                  if (name->symbol) {
+                    name->symbol->set(ompFlag);
+                    AddToContextObjectWithDSA(*name->symbol, ompFlag);
+                  }
                   if (name->symbol &&
                       semantics::IsAssumedSizeArray(*name->symbol)) {
                     context_.Say(designator.source,
@@ -1908,6 +1940,27 @@ void OmpAttributeVisitor::ResolveOmpObject(
             if (const auto *name{
                     semantics::getDesignatorNameIfDataRef(designator)}) {
               if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
+                auto checkExclusivelists =
+                    [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
+                        Symbol *symbol2, Symbol::Flag secondOmpFlag) {
+                      if ((symbol1->test(firstOmpFlag) &&
+                              symbol2->test(secondOmpFlag)) ||
+                          (symbol1->test(secondOmpFlag) &&
+                              symbol2->test(firstOmpFlag))) {
+                        context_.Say(designator.source,
+                            "Variable '%s' may not "
+                            "appear on both %s and %s "
+                            "clauses on a %s construct"_err_en_US,
+                            symbol2->name(),
+                            const_cast<Symbol *>(symbol1)->OmpFlagToClauseName(
+                                firstOmpFlag),
+                            symbol2->OmpFlagToClauseName(secondOmpFlag),
+                            parser::ToUpperCaseLetters(
+                                llvm::omp::getOpenMPDirectiveName(
+                                    GetContext().directive)
+                                    .str()));
+                      }
+                    };
                 if (dataCopyingAttributeFlags.test(ompFlag)) {
                   CheckDataCopyingClause(*name, *symbol, ompFlag);
                 } else {
@@ -1943,28 +1996,37 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               GetContext().directive)
                               .str()));
                 }
-                if ((GetContext().directive ==
-                        llvm::omp::Directive::OMPD_target_data) &&
-                    (((ompFlag == Symbol::Flag::OmpUseDevicePtr) &&
-                         symbol->test(Symbol::Flag::OmpUseDeviceAddr)) ||
-                        ((ompFlag == Symbol::Flag::OmpUseDeviceAddr) &&
-                            symbol->test(Symbol::Flag::OmpUseDevicePtr)))) {
-                  context_.Say(designator.source,
-                      "Variable '%s' may not "
-                      "appear on both USE_DEVICE_PTR and USE_DEVICE_ADDR "
-                      "clauses on a TARGET DATA construct"_err_en_US,
-                      symbol->name());
+                if (GetContext().directive ==
+                    llvm::omp::Directive::OMPD_target_data) {
+                  checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr,
+                      symbol, Symbol::Flag::OmpUseDeviceAddr);
                 }
-                if (llvm::omp::allDistributeSet.test(GetContext().directive) &&
-                    (((ompFlag == Symbol::Flag::OmpFirstPrivate) &&
-                         symbol->test(Symbol::Flag::OmpLastPrivate)) ||
-                        ((ompFlag == Symbol::Flag::OmpLastPrivate) &&
-                            symbol->test(Symbol::Flag::OmpFirstPrivate)))) {
-                  context_.Say(designator.source,
-                      "Variable '%s' may not "
-                      "appear on both FIRSTPRIVATE and LASTPRIVATE "
-                      "clauses on a DISTRIBUTE construct"_err_en_US,
-                      symbol->name());
+                if (llvm::omp::allDistributeSet.test(GetContext().directive)) {
+                  checkExclusivelists(symbol, Symbol::Flag::OmpFirstPrivate,
+                      symbol, Symbol::Flag::OmpLastPrivate);
+                }
+                if (llvm::omp::allTargetSet.test(GetContext().directive)) {
+                  const auto *hostAssocSym{symbol};
+                  if (const auto *details{
+                          symbol->detailsIf<HostAssocDetails>()}) {
+                    hostAssocSym = &details->symbol();
+                  }
+                  Symbol::Flag dataMappingAttributeFlags[] = {
+                      Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
+                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapAlloc,
+                      Symbol::Flag::OmpMapRelease, Symbol::Flag::OmpMapDelete};
+
+                  Symbol::Flag dataSharingAttributeFlags[] = {
+                      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
+                      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
+                      Symbol::Flag::OmpLinear};
+
+                  for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+                    for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+                      checkExclusivelists(
+                          hostAssocSym, ompFlag1, symbol, ompFlag2);
+                    }
+                  }
                 }
               }
             } else {

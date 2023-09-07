@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // We're building as C, so this test doesn't work when building with modules.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // GCC complains about unrecognized arguments because we're compiling the
 // file as C, but we're passing C++ flags on the command-line.

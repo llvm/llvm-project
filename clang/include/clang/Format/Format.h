@@ -2008,6 +2008,8 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
+  ///
+  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -2016,8 +2018,35 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
+  ///
+  /// In C#, Java, and JavaScript:
+  /// \code
+  ///    true:
+  ///    var x = "veryVeryVeryVeryVeryVe" +
+  ///            "ryVeryVeryVeryVeryVery" +
+  ///            "VeryLongString";
+  ///
+  ///    false:
+  ///    var x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
+  /// C# and JavaScript interpolated strings are not broken.
+  ///
+  /// In Verilog:
+  /// \code
+  ///    true:
+  ///    string x = {"veryVeryVeryVeryVeryVe",
+  ///                "ryVeryVeryVeryVeryVery",
+  ///                "VeryLongString"};
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
   /// \version 3.9
   bool BreakStringLiterals;
 
@@ -4021,35 +4050,35 @@ struct FormatStyle {
     ///    true:                                  false:
     ///    if (...) {}                     vs.    if(...) {}
     /// \endcode
-    bool AfterControlStatements = false;
+    bool AfterControlStatements;
     /// If ``true``, put space between foreach macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    FOREACH (...)                   vs.    FOREACH(...)
     ///      <loop-body>                            <loop-body>
     /// \endcode
-    bool AfterForeachMacros = false;
+    bool AfterForeachMacros;
     /// If ``true``, put a space between function declaration name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f ();                      vs.    void f();
     /// \endcode
-    bool AfterFunctionDeclarationName = false;
+    bool AfterFunctionDeclarationName;
     /// If ``true``, put a space between function definition name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f () {}                    vs.    void f() {}
     /// \endcode
-    bool AfterFunctionDefinitionName = false;
+    bool AfterFunctionDefinitionName;
     /// If ``true``, put space between if macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    IF (...)                        vs.    IF(...)
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
-    bool AfterIfMacros = false;
+    bool AfterIfMacros;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4057,7 +4086,7 @@ struct FormatStyle {
     ///    void operator++ (int a);        vs.    void operator++(int a);
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
-    bool AfterOverloadedOperator = false;
+    bool AfterOverloadedOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4066,7 +4095,7 @@ struct FormatStyle {
     ///    requires (A<T> && B<T>)                requires(A<T> && B<T>)
     ///    ...                                    ...
     /// \endcode
-    bool AfterRequiresInClause = false;
+    bool AfterRequiresInClause;
     /// If ``true``, put space between requires keyword in a requires expression
     /// and opening parentheses.
     /// \code
@@ -4076,7 +4105,7 @@ struct FormatStyle {
     ///                  ...                                    ...
     ///                }                                      }
     /// \endcode
-    bool AfterRequiresInExpression = false;
+    bool AfterRequiresInExpression;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -4084,9 +4113,14 @@ struct FormatStyle {
     ///    void f (int a);                 vs.    void f();
     ///    f (a);                                 f();
     /// \endcode
-    bool BeforeNonEmptyParentheses = false;
+    bool BeforeNonEmptyParentheses;
 
-    SpaceBeforeParensCustom() = default;
+    SpaceBeforeParensCustom()
+        : AfterControlStatements(false), AfterForeachMacros(false),
+          AfterFunctionDeclarationName(false),
+          AfterFunctionDefinitionName(false), AfterIfMacros(false),
+          AfterOverloadedOperator(false), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&

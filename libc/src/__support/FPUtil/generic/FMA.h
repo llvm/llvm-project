@@ -226,7 +226,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     if (r_exp > 0) {
       // The result is normal.  We will shift the mantissa to the right by
       // 63 - 52 = 11 bits (from the locations of the most significant bit).
-      // Then the rounding bit will correspond the the 11th bit, and the lowest
+      // Then the rounding bit will correspond the 11th bit, and the lowest
       // 10 bits are merged into sticky bits.
       round_bit = (result & 0x0400ULL) != 0;
       sticky_bits |= (result & 0x03ffULL) != 0;

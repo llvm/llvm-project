@@ -908,6 +908,7 @@ void AMDGPUPALMetadata::reset() {
   MsgPackDoc.clear();
   Registers = MsgPackDoc.getEmptyNode();
   HwStages = MsgPackDoc.getEmptyNode();
+  ShaderFunctions = MsgPackDoc.getEmptyNode();
 }
 
 unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {

@@ -154,12 +154,12 @@ class SiFive7GetReductionCycles<string mx, int sew> {
     !eq(mx, "MF8") : 1
   );
   int c = !add(
-    !div(TwoTimesLMUL, DLEN),
+    TwoTimesLMUL,
     !mul(5, !add(4, !logtwo(!div(DLEN, sew))))
   );
 }
 
-/// Cycles for ordered reductions take approximatley 5*VL cycles
+/// Cycles for ordered reductions take approximatley 6*VL cycles
 class SiFive7GetOrderedReductionCycles<string mx, int sew> {
   defvar VLEN = 512;
   // (VLEN * LMUL) / SEW
@@ -172,7 +172,7 @@ class SiFive7GetOrderedReductionCycles<string mx, int sew> {
     !eq(mx, "MF4") : !div(!div(VLEN, 4), sew),
     !eq(mx, "MF8") : !div(!div(VLEN, 8), sew),
   );
-  int c = !mul(5, VLUpperBound);
+  int c = !mul(6, VLUpperBound);
 }
 
 class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>

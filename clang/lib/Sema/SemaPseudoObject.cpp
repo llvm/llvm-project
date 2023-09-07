@@ -1451,7 +1451,8 @@ MSPropertyOpBuilder::getBaseMSProperty(MSPropertySubscriptExpr *E) {
 
 Expr *MSPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   InstanceBase = capture(RefExpr->getBaseExpr());
-  llvm::for_each(CallArgs, [this](Expr *&Arg) { Arg = capture(Arg); });
+  for (Expr *&Arg : CallArgs)
+    Arg = capture(Arg);
   syntacticBase = Rebuilder(S, [=](Expr *, unsigned Idx) -> Expr * {
                     switch (Idx) {
                     case 0:

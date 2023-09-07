@@ -90,8 +90,10 @@ export namespace std {
 
     using std::ranges::borrowed_subrange_t;
 
+#if _LIBCPP_STD_VER >= 23
     // [range.utility.conv], range conversions
     using std::ranges::to;
+#endif
 
     // [range.empty], empty view
     using std::ranges::empty_view;
@@ -114,12 +116,14 @@ export namespace std {
       using std::ranges::views::iota;
     } // namespace views
 
+#if _LIBCPP_STD_VER >= 23
     // [range.repeat], repeat view
     using std::ranges::repeat_view;
 
     namespace views {
       using std::ranges::views::repeat;
     } // namespace views
+#endif // _LIBCPP_STD_VER >= 23
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
     // [range.istream], istream view
@@ -149,12 +153,14 @@ export namespace std {
     // [range.owning.view], owning view
     using std::ranges::owning_view;
 
+#if _LIBCPP_STD_VER >= 23
     // [range.as.rvalue], as rvalue view
     using std::ranges::as_rvalue_view;
 
     namespace views {
       using std::ranges::views::as_rvalue;
     } // namespace views
+#endif // _LIBCPP_STD_VER >= 23
 
     // [range.filter], filter view
     using std::ranges::filter_view;
@@ -198,11 +204,13 @@ export namespace std {
       using std::ranges::views::drop_while;
     } // namespace views
 
+#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::ranges::join_view;
 
     namespace views {
       using std::ranges::views::join;
     } // namespace views
+#endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #if 0
     using std::ranges::join_with_view;
 
@@ -259,12 +267,14 @@ export namespace std {
       using std::ranges::views::values;
     } // namespace views
 
+#if _LIBCPP_STD_VER >= 23
     // [range.zip], zip view
     using std::ranges::zip_view;
 
     namespace views {
       using std::ranges::views::zip;
     } // namespace views
+#endif // _LIBCPP_STD_VER >= 23
 
 #if 0
     // [range.zip.transform], zip transform view
@@ -301,14 +311,18 @@ export namespace std {
     namespace views {
       using std::ranges::views::slide;
     }
+#endif
 
+#if _LIBCPP_STD_VER >= 23
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
 
     namespace views {
       using std::ranges::views::chunk_by;
     }
+#endif // _LIBCPP_STD_VER >= 23
 
+#if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
@@ -329,6 +343,8 @@ export namespace std {
   using std::tuple_element;
   using std::tuple_size;
 
+#if _LIBCPP_STD_VER >= 23
   using std::from_range;
   using std::from_range_t;
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

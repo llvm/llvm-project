@@ -368,7 +368,7 @@ namespace llvm {
       llvm_unreachable("VTNum greater than number of ValueTypes in RegClass!");
     }
 
-    // Return true if this this class contains the register.
+    // Return true if this class contains the register.
     bool contains(const CodeGenRegister*) const;
 
     // Returns true if RC is a subclass.

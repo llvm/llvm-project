@@ -244,7 +244,7 @@ LIBC_INLINE int raise_except(int excepts) {
   // We set the status flag for exception one at a time and call the
   // fwait instruction to actually get the processor to raise the
   // exception by calling the exception handler. This scheme is per
-  // the description in in "8.6 X87 FPU EXCEPTION SYNCHRONIZATION"
+  // the description in "8.6 X87 FPU EXCEPTION SYNCHRONIZATION"
   // of the "Intel 64 and IA-32 Architectures Software Developer's
   // Manual, Vol 1".
 

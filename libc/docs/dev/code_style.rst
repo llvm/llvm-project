@@ -39,7 +39,7 @@ We define two kinds of macros:
 
    * ``src/__support/macros/properties/`` - Build related properties like
      target architecture or enabled CPU features defined by introspecting
-     compiler defined preprocessor defininitions.
+     compiler defined preprocessor definitions.
 
      * ``architectures.h`` - Target architecture properties.
        e.g., ``LIBC_TARGET_ARCH_IS_ARM``.

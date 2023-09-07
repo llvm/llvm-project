@@ -525,6 +525,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(EXP_F);
   case TargetOpcode::G_FEXP2:
     RTLIBCASE(EXP2_F);
+  case TargetOpcode::G_FEXP10:
+    RTLIBCASE(EXP10_F);
   case TargetOpcode::G_FREM:
     RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
@@ -830,6 +832,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
@@ -2545,6 +2548,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -4214,6 +4218,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FPOW:
   case G_FEXP:
   case G_FEXP2:
+  case G_FEXP10:
   case G_FLOG:
   case G_FLOG2:
   case G_FLOG10:
@@ -6774,26 +6779,9 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   LLT IdxTy = LLT::scalar(32);
 
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-
-  if (DstTy.isScalar()) {
-    if (Src0Ty.isVector())
-      return UnableToLegalize;
-
-    // This is just a SELECT.
-    assert(Mask.size() == 1 && "Expected a single mask element");
-    Register Val;
-    if (Mask[0] < 0 || Mask[0] > 1)
-      Val = MIRBuilder.buildUndef(DstTy).getReg(0);
-    else
-      Val = Mask[0] == 0 ? Src0Reg : Src1Reg;
-    MIRBuilder.buildCopy(DstReg, Val);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
   Register Undef;
   SmallVector<Register, 32> BuildVec;
-  LLT EltTy = DstTy.getElementType();
+  LLT EltTy = DstTy.getScalarType();
 
   for (int Idx : Mask) {
     if (Idx < 0) {
@@ -6815,7 +6803,10 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  if (DstTy.isScalar())
+    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
+  else
+    MIRBuilder.buildBuildVector(DstReg, BuildVec);
   MI.eraseFromParent();
   return Legalized;
 }

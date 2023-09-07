@@ -230,7 +230,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
@@ -337,7 +337,14 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   }
 
   // Make sure there is DWARF to convert first.
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      Obj,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
+      /*DWPName=*/"",
+      /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
+      /*WarningHandler=*/WithColor::defaultWarningHandler,
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");

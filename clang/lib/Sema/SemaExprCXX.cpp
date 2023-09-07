@@ -1217,7 +1217,7 @@ QualType Sema::getCurrentThisType() {
 
   if (CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(DC)) {
     if (method && method->isInstance())
-      ThisTy = method->getThisType();
+      ThisTy = method->getThisType().getNonReferenceType();
   }
 
   if (ThisTy.isNull() && isLambdaCallOperator(CurContext) &&
@@ -1259,7 +1259,8 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
   QualType T = S.Context.getRecordType(Record);
   T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
 
-  S.CXXThisTypeOverride = S.Context.getPointerType(T);
+  S.CXXThisTypeOverride =
+      S.Context.getLangOpts().HLSL ? T : S.Context.getPointerType(T);
 
   this->Enabled = true;
 }
@@ -1406,14 +1407,7 @@ ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
                              bool IsImplicit) {
-  if (getLangOpts().HLSL && Type.getTypePtr()->isPointerType()) {
-    auto *This = new (Context)
-        CXXThisExpr(Loc, Type.getTypePtr()->getPointeeType(), IsImplicit);
-    This->setValueKind(ExprValueKind::VK_LValue);
-    MarkThisReferenced(This);
-    return This;
-  }
-  auto *This = new (Context) CXXThisExpr(Loc, Type, IsImplicit);
+  auto *This = CXXThisExpr::Create(Context, Loc, Type, IsImplicit);
   MarkThisReferenced(This);
   return This;
 }
@@ -3966,7 +3960,7 @@ void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
   if (getSourceManager().isInSystemHeader(PointeeRD->getLocation()))
     return;
 
-  QualType ClassType = dtor->getThisType()->getPointeeType();
+  QualType ClassType = dtor->getThisObjectType();
   if (PointeeRD->isAbstract()) {
     // If the class is abstract, we warn by default, because we're
     // sure the code has undefined behavior.

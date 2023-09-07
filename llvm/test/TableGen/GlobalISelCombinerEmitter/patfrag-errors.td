@@ -273,7 +273,7 @@ def root_def_has_multi_defs : GICombineRule<
 
 // CHECK: error: Failed to parse one or more rules
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   too_many_perms,
   undef_livein,
   out_must_be_root,

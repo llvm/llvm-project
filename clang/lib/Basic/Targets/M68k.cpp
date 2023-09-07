@@ -80,36 +80,24 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__m68k__");
 
-  Builder.defineMacro("mc68000");
-  Builder.defineMacro("__mc68000");
-  Builder.defineMacro("__mc68000__");
+  DefineStd(Builder, "mc68000", Opts);
 
   // For sub-architecture
   switch (CPU) {
   case CK_68010:
-    Builder.defineMacro("mc68010");
-    Builder.defineMacro("__mc68010");
-    Builder.defineMacro("__mc68010__");
+    DefineStd(Builder, "mc68010", Opts);
     break;
   case CK_68020:
-    Builder.defineMacro("mc68020");
-    Builder.defineMacro("__mc68020");
-    Builder.defineMacro("__mc68020__");
+    DefineStd(Builder, "mc68020", Opts);
     break;
   case CK_68030:
-    Builder.defineMacro("mc68030");
-    Builder.defineMacro("__mc68030");
-    Builder.defineMacro("__mc68030__");
+    DefineStd(Builder, "mc68030", Opts);
     break;
   case CK_68040:
-    Builder.defineMacro("mc68040");
-    Builder.defineMacro("__mc68040");
-    Builder.defineMacro("__mc68040__");
+    DefineStd(Builder, "mc68040", Opts);
     break;
   case CK_68060:
-    Builder.defineMacro("mc68060");
-    Builder.defineMacro("__mc68060");
-    Builder.defineMacro("__mc68060__");
+    DefineStd(Builder, "mc68060", Opts);
     break;
   default:
     break;

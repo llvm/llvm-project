@@ -127,6 +127,9 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
+* ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang`` has been removed.
+  It has not been needed to enable ``-ftrivial-auto-var-init=zero`` since Clang 16.
+
 Attribute Changes in Clang
 --------------------------
 - On X86, a warning is now emitted if a function with ``__attribute__((no_caller_saved_registers))``
@@ -162,6 +165,7 @@ Improvements to Clang's diagnostics
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier.
+- Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
 
 Bug Fixes in This Version
 -------------------------
@@ -202,12 +206,16 @@ Bug Fixes in This Version
 - Clang's ``-Wunused-private-field`` no longer warns on fields whose type is
   declared with ``[[maybe_unused]]``.
   (`#61334 <https://github.com/llvm/llvm-project/issues/61334>`_)
-- For function multi-versioning using the ``target`` or ``target_clones``
-  attributes, remove comdat for internal linkage functions.
+- For function multi-versioning using the ``target``, ``target_clones``, or
+  ``target_version`` attributes, remove comdat for internal linkage functions.
   (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
 - Clang now reports ``-Wformat`` for bool value and char specifier confusion
   in scanf. Fixes
   (`#64987 <https://github.com/llvm/llvm-project/issues/64987>`_)
+- Support MSVC predefined macro expressions in constant expressions and in
+  local structs.
+- Correctly parse non-ascii identifiers that appear immediately after a line splicing
+  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -256,6 +264,9 @@ Bug Fixes to C++ Support
 - Fix a crash caused by substitution failure in expression requirements.
   (`#64172 <https://github.com/llvm/llvm-project/issues/64172>`_) and
   (`#64723 <https://github.com/llvm/llvm-project/issues/64723>`_).
+
+- Fix crash when parsing the requires clause of some generic lambdas.
+  (`#64689 <https://github.com/llvm/llvm-project/issues/64689>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -345,6 +356,7 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 - Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
+- ``__builtin_isfpclass`` builtin now supports vector types.
 
 AST Matchers
 ------------

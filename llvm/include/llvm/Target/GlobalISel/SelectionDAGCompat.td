@@ -106,6 +106,7 @@ def : GINodeEquiv<G_FDIV, fdiv>;
 def : GINodeEquiv<G_FREM, frem>;
 def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_FEXP2, fexp2>;
+def : GINodeEquiv<G_FEXP10, fexp10>;
 def : GINodeEquiv<G_FLOG2, flog2>;
 def : GINodeEquiv<G_FLDEXP, fldexp>;
 def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;

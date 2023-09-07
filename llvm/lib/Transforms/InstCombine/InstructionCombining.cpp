@@ -2677,7 +2677,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
-    Instr.moveBefore(TI);
+    Instr.moveBeforePreserving(TI);
   }
   assert(FreeInstrBB->size() == 1 &&
          "Only the branch instruction should remain");
@@ -3617,7 +3617,7 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   Value *StartV = StartU->get();
   BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
   bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
-  // We can't insert freeze if the the start value is the result of the
+  // We can't insert freeze if the start value is the result of the
   // terminator (e.g. an invoke).
   if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
     return nullptr;

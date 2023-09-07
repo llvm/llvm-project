@@ -2189,7 +2189,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
                                      bool IgnoreChains) {
   if (OptLevel == CodeGenOpt::None) return false;
 
-  // If Root use can somehow reach N through a path that that doesn't contain
+  // If Root use can somehow reach N through a path that doesn't contain
   // U then folding N would create a cycle. e.g. In the following
   // diagram, Root can reach N through X. If N is folded into Root, then
   // X is both a predecessor and a successor of U.

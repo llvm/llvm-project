@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -423,7 +424,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Subtarget.hasStdExtZfa() ? Legal : Promote);
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
-                        ISD::FEXP2, ISD::FLOG, ISD::FLOG2, ISD::FLOG10},
+                        ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
+                        ISD::FLOG10},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -871,6 +873,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FEXP10, VT, Expand);
       setOperationAction(ISD::FLOG, VT, Expand);
       setOperationAction(ISD::FLOG2, VT, Expand);
       setOperationAction(ISD::FLOG10, VT, Expand);
@@ -3514,6 +3517,51 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
 
+  // Cap the cost at a value linear to the number of elements in the vector.
+  // The default lowering is to use the stack.  The vector store + scalar loads
+  // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
+  // being (at least) linear in LMUL.  As a result, using the vslidedown
+  // lowering for every element ends up being VL*LMUL..
+  // TODO: Should we be directly costing the stack alternative?  Doing so might
+  // give us a more accurate upper bound.
+  InstructionCost LinearBudget = VT.getVectorNumElements() * 2;
+
+  // TODO: unify with TTI getSlideCost.
+  InstructionCost PerSlideCost = 1;
+  switch (RISCVTargetLowering::getLMUL(ContainerVT)) {
+  default: break;
+  case RISCVII::VLMUL::LMUL_2:
+    PerSlideCost = 2;
+    break;
+  case RISCVII::VLMUL::LMUL_4:
+    PerSlideCost = 4;
+    break;
+  case RISCVII::VLMUL::LMUL_8:
+    PerSlideCost = 8;
+    break;
+  }
+
+  // TODO: Should we be using the build instseq then cost + evaluate scheme
+  // we use for integer constants here?
+  unsigned UndefCount = 0;
+  for (const SDValue &V : Op->ops()) {
+    if (V.isUndef()) {
+      UndefCount++;
+      continue;
+    }
+    if (UndefCount) {
+      LinearBudget -= PerSlideCost;
+      UndefCount = 0;
+    }
+    LinearBudget -= PerSlideCost;
+  }
+  if (UndefCount) {
+    LinearBudget -= PerSlideCost;
+  }
+
+  if (LinearBudget < 0)
+    return SDValue();
+
   assert((!VT.isFloatingPoint() ||
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
          "Illegal type which will result in reserved encoding");
@@ -3521,7 +3569,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   const unsigned Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
 
   SDValue Vec = DAG.getUNDEF(ContainerVT);
-  unsigned UndefCount = 0;
+  UndefCount = 0;
   for (const SDValue &V : Op->ops()) {
     if (V.isUndef()) {
       UndefCount++;
@@ -4228,8 +4276,8 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 }
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
-// reinterpret it as a shuffle of v2i32 where the two i32s are bit rotated, and
-// lower it as a vror.vi (if legal with zvbb enabled).
+// reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
+// as a vror.vi if we have zvbb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4246,8 +4294,7 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                   NumElts / NumSubElts);
 
   // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
-  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::ROTL,
-                                                               RotateVT))
+  if (!Subtarget.getTargetLowering()->isTypeLegal(RotateVT))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -4274,12 +4321,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  // Lower to a vror.vi of a larger element type if possible. Do this before we
-  // promote i1s to i8s.
-  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
-    return V;
-
   if (VT.getVectorElementType() == MVT::i1) {
+    // Lower to a vror.vi of a larger element type if possible before we promote
+    // i1s to i8s.
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
     if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
       return V;
 
@@ -4381,6 +4427,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
+
+  // A bitrotate will be one instruction on zvbb, so try to lower to it first if
+  // available.
+  if (Subtarget.hasStdExtZvbb())
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
 
   // Lower rotations to a SLIDEDOWN and a SLIDEUP. One of the source vectors may
   // be undef which can be handled with a single SLIDEDOWN/UP.
@@ -4507,6 +4559,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   if (IsSelect)
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+
+  // We might be able to express the shuffle as a bitrotate. But even if we
+  // don't have zvbb and have to expand, the expanded sequence of approx. 2
+  // shifts and a vor will have a higher throughput than a vrgather.
+  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+    return V;
 
   if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
     // On such a large vector we're unable to use i8 as the index type.
@@ -12904,12 +12962,10 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
   // shift can be omitted.
   // Fold setlt (sra X, N), 0 -> setlt X, 0 and
   // setge (sra X, N), 0 -> setge X, 0
-  if (auto *RHSConst = dyn_cast<ConstantSDNode>(RHS.getNode())) {
-    if ((CCVal == ISD::SETGE || CCVal == ISD::SETLT) &&
-        LHS.getOpcode() == ISD::SRA && RHSConst->isZero()) {
-      LHS = LHS.getOperand(0);
-      return true;
-    }
+  if (isNullConstant(RHS) && (CCVal == ISD::SETGE || CCVal == ISD::SETLT) &&
+      LHS.getOpcode() == ISD::SRA) {
+    LHS = LHS.getOperand(0);
+    return true;
   }
 
   if (!ISD::isIntEqualitySetCC(CCVal))

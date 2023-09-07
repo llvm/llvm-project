@@ -6860,6 +6860,7 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
+  NewTL.setConceptReference(nullptr);
 
   if (T->isConstrained()) {
     DeclarationNameInfo DNI = DeclarationNameInfo(
@@ -13558,6 +13559,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto TPL = getDerived().TransformTemplateParameterList(
       E->getTemplateParameterList());
   LSI->GLTemplateParameterList = TPL;
+  if (TPL)
+    getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
+                                                        TPL);
 
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since

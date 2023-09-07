@@ -1377,6 +1377,15 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::ensureDistinctSuccessors(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
+  llvm::IRBuilder<> llvmBuilder(llvmContext);
+
+  // Convert module before functions and operations inside, so dialect
+  // attributes can be used to change dialect-specific global configurations via
+  // `amendOperation()`. These configurations can then influence the translation
+  // of operations afterwards.
+  if (failed(translator.convertOperation(*module, llvmBuilder)))
+    return nullptr;
+
   if (failed(translator.convertComdats()))
     return nullptr;
   if (failed(translator.convertFunctionSignatures()))
@@ -1387,7 +1396,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
 
   // Convert other top-level operations if possible.
-  llvm::IRBuilder<> llvmBuilder(llvmContext);
   for (Operation &o : getModuleBody(module).getOperations()) {
     if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::GlobalCtorsOp,
              LLVM::GlobalDtorsOp, LLVM::ComdatOp>(&o) &&
@@ -1401,10 +1409,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // after the top-level operations they refer to are declared, so we do it
   // last.
   if (failed(translator.convertFunctions()))
-    return nullptr;
-
-  // Convert module itself.
-  if (failed(translator.convertOperation(*module, llvmBuilder)))
     return nullptr;
 
   if (llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

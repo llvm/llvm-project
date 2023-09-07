@@ -134,6 +134,11 @@ namespace format {
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
+  /* A string that is part of a string concatenation. For C#, JavaScript, and  \
+   * Java, it is used for marking whether a string needs parentheses around it \
+   * if it is to be split into parts joined by `+`. For Verilog, whether       \
+   * braces need to be added to split it. Not used for other languages. */     \
+  TYPE(StringInConcatenation)                                                  \
   TYPE(StructLBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
