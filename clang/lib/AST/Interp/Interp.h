@@ -166,7 +166,7 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-/// Checks if the result is a floating-point operation is valid
+/// Checks if the result of a floating-point operation is valid
 /// in the current context.
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 
