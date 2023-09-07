@@ -83,6 +83,11 @@
 // RUN:             | FileCheck -check-prefix=G_GDB \
 // RUN:                         -check-prefix=G_DWARF4 %s
 
+// Haiku.
+// RUN: %clang -### -c -g %s --target=x86_64-unknown-haiku 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+
 // Windows.
 // RUN: %clang -### -c -g %s -target x86_64-w64-windows-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB %s
