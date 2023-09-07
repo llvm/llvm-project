@@ -523,6 +523,13 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
     `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
     aliases.
+
+    Note that this can be an expensive operation if there are many operands that
+    cannot be optimized away. The runtime cost of this operation (assuming that
+    nothing is optimized away) is `O(|memrefs|^2+|memrefs|*|retained|)`. The
+    cost in terms of memory space is `O(|memrefs|+|retained|)`. As a result, it
+    is recommended to place it carefully in the IR such that most operands can
+    be optimized away by running the `buffer-deallocation-simplification` pass.
   }];
 
   let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,
