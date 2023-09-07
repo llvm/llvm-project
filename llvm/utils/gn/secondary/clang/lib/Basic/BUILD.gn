@@ -21,6 +21,8 @@ static_library("Basic") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
+    "//clang/include/clang/Basic:AttrLeftSideCanPrintList",
+    "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:AttrTokenKinds",
