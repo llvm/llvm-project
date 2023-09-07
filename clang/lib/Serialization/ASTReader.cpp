@@ -4314,8 +4314,7 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
 ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
                                             ModuleKind Type,
                                             SourceLocation ImportLoc,
-                                            unsigned ClientLoadCapabilities,
-                                            SmallVectorImpl<ImportedSubmodule> *Imported) {
+                                            unsigned ClientLoadCapabilities) {
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
@@ -4505,10 +4504,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     }
   }
   UnresolvedModuleRefs.clear();
-
-  if (Imported)
-    Imported->append(PendingImportedModules.begin(),
-                     PendingImportedModules.end());
 
   // FIXME: How do we load the 'use'd modules? They may not be submodules.
   // Might be unnecessary as use declarations are only used to build the
