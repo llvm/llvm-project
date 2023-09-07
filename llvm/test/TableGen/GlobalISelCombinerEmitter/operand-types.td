@@ -79,7 +79,7 @@ def PatFragTest0 : GICombineRule<
   (match (FooPF $dst)),
   (apply (COPY $dst, (i32 0)))>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest0,
   PatFragTest0
 ]>;
