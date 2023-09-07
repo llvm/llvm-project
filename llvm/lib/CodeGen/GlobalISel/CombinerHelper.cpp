@@ -2647,9 +2647,8 @@ void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
 
 void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, ConstantFP *CFP) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
-  APFloat C = CFP->getValueAPF();
   Builder.setInstr(MI);
-  Builder.buildFConstant(MI.getOperand(0), C);
+  Builder.buildFConstant(MI.getOperand(0), CFP->getValueAPF());
   MI.eraseFromParent();
 }
 
