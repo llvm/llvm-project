@@ -8865,6 +8865,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
     deps = [
         ":AtomicInterfacesTdFiles",
+        ":ControlFlowInterfacesTdFiles",
     ],
 )
 
@@ -9201,13 +9202,11 @@ cc_library(
         exclude =
             [
                 "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
-                "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
             ],
     ),
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
-        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
         ":AtomicInterfaces",
