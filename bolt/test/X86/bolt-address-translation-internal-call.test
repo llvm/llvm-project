@@ -9,7 +9,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # Delete our BB symbols so BOLT doesn't mark them as entry points
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: %clang %t.o -o %t.exe -Wl,-q
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 
 # RUN: llvm-bolt --enable-bat %t.exe --relocs -o %t.out | FileCheck %s
 # CHECK: BOLT-INFO: Wrote {{.*}} BAT maps
@@ -29,6 +29,7 @@ main:
   push   %rbx
   sub    $0x120,%rsp
   mov    $0x3,%rbx
+  movq   rel(%rip), %rdi
 .J1:
   cmp    $0x0,%rbx
   je     .J2
@@ -49,4 +50,8 @@ main:
 .J4:
   pop    %rbp
   retq
+end:
   .size main, .-main
+
+  .data
+rel: .quad end
