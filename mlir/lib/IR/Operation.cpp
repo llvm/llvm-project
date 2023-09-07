@@ -1082,6 +1082,51 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultType(Operation *op) {
   return success();
 }
 
+LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 1)))
+    return failure();
+
+  // delegate function that returns true if type is a shaped type with known
+  // rank
+  auto hasRank = [](const Type type) {
+    if (auto shaped_type = dyn_cast<ShapedType>(type))
+      return shaped_type.hasRank();
+
+    return false;
+  };
+
+  auto rankedOperandTypes =
+      llvm::make_filter_range(op->getOperandTypes(), hasRank);
+  auto rankedResultTypes =
+      llvm::make_filter_range(op->getResultTypes(), hasRank);
+
+  // If all operands and results are unranked, then no further verification.
+  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+    return success();
+
+  // delegate function that returns rank of shaped type with known rank
+  auto getRank = [](const Type type) {
+    return type.cast<ShapedType>().getRank();
+  };
+
+  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
+                                          : getRank(*rankedResultTypes.begin());
+
+  for (const auto type : rankedOperandTypes) {
+    if (rank != getRank(type)) {
+      return op->emitOpError("operands don't have matching ranks");
+    }
+  }
+
+  for (const auto type : rankedResultTypes) {
+    if (rank != getRank(type)) {
+      return op->emitOpError("result type has different rank than operands");
+    }
+  }
+
+  return success();
+}
+
 LogicalResult OpTrait::impl::verifyIsTerminator(Operation *op) {
   Block *block = op->getBlock();
   // Verify that the operation is at the end of the respective parent block.
