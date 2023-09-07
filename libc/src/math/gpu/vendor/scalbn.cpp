@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU remquof function ------------------------===//
+//===-- Implementation of the GPU scalbn function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/remquof.h"
+#include "src/math/scalbn.h"
 #include "src/__support/common.h"
+
+#include "common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(float, remquof, (float x, float y, int *quo)) {
-  return __builtin_remquof(x, y, quo);
+LLVM_LIBC_FUNCTION(double, scalbn, (double x, int y)) {
+  return internal::scalbn(x, y);
 }
 
 } // namespace __llvm_libc
