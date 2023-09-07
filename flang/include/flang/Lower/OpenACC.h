@@ -68,7 +68,7 @@ void genOpenACCConstruct(AbstractConverter &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     Fortran::semantics::SemanticsContext &,
-                                    StatementContext &, pft::Evaluation &,
+                                    StatementContext &,
                                     const parser::OpenACCDeclarativeConstruct &,
                                     AccRoutineInfoMappingList &);
 
