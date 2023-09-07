@@ -1805,7 +1805,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
   }
 }
 
-TEST(TargetParserTest, PrintSupportedExtensions) {
+TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   std::string expected = "All available -march extensions for AArch64\n\n"
                          "\taes\n\tb16b16\n\tbf16";
 
