@@ -60,11 +60,11 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 nounde
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED_I:%.*]], label [[_Z3FOOI_INTERNALIZED_EXIT:%.*]]
 ; CHECK:       region.guarded.i:
 ; CHECK-NEXT:    [[I_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[I:%.*]] to i32
-; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspace(3) @i_shared, align 16
+; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), align 16
 ; CHECK-NEXT:    br label [[_Z3FOOI_INTERNALIZED_EXIT]]
 ; CHECK:       _Z3fooi.internalized.exit:
 ; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @[[GLOB1]], i32 [[TMP2]]) #[[ATTR2]]
-; CHECK-NEXT:    store ptr addrspace(3) @i_shared, ptr [[CAPTURED_VARS_ADDRS_I]], align 8
+; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i_shared to ptr), ptr [[CAPTURED_VARS_ADDRS_I]], align 8
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
@@ -140,8 +140,8 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(i64 nounde
 ; CHECK-NEXT:    [[I_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[I:%.*]] to i32
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspace(3) @i.i_shared, align 16
-; CHECK-NEXT:    store ptr addrspace(3) @i.i_shared, ptr [[CAPTURED_VARS_ADDRS_I]], align 8
+; CHECK-NEXT:    store i32 [[I_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), align 16
+; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @i.i_shared to ptr), ptr [[CAPTURED_VARS_ADDRS_I]], align 8
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__1, ptr nonnull @__omp_outlined__1_wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS_I]], i64 1)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
