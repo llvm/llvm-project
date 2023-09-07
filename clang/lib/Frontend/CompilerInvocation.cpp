@@ -152,7 +152,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
 
 CompilerInvocationBase &
-CompilerInvocationBase::operator=(const CompilerInvocationBase &X) {
+CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
   if (this != &X) {
     LangOpts = make_shared_copy(X.getLangOpts());
     TargetOpts = make_shared_copy(X.getTargetOpts());
@@ -168,6 +168,90 @@ CompilerInvocationBase::operator=(const CompilerInvocationBase &X) {
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
   }
   return *this;
+}
+
+CompilerInvocationBase &
+CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
+  if (this != &X) {
+    LangOpts = X.LangOpts;
+    TargetOpts = X.TargetOpts;
+    DiagnosticOpts = X.DiagnosticOpts;
+    HSOpts = X.HSOpts;
+    PPOpts = X.PPOpts;
+    AnalyzerOpts = X.AnalyzerOpts;
+    MigratorOpts = X.MigratorOpts;
+    CodeGenOpts = X.CodeGenOpts;
+    FSOpts = X.FSOpts;
+    FrontendOpts = X.FrontendOpts;
+    DependencyOutputOpts = X.DependencyOutputOpts;
+    PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+  }
+  return *this;
+}
+
+namespace {
+template <typename T>
+T &ensureOwned(std::shared_ptr<T> &Storage) {
+  if (Storage.use_count() > 1)
+    Storage = std::make_shared<T>(*Storage);
+  return *Storage;
+}
+
+template <typename T>
+T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
+  if (Storage.useCount() > 1)
+    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
+  return *Storage;
+}
+} // namespace
+
+LangOptions &CowCompilerInvocation::getMutLangOpts() {
+  return ensureOwned(LangOpts);
+}
+
+TargetOptions &CowCompilerInvocation::getMutTargetOpts() {
+  return ensureOwned(TargetOpts);
+}
+
+DiagnosticOptions &CowCompilerInvocation::getMutDiagnosticOpts() {
+  return ensureOwned(DiagnosticOpts);
+}
+
+HeaderSearchOptions &CowCompilerInvocation::getMutHeaderSearchOpts() {
+  return ensureOwned(HSOpts);
+}
+
+PreprocessorOptions &CowCompilerInvocation::getMutPreprocessorOpts() {
+  return ensureOwned(PPOpts);
+}
+
+AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
+  return ensureOwned(AnalyzerOpts);
+}
+
+MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
+  return ensureOwned(MigratorOpts);
+}
+
+CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
+  return ensureOwned(CodeGenOpts);
+}
+
+FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
+  return ensureOwned(FSOpts);
+}
+
+FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
+  return ensureOwned(FrontendOpts);
+}
+
+DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
+  return ensureOwned(DependencyOutputOpts);
+}
+
+PreprocessorOutputOptions &
+CowCompilerInvocation::getMutPreprocessorOutputOpts() {
+  return ensureOwned(PreprocessorOutputOpts);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1355,11 +1439,11 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
-void CompilerInvocation::GenerateCodeGenArgs(const CodeGenOptions &Opts,
-                                             ArgumentConsumer Consumer,
-                                             const llvm::Triple &T,
-                                             const std::string &OutputFile,
-                                             const LangOptions *LangOpts) {
+void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
+                                                 ArgumentConsumer Consumer,
+                                                 const llvm::Triple &T,
+                                                 const std::string &OutputFile,
+                                                 const LangOptions *LangOpts) {
   const CodeGenOptions &CodeGenOpts = Opts;
 
   if (Opts.OptimizationLevel == 0)
@@ -2263,9 +2347,9 @@ static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-void CompilerInvocation::GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
-                                                ArgumentConsumer Consumer,
-                                                bool DefaultDiagColor) {
+void CompilerInvocationBase::GenerateDiagnosticArgs(
+    const DiagnosticOptions &Opts, ArgumentConsumer Consumer,
+    bool DefaultDiagColor) {
   const DiagnosticOptions *DiagnosticOpts = &Opts;
 #define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
@@ -3256,9 +3340,10 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
-void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
-                                          ArgumentConsumer Consumer,
-                                          const llvm::Triple &T, InputKind IK) {
+void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
+                                              ArgumentConsumer Consumer,
+                                              const llvm::Triple &T,
+                                              InputKind IK) {
   if (IK.getFormat() == InputKind::Precompiled ||
       IK.getLanguage() == Language::LLVM_IR) {
     if (Opts.ObjCAutoRefCount)
@@ -4597,7 +4682,7 @@ std::string CompilerInvocation::getModuleHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-void CompilerInvocation::generateCC1CommandLine(
+void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
   llvm::Triple T(getTargetOpts().Triple);
 
@@ -4619,7 +4704,7 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateDependencyOutputArgs(getDependencyOutputOpts(), Consumer);
 }
 
-std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
+std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
   std::vector<std::string> Args{"-cc1"};
   generateCC1CommandLine(
       [&Args](const Twine &Arg) { Args.push_back(Arg.str()); });
