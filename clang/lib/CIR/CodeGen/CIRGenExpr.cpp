@@ -9,7 +9,6 @@
 // This contains code to emit Expr nodes as CIR code.
 //
 //===----------------------------------------------------------------------===//
-
 #include "CIRGenBuilder.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
@@ -2214,9 +2213,8 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(LValue lvalue,
 }
 
 mlir::Value CIRGenFunction::buildFromMemory(mlir::Value Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    llvm_unreachable("NYI");
+  if (!Ty->isBooleanType() && hasBooleanRepresentation(Ty)) {
+    llvm_unreachable("NIY");
   }
 
   return Value;
