@@ -24,6 +24,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 namespace clang {
 namespace tooling {
@@ -148,9 +149,15 @@ struct ModuleDeps {
   /// The \c ActionCache key for this module, if any.
   std::optional<std::string> ModuleCacheKey;
 
-  /// Compiler invocation that can be used to build this module. Does not
-  /// include argv[0].
-  std::vector<std::string> BuildArguments;
+  /// Get (or compute) the compiler invocation that can be used to build this
+  /// module. Does not include argv[0].
+  const std::vector<std::string> &getBuildArguments();
+
+private:
+  friend class ModuleDepCollectorPP;
+
+  std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
+      BuildInfo;
 };
 
 class ModuleDepCollector;

@@ -266,16 +266,16 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
     MDS->Modules = new CXModuleDependency[MDS->Count];
     for (int I = 0; I < MDS->Count; ++I) {
       CXModuleDependency &M = MDS->Modules[I];
-      const ModuleDeps &MD = TU.ModuleGraph[I];
+      ModuleDeps &MD = TU.ModuleGraph[I];
       M.Name = cxstring::createDup(MD.ID.ModuleName);
       M.ContextHash = cxstring::createDup(MD.ID.ContextHash);
       M.ModuleMapPath = cxstring::createDup(MD.ClangModuleMapFile);
       M.FileDeps = cxstring::createSet(MD.FileDeps);
       std::vector<std::string> Modules;
-      for (const ModuleID &MID : MD.ClangModuleDeps)
+      for (ModuleID &MID : MD.ClangModuleDeps)
         Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
       M.ModuleDeps = cxstring::createSet(Modules);
-      M.BuildArguments = cxstring::createSet(MD.BuildArguments);
+      M.BuildArguments = cxstring::createSet(MD.getBuildArguments());
     }
     MDC(Context, MDS);
   }
@@ -594,7 +594,8 @@ clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule CXDepMod) {
 CXCStringArray
 clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
   ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
-  return unwrap(CXDepMod)->StrMgr.createCStringsRef(ModDeps.BuildArguments);
+  return unwrap(CXDepMod)->StrMgr.createCStringsRef(
+      ModDeps.getBuildArguments());
 }
 
 const char *
