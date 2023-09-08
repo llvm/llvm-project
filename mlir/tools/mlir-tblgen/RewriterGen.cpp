@@ -1184,17 +1184,22 @@ void PatternEmitter::emitRewriteLogic() {
       DagNode resultTree = pattern.getResultPattern(i);
       auto val = handleResultPattern(resultTree, offsets[i], 0);
       os << "\n";
-      // Resolve each symbol for all range use so that we can loop over them.
-      // We need an explicit cast to `SmallVector` to capture the cases where
-      // `{0}` resolves to an `Operation::result_range` as well as cases that
-      // are not iterable (e.g. vector that gets wrapped in additional braces by
-      // RewriterGen).
-      // TODO: Revisit the need for materializing a vector.
-      os << symbolInfoMap.getAllRangeUse(
-          val,
-          "for (auto v: ::llvm::SmallVector<::mlir::Value, 4>{ {0} }) {{\n"
-          "  tblgen_repl_values.push_back(v);\n}\n",
-          "\n");
+      if (resultTree.isNativeCodeCall() &&
+          resultTree.getNumReturnsOfNativeCode() == 0) {
+        os << val << ";\n";
+      } else {
+        // Resolve each symbol for all range use so that we can loop over them.
+        // We need an explicit cast to `SmallVector` to capture the cases where
+        // `{0}` resolves to an `Operation::result_range` as well as cases that
+        // are not iterable (e.g. vector that gets wrapped in additional braces by
+        // RewriterGen).
+        // TODO: Revisit the need for materializing a vector.
+        os << symbolInfoMap.getAllRangeUse(
+            val,
+            "for (auto v: ::llvm::SmallVector<::mlir::Value, 4>{ {0} }) {{\n"
+            "  tblgen_repl_values.push_back(v);\n}\n",
+            "\n");
+      }
     }
     os << "\nrewriter.replaceOp(op0, tblgen_repl_values);\n";
   }
