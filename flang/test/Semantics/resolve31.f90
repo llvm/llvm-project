@@ -68,7 +68,7 @@ module m4
   !ERROR: A sequence type may not have a CONTAINS statement
   contains
   end type
-  !ERROR: A sequence type must have at least one component
+  !WARNING: A sequence type should have at least one component
   type :: emptyType
     sequence
   end type emptyType

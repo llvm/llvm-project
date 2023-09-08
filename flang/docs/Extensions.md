@@ -428,6 +428,9 @@ end
 * Since Fortran 90, INCLUDE lines have been allowed to have
   a numeric kind parameter prefix on the file name.  No other
   Fortran compiler supports them that I can find.
+* A `SEQUENCE` derived type is required (F'2023 C745) to have
+  at least one component.  No compiler enforces this constraint;
+  this compiler emits a warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
