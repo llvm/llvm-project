@@ -2958,31 +2958,27 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
             Fortran::lower::genOmpAccAtomicRead<
                 Fortran::parser::OmpAtomicRead,
-                Fortran::parser::OmpAtomicClauseList>(converter, eval,
-                                                      atomicRead);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead);
           },
           [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
             Fortran::lower::genOmpAccAtomicWrite<
                 Fortran::parser::OmpAtomicWrite,
-                Fortran::parser::OmpAtomicClauseList>(converter, eval,
-                                                      atomicWrite);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite);
           },
           [&](const Fortran::parser::OmpAtomic &atomicConstruct) {
             Fortran::lower::genOmpAtomic<Fortran::parser::OmpAtomic,
                                          Fortran::parser::OmpAtomicClauseList>(
-                converter, eval, atomicConstruct);
+                converter, atomicConstruct);
           },
           [&](const Fortran::parser::OmpAtomicUpdate &atomicUpdate) {
             Fortran::lower::genOmpAccAtomicUpdate<
                 Fortran::parser::OmpAtomicUpdate,
-                Fortran::parser::OmpAtomicClauseList>(converter, eval,
-                                                      atomicUpdate);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate);
           },
           [&](const Fortran::parser::OmpAtomicCapture &atomicCapture) {
             Fortran::lower::genOmpAccAtomicCapture<
                 Fortran::parser::OmpAtomicCapture,
-                Fortran::parser::OmpAtomicClauseList>(converter, eval,
-                                                      atomicCapture);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture);
           },
       },
       atomicConstruct.u);

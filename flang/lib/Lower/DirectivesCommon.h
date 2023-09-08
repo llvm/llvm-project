@@ -123,8 +123,7 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
 /// location set by builder.
 template <typename AtomicListT>
 static inline void genOmpAccAtomicCaptureStatement(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &eval, mlir::Value fromAddress,
+    Fortran::lower::AbstractConverter &converter, mlir::Value fromAddress,
     mlir::Value toAddress,
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
     [[maybe_unused]] const AtomicListT *rightHandClauseList,
@@ -160,8 +159,7 @@ static inline void genOmpAccAtomicCaptureStatement(
 /// location set by builder.
 template <typename AtomicListT>
 static inline void genOmpAccAtomicWriteStatement(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &eval, mlir::Value lhsAddr,
+    Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
     mlir::Value rhsExpr, [[maybe_unused]] const AtomicListT *leftHandClauseList,
     [[maybe_unused]] const AtomicListT *rightHandClauseList,
     mlir::Value *evaluatedExprValue = nullptr) {
@@ -193,8 +191,7 @@ static inline void genOmpAccAtomicWriteStatement(
 /// location set by builder.
 template <typename AtomicListT>
 static inline void genOmpAccAtomicUpdateStatement(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &eval, mlir::Value lhsAddr,
+    Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr,
     [[maybe_unused]] const AtomicListT *leftHandClauseList,
@@ -336,7 +333,6 @@ static inline void genOmpAccAtomicUpdateStatement(
 /// Processes an atomic construct with write clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicWrite(Fortran::lower::AbstractConverter &converter,
-                          Fortran::lower::pft::Evaluation &eval,
                           const AtomicT &atomicWrite) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
@@ -358,14 +354,13 @@ void genOmpAccAtomicWrite(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
   mlir::Value lhsAddr =
       fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
-  genOmpAccAtomicWriteStatement(converter, eval, lhsAddr, rhsExpr,
-                                leftHandClauseList, rightHandClauseList);
+  genOmpAccAtomicWriteStatement(converter, lhsAddr, rhsExpr, leftHandClauseList,
+                                rightHandClauseList);
 }
 
 /// Processes an atomic construct with read clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
-                         Fortran::lower::pft::Evaluation &eval,
                          const AtomicT &atomicRead) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
@@ -393,7 +388,7 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genOmpAccAtomicCaptureStatement(converter, eval, fromAddress, toAddress,
+  genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
                                   leftHandClauseList, rightHandClauseList,
                                   elementType);
 }
@@ -401,7 +396,6 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
 /// Processes an atomic construct with update clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicUpdate(Fortran::lower::AbstractConverter &converter,
-                           Fortran::lower::pft::Evaluation &eval,
                            const AtomicT &atomicUpdate) {
   const AtomicListT *rightHandClauseList = nullptr;
   const AtomicListT *leftHandClauseList = nullptr;
@@ -430,14 +424,13 @@ void genOmpAccAtomicUpdate(Fortran::lower::AbstractConverter &converter,
               *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx))
           .getType();
   genOmpAccAtomicUpdateStatement<AtomicListT>(
-      converter, eval, lhsAddr, varType, assignmentStmtVariable,
-      assignmentStmtExpr, leftHandClauseList, rightHandClauseList);
+      converter, lhsAddr, varType, assignmentStmtVariable, assignmentStmtExpr,
+      leftHandClauseList, rightHandClauseList);
 }
 
 /// Processes an atomic construct with no clause - which implies update clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
-                  Fortran::lower::pft::Evaluation &eval,
                   const AtomicT &atomicConstruct) {
   const AtomicListT &atomicClauseList =
       std::get<AtomicListT>(atomicConstruct.t);
@@ -460,14 +453,13 @@ void genOmpAtomic(Fortran::lower::AbstractConverter &converter,
   // If atomic-clause is not present on the construct, the behaviour is as if
   // the update clause is specified (for both OpenMP and OpenACC).
   genOmpAccAtomicUpdateStatement<AtomicListT>(
-      converter, eval, lhsAddr, varType, assignmentStmtVariable,
-      assignmentStmtExpr, &atomicClauseList, nullptr);
+      converter, lhsAddr, varType, assignmentStmtVariable, assignmentStmtExpr,
+      &atomicClauseList, nullptr);
 }
 
 /// Processes an atomic construct with capture clause.
 template <typename AtomicT, typename AtomicListT>
 void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
-                            Fortran::lower::pft::Evaluation &eval,
                             const AtomicT &atomicCapture) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -548,11 +540,11 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
           *Fortran::semantics::GetExpr(stmt1Expr);
       elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, eval, stmt1RHSArg, stmt1LHSArg,
+          converter, stmt1RHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType);
       genOmpAccAtomicUpdateStatement<AtomicListT>(
-          converter, eval, stmt1RHSArg, stmt2VarType, stmt2Var, stmt2Expr,
+          converter, stmt1RHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr);
     } else {
@@ -561,11 +553,11 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
           *Fortran::semantics::GetExpr(stmt1Expr);
       elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, eval, stmt1RHSArg, stmt1LHSArg,
+          converter, stmt1RHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType);
       genOmpAccAtomicWriteStatement<AtomicListT>(
-          converter, eval, stmt1RHSArg, stmt2RHSArg,
+          converter, stmt1RHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr);
     }
@@ -576,12 +568,12 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
         *Fortran::semantics::GetExpr(stmt2Expr);
     elementType = converter.genType(fromExpr);
     genOmpAccAtomicCaptureStatement<AtomicListT>(
-        converter, eval, stmt1LHSArg, stmt2LHSArg,
+        converter, stmt1LHSArg, stmt2LHSArg,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr, elementType);
     firOpBuilder.setInsertionPointToStart(&block);
     genOmpAccAtomicUpdateStatement<AtomicListT>(
-        converter, eval, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
+        converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr);
   }

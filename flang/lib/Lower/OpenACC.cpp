@@ -3104,22 +3104,20 @@ genACC(Fortran::lower::AbstractConverter &converter,
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
             Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
-                                                void>(converter, eval,
-                                                      atomicRead);
+                                                void>(converter, atomicRead);
           },
           [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
             Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::AccAtomicWrite, void>(converter, eval,
-                                                       atomicWrite);
+                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite);
           },
           [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
             Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::AccAtomicUpdate, void>(converter, eval,
+                Fortran::parser::AccAtomicUpdate, void>(converter,
                                                         atomicUpdate);
           },
           [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
             Fortran::lower::genOmpAccAtomicCapture<
-                Fortran::parser::AccAtomicCapture, void>(converter, eval,
+                Fortran::parser::AccAtomicCapture, void>(converter,
                                                          atomicCapture);
           },
       },
