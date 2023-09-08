@@ -15,11 +15,11 @@
 #ifndef LLVM_IR_INLINEASM_H
 #define LLVM_IR_INLINEASM_H
 
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -290,38 +290,34 @@ public:
   //                 code.
   //   Else:
   //     Bit 30-16 - The register class ID to use for the operand.
+  //
+  //  Bits 30-16 are called "Data" for lack of a better name. The getter is
+  //  intentionally private; the public methods that rely on that private method
+  //  should be used to check invariants first before accessing Data.
   class Flag {
-    // union {
-    //   unsigned MatchingOpNo : 15;
-    //   unsigned OriginalConstraintCode : 15;
-    //   unsigned RegisterClassID : 15;
-    // } GrabBag;
-    Kind Kind : 3;
-    unsigned NumOperands : 13;
-    unsigned GrabBag : 15;
-    unsigned IsMatched : 1;
+    uint32_t Storage;
+    using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
+    using NumOperands = Bitfield::Element<unsigned, 3, 13>;
+    using Data = Bitfield::Element<unsigned, 16, 15>;
+    using IsMatched = Bitfield::Element<bool, 31, 1>;
 
-    bool isMatched() const { return IsMatched; }
+    unsigned getData() const { return Bitfield::get<Data>(Storage); }
+    bool isMatched() const { return Bitfield::get<IsMatched>(Storage); }
+    void setKind(Kind K) { Bitfield::set<KindField>(Storage, K); }
+    void setNumOperands(unsigned N) { Bitfield::set<NumOperands>(Storage, N); }
+    void setData(unsigned D) { Bitfield::set<Data>(Storage, D); }
+    void setIsMatched(bool B) { Bitfield::set<IsMatched>(Storage, B); }
 
   public:
-    explicit Flag(uint32_t F) {
-      // TODO: some kind of assertion failure if enum Kind becomes bigger than
-      // 3b?
-      static_assert(sizeof(Flag) == sizeof(F), "Expected sizeof Flag to be 4B");
-      // Look away children. May god forgive me of my sins.
-      *reinterpret_cast<uint32_t *>(this) =
-          sys::IsBigEndianHost ? sys::getSwappedBytes(F) : F;
+    explicit Flag(uint32_t F) { Storage = F; }
+    Flag(enum Kind K, unsigned NumOps) {
+      setKind(K);
+      setNumOperands(NumOps);
+      setData(0);
+      setIsMatched(false);
     }
-    Flag(enum Kind K, unsigned NumOps)
-        : Kind(K), NumOperands(NumOps), GrabBag(0), IsMatched(0) {
-      assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
-    }
-    // TODO: this enables implicit conversion. Should we make this explicit?
-    operator uint32_t() {
-      auto R = *reinterpret_cast<uint32_t *>(this);
-      return sys::IsBigEndianHost ? sys::getSwappedBytes(R) : R;
-    }
-    enum Kind getKind() const { return Kind; }
+    operator uint32_t() { return Storage; }
+    Kind getKind() const { return Bitfield::get<KindField>(Storage); }
     bool isRegUseKind() const { return getKind() == Kind::RegUse; }
     bool isRegDefKind() const { return getKind() == Kind::RegDef; }
     bool isRegDefEarlyClobberKind() const {
@@ -332,7 +328,7 @@ public:
     bool isMemKind() const { return getKind() == Kind::Mem; }
     bool isFuncKind() const { return getKind() == Kind::Func; }
     StringRef getKindName() const {
-      switch (Kind) {
+      switch (getKind()) {
       case Kind::RegUse:
         return "reguse";
       case Kind::RegDef:
@@ -351,14 +347,16 @@ public:
 
     /// getNumOperandRegisters - Extract the number of registers field from the
     /// inline asm operand flag.
-    unsigned getNumOperandRegisters() const { return NumOperands; }
+    unsigned getNumOperandRegisters() const {
+      return Bitfield::get<NumOperands>(Storage);
+    }
 
     /// isUseOperandTiedToDef - Return true if the flag of the inline asm
     /// operand indicates it is an use operand that's matched to a def operand.
     bool isUseOperandTiedToDef(unsigned &Idx) const {
       if (!isMatched())
         return false;
-      Idx = GrabBag;
+      Idx = getData();
       return true;
     }
 
@@ -369,9 +367,9 @@ public:
         return false;
       // setRegClass() uses 0 to mean no register class, and otherwise stores
       // RC + 1.
-      if (!GrabBag)
+      if (!getData())
         return false;
-      RC = GrabBag - 1;
+      RC = getData() - 1;
       return true;
     }
 
@@ -379,16 +377,16 @@ public:
     unsigned getMemoryConstraintID() const {
       assert((isMemKind() || isFuncKind()) &&
              "Not expected mem or function flag!");
-      return GrabBag;
+      return getData();
     }
 
     /// setMatchingOp - Augment an existing flag with information indicating
     /// that this input operand is tied to a previous output operand.
     void setMatchingOp(unsigned MatchedOperandNo) {
       assert(MatchedOperandNo <= 0x7fff && "Too big matched operand");
-      assert(GrabBag == 0 && "Matching operand already set");
-      GrabBag = MatchedOperandNo;
-      IsMatched = true;
+      assert(getData() == 0 && "Matching operand already set");
+      setData(MatchedOperandNo);
+      setIsMatched(true);
     }
 
     /// setRegClass - Augment an existing flag with the required register class
@@ -400,8 +398,8 @@ public:
       assert(!isImmKind() && "Immediates cannot have a register class");
       assert(!isMemKind() && "Memory operand cannot have a register class");
       assert(RC <= 0x7fff && "Too large register class ID");
-      assert(GrabBag == 0 && "Register class already set");
-      GrabBag = RC;
+      assert(getData() == 0 && "Register class already set");
+      setData(RC);
     }
 
     /// Augment an existing flag with the constraint code for a memory
@@ -411,8 +409,8 @@ public:
              "InputFlag is not a memory or function constraint!");
       assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
       assert(Constraint <= Constraints_Max && "Unknown constraint ID");
-      assert(GrabBag == 0 && "Mem constraint already set");
-      GrabBag = Constraint;
+      assert(getData() == 0 && "Mem constraint already set");
+      setData(Constraint);
     }
 
     // TODO: do we even need this? WTF is it doing?
@@ -420,7 +418,7 @@ public:
     // ~(0x7fff << 16) == 0x3FFFFF
     void convertMemFlagWordToMatchingFlagWord() {
       assert(isMemKind());
-      GrabBag = 0;
+      setData(0);
       // GrabBag &= 0x3F;
       // GrabBag = GrabBag << Constraints_ShiftAmount; // TODO: is this even
       // correct? return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
