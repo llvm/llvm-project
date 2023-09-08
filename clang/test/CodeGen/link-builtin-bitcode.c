@@ -30,7 +30,9 @@ int bar() { return no_attr() + attr_in_target() + attr_not_in_target() + attr_in
 
 // CHECK-LABEL: define dso_local i32 @bar
 // CHECK-SAME: () #[[ATTR_BAR:[0-9]+]] {
-//
+
+// CHECK: declare i32 @attr_incompatible
+
 // CHECK-LABEL: define internal i32 @no_attr
 // CHECK-SAME: () #[[ATTR_COMPATIBLE:[0-9]+]] {
 
@@ -40,10 +42,6 @@ int bar() { return no_attr() + attr_in_target() + attr_not_in_target() + attr_in
 // CHECK-LABEL: define internal i32 @attr_not_in_target
 // CHECK-SAME: () #[[ATTR_EXTEND:[0-9]+]] {
 
-// CHECK-LABEL: @attr_incompatible
-// CHECK-SAME: () #[[ATTR_INCOMPATIBLE:[0-9]+]] {
-
 // CHECK: attributes #[[ATTR_BAR]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx90a" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
 // CHECK: attributes #[[ATTR_COMPATIBLE]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx90a" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
 // CHECK: attributes #[[ATTR_EXTEND]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx90a" "target-features"="+extended-image-insts,+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
-// CHECK: attributes #[[ATTR_INCOMPATIBLE]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx90a" "target-features"="-gfx9-insts,+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx90a-insts,+gws,+image-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }

@@ -2112,6 +2112,26 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
   F.addFnAttrs(FuncAttrs);
 }
 
+bool CodeGen::dropFunctionWithIncompatibleAttributes(
+    llvm::Function &F, const TargetOptions &TargetOpts) {
+  auto FFeatures = F.getFnAttribute("target-features");
+  if (!FFeatures.isValid())
+    return false;
+
+  const auto &TFeatures = TargetOpts.FeatureMap;
+  for (StringRef Feature : llvm::split(FFeatures.getValueAsString(), ',')) {
+    bool EnabledForFunc = Feature[0] == '+';
+    StringRef Name = Feature.substr(1);
+    auto TEntry = TFeatures.find(Name);
+    if (TEntry != TFeatures.end() && TEntry->second != EnabledForFunc) {
+      F.replaceAllUsesWith(llvm::ConstantPointerNull::get(F.getType()));
+      F.eraseFromParent();
+      return true;
+    }
+  }
+  return false;
+}
+
 void CodeGenModule::getTrivialDefaultFunctionAttributes(
     StringRef Name, bool HasOptnone, bool AttrOnCallSite,
     llvm::AttrBuilder &FuncAttrs) {
