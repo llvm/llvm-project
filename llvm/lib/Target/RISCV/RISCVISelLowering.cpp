@@ -8766,7 +8766,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
 
-    // Shrink down Vec so we're performing the slidedown a smaller LMUL.
+    // Shrink down Vec so we're performing the slidedown on a smaller LMUL.
     unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
     if (auto ShrunkVT =
             getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
