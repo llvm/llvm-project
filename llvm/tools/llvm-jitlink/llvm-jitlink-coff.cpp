@@ -118,8 +118,7 @@ Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
         if (Sym->getSize() != 0) {
           if (auto TS = getCOFFGOTTarget(G, Sym->getBlock()))
             FileInfo.GOTEntryInfos[TS->getName()] = {
-                Sym->getSymbolContent(), Sym->getAddress().getValue(),
-                Sym->getTargetFlags()};
+                Sym->getSymbolContent(), Sym->getAddress().getValue()};
           else
             return TS.takeError();
         }
@@ -131,8 +130,7 @@ Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
 
         if (auto TS = getCOFFStubTarget(G, Sym->getBlock()))
           FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue(),
-                                               Sym->getTargetFlags()};
+                                               Sym->getAddress().getValue()};
         else
           return TS.takeError();
         SectionContainsContent = true;
@@ -145,8 +143,7 @@ Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
           SectionContainsZeroFill = true;
         } else {
           S.SymbolInfos[Sym->getName()] = {Sym->getSymbolContent(),
-                                           Sym->getAddress().getValue(),
-                                           Sym->getTargetFlags()};
+                                           Sym->getAddress().getValue()};
           SectionContainsContent = true;
         }
       }
@@ -167,7 +164,7 @@ Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
     else
       FileInfo.SectionInfos[Sec.getName()] = {
           ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
-          SecAddr.getValue(), FirstSym->getTargetFlags()};
+          SecAddr.getValue()};
   }
 
   return Error::success();

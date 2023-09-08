@@ -46,7 +46,7 @@ ExecutorAddr getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (hasTargetFlags(Sym, aarch32::ThumbSymbol)) {
+    if (Sym.hasTargetFlags(aarch32::ThumbSymbol)) {
       // Set LSB to indicate thumb target
       assert(Sym.isCallable() && "Only callable symbols can have thumb flag");
       assert((Sym.getAddress().getValue() & 0x01) == 0 && "LSB is clear");

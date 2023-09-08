@@ -892,8 +892,6 @@ static int linkAndVerify() {
         StringRef SecContent = Dyld.getSectionContent(SectionID);
         uint64_t SymSize = SecContent.size() - (CSymAddr - SecContent.data());
         SymInfo.setContent(ArrayRef<char>(CSymAddr, SymSize));
-        SymInfo.setTargetFlags(
-            Dyld.getSymbol(Symbol).getFlags().getTargetFlags());
       }
     }
     return SymInfo;
@@ -975,12 +973,11 @@ static int linkAndVerify() {
 
     ObjectFile &Obj = **MaybeObj;
 
-    SubtargetFeatures Features = SubtargetFeatures();
     if (!Checker)
       Checker = std::make_unique<RuntimeDyldChecker>(
           IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo,
           GetStubInfo, Obj.isLittleEndian() ? support::little : support::big,
-          TheTriple, Features, dbgs());
+          Disassembler.get(), InstPrinter.get(), dbgs());
 
     auto FileName = sys::path::filename(InputFile);
     MemMgr.setSectionIDsMap(&FileToSecIDMap[FileName]);
