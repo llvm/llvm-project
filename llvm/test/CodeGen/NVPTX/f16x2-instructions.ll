@@ -993,7 +993,9 @@ define <2 x double> @test_fpext_2xdouble(<2 x half> %a) #0 {
 
 ; CHECK-LABEL: test_bitcast_2xhalf_to_2xi16(
 ; CHECK:      ld.param.u32    [[A:%r[0-9]+]], [test_bitcast_2xhalf_to_2xi16_param_0];
-; CHECK:      st.param.b32 [func_retval0+0], [[A]]
+; CHECK-DAG:  cvt.u16.u32     [[R0:%rs[0-9]+]], [[A]]
+; CHECK-DAG:  mov.b32         {tmp, [[R1:%rs[0-9]+]]}, [[A]];
+; CHECK:      st.param.v2.b16 [func_retval0+0], {[[R0]], [[R1]]}
 ; CHECK:      ret;
 define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
   %r = bitcast <2 x half> %a to <2 x i16>
@@ -1001,7 +1003,11 @@ define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_bitcast_2xi16_to_2xhalf(
-; CHECK:      ld.param.u32         [[R:%r[0-9]+]], [test_bitcast_2xi16_to_2xhalf_param_0];
+; CHECK:      ld.param.v2.u16         {[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [test_bitcast_2xi16_to_2xhalf_param_0];
+; CHECK-DAG:  cvt.u32.u16     [[R0:%r[0-9]+]], [[RS0]];
+; CHECK-DAG:  cvt.u32.u16     [[R1:%r[0-9]+]], [[RS1]];
+; CHECK-DAG:  shl.b32         [[R1H:%r[0-9]+]], [[R1]], 16;
+; CHECK-DAG:  or.b32          [[R:%r[0-9]+]], [[R0]], [[R1H]];
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
