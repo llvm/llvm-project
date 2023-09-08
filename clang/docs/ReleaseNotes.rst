@@ -216,6 +216,8 @@ Bug Fixes in This Version
   local structs.
 - Correctly parse non-ascii identifiers that appear immediately after a line splicing
   (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
+- Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
+  an invalid conversion during method function overload resolution.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
