@@ -3,7 +3,11 @@ include "../../../../include/lldb/Core/PropertiesBase.td"
 let Definition = "processgdbremote" in {
   def PacketTimeout: Property<"packet-timeout", "UInt64">,
     Global,
+#ifdef LLDB_SANITIZED
+    DefaultUnsignedValue<60>,
+#else
     DefaultUnsignedValue<5>,
+#endif
     Desc<"Specify the default packet timeout in seconds.">;
   def TargetDefinitionFile: Property<"target-definition-file", "FileSpec">,
     Global,
