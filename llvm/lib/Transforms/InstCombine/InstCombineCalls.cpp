@@ -1402,8 +1402,7 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
 /// VP Intrinsics whose vector operands are both splat values may be simplified
 /// into the scalar version of the operation and the result is splatted. This
 /// can lead to scalarization down the line.
-Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI,
-                                    InstCombiner::BuilderTy &Builder) {
+Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI, InstCombinerImpl &IC) {
   Value *Op0 = VPI->getArgOperand(0);
   Value *Op1 = VPI->getArgOperand(1);
 
@@ -1419,7 +1418,9 @@ Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI,
   if (!maskIsAllOneOrUndef(Mask))
     return nullptr;
 
+  InstCombiner::BuilderTy &Builder = IC.Builder;
   ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+  Value *EVL = VPI->getArgOperand(3);
   switch (VPI->getIntrinsicID()) {
   case Intrinsic::vp_add:
     return Builder.CreateVectorSplat(
@@ -1457,14 +1458,31 @@ Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI,
   case Intrinsic::vp_fmul:
     return Builder.CreateVectorSplat(
         EC, Builder.CreateFMul(getSplatValue(Op0), getSplatValue(Op1)));
+  case Intrinsic::vp_sdiv:
+    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
+                       &IC.getDominatorTree()))
+      return Builder.CreateVectorSplat(
+          EC, Builder.CreateSDiv(getSplatValue(Op0), getSplatValue(Op1)));
+    break;
+  case Intrinsic::vp_udiv:
+    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
+                       &IC.getDominatorTree()))
+      return Builder.CreateVectorSplat(
+          EC, Builder.CreateUDiv(getSplatValue(Op0), getSplatValue(Op1)));
+    break;
+  case Intrinsic::vp_srem:
+    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
+                       &IC.getDominatorTree()))
+      return Builder.CreateVectorSplat(
+          EC, Builder.CreateSRem(getSplatValue(Op0), getSplatValue(Op1)));
+    break;
+  case Intrinsic::vp_urem:
+    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
+                       &IC.getDominatorTree()))
+      return Builder.CreateVectorSplat(
+          EC, Builder.CreateURem(getSplatValue(Op0), getSplatValue(Op1)));
+    break;
   }
-
-  // TODO: Optimize vp_sdiv, vp_udiv, vp_srem, vp_urem, vp_fdiv, and vp_frem
-  // when EVL != 0. When we tackle these intrinsics, we may need to give care 
-  // to division by immediate 0 being undefined and signed division and signed 
-  // remained having UB when operands are INT_MIN and -1 when we tackle these
-  // intrinsics.
-
   return nullptr;
 }
 
@@ -1591,7 +1609,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(II))
-    if (Value *V = convertOpOfSplatsToSplatOfOp(VPI, Builder))
+    if (Value *V = convertOpOfSplatsToSplatOfOp(VPI, *this))
       return replaceInstUsesWith(*II, V);
 
   Intrinsic::ID IID = II->getIntrinsicID();
