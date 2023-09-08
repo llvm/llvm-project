@@ -119,13 +119,23 @@ endif()
 set(LLVM_LIBGCC_COMPILER_RT ${install_dir_builtins}/libclang_rt.builtins${builtins_suffix}.a)
 
 add_custom_target(llvm-libgcc ALL
-  DEPENDS unwind_shared
+  DEPENDS unwind_shared unwind_static clang_rt.builtins-${COMPILER_RT_DEFAULT_TARGET_ARCH}
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLVM_LIBGCC_COMPILER_RT} libgcc.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink libunwind.a libgcc_eh.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink libunwind.so libgcc_s.so.1.0
   COMMAND ${CMAKE_COMMAND} -E create_symlink libgcc_s.so.1.0 libgcc_s.so.1
   COMMAND ${CMAKE_COMMAND} -E create_symlink libgcc_s.so.1 libgcc_s.so
 )
+
+install(TARGETS unwind_shared unwind_static
+  LIBRARY DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR} COMPONENT llvm-libgcc
+  ARCHIVE DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR} COMPONENT llvm-libgcc
+  RUNTIME DESTINATION ${LLVM_LIBGCC_INSTALL_RUNTIME_DIR} COMPONENT llvm-libgcc)
+
+install(TARGETS clang_rt.builtins-${COMPILER_RT_DEFAULT_TARGET_ARCH}
+  LIBRARY DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR}/${install_dir_builtins} COMPONENT llvm-libgcc
+  ARCHIVE DESTINATION ${LLVM_LIBGCC_INSTALL_LIBRARY_DIR}/${install_dir_builtins} COMPONENT llvm-libgcc
+  RUNTIME DESTINATION ${LLVM_LIBGCC_INSTALL_RUNTIME_DIR}/${install_dir_builtins} COMPONENT llvm-libgcc)
 
 foreach(VAR libgcc.a libgcc_eh.a libgcc_s.so.1.0 libgcc_s.so.1 libgcc_s.so)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${VAR}
