@@ -21,8 +21,14 @@ class AffineDialect;
 class ModuleOp;
 
 namespace func {
+namespace arith {
+class ArithDialect;
+} // namespace arith
 class FuncDialect;
 } // namespace func
+namespace scf {
+class SCFDialect;
+} // namespace scf
 namespace tensor {
 class TensorDialect;
 } // namespace tensor
@@ -66,6 +72,10 @@ std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
 /// Creates an operation pass to expand some memref operation into
 /// easier to reason about operations.
 std::unique_ptr<Pass> createExpandStridedMetadataPass();
+
+/// Creates an operation pass to expand `memref.realloc` operations into their
+/// components.
+std::unique_ptr<Pass> createExpandReallocPass(bool emitDeallocs = true);
 
 //===----------------------------------------------------------------------===//
 // Registration

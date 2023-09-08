@@ -26,7 +26,7 @@ def Test0 : GICombineRule<
   ),
   (apply (COPY $dst, (i32 0)), "APPLY ${cst0}")>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   Test0
 ]>;
 

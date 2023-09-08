@@ -2117,10 +2117,8 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
     bufSize = MULI(bufSize, C_IDX(kSliceIterWidth));
     // Additional two metadata {memSize, idx} at head.
     bufSize = ADDI(bufSize, c2);
-    llvm::for_each(
-        slicePosBuffer[tid][lvl], [bufSize, loc, &builder](Value &cache) {
-          cache = genAlloca(builder, loc, bufSize, builder.getIndexType());
-        });
+    for (Value &cache : slicePosBuffer[tid][lvl])
+      cache = genAlloca(builder, loc, bufSize, builder.getIndexType());
   }
 
   if (sliceInfo.isInitialTensor() ||

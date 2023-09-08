@@ -26,14 +26,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
-if(${LIBC_TARGET_OS} STREQUAL "baremetal")
-  list(APPEND printf_copts
-      "-DLIBC_COPT_PRINTF_DISABLE_FLOAT"
-      "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE"
-      "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT"
-    )
-endif()
-
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
@@ -426,6 +418,17 @@ list(APPEND printf_deps
       libc.src.__support.arg_list
       libc.src.stdio.printf_core.vfprintf_internal
 )
+
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
       libc.src.__support.File.file

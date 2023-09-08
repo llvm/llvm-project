@@ -293,8 +293,9 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
-                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp,
+                      LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
+                      LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -357,6 +358,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                     "__nv_expm1");
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
+  populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
+                                    "__nv_fmod");
   populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log");
   populateOpPatterns<math::Log1pOp>(converter, patterns, "__nv_log1pf",
                                     "__nv_log1p");

@@ -351,10 +351,19 @@ public:
   void attachInterface() {
     // Handle the case where the models resolve a promised interface.
     (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
-         *getDialect(), Models::Interface::getInterfaceID()),
+         *getDialect(), getTypeID(), Models::Interface::getInterfaceID()),
      ...);
 
     getImpl()->getInterfaceMap().insertModels<Models...>();
+  }
+
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return dialect_extension_detail::hasPromisedInterface(
+               getDialect(), getTypeID(), InterfaceT::getInterfaceID()) ||
+           hasInterface<InterfaceT>();
   }
 
   /// Returns true if this operation has the given interface registered to it.

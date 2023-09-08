@@ -3374,6 +3374,9 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   if (auto *ConstructExpr = dyn_cast<CXXConstructExpr>(SubExpr))
     ConstructExpr->setParenOrBraceRange(SourceRange(LPLoc, RPLoc));
 
+  // -Wcast-qual
+  DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
+
   return Op.complete(CXXFunctionalCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, CastTypeInfo, Op.Kind,
       Op.SrcExpr.get(), &Op.BasePath, CurFPFeatureOverrides(), LPLoc, RPLoc));

@@ -24,14 +24,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -62,6 +57,7 @@ class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
 class BlockExpr;
+struct BlockVarCopyInit;
 class BuiltinTemplateDecl;
 class CharUnits;
 class ConceptDecl;
@@ -70,17 +66,19 @@ class CXXConstructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
-class ParentMapContext;
 class DynTypedNodeList;
 class Expr;
 enum class FloatModeKind;
 class GlobalDecl;
+class IdentifierTable;
+class LangOptions;
 class MangleContext;
 class MangleNumberingContext;
 class MemberSpecializationInfo;
 class Module;
 struct MSGuidDeclParts;
 class NestedNameSpecifier;
+class NoSanitizeList;
 class ObjCCategoryDecl;
 class ObjCCategoryImplDecl;
 class ObjCContainerDecl;
@@ -94,8 +92,10 @@ class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 class OMPTraitInfo;
+class ParentMapContext;
 struct ParsedTargetAttr;
 class Preprocessor;
+class ProfileList;
 class StoredDeclsMap;
 class TargetAttr;
 class TargetInfo;
@@ -108,7 +108,7 @@ class UnresolvedSetIterator;
 class UsingShadowDecl;
 class VarTemplateDecl;
 class VTableContextBase;
-struct BlockVarCopyInit;
+class XRayFunctionFilter;
 
 namespace Builtin {
 

@@ -205,6 +205,11 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     // To avoid special cases in the API/UI, use public/private as the kind.
     return getAccessSpelling(CBS.getAccessSpecifier()).str();
   }
+  std::string getKind(const ConceptReference *CR) {
+    // Again there are no variants here.
+    // Kind is "Concept", role is "reference"
+    return "Concept";
+  }
 
   // Detail is the single most important fact about the node.
   // Often this is the name, sometimes a "kind" enum like operators or casts.
@@ -305,6 +310,9 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   std::string getDetail(const CXXBaseSpecifier &CBS) {
     return CBS.isVirtual() ? "virtual" : "";
   }
+  std::string getDetail(const ConceptReference *CR) {
+    return CR->getNamedConcept()->getNameAsString();
+  }
 
   /// Arcana is produced by TextNodeDumper, for the types it supports.
 
@@ -365,6 +373,10 @@ public:
   bool TraverseAttr(Attr *A) {
     return !A || traverseNode("attribute", A, [&] { Base::TraverseAttr(A); });
   }
+  bool TraverseConceptReference(ConceptReference *C) {
+    return !C || traverseNode("reference", C,
+                              [&] { Base::TraverseConceptReference(C); });
+  }
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &CBS) {
     return traverseNode("base", CBS,
                         [&] { Base::TraverseCXXBaseSpecifier(CBS); });
@@ -422,6 +434,8 @@ ASTNode dumpAST(const DynTypedNode &N, const syntax::TokenBuffer &Tokens,
     V.TraverseTemplateArgumentLoc(*const_cast<TemplateArgumentLoc *>(TAL));
   else if (const auto *CBS = N.get<CXXBaseSpecifier>())
     V.TraverseCXXBaseSpecifier(*const_cast<CXXBaseSpecifier *>(CBS));
+  else if (const auto *CR = N.get<ConceptReference>())
+    V.TraverseConceptReference(const_cast<ConceptReference *>(CR));
   else
     elog("dumpAST: unhandled DynTypedNode kind {0}",
          N.getNodeKind().asStringRef());

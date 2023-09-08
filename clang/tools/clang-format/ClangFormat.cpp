@@ -200,7 +200,8 @@ static cl::opt<bool>
                           "whether or not to print diagnostics in color"),
                  cl::init(false), cl::cat(ClangFormatCategory), cl::Hidden);
 
-static cl::list<std::string> FileNames(cl::Positional, cl::desc("[<file> ...]"),
+static cl::list<std::string> FileNames(cl::Positional,
+                                       cl::desc("[@<file>] [<file> ...]"),
                                        cl::cat(ClangFormatCategory));
 
 namespace clang {

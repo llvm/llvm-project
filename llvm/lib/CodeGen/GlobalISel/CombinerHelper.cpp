@@ -395,6 +395,39 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   replaceRegWith(MRI, DstReg, NewDstReg);
 }
 
+bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction kind");
+
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  return Mask.size() == 1;
+}
+
+void CombinerHelper::applyShuffleToExtract(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInsertPt(*MI.getParent(), MI);
+
+  int I = MI.getOperand(3).getShuffleMask()[0];
+  Register Src1 = MI.getOperand(1).getReg();
+  LLT Src1Ty = MRI.getType(Src1);
+  int Src1NumElts = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+  Register SrcReg;
+  if (I >= Src1NumElts) {
+    SrcReg = MI.getOperand(2).getReg();
+    I -= Src1NumElts;
+  } else if (I >= 0)
+    SrcReg = Src1;
+
+  if (I < 0)
+    Builder.buildUndef(DstReg);
+  else if (!MRI.getType(SrcReg).isVector())
+    Builder.buildCopy(DstReg, SrcReg);
+  else
+    Builder.buildExtractVectorElementConstant(DstReg, SrcReg, I);
+
+  MI.eraseFromParent();
+}
+
 namespace {
 
 /// Select a preference between two uses. CurrentUse is the current preference
@@ -1394,7 +1427,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (AccessTy) {
     AMNew.HasBaseReg = true;
     TargetLoweringBase::AddrMode AMOld;
-    AMOld.BaseOffs = MaybeImm2Val->Value.getSExtValue();
+    AMOld.BaseOffs = MaybeImmVal->Value.getSExtValue();
     AMOld.HasBaseReg = true;
     unsigned AS = MRI.getType(Add2).getAddressSpace();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -2563,6 +2596,16 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
          MaybeCst->getSExtValue() == C;
 }
 
+bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP, double C) {
+  if (!MOP.isReg())
+    return false;
+  std::optional<FPValueAndVReg> MaybeCst;
+  if (!mi_match(MOP.getReg(), MRI, m_GFCstOrSplat(MaybeCst)))
+    return false;
+
+  return MaybeCst->Value.isExactlyValue(C);
+}
+
 void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
                                                      unsigned OpIdx) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
@@ -2580,6 +2623,45 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+}
+
+bool CombinerHelper::matchConstantLargerBitWidth(MachineInstr &MI,
+                                                 unsigned ConstIdx) {
+  Register ConstReg = MI.getOperand(ConstIdx).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  // Get the shift amount
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  if (!VRegAndVal)
+    return false;
+
+  // Return true of shift amount >= Bitwidth
+  return (VRegAndVal->Value.uge(DstTy.getSizeInBits()));
+}
+
+void CombinerHelper::applyFunnelShiftConstantModulo(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_FSHL ||
+          MI.getOpcode() == TargetOpcode::G_FSHR) &&
+         "This is not a funnel shift operation");
+
+  Register ConstReg = MI.getOperand(3).getReg();
+  LLT ConstTy = MRI.getType(ConstReg);
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ConstReg, MRI);
+  assert((VRegAndVal) && "Value is not a constant");
+
+  // Calculate the new Shift Amount = Old Shift Amount % BitWidth
+  APInt NewConst = VRegAndVal->Value.urem(
+      APInt(ConstTy.getSizeInBits(), DstTy.getScalarSizeInBits()));
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto NewConstInstr = Builder.buildConstant(ConstTy, NewConst.getZExtValue());
+  Builder.buildInstr(
+      MI.getOpcode(), {MI.getOperand(0)},
+      {MI.getOperand(1), MI.getOperand(2), NewConstInstr.getReg(0)});
+
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
@@ -2632,6 +2714,13 @@ void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+}
+
+void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, ConstantFP *CFP) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildFConstant(MI.getOperand(0), CFP->getValueAPF());
   MI.eraseFromParent();
 }
 
@@ -4521,6 +4610,17 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) 
   return true;
 }
 
+bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldFPBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo =
+      ConstantFP::get(MI.getMF()->getFunction().getContext(), *MaybeCst);
+  return true;
+}
+
 bool CombinerHelper::matchNarrowBinopFeedingAnd(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   // Look for a binop feeding into an AND with a mask:
@@ -6024,6 +6124,24 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
   return MRI.getVRegDef(RHS)->getOpcode() !=
              TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
          !getIConstantVRegVal(RHS, MRI);
+}
+
+bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  std::optional<FPValueAndVReg> ValAndVReg;
+  if (!mi_match(LHS, MRI, m_GFCstOrSplat(ValAndVReg)))
+    return false;
+  return !mi_match(RHS, MRI, m_GFCstOrSplat(ValAndVReg));
+}
+
+void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
+  Observer.changingInstr(MI);
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  MI.getOperand(1).setReg(RHSReg);
+  MI.getOperand(2).setReg(LHSReg);
+  Observer.changedInstr(MI);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

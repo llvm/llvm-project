@@ -6843,7 +6843,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         if (llvm::isKnownNonZero(V, DL))
           MinVal = Align;
         ConservativeResult = ConservativeResult.intersectWith(
-            {MinVal, MaxVal + 1}, RangeType);
+            ConstantRange::getNonEmpty(MinVal, MaxVal + 1), RangeType);
       }
     }
 

@@ -202,9 +202,11 @@ createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
   if (options.allocOp ==
       linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc) {
     alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
-    // Place deallocation at the end of the block.
-    rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-    rewriter.create<memref::DeallocOp>(loc, alloc);
+    if (options.emitDealloc) {
+      // Place deallocation at the end of the block.
+      rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+      rewriter.create<memref::DeallocOp>(loc, alloc);
+    }
   } else if (options.allocOp ==
              linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca) {
     alloc = rewriter.create<memref::AllocaOp>(loc, memrefType, dynamicSizes);
@@ -461,18 +463,20 @@ Value linalg::bufferizeToAllocation(
   AnalysisState state(bufferizationOptions);
 
 #ifndef NDEBUG
-  // Ops with nested tensor ops are not supported yet. At the moment, this
-  // function just bufferizes the given op itself, but not its body.
-  op->walk([&](Operation *nestedOp) {
-    if (op == nestedOp)
-      return;
-    if (llvm::any_of(nestedOp->getOperands(),
-                     [](Value v) { return v.getType().isa<TensorType>(); }))
-      llvm_unreachable("ops with nested tensor ops are not supported yet");
-    if (llvm::any_of(nestedOp->getResults(),
-                     [](Value v) { return v.getType().isa<TensorType>(); }))
-      llvm_unreachable("ops with nested tensor ops are not supported yet");
-  });
+  if (!options.bufferizeDestinationOnly) {
+    // Ops with nested tensor ops are not supported yet. At the moment, this
+    // function just bufferizes the given op itself, but not its body.
+    op->walk([&](Operation *nestedOp) {
+      if (op == nestedOp)
+        return;
+      if (llvm::any_of(nestedOp->getOperands(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+      if (llvm::any_of(nestedOp->getResults(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+    });
+  }
 #endif // NDEBUG
 
   // Gather tensor results.
@@ -509,7 +513,7 @@ Value linalg::bufferizeToAllocation(
     if (!state.bufferizesToMemoryWrite(operand))
       continue;
     if (!isa<RankedTensorType>(operand.get().getType()))
-      return nullptr;
+      continue;
     addOutOfPlaceOperand(&operand);
   }
   // TODO: Support multiple buffers.

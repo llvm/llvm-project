@@ -24,3 +24,22 @@ void f(int x) {
 // CHECK-NEXT: {{^}}      |
 // CHECK-NEXT: {{^}}      |
 // CHECK-NEXT: {{^}}   12 |
+
+#line 10
+int func(
+  int a, int b,
+  int&
+  r);
+
+void test() {
+  func(3, 4, 5);
+}
+// CHECK: 10:5: note: candidate function not viable
+// CHECK-NEXT: {{^}}   10 |
+// CHECK-NEXT: {{^}}      |
+// CHECK-NEXT: {{^}}   11 |
+// CHECK-NEXT: {{^}}   12 |
+// CHECK-NEXT: {{^}}      |
+// CHECK-NEXT: {{^}}   13 |
+// CHECK-NEXT: {{^}}      |
+

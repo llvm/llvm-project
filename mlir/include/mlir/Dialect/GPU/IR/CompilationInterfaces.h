@@ -43,10 +43,15 @@ class TargetOptions {
 public:
   /// The target representation of the compilation process.
   typedef enum {
-    offload,  /// The process should produce an offloading representation. For
-              /// the NVVM & ROCDL targets this option produces LLVM IR.
-    assembly, /// The process should produce assembly code.
-    binary    /// The process should produce a binary.
+    offload = 1,  /// The process should produce an offloading representation.
+                  /// For the NVVM & ROCDL targets this option produces LLVM IR.
+    assembly = 2, /// The process should produce assembly code.
+    binary = 4,   /// The process should produce a binary.
+    fatbinary = 8, /// The process should produce a fat binary.
+    binOrFatbin =
+        binary |
+        fatbinary, /// The process should produce a binary or fatbinary. It's up
+                   /// to the target to decide which.
   } CompilationTarget;
 
   /// Constructor initializing the toolkit path, the list of files to link to,
@@ -54,7 +59,7 @@ public:
   /// compilation target is `binary`.
   TargetOptions(StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
-                CompilationTarget compilationTarget = binary);
+                CompilationTarget compilationTarget = binOrFatbin);
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -80,7 +85,7 @@ protected:
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
   TargetOptions(TypeID typeID, StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
-                CompilationTarget compilationTarget = binary);
+                CompilationTarget compilationTarget = binOrFatbin);
 
   /// Path to the target toolkit.
   std::string toolkitPath;

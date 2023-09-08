@@ -465,10 +465,6 @@ inline Value *getFieldValue(const RecordStorageLocation *Loc,
 
 /// Returns the value of a `Field` on a `Struct.
 /// Returns null if `Struct` is null.
-///
-/// Note: This function currently does not use the `Env` parameter, but it will
-/// soon be needed to look up the `Value` when `setChild()` changes to return a
-/// `StorageLocation *`.
 inline Value *getFieldValue(const RecordValue *Struct, const ValueDecl &Field,
                             const Environment &Env) {
   if (Struct == nullptr)

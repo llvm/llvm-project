@@ -5,8 +5,8 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// RUN: %dexter --fail-lt 0.1 -w --debugger lldb \
-// RUN:     --builder 'clang-c'  --cflags "-O3 -glldb" -- %s
+// RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
+// RUN: %dexter --fail-lt 0.1 -w --debugger lldb --binary %t -- %s
 // See NOTE at end for more info about the RUN command.
 
 // 1. SROA/mem2reg fully promotes parama.

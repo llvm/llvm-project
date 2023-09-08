@@ -1,0 +1,13 @@
+{
+  "printf": {
+    "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+      "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_INDEX_MODE": {
+      "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WRITE_INT": {
+      "value": true
+    }
+  }
+}

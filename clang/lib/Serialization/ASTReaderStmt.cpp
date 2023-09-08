@@ -3876,7 +3876,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_THIS:
-      S = new (Context) CXXThisExpr(Empty);
+      S = CXXThisExpr::CreateEmpty(Context);
       break;
 
     case EXPR_CXX_THROW:

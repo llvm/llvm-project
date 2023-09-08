@@ -1335,7 +1335,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     return nullptr;
 
   PreambleBounds Bounds = ComputePreambleBounds(
-      *PreambleInvocationIn.getLangOpts(), *MainFileBuffer, MaxLines);
+      PreambleInvocationIn.getLangOpts(), *MainFileBuffer, MaxLines);
   if (!Bounds.Size)
     return nullptr;
 
@@ -2198,7 +2198,7 @@ void ASTUnit::CodeComplete(
   FrontendOpts.CodeCompletionAt.Column = Column;
 
   // Set the language options appropriately.
-  LangOpts = *CCInvocation->getLangOpts();
+  LangOpts = CCInvocation->getLangOpts();
 
   // Spell-checking and warnings are wasteful during code-completion.
   LangOpts.SpellChecking = false;

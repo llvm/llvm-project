@@ -138,6 +138,7 @@ public:
              bool IsTemporary, bool IsMutable);
 
   QualType getType() const;
+  QualType getElemQualType() const;
   SourceLocation getLocation() const;
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }

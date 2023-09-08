@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --check-prefixes=RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m < %s | FileCheck %s --check-prefixes=RV32M
 ; RUN: llc -mtriple=riscv64 -mattr=+m < %s | FileCheck %s --check-prefixes=RV64M
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV32MV
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV64MV
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v < %s | FileCheck %s --check-prefixes=RV32MV
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v < %s | FileCheck %s --check-prefixes=RV64MV
 
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV32-LABEL: test_srem_odd:
@@ -766,13 +766,14 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64MV-NEXT:    vslidedown.vi v8, v8, 1
-; RV64MV-NEXT:    lui a1, %hi(.LCPI3_3)
-; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI3_3)
-; RV64MV-NEXT:    vle64.v v10, (a1)
 ; RV64MV-NEXT:    li a1, -1
 ; RV64MV-NEXT:    srli a1, a1, 31
 ; RV64MV-NEXT:    vand.vx v8, v8, a1
-; RV64MV-NEXT:    vmsne.vv v0, v8, v10
+; RV64MV-NEXT:    lui a2, 32
+; RV64MV-NEXT:    addiw a2, a2, 256
+; RV64MV-NEXT:    vmv.s.x v10, a2
+; RV64MV-NEXT:    vsext.vf8 v12, v10
+; RV64MV-NEXT:    vmsne.vv v0, v8, v12
 ; RV64MV-NEXT:    vmv.v.i v8, 0
 ; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, ma

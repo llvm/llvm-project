@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2508,6 +2509,51 @@ bool RISCVTargetLowering::shouldExpandBuildVectorWithShuffles(
   return false;
 }
 
+InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
+  // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
+  // implementation-defined.
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
+  unsigned DLenFactor = Subtarget.getDLenFactor();
+  unsigned Cost;
+  if (VT.isScalableVector()) {
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) =
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
+    if (Fractional)
+      Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
+    else
+      Cost = (LMul * DLenFactor);
+  } else {
+    Cost = divideCeil(VT.getSizeInBits(), Subtarget.getRealMinVLen() / DLenFactor);
+  }
+  return Cost;
+}
+
+
+/// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
+/// is generally quadratic in the number of vreg implied by LMUL.  Note that
+/// operand (index and possibly mask) are handled separately.
+InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
+  return getLMULCost(VT) * getLMULCost(VT);
+}
+
+/// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
+/// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTargetLowering::getVRGatherVICost(MVT VT) const {
+  return getLMULCost(VT);
+}
+
+/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
+/// for the type VT.  (This does not cover the vslide1up or vslide1down
+/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTargetLowering::getVSlideCost(MVT VT) const {
+  return getLMULCost(VT);
+}
+
 static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   // RISC-V FP-to-int conversions saturate to the destination register size, but
@@ -3455,6 +3501,27 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
 
+  // If the number of signbits allows, see if we can lower as a <N x i8>.
+  // We restrict this to N <= 4 to ensure the resulting narrow vector is
+  // 32 bits of smaller and can thus be materialized cheaply from scalar.
+  // The main motivation for this is the constant index vector required
+  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // TODO: We really should be costing the smaller vector.  There are
+  // profitable cases this misses.
+  const unsigned ScalarSize =
+    Op.getSimpleValueType().getScalarSizeInBits();
+  if (ScalarSize > 8 && NumElts <= 4) {
+    unsigned SignBits = DAG.ComputeNumSignBits(Op);
+    if (ScalarSize - SignBits < 8) {
+      SDValue Source =
+        DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
+      Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
+                                       Source, DAG, Subtarget);
+      SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
+      return convertFromScalableVector(VT, Res, DAG, Subtarget);
+    }
+  }
+
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
   // vector.
@@ -3516,6 +3583,51 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
 
+  // Cap the cost at a value linear to the number of elements in the vector.
+  // The default lowering is to use the stack.  The vector store + scalar loads
+  // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
+  // being (at least) linear in LMUL.  As a result, using the vslidedown
+  // lowering for every element ends up being VL*LMUL..
+  // TODO: Should we be directly costing the stack alternative?  Doing so might
+  // give us a more accurate upper bound.
+  InstructionCost LinearBudget = VT.getVectorNumElements() * 2;
+
+  // TODO: unify with TTI getSlideCost.
+  InstructionCost PerSlideCost = 1;
+  switch (RISCVTargetLowering::getLMUL(ContainerVT)) {
+  default: break;
+  case RISCVII::VLMUL::LMUL_2:
+    PerSlideCost = 2;
+    break;
+  case RISCVII::VLMUL::LMUL_4:
+    PerSlideCost = 4;
+    break;
+  case RISCVII::VLMUL::LMUL_8:
+    PerSlideCost = 8;
+    break;
+  }
+
+  // TODO: Should we be using the build instseq then cost + evaluate scheme
+  // we use for integer constants here?
+  unsigned UndefCount = 0;
+  for (const SDValue &V : Op->ops()) {
+    if (V.isUndef()) {
+      UndefCount++;
+      continue;
+    }
+    if (UndefCount) {
+      LinearBudget -= PerSlideCost;
+      UndefCount = 0;
+    }
+    LinearBudget -= PerSlideCost;
+  }
+  if (UndefCount) {
+    LinearBudget -= PerSlideCost;
+  }
+
+  if (LinearBudget < 0)
+    return SDValue();
+
   assert((!VT.isFloatingPoint() ||
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
          "Illegal type which will result in reserved encoding");
@@ -3523,7 +3635,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   const unsigned Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
 
   SDValue Vec = DAG.getUNDEF(ContainerVT);
-  unsigned UndefCount = 0;
+  UndefCount = 0;
   for (const SDValue &V : Op->ops()) {
     if (V.isUndef()) {
       UndefCount++;
@@ -4230,8 +4342,8 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 }
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
-// reinterpret it as a shuffle of v2i32 where the two i32s are bit rotated, and
-// lower it as a vror.vi (if legal with zvbb enabled).
+// reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
+// as a vror.vi if we have zvbb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4248,8 +4360,7 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                   NumElts / NumSubElts);
 
   // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
-  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::ROTL,
-                                                               RotateVT))
+  if (!Subtarget.getTargetLowering()->isTypeLegal(RotateVT))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -4276,12 +4387,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  // Lower to a vror.vi of a larger element type if possible. Do this before we
-  // promote i1s to i8s.
-  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
-    return V;
-
   if (VT.getVectorElementType() == MVT::i1) {
+    // Lower to a vror.vi of a larger element type if possible before we promote
+    // i1s to i8s.
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
     if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
       return V;
 
@@ -4383,6 +4493,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
+
+  // A bitrotate will be one instruction on zvbb, so try to lower to it first if
+  // available.
+  if (Subtarget.hasStdExtZvbb())
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
 
   // Lower rotations to a SLIDEDOWN and a SLIDEUP. One of the source vectors may
   // be undef which can be handled with a single SLIDEDOWN/UP.
@@ -4509,6 +4625,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   if (IsSelect)
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+
+  // We might be able to express the shuffle as a bitrotate. But even if we
+  // don't have zvbb and have to expand, the expanded sequence of approx. 2
+  // shifts and a vor will have a higher throughput than a vrgather.
+  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+    return V;
 
   if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
     // On such a large vector we're unable to use i8 as the index type.

@@ -2678,15 +2678,6 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
-  unsigned Opcode = V.getOpcode();
-  if (Opcode == ISD::OR)
-    return DAG.haveNoCommonBitsSet(V.getOperand(0), V.getOperand(1));
-  if (Opcode == ISD::XOR)
-    return isMinSignedConstant(V.getOperand(1));
-  return false;
-}
-
 static bool
 areBitwiseNotOfEachother(SDValue Op0, SDValue Op1) {
   return (isBitwiseNot(Op0) && Op0.getOperand(0) == Op1) ||
@@ -2768,7 +2759,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   // iff (or x, c0) is equivalent to (add x, c0).
   // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1))
   // iff (xor x, c0) is equivalent to (add x, c0).
-  if (isADDLike(N0, DAG)) {
+  if (DAG.isADDLike(N0)) {
     SDValue N01 = N0.getOperand(1);
     if (SDValue Add = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N1, N01}))
       return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add);
@@ -2789,7 +2780,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     // Do this optimization only when adding c does not introduce instructions
     // for adding carries.
     auto ReassociateAddOr = [&](SDValue N0, SDValue N1) {
-      if (isADDLike(N0, DAG) && N0.hasOneUse() &&
+      if (DAG.isADDLike(N0) && N0.hasOneUse() &&
           isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
         // If N0's type does not split or is a sign mask, it does not introduce
         // add carry.
@@ -5441,34 +5432,18 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
     return DAG.getNode(IsSigned ? ISD::SADDO : ISD::UADDO, DL,
                        N->getVTList(), N0, N0);
 
-  if (IsSigned) {
-    // A 1 bit SMULO overflows if both inputs are 1.
-    if (VT.getScalarSizeInBits() == 1) {
-      SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, N1);
-      return CombineTo(N, And,
-                       DAG.getSetCC(DL, CarryVT, And,
-                                    DAG.getConstant(0, DL, VT), ISD::SETNE));
-    }
-
-    // Multiplying n * m significant bits yields a result of n + m significant
-    // bits. If the total number of significant bits does not exceed the
-    // result bit width (minus 1), there is no overflow.
-    unsigned SignBits = DAG.ComputeNumSignBits(N0);
-    if (SignBits > 1)
-      SignBits += DAG.ComputeNumSignBits(N1);
-    if (SignBits > VT.getScalarSizeInBits() + 1)
-      return CombineTo(N, DAG.getNode(ISD::MUL, DL, VT, N0, N1),
-                       DAG.getConstant(0, DL, CarryVT));
-  } else {
-    KnownBits N1Known = DAG.computeKnownBits(N1);
-    KnownBits N0Known = DAG.computeKnownBits(N0);
-    bool Overflow;
-    (void)N0Known.getMaxValue().umul_ov(N1Known.getMaxValue(), Overflow);
-    if (!Overflow)
-      return CombineTo(N, DAG.getNode(ISD::MUL, DL, VT, N0, N1),
-                       DAG.getConstant(0, DL, CarryVT));
+  // A 1 bit SMULO overflows if both inputs are 1.
+  if (IsSigned && VT.getScalarSizeInBits() == 1) {
+    SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, N1);
+    SDValue Cmp = DAG.getSetCC(DL, CarryVT, And,
+                               DAG.getConstant(0, DL, VT), ISD::SETNE);
+    return CombineTo(N, And, Cmp);
   }
 
+  // If it cannot overflow, transform into a mul.
+  if (DAG.willNotOverflowMul(IsSigned, N0, N1))
+    return CombineTo(N, DAG.getNode(ISD::MUL, DL, VT, N0, N1),
+                     DAG.getConstant(0, DL, CarryVT));
   return SDValue();
 }
 
@@ -10009,6 +9984,27 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     }
   }
 
+  // fold (shl (sext (add_nsw x, c1)), c2) -> (add (shl (sext x), c2), c1 << c2)
+  // TODO: Add zext/add_nuw variant with suitable test coverage
+  // TODO: Should we limit this with isLegalAddImmediate?
+  if (N0.getOpcode() == ISD::SIGN_EXTEND &&
+      N0.getOperand(0).getOpcode() == ISD::ADD &&
+      N0.getOperand(0)->getFlags().hasNoSignedWrap() && N0->hasOneUse() &&
+      N0.getOperand(0)->hasOneUse() &&
+      TLI.isDesirableToCommuteWithShift(N, Level)) {
+    SDValue Add = N0.getOperand(0);
+    SDLoc DL(N0);
+    if (SDValue ExtC = DAG.FoldConstantArithmetic(N0.getOpcode(), DL, VT,
+                                                  {Add.getOperand(1)})) {
+      if (SDValue ShlC =
+              DAG.FoldConstantArithmetic(ISD::SHL, DL, VT, {ExtC, N1})) {
+        SDValue ExtX = DAG.getNode(N0.getOpcode(), DL, VT, Add.getOperand(0));
+        SDValue ShlX = DAG.getNode(ISD::SHL, DL, VT, ExtX, N1);
+        return DAG.getNode(ISD::ADD, DL, VT, ShlX, ShlC);
+      }
+    }
+  }
+
   // fold (shl (mul x, c1), c2) -> (mul x, c1 << c2)
   if (N0.getOpcode() == ISD::MUL && N0->hasOneUse()) {
     SDValue N01 = N0.getOperand(1);
@@ -12926,11 +12922,10 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
-static SDValue tryToFoldExtOfMaskedLoad(SelectionDAG &DAG,
-                                        const TargetLowering &TLI, EVT VT,
-                                        SDNode *N, SDValue N0,
-                                        ISD::LoadExtType ExtLoadType,
-                                        ISD::NodeType ExtOpc) {
+static SDValue
+tryToFoldExtOfMaskedLoad(SelectionDAG &DAG, const TargetLowering &TLI, EVT VT,
+                         bool LegalOperations, SDNode *N, SDValue N0,
+                         ISD::LoadExtType ExtLoadType, ISD::NodeType ExtOpc) {
   if (!N0.hasOneUse())
     return SDValue();
 
@@ -12938,7 +12933,8 @@ static SDValue tryToFoldExtOfMaskedLoad(SelectionDAG &DAG,
   if (!Ld || Ld->getExtensionType() != ISD::NON_EXTLOAD)
     return SDValue();
 
-  if (!TLI.isLoadExtLegalOrCustom(ExtLoadType, VT, Ld->getValueType(0)))
+  if ((LegalOperations || !cast<MaskedLoadSDNode>(N0)->isSimple()) &&
+      !TLI.isLoadExtLegalOrCustom(ExtLoadType, VT, Ld->getValueType(0)))
     return SDValue();
 
   if (!TLI.isVectorLoadExtDesirable(SDValue(N, 0)))
@@ -13211,8 +13207,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     return foldedExt;
 
   if (SDValue foldedExt =
-      tryToFoldExtOfMaskedLoad(DAG, TLI, VT, N, N0, ISD::SEXTLOAD,
-                               ISD::SIGN_EXTEND))
+          tryToFoldExtOfMaskedLoad(DAG, TLI, VT, LegalOperations, N, N0,
+                                   ISD::SEXTLOAD, ISD::SIGN_EXTEND))
     return foldedExt;
 
   // fold (sext (load x)) to multiple smaller sextloads.
@@ -13490,8 +13486,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     return foldedExt;
 
   if (SDValue foldedExt =
-      tryToFoldExtOfMaskedLoad(DAG, TLI, VT, N, N0, ISD::ZEXTLOAD,
-                               ISD::ZERO_EXTEND))
+          tryToFoldExtOfMaskedLoad(DAG, TLI, VT, LegalOperations, N, N0,
+                                   ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
     return foldedExt;
 
   // fold (zext (load x)) to multiple smaller zextloads.

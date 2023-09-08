@@ -845,6 +845,15 @@ public:
     return false;
   }
 
+  /// Return true if the target shall perform extract vector element and store
+  /// given that the vector is known to be splat of constant.
+  /// \p Index[out] gives the index of the vector element to be extracted when
+  /// this is true.
+  virtual bool shallExtractConstSplatVectorElementToStore(
+      Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
+    return false;
+  }
+
   /// Return true if inserting a scalar into a variable element of an undef
   /// vector is more efficiently handled by splatting the scalar instead.
   virtual bool shouldSplatInsEltVarIndex(EVT) const {

@@ -99,7 +99,7 @@ public:
     else
       AnalysisConsumer->AddDiagnosticConsumer(
           new PathDiagConsumer(DiagsOutput));
-    addChecker<Fns...>(*AnalysisConsumer, *Compiler.getAnalyzerOpts());
+    addChecker<Fns...>(*AnalysisConsumer, Compiler.getAnalyzerOpts());
     return std::move(AnalysisConsumer);
   }
 };

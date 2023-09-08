@@ -23,6 +23,7 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
@@ -35,6 +36,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include <cassert>
 #include <numeric>
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
@@ -1959,6 +1961,55 @@ LogicalResult spirv::ShiftRightArithmeticOp::verify() {
 
 LogicalResult spirv::ShiftRightLogicalOp::verify() {
   return verifyShiftOp(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BtiwiseAndOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
+  APInt rhsMask;
+  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
+    return {};
+
+  // x & 0 -> 0
+  if (rhsMask.isZero())
+    return getOperand2();
+
+  // x & <all ones> -> x
+  if (rhsMask.isAllOnes())
+    return getOperand1();
+
+  // (UConvert x : iN to iK) & <mask with N low bits set> -> UConvert x
+  if (auto zext = getOperand1().getDefiningOp<spirv::UConvertOp>()) {
+    int valueBits =
+        getElementTypeOrSelf(zext.getOperand()).getIntOrFloatBitWidth();
+    if (rhsMask.zextOrTrunc(valueBits).isAllOnes())
+      return getOperand1();
+  }
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BtiwiseOrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
+  APInt rhsMask;
+  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
+    return {};
+
+  // x | 0 -> x
+  if (rhsMask.isZero())
+    return getOperand1();
+
+  // x | <all ones> -> <all ones>
+  if (rhsMask.isAllOnes())
+    return getOperand2();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

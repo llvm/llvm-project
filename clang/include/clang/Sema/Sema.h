@@ -1012,6 +1012,14 @@ public:
     }
   } DelayedDiagnostics;
 
+  enum CUDAFunctionTarget {
+    CFT_Device,
+    CFT_Global,
+    CFT_Host,
+    CFT_HostDevice,
+    CFT_InvalidTarget
+  };
+
   /// A RAII object to temporarily push a declaration context.
   class ContextRAII {
   private:
@@ -3620,10 +3628,6 @@ public:
   /// in a 'block', this returns the containing context.
   NamedDecl *getCurFunctionOrMethodDecl() const;
 
-  /// getCurLocalScopeDecl - Return the Decl for either of:
-  /// block, lambda, captured statement, function, or nullptr.
-  Decl *getCurLocalScopeDecl();
-
   /// Add this decl to the scope shadowed decl chains.
   void PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext = true);
 
@@ -4757,8 +4761,13 @@ public:
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
+
+  /// Check validaty of calling convention attribute \p attr. If \p FD
+  /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
+  /// target. Otherwise, it is specified by \p CFT.
   bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr);
+                            const FunctionDecl *FD = nullptr,
+                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
   bool checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
@@ -13270,14 +13279,6 @@ public:
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Determines whether the given function is a CUDA device/host/kernel/etc.
   /// function.
   ///
@@ -13295,6 +13296,29 @@ public:
   };
   /// Determines whether the given variable is emitted on host or device side.
   CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
+
+  /// Defines kinds of CUDA global host/device context where a function may be
+  /// called.
+  enum CUDATargetContextKind {
+    CTCK_Unknown,       /// Unknown context
+    CTCK_InitGlobalVar, /// Function called during global variable
+                        /// initialization
+  };
+
+  /// Define the current global CUDA host/device context where a function may be
+  /// called. Only used when a function is called outside of any functions.
+  struct CUDATargetContext {
+    CUDAFunctionTarget Target = CFT_HostDevice;
+    CUDATargetContextKind Kind = CTCK_Unknown;
+    Decl *D = nullptr;
+  } CurCUDATargetCtx;
+
+  struct CUDATargetContextRAII {
+    Sema &S;
+    CUDATargetContext SavedCtx;
+    CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, Decl *D);
+    ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
+  };
 
   /// Gets the CUDA target for the current context.
   CUDAFunctionTarget CurrentCUDATarget() {

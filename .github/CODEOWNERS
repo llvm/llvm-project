@@ -41,29 +41,28 @@
 /mlir/ @llvm/pr-subscribers-mlir
 
 # mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Support/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Parser/ @llvm/pr-subscribers-mlir-core
-/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Bytecode/ @llvm/pr-subscribers-mlir-core
 /mlir/**/AsmParser/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Pass/ @llvm/pr-subscribers-mlir-core
-/mlir/**/tools/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Reducer/ @llvm/pr-subscribers-mlir-core
-/mlir/**/Transforms/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Bytecode/ @llvm/pr-subscribers-mlir-core
 /mlir/**/Debug/ @llvm/pr-subscribers-mlir-core
+/mlir/**/IR/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Parser/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Pass/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Reducer/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Support/ @llvm/pr-subscribers-mlir-core
+/mlir/**/Transforms/ @llvm/pr-subscribers-mlir-core
+/mlir/**/tools/ @llvm/pr-subscribers-mlir-core
 /mlir/tools/ @llvm/pr-subscribers-mlir-core
 
 # mlir-ods
 /mlir/TableGen/ @llvm/pr-subscribers-mlir-ods
 /mlir/tblgen/ @llvm/pr-subscribers-mlir-ods
+/mlir/include/mlir/IR/*.td @llvm/pr-subscribers-mlir-ods
 
 # mlir-bindings
 /mlir/Bindings/ @llvm/pr-subscribers-mlir-bindings
 
 # mlir-gpu
-/mlir/GPU/ @llvm/pr-subscribers-mlir-gpu
+/mlir/**/*GPU @llvm/pr-subscribers-mlir-gpu
 
 # mlir-amdgpu
 /mlir/**/AMDGPU/ @llvm/pr-subscribers-mlir-amdgpu
@@ -79,6 +78,9 @@
 
 # mlir-neon
 /mlir/**/ArmNeon/ @llvm/pr-subscribers-mlir-neon
+
+# mlir-presburger
+/mlir/**/*Presburger @llvm/pr-subscribers-mlir-presburger
 
 # mlir-sme
 /mlir/**/ArmSME/ @llvm/pr-subscribers-mlir-sme
@@ -108,7 +110,7 @@
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
 
 # mlir-async
-/mlir/GPU/ @llvm/pr-subscribers-mlir-async
+/mlir/**/Async/ @llvm/pr-subscribers-mlir-async
 
 # mlir-irdl
 /mlir/**/IRDL/ @llvm/pr-subscribers-mlir-irdl
@@ -117,13 +119,14 @@
 /mlir/**/Index/ @llvm/pr-subscribers-mlir-index
 
 # mlir-llvm
-/mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVM* @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
-/mlir/linalg/ @llvm/pr-subscribers-mlir-linalg
+/mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
+/mlir/**/*linalg @llvm/pr-subscribers-mlir-linalg
 
 # mlir-mlprogram
-/mlir/**/MLProgram/** @llvm/pr-subscribers-mlir-mlprogram
+/mlir/**/MLProgram @llvm/pr-subscribers-mlir-mlprogram
 
 # mlir-math
 /mlir/**/Math/ @llvm/pr-subscribers-mlir-math
@@ -135,10 +138,10 @@
 /mlir/**/NVGPU/ @llvm/pr-subscribers-mlir-nvgpu
 
 # mlir-openacc
-/mlir/**/OpenACC/ @llvm/pr-subscribers-mlir-openacc
+/mlir/**/*OpenACC @llvm/pr-subscribers-mlir-openacc
 
 # mlir-openmp
-/mlir/**/OpenMP*/ @llvm/pr-subscribers-mlir-openmp
+/mlir/**/*OpenMP @llvm/pr-subscribers-mlir-openmp
 
 # mlir-pdl
 /mlir/**/PDL/ @llvm/pr-subscribers-mlir-pdl
@@ -171,7 +174,7 @@
 /mlir/**/*Vector/ @llvm/pr-subscribers-mlir-vector
 
 # mlir-execution-engine
-/mlir/ExecutionEngine/ @llvm/pr-subscribers-mlir-execution-engine
+/mlir/**/ExecutionEngine/ @llvm/pr-subscribers-mlir-execution-engine
 
 # coroutines
 /clang/docs/DebuggingCoroutines.rst @llvm/pr-subscribers-coroutines
@@ -240,6 +243,38 @@
 /llvm/docs/CommandGuide/lit.rst @llvm/pr-subscribers-testing-tools
 /llvm/docs/TestingGuide.rst @llvm/pr-subscribers-testing-tools
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
+/llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
+/llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
+
+# llvm-binary-utilities
+/llvm/docs/CommandGuide/llvm-* @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
 
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
@@ -386,8 +421,7 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 
 # globalisel
 /llvm/**/GlobalISel/ @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GlobalISelEmitter.cpp @llvm/pr-subscribers-globalisel
-/llvm/utils/TableGen/GICombinerEmitter.cpp @llvm/pr-subscribers-globalisel
+/llvm/utils/TableGen/GlobalISel* @llvm/pr-subscribers-globalisel
 
 # selection-dag
 /llvm/include/llvm/CodeGen/DAGCombine.h @llvm/pr-subscribers-selectiondag
@@ -398,6 +432,29 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/lib/CodeGen/SelectionDAG/ @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/CodeGenDAG* @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/DAGISel* @llvm/pr-subscribers-selectiondag
+
+# register allocation
+/llvm/**/*RegAlloc @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/Register* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveReg* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveInterval* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveVariables* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/LiveRange* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SlotIndexes.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/VirtRegMap.h @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/PHIElimination* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SplitKit* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InlineSpiller* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/ProcessImplicitDefs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RenameIndependentSubregs.cpp @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/InterferenceCache* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/CalcSpillWeights* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/RegUsage* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/MachineCopyPropagation* @llvm/pr-subscribers-regalloc
+/llvm/**/CodeGen/SpillPlacement* @llvm/pr-subscribers-regalloc
+/llvm/include/PBQP/ @llvm/pr-subscribers-regalloc
+/llvm/include/PBQPRAConstraint.h @llvm/pr-subscribers-regalloc
+/llvm/include/llvm/CodeGen/Spiller.h @llvm/pr-subscribers-regalloc
 
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
@@ -467,6 +524,10 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/lib/CodeGen/Targets/AArch64.cpp @llvm/pr-subscribers-AArch64
 /clang/include/clang/Basic/BuiltinsAArch64* @llvm/pr-subscribers-AArch64
 
+# AMDGPU
+**/*AMDGPU* @llvm/pr-subscribers-amdgpu
+**/*amdgpu* @llvm/pr-subscribers-amdgpu
+
 # DirectX
 /llvm/include/llvm/IR/IntrinsicsDirectX.td @llvm/pr-subscribers-DirectX
 /llvm/lib/Target/DirectX/ @llvm/pr-subscribers-DirectX
@@ -497,15 +558,10 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/include/clang/Basic/BuiltinsMSP430* @llvm/pr-subscribers-msp430
 
 # riscv
-/llvm/include/llvm/IR/IntrinsicsRISCV.td @llvm/pr-subscribers-riscv
-/llvm/lib/Target/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/CodeGen/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/MC/RISCV/ @llvm/pr-subscribers-riscv
-/llvm/test/MC/Disassembler/RISCV/ @llvm/pr-subscribers-riscv
-/clang/lib/Basic/Targets/RISCV* @llvm/pr-subscribers-riscv
-/clang/lib/Driver/ToolChains/Arch/RISCV.* @llvm/pr-subscribers-riscv
-/clang/lib/CodeGen/Targets/RISCV.cpp @llvm/pr-subscribers-riscv
-/clang/include/clang/Basic/BuiltinsRISCV* @llvm/pr-subscribers-riscv
+/llvm/**/*RISCV* @llvm/pr-subscribers-riscv
+/llvm/**/*riscv* @llvm/pr-subscribers-riscv
+/clang/**/*RISCV* @llvm/pr-subscribers-riscv
+/clang/**/*riscv* @llvm/pr-subscribers-riscv
 
 # sparc
 /llvm/include/llvm/IR/IntrinsicsSparc.td @llvm/pr-subscribers-sparc
@@ -562,3 +618,41 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/unittests/CodeGen/ML* @llvm/pr-subscribers-mlgo
 /llvm/test/CodeGen/MLRegAlloc/ @llvm/pr-subscribers-mlgo
 
+# llvm-exegesis
+/llvm/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+/llvm/test/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+/llvm/unittests/tools/llvm-exegesis/ @llvm/pr-subscribers-exegesis
+
+# WebAssembly
+/llvm/include/llvm/BinaryFormat/Wasm.h @llvm/pr-subscribers-webassembly
+/llvm/include/llvm/IR/IntinsicsWebAssembly.td @llvm/pr-subscribers-webassembly
+/llvm/include/llvm/Object/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/CodeGen/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/CodeGen/AsmPrinter/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/MC/MCParser/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/MC/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/ObjCopy/wasm/ @llvm/pr-subscribers-webassembly
+/llvm/lib/Object/Wasm* @llvm/pr-subscribers-webassembly
+/llvm/lib/Target/WebAssembly/ @llvm/pr-subscribers-webassembly
+/llvm/test/CodeGen/WebAssembly/ @llvm/pr-subscribers-webassembly
+/llvm/test/DebugInfo/WebAssembly/ @llvm/pr-subscribers-webassembly
+/llvm/test/MC/WebAssembly/ @llvm/pr-subscribers-webassembly
+/llvm/unittests/Target/WebAssembly/ @llvm/pr-subscribers-webassembly
+/clang/include/clang/Basic/BuiltinsWebAssembly.def @llvm/pr-subscribers-webassembly
+/clang/include/clang/Basic/WebAssemblyReferenceTypes.def @llvm/pr-subscribers-webassembly
+/clang/lib/Basic/Targets/WebAssembly* @llvm/pr-subscribers-webassembly
+/clang/lib/Driver/Toolchains/WebAssembly* @llvm/pr-subscribers-webassembly
+/clang/lib/CodeGen/Targets/WebAssembly* @llvm/pr-subscribers-webassembly
+/clang/lib/Headers/wasm_simd128.h @llvm/pr-subscribers-webassembly
+/clang/test/CodeGen/WebAssembly/ @llvm/pr-subscribers-webassembly
+/clang/test/Sema/*wasm* @llvm/pr-subscribers-webassembly
+/clang/test/SemaCXX/*wasm* @llvm/pr-subscribers-webassembly
+
+/lld/**/COFF/ @llvm/pr-subscribers-lld-coff
+/lld/**/ELF/ @llvm/pr-subscribers-lld-elf
+/lld/**/MachO/ @llvm/pr-subscribers-lld-macho
+/lld/**/wasm/ @llvm/pr-subscribers-lld-wasm
+/lld/Common/ @llvm/pr-subscribers-lld-coff @llvm/pr-subscribers-lld-elf @llvm/pr-subscribers-lld-macho @llvm/pr-subscribers-lld-wasm
+
+# lldb
+/lldb/** @llvm/pr-subscribers-lldb

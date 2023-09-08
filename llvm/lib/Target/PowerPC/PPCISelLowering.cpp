@@ -148,6 +148,12 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 
 static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
+// A faster local-exec TLS access sequence (enabled with the
+// -maix-small-local-exec-tls option) can be produced for TLS variables;
+// consistent with the IBM XL compiler, we apply a max size of slightly under
+// 32KB.
+constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
+
 // FIXME: Remove this once the bug has been fixed!
 extern cl::opt<bool> ANDIGlueBug;
 
@@ -1633,6 +1639,27 @@ bool PPCTargetLowering::hasSPE() const {
 
 bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
+}
+
+bool PPCTargetLowering::shallExtractConstSplatVectorElementToStore(
+    Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
+  if (!Subtarget.isPPC64() || !Subtarget.hasVSX())
+    return false;
+
+  if (auto *VTy = dyn_cast<VectorType>(VectorTy)) {
+    if (VTy->getScalarType()->isIntegerTy()) {
+      // ElemSizeInBits 8/16 can fit in immediate field, not needed here.
+      if (ElemSizeInBits == 32) {
+        Index = Subtarget.isLittleEndian() ? 2 : 1;
+        return true;
+      }
+      if (ElemSizeInBits == 64) {
+        Index = Subtarget.isLittleEndian() ? 1 : 0;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -3334,14 +3361,16 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
+  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+  bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
-  if (Model == TLSModel::LocalExec || Model == TLSModel::InitialExec) {
+  if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
     SDValue TLSReg;
-    if (Is64Bit)
+    if (Is64Bit) {
       // For local-exec and initial-exec on AIX (64-bit), the sequence generated
       // involves a load of the variable offset (from the TOC), followed by an
       // add of the loaded variable offset to R13 (the thread pointer).
@@ -3349,7 +3378,22 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    ld reg1,var[TC](2)
       //    add reg2, reg1, r13     // r13 contains the thread pointer
       TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
-    else
+
+      // With the -maix-small-local-exec-tls option, produce a faster access
+      // sequence for local-exec TLS variables where the offset from the TLS
+      // base is encoded as an immediate operand.
+      //
+      // We only utilize the faster local-exec access sequence when the TLS
+      // variable has a size within the policy limit. We treat types that are
+      // not sized or are empty as being over the policy size limit.
+      if (HasAIXSmallLocalExecTLS && IsTLSLocalExecModel) {
+        Type *GVType = GV->getValueType();
+        if (GVType->isSized() && !GVType->isEmptyTy() &&
+            GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+                AIXSmallTlsPolicySizeLimit)
+          return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA, TLSReg);
+      }
+    } else {
       // For local-exec and initial-exec on AIX (32-bit), the sequence generated
       // involves loading the variable offset from the TOC, generating a call to
       // .__get_tpointer to get the thread pointer (which will be in R3), and
@@ -3358,6 +3402,13 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    bla .__get_tpointer
       //    add reg2, reg1, r3
       TLSReg = DAG.getNode(PPCISD::GET_TPOINTER, dl, PtrVT);
+
+      // We do not implement the 32-bit version of the faster access sequence
+      // for local-exec that is controlled by -maix-small-local-exec-tls.
+      if (HasAIXSmallLocalExecTLS)
+        report_fatal_error("The small-local-exec TLS access sequence is "
+                           "currently only supported on AIX (64-bit mode).");
+    }
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
@@ -17086,10 +17137,20 @@ EVT PPCTargetLowering::getOptimalMemOpType(
   if (getTargetMachine().getOptLevel() != CodeGenOpt::None) {
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.
-    if (Subtarget.hasAltivec() && Op.size() >= 16 &&
-        (Op.isAligned(Align(16)) ||
-         ((Op.isMemset() && Subtarget.hasVSX()) || Subtarget.hasP8Vector())))
-      return MVT::v4i32;
+    if (Subtarget.hasAltivec() && Op.size() >= 16) {
+      if (Op.isMemset() && Subtarget.hasVSX()) {
+        uint64_t TailSize = Op.size() % 16;
+        // For memset lowering, EXTRACT_VECTOR_ELT tries to return constant
+        // element if vector element type matches tail store. For tail size
+        // 3/4, the tail store is i32, v4i32 cannot be used, need a legal one.
+        if (TailSize > 2 && TailSize <= 4) {
+          return MVT::v8i16;
+        }
+        return MVT::v4i32;
+      }
+      if (Op.isAligned(Align(16)) || Subtarget.hasP8Vector())
+        return MVT::v4i32;
+    }
   }
 
   if (Subtarget.isPPC64()) {

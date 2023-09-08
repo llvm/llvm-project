@@ -84,6 +84,13 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze templated declarations");
 
+  // The shape of certain elements of the AST can vary depending on the
+  // language. We currently only support C++.
+  if (!C.getLangOpts().CPlusPlus)
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Can only analyze C++");
+
   CFG::BuildOptions Options;
   Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
@@ -107,16 +114,6 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
 
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
                             std::move(BlockReachable));
-}
-
-llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
-  if (D == nullptr)
-    return llvm::createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "Declaration must not be null");
-
-  return build(*D, S, C);
 }
 
 } // namespace dataflow

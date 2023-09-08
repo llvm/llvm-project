@@ -1,12 +1,13 @@
+// RUN: %clang++ -std=gnu++11 -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-O2 -g" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' \
-// RUN:     --cflags "-O0 -g" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 
 // REQUIRES: lldb, D136396
-// UNSUPPORTED: system-windows
+// Currently getting intermittent failures on darwin.
+// UNSUPPORTED: system-windows, system-darwin
 
 //// Check that the debugging experience with __attribute__((optnone)) at O2
 //// matches O0. Test simple functions performing simple arithmetic
