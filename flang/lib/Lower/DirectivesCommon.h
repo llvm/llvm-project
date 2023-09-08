@@ -125,8 +125,10 @@ template <typename AtomicListT>
 static inline void genOmpAccAtomicCaptureStatement(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval, mlir::Value fromAddress,
-    mlir::Value toAddress, const AtomicListT *leftHandClauseList,
-    const AtomicListT *rightHandClauseList, mlir::Type elementType) {
+    mlir::Value toAddress,
+    [[maybe_unused]] const AtomicListT *leftHandClauseList,
+    [[maybe_unused]] const AtomicListT *rightHandClauseList,
+    mlir::Type elementType) {
   // Generate `atomic.read` operation for atomic assigment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -148,8 +150,6 @@ static inline void genOmpAccAtomicCaptureStatement(
         currentLocation, fromAddress, toAddress,
         mlir::TypeAttr::get(elementType), hint, memoryOrder);
   } else {
-    (void)leftHandClauseList;
-    (void)rightHandClauseList;
     firOpBuilder.create<mlir::acc::AtomicReadOp>(
         currentLocation, fromAddress, toAddress,
         mlir::TypeAttr::get(elementType));
@@ -159,13 +159,12 @@ static inline void genOmpAccAtomicCaptureStatement(
 /// Used to generate atomic.write operation which is created in existing
 /// location set by builder.
 template <typename AtomicListT>
-static inline void
-genOmpAccAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
-                              Fortran::lower::pft::Evaluation &eval,
-                              mlir::Value lhsAddr, mlir::Value rhsExpr,
-                              const AtomicListT *leftHandClauseList,
-                              const AtomicListT *rightHandClauseList,
-                              mlir::Value *evaluatedExprValue = nullptr) {
+static inline void genOmpAccAtomicWriteStatement(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, mlir::Value lhsAddr,
+    mlir::Value rhsExpr, [[maybe_unused]] const AtomicListT *leftHandClauseList,
+    [[maybe_unused]] const AtomicListT *rightHandClauseList,
+    mlir::Value *evaluatedExprValue = nullptr) {
   // Generate `atomic.write` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -185,8 +184,6 @@ genOmpAccAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::AtomicWriteOp>(currentLocation, lhsAddr,
                                                   rhsExpr, hint, memoryOrder);
   } else {
-    (void)leftHandClauseList;
-    (void)rightHandClauseList;
     firOpBuilder.create<mlir::acc::AtomicWriteOp>(currentLocation, lhsAddr,
                                                   rhsExpr);
   }
@@ -200,8 +197,8 @@ static inline void genOmpAccAtomicUpdateStatement(
     Fortran::lower::pft::Evaluation &eval, mlir::Value lhsAddr,
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr,
-    const AtomicListT *leftHandClauseList,
-    const AtomicListT *rightHandClauseList) {
+    [[maybe_unused]] const AtomicListT *leftHandClauseList,
+    [[maybe_unused]] const AtomicListT *rightHandClauseList) {
   // Generate `omp.atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -292,8 +289,6 @@ static inline void genOmpAccAtomicUpdateStatement(
     atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
         currentLocation, updateVar, hint, memoryOrder);
   } else {
-    (void)leftHandClauseList;
-    (void)rightHandClauseList;
     atomicUpdateOp = firOpBuilder.create<mlir::acc::AtomicUpdateOp>(
         currentLocation, updateVar);
   }
