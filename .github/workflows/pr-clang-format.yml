@@ -1,0 +1,43 @@
+name: "Run clang-format"
+on: pull_request
+
+jobs:
+  clang_format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          files: |
+            '**.c'
+            '**.cpp'
+            '**.h'
+            '**.cxx'
+            '**.hpp'
+
+      - name: "Listed files"
+        run: |
+          echo "Formatting files:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+
+      - name: Install clang-format
+        uses: aminya/setup-cpp@v
+        with:
+          clangformat: 16.0.6
+
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Test
+        run: |
+          clang-format --version
+          git-clang-format --version
