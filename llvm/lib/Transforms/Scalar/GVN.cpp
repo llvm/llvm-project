@@ -3280,7 +3280,7 @@ public:
     if (skipFunction(F))
       return false;
 
-    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
 
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     return Impl.runImpl(
@@ -3291,7 +3291,7 @@ public:
         Impl.isMemDepEnabled()
             ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
             : nullptr,
-        LIWP ? &LIWP->getLoopInfo() : nullptr,
+        &LIWP.getLoopInfo(),
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
         MSSAWP ? &MSSAWP->getMSSA() : nullptr);
   }
