@@ -14,7 +14,7 @@ class B : A {
 // NO-AS: @_ZTISt9type_info = external constant ptr
 // AS: @_ZTIi = external addrspace(1) constant ptr addrspace(1)
 // NO-AS: @_ZTIi = external constant ptr
-// AS: @_ZTVN10__cxxabiv117__class_type_infoE = external addrspace(1) global [0 x ptr]
+// AS: @_ZTVN10__cxxabiv117__class_type_infoE = external addrspace(1) global [0 x ptr addrspace(1)]
 // NO-AS: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
 // AS: @_ZTS1A = linkonce_odr addrspace(1) constant [3 x i8] c"1A\00", comdat, align 1
 // NO-AS: @_ZTS1A = linkonce_odr constant [3 x i8] c"1A\00", comdat, align 1

@@ -3670,7 +3670,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   if (CGM.getItaniumVTableContext().isRelativeLayout())
     VTable = CGM.getModule().getNamedAlias(VTableName);
   if (!VTable) {
-    llvm::Type *Ty = llvm::ArrayType::get(CGM.VoidPtrTy, 0);
+    llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
     VTable = CGM.getModule().getOrInsertGlobal(VTableName, Ty);
   }
 
