@@ -403,26 +403,22 @@ public:
       setData(RC);
     }
 
-    /// Augment an existing flag with the constraint code for a memory
-    /// constraint.
+    /// setMemConstraint - Augment an existing flag with the constraint code for
+    /// a memory constraint.
     void setMemConstraint(unsigned Constraint) {
       assert((isMemKind() || isFuncKind()) &&
-             "InputFlag is not a memory or function constraint!");
+             "Flag is not a memory or function constraint!");
       assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
       assert(Constraint <= Constraints_Max && "Unknown constraint ID");
       assert(getData() == 0 && "Mem constraint already set");
       setData(Constraint);
     }
-
-    // TODO: do we even need this? WTF is it doing?
-    // IIUC, It was masking off the bottom 22b.
-    // ~(0x7fff << 16) == 0x3FFFFF
-    void convertMemFlagWordToMatchingFlagWord() {
-      assert(isMemKind());
+    /// clearMemConstraint - Similar to setMemConstraint(0), but without the
+    /// assertion checking that the constraint has not been set previously.
+    void clearMemConstraint() {
+      assert((isMemKind() || isFuncKind()) &&
+             "Flag is not a memory or function constraint!");
       setData(0);
-      // GrabBag &= 0x3F;
-      // GrabBag = GrabBag << Constraints_ShiftAmount; // TODO: is this even
-      // correct? return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
     }
   };
 

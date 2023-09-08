@@ -9365,7 +9365,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
                "Unexpected number of operands");
         // Add information to the INLINEASM node to know about this input.
         // See InlineAsm.h isUseOperandTiedToDef.
-        Flag.convertMemFlagWordToMatchingFlagWord();
+        Flag.clearMemConstraint();
         Flag.setMatchingOp(OpInfo.getMatchedOperand());
         AsmNodeOperands.push_back(DAG.getTargetConstant(
             Flag, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
