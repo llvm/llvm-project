@@ -105,6 +105,7 @@
 
 # mlir-emitc
 /mlir/**/EmitC/ @llvm/pr-subscribers-mlir-emitc
+/mlir/lib/Target/Cpp @llvm/pr-subscribers-mlir-emitc
 
 # mlir-func
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
