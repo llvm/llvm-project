@@ -7,10 +7,7 @@ declare void @use.i32(i5)
 
 define i1 @or_xor_xor_normal_variant1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_variant1(
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i1 [[AND]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i1 [[AND]], [[B]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %and = and i1 %a, %b
@@ -22,10 +19,7 @@ define i1 @or_xor_xor_normal_variant1(i1 %a, i1 %b) {
 
 define i8 @or_xor_xor_normal_variant2(i8 %a, i8 %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_variant2(
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[AND]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[AND]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %and = and i8 %a, %b
@@ -37,10 +31,7 @@ define i8 @or_xor_xor_normal_variant2(i8 %a, i8 %b) {
 
 define i16 @or_xor_xor_normal_variant3(i16 %a, i16 %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_variant3(
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i16 [[AND]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i16 [[AND]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i16 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %and = and i16 %b, %a
@@ -52,10 +43,7 @@ define i16 @or_xor_xor_normal_variant3(i16 %a, i16 %b) {
 
 define i64 @or_xor_xor_normal_variant4(i64 %a, i64 %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_variant4(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[AND]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i64 [[AND]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
   %and = and i64 %b, %a
@@ -67,12 +55,7 @@ define i64 @or_xor_xor_normal_variant4(i64 %a, i64 %b) {
 
 define i32 @or_xor_xor_normal_binops(i32 %aa, i32 %bb, i32 %cc) {
 ; CHECK-LABEL: @or_xor_xor_normal_binops(
-; CHECK-NEXT:    [[A:%.*]] = xor i32 [[AA:%.*]], [[CC:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BB:%.*]], [[CC]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[AND]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[A]], [[AND]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[BB:%.*]], [[AA:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = xor i32 %aa, %cc
@@ -87,10 +70,7 @@ define i32 @or_xor_xor_normal_binops(i32 %aa, i32 %bb, i32 %cc) {
 
 define <3 x i1> @or_xor_xor_normal_vector(<3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_vector(
-; CHECK-NEXT:    [[AND:%.*]] = and <3 x i1> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor <3 x i1> [[AND]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor <3 x i1> [[AND]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor <3 x i1> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %and = and <3 x i1> %a, %b
@@ -104,9 +84,7 @@ define i3 @or_xor_xor_normal_multiple_uses_and(i3 %a, i3 %b) {
 ; CHECK-LABEL: @or_xor_xor_normal_multiple_uses_and(
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @use.i3(i3 [[AND]])
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i3 [[AND]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i3 [[AND]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i3 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i3 [[A]], [[B]]
 ; CHECK-NEXT:    ret i3 [[OR]]
 ;
   %and = and i3 %a, %b
