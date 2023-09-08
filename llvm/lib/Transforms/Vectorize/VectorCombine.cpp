@@ -801,6 +801,11 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
       VPIntrinsicToScalar[IntrID], VecTy->getScalarType());
   InstructionCost NewCost = ScalarOpCost + SplatCost;
 
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
+                    << ", Cost of scalarizing:" << NewCost << "\n");
+
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost || !NewCost.isValid())
     return false;
