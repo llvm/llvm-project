@@ -597,7 +597,8 @@ bool MigrationProcess::applyTransform(TransformFn trans,
         I = rewriter.buffer_begin(), E = rewriter.buffer_end(); I != E; ++I) {
     FileID FID = I->first;
     RewriteBuffer &buf = I->second;
-    const FileEntry *file = Ctx.getSourceManager().getFileEntryForID(FID);
+    OptionalFileEntryRef file =
+        Ctx.getSourceManager().getFileEntryRefForID(FID);
     assert(file);
     std::string newFname = std::string(file->getName());
     newFname += "-trans";
