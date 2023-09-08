@@ -1023,9 +1023,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   }
 
   // If we were asked to load any module files, do so now.
-  for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)
-    if (!CI.loadModuleFile(ModuleFile))
+  for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
+    serialization::ModuleFile *Loaded = nullptr;
+    if (!CI.loadModuleFile(ModuleFile, Loaded))
       return false;
+
+    if (Loaded && Loaded->StandardCXXModule)
+      CI.getDiagnostics().Report(
+          diag::warn_eagerly_load_for_standard_cplusplus_modules);
+  }
 
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.

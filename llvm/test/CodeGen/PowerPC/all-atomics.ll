@@ -22,12 +22,12 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 3, 2, sc@toc@ha
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 4, 3, sc@toc@l
 ; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 4, 3, sc@toc@l
-; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:  .LBB0_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 5, 0, 4
@@ -37,8 +37,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    addis 5, 2, uc@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 5, 5, uc@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 5, 5, uc@toc@l
 ; CHECK-NEXT:  .LBB0_3: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 6, 0, 5
@@ -48,8 +48,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    addis 6, 2, ss@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 6, 6, ss@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 6, 6, ss@toc@l
 ; CHECK-NEXT:  .LBB0_5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 7, 0, 6
@@ -59,8 +59,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.6: # %entry
 ; CHECK-NEXT:    addis 7, 2, us@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 8, 7, us@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 8, 7, us@toc@l
 ; CHECK-NEXT:  .LBB0_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 7, 0, 8
@@ -70,8 +70,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.8: # %entry
 ; CHECK-NEXT:    addis 7, 2, si@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 9, 7, si@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 9, 7, si@toc@l
 ; CHECK-NEXT:  .LBB0_9: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 7, 0, 9
@@ -81,8 +81,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.10: # %entry
 ; CHECK-NEXT:    addis 7, 2, ui@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 10, 7, ui@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 10, 7, ui@toc@l
 ; CHECK-NEXT:  .LBB0_11: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 7, 0, 10
@@ -92,9 +92,9 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.12: # %entry
 ; CHECK-NEXT:    addis 7, 2, sll@toc@ha
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:    addi 11, 7, sll@toc@l
 ; CHECK-NEXT:    li 7, 1
-; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB0_13: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 12, 0, 11
@@ -104,8 +104,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.14: # %entry
 ; CHECK-NEXT:    addis 12, 2, ull@toc@ha
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addi 12, 12, ull@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 12, 12, ull@toc@l
 ; CHECK-NEXT:  .LBB0_15: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 30, 0, 12
@@ -329,8 +329,8 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stdcx. 0, 0, 12
 ; CHECK-NEXT:    bne 0, .LBB0_63
 ; CHECK-NEXT:  # %bb.64: # %entry
-; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    addis 30, 2, u128@toc@ha
+; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:    addi 0, 30, u128@toc@l
 ; CHECK-NEXT:    li 30, 0
@@ -342,10 +342,10 @@ define dso_local void @test_op_ignore() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stqcx. 26, 0, 0
 ; CHECK-NEXT:    bne 0, .LBB0_65
 ; CHECK-NEXT:  # %bb.66: # %entry
-; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    addis 29, 2, s128@toc@ha
-; CHECK-NEXT:    sync
+; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    addi 0, 29, s128@toc@l
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB0_67: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lqarx 28, 0, 0
@@ -1237,9 +1237,9 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 4, 2, sc@toc@ha
 ; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; CHECK-NEXT:    li 3, 11
 ; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; CHECK-NEXT:    li 3, 11
 ; CHECK-NEXT:    addi 6, 4, sc@toc@l
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
@@ -1257,8 +1257,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 5, sc@toc@l(4)
 ; CHECK-NEXT:    addis 5, 2, uc@toc@ha
-; CHECK-NEXT:    addi 8, 5, uc@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 8, 5, uc@toc@l
 ; CHECK-NEXT:  .LBB1_3: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 7, 0, 8
@@ -1269,8 +1269,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 7, uc@toc@l(5)
 ; CHECK-NEXT:    addis 7, 2, ss@toc@ha
-; CHECK-NEXT:    addi 10, 7, ss@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 10, 7, ss@toc@l
 ; CHECK-NEXT:  .LBB1_5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 9, 0, 10
@@ -1281,8 +1281,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 9, ss@toc@l(7)
 ; CHECK-NEXT:    addis 9, 2, us@toc@ha
-; CHECK-NEXT:    addi 0, 9, us@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 0, 9, us@toc@l
 ; CHECK-NEXT:  .LBB1_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 11, 0, 0
@@ -1293,8 +1293,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 12, 2, si@toc@ha
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 11, us@toc@l(9)
-; CHECK-NEXT:    addi 29, 12, si@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 29, 12, si@toc@l
 ; CHECK-NEXT:  .LBB1_9: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 11, 0, 29
@@ -1305,8 +1305,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 30, 2, ui@toc@ha
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stw 11, si@toc@l(12)
-; CHECK-NEXT:    addi 27, 30, ui@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 27, 30, ui@toc@l
 ; CHECK-NEXT:  .LBB1_11: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 11, 0, 27
@@ -1318,8 +1318,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stw 11, ui@toc@l(30)
 ; CHECK-NEXT:    li 11, 11
-; CHECK-NEXT:    addi 25, 28, sll@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 25, 28, sll@toc@l
 ; CHECK-NEXT:  .LBB1_13: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 26, 0, 25
@@ -1330,8 +1330,8 @@ define dso_local void @test_fetch_and_op() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    std 26, sll@toc@l(28)
 ; CHECK-NEXT:    addis 26, 2, ull@toc@ha
-; CHECK-NEXT:    addi 24, 26, ull@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 24, 26, ull@toc@l
 ; CHECK-NEXT:  .LBB1_15: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 23, 0, 24
@@ -2591,11 +2591,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 18, -112(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 19, -104(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 4, 3, uc@toc@l
-; CHECK-NEXT:    addi 7, 5, sc@toc@l
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
 ; CHECK-NEXT:    std 20, -96(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 4, 3, uc@toc@l
+; CHECK-NEXT:    addi 7, 5, sc@toc@l
 ; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
@@ -2628,8 +2628,8 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 8, uc@toc@l(3)
 ; CHECK-NEXT:    clrlwi 8, 8, 24
-; CHECK-NEXT:    addi 9, 6, ss@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 9, 6, ss@toc@l
 ; CHECK-NEXT:  .LBB2_5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 10, 0, 9
@@ -2638,11 +2638,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_5
 ; CHECK-NEXT:  # %bb.6: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 10, ss@toc@l(6)
 ; CHECK-NEXT:    addis 8, 2, us@toc@ha
+; CHECK-NEXT:    sth 10, ss@toc@l(6)
 ; CHECK-NEXT:    lbz 10, uc@toc@l(3)
-; CHECK-NEXT:    addi 11, 8, us@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 11, 8, us@toc@l
 ; CHECK-NEXT:  .LBB2_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 12, 0, 11
@@ -2651,11 +2651,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_7
 ; CHECK-NEXT:  # %bb.8: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 12, us@toc@l(8)
 ; CHECK-NEXT:    addis 10, 2, si@toc@ha
+; CHECK-NEXT:    sth 12, us@toc@l(8)
 ; CHECK-NEXT:    lbz 12, uc@toc@l(3)
-; CHECK-NEXT:    addi 0, 10, si@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 0, 10, si@toc@l
 ; CHECK-NEXT:  .LBB2_9: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 30, 0, 0
@@ -2664,11 +2664,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_9
 ; CHECK-NEXT:  # %bb.10: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 30, si@toc@l(10)
 ; CHECK-NEXT:    addis 12, 2, ui@toc@ha
+; CHECK-NEXT:    stw 30, si@toc@l(10)
 ; CHECK-NEXT:    lbz 30, uc@toc@l(3)
-; CHECK-NEXT:    addi 29, 12, ui@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 29, 12, ui@toc@l
 ; CHECK-NEXT:  .LBB2_11: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 28, 0, 29
@@ -2677,11 +2677,11 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_11
 ; CHECK-NEXT:  # %bb.12: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 28, ui@toc@l(12)
 ; CHECK-NEXT:    addis 30, 2, sll@toc@ha
+; CHECK-NEXT:    stw 28, ui@toc@l(12)
 ; CHECK-NEXT:    lbz 28, uc@toc@l(3)
-; CHECK-NEXT:    addi 27, 30, sll@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 27, 30, sll@toc@l
 ; CHECK-NEXT:  .LBB2_13: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 26, 0, 27
@@ -2693,8 +2693,8 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 28, 2, ull@toc@ha
 ; CHECK-NEXT:    std 26, sll@toc@l(30)
 ; CHECK-NEXT:    lbz 25, uc@toc@l(3)
-; CHECK-NEXT:    addi 26, 28, ull@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 26, 28, ull@toc@l
 ; CHECK-NEXT:  .LBB2_15: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 24, 0, 26
@@ -3070,26 +3070,26 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_81
 ; CHECK-NEXT:  # %bb.82: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    lbz 20, uc@toc@l(3)
 ; CHECK-NEXT:    nand 25, 21, 25
 ; CHECK-NEXT:    li 21, -1
-; CHECK-NEXT:    std 21, 8(23)
 ; CHECK-NEXT:    std 25, u128@toc@l(24)
-; CHECK-NEXT:    addis 25, 2, s128@toc@ha
+; CHECK-NEXT:    addis 24, 2, s128@toc@ha
+; CHECK-NEXT:    lbz 25, uc@toc@l(3)
+; CHECK-NEXT:    std 21, 8(23)
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    addi 24, 25, s128@toc@l
+; CHECK-NEXT:    addi 23, 24, s128@toc@l
 ; CHECK-NEXT:  .LBB2_83: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lqarx 18, 0, 24
-; CHECK-NEXT:    nand 17, 20, 19
+; CHECK-NEXT:    lqarx 18, 0, 23
+; CHECK-NEXT:    nand 17, 25, 19
 ; CHECK-NEXT:    nand 16, 22, 18
-; CHECK-NEXT:    stqcx. 16, 0, 24
+; CHECK-NEXT:    stqcx. 16, 0, 23
 ; CHECK-NEXT:    bne 0, .LBB2_83
 ; CHECK-NEXT:  # %bb.84: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    std 21, 8(24)
-; CHECK-NEXT:    nand 23, 19, 20
-; CHECK-NEXT:    std 23, s128@toc@l(25)
+; CHECK-NEXT:    std 21, 8(23)
+; CHECK-NEXT:    nand 25, 19, 25
+; CHECK-NEXT:    std 25, s128@toc@l(24)
 ; CHECK-NEXT:    lbz 25, uc@toc@l(3)
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB2_85: # %entry
@@ -4358,10 +4358,10 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 6, 3, uc@toc@l
-; CHECK-NEXT:    addi 0, 4, sc@toc@l
 ; CHECK-NEXT:    lbz 5, uc@toc@l(3)
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    addi 6, 3, uc@toc@l
+; CHECK-NEXT:    addi 0, 4, sc@toc@l
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_1: # %entry
 ; CHECK-NEXT:    #
@@ -4388,12 +4388,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB3_4
 ; CHECK-NEXT:  .LBB3_6: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    addis 7, 2, ss@toc@ha
 ; CHECK-NEXT:    stb 5, uc@toc@l(3)
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
-; CHECK-NEXT:    addi 12, 7, ss@toc@l
+; CHECK-NEXT:    lbz 7, sc@toc@l(4)
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:    extsb 8, 7
+; CHECK-NEXT:    addis 7, 2, ss@toc@ha
+; CHECK-NEXT:    addi 12, 7, ss@toc@l
 ; CHECK-NEXT:  .LBB3_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 9, 0, 12
@@ -4406,12 +4406,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_9: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 9, ss@toc@l(7)
-; CHECK-NEXT:    addis 7, 2, us@toc@ha
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    lbz 7, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 5, uc@toc@l(3)
-; CHECK-NEXT:    addi 11, 7, us@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:    extsb 8, 7
+; CHECK-NEXT:    addis 7, 2, us@toc@ha
+; CHECK-NEXT:    addi 11, 7, us@toc@l
 ; CHECK-NEXT:  .LBB3_10: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 9, 0, 11
@@ -4424,12 +4424,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_12: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 9, us@toc@l(7)
-; CHECK-NEXT:    addis 7, 2, si@toc@ha
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    lbz 7, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 5, uc@toc@l(3)
-; CHECK-NEXT:    addi 10, 7, si@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:    extsb 8, 7
+; CHECK-NEXT:    addis 7, 2, si@toc@ha
+; CHECK-NEXT:    addi 10, 7, si@toc@l
 ; CHECK-NEXT:  .LBB3_13: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 9, 0, 10
@@ -4442,12 +4442,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_15: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stw 9, si@toc@l(7)
-; CHECK-NEXT:    addis 5, 2, ui@toc@ha
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    lbz 5, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 7, uc@toc@l(3)
-; CHECK-NEXT:    addi 9, 5, ui@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:    extsb 8, 5
+; CHECK-NEXT:    addis 5, 2, ui@toc@ha
+; CHECK-NEXT:    addi 9, 5, ui@toc@l
 ; CHECK-NEXT:  .LBB3_16: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 30, 0, 9
@@ -4477,8 +4477,8 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB3_19
 ; CHECK-NEXT:  .LBB3_21: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    std 28, sll@toc@l(30)
 ; CHECK-NEXT:    addis 29, 2, ull@toc@ha
+; CHECK-NEXT:    std 28, sll@toc@l(30)
 ; CHECK-NEXT:    lbz 7, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 30, uc@toc@l(3)
 ; CHECK-NEXT:    sync
@@ -4511,8 +4511,8 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_27: # %entry
 ; CHECK-NEXT:    xor 0, 28, 30
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 0, 0
 ; CHECK-NEXT:    lbz 30, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 0, 0
 ; CHECK-NEXT:    srwi 0, 0, 5
 ; CHECK-NEXT:    stw 0, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 0, uc@toc@l(3)
@@ -4529,12 +4529,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_30: # %entry
 ; CHECK-NEXT:    xor 6, 29, 0
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 0, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 6, 6
+; CHECK-NEXT:    extsb 0, 0
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 0, 0
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_31: # %entry
 ; CHECK-NEXT:    #
@@ -4548,12 +4548,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_33: # %entry
 ; CHECK-NEXT:    xor 6, 30, 6
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 12, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 6, 6
+; CHECK-NEXT:    extsb 12, 12
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 12, 12
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_34: # %entry
 ; CHECK-NEXT:    #
@@ -4567,12 +4567,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_36: # %entry
 ; CHECK-NEXT:    xor 6, 0, 6
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 11, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 6, 6
+; CHECK-NEXT:    extsb 11, 11
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 11, 11
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_37: # %entry
 ; CHECK-NEXT:    #
@@ -4586,12 +4586,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_39: # %entry
 ; CHECK-NEXT:    xor 6, 12, 6
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 10, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 6, 6
+; CHECK-NEXT:    extsb 10, 10
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 10, 10
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_40: # %entry
 ; CHECK-NEXT:    #
@@ -4605,12 +4605,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_42: # %entry
 ; CHECK-NEXT:    xor 6, 11, 6
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 9, sc@toc@l(4)
+; CHECK-NEXT:    cntlzw 6, 6
+; CHECK-NEXT:    extsb 9, 9
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 9, 9
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_43: # %entry
 ; CHECK-NEXT:    #
@@ -4624,12 +4624,12 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_45: # %entry
 ; CHECK-NEXT:    xor 6, 10, 6
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzd 6, 6
 ; CHECK-NEXT:    lbz 4, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 3, uc@toc@l(3)
+; CHECK-NEXT:    cntlzd 6, 6
+; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    rldicl 6, 6, 58, 63
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_46: # %entry
 ; CHECK-NEXT:    #
@@ -4643,9 +4643,9 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_48: # %entry
 ; CHECK-NEXT:    xor 3, 6, 3
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    cntlzd 3, 3
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-NEXT:    cntlzd 3, 3
 ; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    rldicl 3, 3, 58, 63
@@ -5169,8 +5169,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-LABEL: test_lock:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, sc@toc@ha
-; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    li 7, 1
 ; CHECK-NEXT:    addi 4, 3, sc@toc@l
 ; CHECK-NEXT:  .LBB4_1: # %entry
 ; CHECK-NEXT:    #
@@ -5181,8 +5181,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 4, 2, uc@toc@ha
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 5, sc@toc@l(3)
-; CHECK-NEXT:    addi 6, 4, uc@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 6, 4, uc@toc@l
 ; CHECK-NEXT:  .LBB4_3: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 5, 0, 6
@@ -5192,8 +5192,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 5, uc@toc@l(4)
 ; CHECK-NEXT:    addis 5, 2, ss@toc@ha
-; CHECK-NEXT:    addi 8, 5, ss@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 8, 5, ss@toc@l
 ; CHECK-NEXT:  .LBB4_5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 6, 0, 8
@@ -5203,8 +5203,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 6, ss@toc@l(5)
 ; CHECK-NEXT:    addis 6, 2, us@toc@ha
-; CHECK-NEXT:    addi 9, 6, us@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 9, 6, us@toc@l
 ; CHECK-NEXT:  .LBB4_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 8, 0, 9
@@ -5214,8 +5214,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sth 8, us@toc@l(6)
 ; CHECK-NEXT:    addis 8, 2, si@toc@ha
-; CHECK-NEXT:    addi 10, 8, si@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 10, 8, si@toc@l
 ; CHECK-NEXT:  .LBB4_9: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 9, 0, 10
@@ -5225,8 +5225,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stw 9, si@toc@l(8)
 ; CHECK-NEXT:    addis 9, 2, ui@toc@ha
-; CHECK-NEXT:    addi 11, 9, ui@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 11, 9, ui@toc@l
 ; CHECK-NEXT:  .LBB4_11: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 10, 0, 11
@@ -5237,8 +5237,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stw 10, ui@toc@l(9)
 ; CHECK-NEXT:    li 11, 1
-; CHECK-NEXT:    addi 10, 7, sll@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 10, 7, sll@toc@l
 ; CHECK-NEXT:  .LBB4_13: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 12, 0, 10
@@ -5248,8 +5248,8 @@ define dso_local void @test_lock() local_unnamed_addr #0 {
 ; CHECK-NEXT:    addis 10, 2, ull@toc@ha
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    std 12, sll@toc@l(7)
-; CHECK-NEXT:    addi 0, 10, ull@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 0, 10, ull@toc@l
 ; CHECK-NEXT:  .LBB4_15: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 12, 0, 0
@@ -5506,8 +5506,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB5_3: # %entry
 ; CHECK-NEXT:    stw 5, ui@toc@l(4)
 ; CHECK-NEXT:    addis 5, 2, si@toc@ha
-; CHECK-NEXT:    addi 7, 5, si@toc@l
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    addi 7, 5, si@toc@l
 ; CHECK-NEXT:  .LBB5_4: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 8, 0, 7

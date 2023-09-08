@@ -1355,8 +1355,10 @@ static void createAliases() {
 }
 
 static void handleExplicitExports() {
+  static constexpr int kMaxWarnings = 3;
   if (config->hasExplicitExports) {
-    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+    std::atomic<uint64_t> warningsCount{0};
+    parallelForEach(symtab->getSymbols(), [&warningsCount](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym)) {
         if (config->exportedSymbols.match(sym->getName())) {
           if (defined->privateExtern) {
@@ -1367,8 +1369,12 @@ static void handleExplicitExports() {
               // The former can be exported but the latter cannot.
               defined->privateExtern = false;
             } else {
-              warn("cannot export hidden symbol " + toString(*defined) +
-                   "\n>>> defined in " + toString(defined->getFile()));
+              // Only print the first 3 warnings verbosely, and
+              // shorten the rest to avoid crowding logs.
+              if (warningsCount.fetch_add(1, std::memory_order_relaxed) <
+                  kMaxWarnings)
+                warn("cannot export hidden symbol " + toString(*defined) +
+                     "\n>>> defined in " + toString(defined->getFile()));
             }
           }
         } else {
@@ -1378,6 +1384,9 @@ static void handleExplicitExports() {
         dysym->shouldReexport = config->exportedSymbols.match(sym->getName());
       }
     });
+    if (warningsCount > kMaxWarnings)
+      warn("<... " + Twine(warningsCount - kMaxWarnings) +
+           " more similar warnings...>");
   } else if (!config->unexportedSymbols.empty()) {
     parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym))

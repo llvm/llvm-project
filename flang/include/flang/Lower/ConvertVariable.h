@@ -125,5 +125,9 @@ void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                       const Fortran::semantics::Symbol &sym,
                       const fir::ExtendedValue &exv, bool force = false);
 
+/// For the given Cray pointee symbol return the corresponding
+/// Cray pointer symbol. Assert if the pointer symbol cannot be found.
+Fortran::semantics::SymbolRef getCrayPointer(Fortran::semantics::SymbolRef sym);
+
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

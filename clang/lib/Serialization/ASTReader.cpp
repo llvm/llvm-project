@@ -2428,6 +2428,16 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // For standard C++ modules, we don't need to check the inputs.
   bool SkipChecks = F.StandardCXXModule;
 
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The option ForceCheckCXX20ModulesInputFiles is only meaningful for C++20
+  // modules.
+  if (F.StandardCXXModule && HSOpts.ForceCheckCXX20ModulesInputFiles) {
+    SkipChecks = false;
+    Overridden = false;
+  }
+
   OptionalFileEntryRefDegradesToFileEntryPtr File = OptionalFileEntryRef(
       expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false)));
 
@@ -4311,11 +4321,10 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
-                                            ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
-                                            SmallVectorImpl<ImportedSubmodule> *Imported) {
+                                            ModuleFile **NewLoadedModuleFile) {
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
@@ -4344,6 +4353,9 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     ModuleMgr.setGlobalIndex(nullptr);
     return ReadResult;
   }
+
+  if (NewLoadedModuleFile && !Loaded.empty())
+    *NewLoadedModuleFile = Loaded.back().Mod;
 
   // Here comes stuff that we only do once the entire chain is loaded. Do *not*
   // remove modules from this point. Various fields are updated during reading
@@ -4505,10 +4517,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     }
   }
   UnresolvedModuleRefs.clear();
-
-  if (Imported)
-    Imported->append(PendingImportedModules.begin(),
-                     PendingImportedModules.end());
 
   // FIXME: How do we load the 'use'd modules? They may not be submodules.
   // Might be unnecessary as use declarations are only used to build the
@@ -5713,12 +5721,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
-
-      // If we're loading a module before we initialize the sema, it implies
-      // we're performing eagerly loading.
-      if (!getSema() && CurrentModule->isModulePurview() &&
-          !getContext().getLangOpts().isCompilingModule())
-        Diag(clang::diag::warn_eagerly_load_for_standard_cplusplus_modules);
 
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 

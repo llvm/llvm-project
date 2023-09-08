@@ -164,8 +164,8 @@ entry:
 ; CHECK: .globl	_ZN4llvm11ParseIRFileERKSsRNS_12SMDiagnosticERNS_11LLVMContextE
 ; CHECK: bctrl
 ; CHECK: ld 2, 24(1)
-; CHECK: addis [[REG:[0-9]+]], 2, .L.str@toc@ha
-; CHECK: addi {{[0-9]+}}, [[REG]], .L.str@toc@l
+; CHECK: addis [[REG:[0-9]+]], 2, .L__ModuleStringPool@toc@ha
+; CHECK: addi {{[0-9]+}}, [[REG]], .L__ModuleStringPool@toc@l
 ; CHECK: bl _ZNSs6insertEmPKcm
   %.atomicdst.i.i.i.i.i46 = alloca i32, align 4
   %ref.tmp.i.i47 = alloca %"class.std::allocator", align 1

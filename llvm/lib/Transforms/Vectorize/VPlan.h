@@ -1150,11 +1150,13 @@ public:
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
 class VPWidenRecipe : public VPRecipeWithIRFlags, public VPValue {
+  unsigned Opcode;
 
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPValue(this, &I) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPValue(this, &I),
+        Opcode(I.getOpcode()) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -2202,14 +2204,23 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
-class VPScalarIVStepsRecipe : public VPRecipeBase, public VPValue {
-  const InductionDescriptor &IndDesc;
+class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags, public VPValue {
+  Instruction::BinaryOps InductionOpcode;
 
 public:
+  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step,
+                        Instruction::BinaryOps Opcode, FastMathFlags FMFs)
+      : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
+                            ArrayRef<VPValue *>({IV, Step}), FMFs),
+        VPValue(this), InductionOpcode(Opcode) {}
+
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
                         VPValue *Step)
-      : VPRecipeBase(VPDef::VPScalarIVStepsSC, {IV, Step}), VPValue(this),
-        IndDesc(IndDesc) {}
+      : VPScalarIVStepsRecipe(
+            IV, Step, IndDesc.getInductionOpcode(),
+            dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
+                ? IndDesc.getInductionBinOp()->getFastMathFlags()
+                : FastMathFlags()) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 

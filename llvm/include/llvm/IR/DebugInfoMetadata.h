@@ -22,6 +22,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
@@ -2075,6 +2076,14 @@ public:
   static unsigned
   getBaseDiscriminatorFromDiscriminator(unsigned D,
                                         bool IsFSDiscriminator = false) {
+    // Return the probe id instead of zero for a pseudo probe discriminator.
+    // This should help differenciate callsites with same line numbers to
+    // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
+    // where the original callsite dwarf discriminator is overwritten by
+    // callsite probe information.
+    if (isPseudoProbeDiscriminator(D))
+      return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
+
     if (IsFSDiscriminator)
       return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
     return getUnsignedFromPrefixEncoding(D);

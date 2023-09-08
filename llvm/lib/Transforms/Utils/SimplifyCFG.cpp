@@ -1607,13 +1607,14 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI, bool EqTermsOnly) {
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
-        BIParent->splice(BI->getIterator(), BB2, I2->getIterator());
+        I1->moveBeforePreserving(BI);
+        I2->moveBeforePreserving(BI);
+        Changed = true;
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
+        I1->moveBeforePreserving(BI);
         if (!I2->use_empty())
           I2->replaceAllUsesWith(I1);
         I1->andIRFlags(I2);

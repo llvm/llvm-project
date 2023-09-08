@@ -11,6 +11,8 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/macros/config.h"
 
+#include <stddef.h> // size_t
+
 namespace __llvm_libc::cpp {
 
 // remove_all_extents

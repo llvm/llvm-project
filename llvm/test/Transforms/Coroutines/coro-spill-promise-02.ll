@@ -3,25 +3,25 @@
 
 %"class.task::promise_type" = type { [64 x i8] }
 
-declare void @consume(i32*)
-declare void @consume2(%"class.task::promise_type"*)
+declare void @consume(ptr)
+declare void @consume2(ptr)
 
 define ptr @f() presplitcoroutine {
 entry:
   %data = alloca i32, align 4
   %__promise = alloca %"class.task::promise_type", align 64
   %id = call token @llvm.coro.id(i32 0, ptr %__promise, ptr null, ptr null)
-  call void @consume2(%"class.task::promise_type"* %__promise)
+  call void @consume2(ptr %__promise)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
-  call void @consume(i32* %data)
+  call void @consume(ptr %data)
   %0 = call i8 @llvm.coro.suspend(token none, i1 false)
   switch i8 %0, label %suspend [i8 0, label %resume
                                 i8 1, label %cleanup]
 resume:
-  call void @consume(i32* %data)
-  call void @consume2(%"class.task::promise_type"* %__promise)
+  call void @consume(ptr %data)
+  call void @consume2(ptr %__promise)
   br label %cleanup
 
 cleanup:

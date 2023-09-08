@@ -164,7 +164,7 @@
 #    endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#    if defined(__FreeBSD__)
+#    if defined(__FreeBSD__) && __FreeBSD__ < 14
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
 // For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
@@ -202,7 +202,7 @@
 
 // HARDENING {
 
-// TODO(hardening): remove this in LLVM 18.
+// TODO(hardening): remove this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
 // equivalent to setting the hardened mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
@@ -356,6 +356,8 @@
 #    define __has_declspec_attribute(__x) 0
 #  endif
 
+#  define __has_keyword(__x) !(__is_identifier(__x))
+
 #  ifndef __has_include
 #    define __has_include(...) 0
 #  endif
@@ -397,10 +399,8 @@
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#  endif
-
-#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
+#    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -1106,7 +1106,7 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
-#  if __has_feature(cxx_atomic) || __has_extension(c_atomic)
+#  if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #    define _LIBCPP_HAS_C_ATOMIC_IMP
 #  elif defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_HAS_GCC_ATOMIC_IMP

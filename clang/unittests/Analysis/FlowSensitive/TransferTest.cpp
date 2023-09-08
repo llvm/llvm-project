@@ -1446,6 +1446,99 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
+TEST(TransferTest, StructModeledFieldsWithComplicatedInheritance) {
+  std::string Code = R"(
+    struct Base1 {
+      int base1_1;
+      int base1_2;
+    };
+    struct Intermediate : Base1 {
+      int intermediate_1;
+      int intermediate_2;
+    };
+    struct Base2 {
+      int base2_1;
+      int base2_2;
+    };
+    struct MostDerived : public Intermediate, Base2 {
+      int most_derived_1;
+      int most_derived_2;
+    };
+
+    void target() {
+      MostDerived MD;
+      MD.base1_2 = 1;
+      MD.intermediate_2 = 1;
+      MD.base2_2 = 1;
+      MD.most_derived_2 = 1;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env =
+              getEnvironmentAtAnnotation(Results, "p");
+
+        // Only the accessed fields should exist in the model.
+        auto &MDLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "MD");
+        std::vector<const ValueDecl*> Fields;
+        for (auto [Field, _] : MDLoc.children())
+          Fields.push_back(Field);
+        ASSERT_THAT(Fields, UnorderedElementsAre(
+            findValueDecl(ASTCtx, "base1_2"),
+            findValueDecl(ASTCtx, "intermediate_2"),
+            findValueDecl(ASTCtx, "base2_2"),
+            findValueDecl(ASTCtx, "most_derived_2")));
+      });
+}
+
+TEST(TransferTest, StructInitializerListWithComplicatedInheritance) {
+  std::string Code = R"(
+    struct Base1 {
+      int base1;
+    };
+    struct Intermediate : Base1 {
+      int intermediate;
+    };
+    struct Base2 {
+      int base2;
+    };
+    struct MostDerived : public Intermediate, Base2 {
+      int most_derived;
+    };
+
+    void target() {
+      MostDerived MD = {};
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env =
+              getEnvironmentAtAnnotation(Results, "p");
+
+        // When a struct is initialized with a initializer list, all the
+        // fields are considered "accessed", and therefore do exist.
+        auto &MD = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "MD");
+        ASSERT_THAT(cast<IntegerValue>(
+            getFieldValue(&MD, *findValueDecl(ASTCtx, "base1"), Env)),
+            NotNull());
+        ASSERT_THAT(cast<IntegerValue>(
+            getFieldValue(&MD, *findValueDecl(ASTCtx, "intermediate"), Env)),
+            NotNull());
+        ASSERT_THAT(cast<IntegerValue>(
+            getFieldValue(&MD, *findValueDecl(ASTCtx, "base2"), Env)),
+            NotNull());
+        ASSERT_THAT(cast<IntegerValue>(
+            getFieldValue(&MD, *findValueDecl(ASTCtx, "most_derived"), Env)),
+            NotNull());
+      });
+}
+
 TEST(TransferTest, ReferenceMember) {
   std::string Code = R"(
     struct A {
@@ -2049,6 +2142,26 @@ TEST(TransferTest, AssignmentOperatorFromCallResult) {
         // `ReturnA()`. The only condition we're testing for is that the
         // analysis should not crash in this case.
       });
+}
+
+TEST(TransferTest, AssignmentOperatorWithInitAndInheritance) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct B { int Foo; };
+    struct S : public B {};
+    void target() {
+      S S1 = { 1 };
+      S S2;
+      S S3;
+      S1 = S2;  // Only Dst has InitListExpr.
+      S3 = S1;  // Only Src has InitListExpr.
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
 }
 
 TEST(TransferTest, CopyConstructor) {
@@ -3851,10 +3964,7 @@ TEST(TransferTest, LoopDereferencingChangingPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
@@ -3876,10 +3986,7 @@ TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
@@ -5744,6 +5851,26 @@ TEST(TransferTest, AnonymousStructWithReferenceField) {
         ASSERT_EQ(AnonStruct.getChild(*IDecl),
                   Env.getStorageLocation(*GlobalIDecl));
       });
+}
+
+TEST(TransferTest, EvaluateBlockWithUnreachablePreds) {
+  // This is a crash repro.
+  // `false` block may not have been processed when we try to evalute the `||`
+  // after visiting `true`, because it is not necessary (and therefore the edge
+  // is marked unreachable). Trying to get the analysis state via
+  // `getEnvironment` for the subexpression still should not crash.
+  std::string Code = R"(
+    int cast(int i) {
+      if ((i < 0 && true) || false) {
+        return 0;
+      }
+      return 0;
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
 }
 
 } // namespace

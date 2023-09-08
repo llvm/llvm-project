@@ -2,12 +2,13 @@
 Test lldb-vscode setBreakpoints request
 """
 
+import os
+
+import lldbvscode_testcase
 import vscode
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbvscode_testcase
-import os
 
 
 def make_buffer_verify_dict(start_idx, count, offset=0):
@@ -218,12 +219,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             },
             "pt": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "PointType @ 0x"},
+                "startswith": {"result": "{x:11, y:22}"},
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
                 "equals": {"type": "int[32]"},
-                "startswith": {"result": "int[32] @ 0x"},
+                "startswith": {"result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"},
                 "hasVariablesReference": True,
             },
             "argv": {
@@ -409,7 +410,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "name": "pt",
             "response": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "PointType @ 0x"},
+                "startswith": {"result": "{x:11, y:22}"},
                 "missing": ["indexedVariables"],
                 "hasVariablesReference": True,
             },
@@ -506,15 +507,30 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
         # Verify locals
         locals = self.vscode.get_local_variables()
-        buffer_children = make_buffer_verify_dict(0, 32)
+        # The vector variables will have one additional entry from the fake
+        # "[raw]" child.
         verify_locals = {
             "small_array": {"equals": {"indexedVariables": 5}},
             "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 5}},
-            "large_vector": {"equals": {"indexedVariables": 200}},
+            "small_vector": {"equals": {"indexedVariables": 6}},
+            "large_vector": {"equals": {"indexedVariables": 201}},
             "pt": {"missing": ["indexedVariables"]},
         }
         self.verify_variables(verify_locals, locals)
+
+        # We also verify that we produce a "[raw]" fake child with the real
+        # SBValue for the synthetic type.
+        verify_children = {
+            "[0]": {"equals": {"type": "int", "value": "0"}},
+            "[1]": {"equals": {"type": "int", "value": "0"}},
+            "[2]": {"equals": {"type": "int", "value": "0"}},
+            "[3]": {"equals": {"type": "int", "value": "0"}},
+            "[4]": {"equals": {"type": "int", "value": "0"}},
+            "[raw]": {"contains": {"type": ["vector"]}},
+        }
+        children = self.vscode.request_variables(locals[2]["variablesReference"])["body"]["variables"]
+        self.verify_variables(verify_children, children)
+
 
     @skipIfWindows
     @skipIfRemote
