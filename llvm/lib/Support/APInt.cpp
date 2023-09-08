@@ -31,6 +31,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "apint"
 
+#define    DebugTyPe     "foo"
+
 /// A utility function for allocating memory, checking for allocation failures,
 /// and ensuring the contents are zeroed.
 inline static uint64_t* getClearedMemory(unsigned numWords) {
