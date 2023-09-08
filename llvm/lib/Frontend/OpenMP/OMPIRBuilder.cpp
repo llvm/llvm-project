@@ -6111,9 +6111,8 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(Module &M) {
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB) {
-  if (!updateToLocation(Loc)) {
+  if (!updateToLocation(Loc))
     return Loc.IP;
-  }
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -6198,7 +6197,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
       WrapperArgTys.push_back(Arg.getType());
     }
     FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
-        "outlined_omp_teams",
+        (Twine(OutlinedFn.getName()) + ".teams").str(),
         FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
     Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
     WrapperFunc->getArg(0)->setName("global_tid");
