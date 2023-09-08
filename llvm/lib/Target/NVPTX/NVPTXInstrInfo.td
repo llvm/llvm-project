@@ -165,6 +165,7 @@ class ValueToRegClass<ValueType T> {
    NVPTXRegClass ret = !cond(
      !eq(name, "i1"): Int1Regs,
      !eq(name, "i16"): Int16Regs,
+     !eq(name, "v2i16"): Int32Regs,
      !eq(name, "i32"): Int32Regs,
      !eq(name, "i64"): Int64Regs,
      !eq(name, "f16"): Int16Regs,
@@ -213,6 +214,12 @@ multiclass I3<string OpcStr, SDNode OpNode> {
               !strconcat(OpcStr, "16 \t$dst, $a, $b;"),
               [(set Int16Regs:$dst, (OpNode Int16Regs:$a, (imm):$b))]>;
 }
+
+class I16x2<string OpcStr, SDNode OpNode> :
+ NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
+              !strconcat(OpcStr, "16x2 \t$dst, $a, $b;"),
+              [(set Int32Regs:$dst, (OpNode (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)))]>,
+              Requires<[hasPTX<80>, hasSM<90>]>;
 
 // Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
@@ -740,12 +747,10 @@ defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
 // def v2f16imm : Operand<v2f16>;
 // defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Int32Regs, v2f16imm, imm>;
 
-def SELP_f16x2rr :
-    NVPTXInst<(outs Int32Regs:$dst),
-              (ins Int32Regs:$a, Int32Regs:$b, Int1Regs:$p),
-              "selp.b32 \t$dst, $a, $b, $p;",
-              [(set Int32Regs:$dst,
-                    (select Int1Regs:$p, (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>;
+foreach vt = [v2f16, v2bf16, v2i16] in {
+def : Pat<(vt (select Int1Regs:$p, (vt Int32Regs:$a), (vt Int32Regs:$b))),
+          (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
+}
 
 //-----------------------------------
 // Test Instructions
@@ -787,6 +792,9 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
+def ADD16x2 : I16x2<"add.s", add>;
+def SUB16x2 : I16x2<"sub.s", sub>;
+
 // in32 and int64 addition and subtraction with carry-out.
 defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
 defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
@@ -825,6 +833,12 @@ defm SMAX : I3<"max.s", smax>;
 defm UMAX : I3<"max.u", umax>;
 defm SMIN : I3<"min.s", smin>;
 defm UMIN : I3<"min.u", umin>;
+
+def SMAX16x2 : I16x2<"max.s", smax>;
+def UMAX16x2 : I16x2<"max.u", umax>;
+def SMIN16x2 : I16x2<"min.s", smin>;
+def UMIN16x2 : I16x2<"min.u", umin>;
+
 
 //
 // Wide multiplication
@@ -2633,7 +2647,7 @@ foreach vt = [f16, bf16] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI16 Int16Regs:$src)>;
 }
 
-foreach vt = [v2f16, v2bf16] in {
+foreach vt = [v2f16, v2bf16, v2i16] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 Int32Regs:$src)>;
 }
 
@@ -2929,15 +2943,13 @@ def BITCONVERT_32_F2I : F_BITCONVERT<"32", f32, i32>;
 def BITCONVERT_64_I2F : F_BITCONVERT<"64", i64, f64>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", f64, i64>;
 
-foreach vt = [v2f16, v2bf16] in {
+foreach vt = [v2f16, v2bf16, v2i16] in {
 def: Pat<(vt (bitconvert (i32 UInt32Const:$a))),
          (IMOVB32ri UInt32Const:$a)>;
-def: Pat<(vt (bitconvert (i32 Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
-def: Pat<(i32 (bitconvert (vt Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
 def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
          (BITCONVERT_32_F2I Float32Regs:$a)>;
+def: Pat<(f32 (bitconvert (vt Int32Regs:$a))),
+         (BITCONVERT_32_I2F Int32Regs:$a)>;
 }
 foreach vt = [f16, bf16] in {
 def: Pat<(vt (bitconvert (i16 UInt16Const:$a))),
@@ -2946,6 +2958,15 @@ def: Pat<(vt (bitconvert (i16 Int16Regs:$a))),
          (ProxyRegI16 Int16Regs:$a)>;
 def: Pat<(i16 (bitconvert (vt Int16Regs:$a))),
          (ProxyRegI16 Int16Regs:$a)>;
+}
+
+foreach ta = [v2f16, v2bf16, v2i16, i32] in {
+  foreach tb = [v2f16, v2bf16, v2i16, i32] in {
+    if !ne(ta, tb) then {
+      def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
+             (ProxyRegI32 Int32Regs:$a)>;
+    }
+  }
 }
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
@@ -3286,18 +3307,17 @@ def : Pat<(i32 (trunc (srl Int64Regs:$s, (i32 32)))),
 def : Pat<(i32 (trunc (sra Int64Regs:$s, (i32 32)))),
           (I64toI32H Int64Regs:$s)>;
 
-def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 0)),
+foreach vt = [v2f16, v2bf16, v2i16] in {
+def : Pat<(extractelt (vt Int32Regs:$src), 0),
           (I32toI16L Int32Regs:$src)>;
-def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 1)),
+def : Pat<(extractelt (vt Int32Regs:$src), 1),
           (I32toI16H Int32Regs:$src)>;
+}
 def : Pat<(v2f16 (build_vector (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
-
-def : Pat<(bf16 (extractelt (v2bf16 Int32Regs:$src), 0)),
-          (I32toI16L Int32Regs:$src)>;
-def : Pat<(bf16 (extractelt (v2bf16 Int32Regs:$src), 1)),
-          (I32toI16H Int32Regs:$src)>;
 def : Pat<(v2bf16 (build_vector (bf16 Int16Regs:$a), (bf16 Int16Regs:$b))),
+          (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
+def : Pat<(v2i16 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 
 // Count leading zeros
