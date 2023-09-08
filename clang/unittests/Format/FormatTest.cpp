@@ -22524,8 +22524,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      []() -> auto {\n"
                "    int b = 32;\n"
                "    return 3;\n"
-               "  },\n"
-               "      foo, bar)\n"
+               "  }, foo, bar)\n"
                "      .foo();\n"
                "}",
                Style);
@@ -22551,32 +22550,12 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  verifyFormat("void foo() {\n"
-               "  aFunction(\n"
-               "      1, b(c(\n"
-               "             [](d) -> Foo {\n"
-               "    auto f = e(d);\n"
-               "    return f;\n"
-               "  },\n"
-               "             foo, Bar{},\n"
-               "             [] {\n"
-               "    auto g = h();\n"
-               "    return g;\n"
-               "  },\n"
-               "             baz)));\n"
-               "}",
-               Style);
   verifyFormat("void foo() {\n"
                "  aFunction(1, b(c(foo, Bar{}, baz, [](d) -> Foo {\n"
-               "    auto f = e(\n"
-               "        foo,\n"
-               "        [&] {\n"
+               "    auto f = e(foo, [&] {\n"
                "      auto g = h();\n"
                "      return g;\n"
-               "    },\n"
-               "        qux,\n"
-               "        [&] -> Bar {\n"
+               "    }, qux, [&] -> Bar {\n"
                "      auto i = j();\n"
                "      return i;\n"
                "    });\n"
@@ -22584,28 +22563,77 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
-  verifyFormat("Namespace::Foo::Foo(\n"
-               "    LongClassName bar, AnotherLongClassName baz)\n"
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz)\n"
                "    : baz{baz}, func{[&] {\n"
                "  auto qux = bar;\n"
                "  return aFunkyFunctionCall(qux);\n"
                "}} {}",
                Style);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  // FIXME: The following test should pass, but fails at the time of writing.
+#if 0
+  // As long as all the non-lambda arguments fit on a single line, AlwaysBreak
+  // doesn't force an initial line break, even if lambdas span multiple lines.
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  }, foo, Bar{}, [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  }, baz);\n"
+               "}",
+               Style);
+#endif
+  // A long non-lambda argument forces arguments to span multiple lines and thus
+  // forces an initial line break when using AlwaysBreak.
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1,\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  }, foo, Bar{},\n"
+               "      [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  }, bazzzzz,\n"
+               "      quuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuux);\n"
+               "}",
+               Style);
+  Style.BinPackArguments = false;
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1,\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  },\n"
+               "      foo,\n"
+               "      Bar{},\n"
+               "      [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  },\n"
+               "      bazzzzz,\n"
+               "      quuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuux);\n"
+               "}",
+               Style);
+  Style.BinPackArguments = true;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.BeforeLambdaBody = true;
   verifyFormat("void foo() {\n"
                "  aFunction(\n"
-               "      1, b(c(foo, Bar{}, baz,\n"
-               "             [](d) -> Foo\n"
+               "      1, b(c(foo, Bar{}, baz, [](d) -> Foo\n"
                "  {\n"
                "    auto f = e(\n"
                "        [&]\n"
                "    {\n"
                "      auto g = h();\n"
                "      return g;\n"
-               "    },\n"
-               "        qux,\n"
-               "        [&] -> Bar\n"
+               "    }, qux, [&] -> Bar\n"
                "    {\n"
                "      auto i = j();\n"
                "      return i;\n"
