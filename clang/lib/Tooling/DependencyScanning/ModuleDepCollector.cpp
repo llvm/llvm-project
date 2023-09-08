@@ -266,6 +266,13 @@ void ModuleDepCollector::addModuleFiles(
   for (const ModuleID &MID : ClangModuleDeps) {
     std::string PCMPath =
         Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    assert(MD && "Inconsistent dependency info");
+    if (MD->ModuleCacheKey)
+      CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
+                                                           *MD->ModuleCacheKey);
+
     if (EagerLoadModules)
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
