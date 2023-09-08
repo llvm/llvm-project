@@ -2423,11 +2423,11 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
-; CHECK-LE-NEXT:    mtfprwz f1, r3
-; CHECK-LE-NEXT:    addi r4, r4, .LCPI65_0@toc@l
-; CHECK-LE-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-NEXT:    xxspltw v2, vs1, 1
+; CHECK-LE-NEXT:    mtfprwz f0, r3
+; CHECK-LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
+; CHECK-LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
+; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-NEXT:    vadduwm v2, v2, v3
 ; CHECK-LE-NEXT:    blr

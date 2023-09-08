@@ -70,14 +70,14 @@ entry:
 ; CHECK: addis [[REG1:[0-9]+]], 2, .LC0@toc@ha
 ; CHECK: std 2, 40(1)
 ; CHECK: ld {{[0-9]+}}, .LC0@toc@l([[REG1]])
-; CHECK: {{mr|ld}} 2,
 ; CHECK: mtctr
+; CHECK: {{mr|ld}} 3,
 ; CHECK: bctrl
 ; CHECK: ld 2, 40(1)
 
 ; CHECK: std 2, 40(1)
-; CHECK: {{mr|ld}} 2,
 ; CHECK: mtctr
+; CHECK: {{mr|ld}} 3,
 ; CHECK: bctrl
 ; CHECK: ld 2, 40(1)
 

@@ -9,18 +9,18 @@
 ; Function Attrs: mustprogress uwtable
 define dso_local void @_Z1g1dILi17EE(ptr nocapture noundef readnone byval(%struct.d) align 8 %0) local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z1g1dILi17EE:
-; CHECK:    mtfprd f0, r4
-; CHECK:    stdx [[REG:r[0-9]+]], r1, r4
-; CHECK:    mffprd r4, f0
-; CHECK:    mtfprd f0, r4
-; CHECK:    ldx [[REG]], r1, r4
-; CHECK:    mffprd r4, f0
-; CHECK:    mtfprd f0, r4
-; CHECK:    stdx [[REG2:r[0-9]+]], r1, r4
-; CHECK:    mffprd r4, f0
-; CHECK:    mtfprd f0, r4
-; CHECK:    ldx [[REG2]], r1, r4
-; CHECK:    mffprd r4, f0
+; CHECK-NOT:    mtfprd f0, r4
+; CHECK-NOT:    stdx r3, r1, r4
+; CHECK-NOT:    mffprd r4, f0
+; CHECK-NOT:    mtfprd f0, r4
+; CHECK-NOT:    ldx r3, r1, r4
+; CHECK-NOT:    mffprd r4, f0
+; CHECK-NOT:    mtfprd f0, r4
+; CHECK-NOT:    stdx r3, r1, r4
+; CHECK-NOT:    mffprd r4, f0
+; CHECK-NOT:    mtfprd f0, r4
+; CHECK-NOT:    ldx r3, r1, r4
+; CHECK-NOT:    mffprd r4, f0
 entry:
   %c = alloca %struct.d, align 8
   call void @llvm.lifetime.start.p0(i64 524288, ptr nonnull %c) #3

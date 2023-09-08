@@ -11,11 +11,11 @@
 define dso_local i64 @rotatemask32(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: rotatemask32:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r5, r4
+; AIX32-NEXT:    cntlzw r5, r3
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    cntlzw r3, r3
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r3, r5, r3
+; AIX32-NEXT:    cntlzw r3, r4
+; AIX32-NEXT:    addi r3, r3, 32
+; AIX32-NEXT:    iseleq r3, r3, r5
 ; AIX32-NEXT:    rlwnm r4, r4, r3, 1, 31
 ; AIX32-NEXT:    li r3, 0
 ; AIX32-NEXT:    blr
@@ -53,23 +53,23 @@ declare i32 @llvm.fshl.i32(i32, i32, i32) #0
 define dso_local i64 @rotatemask64(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: rotatemask64:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r5, r4
-; AIX32-NEXT:    cntlzw r6, r3
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r5, r5, r6
+; AIX32-NEXT:    cntlzw r6, r4
+; AIX32-NEXT:    addi r6, r6, 32
+; AIX32-NEXT:    cntlzw r5, r3
+; AIX32-NEXT:    iseleq r5, r6, r5
 ; AIX32-NEXT:    andi. r6, r5, 32
 ; AIX32-NEXT:    clrlwi r5, r5, 27
 ; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    slw r8, r6, r5
-; AIX32-NEXT:    srw r6, r6, r7
-; AIX32-NEXT:    srw r4, r3, r7
-; AIX32-NEXT:    slw r3, r3, r5
-; AIX32-NEXT:    or r5, r8, r4
-; AIX32-NEXT:    or r4, r3, r6
-; AIX32-NEXT:    clrlwi r3, r5, 1
+; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    slw r4, r3, r5
+; AIX32-NEXT:    srw r3, r3, r7
+; AIX32-NEXT:    slw r5, r6, r5
+; AIX32-NEXT:    srw r8, r6, r7
+; AIX32-NEXT:    or r3, r5, r3
+; AIX32-NEXT:    or r4, r4, r8
+; AIX32-NEXT:    clrlwi r3, r3, 1
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: rotatemask64:
@@ -101,23 +101,23 @@ declare i64 @llvm.fshl.i64(i64, i64, i64) #1
 define dso_local i64 @rotatemask64_2(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: rotatemask64_2:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r5, r4
-; AIX32-NEXT:    cntlzw r6, r3
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r5, r5, r6
+; AIX32-NEXT:    cntlzw r6, r4
+; AIX32-NEXT:    addi r6, r6, 32
+; AIX32-NEXT:    cntlzw r5, r3
+; AIX32-NEXT:    iseleq r5, r6, r5
 ; AIX32-NEXT:    andi. r6, r5, 32
 ; AIX32-NEXT:    clrlwi r5, r5, 27
 ; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    slw r8, r6, r5
-; AIX32-NEXT:    srw r6, r6, r7
-; AIX32-NEXT:    srw r4, r3, r7
-; AIX32-NEXT:    slw r3, r3, r5
-; AIX32-NEXT:    or r5, r8, r4
-; AIX32-NEXT:    or r4, r3, r6
-; AIX32-NEXT:    clrlwi r3, r5, 1
+; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    slw r4, r3, r5
+; AIX32-NEXT:    srw r3, r3, r7
+; AIX32-NEXT:    slw r5, r6, r5
+; AIX32-NEXT:    srw r8, r6, r7
+; AIX32-NEXT:    or r3, r5, r3
+; AIX32-NEXT:    or r4, r4, r8
+; AIX32-NEXT:    clrlwi r3, r3, 1
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: rotatemask64_2:
@@ -147,21 +147,21 @@ entry:
 define dso_local i64 @rotatemask64_3(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: rotatemask64_3:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r5, r4
-; AIX32-NEXT:    cntlzw r6, r3
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r5, r5, r6
+; AIX32-NEXT:    cntlzw r6, r4
+; AIX32-NEXT:    addi r6, r6, 32
+; AIX32-NEXT:    cntlzw r5, r3
+; AIX32-NEXT:    iseleq r5, r6, r5
 ; AIX32-NEXT:    andi. r6, r5, 32
 ; AIX32-NEXT:    clrlwi r5, r5, 27
 ; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    srw r4, r6, r7
-; AIX32-NEXT:    slw r8, r3, r5
+; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    srw r8, r6, r7
+; AIX32-NEXT:    slw r4, r3, r5
 ; AIX32-NEXT:    srw r3, r3, r7
 ; AIX32-NEXT:    slw r5, r6, r5
-; AIX32-NEXT:    or r4, r8, r4
+; AIX32-NEXT:    or r4, r4, r8
 ; AIX32-NEXT:    or r3, r5, r3
 ; AIX32-NEXT:    clrlwi r3, r3, 1
 ; AIX32-NEXT:    rlwinm r4, r4, 0, 0, 23
@@ -201,17 +201,17 @@ define dso_local i64 @rotatemask64_nocount(i64 noundef %word, i64 noundef %clz) 
 ; AIX32-LABEL: rotatemask64_nocount:
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    andi. r5, r6, 32
-; AIX32-NEXT:    clrlwi r5, r6, 27
-; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    clrlwi r6, r6, 27
+; AIX32-NEXT:    subfic r7, r6, 32
+; AIX32-NEXT:    iseleq r5, r3, r4
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    slw r8, r6, r5
-; AIX32-NEXT:    srw r4, r3, r7
-; AIX32-NEXT:    srw r6, r6, r7
-; AIX32-NEXT:    slw r3, r3, r5
-; AIX32-NEXT:    or r5, r8, r4
-; AIX32-NEXT:    or r4, r3, r6
-; AIX32-NEXT:    clrlwi r3, r5, 8
+; AIX32-NEXT:    srw r8, r5, r7
+; AIX32-NEXT:    slw r4, r3, r6
+; AIX32-NEXT:    srw r3, r3, r7
+; AIX32-NEXT:    slw r5, r5, r6
+; AIX32-NEXT:    or r3, r5, r3
+; AIX32-NEXT:    or r4, r4, r8
+; AIX32-NEXT:    clrlwi r3, r3, 8
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: rotatemask64_nocount:
@@ -238,17 +238,17 @@ define dso_local i64 @builtincheck(i64 noundef %word, i64 noundef %shift) local_
 ; AIX32-LABEL: builtincheck:
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    andi. r5, r6, 32
-; AIX32-NEXT:    clrlwi r5, r6, 27
-; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    clrlwi r6, r6, 27
+; AIX32-NEXT:    subfic r7, r6, 32
+; AIX32-NEXT:    iseleq r5, r3, r4
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    slw r8, r6, r5
-; AIX32-NEXT:    srw r4, r3, r7
-; AIX32-NEXT:    srw r6, r6, r7
-; AIX32-NEXT:    slw r3, r3, r5
-; AIX32-NEXT:    or r5, r8, r4
-; AIX32-NEXT:    or r4, r3, r6
-; AIX32-NEXT:    clrlwi r3, r5, 1
+; AIX32-NEXT:    srw r8, r5, r7
+; AIX32-NEXT:    slw r4, r3, r6
+; AIX32-NEXT:    srw r3, r3, r7
+; AIX32-NEXT:    slw r5, r5, r6
+; AIX32-NEXT:    or r3, r5, r3
+; AIX32-NEXT:    or r4, r4, r8
+; AIX32-NEXT:    clrlwi r3, r3, 1
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: builtincheck:
@@ -275,10 +275,10 @@ define dso_local i64 @immshift(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: immshift:
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    rotlwi r5, r3, 15
-; AIX32-NEXT:    srwi r6, r4, 17
 ; AIX32-NEXT:    rlwimi r5, r4, 15, 0, 16
-; AIX32-NEXT:    rlwimi r6, r3, 15, 12, 16
-; AIX32-NEXT:    mr r3, r6
+; AIX32-NEXT:    srwi r4, r4, 17
+; AIX32-NEXT:    rlwimi r4, r3, 15, 12, 16
+; AIX32-NEXT:    mr r3, r4
 ; AIX32-NEXT:    mr r4, r5
 ; AIX32-NEXT:    blr
 ;
@@ -307,23 +307,23 @@ define dso_local i64 @twomasks(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    cntlzw r5, r4
-; AIX32-NEXT:    cntlzw r6, r3
-; AIX32-NEXT:    stw r0, 72(r1)
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r5, r5, r6
+; AIX32-NEXT:    cntlzw r6, r4
+; AIX32-NEXT:    stw r0, 72(r1)
+; AIX32-NEXT:    addi r6, r6, 32
+; AIX32-NEXT:    cntlzw r5, r3
+; AIX32-NEXT:    iseleq r5, r6, r5
 ; AIX32-NEXT:    andi. r6, r5, 32
 ; AIX32-NEXT:    clrlwi r5, r5, 27
 ; AIX32-NEXT:    iseleq r6, r3, r4
-; AIX32-NEXT:    subfic r7, r5, 32
 ; AIX32-NEXT:    iseleq r3, r4, r3
-; AIX32-NEXT:    slw r8, r6, r5
-; AIX32-NEXT:    srw r6, r6, r7
-; AIX32-NEXT:    srw r4, r3, r7
-; AIX32-NEXT:    slw r3, r3, r5
-; AIX32-NEXT:    or r5, r8, r4
-; AIX32-NEXT:    or r4, r3, r6
+; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    srw r8, r6, r7
+; AIX32-NEXT:    slw r4, r3, r5
+; AIX32-NEXT:    srw r3, r3, r7
+; AIX32-NEXT:    slw r5, r6, r5
+; AIX32-NEXT:    or r4, r4, r8
+; AIX32-NEXT:    or r5, r5, r3
 ; AIX32-NEXT:    clrlwi r3, r5, 1
 ; AIX32-NEXT:    clrlwi r5, r5, 16
 ; AIX32-NEXT:    mr r6, r4
@@ -397,27 +397,28 @@ define dso_local i64 @tworotates(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -64(r1)
-; AIX32-NEXT:    cntlzw r5, r4
-; AIX32-NEXT:    cntlzw r6, r3
-; AIX32-NEXT:    stw r0, 72(r1)
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    addi r5, r5, 32
-; AIX32-NEXT:    iseleq r5, r5, r6
+; AIX32-NEXT:    cntlzw r6, r4
+; AIX32-NEXT:    stw r0, 72(r1)
+; AIX32-NEXT:    addi r6, r6, 32
+; AIX32-NEXT:    cntlzw r5, r3
+; AIX32-NEXT:    iseleq r5, r6, r5
 ; AIX32-NEXT:    andi. r6, r5, 32
 ; AIX32-NEXT:    clrlwi r5, r5, 27
-; AIX32-NEXT:    iseleq r7, r3, r4
-; AIX32-NEXT:    subfic r8, r5, 32
-; AIX32-NEXT:    rotlwi r6, r3, 23
+; AIX32-NEXT:    iseleq r6, r3, r4
 ; AIX32-NEXT:    iseleq r9, r4, r3
-; AIX32-NEXT:    slw r11, r7, r5
-; AIX32-NEXT:    srw r7, r7, r8
-; AIX32-NEXT:    srw r10, r9, r8
-; AIX32-NEXT:    slw r8, r9, r5
-; AIX32-NEXT:    srwi r5, r4, 9
-; AIX32-NEXT:    or r9, r11, r10
+; AIX32-NEXT:    subfic r7, r5, 32
+; AIX32-NEXT:    srw r8, r6, r7
+; AIX32-NEXT:    slw r10, r9, r5
+; AIX32-NEXT:    srw r7, r9, r7
+; AIX32-NEXT:    slw r5, r6, r5
+; AIX32-NEXT:    rotlwi r6, r3, 23
+; AIX32-NEXT:    or r5, r5, r7
+; AIX32-NEXT:    or r8, r10, r8
 ; AIX32-NEXT:    rlwimi r6, r4, 23, 0, 8
-; AIX32-NEXT:    or r4, r8, r7
-; AIX32-NEXT:    clrlwi r7, r9, 1
+; AIX32-NEXT:    clrlwi r7, r5, 1
+; AIX32-NEXT:    srwi r5, r4, 9
+; AIX32-NEXT:    mr r4, r8
 ; AIX32-NEXT:    rlwimi r5, r3, 23, 1, 8
 ; AIX32-NEXT:    mr r3, r7
 ; AIX32-NEXT:    bl .callee[PR]

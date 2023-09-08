@@ -20,12 +20,12 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    std 0, 80(1)
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
 ; CHECK-NEXT:    lwz 3, 0(3)
-; CHECK-NEXT:    ld 29, .LC0@toc@l(4)
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    addi 30, 3, 1
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECK-NEXT:    ld 29, .LC0@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, aj@got@tlsgd@ha
 ; CHECK-NEXT:    addi 3, 3, aj@got@tlsgd@l
 ; CHECK-NEXT:    bl __tls_get_addr(aj@tlsgd)

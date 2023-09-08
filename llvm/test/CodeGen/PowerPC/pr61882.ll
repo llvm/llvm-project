@@ -34,8 +34,8 @@ define void @foo(ptr %a, i32 %x) {
 ;
 ; PWR8-LABEL: foo:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    extsb r4, r4
 ; PWR8-NEXT:    sync
+; PWR8-NEXT:    extsb r4, r4
 ; PWR8-NEXT:  .LBB0_1:
 ; PWR8-NEXT:    lbarx r5, 0, r3
 ; PWR8-NEXT:    extsb r5, r5

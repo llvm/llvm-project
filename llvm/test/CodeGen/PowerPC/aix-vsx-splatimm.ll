@@ -36,20 +36,20 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    bclr 12, 20, 0
 ; CHECK-NEXT:  # %bb.1: # %bb3
+; CHECK-NEXT:    slwi 3, 3, 8
 ; CHECK-NEXT:    srwi 4, 4, 16
+; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    srwi 5, 5, 16
 ; CHECK-NEXT:    mullw 4, 5, 4
 ; CHECK-NEXT:    lwz 5, 0(3)
-; CHECK-NEXT:    slwi 3, 3, 8
-; CHECK-NEXT:    neg 3, 3
-; CHECK-NEXT:    srwi 5, 5, 1
 ; CHECK-NEXT:    mtvsrd 34, 3
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    srwi 5, 5, 1
 ; CHECK-NEXT:    mullw 4, 4, 5
-; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    neg 4, 4
 ; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    vsplth 2, 2, 3
+; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    vsplth 3, 3, 3
 ; CHECK-NEXT:    stxvd2x 35, 0, 3
 bb:

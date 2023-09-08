@@ -257,8 +257,8 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -112(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
 ; AIX64-NEXT:    li r4, 0
+; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
 ; AIX64-NEXT:    std r0, 128(r1)
 ; AIX64-NEXT:    ori r4, r4, 35612
 ; AIX64-NEXT:    add r3, r3, r4
@@ -318,18 +318,18 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -96(r1)
-; AIX32-NEXT:    lwz r3, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    lis r4, 0
-; AIX32-NEXT:    stw r0, 104(r1)
-; AIX32-NEXT:    ori r5, r4, 35596
-; AIX32-NEXT:    ori r4, r4, 35584
-; AIX32-NEXT:    lxvw4x vs0, r3, r5
-; AIX32-NEXT:    lxvw4x vs1, r3, r4
-; AIX32-NEXT:    li r4, 12
+; AIX32-NEXT:    lis r6, 0
+; AIX32-NEXT:    lwz r4, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    li r5, 12
 ; AIX32-NEXT:    addi r3, r1, 64
-; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
-; AIX32-NEXT:    stxvw4x vs0, 0, r4
-; AIX32-NEXT:    stxvw4x vs1, 0, r3
+; AIX32-NEXT:    stw r0, 104(r1)
+; AIX32-NEXT:    ori r7, r6, 35596
+; AIX32-NEXT:    rlwimi r5, r3, 0, 30, 27
+; AIX32-NEXT:    lxvw4x vs0, r4, r7
+; AIX32-NEXT:    stxvw4x vs0, 0, r5
+; AIX32-NEXT:    ori r5, r6, 35584
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 96
@@ -341,17 +341,17 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr r0
 ; AIX64-NEXT:    stdu r1, -144(r1)
-; AIX64-NEXT:    ld r3, L..C0(r2) # @__ModuleStringPool
-; AIX64-NEXT:    li r4, 0
+; AIX64-NEXT:    li r3, 0
+; AIX64-NEXT:    ld r4, L..C0(r2) # @__ModuleStringPool
 ; AIX64-NEXT:    std r0, 160(r1)
-; AIX64-NEXT:    ori r5, r4, 35596
-; AIX64-NEXT:    ori r4, r4, 35584
-; AIX64-NEXT:    lxvw4x vs0, r3, r5
-; AIX64-NEXT:    lxvw4x vs1, r3, r4
-; AIX64-NEXT:    addi r4, r1, 124
+; AIX64-NEXT:    ori r5, r3, 35596
+; AIX64-NEXT:    ori r3, r3, 35584
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    addi r5, r1, 124
+; AIX64-NEXT:    stxvw4x vs0, 0, r5
+; AIX64-NEXT:    lxvw4x vs0, r4, r3
 ; AIX64-NEXT:    addi r3, r1, 112
-; AIX64-NEXT:    stxvw4x vs0, 0, r4
-; AIX64-NEXT:    stxvw4x vs1, 0, r3
+; AIX64-NEXT:    stxvw4x vs0, 0, r3
 ; AIX64-NEXT:    bl .calleeInt[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 144
@@ -370,11 +370,11 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    ori r5, r4, 35596
 ; LINUX64BE-NEXT:    ori r4, r4, 35584
 ; LINUX64BE-NEXT:    lxvw4x vs0, r3, r5
-; LINUX64BE-NEXT:    lxvw4x vs1, r3, r4
-; LINUX64BE-NEXT:    addi r4, r1, 124
+; LINUX64BE-NEXT:    addi r5, r1, 124
+; LINUX64BE-NEXT:    stxvw4x vs0, 0, r5
+; LINUX64BE-NEXT:    lxvw4x vs0, r3, r4
 ; LINUX64BE-NEXT:    addi r3, r1, 112
-; LINUX64BE-NEXT:    stxvw4x vs0, 0, r4
-; LINUX64BE-NEXT:    stxvw4x vs1, 0, r3
+; LINUX64BE-NEXT:    stxvw4x vs0, 0, r3
 ; LINUX64BE-NEXT:    bl calleeInt
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addi r1, r1, 144
@@ -393,11 +393,11 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    ori r5, r4, 35596
 ; LINUX64LE-NEXT:    ori r4, r4, 35584
 ; LINUX64LE-NEXT:    lxvd2x vs0, r3, r5
-; LINUX64LE-NEXT:    lxvd2x vs1, r3, r4
-; LINUX64LE-NEXT:    addi r4, r1, 44
+; LINUX64LE-NEXT:    addi r5, r1, 44
+; LINUX64LE-NEXT:    stxvd2x vs0, 0, r5
+; LINUX64LE-NEXT:    lxvd2x vs0, r3, r4
 ; LINUX64LE-NEXT:    addi r3, r1, 32
-; LINUX64LE-NEXT:    stxvd2x vs0, 0, r4
-; LINUX64LE-NEXT:    stxvd2x vs1, 0, r3
+; LINUX64LE-NEXT:    stxvd2x vs0, 0, r3
 ; LINUX64LE-NEXT:    bl calleeInt
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 64
@@ -420,27 +420,27 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stwu r1, -176(r1)
 ; AIX32-NEXT:    lwz r4, L..C0(r2) # @__ModuleStringPool
 ; AIX32-NEXT:    li r5, 96
-; AIX32-NEXT:    li r6, 80
-; AIX32-NEXT:    li r7, 64
-; AIX32-NEXT:    li r8, 48
-; AIX32-NEXT:    li r9, 32
-; AIX32-NEXT:    li r10, 16
 ; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stw r0, 184(r1)
 ; AIX32-NEXT:    lxvw4x vs0, r4, r5
-; AIX32-NEXT:    lxvw4x vs1, r4, r6
-; AIX32-NEXT:    lxvw4x vs2, r4, r7
-; AIX32-NEXT:    lxvw4x vs3, r4, r8
-; AIX32-NEXT:    lxvw4x vs4, r4, r9
-; AIX32-NEXT:    lxvw4x vs5, r4, r10
-; AIX32-NEXT:    lxvw4x vs6, 0, r4
 ; AIX32-NEXT:    stxvw4x vs0, r3, r5
-; AIX32-NEXT:    stxvw4x vs1, r3, r6
-; AIX32-NEXT:    stxvw4x vs2, r3, r7
-; AIX32-NEXT:    stxvw4x vs3, r3, r8
-; AIX32-NEXT:    stxvw4x vs4, r3, r9
-; AIX32-NEXT:    stxvw4x vs5, r3, r10
-; AIX32-NEXT:    stxvw4x vs6, 0, r3
+; AIX32-NEXT:    li r5, 80
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 64
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 48
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 32
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 16
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    lxvw4x vs0, 0, r4
+; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    addi r1, r1, 176
@@ -454,27 +454,27 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -224(r1)
 ; AIX64-NEXT:    ld r4, L..C0(r2) # @__ModuleStringPool
 ; AIX64-NEXT:    li r5, 96
-; AIX64-NEXT:    li r6, 80
-; AIX64-NEXT:    li r7, 64
-; AIX64-NEXT:    li r8, 48
-; AIX64-NEXT:    li r9, 32
-; AIX64-NEXT:    li r10, 16
 ; AIX64-NEXT:    addi r3, r1, 112
 ; AIX64-NEXT:    std r0, 240(r1)
 ; AIX64-NEXT:    lxvw4x vs0, r4, r5
-; AIX64-NEXT:    lxvw4x vs1, r4, r6
-; AIX64-NEXT:    lxvw4x vs2, r4, r7
-; AIX64-NEXT:    lxvw4x vs3, r4, r8
-; AIX64-NEXT:    lxvw4x vs4, r4, r9
-; AIX64-NEXT:    lxvw4x vs5, r4, r10
-; AIX64-NEXT:    lxvw4x vs6, 0, r4
 ; AIX64-NEXT:    stxvw4x vs0, r3, r5
-; AIX64-NEXT:    stxvw4x vs1, r3, r6
-; AIX64-NEXT:    stxvw4x vs2, r3, r7
-; AIX64-NEXT:    stxvw4x vs3, r3, r8
-; AIX64-NEXT:    stxvw4x vs4, r3, r9
-; AIX64-NEXT:    stxvw4x vs5, r3, r10
-; AIX64-NEXT:    stxvw4x vs6, 0, r3
+; AIX64-NEXT:    li r5, 80
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 64
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 48
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 32
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 16
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    lxvw4x vs0, 0, r4
+; AIX64-NEXT:    stxvw4x vs0, 0, r3
 ; AIX64-NEXT:    bl .calleeInt[PR]
 ; AIX64-NEXT:    nop
 ; AIX64-NEXT:    addi r1, r1, 224
@@ -486,30 +486,30 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; LINUX64BE:       # %bb.0: # %entry
 ; LINUX64BE-NEXT:    mflr r0
 ; LINUX64BE-NEXT:    stdu r1, -224(r1)
-; LINUX64BE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64BE-NEXT:    li r4, 96
-; LINUX64BE-NEXT:    li r6, 80
-; LINUX64BE-NEXT:    li r7, 64
-; LINUX64BE-NEXT:    li r8, 48
-; LINUX64BE-NEXT:    li r9, 32
-; LINUX64BE-NEXT:    li r10, 16
-; LINUX64BE-NEXT:    addi r5, r3, .L__ModuleStringPool@toc@l
+; LINUX64BE-NEXT:    addis r4, r2, .L__ModuleStringPool@toc@ha
+; LINUX64BE-NEXT:    li r5, 96
 ; LINUX64BE-NEXT:    addi r3, r1, 112
 ; LINUX64BE-NEXT:    std r0, 240(r1)
-; LINUX64BE-NEXT:    lxvw4x vs0, r5, r4
-; LINUX64BE-NEXT:    lxvw4x vs1, r5, r6
-; LINUX64BE-NEXT:    lxvw4x vs2, r5, r7
-; LINUX64BE-NEXT:    lxvw4x vs3, r5, r8
-; LINUX64BE-NEXT:    lxvw4x vs4, r5, r9
-; LINUX64BE-NEXT:    lxvw4x vs5, r5, r10
-; LINUX64BE-NEXT:    lxvw4x vs6, 0, r5
-; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
-; LINUX64BE-NEXT:    stxvw4x vs1, r3, r6
-; LINUX64BE-NEXT:    stxvw4x vs2, r3, r7
-; LINUX64BE-NEXT:    stxvw4x vs3, r3, r8
-; LINUX64BE-NEXT:    stxvw4x vs4, r3, r9
-; LINUX64BE-NEXT:    stxvw4x vs5, r3, r10
-; LINUX64BE-NEXT:    stxvw4x vs6, 0, r3
+; LINUX64BE-NEXT:    addi r4, r4, .L__ModuleStringPool@toc@l
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    li r5, 80
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    li r5, 64
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    li r5, 48
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    li r5, 32
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    li r5, 16
+; LINUX64BE-NEXT:    lxvw4x vs0, r4, r5
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    lxvw4x vs0, 0, r4
+; LINUX64BE-NEXT:    stxvw4x vs0, 0, r3
 ; LINUX64BE-NEXT:    bl calleeInt
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addi r1, r1, 224
@@ -521,30 +521,30 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    mflr r0
 ; LINUX64LE-NEXT:    stdu r1, -144(r1)
-; LINUX64LE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
-; LINUX64LE-NEXT:    li r4, 96
-; LINUX64LE-NEXT:    li r6, 80
-; LINUX64LE-NEXT:    li r7, 64
-; LINUX64LE-NEXT:    li r8, 48
-; LINUX64LE-NEXT:    li r9, 32
-; LINUX64LE-NEXT:    li r10, 16
-; LINUX64LE-NEXT:    addi r5, r3, .L__ModuleStringPool@toc@l
+; LINUX64LE-NEXT:    addis r4, r2, .L__ModuleStringPool@toc@ha
+; LINUX64LE-NEXT:    li r5, 96
 ; LINUX64LE-NEXT:    addi r3, r1, 32
 ; LINUX64LE-NEXT:    std r0, 160(r1)
-; LINUX64LE-NEXT:    lxvd2x vs0, r5, r4
-; LINUX64LE-NEXT:    lxvd2x vs1, r5, r6
-; LINUX64LE-NEXT:    lxvd2x vs2, r5, r7
-; LINUX64LE-NEXT:    lxvd2x vs3, r5, r8
-; LINUX64LE-NEXT:    lxvd2x vs4, r5, r9
-; LINUX64LE-NEXT:    lxvd2x vs5, r5, r10
-; LINUX64LE-NEXT:    lxvd2x vs6, 0, r5
-; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
-; LINUX64LE-NEXT:    stxvd2x vs1, r3, r6
-; LINUX64LE-NEXT:    stxvd2x vs2, r3, r7
-; LINUX64LE-NEXT:    stxvd2x vs3, r3, r8
-; LINUX64LE-NEXT:    stxvd2x vs4, r3, r9
-; LINUX64LE-NEXT:    stxvd2x vs5, r3, r10
-; LINUX64LE-NEXT:    stxvd2x vs6, 0, r3
+; LINUX64LE-NEXT:    addi r4, r4, .L__ModuleStringPool@toc@l
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    li r5, 80
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    li r5, 64
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    li r5, 48
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    li r5, 32
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    li r5, 16
+; LINUX64LE-NEXT:    lxvd2x vs0, r4, r5
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    lxvd2x vs0, 0, r4
+; LINUX64LE-NEXT:    stxvd2x vs0, 0, r3
 ; LINUX64LE-NEXT:    bl calleeInt
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 144
@@ -567,33 +567,33 @@ define dso_local signext i32 @array2() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stwu r1, -176(r1)
 ; AIX32-NEXT:    lwz r4, L..C0(r2) # @__ModuleStringPool
 ; AIX32-NEXT:    li r3, 208
-; AIX32-NEXT:    li r5, 192
-; AIX32-NEXT:    li r6, 176
-; AIX32-NEXT:    li r7, 160
-; AIX32-NEXT:    li r8, 144
+; AIX32-NEXT:    li r5, 96
 ; AIX32-NEXT:    stw r0, 184(r1)
 ; AIX32-NEXT:    lxvw4x vs0, r4, r3
-; AIX32-NEXT:    lxvw4x vs1, r4, r5
-; AIX32-NEXT:    li r5, 96
 ; AIX32-NEXT:    addi r3, r1, 64
-; AIX32-NEXT:    lxvw4x vs2, r4, r6
-; AIX32-NEXT:    lxvw4x vs3, r4, r7
-; AIX32-NEXT:    li r6, 128
-; AIX32-NEXT:    li r7, 112
-; AIX32-NEXT:    lxvw4x vs4, r4, r8
-; AIX32-NEXT:    lxvw4x vs5, r4, r6
 ; AIX32-NEXT:    stxvw4x vs0, r3, r5
-; AIX32-NEXT:    lxvw4x vs0, r4, r7
-; AIX32-NEXT:    li r4, 80
+; AIX32-NEXT:    li r5, 192
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    li r5, 80
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 176
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
 ; AIX32-NEXT:    li r5, 64
-; AIX32-NEXT:    stxvw4x vs1, r3, r4
-; AIX32-NEXT:    li r4, 48
-; AIX32-NEXT:    stxvw4x vs2, r3, r5
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 160
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    li r5, 48
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 144
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
 ; AIX32-NEXT:    li r5, 32
-; AIX32-NEXT:    stxvw4x vs3, r3, r4
-; AIX32-NEXT:    li r4, 16
-; AIX32-NEXT:    stxvw4x vs4, r3, r5
-; AIX32-NEXT:    stxvw4x vs5, r3, r4
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 128
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    li r5, 16
+; AIX32-NEXT:    stxvw4x vs0, r3, r5
+; AIX32-NEXT:    li r5, 112
+; AIX32-NEXT:    lxvw4x vs0, r4, r5
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
@@ -608,33 +608,33 @@ define dso_local signext i32 @array2() local_unnamed_addr #0 {
 ; AIX64-NEXT:    stdu r1, -224(r1)
 ; AIX64-NEXT:    ld r4, L..C0(r2) # @__ModuleStringPool
 ; AIX64-NEXT:    li r3, 208
-; AIX64-NEXT:    li r5, 192
-; AIX64-NEXT:    li r6, 176
-; AIX64-NEXT:    li r7, 160
-; AIX64-NEXT:    li r8, 144
+; AIX64-NEXT:    li r5, 96
 ; AIX64-NEXT:    std r0, 240(r1)
 ; AIX64-NEXT:    lxvw4x vs0, r4, r3
-; AIX64-NEXT:    lxvw4x vs1, r4, r5
-; AIX64-NEXT:    li r5, 96
 ; AIX64-NEXT:    addi r3, r1, 112
-; AIX64-NEXT:    lxvw4x vs2, r4, r6
-; AIX64-NEXT:    lxvw4x vs3, r4, r7
-; AIX64-NEXT:    li r6, 128
-; AIX64-NEXT:    li r7, 112
-; AIX64-NEXT:    lxvw4x vs4, r4, r8
-; AIX64-NEXT:    lxvw4x vs5, r4, r6
 ; AIX64-NEXT:    stxvw4x vs0, r3, r5
-; AIX64-NEXT:    lxvw4x vs0, r4, r7
-; AIX64-NEXT:    li r4, 80
+; AIX64-NEXT:    li r5, 192
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    li r5, 80
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 176
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
 ; AIX64-NEXT:    li r5, 64
-; AIX64-NEXT:    stxvw4x vs1, r3, r4
-; AIX64-NEXT:    li r4, 48
-; AIX64-NEXT:    stxvw4x vs2, r3, r5
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 160
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    li r5, 48
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 144
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
 ; AIX64-NEXT:    li r5, 32
-; AIX64-NEXT:    stxvw4x vs3, r3, r4
-; AIX64-NEXT:    li r4, 16
-; AIX64-NEXT:    stxvw4x vs4, r3, r5
-; AIX64-NEXT:    stxvw4x vs5, r3, r4
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 128
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
+; AIX64-NEXT:    li r5, 16
+; AIX64-NEXT:    stxvw4x vs0, r3, r5
+; AIX64-NEXT:    li r5, 112
+; AIX64-NEXT:    lxvw4x vs0, r4, r5
 ; AIX64-NEXT:    stxvw4x vs0, 0, r3
 ; AIX64-NEXT:    bl .calleeInt[PR]
 ; AIX64-NEXT:    nop
@@ -649,34 +649,34 @@ define dso_local signext i32 @array2() local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    stdu r1, -224(r1)
 ; LINUX64BE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
 ; LINUX64BE-NEXT:    li r4, 208
-; LINUX64BE-NEXT:    li r6, 176
-; LINUX64BE-NEXT:    li r7, 144
+; LINUX64BE-NEXT:    li r5, 96
 ; LINUX64BE-NEXT:    std r0, 240(r1)
-; LINUX64BE-NEXT:    addi r5, r3, .L__ModuleStringPool@toc@l
-; LINUX64BE-NEXT:    li r3, 192
-; LINUX64BE-NEXT:    lxvw4x vs0, r5, r4
-; LINUX64BE-NEXT:    li r4, 160
-; LINUX64BE-NEXT:    lxvw4x vs1, r5, r3
+; LINUX64BE-NEXT:    addi r6, r3, .L__ModuleStringPool@toc@l
 ; LINUX64BE-NEXT:    addi r3, r1, 112
-; LINUX64BE-NEXT:    lxvw4x vs2, r5, r6
-; LINUX64BE-NEXT:    li r6, 96
-; LINUX64BE-NEXT:    lxvw4x vs3, r5, r4
-; LINUX64BE-NEXT:    li r4, 128
-; LINUX64BE-NEXT:    lxvw4x vs4, r5, r7
-; LINUX64BE-NEXT:    li r7, 112
-; LINUX64BE-NEXT:    lxvw4x vs5, r5, r4
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
+; LINUX64BE-NEXT:    li r4, 192
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r5
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
 ; LINUX64BE-NEXT:    li r4, 80
-; LINUX64BE-NEXT:    stxvw4x vs0, r3, r6
-; LINUX64BE-NEXT:    lxvw4x vs0, r5, r7
-; LINUX64BE-NEXT:    li r5, 64
-; LINUX64BE-NEXT:    stxvw4x vs1, r3, r4
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
+; LINUX64BE-NEXT:    li r4, 176
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
+; LINUX64BE-NEXT:    li r4, 64
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
+; LINUX64BE-NEXT:    li r4, 160
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
 ; LINUX64BE-NEXT:    li r4, 48
-; LINUX64BE-NEXT:    stxvw4x vs2, r3, r5
-; LINUX64BE-NEXT:    li r5, 32
-; LINUX64BE-NEXT:    stxvw4x vs3, r3, r4
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
+; LINUX64BE-NEXT:    li r4, 144
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
+; LINUX64BE-NEXT:    li r4, 32
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
+; LINUX64BE-NEXT:    li r4, 128
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
 ; LINUX64BE-NEXT:    li r4, 16
-; LINUX64BE-NEXT:    stxvw4x vs4, r3, r5
-; LINUX64BE-NEXT:    stxvw4x vs5, r3, r4
+; LINUX64BE-NEXT:    stxvw4x vs0, r3, r4
+; LINUX64BE-NEXT:    li r4, 112
+; LINUX64BE-NEXT:    lxvw4x vs0, r6, r4
 ; LINUX64BE-NEXT:    stxvw4x vs0, 0, r3
 ; LINUX64BE-NEXT:    bl calleeInt
 ; LINUX64BE-NEXT:    nop
@@ -691,34 +691,34 @@ define dso_local signext i32 @array2() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    stdu r1, -144(r1)
 ; LINUX64LE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
 ; LINUX64LE-NEXT:    li r4, 208
-; LINUX64LE-NEXT:    li r6, 176
-; LINUX64LE-NEXT:    li r7, 144
+; LINUX64LE-NEXT:    li r5, 96
 ; LINUX64LE-NEXT:    std r0, 160(r1)
-; LINUX64LE-NEXT:    addi r5, r3, .L__ModuleStringPool@toc@l
-; LINUX64LE-NEXT:    li r3, 192
-; LINUX64LE-NEXT:    lxvd2x vs0, r5, r4
-; LINUX64LE-NEXT:    li r4, 160
-; LINUX64LE-NEXT:    lxvd2x vs1, r5, r3
+; LINUX64LE-NEXT:    addi r6, r3, .L__ModuleStringPool@toc@l
 ; LINUX64LE-NEXT:    addi r3, r1, 32
-; LINUX64LE-NEXT:    lxvd2x vs2, r5, r6
-; LINUX64LE-NEXT:    li r6, 96
-; LINUX64LE-NEXT:    lxvd2x vs3, r5, r4
-; LINUX64LE-NEXT:    li r4, 128
-; LINUX64LE-NEXT:    lxvd2x vs4, r5, r7
-; LINUX64LE-NEXT:    li r7, 112
-; LINUX64LE-NEXT:    lxvd2x vs5, r5, r4
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
+; LINUX64LE-NEXT:    li r4, 192
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r5
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
 ; LINUX64LE-NEXT:    li r4, 80
-; LINUX64LE-NEXT:    stxvd2x vs0, r3, r6
-; LINUX64LE-NEXT:    lxvd2x vs0, r5, r7
-; LINUX64LE-NEXT:    li r5, 64
-; LINUX64LE-NEXT:    stxvd2x vs1, r3, r4
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    li r4, 176
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
+; LINUX64LE-NEXT:    li r4, 64
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    li r4, 160
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
 ; LINUX64LE-NEXT:    li r4, 48
-; LINUX64LE-NEXT:    stxvd2x vs2, r3, r5
-; LINUX64LE-NEXT:    li r5, 32
-; LINUX64LE-NEXT:    stxvd2x vs3, r3, r4
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    li r4, 144
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
+; LINUX64LE-NEXT:    li r4, 32
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    li r4, 128
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
 ; LINUX64LE-NEXT:    li r4, 16
-; LINUX64LE-NEXT:    stxvd2x vs4, r3, r5
-; LINUX64LE-NEXT:    stxvd2x vs5, r3, r4
+; LINUX64LE-NEXT:    stxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    li r4, 112
+; LINUX64LE-NEXT:    lxvd2x vs0, r6, r4
 ; LINUX64LE-NEXT:    stxvd2x vs0, 0, r3
 ; LINUX64LE-NEXT:    bl calleeInt
 ; LINUX64LE-NEXT:    nop
