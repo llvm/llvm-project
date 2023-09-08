@@ -441,14 +441,13 @@ bool InlineAsmLowering::lowerInlineAsm(
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
         assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
 
-        unsigned MatchedOperandFlag = Inst->getOperand(InstFlagIdx).getImm();
-        InlineAsm::Flag F(MatchedOperandFlag);
-        if (F.isMemKind()) {
+        const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
+        if (MatchedOperandFlag.isMemKind()) {
           LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
                                "supported. This should be target specific.\n");
           return false;
         }
-        if (!F.isRegDefKind() && !F.isRegDefEarlyClobberKind()) {
+        if (!MatchedOperandFlag.isRegDefKind() && !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
           LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
           return false;
         }
@@ -470,9 +469,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         }
 
         // Add Flag and input register operand (In) to Inst. Tie In to Def.
-        F = InlineAsm::Flag(InlineAsm::Kind::RegUse, 1);
-        F.setMatchingOp(DefIdx);
-        Inst.addImm(F);
+        InlineAsm::Flag UseFlag(InlineAsm::Kind::RegUse, 1);
+        UseFlag.setMatchingOp(DefIdx);
+        Inst.addImm(UseFlag);
         Inst.addReg(In);
         Inst->tieOperands(DefRegIdx, Inst->getNumOperands() - 1);
         break;
