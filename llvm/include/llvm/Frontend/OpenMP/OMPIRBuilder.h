@@ -2007,7 +2007,7 @@ public:
 
   /// Generator for `#omp teams`
   ///
-  /// \param Loc The location where the task construct was encountered.
+  /// \param Loc The location where the teams construct was encountered.
   /// \param BodyGenCB Callback that will generate the region code.
   InsertPointTy createTeams(const LocationDescription &Loc,
                             BodyGenCallbackTy BodyGenCB);
