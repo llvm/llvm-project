@@ -182,19 +182,30 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     inactive.
 
     ``` {.ebnf}
-     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore `
-                              ssa-use `, ` ssa-use `, `
-                              ssa-use `, ` cooperative-matrix-layout `, `
-                              (`[` memory-operand `]`)? `:`
-                              pointer-type `,` coop-matrix-type
+     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore`
+                              ssa-use `,` ssa-use `,`
+                              ssa-use `,` `<` cooperative-matrix-layout `>`
+                              (`,` `<` memory-operand `>`)? `:`
+                              pointer-type `,` coop-matrix-type `,` stride-type
     ```
+
+    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
+    support this optionality in the SPIR-V dialect.
 
     #### Example:
 
     ```
-      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride :
-        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>
+      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride, <RowMajor> :
+        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
+
+      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride, <ColumnMajor>, <Volatile> :
+        !spirv.ptr<f32, StorageBuffer>, !spirv.coopmatrix<8x8xf32, Subgroup, MatrixAcc>, i64
     ```
+  }];
+
+  let assemblyFormat = [{
+    $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+      type(operands)
   }];
 
   let availability = [
@@ -207,8 +218,8 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
     SPIRV_AnyCooperativeMatrix:$object,
-    SPIRV_Integer:$stride,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
+    SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand
   );
 
