@@ -93,15 +93,14 @@ build with these compiler-rt symbols exposed.
       -DLLVM_LIBGCC_EXPLICIT_OPT_IN=Yes
   $ ninja -C build-primary install
 
-Enabling llvm-libgcc now implies ``compiler-rt`` and ``libunwind`` are enabled,
-but it's okay to explicitly enable ``compiler-rt`` and ``libunwind``. When
-``compiler-rt`` is explicitly enabled, ``-DCOMPILER_RT_BUILTINS_HIDE_SYMBOLS=No``
-is required to keep symbols in ``compiler-rt`` visible for linking together
-with ``libunwind``.
+It's very important to notice that neither ``compiler-rt``, nor ``libunwind``,
+are listed in ``LLVM_ENABLE_RUNTIMES``. llvm-libgcc makes these subprojects, and
+adding them to this list will cause you problems due to there being duplicate
+targets. As such, configuring the runtimes build will reject explicitly mentioning
+either project with ``llvm-libgcc``.
 
-As mentioned above, llvm-libgcc is not for the casual user, thus it is not
-included in runtimes with setting ``-DLLVM_ENABLE_RUNTIMES=all``, and
-``-DLLVM_LIBGCC_EXPLICIT_OPT_IN=Yes`` is required as double insurance.
+To avoid issues when building with ``-DLLVM_ENABLE_RUNTIMES=all``, ``llvm-libgcc``
+is not included, and all runtimes targets must be manually listed.
 
 ## Verifying your results
 

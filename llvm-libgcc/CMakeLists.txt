@@ -32,11 +32,16 @@ if(NOT LLVM_LIBGCC_EXPLICIT_OPT_IN)
     "to your CMake invocation and try again.")
 endif()
 
-if(HAVE_COMPILER_RT AND (NOT COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_BUILTINS_HIDE_SYMBOLS))
+if(HAVE_COMPILER_RT)
   message(FATAL_ERROR
-    "llvm-libgcc requires compiler-rt builtins with default symbol visibility, "
-    "add -DCOMPILER_RT_BUILD_BUILTINS=Yes -DCOMPILER_RT_BUILTINS_HIDE_SYMBOLS=No "
-    "to your CMake invocation and try again.")
+    "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
+    "target clashes. Please choose one or the other, but not both.")
+endif()
+
+if(HAVE_LIBUNWIND)
+  message(FATAL_ERROR
+    "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
+    "target clashes. Please choose one or the other, but not both.")
 endif()
 
 #===============================================================================
@@ -66,23 +71,17 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_LIBGCC_LIBRARY_DIR})
 
 #===============================================================================
-# Configure System
+# Build libraries
 #===============================================================================
 
 set(COMPILER_RT_BUILD_BUILTINS ON)
 set(COMPILER_RT_BUILTINS_HIDE_SYMBOLS OFF)
-
-if(NOT HAVE_COMPILER_RT)
-  add_subdirectory(${LLVM_LIBGCC_COMPILER_RT_PATH} "../compiler-rt")
-endif()
+add_subdirectory(${LLVM_LIBGCC_COMPILER_RT_PATH} "../compiler-rt")
 
 set(LIBUNWIND_ENABLE_STATIC ON)
 set(LIBUNWIND_ENABLE_SHARED ON)
 set(LIBUNWIND_USE_COMPILER_RT ON)
-
-if(NOT HAVE_LIBUNWIND)
-    add_subdirectory(${LLVM_LIBGCC_LIBUNWIND_PATH} "../libunwind")
-endif()
+add_subdirectory(${LLVM_LIBGCC_LIBUNWIND_PATH} "../libunwind")
 
 add_custom_target(gcc_s.ver
   SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/gcc_s.ver.in
