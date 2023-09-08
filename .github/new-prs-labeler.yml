@@ -18,11 +18,6 @@ clang:frontend:
 clang:headers:
   - clang/lib/Headers/**/*
 
-clang:static analyzer:
-  - clang/**/StaticAnalyzer/**/*
-  - clang/utils/analyzer/**/*
-  - clang/docs/analyzer/**/*
-
 compiler-rt:
   - compiler-rt/**/*
 
@@ -39,20 +34,11 @@ HLSL:
   - clang/**/*HLSL*
   - llvm/**/Frontend/HLSL/**/*
 
-libc++:
-  - libcxx/**/*
-
-libc++-abi:
-  - libcxxabi/**/*
-
 lld:
   - lld/**/*
 
 llvm-lit:
   - llvm/utils/lit/**/*
-
-mc:
-  - llvm/**/MC/**
 
 mlir:afine:
   - mlir/**/Affine/**/*
@@ -62,14 +48,6 @@ mlir:python:
 
 mlir:vectorops:
   - mlir/**/Vector/**/*
-
-tools:llvm-exegesis:
-  - '**/llvm-exegesis/**/*'
-
-tools:llvm-mca:
-  - llvm/tools/llvm-mca/**/*
-  - llvm/include/llvm/MCA/**/*
-  - llvm/lib/MCA/**/*
 
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -725,4 +703,3 @@ backend:X86:
   - /llvm/include/llvm/TargetParser/X86*
   - /llvm/lib/TargetParser/X86*
   - /llvm/utils/TableGen/X86*
-
