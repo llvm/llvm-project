@@ -915,11 +915,8 @@ define <16 x i1> @PR52500(<16 x i1> %msk, i32 %in) {
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vmovd %edi, %xmm0
-; AVX512F-NEXT:    movl $789, %eax # imm = 0x315
-; AVX512F-NEXT:    vmovd %eax, %xmm1
-; AVX512F-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpbroadcastd %xmm0, %zmm0
+; AVX512F-NEXT:    imull $789, %edi, %eax # imm = 0x315
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm0
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1 {%k1}
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
@@ -931,11 +928,8 @@ define <16 x i1> @PR52500(<16 x i1> %msk, i32 %in) {
 ; AVX512VL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512VL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovd %edi, %xmm0
-; AVX512VL-NEXT:    movl $789, %eax # imm = 0x315
-; AVX512VL-NEXT:    vmovd %eax, %xmm1
-; AVX512VL-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpbroadcastd %xmm0, %zmm0
+; AVX512VL-NEXT:    imull $789, %edi, %eax # imm = 0x315
+; AVX512VL-NEXT:    vpbroadcastd %eax, %zmm0
 ; AVX512VL-NEXT:    vptestnmd %zmm0, %zmm0, %k1 {%k1}
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
@@ -946,11 +940,8 @@ define <16 x i1> @PR52500(<16 x i1> %msk, i32 %in) {
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vpmovb2m %xmm0, %k1
-; VL_BW_DQ-NEXT:    vmovd %edi, %xmm0
-; VL_BW_DQ-NEXT:    movl $789, %eax # imm = 0x315
-; VL_BW_DQ-NEXT:    vmovd %eax, %xmm1
-; VL_BW_DQ-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; VL_BW_DQ-NEXT:    vpbroadcastd %xmm0, %zmm0
+; VL_BW_DQ-NEXT:    imull $789, %edi, %eax # imm = 0x315
+; VL_BW_DQ-NEXT:    vpbroadcastd %eax, %zmm0
 ; VL_BW_DQ-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k1}
 ; VL_BW_DQ-NEXT:    vpmovm2b %k0, %xmm0
 ; VL_BW_DQ-NEXT:    vzeroupper

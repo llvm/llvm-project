@@ -232,13 +232,27 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: signbits_ashr_insert_ashr_extract_sitofp:
-; X64:       # %bb.0:
-; X64-NEXT:    sarq $30, %rdi
-; X64-NEXT:    vmovq %rdi, %xmm0
-; X64-NEXT:    vpsrlq $3, %xmm0, %xmm0
-; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X64-NEXT:    retq
+; X64-AVX1-LABEL: signbits_ashr_insert_ashr_extract_sitofp:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovq %rdi, %xmm0
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-AVX1-NEXT:    vpsrad $30, %xmm0, %xmm1
+; X64-AVX1-NEXT:    vpsrlq $30, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; X64-AVX1-NEXT:    vpsrlq $3, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: signbits_ashr_insert_ashr_extract_sitofp:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovq %rdi, %xmm0
+; X64-AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsrad $30, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vpsrlq $30, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; X64-AVX2-NEXT:    vpsrlq $3, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
   %1 = ashr i64 %a0, 30
   %2 = insertelement <2 x i64> undef, i64 %1, i32 0
   %3 = insertelement <2 x i64> %2, i64 %a1, i32 1

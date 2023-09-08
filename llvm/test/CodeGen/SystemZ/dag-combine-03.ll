@@ -24,11 +24,7 @@ define void @fun(i64 %a0) {
 ; CHECK-NEXT:    cgr %r0, %r2
 ; CHECK-NEXT:    lhi %r0, 0
 ; CHECK-NEXT:    lochie %r0, 1
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vlvgp %v1, %r0, %r0
-; CHECK-NEXT:    vx %v0, %v0, %v1
-; CHECK-NEXT:    vlgvf %r0, %v0, 1
-; CHECK-NEXT:    chi %r0, 0
+; CHECK-NEXT:    xr %r0, %r3
 ; CHECK-NEXT:    locghie %r1, 0
 ; CHECK-NEXT:    j .LBB0_1
 entry:

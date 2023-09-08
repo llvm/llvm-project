@@ -593,8 +593,9 @@ entry:
 define <2 x i32> @fct20(ptr nocapture %sp0) {
 ; CHECK-LABEL: fct20:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    mul.2s v0, v0, v0
+; CHECK-NEXT:    ldr w8, [x0, #4]
+; CHECK-NEXT:    mul w8, w8, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
 entry:
   %addr = getelementptr i32, ptr %sp0, i64 1
@@ -607,8 +608,9 @@ entry:
 define <4 x i32> @fct21(ptr nocapture %sp0) {
 ; CHECK-LABEL: fct21:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    mul.4s v0, v0, v0
+; CHECK-NEXT:    ldr w8, [x0, #4]
+; CHECK-NEXT:    mul w8, w8, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
 entry:
   %addr = getelementptr i32, ptr %sp0, i64 1
@@ -703,8 +705,9 @@ entry:
 define <2 x i32> @fct28(ptr nocapture %sp0, i64 %offset) {
 ; CHECK-LABEL: fct28:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
-; CHECK-NEXT:    mul.2s v0, v0, v0
+; CHECK-NEXT:    ldr w8, [x0, x1, lsl #2]
+; CHECK-NEXT:    mul w8, w8, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
 entry:
   %addr = getelementptr i32, ptr %sp0, i64 %offset
@@ -717,8 +720,9 @@ entry:
 define <4 x i32> @fct29(ptr nocapture %sp0, i64 %offset) {
 ; CHECK-LABEL: fct29:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
-; CHECK-NEXT:    mul.4s v0, v0, v0
+; CHECK-NEXT:    ldr w8, [x0, x1, lsl #2]
+; CHECK-NEXT:    mul w8, w8, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
 entry:
   %addr = getelementptr i32, ptr %sp0, i64 %offset

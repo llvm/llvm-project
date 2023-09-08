@@ -473,16 +473,16 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0x0000ff000000ff
-; CHECK-NEXT:    dup v1.2s, w0
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    movi d2, #0x0000ff000000ff
+; CHECK-NEXT:    dup v0.2s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI27_0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI27_0]
-; CHECK-NEXT:    dup v3.2s, w1
-; CHECK-NEXT:    and v1.8b, v1.8b, v0.8b
-; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    umin v1.2s, v1.2s, v0.2s
-; CHECK-NEXT:    and v0.8b, v3.8b, v0.8b
-; CHECK-NEXT:    cmhi v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-NEXT:    and w8, w1, #0xff
+; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    umin v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    cmhi v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i8(i8 %index, i8 %TC)
   ret <2 x i1> %active.lane.mask

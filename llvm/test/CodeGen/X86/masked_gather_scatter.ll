@@ -816,11 +816,13 @@ define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
 ;
 ; KNL_32-LABEL: test14:
 ; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vmovd %xmm0, %eax
-; KNL_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovd %xmm0, %ecx
+; KNL_32-NEXT:    shll $2, %eax
+; KNL_32-NEXT:    vpbroadcastd %eax, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
 ; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; KNL_32-NEXT:    vgatherdps (%ecx,%zmm1), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test14:
@@ -836,11 +838,13 @@ define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
 ;
 ; SKX_32-LABEL: test14:
 ; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vmovd %xmm0, %eax
-; SKX_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovd %xmm0, %ecx
+; SKX_32-NEXT:    shll $2, %eax
+; SKX_32-NEXT:    vpbroadcastd %eax, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; SKX_32-NEXT:    vgatherdps (%ecx,%zmm1), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
   %broadcast.splatinsert = insertelement <16 x ptr> %vec, ptr %base, i32 1

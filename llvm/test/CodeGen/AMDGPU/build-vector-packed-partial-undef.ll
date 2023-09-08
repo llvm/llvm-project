@@ -244,7 +244,8 @@ define void @undef_hi_op_v2f16(half %arg0) {
 ; GFX9-LABEL: undef_hi_op_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_pack_b32_f16 v0, v0, v0
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v0
 ; GFX9-NEXT:    ;;#ASMEND
@@ -254,7 +255,8 @@ define void @undef_hi_op_v2f16(half %arg0) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_f16_e32 v0, 1.0, v0
-; GFX8-NEXT:    v_or_b32_e32 v0, 0x7e000000, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v0
 ; GFX8-NEXT:    ;;#ASMEND
@@ -269,8 +271,9 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ; GFX9-LABEL: undef_hi_op_v2i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x63
-; GFX9-NEXT:    v_pk_add_u16 v0, v0, s4 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_add_u16_e32 v0, 0x63, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v0
 ; GFX9-NEXT:    ;;#ASMEND
@@ -280,6 +283,8 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u16_e32 v0, 0x63, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v0
 ; GFX8-NEXT:    ;;#ASMEND

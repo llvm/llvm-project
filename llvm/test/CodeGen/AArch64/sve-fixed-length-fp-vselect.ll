@@ -237,8 +237,12 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm x8, ne
+; CHECK-NEXT:    mvn x9, x8
 ; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    fmov d3, x9
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x double> %op1, <1 x double> %op2
   ret <1 x double> %sel

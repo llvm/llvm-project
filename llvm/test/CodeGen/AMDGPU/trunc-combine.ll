@@ -95,9 +95,10 @@ define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) noc
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_sext_i32_i16 s4, s4
 ; SI-NEXT:    s_sext_i32_i16 s5, s5
-; SI-NEXT:    s_mul_i32 s5, s5, s4
-; SI-NEXT:    s_lshr_b32 s4, s5, 16
+; SI-NEXT:    s_mul_i32 s4, s5, s4
+; SI-NEXT:    s_lshr_b32 s5, s4, 16
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_alignbit_b32 v0, s5, v0, 16
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -113,9 +114,10 @@ define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) noc
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_sext_i32_i16 s0, s2
 ; VI-NEXT:    s_sext_i32_i16 s1, s3
-; VI-NEXT:    s_mul_i32 s1, s1, s0
-; VI-NEXT:    s_lshr_b32 s0, s1, 16
+; VI-NEXT:    s_mul_i32 s0, s1, s0
+; VI-NEXT:    s_lshr_b32 s1, s0, 16
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_alignbit_b32 v2, s1, v2, 16
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 bb:

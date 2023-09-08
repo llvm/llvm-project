@@ -67,9 +67,9 @@ declare <4 x i32> @llvm.vp.mul.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_sdiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; SSE-LABEL: vp_sdiv_v4i32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    addl $-2147483648, %esi # imm = 0x80000000
 ; SSE-NEXT:    movd %esi, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    paddd %xmm2, %xmm1
@@ -210,9 +210,9 @@ declare <4 x i32> @llvm.vp.sdiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; SSE-LABEL: vp_udiv_v4i32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    addl $-2147483648, %esi # imm = 0x80000000
 ; SSE-NEXT:    movd %esi, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    paddd %xmm2, %xmm1
@@ -353,9 +353,9 @@ declare <4 x i32> @llvm.vp.udiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_srem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; SSE-LABEL: vp_srem_v4i32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    addl $-2147483648, %esi # imm = 0x80000000
 ; SSE-NEXT:    movd %esi, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    paddd %xmm2, %xmm1
@@ -496,9 +496,9 @@ declare <4 x i32> @llvm.vp.srem.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; SSE-LABEL: vp_urem_v4i32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    addl $-2147483648, %esi # imm = 0x80000000
 ; SSE-NEXT:    movd %esi, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    paddd %xmm2, %xmm1

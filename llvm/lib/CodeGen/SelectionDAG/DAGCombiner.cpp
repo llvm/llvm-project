@@ -26196,20 +26196,20 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   EVT EltVT = VT.getVectorElementType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  // TODO: Remove/replace the extract cost check? If the elements are available
-  //       as scalars, then there may be no extract cost. Should we ask if
-  //       inserting a scalar back into a vector is cheap instead?
   int Index0, Index1;
   SDValue Src0 = DAG.getSplatSourceVector(N0, Index0);
   SDValue Src1 = DAG.getSplatSourceVector(N1, Index1);
-  // Extract element from splat_vector should be free.
-  // TODO: use DAG.isSplatValue instead?
-  bool IsBothSplatVector = N0.getOpcode() == ISD::SPLAT_VECTOR &&
-                           N1.getOpcode() == ISD::SPLAT_VECTOR;
+  // Extracting from a shuffle_vector might cost something, but extracting from
+  // a splat_vector or a splatted build_vector should be free since the operands
+  // are scalars anyway.
+  bool IsExtractFree = (N0.getOpcode() == ISD::SPLAT_VECTOR ||
+                        N0.getOpcode() == ISD::BUILD_VECTOR) &&
+                       (N1.getOpcode() == ISD::SPLAT_VECTOR ||
+                        N1.getOpcode() == ISD::BUILD_VECTOR);
   if (!Src0 || !Src1 || Index0 != Index1 ||
       Src0.getValueType().getVectorElementType() != EltVT ||
       Src1.getValueType().getVectorElementType() != EltVT ||
-      !(IsBothSplatVector || TLI.isExtractVecEltCheap(VT, Index0)) ||
+      !(IsExtractFree || TLI.isExtractVecEltCheap(VT, Index0)) ||
       !TLI.isOperationLegalOrCustom(Opcode, EltVT))
     return SDValue();
 

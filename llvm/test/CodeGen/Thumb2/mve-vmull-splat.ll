@@ -774,8 +774,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext16_02468101214_0ext(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: zext16_02468101214_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vmullb.u16 q0, q0, q1
+; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vmul.i32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i16> %src1, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -790,8 +791,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext16_0ext_02468101214(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: zext16_0ext_02468101214:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vmullb.u16 q0, q1, q0
+; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vmul.i32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i16> %src1, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -840,9 +842,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext16_13579111315_0ext(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: zext16_13579111315_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vrev32.16 q0, q0
-; CHECK-NEXT:    vmullb.u16 q0, q0, q1
+; CHECK-NEXT:    vmovlt.u16 q0, q0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vmul.i32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i16> %src1, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -857,9 +859,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext16_0ext_13579111315(<8 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: zext16_0ext_13579111315:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vrev32.16 q0, q0
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vmullb.u16 q0, q1, q0
+; CHECK-NEXT:    vmovlt.u16 q0, q0
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vmul.i32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i16> %src1, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

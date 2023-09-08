@@ -210,19 +210,21 @@ define i32 @e() {
 ; CHECK-NEXT:    adr r0, .LCPI14_0
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    mov.w r12, #4
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:  .LBB14_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, r12
 ; CHECK-NEXT:    cmp r1, #8
 ; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    subs.w r3, r1, #8
+; CHECK-NEXT:    subs.w r0, r1, #8
+; CHECK-NEXT:    mvn.w r3, r2
 ; CHECK-NEXT:    vdup.32 q2, r2
-; CHECK-NEXT:    csel r1, r1, r3, ne
-; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    vdup.32 q3, r3
 ; CHECK-NEXT:    vand q2, q2, q0
+; CHECK-NEXT:    vand q1, q1, q3
+; CHECK-NEXT:    csel r1, r1, r0, ne
 ; CHECK-NEXT:    vorr q1, q2, q1
 ; CHECK-NEXT:    b .LBB14_1
 ; CHECK-NEXT:    .p2align 4

@@ -267,8 +267,12 @@ define <2 x i32> @test_select_cc_v2i32_icmpi1(i1 %cc, <2 x i32> %a, <2 x i32> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm w8, ne
+; CHECK-NEXT:    mvn w9, w8
 ; CHECK-NEXT:    dup v2.2s, w8
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    dup v3.2s, w9
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i1 %cc, 0
   %e = select i1 %cmp, <2 x i32> %a, <2 x i32> %b

@@ -27,12 +27,11 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    vlvgp %v0, %r0, %r1
 ; CHECK-NEXT:    vlvgf %v0, %r0, 0
 ; CHECK-NEXT:    vlvgf %v0, %r0, 2
-; CHECK-NEXT:    vlvgp %v2, %r1, %r1
+; CHECK-NEXT:    vgbm %v2, 30583
+; CHECK-NEXT:    vn %v0, %v0, %v2
+; CHECK-NEXT:    vn %v1, %v1, %v2
+; CHECK-NEXT:    vlvgp %v2, %r0, %r0
 ; CHECK-NEXT:    vrepf %v2, %v2, 1
-; CHECK-NEXT:    vgbm %v3, 30583
-; CHECK-NEXT:    vn %v0, %v0, %v3
-; CHECK-NEXT:    vn %v1, %v1, %v3
-; CHECK-NEXT:    vn %v2, %v2, %v3
 ; CHECK-NEXT:    vrepif %v3, 127
 ; CHECK-NEXT:    vchlf %v1, %v1, %v3
 ; CHECK-NEXT:    vlgvf %r13, %v1, 0

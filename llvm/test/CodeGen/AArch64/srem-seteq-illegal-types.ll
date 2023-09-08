@@ -76,28 +76,28 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    add x11, x11, x11, lsl #3
 ; CHECK-NEXT:    add x9, x9, x9, lsl #3
 ; CHECK-NEXT:    sub x8, x8, x11
-; CHECK-NEXT:    sub x11, x13, x12
+; CHECK-NEXT:    sub x12, x13, x12
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #8589934591 // =0x1ffffffff
 ; CHECK-NEXT:    sub x9, x10, x9
-; CHECK-NEXT:    asr x10, x11, #3
+; CHECK-NEXT:    lsr x10, x12, #3
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    mov v0.d[1], x9
-; CHECK-NEXT:    add x9, x10, x11, lsr #63
+; CHECK-NEXT:    add x9, x10, x12, lsr #63
 ; CHECK-NEXT:    add x8, x9, x9, lsl #3
 ; CHECK-NEXT:    adrp x9, .LCPI3_0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI3_0]
-; CHECK-NEXT:    add x8, x12, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    fmov d3, x8
+; CHECK-NEXT:    add x8, x2, x8
+; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI3_0]
+; CHECK-NEXT:    and x8, x8, #0x1ffffffff
+; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    adrp x8, .LCPI3_1
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
-; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_1]
+; CHECK-NEXT:    cmeq v1.2d, v2.2d, v1.2d
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    cmeq v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-NEXT:    mov w1, v0.s[1]
 ; CHECK-NEXT:    fmov w0, s0

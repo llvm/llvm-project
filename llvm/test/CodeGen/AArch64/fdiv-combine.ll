@@ -100,13 +100,11 @@ define void @two_fdiv_double(double %D, double %a, double %b) #0 {
 define void @splat_three_fdiv_4xfloat(float %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; CHECK-LABEL: splat_three_fdiv_4xfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    fmov v4.4s, #1.00000000
-; CHECK-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-NEXT:    fdiv v4.4s, v4.4s, v0.4s
-; CHECK-NEXT:    fmul v0.4s, v1.4s, v4.4s
-; CHECK-NEXT:    fmul v1.4s, v2.4s, v4.4s
-; CHECK-NEXT:    fmul v2.4s, v3.4s, v4.4s
+; CHECK-NEXT:    fmov s4, #1.00000000
+; CHECK-NEXT:    fdiv s4, s4, s0
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v4.s[0]
+; CHECK-NEXT:    fmul v1.4s, v2.4s, v4.s[0]
+; CHECK-NEXT:    fmul v2.4s, v3.4s, v4.s[0]
 ; CHECK-NEXT:    b foo_3_4xf
   %D.ins = insertelement <4 x float> poison, float %D, i64 0
   %splat = shufflevector <4 x float> %D.ins, <4 x float> poison, <4 x i32> zeroinitializer
@@ -120,11 +118,9 @@ define void @splat_three_fdiv_4xfloat(float %D, <4 x float> %a, <4 x float> %b, 
 define <4 x float> @splat_fdiv_v4f32(float %D, <4 x float> %a) #1 {
 ; CHECK-LABEL: splat_fdiv_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    fmov v2.4s, #1.00000000
-; CHECK-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-NEXT:    fdiv v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmov s2, #1.00000000
+; CHECK-NEXT:    fdiv s0, s2, s0
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %D.ins = insertelement <4 x float> poison, float %D, i64 0

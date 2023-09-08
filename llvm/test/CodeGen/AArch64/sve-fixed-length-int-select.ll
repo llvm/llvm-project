@@ -254,8 +254,12 @@ define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, i1 %mask) vscale_
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm w8, ne
+; CHECK-NEXT:    mvn w9, w8
 ; CHECK-NEXT:    dup v2.2s, w8
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    dup v3.2s, w9
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %sel = select i1 %mask, <2 x i32> %op1, <2 x i32> %op2
   ret <2 x i32> %sel
@@ -267,8 +271,12 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, i1 %mask) vscale_
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm w8, ne
+; CHECK-NEXT:    mvn w9, w8
 ; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    dup v3.4s, w9
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sel = select i1 %mask, <4 x i32> %op1, <4 x i32> %op2
   ret <4 x i32> %sel
@@ -378,8 +386,12 @@ define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, i1 %mask) vscale_
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm x8, ne
+; CHECK-NEXT:    mvn x9, x8
 ; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    fmov d3, x9
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %sel = select i1 %mask, <1 x i64> %op1, <1 x i64> %op2
   ret <1 x i64> %sel
@@ -391,8 +403,12 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, i1 %mask) vscale_
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm x8, ne
+; CHECK-NEXT:    mvn x9, x8
 ; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    dup v3.2d, x9
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sel = select i1 %mask, <2 x i64> %op1, <2 x i64> %op2
   ret <2 x i64> %sel

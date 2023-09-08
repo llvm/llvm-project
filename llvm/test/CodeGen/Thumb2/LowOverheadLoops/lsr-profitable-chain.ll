@@ -11,13 +11,10 @@ define arm_aapcs_vfpcc float @vctpi32(ptr %0, i32 %1) {
 ; CHECK-LABEL: vctpi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    mvn r3, #31
-; CHECK-NEXT:    vmov.32 q2[0], r0
-; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    subs r2, r1, #1
-; CHECK-NEXT:    vadd.i32 q2, q2, r3
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    subs r0, #32
 ; CHECK-NEXT:    vidup.u32 q1, r4, #8
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r2

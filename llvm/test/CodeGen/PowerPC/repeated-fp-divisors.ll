@@ -5,17 +5,16 @@
 define <4 x float> @repeated_fp_divisor_noest(float %a, <4 x float> %b) {
 ; CHECK-LABEL: repeated_fp_divisor_noest:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; CHECK-NEXT:    lxvd2x 1, 0, 3
+; CHECK-NEXT:    vspltisw 3, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    xxspltw 0, 0, 0
-; CHECK-NEXT:    xvdivsp 0, 1, 0
+; CHECK-NEXT:    xvcvsxwdp 0, 35
+; CHECK-NEXT:    xsdivsp 0, 0, 1
 ; CHECK-NEXT:    lxvd2x 1, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 1
 ; CHECK-NEXT:    xvmulsp 1, 34, 35
+; CHECK-NEXT:    xscvdpspn 0, 0
+; CHECK-NEXT:    xxspltw 0, 0, 0
 ; CHECK-NEXT:    xvmulsp 34, 1, 0
 ; CHECK-NEXT:    blr
   %ins = insertelement <4 x float> undef, float %a, i32 0

@@ -5,19 +5,17 @@
 define <4 x double> @fneg_fdiv_splat(double %a0, <4 x double> %a1) {
 ; CHECK-LABEL: fneg_fdiv_splat:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxspltd 0, 1, 0
-; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lxvd2x 2, 0, 3
-; CHECK-NEXT:    xvredp 1, 0
-; CHECK-NEXT:    xxlor 3, 2, 2
-; CHECK-NEXT:    xvmaddadp 3, 0, 1
-; CHECK-NEXT:    xvnmsubadp 1, 1, 3
-; CHECK-NEXT:    xvmaddadp 2, 0, 1
-; CHECK-NEXT:    xvmsubadp 1, 1, 2
-; CHECK-NEXT:    xvmuldp 34, 34, 1
-; CHECK-NEXT:    xvmuldp 35, 35, 1
+; CHECK-NEXT:    vspltisw 4, 1
+; CHECK-NEXT:    xsredp 0, 1
+; CHECK-NEXT:    xvcvsxwdp 2, 36
+; CHECK-NEXT:    fmr 3, 2
+; CHECK-NEXT:    xsnmsubadp 3, 1, 0
+; CHECK-NEXT:    xsmaddadp 0, 0, 3
+; CHECK-NEXT:    xsnmsubadp 2, 1, 0
+; CHECK-NEXT:    xsnmaddadp 0, 0, 2
+; CHECK-NEXT:    xxspltd 0, 0, 0
+; CHECK-NEXT:    xvmuldp 34, 34, 0
+; CHECK-NEXT:    xvmuldp 35, 35, 0
 ; CHECK-NEXT:    blr
 entry:
   %splat.splatinsert = insertelement <4 x double> undef, double %a0, i32 0

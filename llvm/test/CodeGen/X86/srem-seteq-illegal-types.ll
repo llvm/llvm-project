@@ -171,23 +171,25 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-LABEL: test_srem_vec:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdx, %rcx
-; SSE2-NEXT:    shlq $31, %rcx
-; SSE2-NEXT:    sarq $31, %rcx
-; SSE2-NEXT:    shlq $31, %rdi
-; SSE2-NEXT:    sarq $31, %rdi
+; SSE2-NEXT:    movq %rsi, %r8
+; SSE2-NEXT:    movq %rdx, %rsi
 ; SSE2-NEXT:    shlq $31, %rsi
 ; SSE2-NEXT:    sarq $31, %rsi
-; SSE2-NEXT:    movabsq $2049638230412172402, %r8 # imm = 0x1C71C71C71C71C72
-; SSE2-NEXT:    movq %rsi, %rax
-; SSE2-NEXT:    imulq %r8
+; SSE2-NEXT:    shlq $31, %rdi
+; SSE2-NEXT:    sarq $31, %rdi
+; SSE2-NEXT:    shlq $31, %r8
+; SSE2-NEXT:    sarq $31, %r8
+; SSE2-NEXT:    movabsq $2049638230412172402, %r9 # imm = 0x1C71C71C71C71C72
+; SSE2-NEXT:    movq %r8, %rax
+; SSE2-NEXT:    imulq %r9
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $63, %rax
 ; SSE2-NEXT:    addq %rdx, %rax
 ; SSE2-NEXT:    leaq (%rax,%rax,8), %rax
-; SSE2-NEXT:    subq %rax, %rsi
-; SSE2-NEXT:    movq %rsi, %xmm1
+; SSE2-NEXT:    subq %rax, %r8
+; SSE2-NEXT:    movq %r8, %xmm1
 ; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    imulq %r8
+; SSE2-NEXT:    imulq %r9
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $63, %rax
 ; SSE2-NEXT:    addq %rdx, %rax
@@ -195,26 +197,27 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    subq %rax, %rdi
 ; SSE2-NEXT:    movq %rdi, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [8589934591,8589934591]
-; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movabsq $2049638230412172401, %rdx # imm = 0x1C71C71C71C71C71
-; SSE2-NEXT:    movq %rcx, %rax
+; SSE2-NEXT:    movq %rsi, %rax
 ; SSE2-NEXT:    imulq %rdx
-; SSE2-NEXT:    subq %rcx, %rdx
+; SSE2-NEXT:    subq %rsi, %rdx
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $63, %rax
 ; SSE2-NEXT:    sarq $3, %rdx
 ; SSE2-NEXT:    addq %rax, %rdx
 ; SSE2-NEXT:    leaq (%rdx,%rdx,8), %rax
 ; SSE2-NEXT:    addq %rcx, %rax
-; SSE2-NEXT:    movq %rax, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    movabsq $8589934591, %rcx # imm = 0x1FFFFFFFF
+; SSE2-NEXT:    andq %rax, %rcx
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,2]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,3]
-; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,2]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,3]
+; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
@@ -226,23 +229,25 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-LABEL: test_srem_vec:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq %rdx, %rcx
-; SSE41-NEXT:    shlq $31, %rcx
-; SSE41-NEXT:    sarq $31, %rcx
-; SSE41-NEXT:    shlq $31, %rdi
-; SSE41-NEXT:    sarq $31, %rdi
+; SSE41-NEXT:    movq %rsi, %r8
+; SSE41-NEXT:    movq %rdx, %rsi
 ; SSE41-NEXT:    shlq $31, %rsi
 ; SSE41-NEXT:    sarq $31, %rsi
-; SSE41-NEXT:    movabsq $2049638230412172402, %r8 # imm = 0x1C71C71C71C71C72
-; SSE41-NEXT:    movq %rsi, %rax
-; SSE41-NEXT:    imulq %r8
+; SSE41-NEXT:    shlq $31, %rdi
+; SSE41-NEXT:    sarq $31, %rdi
+; SSE41-NEXT:    shlq $31, %r8
+; SSE41-NEXT:    sarq $31, %r8
+; SSE41-NEXT:    movabsq $2049638230412172402, %r9 # imm = 0x1C71C71C71C71C72
+; SSE41-NEXT:    movq %r8, %rax
+; SSE41-NEXT:    imulq %r9
 ; SSE41-NEXT:    movq %rdx, %rax
 ; SSE41-NEXT:    shrq $63, %rax
 ; SSE41-NEXT:    addq %rdx, %rax
 ; SSE41-NEXT:    leaq (%rax,%rax,8), %rax
-; SSE41-NEXT:    subq %rax, %rsi
-; SSE41-NEXT:    movq %rsi, %xmm1
+; SSE41-NEXT:    subq %rax, %r8
+; SSE41-NEXT:    movq %r8, %xmm1
 ; SSE41-NEXT:    movq %rdi, %rax
-; SSE41-NEXT:    imulq %r8
+; SSE41-NEXT:    imulq %r9
 ; SSE41-NEXT:    movq %rdx, %rax
 ; SSE41-NEXT:    shrq $63, %rax
 ; SSE41-NEXT:    addq %rdx, %rax
@@ -250,28 +255,29 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    subq %rax, %rdi
 ; SSE41-NEXT:    movq %rdi, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [8589934591,8589934591]
-; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    movabsq $2049638230412172401, %rdx # imm = 0x1C71C71C71C71C71
-; SSE41-NEXT:    movq %rcx, %rax
+; SSE41-NEXT:    movq %rsi, %rax
 ; SSE41-NEXT:    imulq %rdx
-; SSE41-NEXT:    subq %rcx, %rdx
+; SSE41-NEXT:    subq %rsi, %rdx
 ; SSE41-NEXT:    movq %rdx, %rax
 ; SSE41-NEXT:    shrq $63, %rax
 ; SSE41-NEXT:    sarq $3, %rdx
 ; SSE41-NEXT:    addq %rax, %rdx
 ; SSE41-NEXT:    leaq (%rdx,%rdx,8), %rax
 ; SSE41-NEXT:    addq %rcx, %rax
-; SSE41-NEXT:    movq %rax, %xmm2
-; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movabsq $8589934591, %rcx # imm = 0x1FFFFFFFF
+; SSE41-NEXT:    andq %rax, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE41-NEXT:    pxor %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrb $8, %xmm0, %edx
-; SSE41-NEXT:    pextrb $0, %xmm2, %ecx
+; SSE41-NEXT:    pextrb $0, %xmm1, %ecx
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE41-NEXT:    # kill: def $dl killed $dl killed $edx
 ; SSE41-NEXT:    # kill: def $cl killed $cl killed $ecx

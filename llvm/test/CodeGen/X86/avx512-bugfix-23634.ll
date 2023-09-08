@@ -8,16 +8,17 @@ define void @f_fu(ptr %ret, ptr  %aa, float %b) {
 ; CHECK-LABEL: f_fu:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vcvttss2si %xmm0, %eax
-; CHECK-NEXT:    vpbroadcastd %eax, %zmm0
-; CHECK-NEXT:    vcvttps2dq (%rsi), %zmm1
-; CHECK-NEXT:    vpsrld $31, %zmm0, %zmm2
-; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm2
-; CHECK-NEXT:    vpsrad $1, %zmm2, %zmm2
-; CHECK-NEXT:    movw $-21846, %ax ## imm = 0xAAAA
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa32 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
-; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
-; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2dq (%rsi), %zmm0
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    sarl %ecx
+; CHECK-NEXT:    movw $-21846, %dx ## imm = 0xAAAA
+; CHECK-NEXT:    kmovw %edx, %k1
+; CHECK-NEXT:    vmovdqa32 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1}
+; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    vpbroadcastd %ecx, %zmm1
+; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rdi)
 ; CHECK-NEXT:    retq
