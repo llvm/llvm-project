@@ -98,6 +98,7 @@ add_mlir_library(MLIRValueBoundsOpInterface
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRDestinationStyleOpInterface
   MLIRIR
   )
 
