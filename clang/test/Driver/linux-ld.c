@@ -1031,7 +1031,7 @@
 // CHECK-SPARCV8: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8: "-m" "elf32_sparc"
 // CHECK-SPARCV8: "-dynamic-linker" "{{(/usr/sparc-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
-// CHECK-SPARCV8: "--push-state" "--as-needed" "-latomic" "--pop-state"
+// CHECK-SPARCV8: "--push-state" "--as-needed" "-latomic" "--no-as-needed" "--pop-state"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=sparcel-unknown-linux-gnu \
