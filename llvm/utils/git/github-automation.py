@@ -9,7 +9,6 @@
 # ==-------------------------------------------------------------------------==#
 
 import argparse
-import fnmatch
 from git import Repo  # type: ignore
 import github
 import os
