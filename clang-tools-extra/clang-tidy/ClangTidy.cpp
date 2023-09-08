@@ -227,6 +227,14 @@ public:
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
         }
       }
+
+      auto BuildDir = Context.getCurrentBuildDirectory();
+      if (!BuildDir.empty())
+        Rewrite.getSourceMgr()
+            .getFileManager()
+            .getVirtualFileSystem()
+            .setCurrentWorkingDirectory(BuildDir);
+
       if (Rewrite.overwriteChangedFiles()) {
         llvm::errs() << "clang-tidy failed to apply suggested fixes.\n";
       } else {
