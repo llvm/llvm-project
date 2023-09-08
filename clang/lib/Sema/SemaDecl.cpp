@@ -11680,20 +11680,22 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   FunctionDecl *OldFD = OldDecl->getAsFunction();
 
   if (!OldFD->isMultiVersion() && MVKind == MultiVersionKind::None) {
-    // No target_version attributes mean default
-    if (!NewTVA) {
-      const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
-      if (OldTVA) {
-        NewFD->addAttr(TargetVersionAttr::CreateImplicit(
-            S.Context, "default", NewFD->getSourceRange()));
-        NewFD->setIsMultiVersion();
-        OldFD->setIsMultiVersion();
-        OldDecl = OldFD;
-        Redeclaration = true;
-        return true;
-      }
+    if (NewTVA || !OldFD->getAttr<TargetVersionAttr>())
+      return false;
+    if (!NewFD->getType()->getAs<FunctionProtoType>()) {
+      // Multiversion declaration doesn't have prototype.
+      S.Diag(NewFD->getLocation(), diag::err_multiversion_noproto);
+      NewFD->setInvalidDecl();
+    } else {
+      // No "target_version" attribute is equivalent to "default" attribute.
+      NewFD->addAttr(TargetVersionAttr::CreateImplicit(
+          S.Context, "default", NewFD->getSourceRange()));
+      NewFD->setIsMultiVersion();
+      OldFD->setIsMultiVersion();
+      OldDecl = OldFD;
+      Redeclaration = true;
     }
-    return false;
+    return true;
   }
 
   // Multiversioned redeclarations aren't allowed to omit the attribute, except
