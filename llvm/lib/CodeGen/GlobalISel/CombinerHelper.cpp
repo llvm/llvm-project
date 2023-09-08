@@ -4624,7 +4624,8 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &Mat
 
 bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
                                           ConstantFP *&MatchInfo) {
-  unsigned Opc = MI.getOpcode();
+  assert(MI.getOpcode() == TargetOpcode::G_FMA ||
+         MI.getOpcode() == TargetOpcode::G_FMAD);
   auto [_, Op1, Op2, Op3] = MI.getFirst4Regs();
 
   const ConstantFP *Op3Cst = getConstantFPVRegVal(Op3, MRI);
@@ -4640,22 +4641,9 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
     return false;
 
   APFloat Op1F = Op1Cst->getValueAPF();
-  APFloat Op2F = Op2Cst->getValueAPF();
-  APFloat Op3F = Op3Cst->getValueAPF();
-
-  switch (Opc) {
-  case TargetOpcode::G_FMA:
-    Op1F.fusedMultiplyAdd(Op2F, Op3F, APFloat::rmNearestTiesToEven);
-    MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
-    break;
-  case TargetOpcode::G_FMAD: {
-    APFloat Res = (Op1F * Op2F) + Op3F;
-    MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Res);
-    break;
-  }
-  default:
-    llvm_unreachable("Unexpected opcode");
-  }
+  Op1F.fusedMultiplyAdd(Op2Cst->getValueAPF(), Op3Cst->getValueAPF(),
+                        APFloat::rmNearestTiesToEven);
+  MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
   return true;
 }
 
