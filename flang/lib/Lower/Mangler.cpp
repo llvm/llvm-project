@@ -99,11 +99,14 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
 
   // TODO: A procedure that inherits BIND(C) through another interface
   // (procedure(iface)) should be dealt with in GetBindName() or some wrapper.
-  if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
-      Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
-      Fortran::semantics::ClassifyProcedure(symbol) !=
-          Fortran::semantics::ProcedureDefinitionClass::Internal)
-    return ultimateSymbol.name().ToString();
+  if (const auto *procDetails{
+          ultimateSymbol.detailsIf<Fortran::semantics::ProcEntityDetails>()})
+    if (procDetails->procInterface() &&
+        !Fortran::semantics::IsPointer(ultimateSymbol) &&
+        Fortran::semantics::IsBindCProcedure(*procDetails->procInterface()) &&
+        Fortran::semantics::ClassifyProcedure(symbol) !=
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      return ultimateSymbol.name().ToString();
 
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
   llvm::SmallVector<llvm::StringRef> modules;
