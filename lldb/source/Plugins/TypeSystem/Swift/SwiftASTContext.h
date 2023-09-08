@@ -477,6 +477,7 @@ public:
     const DiagnosticCursor m_cursor;
 
   public:
+    enum class ErrorKind { swift, clang };
     ScopedDiagnostics(swift::DiagnosticConsumer &consumer);
     ~ScopedDiagnostics();
     /// Print all diagnostics that happened during the lifetime of
@@ -486,6 +487,7 @@ public:
                           uint32_t bufferID = UINT32_MAX,
                           uint32_t first_line = 0,
                           uint32_t last_line = UINT32_MAX) const;
+    std::optional<ErrorKind> GetOptionalErrorKind() const;
     bool HasErrors() const;
     /// Return all errors and warnings that happened during the lifetime of this
     /// object.

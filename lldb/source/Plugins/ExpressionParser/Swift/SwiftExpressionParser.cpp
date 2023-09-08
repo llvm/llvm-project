@@ -1962,10 +1962,24 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   // If IRGen failed without errors, the root cause may be a fatal
   // Clang diagnostic.
-  if (expr_diagnostics->HasErrors() ||
+  using ErrorKind = SwiftASTContext::ScopedDiagnostics::ErrorKind;
+  // GetOptionalErrorKind() returns all diagnostics that occurred to during the
+  // lifetime of expr_diagnostics, but there could be earlier ClangImporter
+  // errors that still caused the expression to fail.
+  std::optional<ErrorKind> error_kind =
+      expr_diagnostics->GetOptionalErrorKind();
+  if (error_kind == ErrorKind::clang ||
       m_swift_ast_ctx.HasClangImporterErrors()) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityRemark,
+        "couldn't IRGen expression: Clang importer error");
+    DiagnoseSwiftASTContextError();
+    return ParseResult::unrecoverable_error;
+  }
+
+  if (error_kind == ErrorKind::swift) {
     diagnostic_manager.PutString(eDiagnosticSeverityRemark,
-                                 "couldn't IRGen expression");
+                                 "couldn't IRGen expression: Swift error");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }

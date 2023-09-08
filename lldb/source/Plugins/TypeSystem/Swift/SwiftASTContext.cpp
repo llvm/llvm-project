@@ -913,19 +913,25 @@ void SwiftASTContext::ScopedDiagnostics::PrintDiagnostics(
                              last_line);
 }
 
-bool SwiftASTContext::ScopedDiagnostics::HasErrors() const {
+std::optional<SwiftASTContext::ScopedDiagnostics::ErrorKind>
+SwiftASTContext::ScopedDiagnostics::GetOptionalErrorKind() const {
+  using ErrorKind = SwiftASTContext::ScopedDiagnostics::ErrorKind;
   auto &consumer = *static_cast<StoringDiagnosticConsumer *>(&m_consumer);
 
-  if (consumer.m_num_swift_errors > m_cursor.m_num_swift_errors)
-    return true;
   if (consumer.m_raw_clang_diagnostics.size() > m_cursor.clang)
-    return true;
+    return ErrorKind::clang;
+  if (consumer.m_num_swift_errors > m_cursor.m_num_swift_errors)
+    return ErrorKind::swift;
 
   for (size_t i = m_cursor.lldb; i < consumer.m_diagnostics.size(); ++i)
     if (consumer.m_diagnostics[i]->GetSeverity() == eDiagnosticSeverityError)
-      return true;
+      return ErrorKind::swift;
 
-  return false;
+  return {};
+}
+
+bool SwiftASTContext::ScopedDiagnostics::HasErrors() const {
+  return GetOptionalErrorKind() != std::nullopt;
 }
 
 llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
