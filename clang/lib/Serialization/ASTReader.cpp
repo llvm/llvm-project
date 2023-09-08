@@ -2428,6 +2428,16 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // For standard C++ modules, we don't need to check the inputs.
   bool SkipChecks = F.StandardCXXModule;
 
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The option ForceCheckCXX20ModulesInputFiles is only meaningful for C++20
+  // modules.
+  if (F.StandardCXXModule && HSOpts.ForceCheckCXX20ModulesInputFiles) {
+    SkipChecks = false;
+    Overridden = false;
+  }
+
   OptionalFileEntryRefDegradesToFileEntryPtr File = OptionalFileEntryRef(
       expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false)));
 
