@@ -435,40 +435,48 @@ define <4 x float> @unary_interleave_v4f32(<4 x float> %x) {
 define <4 x double> @unary_interleave_v4f64(<4 x double> %x) {
 ; RV32-V128-LABEL: unary_interleave_v4f64:
 ; RV32-V128:       # %bb.0:
-; RV32-V128-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV32-V128-NEXT:    addi a0, a0, %lo(.LCPI13_0)
-; RV32-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-V128-NEXT:    vle16.v v12, (a0)
+; RV32-V128-NEXT:    lui a0, 12304
+; RV32-V128-NEXT:    addi a0, a0, 512
+; RV32-V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-V128-NEXT:    vmv.s.x v10, a0
+; RV32-V128-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-V128-NEXT:    vsext.vf2 v12, v10
+; RV32-V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-V128-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV32-V128-NEXT:    vmv.v.v v8, v10
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V128-LABEL: unary_interleave_v4f64:
 ; RV64-V128:       # %bb.0:
-; RV64-V128-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV64-V128-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV64-V128-NEXT:    lui a0, 12304
+; RV64-V128-NEXT:    addiw a0, a0, 512
 ; RV64-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-V128-NEXT:    vle64.v v12, (a0)
+; RV64-V128-NEXT:    vmv.s.x v10, a0
+; RV64-V128-NEXT:    vsext.vf8 v12, v10
 ; RV64-V128-NEXT:    vrgather.vv v10, v8, v12
 ; RV64-V128-NEXT:    vmv.v.v v8, v10
 ; RV64-V128-NEXT:    ret
 ;
 ; RV32-V512-LABEL: unary_interleave_v4f64:
 ; RV32-V512:       # %bb.0:
-; RV32-V512-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV32-V512-NEXT:    addi a0, a0, %lo(.LCPI13_0)
-; RV32-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; RV32-V512-NEXT:    vle16.v v10, (a0)
+; RV32-V512-NEXT:    lui a0, 12304
+; RV32-V512-NEXT:    addi a0, a0, 512
+; RV32-V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; RV32-V512-NEXT:    vmv.s.x v9, a0
+; RV32-V512-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-V512-NEXT:    vsext.vf2 v10, v9
+; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10
 ; RV32-V512-NEXT:    vmv.v.v v8, v9
 ; RV32-V512-NEXT:    ret
 ;
 ; RV64-V512-LABEL: unary_interleave_v4f64:
 ; RV64-V512:       # %bb.0:
-; RV64-V512-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV64-V512-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV64-V512-NEXT:    lui a0, 12304
+; RV64-V512-NEXT:    addiw a0, a0, 512
 ; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; RV64-V512-NEXT:    vle64.v v10, (a0)
+; RV64-V512-NEXT:    vmv.s.x v9, a0
+; RV64-V512-NEXT:    vsext.vf8 v10, v9
 ; RV64-V512-NEXT:    vrgather.vv v9, v8, v10
 ; RV64-V512-NEXT:    vmv.v.v v8, v9
 ; RV64-V512-NEXT:    ret
