@@ -992,10 +992,8 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (IndDesc.getInductionBinOp() &&
-      isa<FPMathOperator>(IndDesc.getInductionBinOp()))
-    State.Builder.setFastMathFlags(
-        IndDesc.getInductionBinOp()->getFastMathFlags());
+  if (hasFastMathFlags())
+    State.Builder.setFastMathFlags(getFastMathFlags());
 
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step.
@@ -1022,7 +1020,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
   } else {
-    AddOp = IndDesc.getInductionOpcode();
+    AddOp = InductionOpcode;
     MulOp = Instruction::FMul;
   }
 
