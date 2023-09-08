@@ -36,6 +36,7 @@
 #include "src/__support/CPP/type_traits/is_reference.h"
 #include "src/__support/CPP/type_traits/is_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/is_same.h"
+#include "src/__support/CPP/type_traits/is_scalar.h"
 #include "src/__support/CPP/type_traits/is_signed.h"
 #include "src/__support/CPP/type_traits/is_trivially_constructible.h"
 #include "src/__support/CPP/type_traits/is_trivially_copyable.h"
