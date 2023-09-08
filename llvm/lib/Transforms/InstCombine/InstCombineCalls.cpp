@@ -1399,93 +1399,6 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-/// VP Intrinsics whose vector operands are both splat values may be simplified
-/// into the scalar version of the operation and the result is splatted. This
-/// can lead to scalarization down the line.
-Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI, InstCombinerImpl &IC) {
-  Value *Op0 = VPI->getArgOperand(0);
-  Value *Op1 = VPI->getArgOperand(1);
-
-  if (!isSplatValue(Op0) || !isSplatValue(Op1))
-    return nullptr;
-
-  // For the binary VP intrinsics supported here, the result on disabled lanes
-  // is a poison value. For now, only do this simplification if all lanes
-  // are active.
-  // TODO: Relax the condition that all lanes are active by using insertelement
-  // on inactive lanes.
-  Value *Mask = VPI->getArgOperand(2);
-  if (!maskIsAllOneOrUndef(Mask))
-    return nullptr;
-
-  InstCombiner::BuilderTy &Builder = IC.Builder;
-  ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
-  Value *EVL = VPI->getArgOperand(3);
-  switch (VPI->getIntrinsicID()) {
-  case Intrinsic::vp_add:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateAdd(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_sub:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateSub(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_mul:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateMul(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_ashr:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateAShr(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_lshr:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateLShr(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_shl:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateShl(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_or:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateOr(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_and:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateAnd(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_xor:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateXor(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_fadd:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateFAdd(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_fsub:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateFSub(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_fmul:
-    return Builder.CreateVectorSplat(
-        EC, Builder.CreateFMul(getSplatValue(Op0), getSplatValue(Op1)));
-  case Intrinsic::vp_sdiv:
-    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
-                       &IC.getDominatorTree()))
-      return Builder.CreateVectorSplat(
-          EC, Builder.CreateSDiv(getSplatValue(Op0), getSplatValue(Op1)));
-    break;
-  case Intrinsic::vp_udiv:
-    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
-                       &IC.getDominatorTree()))
-      return Builder.CreateVectorSplat(
-          EC, Builder.CreateUDiv(getSplatValue(Op0), getSplatValue(Op1)));
-    break;
-  case Intrinsic::vp_srem:
-    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
-                       &IC.getDominatorTree()))
-      return Builder.CreateVectorSplat(
-          EC, Builder.CreateSRem(getSplatValue(Op0), getSplatValue(Op1)));
-    break;
-  case Intrinsic::vp_urem:
-    if (isKnownNonZero(EVL, IC.getDataLayout(), 0, &IC.getAssumptionCache(), VPI,
-                       &IC.getDominatorTree()))
-      return Builder.CreateVectorSplat(
-          EC, Builder.CreateURem(getSplatValue(Op0), getSplatValue(Op1)));
-    break;
-  }
-  return nullptr;
-}
-
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1607,10 +1520,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (simplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
       return eraseInstFromFunction(CI);
   }
-
-  if (VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(II))
-    if (Value *V = convertOpOfSplatsToSplatOfOp(VPI, *this))
-      return replaceInstUsesWith(*II, V);
 
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
