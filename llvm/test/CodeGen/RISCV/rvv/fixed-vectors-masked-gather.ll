@@ -13130,10 +13130,12 @@ define <4 x i32> @mgather_unit_stride_load_with_offset(ptr %base) {
 ;
 ; RV64V-LABEL: mgather_unit_stride_load_with_offset:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, %hi(.LCPI103_0)
-; RV64V-NEXT:    addi a1, a1, %lo(.LCPI103_0)
-; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-NEXT:    vle64.v v10, (a1)
+; RV64V-NEXT:    lui a1, 115073
+; RV64V-NEXT:    addiw a1, a1, 1040
+; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64V-NEXT:    vmv.s.x v8, a1
+; RV64V-NEXT:    vsext.vf8 v10, v8
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64V-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64V-NEXT:    ret
 ;
