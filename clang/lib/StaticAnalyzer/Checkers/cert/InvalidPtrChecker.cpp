@@ -38,6 +38,15 @@ private:
                                                 CheckerContext &C) const;
 
   // SEI CERT ENV31-C
+
+  // If set to true, consider getenv calls as invalidating operations on the
+  // environment variable buffer. This is implied in the standard, but in
+  // practice does not cause problems (in the commonly used environments).
+  bool InvalidatingGetEnv = false;
+
+  // GetEnv can be treated invalidating and non-invalidating as well.
+  const CallDescription GetEnvCall{{"getenv"}, 1};
+
   const CallDescriptionMap<HandlerFn> EnvpInvalidatingFunctions = {
       {{{"setenv"}, 3}, &InvalidPtrChecker::EnvpInvalidatingCall},
       {{{"unsetenv"}, 1}, &InvalidPtrChecker::EnvpInvalidatingCall},
@@ -51,7 +60,6 @@ private:
 
   // SEI CERT ENV34-C
   const CallDescriptionMap<HandlerFn> PreviousCallInvalidatingFunctions = {
-      {{{"getenv"}, 1}, &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
       {{{"setlocale"}, 2},
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
       {{{"strerror"}, 1},
@@ -61,6 +69,10 @@ private:
       {{{"asctime"}, 1},
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
   };
+
+  // The private members of this checker corresponding to commandline options
+  // are set in this function.
+  friend void ento::registerInvalidPtrChecker(CheckerManager &);
 
 public:
   // Obtain the environment pointer from 'main()' (if present).
@@ -84,7 +96,10 @@ public:
 REGISTER_SET_WITH_PROGRAMSTATE(InvalidMemoryRegions, const MemRegion *)
 
 // Stores the region of the environment pointer of 'main' (if present).
-REGISTER_TRAIT_WITH_PROGRAMSTATE(EnvPtrRegion, const MemRegion *)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(MainEnvPtrRegion, const MemRegion *)
+
+// Stores the regions of environments returned by getenv calls.
+REGISTER_SET_WITH_PROGRAMSTATE(GetenvEnvPtrRegions, const MemRegion *)
 
 // Stores key-value pairs, where key is function declaration and value is
 // pointer to memory region returned by previous call of this function
@@ -95,22 +110,35 @@ void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
                                              CheckerContext &C) const {
   StringRef FunctionName = Call.getCalleeIdentifier()->getName();
   ProgramStateRef State = C.getState();
-  const MemRegion *SymbolicEnvPtrRegion = State->get<EnvPtrRegion>();
-  if (!SymbolicEnvPtrRegion)
-    return;
 
-  State = State->add<InvalidMemoryRegions>(SymbolicEnvPtrRegion);
+  auto PlaceInvalidationNote = [&C, FunctionName,
+                                &State](const MemRegion *Region,
+                                        StringRef Message, ExplodedNode *Pred) {
+    State = State->add<InvalidMemoryRegions>(Region);
 
-  const NoteTag *Note =
-      C.getNoteTag([SymbolicEnvPtrRegion, FunctionName](
-                       PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
-        if (!BR.isInteresting(SymbolicEnvPtrRegion))
-          return;
-        Out << '\'' << FunctionName
-            << "' call may invalidate the environment parameter of 'main'";
-      });
+    // Make copy of string data for the time when notes are *actually* created.
+    const NoteTag *Note =
+        C.getNoteTag([Region, FunctionName = std::string{FunctionName},
+                      Message = std::string{Message}](
+                         PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
+          if (!BR.isInteresting(Region))
+            return;
+          Out << '\'' << FunctionName << "' " << Message;
+        });
+    return C.addTransition(State, Pred, Note);
+  };
 
-  C.addTransition(State, Note);
+  ExplodedNode *CurrentChainEnd = C.getPredecessor();
+
+  if (const MemRegion *MainEnvPtr = State->get<MainEnvPtrRegion>())
+    CurrentChainEnd = PlaceInvalidationNote(
+        MainEnvPtr, "call may invalidate the environment parameter of 'main'",
+        CurrentChainEnd);
+
+  for (const MemRegion *EnvPtr : State->get<GetenvEnvPtrRegions>())
+    CurrentChainEnd = PlaceInvalidationNote(
+        EnvPtr, "call may invalidate the environment returned by getenv",
+        CurrentChainEnd);
 }
 
 void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
@@ -146,8 +174,7 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
 
   // Remember to this region.
   const auto *SymRegOfRetVal = cast<SymbolicRegion>(RetVal.getAsRegion());
-  const MemRegion *MR =
-      const_cast<MemRegion *>(SymRegOfRetVal->getBaseRegion());
+  const MemRegion *MR = SymRegOfRetVal->getBaseRegion();
   State = State->set<PreviousCallResultMap>(FD, MR);
 
   ExplodedNode *Node = C.addTransition(State, Note);
@@ -185,6 +212,18 @@ static const MemRegion *findInvalidatedSymbolicBase(ProgramStateRef State,
 // function call as an argument.
 void InvalidPtrChecker::checkPostCall(const CallEvent &Call,
                                       CheckerContext &C) const {
+
+  ProgramStateRef State = C.getState();
+
+  // Model 'getenv' calls
+  if (GetEnvCall.matches(Call)) {
+    const MemRegion *Region = Call.getReturnValue().getAsRegion();
+    if (Region) {
+      State = State->add<GetenvEnvPtrRegions>(Region);
+      C.addTransition(State);
+    }
+  }
+
   // Check if function invalidates 'envp' argument of 'main'
   if (const auto *Handler = EnvpInvalidatingFunctions.lookup(Call))
     (this->**Handler)(Call, C);
@@ -193,13 +232,15 @@ void InvalidPtrChecker::checkPostCall(const CallEvent &Call,
   if (const auto *Handler = PreviousCallInvalidatingFunctions.lookup(Call))
     (this->**Handler)(Call, C);
 
+  // If pedantic mode is on, regard 'getenv' calls invalidating as well
+  if (InvalidatingGetEnv && GetEnvCall.matches(Call))
+    postPreviousReturnInvalidatingCall(Call, C);
+
   // Check if one of the arguments of the function call is invalidated
 
   // If call was inlined, don't report invalidated argument
   if (C.wasInlined)
     return;
-
-  ProgramStateRef State = C.getState();
 
   for (unsigned I = 0, NumArgs = Call.getNumArgs(); I < NumArgs; ++I) {
 
@@ -243,7 +284,7 @@ void InvalidPtrChecker::checkBeginFunction(CheckerContext &C) const {
 
   // Save the memory region pointed by the environment pointer parameter of
   // 'main'.
-  C.addTransition(State->set<EnvPtrRegion>(EnvpReg));
+  C.addTransition(State->set<MainEnvPtrRegion>(EnvpReg));
 }
 
 // Check if invalidated region is being dereferenced.
@@ -268,7 +309,10 @@ void InvalidPtrChecker::checkLocation(SVal Loc, bool isLoad, const Stmt *S,
 }
 
 void ento::registerInvalidPtrChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<InvalidPtrChecker>();
+  auto *Checker = Mgr.registerChecker<InvalidPtrChecker>();
+  Checker->InvalidatingGetEnv =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker,
+                                                       "InvalidatingGetEnv");
 }
 
 bool ento::shouldRegisterInvalidPtrChecker(const CheckerManager &) {
