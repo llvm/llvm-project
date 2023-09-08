@@ -5858,7 +5858,7 @@ TEST(TransferTest, EvaluateBlockWithUnreachablePreds) {
   // `false` block may not have been processed when we try to evalute the `||`
   // after visiting `true`, because it is not necessary (and therefore the edge
   // is marked unreachable). Trying to get the analysis state via
-  // `getEnvironment` for the subexpression should still not crash.
+  // `getEnvironment` for the subexpression still should not crash.
   std::string Code = R"(
     int cast(int i) {
       if ((i < 0 && true) || false) {
