@@ -816,6 +816,11 @@ void LoadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
   if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
                          getOrdering() != AtomicOrdering::unordered)) {
     effects.emplace_back(MemoryEffects::Write::get());
@@ -947,6 +952,11 @@ void StoreOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
   if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
                          getOrdering() != AtomicOrdering::unordered)) {
     effects.emplace_back(MemoryEffects::Write::get());
