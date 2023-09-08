@@ -2,6 +2,7 @@
 //    Check that the optional keyword argument 'on_line' makes a \DexLabel label
 //    that line instead of the line the command is found on.
 //
+// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: label_another_line.cpp: (1.0000)

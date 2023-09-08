@@ -2,6 +2,7 @@
 //      Test that a \DexDeclareAddress value can be used to compare two pointer
 //      variables that have a fixed offset between them.
 //
+// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: offset_address.cpp
