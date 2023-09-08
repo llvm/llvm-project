@@ -64,9 +64,11 @@ def GpuModuleToBinaryPass
     with an object for every target.
 
     The `format` argument can have the following values:
-    1. `offloading`, `llvm`: producing an offloading representation.
-    2. `assembly`, `isa`: producing assembly code.
-    3. `binary`, `bin`: producing binaries.
+    1. `offloading`, `llvm`: produces an offloading representation.
+    2. `assembly`, `isa`: produces assembly code.
+    3. `binary`, `bin`: produces binaries.
+    4. `fatbinary`, `fatbin`: produces fatbinaries.
+    5. `binOrFatbin`: produces bins or fatbins, the target decides which.
   }];
   let options = [
     Option<"offloadingHandler", "handler", "Attribute", "nullptr",
@@ -78,7 +80,10 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"binOrFatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,
+    Option<"constructSymbolTable", "symbol-table", "bool", [{false}],
+           "Enable building a symbol table enclosing the modules to serialize."
+           "Most targets can safely disable this.">
   ];
 }
 

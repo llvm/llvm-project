@@ -1982,17 +1982,19 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 TargetOptions::TargetOptions(StringRef toolkitPath,
                              ArrayRef<std::string> linkFiles,
                              StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+                             CompilationTarget compilationTarget,
+                             SymbolTable *parentTable)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget) {}
+                    cmdOptions, compilationTarget, parentTable) {}
 
 TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
                              ArrayRef<std::string> linkFiles,
                              StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+                             CompilationTarget compilationTarget,
+                             SymbolTable *parentTable)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      typeID(typeID) {}
+      parentTable(parentTable), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2001,6 +2003,8 @@ StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+SymbolTable *TargetOptions::getParentTable() const { return parentTable; }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {

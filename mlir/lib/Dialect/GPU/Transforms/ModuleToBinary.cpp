@@ -66,9 +66,16 @@ void GpuModuleToBinaryPass::runOnOperation() {
                          .Default(-1);
   if (targetFormat == -1)
     getOperation()->emitError() << "Invalid format specified.";
+
+  std::unique_ptr<SymbolTable> parentTable;
+  // Create the symbol table if it was requested in the pass options.
+  if (constructSymbolTable)
+    parentTable = std::unique_ptr<SymbolTable>(new SymbolTable(getOperation()));
+
   TargetOptions targetOptions(
       toolkitPath, linkFiles, cmdOptions,
-      static_cast<TargetOptions::CompilationTarget>(targetFormat));
+      static_cast<TargetOptions::CompilationTarget>(targetFormat),
+      parentTable.get());
   if (failed(transformGpuModulesToBinaries(
           getOperation(),
           offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(

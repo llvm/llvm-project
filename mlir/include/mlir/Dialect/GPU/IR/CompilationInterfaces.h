@@ -20,6 +20,7 @@ class IRBuilderBase;
 }
 
 namespace mlir {
+class SymbolTable;
 namespace LLVM {
 class ModuleTranslation;
 }
@@ -59,7 +60,8 @@ public:
   /// compilation target is `binary`.
   TargetOptions(StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
-                CompilationTarget compilationTarget = binOrFatbin);
+                CompilationTarget compilationTarget = binOrFatbin,
+                SymbolTable *parentTable = nullptr);
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -80,12 +82,16 @@ public:
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
+  /// Returns the provided parent symbol table.
+  SymbolTable *getParentTable() const;
+
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
   TargetOptions(TypeID typeID, StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
-                CompilationTarget compilationTarget = binOrFatbin);
+                CompilationTarget compilationTarget = binOrFatbin,
+                SymbolTable *parentTable = nullptr);
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -99,6 +105,10 @@ protected:
 
   /// Compilation process target representation.
   CompilationTarget compilationTarget;
+
+  /// Parent symbol table of all the GPU modules being serialized. By default
+  /// this member is null as it is not required by most targets.
+  SymbolTable *parentTable;
 
 private:
   TypeID typeID;
