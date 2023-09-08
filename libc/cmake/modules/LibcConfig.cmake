@@ -47,7 +47,6 @@ function(read_libc_config config_file opt_list)
     # to load. If there are no config options, it is better to remove that
     # config.json file instead of including an empty file.
     message(FATAL_ERROR "${config_file}: Does not contain any config option groups")
-    return()
   endif()
   math(EXPR group_count_1 "${group_count} - 1")
 
@@ -147,7 +146,6 @@ function(generate_config_doc config_file doc_file)
   endif()
   if(${group_count} EQUAL 0)
     message(FATAL_ERROR "${config_file}: Does not contain any config option groups")
-    return()
   endif()
   math(EXPR group_count_1 "${group_count} - 1")
 
