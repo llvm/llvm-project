@@ -363,7 +363,7 @@ Reducing Bugs
 -------------
 
 This section covers reducing a bug that happens in LLDB itself, or where you
-suspect that LLDB causes something else to behave abnormaly.
+suspect that LLDB causes something else to behave abnormally.
 
 Since bugs vary wildly, the advice here is general and incomplete. Let your
 instincts guide you and don't feel the need to try everything before reporting
