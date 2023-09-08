@@ -5707,7 +5707,7 @@ bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
 
 bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
   std::vector<SDValue> AsmNodeOperands;
-  InlineAsm::Flag Flag(0);
+  InlineAsm::Flag Flag;
   bool Changed = false;
   unsigned NumOps = N->getNumOperands();
 

@@ -309,7 +309,8 @@ public:
     void setIsMatched(bool B) { Bitfield::set<IsMatched>(Storage, B); }
 
   public:
-    explicit Flag(uint32_t F) { Storage = F; }
+    Flag() : Storage(0) {}
+    explicit Flag(uint32_t F) : Storage(F) {}
     Flag(enum Kind K, unsigned NumOps) {
       setKind(K);
       setNumOperands(NumOps);

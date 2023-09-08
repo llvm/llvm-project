@@ -116,7 +116,7 @@ void CSKYDAGToDAGISel::Select(SDNode *N) {
 
 bool CSKYDAGToDAGISel::selectInlineAsm(SDNode *N) {
   std::vector<SDValue> AsmNodeOperands;
-  InlineAsm::Flag Flag(0);
+  InlineAsm::Flag Flag;
   bool Changed = false;
   unsigned NumOps = N->getNumOperands();
 
