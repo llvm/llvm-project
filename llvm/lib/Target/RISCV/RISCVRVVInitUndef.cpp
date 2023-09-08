@@ -87,6 +87,7 @@ private:
   getVRLargestSuperClass(const TargetRegisterClass *RC) const;
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
+  bool fixupUndefOperandOnly(MachineInstr *MI);
 };
 
 } // end anonymous namespace
@@ -248,6 +249,30 @@ bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
   return Changed;
 }
 
+bool RISCVInitUndef::fixupUndefOperandOnly(MachineInstr *MI) {
+  bool Changed = false;
+  for (auto &UseMO : MI->uses()) {
+    if (!UseMO.isReg())
+      continue;
+    if (UseMO.isTied())
+      continue;
+    if (!UseMO.isUndef())
+      continue;
+    if (!isVectorRegClass(UseMO.getReg()))
+      continue;
+    const TargetRegisterClass *TargetRegClass =
+        getVRLargestSuperClass(MRI->getRegClass(UseMO.getReg()));
+    unsigned Opcode = getUndefInitOpcode(TargetRegClass->getID());
+    Register NewReg = MRI->createVirtualRegister(TargetRegClass);
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(Opcode), NewReg);
+    UseMO.setReg(NewReg);
+    UseMO.setIsUndef(false);
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 bool RISCVInitUndef::processBasicBlock(MachineFunction &MF,
                                        MachineBasicBlock &MBB,
                                        const DeadLaneDetector &DLD) {
@@ -276,6 +301,8 @@ bool RISCVInitUndef::processBasicBlock(MachineFunction &MF,
 
     if (ST->enableSubRegLiveness() && isEarlyClobberMI(MI))
       Changed |= handleSubReg(MF, MI, DLD);
+    if (isEarlyClobberMI(MI))
+      Changed |= fixupUndefOperandOnly(&MI);
     if (MI.isImplicitDef()) {
       auto DstReg = MI.getOperand(0).getReg();
       if (DstReg.isVirtual() && isVectorRegClass(DstReg))

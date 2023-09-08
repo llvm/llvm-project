@@ -32,7 +32,7 @@ define void @foo(<vscale x 8 x i8> %0) #2 {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s s0, v10
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v8, 0
+; CHECK-NEXT:    vslideup.vi v8, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
