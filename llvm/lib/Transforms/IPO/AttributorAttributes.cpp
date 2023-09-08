@@ -12550,8 +12550,13 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
       // CGSCC if the AA is run on CGSCC instead of the entire module.
       if (!A.isRunOn(Inst->getFunction()))
         return true;
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+      if (isa<LoadInst>(Inst))
         MakeChange(Inst, const_cast<Use &>(U));
+      if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+        // We only make changes if the use is the pointer operand.
+        if (U.getOperandNo() == 1)
+          MakeChange(Inst, const_cast<Use &>(U));
+      }
       return true;
     };
 
