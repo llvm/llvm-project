@@ -543,7 +543,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
       performOmptCallback(device_initialize,
                           /* device_num */ DeviceId +
-                              Plugin.getGlobalDeviceIdOffset(),
+                              Plugin.getDeviceIdStartIndex(),
                           /* type */ getComputeUnitKind().c_str(),
                           /* device */ reinterpret_cast<ompt_device_t *>(this),
                           /* lookup */ ompt::lookupCallbackByName,
@@ -608,7 +608,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
       performOmptCallback(device_finalize,
                           /* device_num */ DeviceId +
-                              Plugin.getGlobalDeviceIdOffset());
+                              Plugin.getDeviceIdStartIndex());
   }
 #endif
 
@@ -660,7 +660,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(device_load,
                         /* device_num */ DeviceId +
-                            Plugin.getGlobalDeviceIdOffset(),
+                            Plugin.getDeviceIdStartIndex(),
                         /* FileName */ nullptr,
                         /* File Offset */ 0,
                         /* VmaInFile */ nullptr,
@@ -1820,7 +1820,7 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
 }
 
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
-  Plugin::get().setGlobalDeviceIdOffset(DeviceIdOffset);
+  Plugin::get().setDeviceIdStartIndex(DeviceIdOffset);
 
   return OFFLOAD_SUCCESS;
 }

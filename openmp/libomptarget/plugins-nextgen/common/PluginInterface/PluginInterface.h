@@ -947,12 +947,10 @@ struct GenericPluginTy {
   int32_t getNumDevices() const { return NumDevices; }
 
   /// Get the plugin-specific device identifier offset.
-  int32_t getGlobalDeviceIdOffset() const { return GlobalDeviceIdOffset; }
+  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
 
   /// Set the plugin-specific device identifier offset.
-  void setGlobalDeviceIdOffset(int32_t Offset) {
-    GlobalDeviceIdOffset = Offset;
-  }
+  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
@@ -1018,9 +1016,10 @@ private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
 
-  /// Offset which when added to a DeviceId will yield a unique, user-observable
-  /// device identifier.
-  int32_t GlobalDeviceIdOffset = 0;
+  /// Index offset, which when added to a DeviceId, will yield a unique
+  /// user-observable device identifier. This is especially important when
+  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
+  int32_t DeviceIdStartIndex = 0;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
