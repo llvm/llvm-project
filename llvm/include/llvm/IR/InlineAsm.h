@@ -384,7 +384,6 @@ public:
     /// setMatchingOp - Augment an existing flag with information indicating
     /// that this input operand is tied to a previous output operand.
     void setMatchingOp(unsigned MatchedOperandNo) {
-      assert(MatchedOperandNo <= 0x7fff && "Too big matched operand");
       assert(getData() == 0 && "Matching operand already set");
       setData(MatchedOperandNo);
       setIsMatched(true);
@@ -394,13 +393,11 @@ public:
     /// for the following register operands. A tied use operand cannot have a
     /// register class, use the register class from the def operand instead.
     void setRegClass(unsigned RC) {
-      // Store RC + 1, reserve the value 0 to mean 'no register class'.
-      ++RC;
       assert(!isImmKind() && "Immediates cannot have a register class");
       assert(!isMemKind() && "Memory operand cannot have a register class");
-      assert(RC <= 0x7fff && "Too large register class ID");
       assert(getData() == 0 && "Register class already set");
-      setData(RC);
+      // Store RC + 1, reserve the value 0 to mean 'no register class'.
+      setData(RC + 1);
     }
 
     /// setMemConstraint - Augment an existing flag with the constraint code for
@@ -408,7 +405,6 @@ public:
     void setMemConstraint(unsigned Constraint) {
       assert((isMemKind() || isFuncKind()) &&
              "Flag is not a memory or function constraint!");
-      assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
       assert(Constraint <= Constraints_Max && "Unknown constraint ID");
       assert(getData() == 0 && "Mem constraint already set");
       setData(Constraint);
