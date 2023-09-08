@@ -4066,33 +4066,39 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
                    .getPointer();
   assert(!found_type || &found_type->getASTContext() == ast_ctx);
 
-  // Objective-C classes sometimes have private subclasses that are invisible to
-  // the Swift compiler because they are declared and defined in a .m file. If
-  // we can't reconstruct an ObjC type, walk up the type hierarchy until we find
-  // something we can import, or until we run out of types
-  while (!found_type) {
-    CompilerType clang_type = GetAsClangType(mangled_typename);
-    if (!clang_type)
-      break;
+  // If the typeref type system is disabled GetAsClangType will eventually call
+  // ReconstructType again, eventually leading to a stack overflow.
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetUseSwiftTypeRefTypeSystem()) {
+    // Objective-C classes sometimes have private subclasses that are invisible
+    // to the Swift compiler because they are declared and defined in a .m file.
+    // If we can't reconstruct an ObjC type, walk up the type hierarchy until we
+    // find something we can import, or until we run out of types
+    while (!found_type) {
+      CompilerType clang_type = GetAsClangType(mangled_typename);
+      if (!clang_type)
+        break;
 
-    auto clang_ctx =
-        clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-    if (!clang_ctx)
-      break;
-    auto *interface_decl = TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
-    if (!interface_decl)
-      break;
-    auto *super_interface_decl = interface_decl->getSuperClass();
-    if (!super_interface_decl)
-      break;
-    CompilerType super_type = clang_ctx->GetTypeForDecl(super_interface_decl);
-    if (!super_type)
-      break;
-    auto super_mangled_typename = super_type.GetMangledTypeName();
-    found_type = swift::Demangle::getTypeForMangling(
-                     *ast_ctx, super_mangled_typename.GetStringRef())
-                     .getPointer();
-    assert(!found_type || &found_type->getASTContext() == ast_ctx);
+      auto clang_ctx =
+          clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+      if (!clang_ctx)
+        break;
+      auto *interface_decl =
+          TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
+      if (!interface_decl)
+        break;
+      auto *super_interface_decl = interface_decl->getSuperClass();
+      if (!super_interface_decl)
+        break;
+      CompilerType super_type = clang_ctx->GetTypeForDecl(super_interface_decl);
+      if (!super_type)
+        break;
+      auto super_mangled_typename = super_type.GetMangledTypeName();
+      found_type = swift::Demangle::getTypeForMangling(
+                       *ast_ctx, super_mangled_typename.GetStringRef())
+                       .getPointer();
+      assert(!found_type || &found_type->getASTContext() == ast_ctx);
+    }
   }
 
   if (found_type) {
