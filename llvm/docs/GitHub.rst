@@ -142,7 +142,7 @@ CLI:
   gh pr checkout <PR Number>
 
 This is also possible with the web interface and the normal git command line
-tools, but the process is a bit more complicated. See GitHubs
+tools, but the process is a bit more complicated. See GitHub's
 `documentation <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally?platform=linux&tool=webui#modifying-an-inactive-pull-request-locally>`_
 on the topic.
 
