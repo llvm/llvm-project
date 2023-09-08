@@ -77,6 +77,72 @@ public:
   void runOnOperation() override;
 };
 
+/// @struct ArgInfo
+/// A structure to hold an argument, the size of the argument and dimension
+/// information.
+struct ArgInfo {
+  mlir::Value arg;
+  size_t size;
+  unsigned rank;
+  fir::BoxDimsOp dims[CFI_MAX_RANK];
+};
+
+/// @struct ArgsUsageInLoop
+/// A structure providing information about the function arguments
+/// usage by the instructions immediately nested in a loop.
+struct ArgsUsageInLoop {
+  /// Mapping between the memref operand of an array indexing
+  /// operation (e.g. fir.coordinate_of) and the argument information.
+  llvm::DenseMap<mlir::Value, ArgInfo> usageInfo;
+  /// Some array indexing operations inside a loop cannot be transformed.
+  /// This vector holds the memref operands of such operations.
+  /// The vector is used to make sure that we do not try to transform
+  /// any outer loop, since this will imply the operation rewrite
+  /// in this loop.
+  llvm::SetVector<mlir::Value> cannotTransform;
+
+  // Debug dump of the structure members assuming that
+  // the information has been collected for the given loop.
+  void dump(fir::DoLoopOp loop) const {
+    // clang-format off
+    LLVM_DEBUG(
+        mlir::OpPrintingFlags printFlags;
+        printFlags.skipRegions();
+        llvm::dbgs() << "Arguments usage info for loop:\n";
+        loop.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\nUsed args:\n";
+        for (auto &use : usageInfo) {
+          mlir::Value v = use.first;
+          v.print(llvm::dbgs(), printFlags);
+          llvm::dbgs() << "\n";
+        }
+        llvm::dbgs() << "\nCannot transform args:\n";
+        for (mlir::Value arg : cannotTransform) {
+          arg.print(llvm::dbgs(), printFlags);
+          llvm::dbgs() << "\n";
+        }
+        llvm::dbgs() << "====\n"
+    );
+    // clang-format on
+  }
+
+  // Erase usageInfo and cannotTransform entries for a set
+  // of given arguments.
+  void eraseUsage(const llvm::SetVector<mlir::Value> &args) {
+    for (auto &arg : args)
+      usageInfo.erase(arg);
+    cannotTransform.set_subtract(args);
+  }
+
+  // Erase usageInfo and cannotTransform entries for a set
+  // of given arguments provided in the form of usageInfo map.
+  void eraseUsage(const llvm::DenseMap<mlir::Value, ArgInfo> &args) {
+    for (auto &arg : args) {
+      usageInfo.erase(arg.first);
+      cannotTransform.remove(arg.first);
+    }
+  }
+};
 } // namespace
 
 /// @c replaceOuterUses - replace uses outside of @c op with result of @c
@@ -179,16 +245,6 @@ void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
   mlir::func::FuncOp func = getOperation();
 
-  /// @c ArgInfo
-  /// A structure to hold an argument, the size of the argument and dimension
-  /// information.
-  struct ArgInfo {
-    mlir::Value arg;
-    size_t size;
-    unsigned rank;
-    fir::BoxDimsOp dims[CFI_MAX_RANK];
-  };
-
   // First look for arguments with assumed shape = unknown extent in the lowest
   // dimension.
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
@@ -224,58 +280,137 @@ void LoopVersioningPass::runOnOperation() {
     }
   }
 
-  if (argsOfInterest.empty())
+  if (argsOfInterest.empty()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "No suitable arguments.\n=== End " DEBUG_TYPE " ===\n");
     return;
+  }
 
-  struct OpsWithArgs {
-    mlir::Operation *op;
-    mlir::SmallVector<ArgInfo, 4> argsAndDims;
-  };
-  // Now see if those arguments are used inside any loop.
-  mlir::SmallVector<OpsWithArgs, 4> loopsOfInterest;
+  // A list of all loops in the function in post-order.
+  mlir::SmallVector<fir::DoLoopOp> originalLoops;
+  // Information about the arguments usage by the instructions
+  // immediately nested in a loop.
+  llvm::DenseMap<fir::DoLoopOp, ArgsUsageInLoop> argsInLoops;
 
+  // Traverse the loops in post-order and see
+  // if those arguments are used inside any loop.
   func.walk([&](fir::DoLoopOp loop) {
     mlir::Block &body = *loop.getBody();
-    mlir::SmallVector<ArgInfo, 4> argsInLoop;
+    auto &argsInLoop = argsInLoops[loop];
+    originalLoops.push_back(loop);
     body.walk([&](mlir::Operation *op) {
-      // support either fir.array_coor or fir.coordinate_of
-      if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op)) {
-        // no support currently for sliced arrays
-        if (arrayCoor.getSlice())
-          return;
-      } else if (!mlir::isa<fir::CoordinateOp>(op)) {
+      // Support either fir.array_coor or fir.coordinate_of.
+      if (!mlir::isa<fir::ArrayCoorOp, fir::CoordinateOp>(op))
         return;
-      }
-
-      // The current operation could be inside another loop than
-      // the one we're currently processing. Skip it, we'll get
-      // to it later.
+      // Process only operations immediately nested in the current loop.
       if (op->getParentOfType<fir::DoLoopOp>() != loop)
         return;
       mlir::Value operand = op->getOperand(0);
       for (auto a : argsOfInterest) {
         if (a.arg == normaliseVal(operand)) {
-          // use the reboxed value, not the block arg when re-creating the loop:
+          // Use the reboxed value, not the block arg when re-creating the loop.
+          // TODO: should we check that the operand dominates the loop?
+          // If this might be a case, we should record such operands in
+          // argsInLoop.cannotTransform, so that they disable the transformation
+          // for the parent loops as well.
           a.arg = operand;
-          // Only add if it's not already in the list.
-          if (std::find_if(argsInLoop.begin(), argsInLoop.end(), [&](auto it) {
-                return it.arg == a.arg;
-              }) == argsInLoop.end()) {
 
-            argsInLoop.push_back(a);
+          // No support currently for sliced arrays.
+          // This means that we cannot transform properly
+          // instructions referencing a.arg in the whole loop
+          // nest this loop is located in.
+          if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+            if (arrayCoor.getSlice())
+              argsInLoop.cannotTransform.insert(a.arg);
+
+          if (argsInLoop.cannotTransform.contains(a.arg)) {
+            // Remove any previously recorded usage, if any.
+            argsInLoop.usageInfo.erase(a.arg);
             break;
           }
+
+          // Record the a.arg usage, if not recorded yet.
+          argsInLoop.usageInfo.try_emplace(a.arg, a);
+          break;
         }
       }
     });
-
-    if (!argsInLoop.empty()) {
-      OpsWithArgs ops = {loop, argsInLoop};
-      loopsOfInterest.push_back(ops);
-    }
   });
-  if (loopsOfInterest.empty())
+
+  // Dump loops info after initial collection.
+  // clang-format off
+  LLVM_DEBUG(
+      llvm::dbgs() << "Initial usage info:\n";
+      for (fir::DoLoopOp loop : originalLoops) {
+        auto &argsInLoop = argsInLoops[loop];
+        argsInLoop.dump(loop);
+      }
+  );
+  // clang-format on
+
+  // Clear argument usage for parent loops if an inner loop
+  // contains a non-transformable usage.
+  for (fir::DoLoopOp loop : originalLoops) {
+    auto &argsInLoop = argsInLoops[loop];
+    if (argsInLoop.cannotTransform.empty())
+      continue;
+
+    fir::DoLoopOp parent = loop;
+    while ((parent = parent->getParentOfType<fir::DoLoopOp>()))
+      argsInLoops[parent].eraseUsage(argsInLoop.cannotTransform);
+  }
+
+  // If an argument access can be optimized in a loop and
+  // its descendant loop, then it does not make sense to
+  // generate the contiguity check for the descendant loop.
+  // The check will be produced as part of the ancestor
+  // loop's transformation. So we can clear the argument
+  // usage for all descendant loops.
+  for (fir::DoLoopOp loop : originalLoops) {
+    auto &argsInLoop = argsInLoops[loop];
+    if (argsInLoop.usageInfo.empty())
+      continue;
+
+    loop.getBody()->walk([&](fir::DoLoopOp dloop) {
+      argsInLoops[dloop].eraseUsage(argsInLoop.usageInfo);
+    });
+  }
+
+  // clang-format off
+  LLVM_DEBUG(
+      llvm::dbgs() << "Final usage info:\n";
+      for (fir::DoLoopOp loop : originalLoops) {
+        auto &argsInLoop = argsInLoops[loop];
+        argsInLoop.dump(loop);
+      }
+  );
+  // clang-format on
+
+  // Reduce the collected information to a list of loops
+  // with attached arguments usage information.
+  // The list must hold the loops in post order, so that
+  // the inner loops are transformed before the outer loops.
+  struct OpsWithArgs {
+    mlir::Operation *op;
+    mlir::SmallVector<ArgInfo, 4> argsAndDims;
+  };
+  mlir::SmallVector<OpsWithArgs, 4> loopsOfInterest;
+  for (fir::DoLoopOp loop : originalLoops) {
+    auto &argsInLoop = argsInLoops[loop];
+    if (argsInLoop.usageInfo.empty())
+      continue;
+    OpsWithArgs info;
+    info.op = loop;
+    for (auto &arg : argsInLoop.usageInfo)
+      info.argsAndDims.push_back(arg.second);
+    loopsOfInterest.emplace_back(std::move(info));
+  }
+
+  if (loopsOfInterest.empty()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "No loops to transform.\n=== End " DEBUG_TYPE " ===\n");
     return;
+  }
 
   // If we get here, there are loops to process.
   fir::FirOpBuilder builder{module, std::move(kindMap)};
