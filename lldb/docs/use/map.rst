@@ -6,6 +6,15 @@ GDB-compatibility aliases in LLDB are also listed. The full lldb command names
 are often long, but any unique short form can be used. Instead of "**breakpoint
 set**", "**br se**" is also acceptable.
 
+* `Execution Commands`_
+* `Breakpoint Commands`_
+* `Watchpoint Commands`_
+* `Examining Variables`_
+* `Evaluating Expressions`_
+* `Examining Thread State`_
+* `Executable and Shared Library Query Commands`_
+* `Miscellaneous`_
+
 Execution Commands
 ------------------
 
