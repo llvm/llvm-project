@@ -181,7 +181,7 @@ body: |
 
 # CHECK-LABEL: name: preexisting_waitcnt{{$}}
 # CHECK: FLAT_LOAD_DWORD
-# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NEXT: S_WAITCNT 0 
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt
 tracksRegLiveness: true
@@ -226,7 +226,7 @@ body: |
 # See the waitcnt inside the bundle and don't insert an extra
 # CHECK-LABEL: name: preexisting_waitcnt_in_bundle{{$}}
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 0
+# CHECK: S_WAITCNT 0 
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt_in_bundle
 tracksRegLiveness: true

@@ -24,7 +24,6 @@ define amdgpu_kernel void @same_address_fence_merge_write2() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:66
 ; GCN-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset0:132 offset1:198
 ; GCN-NEXT:    ds_write2_b64 v3, v[0:1], v[0:1] offset0:8 offset1:74
