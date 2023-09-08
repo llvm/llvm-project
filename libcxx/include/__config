@@ -202,7 +202,7 @@
 
 // HARDENING {
 
-// TODO(hardening): remove this in LLVM 18.
+// TODO(hardening): remove this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
 // equivalent to setting the hardened mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
