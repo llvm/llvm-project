@@ -45,7 +45,7 @@ coro_Cleanup:
   br label %coro_Suspend
 
 coro_Suspend:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 false)
   ret ptr %1
 }
 
@@ -69,7 +69,7 @@ declare i32 @llvm.coro.size.i32()
 declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, ...)
 
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)

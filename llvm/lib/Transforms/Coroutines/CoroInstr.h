@@ -633,6 +633,23 @@ public:
 /// This represents the llvm.coro.end instruction.
 class LLVM_LIBRARY_VISIBILITY CoroEndInst : public AnyCoroEndInst {
 public:
+  op_iterator retval_begin() { return std::next(arg_begin(), 2); }
+  const_op_iterator retval_begin() const { return std::next(arg_begin(), 2); }
+
+  op_iterator retval_end() { return arg_end(); }
+  const_op_iterator retval_end() const { return arg_end(); }
+
+  iterator_range<op_iterator> return_values() {
+    return make_range(retval_begin(), retval_end());
+  }
+  iterator_range<const_op_iterator> return_values() const {
+    return make_range(retval_begin(), retval_end());
+  }
+
+  unsigned numReturns() const {
+    return std::distance(retval_begin(), retval_end());
+  }
+
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_end;

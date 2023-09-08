@@ -3046,7 +3046,8 @@ void coro::buildCoroutineFrame(
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
     for (User *U : A.users())
-      if (Checker.isDefinitionAcrossSuspend(A, U))
+      if (Checker.isDefinitionAcrossSuspend(A, U) ||
+          isa<CoroEndInst>(U))
         FrameData.Spills[&A].push_back(cast<Instruction>(U));
 
   const DominatorTree DT(F);

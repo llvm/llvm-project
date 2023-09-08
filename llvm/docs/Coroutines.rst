@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 false)
     ret ptr %hdl
   }
 
@@ -630,7 +630,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 false)
     ret ptr %hdl
   }
 
@@ -1312,8 +1312,8 @@ Arguments:
 """"""""""
 
 As for ``llvm.core.id.retcon``, except that the return type of the
-continuation prototype must be `void` instead of matching the
-coroutine's return type.
+continuation prototype must represent the normal return type of the continuation
+(instead of matching the coroutine's return type).
 
 Semantics:
 """"""""""
@@ -1326,7 +1326,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>)
+  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, ...)
 
 Overview:
 """""""""
@@ -1346,6 +1346,21 @@ handle value.
 The second argument should be `true` if this coro.end is in the block that is
 part of the unwind sequence leaving the coroutine body due to an exception and
 `false` otherwise.
+
+Other arguments can only be specified for unique-suspend returned-continuation
+coroutines where they will be normal returns of a coroutine continuation
+function. The number of arguments must match the return type of the continuation
+function:
+
+- if the return type of the continuation function is ``void`` there must be no
+  extra argumets
+
+- if the return type of the continuation function is a ``struct``, the arguments
+  will be element types of that ``struct`` in order;
+
+- otherwise, it is just the return value of the continuation function.
+
+No extra arguments are allowed for coro.end calls in unwind sections
 
 Semantics:
 """"""""""
@@ -1378,7 +1393,7 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true)
+      %InResumePart = call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 true)
       br i1 %InResumePart, label %eh.resume, label %cleanup.cont
 
     cleanup.cont:
@@ -1403,7 +1418,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 @llvm.coro.end(ptr null, i1 true) [ "funclet"(token %tok) ]
+      %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 true) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
