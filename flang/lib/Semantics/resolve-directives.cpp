@@ -552,9 +552,6 @@ public:
       case Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
-      default:
-        assert(false && "Unsupported map-type");
-        break;
       }
     }
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
