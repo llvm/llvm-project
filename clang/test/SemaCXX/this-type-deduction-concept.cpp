@@ -1,9 +1,11 @@
-
+// RUN: %clang_cc1 -std=c++23 -verify -fsyntax-only %s
 // This test case came up in the review of
 // https://reviews.llvm.org/D159126
 // when transforming `this` within a
 // requires expression, we need to make sure
 // the type of this (and its qualifiers) is respected.
+
+// expected-no-diagnostics
 namespace D159126 {
 
 template <class _Tp>
