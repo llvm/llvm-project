@@ -604,36 +604,42 @@ struct AACalleeToCallSite : public BaseType {
            "returned positions!");
     auto &S = this->getState();
 
-    const Function *AssociatedFunction =
-        this->getIRPosition().getAssociatedFunction();
-    if (!AssociatedFunction)
-      return S.indicatePessimisticFixpoint();
-
     CallBase &CB = cast<CallBase>(this->getAnchorValue());
     if (IntroduceCallBaseContext)
       LLVM_DEBUG(dbgs() << "[Attributor] Introducing call base context:" << CB
                         << "\n");
 
-    IRPosition FnPos =
-        IRPKind == llvm::IRPosition::IRP_CALL_SITE_RETURNED
-            ? IRPosition::returned(*AssociatedFunction,
-                                   IntroduceCallBaseContext ? &CB : nullptr)
-            : IRPosition::function(*AssociatedFunction,
-                                   IntroduceCallBaseContext ? &CB : nullptr);
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    auto CalleePred = [&](ArrayRef<const Function *> Callees) {
+      for (const Function *Callee : Callees) {
+        IRPosition FnPos =
+            IRPKind == llvm::IRPosition::IRP_CALL_SITE_RETURNED
+                ? IRPosition::returned(*Callee,
+                                       IntroduceCallBaseContext ? &CB : nullptr)
+                : IRPosition::function(
+                      *Callee, IntroduceCallBaseContext ? &CB : nullptr);
+        // If possible, use the hasAssumedIRAttr interface.
+        if (Attribute::isEnumAttrKind(IRAttributeKind)) {
+          bool IsKnown;
+          if (!AA::hasAssumedIRAttr<IRAttributeKind>(
+                  A, this, FnPos, DepClassTy::REQUIRED, IsKnown))
+            return false;
+          continue;
+        }
 
-    // If possible, use the hasAssumedIRAttr interface.
-    if (Attribute::isEnumAttrKind(IRAttributeKind)) {
-      bool IsKnown;
-      if (!AA::hasAssumedIRAttr<IRAttributeKind>(A, this, FnPos,
-                                                 DepClassTy::REQUIRED, IsKnown))
-        return S.indicatePessimisticFixpoint();
-      return ChangeStatus::UNCHANGED;
-    }
-
-    const AAType *AA = A.getAAFor<AAType>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!AA)
+        const AAType *AA =
+            A.getAAFor<AAType>(*this, FnPos, DepClassTy::REQUIRED);
+        if (!AA)
+          return false;
+        Changed |= clampStateAndIndicateChange(S, AA->getState());
+        if (S.isAtFixpoint())
+          return S.isValidState();
+      }
+      return true;
+    };
+    if (!A.checkForAllCallees(CalleePred, *this, CB))
       return S.indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(S, AA->getState());
+    return Changed;
   }
 };
 
