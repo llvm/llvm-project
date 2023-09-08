@@ -2001,6 +2001,54 @@ static void getTrivialDefaultFunctionAttributes(
   }
 }
 
+static void
+overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
+                                           const llvm::Function &F,
+                                           const TargetOptions &TargetOpts) {
+  auto FFeatures = F.getFnAttribute("target-features");
+
+  llvm::StringSet<> IncompatibleFeatureNames;
+  SmallVector<StringRef> MergedFeatures;
+  MergedFeatures.reserve(TargetOpts.Features.size());
+
+  if (FFeatures.isValid()) {
+    const auto &TFeatures = TargetOpts.FeatureMap;
+    for (StringRef Feature : llvm::split(FFeatures.getValueAsString(), ',')) {
+      if (Feature.empty())
+        continue;
+
+      bool EnabledForFunc = Feature.starts_with("+");
+      assert(EnabledForFunc || Feature.starts_with("-"));
+
+      StringRef Name = Feature.drop_front(1);
+      auto TEntry = TFeatures.find(Name);
+
+      // Preserves features that are incompatible (either set to something
+      // different or missing) from the target features
+      bool MissingFromTarget = TEntry == TFeatures.end();
+      bool EnabledForTarget = !MissingFromTarget && TEntry->second;
+      bool Incompatible = EnabledForTarget != EnabledForFunc;
+      if (MissingFromTarget || Incompatible) {
+        MergedFeatures.push_back(Feature);
+        if (Incompatible)
+          IncompatibleFeatureNames.insert(Name);
+      }
+    }
+  }
+
+  for (StringRef Feature : TargetOpts.Features) {
+    if (Feature.empty())
+      continue;
+    StringRef Name = Feature.drop_front(1);
+    if (IncompatibleFeatureNames.contains(Name))
+      continue;
+    MergedFeatures.push_back(Feature);
+  }
+
+  if (!MergedFeatures.empty())
+    FuncAttr.addAttribute("target-features", llvm::join(MergedFeatures, ","));
+}
+
 void CodeGen::mergeDefaultFunctionDefinitionAttributes(
     llvm::Function &F, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, const TargetOptions &TargetOpts,
@@ -2058,6 +2106,9 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
 
   F.removeFnAttrs(AttrsToRemove);
   addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
+
+  overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
+
   F.addFnAttrs(FuncAttrs);
 }
 
