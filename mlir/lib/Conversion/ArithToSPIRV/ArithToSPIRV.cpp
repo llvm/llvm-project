@@ -1039,12 +1039,13 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// MaxFOp
+// MinimumFOp, MaximumFOp
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.maxf to spirv.GL.FMax or spirv.CL.fmax.
+/// Converts arith.maximumf/minimumf to spirv.GL.FMax/FMin or
+/// spirv.CL.fmax/fmin.
 template <typename Op, typename SPIRVOp>
-class MinMaxFOpPattern final : public OpConversionPattern<Op> {
+class MinimumMaximumFOpPattern final : public OpConversionPattern<Op> {
 public:
   using OpConversionPattern<Op>::OpConversionPattern;
   LogicalResult
@@ -1055,7 +1056,7 @@ public:
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
-    // arith.maxf/minf:
+    // arith.maximumf/minimumf:
     //   "if one of the arguments is NaN, then the result is also NaN."
     // spirv.GL.FMax/FMin
     //   "which operand is the result is undefined if one of the operands
@@ -1135,15 +1136,15 @@ void mlir::arith::populateArithToSPIRVPatterns(
     MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
     SelectOpPattern,
 
-    MinMaxFOpPattern<arith::MaxFOp, spirv::GLFMaxOp>,
-    MinMaxFOpPattern<arith::MinFOp, spirv::GLFMinOp>,
+    MinimumMaximumFOpPattern<arith::MaximumFOp, spirv::GLFMaxOp>,
+    MinimumMaximumFOpPattern<arith::MinimumFOp, spirv::GLFMinOp>,
     spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSMaxOp>,
     spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLUMaxOp>,
     spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSMinOp>,
     spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLUMinOp>,
 
-    MinMaxFOpPattern<arith::MaxFOp, spirv::CLFMaxOp>,
-    MinMaxFOpPattern<arith::MinFOp, spirv::CLFMinOp>,
+    MinimumMaximumFOpPattern<arith::MaximumFOp, spirv::CLFMaxOp>,
+    MinimumMaximumFOpPattern<arith::MinimumFOp, spirv::CLFMinOp>,
     spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::CLSMaxOp>,
     spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::CLUMaxOp>,
     spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::CLSMinOp>,

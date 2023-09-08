@@ -96,7 +96,7 @@ func.func @elementwise_no_conflict_4(%arg0: tensor<8x32x32x32xf32>, %arg1: tenso
     // They are different SSA values, but %6 and %extract_slice are equivalent.
     %7 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]} ins(%6 : tensor<32x32xf32>) outs(%extracted_slice : tensor<32x32xf32>) {
     ^bb0(%in: f32, %out: f32):
-      %8 = arith.maxf %in, %cst_1 : f32
+      %8 = arith.maximumf %in, %cst_1 : f32
       linalg.yield %8 : f32
     } -> tensor<32x32xf32>
     scf.forall.in_parallel {

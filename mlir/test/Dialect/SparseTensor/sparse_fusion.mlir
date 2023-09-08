@@ -16,7 +16,7 @@
 // CHECK:       arith.addf
 // CHECK:     linalg.generic
 // CHECK:       math.exp
-// CHECK:       arith.maxf
+// CHECK:       arith.maximumf
 // CHECK-NOT: linalg.generic
 // CHECK:     return
 func.func @sparse_fusion(%argA: tensor<100xf64, #SV>) -> tensor<100xf64> {
@@ -51,7 +51,7 @@ func.func @sparse_fusion(%argA: tensor<100xf64, #SV>) -> tensor<100xf64> {
   %l2 = linalg.generic #trait
       ins(%l1: tensor<100xf64>) outs(%t2: tensor<100xf64>) {
     ^bb0(%in2: f64, %out2: f64):
-      %b2 = arith.maxf %in2, %c100 : f64
+      %b2 = arith.maximumf %in2, %c100 : f64
       linalg.yield %b2 : f64
   } -> tensor<100xf64>
 
