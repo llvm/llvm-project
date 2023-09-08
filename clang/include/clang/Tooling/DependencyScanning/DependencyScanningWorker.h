@@ -101,7 +101,7 @@ public:
     return llvm::Error::success();
   }
 
-  virtual llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
+  virtual llvm::Error finalizeModuleInvocation(CowCompilerInvocation &CI,
                                                const ModuleDeps &MD) {
     return llvm::Error::success();
   }

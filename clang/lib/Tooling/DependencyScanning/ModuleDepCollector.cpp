@@ -621,39 +621,30 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   auto &Diags = MDC.ScanInstance.getDiagnostics();
 
-  // TODO: Avoid this overhead.
-  CompilerInvocation CopiedCI(CI);
-
-  if (auto E = MDC.Controller.finalizeModuleInvocation(CopiedCI, MD))
+  if (auto E = MDC.Controller.finalizeModuleInvocation(CI, MD))
     Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
 
   // Compute the cache key, if needed. Requires dependencies.
   if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
-    if (auto Key = createCompileJobCacheKey(CAS, Diags, CopiedCI))
+    if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
       MD.ModuleCacheKey = Key->toString();
   }
-
-  CI = CopiedCI;
 
   MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
 
-  CopiedCI = CI;
-
 #ifndef NDEBUG
   // Verify the key has not changed with final arguments.
   if (MD.ModuleCacheKey) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
-    auto Key = createCompileJobCacheKey(CAS, Diags, CopiedCI);
+    auto Key = createCompileJobCacheKey(CAS, Diags, CI);
     assert(Key);
     checkCompileCacheKeyMatch(CAS, *MD.ModuleCacheKey, *Key);
   }
 #endif
-
-  CI = CopiedCI;
 
   MD.BuildInfo = std::move(CI);
 
