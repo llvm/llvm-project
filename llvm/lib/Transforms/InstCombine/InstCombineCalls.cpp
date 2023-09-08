@@ -1399,6 +1399,110 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+/// VP Intrinsics whose vector operands are both splat values may be simplified
+/// into the scalar version of the operation and the result is splatted. This
+/// can lead to scalarization down the line.
+Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = VPI->getArgOperand(0);
+  Value *Op1 = VPI->getArgOperand(1);
+
+  if (!isSplatValue(Op0) || !isSplatValue(Op1))
+    return nullptr;
+
+  // For the binary VP intrinsics supported here, the result on disabled lanes
+  // is a poison value. For now, only do this simplification if all lanes
+  // are active.
+  // TODO: Relax the condition that all lanes are active by using insertelement
+  // on inactive lanes.
+  Value *Mask = VPI->getArgOperand(2);
+  if (!maskIsAllOneOrUndef(Mask))
+    return nullptr;
+
+  Value *EVL = VPI->getArgOperand(3);
+  auto SplatAndPoison = [&Builder, &Op0, &EVL](Value *V) {
+    ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+    return Builder.CreateVectorSplat(EC, V);
+    // FIXME: Do we need to Poison out all lanes past EVL since the semantics of
+    // all of these intrinsics are that non-active lanes are poison?
+  };
+  switch(VPI->getIntrinsicID()) {
+  case Intrinsic::vp_add:
+    return SplatAndPoison(
+      Builder.CreateAdd(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_sub:
+    return SplatAndPoison(
+      Builder.CreateSub(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_mul:
+    return SplatAndPoison(
+      Builder.CreateMul(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_sdiv:
+    return SplatAndPoison(
+      Builder.CreateSDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+ case Intrinsic::vp_udiv:
+     return SplatAndPoison(
+      Builder.CreateUDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+ case Intrinsic::vp_srem:
+    return SplatAndPoison(
+      Builder.CreateSRem(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_urem:
+    return SplatAndPoison(
+      Builder.CreateURem(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_ashr:
+    return SplatAndPoison(
+      Builder.CreateAShr(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_lshr:
+    return SplatAndPoison(
+      Builder.CreateLShr(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_shl:
+    return SplatAndPoison(
+      Builder.CreateShl(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_or:
+    return SplatAndPoison(
+      Builder.CreateOr(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_and:
+    return SplatAndPoison(
+      Builder.CreateAnd(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_xor:
+    return SplatAndPoison(
+      Builder.CreateXor(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_fadd:
+    return SplatAndPoison(
+      Builder.CreateFAdd(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_fsub:
+    return SplatAndPoison(
+      Builder.CreateFSub(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_fmul:
+    return SplatAndPoison(
+      Builder.CreateFMul(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_fdiv:
+    return SplatAndPoison(
+      Builder.CreateFDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  case Intrinsic::vp_frem:
+    return SplatAndPoison(
+      Builder.CreateFRem(Builder.CreateExtractElement(Op0, (uint64_t)0),
+      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+  }
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1520,6 +1624,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (simplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
       return eraseInstFromFunction(CI);
   }
+
+  if (VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(II))
+    if (Value *V = convertOpOfSplatsToSplatOfOp(VPI, Builder))
+      return replaceInstUsesWith(*II, V);
 
   Intrinsic::ID IID = II->getIntrinsicID();
   switch (IID) {
