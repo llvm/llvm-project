@@ -166,5 +166,5 @@ interesting areas to contribute to lldb.
    Releases <https://github.com/llvm/llvm-project/releases>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
-   Bug Reports <https://github.com/llvm/llvm-project/issues/labels/lldb/>
-   Code Reviews <https://reviews.llvm.org>
+   Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>
+   Code Reviews <https://github.com/llvm/llvm-project/pulls?q=is%3Apr+label%3Alldb+is%3Aopen>
