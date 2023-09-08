@@ -1159,8 +1159,8 @@ public:
                                 InsertPointTy AllocaIP,
                                 BodyGenCallbackTy BodyGenCB);
 
-
-  using FileIdentifierInfoCallbackTy = std::function<std::tuple<std::string, uint64_t>()>;
+  using FileIdentifierInfoCallbackTy =
+      std::function<std::tuple<std::string, uint64_t>()>;
 
   /// Creates a unique info for a target entry when provided a filename and
   /// line number from.

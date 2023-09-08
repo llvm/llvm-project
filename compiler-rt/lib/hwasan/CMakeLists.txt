@@ -164,8 +164,6 @@ function(add_hwasan_runtimes arch use_aliases)
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
-                # FIXME: disable tagging when in symbolizer.
-                # RTSanitizerCommonSymbolizerInternal
                 RTLSanCommon
                 RTUbsan
     CFLAGS ${hwasan_rtl_flags}
@@ -203,8 +201,6 @@ function(add_hwasan_runtimes arch use_aliases)
             RTSanitizerCommonLibc
             RTSanitizerCommonCoverage
             RTSanitizerCommonSymbolizer
-            # FIXME: disable tagging when in symbolizer.
-            # RTSanitizerCommonSymbolizerInternal
             RTLSanCommon
             RTUbsan
             RTUbsan_cxx

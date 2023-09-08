@@ -622,6 +622,25 @@ class CommandLineCompletionTestCase(TestBase):
     def test_command_unalias(self):
         self.complete_from_to("command unalias ima", "command unalias image")
 
+    def test_command_aliases(self):
+        self.runCmd("command alias brkpt breakpoint")
+        # If there is an unambiguous completion from the built-in commands,
+        # we choose that.
+        self.complete_from_to("br", "breakpoint")
+        # Only if there is not, do we then look for an unambiguous completion
+        # from the user defined aliases.
+        self.complete_from_to("brk", "brkpt")
+
+        # Aliases are included when there's no exact match.
+        self.runCmd("command alias play breakpoint")
+        self.complete_from_to("pl", ["plugin", "platform", "play"])
+
+        # That list can also contain only aliases if there's no built-ins to
+        # match.
+        self.runCmd("command alias test_1 breakpoint")
+        self.runCmd("command alias test_2 breakpoint")
+        self.complete_from_to("test_", ["test_1", "test_2"])
+
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""
         self.check_completion_with_desc(

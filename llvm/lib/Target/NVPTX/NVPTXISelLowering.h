@@ -617,7 +617,6 @@ private:
   Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
                              unsigned Idx, const DataLayout &DL) const;
 };
-
 } // namespace llvm
 
 #endif
