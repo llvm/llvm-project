@@ -128,7 +128,9 @@ set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
   RTSanitizerCommonLibc
   RTSanitizerCommonCoverage
   RTSanitizerCommonSymbolizer
-  RTSanitizerCommonSymbolizerInternal)
+  # FIXME: hangs.
+  # RTSanitizerCommonSymbolizerInternal
+)
 
 add_compiler_rt_runtime(clang_rt.memprof
   STATIC
