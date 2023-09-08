@@ -119,7 +119,7 @@
 /mlir/**/Index/ @llvm/pr-subscribers-mlir-index
 
 # mlir-llvm
-/mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVM* @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
 /mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
