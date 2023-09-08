@@ -101,18 +101,27 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     ``` {.ebnf}
     cooperative-matrix-load-op ::= ssa-id `=` `spirv.KHR.CooperativeMatrixLoad`
                               ssa-use `,` ssa-use `,`
-                              cooperative-matrix-layout `,`
-                              (`[` memory-operand `]`)? ` : `
-                                pointer-type `as` cooperative-matrix-type
+                              `<` cooperative-matrix-layout `>`
+                              (`,` `<` memory-operand `>`)? `:`
+                                pointer-type `as` cooperative-matrix-type `,` stride-type
     ```
 
     #### Example:
 
     ```
-    %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, RowMajor
+    %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <RowMajor>
          : !spirv.ptr<i32, StorageBuffer>
-             as !spirv.KHR.coopmatrix<16x8xi32, Workgroup, MatrixA>
+             as !spirv.KHR.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
+
+    %1 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor>, <Volatile>
+         : !spirv.ptr<f32, StorageBuffer>
+             as !spirv.KHR.coopmatrix<8x8xf32, Subgroup, MatrixAcc>, i64
     ```
+  }];
+
+  let assemblyFormat = [{
+    $pointer `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+      type($pointer) `as` type($result) `,` type($stride)
   }];
 
   let availability = [
