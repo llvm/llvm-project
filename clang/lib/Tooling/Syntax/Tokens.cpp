@@ -940,7 +940,7 @@ std::string TokenBuffer::dumpForTests() const {
 
   for (FileID ID : Keys) {
     const MarkedFile &File = Files.find(ID)->second;
-    auto *Entry = SourceMgr->getFileEntryForID(ID);
+    auto Entry = SourceMgr->getFileEntryRefForID(ID);
     if (!Entry)
       continue; // Skip builtin files.
     std::string Path = llvm::sys::path::convert_to_slash(Entry->getName());
