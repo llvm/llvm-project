@@ -93,6 +93,7 @@ public:
   }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
+  bool underscoring() const { return underscoring_; }
   bool warningsAreErrors() const { return warningsAreErrors_; }
   bool debugModuleWriter() const { return debugModuleWriter_; }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
@@ -128,6 +129,10 @@ public:
   }
   SemanticsContext &set_moduleFileSuffix(const std::string &x) {
     moduleFileSuffix_ = x;
+    return *this;
+  }
+  SemanticsContext &set_underscoring(bool x) {
+    underscoring_ = x;
     return *this;
   }
   SemanticsContext &set_warnOnNonstandardUsage(bool x) {
@@ -262,6 +267,7 @@ private:
   std::vector<std::string> intrinsicModuleDirectories_;
   std::string moduleDirectory_{"."s};
   std::string moduleFileSuffix_{".mod"};
+  bool underscoring_{true};
   bool warnOnNonstandardUsage_{false};
   bool warningsAreErrors_{false};
   bool debugModuleWriter_{false};

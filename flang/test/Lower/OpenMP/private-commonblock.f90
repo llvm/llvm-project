@@ -15,7 +15,7 @@ subroutine private_common
   !$omp end parallel
 end subroutine
 
-!CHECK: %[[val_0:.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<74xi8>>
+!CHECK: %[[val_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<74xi8>>
 !CHECK: %[[val_1:.*]] = fir.convert %0 : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0:.*]] = arith.constant 0 : index
 !CHECK: %[[val_2:.*]] = fir.coordinate_of %[[val_1]], %[[val_c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
@@ -72,7 +72,7 @@ subroutine private_clause_commonblock()
 end subroutine
 
 !CHECK: func.func @_QPprivate_clause_commonblock_pointer() {
-!CHECK: %[[val_0:.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<74xi8>>
+!CHECK: %[[val_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<74xi8>>
 !CHECK: %[[val_1:.*]] = fir.convert %[[val_0]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c24:.*]] = arith.constant 24 : index
 !CHECK: %[[val_2:.*]] = fir.coordinate_of %[[val_1]], %[[val_c24]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
