@@ -21,6 +21,14 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
+const std::vector<std::string> &ModuleDeps::getBuildArguments() {
+  assert(!std::holds_alternative<std::monostate>(BuildInfo) &&
+         "Using uninitialized ModuleDeps");
+  if (const auto *CI = std::get_if<CowCompilerInvocation>(&BuildInfo))
+    BuildInfo = CI->getCC1CommandLine();
+  return std::get<std::vector<std::string>>(BuildInfo);
+}
+
 static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
                                      ASTReader &Reader,
                                      const serialization::ModuleFile &MF) {
@@ -532,7 +540,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
 
-  MD.BuildArguments = CI.getCC1CommandLine();
+  MD.BuildInfo = std::move(CI);
 
   return MD.ID;
 }
