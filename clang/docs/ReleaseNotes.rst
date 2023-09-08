@@ -374,6 +374,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``AllowBreakBeforeNoexceptSpecifier`` option.
 
 libclang
 --------
