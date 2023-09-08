@@ -1931,7 +1931,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
   getActionDefinitionsBuilder({
-      // TODO: Verify V_BFI_B32 is generated from expanded bit ops
+      // TODO: Verify V_BFI_B32 is generated from expanded bit ops (it's not)
       G_FCOPYSIGN,
 
       G_ATOMIC_CMPXCHG_WITH_SUCCESS,
