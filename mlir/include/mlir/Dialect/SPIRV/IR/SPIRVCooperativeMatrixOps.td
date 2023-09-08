@@ -170,12 +170,15 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     inactive.
 
     ``` {.ebnf}
-     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore `
+     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore`
                               ssa-use `,` ssa-use `,`
-                              ssa-use `,` `<` cooperative-matrix-layout `>
+                              ssa-use `,` `<` cooperative-matrix-layout `>`
                               (`,` `<` memory-operand `>`)? `:`
-                              pointer-type `,` coop-matrix-type, stride-type
+                              pointer-type `,` coop-matrix-type `,` stride-type
     ```
+
+    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
+    support this optionality in the SPIR-V dialect.
 
     #### Example:
 
@@ -190,7 +193,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
 
   let assemblyFormat = [{
     $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
-      type($pointer) `,` type($object) `,` type($stride)
+      type(operands)
   }];
 
   let availability = [
